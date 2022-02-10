@@ -6,29 +6,29 @@ my_plex_server:
     enabled: true
     lastSync: null
   import:
-    enabled: false
+    enabled: true
     lastSync: null
 my_jellyfin_server:
   type: jellyfin
   url: 'http://172.23.0.12:8096'
-  token: Jellyfin-api-token
+  token: api-token
   options:
-    user: jellfin-user-id
+    user: user-id
   export:
     enabled: true
     lastSync: null
   import:
-    enabled: false
+    enabled: true
     lastSync: null
 my_emby_server:
   type: emby
   url: 'http://172.23.0.13:8096'
-  token: emby-api-token
+  token: api-token
   options:
-    user: emby-user-id
+    user: user-id
   export:
     enabled: true
     lastSync: null
   import:
-    enabled: false
+    enabled: true
     lastSync: null
