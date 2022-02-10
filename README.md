@@ -1,3 +1,10 @@
+# WARNING
+
+This is an early release version, Expect bugs and edge cases that i haven't encountered. Please keep in mind that and
+before running the tool, please take a backup of your media server data, I personally run the app on my live servers,
+but I cannot guarantee it will work perfectly for you as this is really early version. So, Please do **BACKUP** your
+watch data before running.
+
 # Watch State Sync (Early Preview)
 
 A CLI based app to sync watch state between different media servers.
@@ -41,8 +48,6 @@ docker-compose up -d
 ```
 
 This docker container will expose port 8081 by default to listen for webhooks calls.
-
-====
 
 # First time
 
