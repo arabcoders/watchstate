@@ -1,0 +1,75 @@
+<?php
+
+declare(strict_types=1);
+
+error_reporting(E_ALL);
+ini_set('display_errors', 'On');
+
+if (!defined('BASE_MEMORY')) {
+    define('BASE_MEMORY', memory_get_usage());
+}
+
+if (!defined('BASE_PEAK_MEMORY')) {
+    define('BASE_PEAK_MEMORY', memory_get_peak_usage());
+}
+
+if (!defined('DS')) {
+    define('DS', DIRECTORY_SEPARATOR);
+}
+
+if (!defined('ROOT_PATH')) {
+    define('ROOT_PATH', __DIR__);
+}
+
+set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
+    $errno = $number & error_reporting();
+    static $errorLevels = [
+        E_ERROR => 'Error',
+        E_WARNING => 'Warning',
+        E_PARSE => 'Parser Error',
+        E_NOTICE => 'Notice',
+        E_CORE_ERROR => 'Core Error',
+        E_CORE_WARNING => 'Core Warning',
+        E_COMPILE_ERROR => 'Compile Error',
+        E_COMPILE_WARNING => 'Compile Warning',
+        E_USER_ERROR => 'User Error',
+        E_USER_WARNING => 'User Warning',
+        E_USER_NOTICE => 'User notice',
+        E_STRICT => 'Strict Notice',
+        E_RECOVERABLE_ERROR => 'Recoverable Error'
+    ];
+
+    if (0 === $errno) {
+        return;
+    }
+
+    fwrite(
+        STDERR,
+        trim(
+            sprintf('%s: %s (%s:%d)' . PHP_EOL, ($errorLevels[$number] ?? (string)$number), $error, $file, $line)
+        ) . PHP_EOL
+    );
+
+    exit(1);
+});
+
+set_exception_handler(function (Throwable $e) {
+    fwrite(
+        STDERR,
+        trim(
+            sprintf("%s: %s (%s:%d)." . PHP_EOL, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine())
+        ) . PHP_EOL
+    );
+    exit(1);
+});
+
+if (!file_exists(__DIR__ . DS . 'vendor' . DS . 'autoload.php')) {
+    fwrite(STDERR, 'Composer dependencies are missing. Run the following commands.' . PHP_EOL);
+    fwrite(STDERR, sprintf('cd %s', dirname(__DIR__)) . PHP_EOL);
+    fwrite(STDERR, 'composer install --optimize-autoloader' . PHP_EOL);
+    exit(1);
+}
+
+require __DIR__ . DS . 'vendor' . DS . 'autoload.php';
+
+(new App\Libs\KernelConsole())->boot()->runConsole();

@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  watchstate:
+    build: .
+    restart: unless-stopped
+    container_name: watchstate
+    environment:
+      APP_UID: 1000
+      APP_GID: 1000
+      IN_DOCKER: 1
+      WS_DATA_PATH: /config
+    ports:
+      - "8081:80"
+    volumes:
+      - ../../:/app
+      - ../../var:/config:rw
+      - ./entrypoint.sh:/entrypoint-docker
