@@ -185,11 +185,11 @@ go back again to dashboard> plugins > webhook. Add A ``Add Generic Destination``
 
 ##### Webhook Name:
 
-Choose want you want.
+Choose whatever name you want.
 
 ##### Webhook Url:
 
-Put your webhook server url here: for example ``http://localhost:8081/?type=jellyfin&apikey=[YOUR_API_KEY]``
+``http://localhost:8081/?type=jellyfin&apikey=[YOUR_API_KEY]``
 
 ##### Notification Type:
 
@@ -206,7 +206,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook Url:
 
-Put your webhook server url here: for example ``http://localhost:8081/?type=emby&apikey=[YOUR_API_KEY]``
+``http://localhost:8081/?type=emby&apikey=[YOUR_API_KEY]``
 
 ##### Webhook Events
 
@@ -217,12 +217,12 @@ Select the following events
 
 Click ``Add Webhook``
 
-#### Plex (you need plex pass use webhooks)
+#### Plex (you need PlexPass to use webhooks)
 
-Go to Plex dashboard > Settings > Your Account > web hooks > (Click ADD WEBHOOK)
+Go to your plex WebUI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 
 ##### URL:
 
-Put your webhook server url here: for example ``http://localhost:8081/?type=plex&apikey=[YOUR_API_KEY]``
+``http://localhost:8081/?type=plex&apikey=[YOUR_API_KEY]``
 
 Click ``Save Changes``
