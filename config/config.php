@@ -15,9 +15,11 @@ use Monolog\Logger;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.1-alpha',
+        'version' => 'v0.0.2',
         'tz' => null,
-        'path' => fixPath(env('WS_DATA_PATH', fn() => realpath(__DIR__ . DS . '..' . DS . 'var'))),
+        'path' => fixPath(
+            env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . DS . '..' . DS . 'var'))
+        ),
     ];
 
     $config['storage'] = [
@@ -105,8 +107,8 @@ return (function () {
 
     $config['supported'] = [
         'plex' => PlexServer::class,
+        'emby' => EmbyServer::class,
         'jellyfin' => JellyfinServer::class,
-        'emby' => EmbyServer::class
     ];
 
     $config['servers'] = [];

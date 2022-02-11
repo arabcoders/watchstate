@@ -18,7 +18,7 @@ class GenerateCommand extends Command
     {
         $this->setName('config:generate')
             ->setDescription('Generate API key for webhook.')
-            ->addOption('regenerate', 'w', InputOption::VALUE_NONE, 'Regenerate the API key');
+            ->addOption('regenerate', 'w', InputOption::VALUE_NONE, 'Regenerate the API key.');
     }
 
     /**
@@ -37,20 +37,12 @@ class GenerateCommand extends Command
             }
         }
 
-        $randomKey = $this->generateHash();
+        $randomKey = bin2hex(random_bytes(16));
 
         $output->writeln(sprintf('<info>Your Webhook API key is: %s</info>', $randomKey));
 
         file_put_contents($config, Yaml::dump(ag_set($yaml, 'webhook.apikey', $randomKey), 8, 2));
 
         return self::SUCCESS;
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function generateHash(): string
-    {
-        return bin2hex(random_bytes(16));
     }
 }

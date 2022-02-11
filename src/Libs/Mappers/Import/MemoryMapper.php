@@ -234,4 +234,9 @@ final class MemoryMapper implements ImportInterface
 
         return $this;
     }
+
+    public function count(): int
+    {
+        return count($this->changed);
+    }
 }

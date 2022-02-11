@@ -17,15 +17,13 @@ final class PDOMigrations
 {
     private string $path;
     private string $versionFile;
+    private string $driver;
 
     public function __construct(private PDO $pdo)
     {
         $this->path = __DIR__ . DS . 'Migrations';
         $this->versionFile = Config::get('path') . DS . 'db' . DS . 'pdo_migrations_version';
-
-        if (!file_exists($this->versionFile)) {
-            $this->setVersion(0);
-        }
+        $this->driver = $this->getDriver();
     }
 
     public function up(InputInterface $input, OutputInterface $output): int
@@ -104,7 +102,7 @@ final class PDOMigrations
     {
         $name = str_replace(chr(040), '_', $name);
 
-        $fileName = sprintf('%s_%d_%s.sql', $this->getDriver(), time(), $name);
+        $fileName = sprintf('%s_%d_%s.sql', $this->driver, time(), $name);
 
         $file = $this->path . DS . $fileName;
 
@@ -138,12 +136,24 @@ final class PDOMigrations
 
     private function getVersion(): int
     {
-        return (int)file_get_contents($this->versionFile);
+        if ('sqlite' === $this->driver) {
+            return (int)$this->pdo->query('PRAGMA user_version')->fetchColumn();
+        }
+
+        if (file_exists($this->versionFile)) {
+            return (int)file_get_contents($this->versionFile);
+        }
+
+        return 0;
     }
 
     private function setVersion(int $version): void
     {
-        file_put_contents($this->versionFile, $version);
+        if ('sqlite' === $this->driver) {
+            $this->pdo->exec('PRAGMA user_version = ' . $version);
+        } else {
+            file_put_contents($this->versionFile, $version);
+        }
     }
 
     private function getDriver(): string
@@ -160,7 +170,6 @@ final class PDOMigrations
     private function parseFiles(): array
     {
         $migrations = [];
-        $driver = $this->getDriver();
 
         foreach ((array)glob($this->path . DS . '*.sql') as $file) {
             if (!is_string($file) || false === ($f = realpath($file))) {
@@ -174,7 +183,7 @@ final class PDOMigrations
                 PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
             );
 
-            if ($type !== $driver) {
+            if ($type !== $this->driver) {
                 continue;
             }
 

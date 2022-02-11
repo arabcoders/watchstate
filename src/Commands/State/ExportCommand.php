@@ -25,9 +25,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-use function ag;
-use function makeDate;
-
 class ExportCommand extends Command
 {
     public function __construct(private ExportInterface $mapper, private Request $http, private LoggerInterface $logger)
@@ -42,21 +39,15 @@ class ExportCommand extends Command
     {
         $this->setName('state:export')
             ->setDescription('Export watch state to servers.')
-            ->addOption(
-                'read-mapper',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Shows what kind of mapper configured.',
-                $this->mapper::class
-            )
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stderr.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Display memory usage.')
+            ->addOption('read-mapper', null, InputOption::VALUE_OPTIONAL, 'Configured mapper.', $this->mapper::class)
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export.')
             ->addOption(
                 'concurrency',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'How many Requests to send.',
+                'How many parallel requests to send.',
                 (int)Config::get('request.export.concurrency')
             )
             ->addOption(
