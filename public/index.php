@@ -14,7 +14,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 error_reporting(E_ALL);
-ini_set('display_errors', 'On');
+ini_set('error_reporting', 'On');
+ini_set('display_errors', 'Off');
 
 if (!defined('BASE_MEMORY')) {
     define('BASE_MEMORY', memory_get_usage());
@@ -29,7 +30,7 @@ if (!defined('DS')) {
 }
 
 if (!defined('ROOT_PATH')) {
-    define('ROOT_PATH', __DIR__ . '..' . DS);
+    define('ROOT_PATH', realpath(__DIR__ . '..' . DS));
 }
 
 set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
