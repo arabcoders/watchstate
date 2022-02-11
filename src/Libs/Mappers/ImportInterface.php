@@ -9,7 +9,7 @@ use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
 use Psr\Log\LoggerInterface;
 
-interface ImportInterface
+interface ImportInterface extends \Countable
 {
     /**
      * Initiate Mapper.
