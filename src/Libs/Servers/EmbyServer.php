@@ -43,7 +43,7 @@ class EmbyServer extends JellyfinServer
         $type = ag($json, 'Item.Type', 'not_found');
 
         if (true === Config::get('webhook.debug')) {
-            saveWebhookPayload($request, "jellyfin.{$via}.{$event}", $json);
+            saveWebhookPayload($request, "emby.{$via}.{$event}", $json);
         }
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
@@ -93,9 +93,9 @@ class EmbyServer extends JellyfinServer
             ];
         }
 
-        if ('markplayed' === $event || 'playback.scrobble' === $event) {
+        if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
             $isWatched = 1;
-        } elseif ('markunplayed' === $event) {
+        } elseif ('item.markunplayed' === $event) {
             $isWatched = 0;
         } else {
             $isWatched = (int)(bool)ag($json, 'Item.Played', ag($json, 'Item.PlayedToCompletion', 0));
@@ -111,5 +111,4 @@ class EmbyServer extends JellyfinServer
 
         return new StateEntity($row);
     }
-
 }
