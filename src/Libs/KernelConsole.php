@@ -131,9 +131,9 @@ class KernelConsole
     public function runHttp(
         Closure $fn,
         ServerRequestInterface|null $request = null,
-        EmitterInterface|null $emit = null
+        EmitterInterface|null $emitter = null
     ): void {
-        $emitter = $emit ?? new SapiEmitter();
+        $emitter = $emitter ?? new SapiEmitter();
         $request = $request ?? ServerRequestFactory::fromGlobals();
 
         try {

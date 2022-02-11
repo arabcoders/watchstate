@@ -18,7 +18,7 @@ if (!defined('DS')) {
 }
 
 if (!defined('ROOT_PATH')) {
-    define('ROOT_PATH', __DIR__);
+    define('ROOT_PATH', realpath(__DIR__));
 }
 
 set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {

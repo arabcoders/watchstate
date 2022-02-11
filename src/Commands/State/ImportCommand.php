@@ -21,9 +21,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-use function ag;
-use function makeDate;
-
 class ImportCommand extends Command
 {
     public function __construct(private ImportInterface $mapper, private LoggerInterface $logger)
@@ -38,15 +35,9 @@ class ImportCommand extends Command
     {
         $this->setName('state:import')
             ->setDescription('Import watch state from servers.')
-            ->addOption(
-                'read-mapper',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Shows what kind of mapper configured.',
-                $this->mapper::class
-            )
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stderr.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Display memory usage.')
+            ->addOption('read-mapper', null, InputOption::VALUE_OPTIONAL, 'Configured Mapper.', $this->mapper::class)
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import.')
             ->addOption(
                 'servers-filter',
@@ -181,7 +172,9 @@ class ImportCommand extends Command
         Utils::settle($promises)->wait();
         $this->logger->notice(sprintf('Finished waiting on (%d) HTTP Requests.', count($promises)));
 
+        $this->logger->notice(sprintf('Committing (%d) Changes.', count($this->mapper)));
         $operations = $this->mapper->commit();
+        $this->logger->notice('Finished Committing the changes.');
 
         if ($input->getOption('stats-show')) {
             Data::add('operations', 'stats', $operations);

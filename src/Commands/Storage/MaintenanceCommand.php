@@ -22,7 +22,7 @@ final class MaintenanceCommand extends Command
             ->setDescription('Run maintenance tasks on storage backend.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $this->storage->maintenance($input, $output);
 

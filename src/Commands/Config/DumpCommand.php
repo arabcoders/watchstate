@@ -22,19 +22,13 @@ class DumpCommand extends Command
     protected function configure(): void
     {
         $this->setName('config:dump')
-            ->setDescription('Dump configs to customize.')
-            ->addOption(
-                'location',
-                'l',
-                InputOption::VALUE_OPTIONAL,
-                'Path to config dir.',
-                Config::get('path'),
-            )
+            ->setDescription('Create config files.')
+            ->addOption('location', 'l', InputOption::VALUE_OPTIONAL, 'Path to config dir.', Config::get('path'))
             ->addOption('override', 'w', InputOption::VALUE_NONE, 'Override existing file.')
             ->addArgument(
                 'type',
                 InputArgument::REQUIRED,
-                sprintf('Config to dump. Can be one of ( %s )', implode(' or ', array_keys(self::$configs)))
+                sprintf('Config type to create. Can be one of ( %s )', implode(' or ', array_keys(self::$configs)))
             );
     }
 

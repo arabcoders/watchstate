@@ -23,7 +23,7 @@ final class MakeCommand extends Command
         $this->setName('storage:make')
             ->setDescription('Create Storage backend migration.')
             ->addOption('extra', null, InputOption::VALUE_OPTIONAL, 'Extra options.', null)
-            ->addArgument('name', InputArgument::REQUIRED, 'Migration name');
+            ->addArgument('name', InputArgument::REQUIRED, 'Migration name.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

@@ -15,11 +15,11 @@ final class PHPCommand extends Command
     protected function configure(): void
     {
         $this->setName('config:php')
-            ->setDescription('Generate PHP Config')
-            ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate FPM Config.');
+            ->setDescription('Generate php config.')
+            ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate php-fpm config.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         return $input->getOption('fpm') ? $this->makeFPM($output) : $this->makeConfig($output);
     }
