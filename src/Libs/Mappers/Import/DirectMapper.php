@@ -104,11 +104,16 @@ final class DirectMapper implements ImportInterface
 
     public function remove(StateEntity $entity): bool
     {
-        return null !== $this->storage->get($entity);
+        return $this->storage->remove($entity);
     }
 
     public function reset(): self
     {
         return $this;
+    }
+
+    public function count(): int
+    {
+        return 0;
     }
 }
