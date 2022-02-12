@@ -16,7 +16,7 @@ use Monolog\Logger;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.2',
+        'version' => 'v0.0.3-alpha',
         'tz' => null,
         'path' => fixPath(
             env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . DS . '..' . DS . 'var'))
