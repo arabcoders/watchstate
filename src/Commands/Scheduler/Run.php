@@ -10,6 +10,7 @@ use App\Libs\Scheduler\Scheduler;
 use App\Libs\Scheduler\Task;
 use App\Libs\Scheduler\TaskTimer;
 use Closure;
+use Cron\CronExpression;
 use DateTimeImmutable;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
@@ -160,7 +161,12 @@ final class Run extends Command
 
         $obj = Task::newTask($task[Task::NAME], $task[Task::COMMAND], $task[Task::ARGS], $task[Task::CONFIG]);
 
-        $obj->runAt($task[Task::RUN_AT] ?? TaskTimer::everyMinute(5));
+        $timer = $task[Task::RUN_AT] ?? TaskTimer::everyMinute(5);
+        if ((!$timer instanceof CronExpression)) {
+            $timer = TaskTimer::at($timer);
+        }
+
+        $obj->runAt($timer);
 
         if (true === $task[Task::RUN_IN_FOREGROUND]) {
             $obj->inForeground();

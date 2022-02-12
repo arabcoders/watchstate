@@ -9,6 +9,7 @@ use App\Libs\Config;
 use App\Libs\Scheduler\Task;
 use App\Libs\Scheduler\TaskTimer;
 use Closure;
+use Cron\CronExpression;
 use DateTimeInterface;
 use DateTimeZone;
 use Exception;
@@ -49,6 +50,10 @@ final class Lists extends Command
             $task = Run::fixTask($task);
 
             $timer = $task[Task::RUN_AT] ?? TaskTimer::everyMinute(5);
+            if ((!$timer instanceof CronExpression)) {
+                $timer = TaskTimer::at($timer);
+            }
+
             $task[Task::RUN_AT] = $timer->getNextRunDate('now');
             $task[Task::RUN_IN_FOREGROUND] = (bool)($task[Task::RUN_IN_FOREGROUND] ?? false);
 

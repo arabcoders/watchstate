@@ -1,9 +1,7 @@
-# WARNING
+# Warning
 
-This is an early release version, Expect bugs and edge cases that i haven't encountered. Please keep in mind that and
-before running the tool, please take a backup of your media server data, I personally run the app on my live servers,
-but I cannot guarantee it will work perfectly for you as this is really early version. So, Please do **BACKUP** your
-watch data before running.
+This is an early release version, expect bugs and edge cases that we haven't encountered. Please keep that in mind that
+before running the tool. while its works for me, it might not work for your setup.
 
 # Watch State Sync (Early Preview)
 
@@ -11,9 +9,9 @@ A CLI based app to sync watch state between different media servers.
 
 # Introduction
 
-I created this app for my own personal use, I had multiple problems with Plex trakt.tv plugin which led to my account
-being banned at trakt.tv, and on top of that the plugin no longer supported. And I like to keep my own data locally if
-possible.
+Ever wanted to sync your watch state without having to rely on 3rd party service like trakt.tv? then this tool is for
+you. I had multiple problems with Plex trakt.tv plugin which led to my account being banned at trakt.tv, and on top of
+that the plugin no longer supported. And I like to keep my own data locally if possible.
 
 # Supported Media servers.
 
@@ -23,72 +21,53 @@ possible.
 
 ## Install (Early Preview)
 
-Clone this repo
+Clone this repo by
 
 ```bash
 git clone https://github.com/ArabCoders/watchstate.git
 ```
 
-after cloning the app, you have two choices
-
---------
-
-# Run the CLI version only
+after cloning the app, start the docker container
 
 ```bash
-cd watchstate/docker/cli
+cd watchstate/docker/
 docker-compose up -d
 ```
 
-# Run Full Version with Webhooks Support
-
-```bash
-cd watchstate/docker/full
-docker-compose up -d
-```
-
-This docker container will expose port 8081 by default to listen for webhooks calls.
+This docker container will expose port 80 by default to listen for webhooks calls. mapped to port 8081 on host.
 
 # First time
 
-regardless of what container type you have used you have to set up your servers, to do so run the following command.
+You have to set up your servers in ``docker/config/config/servers.yaml`` you will have examples inside the file, after
+editing the file remove the unused servers examples.
 
-```bash
-docker exec -ti watchstate console config:dump servers 
-```
-
-after running the command you should have a file called ``servers.yaml`` inside ``watchstate/var/config/``, with
-examples of how to define servers to use.
-
-## First time Import
-
-after configuring your servers at ``watchstate/var/config/servers.yaml`` you should import your current watch state by
+after configuring your servers at ``docker/config/config/servers.yaml`` you should import your current watch state by
 running the following command.
 
 ```bash
-docker exec -ti watchstate console state:import 
+docker exec -ti watchstate console state:import -vvrm
 ```
 
 #### TIP
 
-to watch lovely debug information you could run the command with -vvv it will show excessive information, be careful it
-might crash your shell depending on how many servers and media you have. the output is massive.
-----
+to watch lovely debug information you could run the command with -vvvrm it will show excessive information, be careful
+it might crash your terminal depending on how many servers and media you have. the output is excessive.
+
+---
 
 now that you have imported your watch state, you can stop manually running the command again. and rely solely on the
-webhooks to update the state. If however you don't want to run a webhook server, then you have to make a cronjob that
-will run the command as you see fit.
+webhooks to update the import state.
 
-# Example for cronjob, (only for < v1.x)
+If however you don't want to run a webhook server, then you have to make a few adjustments edit ``docker-compose.yaml``
+and enable the environment variable ``WS_CRON`` by changing its value to ``1``, you can also control whether you want to
+run both import and export by using the other ``WS_CRON_*`` variables. All those variables can be edited
+using ``config/config/config.yaml`` file, the options modified get to override the ``config/config.php``. After editing
+the variables restart the docker container for the changes to take effect.
+
+### You can manually export your watch state back to servers using the following command
 
 ```bash
-0 */1 * * * docker exec -ti watchstate console state:import 
-```
-
-## Exporting watch state back to servers
-
-```bash
-docker exec -ti watchstate console state:export 
+docker exec -ti watchstate console state:export -vvrm 
 ```
 
 # Memory usage (Import)
@@ -111,7 +90,7 @@ docker exec -ti watchstate console state:import -vvvrm
 
 ### How to change the Mapper
 
-Edit ``var/config/config.yaml`` if it does not exist create it, Put the following instruction there
+Edit ``config/config/config.yaml``
 
 ```yaml
 mapper:
@@ -160,25 +139,26 @@ my_plex_server:
 
 # Running Webhook server.
 
-if you want to use webhooks, you have to generate an api key.
+You should have a working webhook server already. view the contents of ``config/config/config.yaml`` and take note of
+the ``webhook.apikey``. if the apikey does not exist run the following command.
 
 ```bash
 docker exec -ti watchstate console config:generate 
 ```
 
-If you don't have an api key already set at ``watchstate/var/config/config.yaml`` it will generate new key and store it
-there under the key of ``webhook.apikey``
+it should update your ``config.yaml`` and add randomly generated key, and it will be printed to your screen.
 
 Adding webhook to your server the url will be dependent on how you expose the server, but typically it will be like this
 ``http://localhost:8081/?type=[SERVER_TYPE]&apikey=[YOUR_API_KEY]``
 
 ### [SERVER_TYPE]
 
-Change the parameter to one of those ``emby, plex or jellyfin``.
+Change the parameter to one of those ``emby, plex or jellyfin``. it should the server that you are adding to, as each
+server has different webhook payload.
 
 ### [YOUR_API_KEY]
 
-Change this parameter to your api key you can find it by viewing ``var/config/config.yaml`` under the key
+Change this parameter to your api key you can find it by viewing ``config/config/config.yaml`` under the key
 of ``webhook.apikey``
 
 # Configuring Media servers to send webhook events.
@@ -186,7 +166,7 @@ of ``webhook.apikey``
 #### Jellyfin (Free)
 
 go to your jellyfin dashboard > plugins > Catalog > install: Notifications > Webhook, restart your jellyfin. After that
-go back again to dashboard> plugins > webhook. Add A ``Add Generic Destination``,
+go back again to dashboard > plugins > webhook. Add A ``Add Generic Destination``,
 
 ##### Webhook Name:
 
@@ -231,3 +211,16 @@ Go to your plex WebUI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 ``http://localhost:8081/?type=plex&apikey=[YOUR_API_KEY]``
 
 Click ``Save Changes``
+
+# Finally
+
+after making sure everything is running smoothly, edit your ``docker-compose.yaml`` file and enable the exporting of
+your watch state back to servers. by enabling the following options
+
+```yaml
+environment:
+    WS_CRON: 1
+    WS_CRON_EXPORT: 1
+```
+
+restart your docker container for changes to take effect.

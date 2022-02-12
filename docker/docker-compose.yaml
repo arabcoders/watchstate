@@ -1,0 +1,19 @@
+version: '3.3'
+services:
+  watchstate:
+    container_name: watchstate
+    restart: unless-stopped
+    build:
+      context: .
+      args:
+        APP_VERSION: latest
+    environment:
+      WS_UID: 1000
+      WS_GID: 1000
+      WS_CRON: 0
+      WS_CRON_IMPORT: 1
+      WS_CRON_EXPORT: 1
+    ports:
+      - "8081:80"
+    volumes:
+      - ./config:/config:rw
