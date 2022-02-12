@@ -11,3 +11,5 @@ logger:
     enabled: false
     type: syslog
     level: INFO
+webhook:
+  apikey: null

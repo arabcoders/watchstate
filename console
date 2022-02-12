@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
+    fwrite(STDERR, 'Unable to run as root. Please choose different user.' . PHP_EOL);
+    exit(1);
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 

@@ -6,7 +6,6 @@ use App\Libs\Config;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Scheduler\Task;
-use App\Libs\Scheduler\TaskTimer;
 use App\Libs\Servers\EmbyServer;
 use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
@@ -156,8 +155,8 @@ return (function () {
     $config['tasks'] = [
         'import' => [
             Task::NAME => 'import',
-            Task::ENABLED => true,
-            Task::RUN_AT => TaskTimer::hourly(10),
+            Task::ENABLED => (bool)env('WS_CRON_IMPORT', true),
+            Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '1 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
                 '-vvrm' => null,
@@ -165,8 +164,8 @@ return (function () {
         ],
         'export' => [
             Task::NAME => 'export',
-            Task::ENABLED => true,
-            Task::RUN_AT => TaskTimer::everyMinute(15),
+            Task::ENABLED => (bool)env('WS_CRON_EXPORT', true),
+            Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
             Task::ARGS => [
                 '-vvrm' => null,
