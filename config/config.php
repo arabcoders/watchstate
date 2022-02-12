@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Libs\Config;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Scheduler\Task;
+use App\Libs\Scheduler\TaskTimer;
 use App\Libs\Servers\EmbyServer;
 use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
@@ -148,6 +150,27 @@ return (function () {
                 'catch_workers_output' => 'yes',
                 'decorate_workers_output' => 'no',
             ],
+        ],
+    ];
+
+    $config['tasks'] = [
+        'import' => [
+            Task::NAME => 'import',
+            Task::ENABLED => true,
+            Task::RUN_AT => TaskTimer::hourly(10),
+            Task::COMMAND => '@state:import',
+            Task::ARGS => [
+                '-vvrm' => null,
+            ]
+        ],
+        'export' => [
+            Task::NAME => 'export',
+            Task::ENABLED => true,
+            Task::RUN_AT => TaskTimer::everyMinute(15),
+            Task::COMMAND => '@state:export',
+            Task::ARGS => [
+                '-vvrm' => null,
+            ]
         ],
     ];
 

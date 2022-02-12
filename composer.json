@@ -19,10 +19,12 @@
         "monolog/monolog": "^2.3",
         "symfony/console": "^6.0",
         "symfony/yaml": "^6.0",
+        "symfony/process": "^6.0",
         "league/container": "^4.0",
         "guzzlehttp/guzzle": "^7.0",
         "laminas/laminas-diactoros": "^2.0",
-        "laminas/laminas-httphandlerrunner": "^2.0"
+        "laminas/laminas-httphandlerrunner": "^2.0",
+        "dragonmantank/cron-expression": "^3.0"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
