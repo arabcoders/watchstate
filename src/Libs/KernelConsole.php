@@ -60,7 +60,7 @@ class KernelConsole
         (function () {
             $path = Config::get('path') . DS . 'config' . DS . 'config.yaml';
             if (file_exists($path)) {
-                Config::append(function () use ($path) {
+                Config::init(function () use ($path) {
                     return array_replace_recursive(Config::getAll(), Yaml::parseFile($path));
                 });
             }
