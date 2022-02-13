@@ -7,21 +7,20 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Extends\Request;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateTimeInterface;
-use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Psr7\Uri;
-use GuzzleHttp\RequestOptions;
 use JsonException;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
 class PlexServer implements ServerInterface
@@ -46,18 +45,22 @@ class PlexServer implements ServerInterface
         'media.scrobble',
     ];
 
-    protected Uri|null $url = null;
+    protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected array $options = [];
     protected string $name = '';
     protected bool $loaded = false;
 
-    public function __construct(protected Request $http, protected LoggerInterface $logger)
+    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
-    public function setUp(string $name, Uri $url, string|int|null $token = null, array $options = []): ServerInterface
-    {
+    public function setUp(
+        string $name,
+        UriInterface $url,
+        string|int|null $token = null,
+        array $options = []
+    ): ServerInterface {
         return (new self($this->http, $this->logger))->setState($name, $url, $token, $options);
     }
 
@@ -143,17 +146,31 @@ class PlexServer implements ServerInterface
 
     private function getHeaders(): array
     {
-        return [
-            RequestOptions::HTTP_ERRORS => false,
-            RequestOptions::TIMEOUT => $this->options['timeout'] ?? 0,
-            RequestOptions::CONNECT_TIMEOUT => $this->options['connect_timeout'] ?? 0,
-            RequestOptions::HEADERS => [
+        $opts = [
+            'headers' => [
                 'Accept' => 'application/json',
                 'X-Plex-Token' => $this->token,
             ],
         ];
+
+        if (null !== ($this->options['timeout'] ?? null)) {
+            $opts['timeout'] = $this->options['timeout'];
+        }
+
+        if (null !== ($this->options['max_duration'] ?? null)) {
+            $opts['max_duration'] = $this->options['max_duration'];
+        }
+
+        if (true === ($this->options['http2'] ?? false)) {
+            $opts['http_version'] = '2.0';
+        }
+
+        return $opts;
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     protected function getLibraries(Closure $ok, Closure $error): array
     {
         if (null === $this->url) {
@@ -172,9 +189,9 @@ class PlexServer implements ServerInterface
 
             $url = $this->url->withPath('/library/sections');
 
-            $response = $this->http->request('GET', $url, $this->getHeaders());
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
-            $content = $response->getBody()->getContents();
+            $content = $response->getContent(false);
 
             $this->logger->debug(sprintf('===[ Sample from %s List library response ]===', $this->name));
             $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : 'Empty response body');
@@ -202,7 +219,7 @@ class PlexServer implements ServerInterface
                 Data::add($this->name, 'no_import_update', true);
                 return [];
             }
-        } catch (GuzzleException $e) {
+        } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage());
             Data::add($this->name, 'no_import_update', true);
             return [];
@@ -257,9 +274,18 @@ class PlexServer implements ServerInterface
 
             $this->logger->debug(sprintf('Requesting %s - %s library content.', $this->name, $cName), ['url' => $url]);
 
-            $promises[] = $this->http->requestAsync('GET', $url, $this->getHeaders())->then(
-                $ok($cName, $type, $url),
-                $error($cName, $type, $url)
+            $promises[] = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive(
+                    $this->getHeaders(),
+                    [
+                        'user_data' => [
+                            'ok' => $ok($cName, $type, $url),
+                            'error' => $error($cName, $type, $url),
+                        ],
+                    ],
+                )
             );
         }
 
@@ -280,6 +306,9 @@ class PlexServer implements ServerInterface
         return $promises;
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -298,7 +327,7 @@ class PlexServer implements ServerInterface
                     }
 
                     try {
-                        $content = $response->getBody()->getContents();
+                        $content = $response->getContent(false);
 
                         $this->logger->debug(
                             sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
@@ -324,7 +353,7 @@ class PlexServer implements ServerInterface
                     $this->processImport($mapper, $type, $cName, $payload['MediaContainer']['Metadata'] ?? [], $after);
                 };
             },
-            function (string $cName, string $type, Uri|string $url) {
+            function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     ['url' => $url]
@@ -333,6 +362,9 @@ class PlexServer implements ServerInterface
         );
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -351,7 +383,7 @@ class PlexServer implements ServerInterface
                     }
 
                     try {
-                        $content = $response->getBody()->getContents();
+                        $content = $response->getContent(false);
 
                         $this->logger->debug(
                             sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
@@ -377,7 +409,7 @@ class PlexServer implements ServerInterface
                     $this->processExport($mapper, $type, $cName, $payload['MediaContainer']['Metadata'] ?? []);
                 };
             },
-            function (string $cName, string $type, Uri|string $url) {
+            function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     ['url' => $url]
@@ -483,7 +515,21 @@ class PlexServer implements ServerInterface
                         )
                     );
 
-                $mapper->queue(new \GuzzleHttp\Psr7\Request('GET', $url, $this->getHeaders()['headers'] ?? []));
+                $mapper->queue(
+                    $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive(
+                            $this->getHeaders(),
+                            [
+                                'user_data' => [
+                                    'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
+                                    'itemName' => $iName,
+                                ],
+                            ]
+                        )
+                    )
+                );
             } catch (Throwable $e) {
                 $this->logger->error($e->getMessage());
             }
@@ -641,8 +687,12 @@ class PlexServer implements ServerInterface
         return false;
     }
 
-    public function setState(string $name, Uri $url, string|int|null $token = null, array $opts = []): ServerInterface
-    {
+    public function setState(
+        string $name,
+        UriInterface $url,
+        string|int|null $token = null,
+        array $opts = []
+    ): ServerInterface {
         if (true === $this->loaded) {
             throw new RuntimeException('setState: already called once');
         }

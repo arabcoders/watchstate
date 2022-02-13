@@ -8,10 +8,10 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use DateTimeInterface;
-use GuzzleHttp\Promise\PromiseInterface;
-use GuzzleHttp\Psr7\Uri;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 interface ServerInterface
 {
@@ -19,13 +19,13 @@ interface ServerInterface
      * Initiate Server. It should return **NEW OBJECT**
      *
      * @param string $name
-     * @param Uri $url
+     * @param UriInterface $url
      * @param null|int|string $token
      * @param array $options
      *
      * @return self
      */
-    public function setUp(string $name, Uri $url, null|string|int $token = null, array $options = []): self;
+    public function setUp(string $name, UriInterface $url, null|string|int $token = null, array $options = []): self;
 
     /**
      * Inject Logger.
@@ -50,7 +50,7 @@ interface ServerInterface
      * @param ImportInterface $mapper
      * @param DateTimeInterface|null $after
      *
-     * @return array<array-key,PromiseInterface>
+     * @return array<array-key,ResponseInterface>
      */
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array;
 
@@ -60,7 +60,7 @@ interface ServerInterface
      * @param ExportInterface $mapper
      * @param DateTimeInterface|null $after
      *
-     * @return array<array-key,PromiseInterface>
+     * @return array<array-key,ResponseInterface>
      */
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
 }

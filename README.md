@@ -1,7 +1,7 @@
 # Warning
 
-This is an early release version, expect bugs and edge cases that we haven't encountered. Please keep that in mind that
-before running the tool. while its works for me, it might not work for your setup.
+This is an early release version, expect bugs and edge cases that we haven't encountered. Please keep that in mind
+before running this tool. while its works for me, it might not work for your setup.
 
 # Watch State Sync (Early Preview)
 

@@ -12,14 +12,15 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
-use GuzzleHttp\Promise\Utils;
-use GuzzleHttp\Psr7\Uri;
+use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ImportCommand extends Command
 {
@@ -115,7 +116,8 @@ class ImportCommand extends Command
             $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
         }
 
-        $promises = [];
+        /** @var array<ResponseInterface> $requests */
+        $requests = [];
 
         if (count($list) >= 1) {
             $this->mapper->loadData();
@@ -157,7 +159,7 @@ class ImportCommand extends Command
                 );
             }
 
-            array_push($promises, ...$class->pull($this->mapper, $after));
+            array_push($requests, ...$class->pull($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
                 $this->logger->notice(
@@ -168,9 +170,20 @@ class ImportCommand extends Command
             }
         }
 
-        $this->logger->notice(sprintf('Waiting on (%d) HTTP Requests.', count($promises)));
-        Utils::settle($promises)->wait();
-        $this->logger->notice(sprintf('Finished waiting on (%d) HTTP Requests.', count($promises)));
+        $this->logger->notice(sprintf('Waiting on (%d) HTTP Requests.', count($requests)));
+        foreach ($requests as $response) {
+            $requestData = $response->getInfo('user_data');
+            try {
+                if (200 === $response->getStatusCode()) {
+                    $requestData['ok']($response);
+                } else {
+                    $requestData['error']($response);
+                }
+            } catch (ExceptionInterface $e) {
+                $requestData['error']($e);
+            }
+        }
+        $this->logger->notice(sprintf('Finished waiting on (%d) HTTP Requests.', count($requests)));
 
         $this->logger->notice(sprintf('Committing (%d) Changes.', count($this->mapper)));
         $operations = $this->mapper->commit();

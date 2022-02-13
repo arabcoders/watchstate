@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\Extends\Date;
+use Nyholm\Psr7\Response;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 if (!function_exists('env')) {
@@ -233,26 +235,18 @@ if (!function_exists('saveWebhookPayload')) {
     }
 }
 
-if (!function_exists('array_merge_recursive_distinct')) {
-    function array_merge_recursive_distinct(array &$array1, array &$array2): array
+if (!function_exists('jsonResponse')) {
+    function jsonResponse(int $status, array $body, $headers = []): ResponseInterface
     {
-        $merged = $array1;
-        foreach ($array2 as $key => &$value) {
-            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
-                if (is_int($key)) {
-                    $merged[] = array_merge_recursive_distinct($merged[$key], $value);
-                } else {
-                    $merged[$key] = array_merge_recursive_distinct($merged[$key], $value);
-                }
-            } else {
-                if (is_int($key)) {
-                    $merged[] = $value;
-                } else {
-                    $merged[$key] = $value;
-                }
-            }
-        }
+        $headers['Content-Type'] = 'application/json';
 
-        return $merged;
+        return new Response(
+            status:  $status,
+            headers: $headers,
+            body:    json_encode(
+                         $body,
+                         JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
+                     )
+        );
     }
 }

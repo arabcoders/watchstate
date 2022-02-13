@@ -7,8 +7,7 @@ use App\Libs\Container;
 use App\Libs\HttpException;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
-use Laminas\Diactoros\Response\EmptyResponse;
-use Laminas\Diactoros\Response\JsonResponse;
+use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -99,43 +98,38 @@ $fn = function (ServerRequestInterface $request): ResponseInterface {
         $entity = $backend::parseWebhook($request);
 
         if (null === $entity || !$entity->hasGuids()) {
-            return new EmptyResponse(200, ['X-Status' => 'No GUIDs.']);
+            return new Response(status: 200, headers: ['X-Status' => 'No GUIDs.']);
         }
 
         $storage = Container::get(StorageInterface::class);
 
         if (null === ($backend = $storage->get($entity))) {
             $storage->insert($entity);
-            return new JsonResponse($entity->getAll(), 200);
+            return jsonResponse(status: 200, body: $entity->getAll());
         }
 
         if ($backend->updated > $entity->updated) {
-            return new EmptyResponse(200, ['X-Status' => 'Entity date is older than what available in storage.']);
+            return new Response(
+                status: 200,
+                headers: ['X-Status' => 'Entity date is older than what available in storage.']
+            );
         }
 
         if ($backend->apply($entity)->isChanged()) {
             $backend = $storage->update($backend);
 
-            return new JsonResponse($backend->getAll(), 200);
+            return jsonResponse(status: 200, body: $backend->getAll());
         }
 
-        return new EmptyResponse(200, ['X-Status' => 'Entity is unchanged.']);
+        return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
     } catch (HttpException $e) {
         Container::get(LoggerInterface::class)->error($e->getMessage());
 
         if (200 === $e->getCode()) {
-            return new EmptyResponse($e->getCode(), [
-                'X-Status' => $e->getMessage(),
-            ]);
+            return new Response(status: $e->getCode(), headers: ['X-Status' => $e->getMessage()]);
         }
 
-        return new JsonResponse(
-            [
-                'error' => true,
-                'message' => $e->getMessage(),
-            ],
-            $e->getCode()
-        );
+        return jsonResponse(status: $e->getCode(), body: ['error' => true, 'message' => $e->getMessage()]);
     }
 };
 

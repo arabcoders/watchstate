@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Scheduler;
 
+use DateTimeInterface;
+
 final class Scheduler
 {
     /**
@@ -48,10 +50,10 @@ final class Scheduler
     /**
      * Run the scheduler.
      *
-     * @param \DateTimeInterface $runTime Run at specific moment.
+     * @param DateTimeInterface $runTime Run at specific moment.
      * @return array  Executed tasks
      */
-    public function run(\DateTimeInterface $runTime): array
+    public function run(DateTimeInterface $runTime): array
     {
         foreach ($this->getQueuedTasks() as $task) {
             if (!$task->isDue($runTime)) {

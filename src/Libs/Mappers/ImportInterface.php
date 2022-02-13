@@ -6,10 +6,11 @@ namespace App\Libs\Mappers;
 
 use App\Libs\Entity\StateEntity;
 use App\Libs\Storage\StorageInterface;
+use Countable;
 use DateTimeImmutable;
 use Psr\Log\LoggerInterface;
 
-interface ImportInterface extends \Countable
+interface ImportInterface extends Countable
 {
     /**
      * Initiate Mapper.

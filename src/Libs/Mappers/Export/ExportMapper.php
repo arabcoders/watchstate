@@ -9,8 +9,8 @@ use App\Libs\Guid;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
-use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class ExportMapper implements ExportInterface
 {
@@ -25,7 +25,7 @@ final class ExportMapper implements ExportInterface
     private array $guids = [];
 
     /**
-     * @var array<RequestInterface> Queued Requests.
+     * @var array<ResponseInterface> Queued Requests.
      */
     private array $queue = [];
 
@@ -79,7 +79,7 @@ final class ExportMapper implements ExportInterface
         return $this->queue;
     }
 
-    public function queue(RequestInterface $request): self
+    public function queue(ResponseInterface $request): self
     {
         $this->queue[] = $request;
 

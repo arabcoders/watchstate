@@ -7,21 +7,20 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Extends\Request;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateTimeInterface;
-use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Psr7\Uri;
-use GuzzleHttp\RequestOptions;
 use JsonException;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
 class JellyfinServer implements ServerInterface
@@ -46,7 +45,7 @@ class JellyfinServer implements ServerInterface
         'UserDataSaved',
     ];
 
-    protected Uri|null $url = null;
+    protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected string|null $user = null;
     protected array $options = [];
@@ -54,12 +53,16 @@ class JellyfinServer implements ServerInterface
     protected bool $loaded = false;
     protected bool $isEmby = false;
 
-    public function __construct(protected Request $http, protected LoggerInterface $logger)
+    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
-    public function setUp(string $name, Uri $url, string|int|null $token = null, array $options = []): ServerInterface
-    {
+    public function setUp(
+        string $name,
+        UriInterface $url,
+        string|int|null $token = null,
+        array $options = []
+    ): ServerInterface {
         return (new self($this->http, $this->logger))->setState($name, $url, $token, $options);
     }
 
@@ -143,18 +146,23 @@ class JellyfinServer implements ServerInterface
     private function getHeaders(): array
     {
         $opts = [
-            RequestOptions::HTTP_ERRORS => false,
-            RequestOptions::TIMEOUT => $this->options['timeout'] ?? 0,
-            RequestOptions::CONNECT_TIMEOUT => $this->options['connect_timeout'] ?? 0,
-            RequestOptions::HEADERS => [
+            'headers' => [
                 'Accept' => 'application/json',
             ],
         ];
 
+        if (null !== ($this->options['timeout'] ?? null)) {
+            $opts['timeout'] = $this->options['timeout'];
+        }
+
+        if (null !== ($this->options['max_duration'] ?? null)) {
+            $opts['max_duration'] = $this->options['max_duration'];
+        }
+
         if (true === $this->isEmby) {
-            $opts[RequestOptions::HEADERS]['X-MediaBrowser-Token'] = $this->token;
+            $opts['headers']['X-MediaBrowser-Token'] = $this->token;
         } else {
-            $opts[RequestOptions::HEADERS]['X-Emby-Authorization'] = sprintf(
+            $opts['headers']['X-Emby-Authorization'] = sprintf(
                 'MediaBrowser Client="%s", Device="script", DeviceId="", Version="%s", Token="%s"',
                 Config::get('name'),
                 Config::get('version'),
@@ -162,12 +170,19 @@ class JellyfinServer implements ServerInterface
             );
         }
 
+        if (true === ($this->options['http2'] ?? false)) {
+            $opts['http_version'] = '2.0';
+        }
+
         return $opts;
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     protected function getLibraries(Closure $ok, Closure $error): array
     {
-        if (!($this->url instanceof Uri)) {
+        if (!($this->url instanceof UriInterface)) {
             throw new RuntimeException('No host was set.');
         }
 
@@ -196,9 +211,9 @@ class JellyfinServer implements ServerInterface
                 )
             );
 
-            $response = $this->http->request('GET', $url, $this->getHeaders());
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
-            $content = $response->getBody()->getContents();
+            $content = $response->getContent(false);
 
             $this->logger->debug(sprintf('===[ Sample from %s List library response ]===', $this->name));
             $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : 'Empty response body');
@@ -226,7 +241,7 @@ class JellyfinServer implements ServerInterface
                 Data::add($this->name, 'no_import_update', true);
                 return [];
             }
-        } catch (GuzzleException $e) {
+        } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage());
             Data::add($this->name, 'no_import_update', true);
             return [];
@@ -285,9 +300,18 @@ class JellyfinServer implements ServerInterface
 
             $this->logger->debug(sprintf('Requesting %s - %s library content.', $this->name, $cName), ['url' => $url]);
 
-            $promises[] = $this->http->requestAsync('GET', $url, $this->getHeaders())->then(
-                $ok($cName, $type, $url),
-                $error($cName, $type, $url)
+            $promises[] = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive(
+                    $this->getHeaders(),
+                    [
+                        'user_data' => [
+                            'ok' => $ok($cName, $type, $url),
+                            'error' => $error($cName, $type, $url),
+                        ],
+                    ]
+                )
             );
         }
 
@@ -308,6 +332,9 @@ class JellyfinServer implements ServerInterface
         return $promises;
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -326,7 +353,7 @@ class JellyfinServer implements ServerInterface
                     }
 
                     try {
-                        $content = $response->getBody()->getContents();
+                        $content = $response->getContent(false);
 
                         $this->logger->debug(
                             sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
@@ -352,7 +379,7 @@ class JellyfinServer implements ServerInterface
                     $this->processImport($mapper, $type, $cName, $payload['Items'] ?? [], $after);
                 };
             },
-            function (string $cName, string $type, Uri|string $url) {
+            function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     ['url' => $url]
@@ -361,6 +388,9 @@ class JellyfinServer implements ServerInterface
         );
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -379,7 +409,7 @@ class JellyfinServer implements ServerInterface
                     }
 
                     try {
-                        $content = $response->getBody()->getContents();
+                        $content = $response->getContent(false);
 
                         $this->logger->debug(
                             sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
@@ -405,7 +435,7 @@ class JellyfinServer implements ServerInterface
                     $this->processExport($mapper, $type, $cName, $payload['Items'] ?? []);
                 };
             },
-            function (string $cName, string $type, Uri|string $url) {
+            function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     ['url' => $url]
@@ -498,10 +528,18 @@ class JellyfinServer implements ServerInterface
                 $this->logger->debug(sprintf('(%d/%d) Queuing %s.', $total, $x, $iName), ['url' => $this->url]);
 
                 $mapper->queue(
-                    new \GuzzleHttp\Psr7\Request(
+                    $this->http->request(
                         1 === $entity->watched ? 'POST' : 'DELETE',
-                        $this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item['Id'])),
-                        $this->getHeaders()['headers'] ?? []
+                        (string)$this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item['Id'])),
+                        array_replace_recursive(
+                            $this->getHeaders(),
+                            [
+                                'user_data' => [
+                                    'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
+                                    'itemName' => $iName,
+                                ],
+                            ]
+                        )
                     )
                 );
             } catch (Throwable $e) {
@@ -648,8 +686,12 @@ class JellyfinServer implements ServerInterface
         return false;
     }
 
-    public function setState(string $name, Uri $url, string|int|null $token = null, array $opts = []): ServerInterface
-    {
+    public function setState(
+        string $name,
+        UriInterface $url,
+        string|int|null $token = null,
+        array $opts = []
+    ): ServerInterface {
         if (true === $this->loaded) {
             throw new RuntimeException('setState: already called once');
         }
