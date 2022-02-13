@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Libs\Config;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Scheduler\Task;
@@ -10,7 +9,6 @@ use App\Libs\Servers\EmbyServer;
 use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
 use App\Libs\Storage\PDO\PDOAdapter;
-use GuzzleHttp\RequestOptions;
 use Monolog\Logger;
 
 return (function () {
@@ -59,19 +57,21 @@ return (function () {
         ],
     ];
 
-    $config['request'] = [
+    $config['http'] = [
         'default' => [
             'options' => [
-                RequestOptions::FORCE_IP_RESOLVE => 'v4',
-                RequestOptions::HEADERS => [
-                    'User-Agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'WatchState/' . Config::get('version'),
+                'headers' => [
+                    'User-Agent' => 'WatchState/' . ag($config, 'version'),
                 ],
-            ]
-        ],
-        'export' => [
-            'concurrency' => 75
+                'extra' => [
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                    ],
+                ],
+            ],
         ],
     ];
+
 
     $config['debug'] = [
         'profiler' => [

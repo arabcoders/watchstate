@@ -9,25 +9,21 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Extends\Request;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Servers\ServerInterface;
-use Generator;
-use GuzzleHttp\Pool;
-use GuzzleHttp\Promise\Utils;
-use GuzzleHttp\Psr7\Uri;
-use Psr\Http\Message\ResponseInterface;
+use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\Yaml\Yaml;
-use Throwable;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 class ExportCommand extends Command
 {
-    public function __construct(private ExportInterface $mapper, private Request $http, private LoggerInterface $logger)
+    public function __construct(private ExportInterface $mapper, private LoggerInterface $logger)
     {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -43,13 +39,6 @@ class ExportCommand extends Command
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export.')
-            ->addOption(
-                'concurrency',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'How many parallel requests to send.',
-                (int)Config::get('request.export.concurrency')
-            )
             ->addOption(
                 'servers-filter',
                 's',
@@ -126,7 +115,7 @@ class ExportCommand extends Command
             $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
         }
 
-        $promises = [];
+        $requests = [];
 
         if (count($list) >= 1) {
             $this->mapper->loadData();
@@ -168,7 +157,7 @@ class ExportCommand extends Command
                 );
             }
 
-            array_push($promises, ...$class->push($this->mapper, $after));
+            array_push($requests, ...$class->push($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_export_update', $name))) {
                 $this->logger->notice(
@@ -179,9 +168,20 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice(sprintf('Waiting on (%d) (Compare State) Requests.', count($promises)));
-        Utils::settle($promises)->wait();
-        $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($promises)));
+        $this->logger->notice(sprintf('Waiting on (%d) (Compare State) Requests.', count($requests)));
+        foreach ($requests as $response) {
+            $requestData = $response->getInfo('user_data');
+            try {
+                if (200 === $response->getStatusCode()) {
+                    $requestData['ok']($response);
+                } else {
+                    $requestData['error']($response);
+                }
+            } catch (ExceptionInterface $e) {
+                $requestData['error']($e);
+            }
+        }
+        $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($requests)));
 
         $changes = $this->mapper->getQueue();
 
@@ -190,25 +190,24 @@ class ExportCommand extends Command
             return self::SUCCESS;
         }
 
-        $pool = new Pool(
-            $this->http,
-            (function () use ($changes): Generator {
-                foreach ($changes as $request) {
-                    yield $request;
-                }
-            })(),
-            [
-                'concurrency' => $input->getOption('concurrency'),
-                'fulfilled' => function (ResponseInterface $response) {
-                },
-                'rejected' => function (Throwable $reason) {
-                    $this->logger->error($reason->getMessage());
-                },
-            ]
-        );
-
         $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', count($changes)));
-        $pool->promise()->wait();
+        foreach ($changes as $response) {
+            $requestData = $response->getInfo('user_data');
+            try {
+                if (200 !== $response->getStatusCode()) {
+                    throw new ServerException($response);
+                }
+                $this->logger->debug(
+                    sprintf(
+                        'Processed: State (%s) - %s',
+                        ag($requestData, 'state', '??'),
+                        ag($requestData, 'itemName', '??'),
+                    )
+                );
+            } catch (ExceptionInterface $e) {
+                $this->logger->error($e->getMessage());
+            }
+        }
         $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($changes)));
 
         // -- Update Server.yaml with new lastSync date.

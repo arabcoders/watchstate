@@ -7,8 +7,8 @@ namespace App\Libs\Mappers;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
-use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 interface ExportInterface
 {
@@ -40,11 +40,11 @@ interface ExportInterface
     /**
      * Queue State change request.
      *
-     * @param RequestInterface $request
+     * @param ResponseInterface $request
      *
      * @return self
      */
-    public function queue(RequestInterface $request): self;
+    public function queue(ResponseInterface $request): self;
 
     /**
      * Inject Logger.

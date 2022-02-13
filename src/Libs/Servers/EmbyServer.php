@@ -7,8 +7,8 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\HttpException;
-use GuzzleHttp\Psr7\Uri;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 
 class EmbyServer extends JellyfinServer
 {
@@ -23,7 +23,7 @@ class EmbyServer extends JellyfinServer
         'playback.scrobble',
     ];
 
-    public function setUp(string $name, Uri $url, string|int|null $token = null, array $options = []): ServerInterface
+    public function setUp(string $name, UriInterface $url, string|int|null $token = null, array $options = []): ServerInterface
     {
         $options['emby'] = true;
 

@@ -12,14 +12,15 @@ use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Storage\StorageInterface;
 use Closure;
-use Laminas\Diactoros\Response\EmptyResponse;
-use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use League\Container\ReflectionContainer;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\Response;
+use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -134,13 +135,16 @@ class KernelConsole
         EmitterInterface|null $emitter = null
     ): void {
         $emitter = $emitter ?? new SapiEmitter();
-        $request = $request ?? ServerRequestFactory::fromGlobals();
+        if (null === $request) {
+            $factory = new Psr17Factory();
+            $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))->fromGlobals();
+        }
 
         try {
             $response = $fn($request);
         } catch (Throwable $e) {
             Container::get(LoggerInterface::class)->error($e->getMessage());
-            $response = new EmptyResponse(500);
+            $response = new Response(500);
         }
 
         $emitter->emit($response);
