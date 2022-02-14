@@ -12,27 +12,21 @@ RUN mv "${PHP_INI_DIR}/php.ini-production" "${PHP_INI_DIR}/php.ini" && chmod +x 
     apk add --no-cache caddy nano curl procps net-tools iproute2 shadow runuser && \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
-# Create needed directories.
 RUN mkdir -p /app /config
 
-# App Verison
-#
-ARG APP_VERSION=latest
+COPY . /app
 
-# Add Latest Watchstate release.
-#
-COPY ./files/download.sh /usr/bin/downloadapp
-COPY ./files/Caddyfile /etc/caddy/Caddyfile
-COPY ./files/entrypoint.sh /entrypoint-docker
-COPY ./files/app_console.sh /usr/bin/console
-COPY ./files/cron.sh /usr/bin/run-app-cron
+RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/root && \
+    cp /app/docker/files/Caddyfile /etc/caddy/Caddyfile && \
+    cp /app/docker/files/entrypoint.sh /usr/bin/entrypoint-docker && \
+    cp /app/docker/files/app_console.sh /usr/bin/console && \
+    cp /app/docker/files/cron.sh /usr/bin/run-app-cron && \
+    rm -rf /app/docker/ /app/var/ /app/docs/ /app/.github/ && \
+    chmod +x /usr/bin/run-app-cron /usr/bin/console /usr/bin/entrypoint-docker && \
+    /usr/bin/composer --ansi --working-dir=/app/ -o --no-dev --no-progress --no-cache install && \
+    chown -R www-data:www-data /app /config
 
-RUN chmod +x /entrypoint-docker /usr/bin/console /usr/bin/run-app-cron /usr/bin/downloadapp && \
-    echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/root
-
-RUN /usr/bin/downloadapp ${APP_VERSION}
-
-ENTRYPOINT ["/entrypoint-docker"]
+ENTRYPOINT ["/usr/bin/entrypoint-docker"]
 
 WORKDIR /config
 
