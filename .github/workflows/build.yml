@@ -24,6 +24,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
             type=ref,event=tag
+            type=ref,event=pr
             type=sha,prefix={{branch}}-
           flavor: |
             latest=false
