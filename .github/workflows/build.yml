@@ -3,14 +3,16 @@ name: Build Container Images
 on:
   push:
     branches:
-      - '*'
+      - 'master'
+    tags:
+      - 'v*'
   pull_request:
+    branches:
+      - 'master'
 
 jobs:
   publish_docker_images:
-    runs-on: "ubuntu-20.04"
-
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.event_name == 'release'
+    runs-on: "ubuntu-latest"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -20,8 +22,9 @@ jobs:
         with:
           images: arabcoders/watchstate
           tags: |
-            type=raw,value=latest,enable=${{ endsWith(github.ref, 'master') }}
+            type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
             type=ref,event=tag
+            type=ref,event=pr
           flavor: |
             latest=false
       - name: Login to DockerHub
