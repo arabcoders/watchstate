@@ -3,10 +3,8 @@ name: Build Container Images
 on:
   push:
     branches:
-      - 'master'
+      - '*'
   pull_request:
-    branches:
-      - 'master'
 
 jobs:
   publish_docker_images:
