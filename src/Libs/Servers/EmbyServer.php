@@ -23,11 +23,16 @@ class EmbyServer extends JellyfinServer
         'playback.scrobble',
     ];
 
-    public function setUp(string $name, UriInterface $url, string|int|null $token = null, array $options = []): ServerInterface
-    {
+    public function setUp(
+        string $name,
+        UriInterface $url,
+        string|int|null $token = null,
+        string|int|null $userId = null,
+        array $options = []
+    ): ServerInterface {
         $options['emby'] = true;
 
-        return (new self($this->http, $this->logger))->setState($name, $url, $token, $options);
+        return (new self($this->http, $this->logger))->setState($name, $url, $token, $userId, $options);
     }
 
     public static function parseWebhook(ServerRequestInterface $request): StateEntity

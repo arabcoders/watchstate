@@ -100,41 +100,30 @@ mapper:
 
 # Servers.yaml
 
-Example of working servers. You can have as many servers as you want.
+Example of working server with all options. You can have as many servers as you want.
 
 ```yaml
-# The following instruction works for both jellyfin and emby. 
-jellyfin_basement_server:
-    # What backend server is this can be jellyfin or emby
-    type: jellyfin|emby #Choose one
-    # The Url for api access.
-    url: 'http://172.23.0.12:8096'
-    # Create API token via jellyfin (Dashboard > Advanced > API keys > +)
-    token: api-token
+my_home_server:
+    type: jellyfin|emby|plex # Choose one
+    url: 'https://mymedia.example.com' # The URL for the media server api
+    # User API Token.
+    # Jellyfin: Create API token via (Dashboard > Advanced > API keys > +)
+    # Emby: Create API token via (Manage Emby server > Advanced > API keys > + New Api Key)
+    # Plex: see on how to get your plex-token https://support.plex.tv/articles/204059436
+    token: user-api-token
+    # Get your user ID. For Jellyfin/emby only.
+    # Jellyfin : Dashboard > Server > Users > click your user > copy the userId= value
+    # Emby: Manage Emby server > Server > Users > click your user > copy the userId= value
+    # Plex: for plex managed users the X-Plex-Token acts as userId.
+    user: user-id
+    export:
+        enabled: true # Enable export.
+    import:
+        enabled: true # Enable import.
     options:
-        # Get your user id from jellyfin (Dashboard > Server > Users > click your user > copy the userId= value from url)
-        user: jellfin-user-id
-    export:
-        # Whether to enable exporting watch state back to this server.  
-        enabled: true
-    import:
-        # Whether to enable importing watch state from this server.  
-        enabled: false
-
-# For plex.
-my_plex_server:
-    # What backend server is this
-    type: plex
-    # The Url for api access.
-    url: 'http://172.23.0.12:8096'
-    # Get your plex token, (see https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-    token: api-token
-    export:
-        # Whether to enable exporting watch state back to this server.  
-        enabled: true
-    import:
-        # Whether to enable importing watch state from this server.  
-        enabled: false
+        http2: false # Enable HTTP/2 support for faster http requests (server must support http 2.0).
+        importUnwatched: false # By default, We do not import unwatched state to enable support, Set this to true. Webhooks can set unwatched state as they are explicit user action. 
+        exportIgnoreDate: false # By default, we respect the server watch date. To override the check, set this to true.
 ```
 
 # Running Webhook server.
@@ -159,7 +148,7 @@ server has different webhook payload.
 ### [YOUR_API_KEY]
 
 Change this parameter to your api key you can find it by viewing ``config/config/config.yaml`` under the key
-of ``webhook.apikey``
+of ``webhook.apikey``.
 
 # Configuring Media servers to send webhook events.
 
@@ -224,3 +213,32 @@ environment:
 ```
 
 restart your docker container for changes to take effect.
+
+# FAQ
+
+---
+
+### (Q01): How to update new server watched state without overwriting the existing watch state?
+
+Add the server, disable the import operation, and enable export. Then run the following commands.
+
+```bash
+docker exec -ti watchstate console state:export --vvrm --ignore-date --force-full --servers-filter [SERVER_NAME]
+```
+
+### [SERVER_NAME]
+
+Replace `[SERVER_NAME]` with what you have chosen to name your server in config e.g. my_home_server
+
+this command will force export your current database state back to the selected server. If the operation is successful
+you can then enable the import feature if you want.
+
+### (Q02): Is there support for Multi-user setup?
+
+No, Not at this time. The database design centered on single user. However, It's possible to run container for each
+user.
+
+Note: for Plex managed users you can log in via managed user and then extract the user x-plex-token (this token acts as
+userId for plex)
+
+For jellyfin/emby, you can use same api-token and just replace the userId.

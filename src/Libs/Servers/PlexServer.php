@@ -59,6 +59,7 @@ class PlexServer implements ServerInterface
         string $name,
         UriInterface $url,
         string|int|null $token = null,
+        string|int|null $userId = null,
         array $options = []
     ): ServerInterface {
         return (new self($this->http, $this->logger))->setState($name, $url, $token, $options);
@@ -486,13 +487,15 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                if ($date->getTimestamp() > $entity->updated) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. Date is newer then what in db.', $total, $x, $iName)
-                    );
-                    Data::increment($this->name, $type . '_ignored_date_is_newer');
+                if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    if ($date->getTimestamp() >= $entity->updated) {
+                        $this->logger->debug(
+                            sprintf('(%d/%d) Ignoring %s. Date is newer then what in db.', $total, $x, $iName)
+                        );
+                        Data::increment($this->name, $type . '_ignored_date_is_newer');
 
-                    continue;
+                        continue;
+                    }
                 }
 
                 if ($isWatched === $entity->watched) {
@@ -572,6 +575,14 @@ class PlexServer implements ServerInterface
                     );
                 }
 
+                $isWatched = (int)($item['viewCount'] ?? 0);
+
+                if (0 === $isWatched && true !== ($this->options[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
+                    $this->logger->debug(sprintf('(%d/%d) Ignoring %s. Not watched.', $total, $x, $iName));
+                    Data::increment($this->name, $type . '_ignored_not_watched');
+                    continue;
+                }
+
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [['id' => $item['guid']]];
                 } else {
@@ -587,7 +598,6 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                $item['viewCount'] = (int)($item['viewCount'] ?? 0);
                 $date = (int)($item['lastViewedAt'] ?? $item['updatedAt'] ?? $item['addedAt'] ?? 0);
 
                 if (0 === $date) {
@@ -628,7 +638,7 @@ class PlexServer implements ServerInterface
                 $row = [
                     'type' => $type,
                     'updated' => $date,
-                    'watched' => (int)($item['viewCount'] >= 1),
+                    'watched' => $isWatched,
                     'meta' => $meta,
                     ...self::getGuids($type, $item['Guid'] ?? [])
                 ];

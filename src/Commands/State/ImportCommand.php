@@ -47,6 +47,12 @@ class ImportCommand extends Command
                 'Sync selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
+            ->addOption(
+                'import-unwatched',
+                null,
+                InputOption::VALUE_NONE,
+                'Import unwatched state (note: It Will set items to unwatched if the server has newer date on items)'
+            )
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
                 'stats-filter',
@@ -135,11 +141,18 @@ class ImportCommand extends Command
             $class = Container::get(ag($server, 'kind'));
             assert($class instanceof ServerInterface);
 
+            $opts = ag($server, 'server.options', []);
+
+            if ($input->getOption('import-unwatched')) {
+                $opts[ServerInterface::OPT_IMPORT_UNWATCHED] = true;
+            }
+
             $class = $class->setUp(
-                $name,
-                new Uri(ag($server, 'server.url')),
-                ag($server, 'server.token', null),
-                ag($server, 'server.options', [])
+                name:    $name,
+                url:     new Uri(ag($server, 'server.url')),
+                token:   ag($server, 'server.token', null),
+                userId:  ag($server, 'server.user', null),
+                options: $opts
             );
 
             if (null !== $logger) {
