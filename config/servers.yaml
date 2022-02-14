@@ -1,34 +1,28 @@
+my_jellyfin_server:
+  type: jellyfin
+  url: 'http://172.23.0.12:8096'
+  token: api-token
+  user: user-id
+  export:
+    enabled: true
+  import:
+    enabled: true
+
+my_emby_server:
+  type: emby
+  url: 'http://172.23.0.13:8096'
+  token: api-token
+  user: user-id
+  export:
+    enabled: true
+  import:
+    enabled: true
+
 my_plex_server:
   type: plex
   url: 'http://172.23.0.11:32400'
   token: X-Plex-Token
   export:
     enabled: true
-    lastSync: null
   import:
     enabled: true
-    lastSync: null
-my_jellyfin_server:
-  type: jellyfin
-  url: 'http://172.23.0.12:8096'
-  token: api-token
-  options:
-    user: user-id
-  export:
-    enabled: true
-    lastSync: null
-  import:
-    enabled: true
-    lastSync: null
-my_emby_server:
-  type: emby
-  url: 'http://172.23.0.13:8096'
-  token: api-token
-  options:
-    user: user-id
-  export:
-    enabled: true
-    lastSync: null
-  import:
-    enabled: true
-    lastSync: null

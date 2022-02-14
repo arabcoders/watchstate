@@ -15,17 +15,27 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 interface ServerInterface
 {
+    public const OPT_IMPORT_UNWATCHED = 'importUnwatched';
+    public const OPT_EXPORT_IGNORE_DATE = 'exportIgnoreDate';
+
     /**
      * Initiate Server. It should return **NEW OBJECT**
      *
      * @param string $name
      * @param UriInterface $url
      * @param null|int|string $token
+     * @param null|int|string $userId
      * @param array $options
      *
      * @return self
      */
-    public function setUp(string $name, UriInterface $url, null|string|int $token = null, array $options = []): self;
+    public function setUp(
+        string $name,
+        UriInterface $url,
+        null|string|int $token = null,
+        null|string|int $userId = null,
+        array $options = []
+    ): self;
 
     /**
      * Inject Logger.

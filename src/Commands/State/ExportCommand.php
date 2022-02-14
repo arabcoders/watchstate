@@ -46,6 +46,12 @@ class ExportCommand extends Command
                 'Sync selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
+            ->addOption(
+                'ignore-date',
+                null,
+                InputOption::VALUE_NONE,
+                'Ignore date comparison, and update server watched state to match database.'
+            )
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
                 'stats-filter',
@@ -133,11 +139,18 @@ class ExportCommand extends Command
             $class = Container::get(ag($server, 'kind'));
             assert($class instanceof ServerInterface);
 
+            $opts = ag($server, 'server.options', []);
+
+            if ($input->getOption('ignore-date')) {
+                $opts[ServerInterface::OPT_EXPORT_IGNORE_DATE] = true;
+            }
+
             $class = $class->setUp(
-                $name,
-                new Uri(ag($server, 'server.url')),
-                ag($server, 'server.token', null),
-                ag($server, 'server.options', [])
+                name:    $name,
+                url:     new Uri(ag($server, 'server.url')),
+                token:   ag($server, 'server.token', null),
+                userId:  ag($server, 'server.user', null),
+                options: $opts
             );
 
             if (null !== $logger) {

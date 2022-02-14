@@ -61,9 +61,10 @@ class JellyfinServer implements ServerInterface
         string $name,
         UriInterface $url,
         string|int|null $token = null,
+        string|int|null $userId = null,
         array $options = []
     ): ServerInterface {
-        return (new self($this->http, $this->logger))->setState($name, $url, $token, $options);
+        return (new self($this->http, $this->logger))->setState($name, $url, $token, $userId, $options);
     }
 
     public function setLogger(LoggerInterface $logger): ServerInterface
@@ -506,16 +507,18 @@ class JellyfinServer implements ServerInterface
                     continue;
                 }
 
-                if ($date->getTimestamp() > $entity->updated) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. Date is newer then what in db.', $total, $x, $iName)
-                    );
-                    Data::increment($this->name, $type . '_ignored_date_is_newer');
+                if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    if ($date->getTimestamp() >= $entity->updated) {
+                        $this->logger->debug(
+                            sprintf('(%d/%d) Ignoring %s. Date is newer then what in db.', $total, $x, $iName)
+                        );
+                        Data::increment($this->name, $type . '_ignored_date_is_newer');
 
-                    continue;
+                        continue;
+                    }
                 }
 
-                $isWatched = (int)($item['UserData']['Played'] ?? false);
+                $isWatched = (int)(bool)($item['UserData']['Played'] ?? false);
 
                 if ($isWatched === $entity->watched) {
                     $this->logger->debug(
@@ -585,6 +588,14 @@ class JellyfinServer implements ServerInterface
                     );
                 }
 
+                $isWatched = (int)(bool)($item['UserData']['Played'] ?? false);
+
+                if (0 === $isWatched && true !== ($this->options[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
+                    $this->logger->debug(sprintf('(%d/%d) Ignoring %s. Not watched.', $total, $x, $iName));
+                    Data::increment($this->name, $type . '_ignored_not_watched');
+                    continue;
+                }
+
                 if (!$this->hasSupportedIds($item['ProviderIds'] ?? [])) {
                     $this->logger->debug(
                         sprintf('(%d/%d) Ignoring %s. No supported guid.', $total, $x, $iName),
@@ -604,7 +615,7 @@ class JellyfinServer implements ServerInterface
 
                 $updatedAt = makeDate($date)->getTimestamp();
 
-                if ($after !== null && $after->getTimestamp() >= $updatedAt) {
+                if (null !== $after && $after->getTimestamp() >= $updatedAt) {
                     $this->logger->debug(
                         sprintf('(%d/%d) Ignoring %s. Not played since last sync.', $total, $x, $iName)
                     );
@@ -614,6 +625,7 @@ class JellyfinServer implements ServerInterface
                 }
 
                 $this->logger->debug(sprintf('(%d/%d) Processing %s.', $total, $x, $iName), ['url' => $this->url]);
+
                 if (StateEntity::TYPE_MOVIE === $type) {
                     $meta = [
                         'via' => $this->name,
@@ -636,7 +648,7 @@ class JellyfinServer implements ServerInterface
                 $row = [
                     'type' => $type,
                     'updated' => $updatedAt,
-                    'watched' => (int)($item['UserData']['Played'] ?? false),
+                    'watched' => $isWatched,
                     'meta' => $meta,
                     ...self::getGuids($type, $item['ProviderIds'] ?? []),
                 ];
@@ -690,19 +702,21 @@ class JellyfinServer implements ServerInterface
         string $name,
         UriInterface $url,
         string|int|null $token = null,
+        string|int|null $userId = null,
         array $opts = []
     ): ServerInterface {
         if (true === $this->loaded) {
             throw new RuntimeException('setState: already called once');
         }
 
+        if (null === $userId && null === ($opts['user'] ?? null)) {
+            throw new RuntimeException('Jellyfin/Emby media servers: require userId to be set.');
+        }
+
         $this->name = $name;
         $this->url = $url;
         $this->token = $token;
-        $this->user = $opts['user'] ?? null;
-        if (null !== ($opts['user'] ?? null)) {
-            unset($opts['user']);
-        }
+        $this->user = $userId ?? $opts['user'];
 
         $this->isEmby = (bool)($opts['emby'] ?? false);
 
