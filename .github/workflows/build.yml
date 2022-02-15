@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - 'master'
+      - 'dev'
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - 'master'
 
 jobs:
   publish_docker_images:
@@ -23,12 +21,12 @@ jobs:
           images: arabcoders/watchstate
           tags: |
             type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
+            type=raw,value=dev-latest,enable=${{ endsWith(github.ref, '/dev') }}
             type=ref,event=tag
-            type=ref,event=pr
+            type=sha
           flavor: |
             latest=false
       - name: Login to DockerHub
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -37,6 +35,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
