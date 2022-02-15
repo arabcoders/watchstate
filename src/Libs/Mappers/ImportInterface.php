@@ -63,10 +63,11 @@ interface ImportInterface extends Countable
      *
      * @param string $bucket bucket name.
      * @param StateEntity $entity
+     * @param array $opts
      *
      * @return self
      */
-    public function add(string $bucket, StateEntity $entity): self;
+    public function add(string $bucket, StateEntity $entity, array $opts = []): self;
 
     /**
      * Get Entity.

@@ -115,7 +115,7 @@ final class MemoryMapper implements ImportInterface
         return $arr;
     }
 
-    public function add(string $bucket, StateEntity $entity): self
+    public function add(string $bucket, StateEntity $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
             Data::increment($bucket, $entity->type . '_failed_no_guid');
