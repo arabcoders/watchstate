@@ -3,17 +3,16 @@ services:
   watchstate:
     container_name: watchstate
     restart: unless-stopped
-    build:
-      context: .
-      args:
-        APP_VERSION: latest
+    build: .
     environment:
-      WS_UID: 1000
-      WS_GID: 1000
-      WS_CRON: 0
+      WS_UID: ${UID:-1000}
+      WS_GID: ${GID:-1000}
+      WS_WEBHOOK_ENABLE: 1
       WS_CRON_IMPORT: 1
       WS_CRON_EXPORT: 1
+      WS_CRON_EXPORT_AT: '*/2 * * * *'
     ports:
       - "8081:80"
     volumes:
+      - ../:/app
       - ./config:/config:rw

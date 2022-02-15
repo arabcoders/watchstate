@@ -10,29 +10,16 @@ ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/do
 RUN mv "${PHP_INI_DIR}/php.ini-production" "${PHP_INI_DIR}/php.ini" && chmod +x /usr/bin/install-php-extensions && \
     sync && install-php-extensions pdo mbstring ctype sqlite3 json opcache xhprof && \
     apk add --no-cache caddy nano curl procps net-tools iproute2 shadow runuser && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer && \
+    mkdir -p /app /config
 
-# Create needed directories.
-RUN mkdir -p /app /config
-
-# App Verison
-#
-ARG APP_VERSION=latest
-
-# Add Latest Watchstate release.
-#
-COPY ./files/download.sh /usr/bin/downloadapp
+COPY ./files/entrypoint.sh /usr/bin/entrypoint-docker
 COPY ./files/Caddyfile /etc/caddy/Caddyfile
-COPY ./files/entrypoint.sh /entrypoint-docker
-COPY ./files/app_console.sh /usr/bin/console
-COPY ./files/cron.sh /usr/bin/run-app-cron
 
-RUN chmod +x /entrypoint-docker /usr/bin/console /usr/bin/run-app-cron /usr/bin/downloadapp && \
-    echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/root
+RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
+    chmod +x /usr/bin/entrypoint-docker
 
-RUN /usr/bin/downloadapp ${APP_VERSION}
-
-ENTRYPOINT ["/entrypoint-docker"]
+ENTRYPOINT ["/usr/bin/entrypoint-docker"]
 
 WORKDIR /config
 

@@ -60,7 +60,7 @@ final class Run extends Command
         foreach ($tasks as $task) {
             $newTask = $this->makeTask($task);
 
-            if (true !== $newTask[Task::ENABLED] && $newTask[Task::NAME] !== $runSpecificTask) {
+            if (true !== $task[Task::ENABLED] && $task[Task::NAME] !== $runSpecificTask) {
                 continue;
             }
 
@@ -75,7 +75,7 @@ final class Run extends Command
 
         if (0 === $count) {
             $output->writeln(
-                '#@date <info>No Tasks Scheduled to run at this time.</info>',
+                '!{date} <info>No Tasks Scheduled to run at this time.</info>',
                 OutputInterface::VERBOSITY_VERY_VERBOSE
             );
         }

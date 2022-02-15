@@ -44,13 +44,13 @@ return (function () {
 
     $config['mapper'] = [
         'import' => [
-            'type' => MemoryMapper::class,
+            'type' => env('WS_IMPORT_MAPPER', MemoryMapper::class),
             'opts' => [
                 'lazyload' => true
             ],
         ],
         'export' => [
-            'type' => ExportMapper::class,
+            'type' => env('WS_EXPORT_MAPPER', ExportMapper::class),
             'opts' => [
                 'lazyload' => true
             ],
@@ -156,10 +156,10 @@ return (function () {
         'import' => [
             Task::NAME => 'import',
             Task::ENABLED => (bool)env('WS_CRON_IMPORT', true),
-            Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '1 */1 * * *'),
+            Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
-                '-vvrm' => null,
+                '-vvr' => null,
             ]
         ],
         'export' => [
@@ -168,7 +168,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
             Task::ARGS => [
-                '-vvrm' => null,
+                '-vvr' => null,
             ]
         ],
     ];
