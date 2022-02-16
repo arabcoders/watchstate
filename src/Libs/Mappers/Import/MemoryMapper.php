@@ -127,6 +127,12 @@ final class MemoryMapper implements ImportInterface
         }
 
         if (false === ($pointer = $this->getPointer($entity))) {
+            if (0 === $entity->watched && true !== ($opts[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
+                $this->logger->debug(sprintf('Ignoring %s. Not watched.', $name));
+                Data::increment($bucket, $entity->type . '_ignored_not_watched');
+                return $this;
+            }
+
             $this->objects[] = $entity;
 
             $pointer = array_key_last($this->objects);
