@@ -96,8 +96,8 @@ class PlexServer implements ServerInterface
             throw new HttpException(sprintf('Not allowed Event [%s]', $event), 200);
         }
 
-        if (StateEntity::TYPE_MOVIE === $type) {
-            $meta = [
+        $meta = match ($type) {
+            StateEntity::TYPE_MOVIE => [
                 'via' => $via,
                 'title' => ag($json, 'Metadata.title', ag($json, 'Metadata.originalTitle', '??')),
                 'year' => ag($json, 'Metadata.year', 0000),
@@ -105,9 +105,8 @@ class PlexServer implements ServerInterface
                 'webhook' => [
                     'event' => $event,
                 ],
-            ];
-        } else {
-            $meta = [
+            ],
+            StateEntity::TYPE_EPISODE => [
                 'via' => $via,
                 'series' => ag($json, 'Metadata.grandparentTitle', '??'),
                 'year' => ag($json, 'Metadata.year', 0000),
@@ -118,8 +117,9 @@ class PlexServer implements ServerInterface
                 'webhook' => [
                     'event' => $event,
                 ],
-            ];
-        }
+            ],
+            default => throw new HttpException('Invalid content type.', 400),
+        };
 
         $guids = ag($json, 'Metadata.Guid', []);
         $guids[] = ['id' => ag($json, 'Metadata.guid')];
@@ -131,6 +131,10 @@ class PlexServer implements ServerInterface
             'Metadata.lastViewedAt',
             ag($json, 'Metadata.updatedAt', ag($json, 'Metadata.addedAt', 0))
         );
+
+        if (0 === $date) {
+            throw new HttpException('Invalid Content date.', 400);
+        }
 
         $meta['payload'] = $json;
 
@@ -169,9 +173,6 @@ class PlexServer implements ServerInterface
         return $opts;
     }
 
-    /**
-     * @throws ExceptionInterface
-     */
     protected function getLibraries(Closure $ok, Closure $error): array
     {
         if (null === $this->url) {
@@ -221,7 +222,7 @@ class PlexServer implements ServerInterface
                 return [];
             }
         } catch (ExceptionInterface $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error(sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()));
             Data::add($this->name, 'no_import_update', true);
             return [];
         } catch (JsonException $e) {
@@ -275,19 +276,24 @@ class PlexServer implements ServerInterface
 
             $this->logger->debug(sprintf('Requesting %s - %s library content.', $this->name, $cName), ['url' => $url]);
 
-            $promises[] = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive(
-                    $this->getHeaders(),
-                    [
+            try {
+                $promises[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'ok' => $ok($cName, $type, $url),
                             'error' => $error($cName, $type, $url),
-                        ],
-                    ],
-                )
-            );
+                        ]
+                    ])
+                );
+            } catch (ExceptionInterface $e) {
+                $this->logger->error(
+                    sprintf('Request to %s library - %s failed. Reason: %s', $this->name, $cName, $e->getMessage()),
+                    ['url' => $url]
+                );
+                continue;
+            }
         }
 
         if (0 === count($promises)) {
@@ -307,27 +313,24 @@ class PlexServer implements ServerInterface
         return $promises;
     }
 
-    /**
-     * @throws ExceptionInterface
-     */
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
             function (string $cName, string $type) use ($after, $mapper) {
                 return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            sprintf(
-                                'Request to %s - %s responded with (%d) unexpected code.',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            )
-                        );
-                        return;
-                    }
-
                     try {
+                        if (200 !== $response->getStatusCode()) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    $this->name,
+                                    $cName,
+                                    $response->getStatusCode()
+                                )
+                            );
+                            return;
+                        }
+
                         $content = $response->getContent(false);
 
                         $this->logger->debug(
@@ -363,27 +366,23 @@ class PlexServer implements ServerInterface
         );
     }
 
-    /**
-     * @throws ExceptionInterface
-     */
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
             function (string $cName, string $type) use ($mapper) {
                 return function (ResponseInterface $response) use ($mapper, $cName, $type) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            sprintf(
-                                'Request to %s - %s responded with (%d) unexpected code.',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            )
-                        );
-                        return;
-                    }
-
                     try {
+                        if (200 !== $response->getStatusCode()) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    $this->name,
+                                    $cName,
+                                    $response->getStatusCode()
+                                )
+                            );
+                            return;
+                        }
                         $content = $response->getContent(false);
 
                         $this->logger->debug(
@@ -546,13 +545,10 @@ class PlexServer implements ServerInterface
         array $items,
         DateTimeInterface|null $after = null
     ): void {
-        $x = 0;
-        $total = count($items);
         Data::increment($this->name, $type . '_total', count($items));
 
         foreach ($items as $item) {
             try {
-                $x++;
                 if (StateEntity::TYPE_MOVIE === $type) {
                     $iName = sprintf(
                         '%s - %s - [%s (%d)]',
@@ -575,25 +571,14 @@ class PlexServer implements ServerInterface
                     );
                 }
 
-                $isWatched = (int)($item['viewCount'] ?? 0);
-
-                if (0 === $isWatched && true !== ($this->options[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
-                    $this->logger->debug(sprintf('(%d/%d) Ignoring %s. Not watched.', $total, $x, $iName));
-                    Data::increment($this->name, $type . '_ignored_not_watched');
-                    continue;
-                }
-
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [['id' => $item['guid']]];
                 } else {
                     $item['Guid'][] = ['id' => $item['guid']];
                 }
 
-                if (!$this->hasSupportedIds($item['Guid'])) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. No supported guid.', $total, $x, $iName),
-                        $item['Guid'] ?? []
-                    );
+                if (!$this->hasSupportedIds($item['Guid'] ?? [])) {
+                    $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item['Guid'] ?? []);
                     Data::increment($this->name, $type . '_ignored_no_supported_guid');
                     continue;
                 }
@@ -601,20 +586,10 @@ class PlexServer implements ServerInterface
                 $date = (int)($item['lastViewedAt'] ?? $item['updatedAt'] ?? $item['addedAt'] ?? 0);
 
                 if (0 === $date) {
-                    $this->logger->error(sprintf('(%d/%d) Ignoring %s. No date is set.', $total, $x, $iName));
+                    $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
                     Data::increment($this->name, $type . '_ignored_no_date_is_set');
                     continue;
                 }
-
-                if (null !== $after && $after->getTimestamp() >= $date) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. Not played since last sync.', $total, $x, $iName)
-                    );
-                    Data::increment($this->name, $type . '_ignored_not_played_since_last_sync');
-                    continue;
-                }
-
-                $this->logger->debug(sprintf('(%d/%d) Processing %s.', $total, $x, $iName));
 
                 if (StateEntity::TYPE_MOVIE === $type) {
                     $meta = [
@@ -638,12 +613,15 @@ class PlexServer implements ServerInterface
                 $row = [
                     'type' => $type,
                     'updated' => $date,
-                    'watched' => $isWatched,
+                    'watched' => (int)(bool)($item['viewCount'] ?? false),
                     'meta' => $meta,
                     ...self::getGuids($type, $item['Guid'] ?? [])
                 ];
 
-                $mapper->add($this->name, new StateEntity($row));
+                $mapper->add($this->name, $iName, new StateEntity($row), [
+                    'after' => $after,
+                    self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
+                ]);
             } catch (Throwable $e) {
                 $this->logger->error($e->getMessage());
             }

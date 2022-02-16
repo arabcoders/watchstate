@@ -65,8 +65,8 @@ class EmbyServer extends JellyfinServer
             throw new HttpException('No DateCreated value is set.', 200);
         }
 
-        if (StateEntity::TYPE_MOVIE === $type) {
-            $meta = [
+        $meta = match ($type) {
+            StateEntity::TYPE_MOVIE => [
                 'via' => $via,
                 'title' => ag($json, 'Item.Name', ag($json, 'Item.OriginalTitle', '??')),
                 'year' => ag($json, 'Item.ProductionYear', 0000),
@@ -80,9 +80,8 @@ class EmbyServer extends JellyfinServer
                 'webhook' => [
                     'event' => $event,
                 ],
-            ];
-        } else {
-            $meta = [
+            ],
+            StateEntity::TYPE_EPISODE => [
                 'via' => $via,
                 'series' => ag($json, 'Item.SeriesName', '??'),
                 'year' => ag($json, 'Item.ProductionYear', 0000),
@@ -95,8 +94,9 @@ class EmbyServer extends JellyfinServer
                 'webhook' => [
                     'event' => $event,
                 ],
-            ];
-        }
+            ],
+            default => throw new HttpException('Invalid content type.', 400),
+        };
 
         if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
             $isWatched = 1;
