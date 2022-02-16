@@ -8,8 +8,10 @@ use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
+use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 
 final class MemoryMapper implements ImportInterface
@@ -52,12 +54,13 @@ final class MemoryMapper implements ImportInterface
      */
     private bool $lazyLoad = false;
 
-    public function __construct(private StorageInterface $storage)
+    public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
     }
 
     public function setLogger(LoggerInterface $logger): self
     {
+        $this->logger = $logger;
         $this->storage->setLogger($logger);
         return $this;
     }
@@ -115,9 +118,10 @@ final class MemoryMapper implements ImportInterface
         return $arr;
     }
 
-    public function add(string $bucket, StateEntity $entity): self
+    public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
+            $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
         }
@@ -130,8 +134,43 @@ final class MemoryMapper implements ImportInterface
 
             Data::increment($bucket, $entity->type . '_added');
             $this->addGuids($this->objects[$pointer], $pointer);
+            $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
 
             return $this;
+        }
+
+        // -- Ignore unwatched Item.
+        if (0 === $entity->watched && true !== ($opts[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
+            // -- check for updated GUIDs.
+            if ($this->objects[$pointer]->apply($entity, guidOnly: true)->isChanged()) {
+                $this->changed[$pointer] = $pointer;
+                Data::increment($bucket, $entity->type . '_updated');
+                $this->addGuids($this->objects[$pointer], $pointer);
+                $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $this->objects[$pointer]->diff());
+                return $this;
+            }
+
+            $this->logger->debug(sprintf('Ignoring %s. Not watched.', $name));
+            Data::increment($bucket, $entity->type . '_ignored_not_watched');
+            return $this;
+        }
+
+        // -- Ignore old item.
+        if (null !== ($opts['after'] ?? null) && ($opts['after'] instanceof DateTimeInterface)) {
+            if ($opts['after']->getTimestamp() >= $entity->updated) {
+                // -- check for updated GUIDs.
+                if ($this->objects[$pointer]->apply($entity, guidOnly: true)->isChanged()) {
+                    $this->changed[$pointer] = $pointer;
+                    Data::increment($bucket, $entity->type . '_updated');
+                    $this->addGuids($this->objects[$pointer], $pointer);
+                    $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $this->objects[$pointer]->diff());
+                    return $this;
+                }
+
+                $this->logger->debug(sprintf('Ignoring %s. Not played since last sync.', $name));
+                Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
+                return $this;
+            }
         }
 
         $this->objects[$pointer] = $this->objects[$pointer]->apply($entity);
@@ -140,9 +179,12 @@ final class MemoryMapper implements ImportInterface
             Data::increment($bucket, $entity->type . '_updated');
             $this->changed[$pointer] = $pointer;
             $this->addGuids($this->objects[$pointer], $pointer);
-        } else {
-            Data::increment($bucket, $entity->type . '_ignored_no_change');
+            $this->logger->debug(sprintf('Updating %s. State changed.', $name), $this->objects[$pointer]->diff());
+            return $this;
         }
+
+        $this->logger->debug(sprintf('Ignoring %s. State unchanged.', $name));
+        Data::increment($bucket, $entity->type . '_ignored_no_change');
 
         return $this;
     }

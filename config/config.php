@@ -14,7 +14,7 @@ use Monolog\Logger;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.5-alpha',
+        'version' => 'v0.0.9-alpha',
         'tz' => null,
         'path' => fixPath(
             env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . DS . '..' . DS . 'var'))
@@ -24,7 +24,10 @@ return (function () {
     $config['storage'] = [
         'type' => PDOAdapter::class,
         'opts' => [
-            'dsn' => 'sqlite:' . ag($config, 'path') . DS . 'db' . DS . 'watchstate.db',
+            'dsn' => env(
+                'WS_STORAGE_PDO_DSN',
+                fn() => 'sqlite:' . ag($config, 'path') . DS . 'db' . DS . 'watchstate.db'
+            ),
             'username' => null,
             'password' => null,
             'options' => [],
@@ -46,13 +49,13 @@ return (function () {
         'import' => [
             'type' => env('WS_IMPORT_MAPPER', MemoryMapper::class),
             'opts' => [
-                'lazyload' => true
+                'lazyload' => (bool)env('WS_IMPORT_MAPPER_LAZYLOAD', false),
             ],
         ],
         'export' => [
             'type' => env('WS_EXPORT_MAPPER', ExportMapper::class),
             'opts' => [
-                'lazyload' => true
+                'lazyload' => (bool)env('WS_EXPORT_MAPPER_LAZYLOAD', false),
             ],
         ],
     ];
@@ -72,7 +75,6 @@ return (function () {
         ],
     ];
 
-
     $config['debug'] = [
         'profiler' => [
             'options' => [
@@ -87,21 +89,21 @@ return (function () {
     $config['logger'] = [
         'stderr' => [
             'type' => 'stream',
-            'enabled' => true,
-            'level' => Logger::DEBUG,
+            'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
+            'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
             'filename' => 'php://stderr',
         ],
         'file' => [
             'type' => 'stream',
-            'enabled' => false,
-            'level' => Logger::INFO,
-            'filename' => ag($config, 'path') . DS . 'logs' . DS . 'app.log',
+            'enabled' => env('WS_LOGGER_FILE_ENABLE', false),
+            'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
+            'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'path') . DS . 'logs' . DS . 'app.log'),
         ],
         'syslog' => [
             'type' => 'syslog',
-            'facility' => LOG_USER,
-            'enabled' => false,
-            'level' => Logger::INFO,
+            'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
+            'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', false),
+            'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
             'name' => ag($config, 'name'),
         ],
     ];

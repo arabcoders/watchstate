@@ -100,17 +100,16 @@ class JellyfinServer implements ServerInterface
 
         $date = $json['LastPlayedDate'] ?? $json['DateCreated'] ?? $json['PremiereDate'] ?? $json['Timestamp'] ?? null;
 
-        if (StateEntity::TYPE_MOVIE === $type) {
-            $meta = [
+        $meta = match ($type) {
+            StateEntity::TYPE_MOVIE => [
                 'via' => $via,
                 'title' => ag($json, 'Name', '??'),
                 'year' => ag($json, 'Year', 0000),
                 'webhook' => [
                     'event' => $event,
                 ],
-            ];
-        } else {
-            $meta = [
+            ],
+            StateEntity::TYPE_EPISODE => [
                 'via' => $via,
                 'series' => ag($json, 'SeriesName', '??'),
                 'year' => ag($json, 'Year', 0000),
@@ -120,8 +119,9 @@ class JellyfinServer implements ServerInterface
                 'webhook' => [
                     'event' => $event,
                 ],
-            ];
-        }
+            ],
+            default => throw new HttpException('Invalid content type.', 400),
+        };
 
         $guids = [];
 
@@ -178,9 +178,6 @@ class JellyfinServer implements ServerInterface
         return $opts;
     }
 
-    /**
-     * @throws ExceptionInterface
-     */
     protected function getLibraries(Closure $ok, Closure $error): array
     {
         if (!($this->url instanceof UriInterface)) {
@@ -301,19 +298,24 @@ class JellyfinServer implements ServerInterface
 
             $this->logger->debug(sprintf('Requesting %s - %s library content.', $this->name, $cName), ['url' => $url]);
 
-            $promises[] = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive(
-                    $this->getHeaders(),
-                    [
+            try {
+                $promises[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'ok' => $ok($cName, $type, $url),
                             'error' => $error($cName, $type, $url),
-                        ],
-                    ]
-                )
-            );
+                        ]
+                    ])
+                );
+            } catch (ExceptionInterface $e) {
+                $this->logger->error(
+                    sprintf('Request to %s library - %s failed. Reason: %s', $this->name, $cName, $e->getMessage()),
+                    ['url' => $url]
+                );
+                continue;
+            }
         }
 
         if (0 === count($promises)) {
@@ -333,9 +335,6 @@ class JellyfinServer implements ServerInterface
         return $promises;
     }
 
-    /**
-     * @throws ExceptionInterface
-     */
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -389,9 +388,6 @@ class JellyfinServer implements ServerInterface
         );
     }
 
-    /**
-     * @throws ExceptionInterface
-     */
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -558,14 +554,10 @@ class JellyfinServer implements ServerInterface
         array $items,
         DateTimeInterface|null $after = null
     ): void {
-        $x = 0;
-        $total = count($items);
-        Data::increment($this->name, $type . '_total', $total);
+        Data::increment($this->name, $type . '_total', count($items));
 
         foreach ($items as $item) {
             try {
-                $x++;
-
                 if (StateEntity::TYPE_MOVIE === $type) {
                     $iName = sprintf(
                         '%s - %s - [%s (%d)]',
@@ -588,19 +580,8 @@ class JellyfinServer implements ServerInterface
                     );
                 }
 
-                $isWatched = (int)(bool)($item['UserData']['Played'] ?? false);
-
-                if (0 === $isWatched && true !== ($this->options[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
-                    $this->logger->debug(sprintf('(%d/%d) Ignoring %s. Not watched.', $total, $x, $iName));
-                    Data::increment($this->name, $type . '_ignored_not_watched');
-                    continue;
-                }
-
                 if (!$this->hasSupportedIds($item['ProviderIds'] ?? [])) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. No supported guid.', $total, $x, $iName),
-                        $item['ProviderIds'] ?? []
-                    );
+                    $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item['ProviderIds'] ?? []);
                     Data::increment($this->name, $type . '_ignored_no_supported_guid');
                     continue;
                 }
@@ -608,23 +589,10 @@ class JellyfinServer implements ServerInterface
                 $date = $item['UserData']['LastPlayedDate'] ?? $item['DateCreated'] ?? $item['PremiereDate'] ?? null;
 
                 if (null === $date) {
-                    $this->logger->error(sprintf('(%d/%d) Ignoring %s. No date is set.', $total, $x, $iName));
+                    $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
                     Data::increment($this->name, $type . '_ignored_no_date_is_set');
                     continue;
                 }
-
-                $updatedAt = makeDate($date)->getTimestamp();
-
-                if (null !== $after && $after->getTimestamp() >= $updatedAt) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. Not played since last sync.', $total, $x, $iName)
-                    );
-                    Data::increment($this->name, $type . '_ignored_not_played_since_last_sync');
-
-                    continue;
-                }
-
-                $this->logger->debug(sprintf('(%d/%d) Processing %s.', $total, $x, $iName), ['url' => $this->url]);
 
                 if (StateEntity::TYPE_MOVIE === $type) {
                     $meta = [
@@ -647,13 +615,16 @@ class JellyfinServer implements ServerInterface
 
                 $row = [
                     'type' => $type,
-                    'updated' => $updatedAt,
-                    'watched' => $isWatched,
+                    'updated' => makeDate($date)->getTimestamp(),
+                    'watched' => (int)(bool)($item['UserData']['Played'] ?? false),
                     'meta' => $meta,
                     ...self::getGuids($type, $item['ProviderIds'] ?? []),
                 ];
 
-                $mapper->add($this->name, new StateEntity($row));
+                $mapper->add($this->name, $iName, new StateEntity($row), [
+                    'after' => $after,
+                    self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
+                ]);
             } catch (Throwable $e) {
                 $this->logger->error($e->getMessage());
             }

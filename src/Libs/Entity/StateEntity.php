@@ -99,13 +99,7 @@ final class StateEntity
 
     public function getAll(): array
     {
-        $arr = [];
-
-        foreach (self::$entityKeys as $key) {
-            $arr[$key] = $this->{$key};
-        }
-
-        return $arr;
+        return array_intersect_key((array)$this, array_flip(self::$entityKeys));
     }
 
     public function isChanged(): bool
@@ -124,13 +118,17 @@ final class StateEntity
         return false;
     }
 
-    public function apply(StateEntity $entity): self
+    public function apply(StateEntity $entity, bool $guidOnly = false): self
     {
         if ($this->isEqual($entity)) {
             return $this;
         }
 
         foreach ($entity->getAll() as $key => $val) {
+            if (true === $guidOnly && !str_starts_with($key, 'guid_')) {
+                continue;
+            }
+
             $this->updateValue($key, $entity);
         }
 

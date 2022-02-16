@@ -71,16 +71,12 @@ final class CliLogger implements LoggerInterface
         $debug = '';
 
         if ($this->debug) {
-            $debug = sprintf(
-                '[MU: %s | PMU: %s] ',
-                fsize(memory_get_usage() - BASE_MEMORY),
-                fsize(memory_get_peak_usage() - BASE_PEAK_MEMORY)
-            );
+            $debug = '[M: ' . fsize(memory_get_usage() - BASE_MEMORY) . '] ';
         }
 
         $levels = array_flip(Logger::getLevels());
 
-        $message = 'logger.' . ($levels[$level] ?? $level) . ': ' . $debug . $message;
+        $message = '[' . makeDate() . '] logger.' . ($levels[$level] ?? $level) . ': ' . $debug . $message;
 
         if (!empty($context)) {
             $list = [];

@@ -52,6 +52,7 @@ class ExportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison, and update server watched state to match database.'
             )
+            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
                 'stats-filter',
@@ -64,6 +65,14 @@ class ExportCommand extends Command
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        // -- Use Custom servers.yaml file.
+        if (($newConfig = $input->getOption('use-config'))) {
+            if (!is_string($newConfig) || !is_file($newConfig) || !is_readable($newConfig)) {
+                throw new RuntimeException('Unable to read data given config.');
+            }
+            Config::save('servers', Yaml::parseFile($newConfig));
+        }
+
         $list = [];
         $serversFilter = (string)$input->getOption('servers-filter');
         $selected = explode(',', $serversFilter);
@@ -225,7 +234,7 @@ class ExportCommand extends Command
 
         // -- Update Server.yaml with new lastSync date.
         file_put_contents(
-            Config::get('path') . DS . 'config' . DS . 'servers.yaml',
+            $newConfig ?? Config::get('path') . DS . 'config' . DS . 'servers.yaml',
             Yaml::dump(Config::get('servers', []), 8, 2)
         );
 
