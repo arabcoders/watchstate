@@ -31,16 +31,34 @@ class Command extends BaseCommand
             throw new RuntimeException('The profiler run was unsuccessful. No data was returned.');
         }
 
+        $removeKeys = [
+            'HTTP_USER_AGENT',
+            'PHP_AUTH_USER',
+            'REMOTE_USER',
+            'UNIQUE_ID'
+        ];
+
         $url = '/cli/' . Config::get('name') . '/' . Config::get('version') . '/' . $this->getName();
         $data['meta']['url'] = $data['meta']['simple_url'] = $url;
         $data['meta']['get'] = $data['meta']['env'] = [];
-        $data['meta']['SERVER'] = [
+        $data['meta']['SERVER'] = array_replace_recursive($data['meta']['SERVER'], [
             'APP_VERSION' => Config::get('version'),
             'PHP_VERSION' => PHP_VERSION,
             'PHP_VERSION_ID' => PHP_VERSION_ID,
             'PHP_OS' => PHP_OS,
+            'DOCKER' => env('in_docker') ? 'Yes' : 'No',
             'SYSTEM' => php_uname('s') . ' ' . php_uname('r') . ' ' . php_uname('v') . ' ' . php_uname('m'),
-        ];
+            'DOCUMENT_ROOT' => env('IN_DOCKER') ? '/docker/' : '/cli',
+            'REMOTE_ADDR' => '127.0.0.1',
+            'SERVER_ADDR' => '127.0.0.1',
+            'SERVER_NAME' => env('IN_DOCKER') ? 'docker.vm' : 'cli.php'
+        ]);
+
+        foreach ($removeKeys as $key) {
+            if (isset($data['meta'][$key])) {
+                unset($data['meta'][$key]);
+            }
+        }
 
         $profiler->save($data);
 
