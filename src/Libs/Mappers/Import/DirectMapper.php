@@ -7,8 +7,10 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
+use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -19,12 +21,13 @@ final class DirectMapper implements ImportInterface
         StateEntity::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
     ];
 
-    public function __construct(private StorageInterface $storage)
+    public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
     }
 
     public function setLogger(LoggerInterface $logger): self
     {
+        $this->logger = $logger;
         $this->storage->setLogger($logger);
         return $this;
     }
@@ -50,16 +53,17 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
-    public function add(string $bucket, StateEntity $entity, array $opts = []): self
+    public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
+            $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
         }
 
-        $record = $this->get($entity);
+        $item = $this->get($entity);
 
-        if (null === $entity->id && null === $record) {
+        if (null === $entity->id && null === $item) {
             try {
                 $this->storage->insert($entity);
             } catch (Throwable $e) {
@@ -69,14 +73,59 @@ final class DirectMapper implements ImportInterface
             }
             Data::increment($bucket, $entity->type . '_added');
             $this->operations[$entity->type]['added']++;
+            $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
             return $this;
         }
 
-        $record = $record->apply($entity);
+        // -- Ignore unwatched Item.
+        if (0 === $entity->watched && true !== ($opts[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
+            // -- check for updated GUIDs.
+            if ($item->apply($entity, guidOnly: true)->isChanged()) {
+                try {
+                    $this->storage->update($item);
+                    $this->operations[$entity->type]['updated']++;
+                    $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
+                    return $this;
+                } catch (Throwable $e) {
+                    $this->operations[$entity->type]['failed']++;
+                    Data::append($bucket, 'storage_error', $e->getMessage());
+                    return $this;
+                }
+            }
 
-        if ($record->isChanged()) {
+            $this->logger->debug(sprintf('Ignoring %s. Not watched.', $name));
+            Data::increment($bucket, $entity->type . '_ignored_not_watched');
+            return $this;
+        }
+
+        // -- Ignore old item.
+        if (null !== ($opts['after'] ?? null) && ($opts['after'] instanceof DateTimeInterface)) {
+            if ($opts['after']->getTimestamp() >= $entity->updated) {
+                // -- check for updated GUIDs.
+                if ($item->apply($entity, guidOnly: true)->isChanged()) {
+                    try {
+                        $this->storage->update($item);
+                        $this->operations[$entity->type]['updated']++;
+                        $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
+                        return $this;
+                    } catch (Throwable $e) {
+                        $this->operations[$entity->type]['failed']++;
+                        Data::append($bucket, 'storage_error', $e->getMessage());
+                        return $this;
+                    }
+                }
+
+                $this->logger->debug(sprintf('Ignoring %s. Not played since last sync.', $name));
+                Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
+                return $this;
+            }
+        }
+
+        $item = $item->apply($entity);
+
+        if ($item->isChanged()) {
             try {
-                $this->storage->update($record);
+                $this->storage->update($item);
             } catch (Throwable $e) {
                 $this->operations[$entity->type]['failed']++;
                 Data::append($bucket, 'storage_error', $e->getMessage());
