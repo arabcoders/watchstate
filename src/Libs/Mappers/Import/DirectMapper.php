@@ -64,6 +64,12 @@ final class DirectMapper implements ImportInterface
         $item = $this->get($entity);
 
         if (null === $entity->id && null === $item) {
+            if (0 === $entity->watched && true !== ($opts[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
+                $this->logger->debug(sprintf('Ignoring %s. Not watched.', $name));
+                Data::increment($bucket, $entity->type . '_ignored_not_watched');
+                return $this;
+            }
+
             try {
                 $this->storage->insert($entity);
             } catch (Throwable $e) {
@@ -71,6 +77,7 @@ final class DirectMapper implements ImportInterface
                 Data::append($bucket, 'storage_error', $e->getMessage());
                 return $this;
             }
+
             Data::increment($bucket, $entity->type . '_added');
             $this->operations[$entity->type]['added']++;
             $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
