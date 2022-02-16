@@ -302,7 +302,7 @@ final class PDOAdapter implements StorageInterface
             foreach ($entities as $entity) {
                 try {
                     if (null === $entity->id) {
-                        $this->logger->debug('Inserting ' . $entity->type, $entity->meta ?? []);
+                        $this->logger->debug('Adding ' . $entity->type, $entity->meta ?? []);
 
                         $this->insert($entity);
 
