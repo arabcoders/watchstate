@@ -545,7 +545,12 @@ class PlexServer implements ServerInterface
         array $items,
         DateTimeInterface|null $after = null
     ): void {
-        Data::increment($this->name, $type . '_total', count($items));
+        $total = count($items);
+        Data::increment($this->name, $type . '_total', $total);
+
+        $this->logger->notice(
+            sprintf('Parsing Successful %s - %s (%d) object response.', $this->name, $library, $total)
+        );
 
         foreach ($items as $item) {
             try {
@@ -626,6 +631,8 @@ class PlexServer implements ServerInterface
                 $this->logger->error($e->getMessage());
             }
         }
+
+        $this->logger->notice(sprintf('Finished Parsing %s - %s response.', $this->name, $library));
     }
 
     protected static function getGuids(string $type, array $guids): array

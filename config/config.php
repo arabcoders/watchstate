@@ -48,15 +48,11 @@ return (function () {
     $config['mapper'] = [
         'import' => [
             'type' => env('WS_IMPORT_MAPPER', MemoryMapper::class),
-            'opts' => [
-                'lazyload' => (bool)env('WS_IMPORT_MAPPER_LAZYLOAD', false),
-            ],
+            'opts' => [],
         ],
         'export' => [
             'type' => env('WS_EXPORT_MAPPER', ExportMapper::class),
-            'opts' => [
-                'lazyload' => (bool)env('WS_EXPORT_MAPPER_LAZYLOAD', false),
-            ],
+            'opts' => [],
         ],
     ];
 

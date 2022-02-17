@@ -131,12 +131,8 @@ class ImportCommand extends Command
             $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
         }
 
-        /** @var array<ResponseInterface> $requests */
-        $requests = [];
-
-        if (count($list) >= 1) {
-            $this->mapper->loadData();
-        }
+        /** @var array<array-key,ResponseInterface> $queue */
+        $queue = [];
 
         if (null !== $logger) {
             $this->logger = $logger;
@@ -181,7 +177,7 @@ class ImportCommand extends Command
                 );
             }
 
-            array_push($requests, ...$class->pull($this->mapper, $after));
+            array_push($queue, ...$class->pull($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
                 $this->logger->notice(
@@ -192,8 +188,9 @@ class ImportCommand extends Command
             }
         }
 
-        $this->logger->notice(sprintf('Waiting on (%d) HTTP Requests.', count($requests)));
-        foreach ($requests as $response) {
+        $this->logger->notice(sprintf('Waiting on (%d) HTTP Requests.', count($queue)));
+
+        foreach ($queue as $_key => $response) {
             $requestData = $response->getInfo('user_data');
             try {
                 if (200 === $response->getStatusCode()) {
@@ -204,8 +201,13 @@ class ImportCommand extends Command
             } catch (ExceptionInterface $e) {
                 $requestData['error']($e);
             }
+
+            $queue[$_key] = null;
+
+            gc_collect_cycles();
         }
-        $this->logger->notice(sprintf('Finished waiting on (%d) HTTP Requests.', count($requests)));
+
+        $this->logger->notice('Finished waiting HTTP Requests.');
 
         $this->logger->notice(sprintf('Committing (%d) Changes.', count($this->mapper)));
         $operations = $this->mapper->commit();

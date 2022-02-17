@@ -7,7 +7,6 @@ namespace App\Libs\Mappers;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Storage\StorageInterface;
 use Countable;
-use DateTimeImmutable;
 use Psr\Log\LoggerInterface;
 
 interface ImportInterface extends Countable
@@ -45,17 +44,6 @@ interface ImportInterface extends Countable
      * @return mixed
      */
     public function commit(): mixed;
-
-    /**
-     * Do Data retrieval if necessary.
-     *
-     * This method get called only once. on import. and once for every export.
-     *
-     * @param DateTimeImmutable|null $date
-     *
-     * @return self
-     */
-    public function loadData(DateTimeImmutable|null $date = null): self;
 
     /**
      * Add Entity. it has to search for

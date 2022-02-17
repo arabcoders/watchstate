@@ -9,7 +9,6 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
-use DateTimeImmutable;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -46,11 +45,6 @@ final class DirectMapper implements ImportInterface
     public function commit(): mixed
     {
         return $this->operations;
-    }
-
-    public function loadData(DateTimeImmutable|null $date = null): self
-    {
-        return $this;
     }
 
     public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self

@@ -29,11 +29,6 @@ final class ExportMapper implements ExportInterface
      */
     private array $queue = [];
 
-    /**
-     * @var bool Lazy lode entities.
-     */
-    private bool $lazyLoad = false;
-
     public function __construct(private StorageInterface $storage)
     {
     }
@@ -52,8 +47,6 @@ final class ExportMapper implements ExportInterface
 
     public function setUp(array $opts): self
     {
-        $this->lazyLoad = true === (bool)($opts['lazyload'] ?? false);
-
         return $this;
     }
 
@@ -63,7 +56,7 @@ final class ExportMapper implements ExportInterface
             return $this;
         }
 
-        foreach ($this->storage->getAll(false === $this->lazyLoad ? null : $date) as $entity) {
+        foreach ($this->storage->getAll($date) as $entity) {
             if (null !== ($this->objects[$entity->id] ?? null)) {
                 continue;
             }
@@ -116,7 +109,7 @@ final class ExportMapper implements ExportInterface
             }
         }
 
-        if (true === $this->lazyLoad && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[$lazyEntity->id] = $lazyEntity;
             $this->addGuids($this->objects[$lazyEntity->id], $lazyEntity->id);
             return $this->objects[$lazyEntity->id];
@@ -132,9 +125,7 @@ final class ExportMapper implements ExportInterface
 
     public function reset(): self
     {
-        $this->objects = [];
-        $this->guids = [];
-        $this->queue = [];
+        $this->objects = $this->guids = $this->queue = [];
 
         return $this;
     }

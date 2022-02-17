@@ -10,7 +10,6 @@ use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
-use DateTimeImmutable;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 
@@ -44,16 +43,6 @@ final class MemoryMapper implements ImportInterface
      */
     private array $changed = [];
 
-    /**
-     * @var bool Has the data been loaded from store?
-     */
-    private bool $loaded = false;
-
-    /**
-     * @var bool Lazy load data from storage. Otherwise, load all.
-     */
-    private bool $lazyLoad = false;
-
     public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
     }
@@ -73,49 +62,18 @@ final class MemoryMapper implements ImportInterface
 
     public function setUp(array $opts): ImportInterface
     {
-        $this->lazyLoad = true === (bool)($opts['lazyload'] ?? false);
         return $this;
     }
 
     public function commit(): mixed
     {
-        $state = $this->storage->commit($this->getChanged());
+        $state = $this->storage->commit(
+            array_intersect_key($this->objects, $this->changed)
+        );
 
         $this->reset();
 
         return $state;
-    }
-
-    public function loadData(DateTimeImmutable|null $date = null): self
-    {
-        if (true === $this->loaded) {
-            return $this;
-        }
-
-        if ($this->lazyLoad) {
-            $this->loaded = true;
-            return $this;
-        }
-
-        foreach ($this->storage->getAll($date) as $index => $entity) {
-            $this->objects[$index] = $entity;
-            $this->addGuids($this->objects[$index], $index);
-        }
-
-        $this->loaded = true;
-
-        return $this;
-    }
-
-    public function getChanged(): array
-    {
-        $arr = [];
-
-        foreach ($this->changed as $id) {
-            $arr[] = &$this->objects[$id];
-        }
-
-        return $arr;
     }
 
     public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self
@@ -210,7 +168,7 @@ final class MemoryMapper implements ImportInterface
             }
         }
 
-        if (true === $this->lazyLoad && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[] = $lazyEntity;
             $id = array_key_last($this->objects);
             $this->addGuids($this->objects[$id], $id);
@@ -264,7 +222,7 @@ final class MemoryMapper implements ImportInterface
             }
         }
 
-        if (true === $this->lazyLoad && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[] = $lazyEntity;
             $id = array_key_last($this->objects);
             $this->addGuids($this->objects[$id], $id);
