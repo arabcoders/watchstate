@@ -207,6 +207,7 @@ class ImportCommand extends Command
             gc_collect_cycles();
         }
 
+        unset($queue);
         $this->logger->notice('Finished waiting HTTP Requests.');
 
         $this->logger->notice(sprintf('Committing (%d) Changes.', count($this->mapper)));
