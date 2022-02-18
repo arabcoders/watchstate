@@ -8,7 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
@@ -36,10 +36,23 @@ class ImportCommand extends Command
     {
         $this->setName('state:import')
             ->setDescription('Import watch state from servers.')
-            ->addOption('read-mapper', null, InputOption::VALUE_OPTIONAL, 'Configured Mapper.', $this->mapper::class)
+            ->addOption('mapper-class', null, InputOption::VALUE_OPTIONAL, 'Configured Mapper.', $this->mapper::class)
+            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import.')
+            ->addOption(
+                'proxy',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'By default the HTTP client uses your ENV: HTTP_PROXY.'
+            )
+            ->addOption(
+                'no-proxy',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
+            )
             ->addOption(
                 'servers-filter',
                 's',
@@ -139,6 +152,12 @@ class ImportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
+        if (count($list) >= 1 && $input->getOption('mapper-preload')) {
+            $this->logger->info('Preloading all mapper data.');
+            $this->mapper->loadData();
+            $this->logger->info('Finished preloading mapper data.');
+        }
+
         foreach ($list as $server) {
             $name = ag($server, 'name');
             Data::addBucket($name);
@@ -150,6 +169,14 @@ class ImportCommand extends Command
 
             if ($input->getOption('import-unwatched')) {
                 $opts[ServerInterface::OPT_IMPORT_UNWATCHED] = true;
+            }
+
+            if ($input->getOption('proxy')) {
+                $opts['proxy'] = $input->getOption('proxy');
+            }
+
+            if ($input->getOption('no-proxy')) {
+                $opts['no_proxy'] = $input->getOption('no-proxy');
             }
 
             $class = $class->setUp(
@@ -227,12 +254,12 @@ class ImportCommand extends Command
             $output->writeln(
                 sprintf(
                     '<info>Movies [A: %d - U: %d - F: %d] - Episodes [A: %d - U: %d - F: %d]</info>',
-                    $operations[StateEntity::TYPE_MOVIE]['added'] ?? 0,
-                    $operations[StateEntity::TYPE_MOVIE]['updated'] ?? 0,
-                    $operations[StateEntity::TYPE_MOVIE]['failed'] ?? 0,
-                    $operations[StateEntity::TYPE_EPISODE]['added'] ?? 0,
-                    $operations[StateEntity::TYPE_EPISODE]['updated'] ?? 0,
-                    $operations[StateEntity::TYPE_EPISODE]['failed'] ?? 0,
+                    $operations[StateInterface::TYPE_MOVIE]['added'] ?? 0,
+                    $operations[StateInterface::TYPE_MOVIE]['updated'] ?? 0,
+                    $operations[StateInterface::TYPE_MOVIE]['failed'] ?? 0,
+                    $operations[StateInterface::TYPE_EPISODE]['added'] ?? 0,
+                    $operations[StateInterface::TYPE_EPISODE]['updated'] ?? 0,
+                    $operations[StateInterface::TYPE_EPISODE]['failed'] ?? 0,
                 )
             );
         }

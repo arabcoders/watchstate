@@ -27,7 +27,8 @@
         "nyholm/psr7": "^1.5",
         "nyholm/psr7-server": "^1.0",
         "laminas/laminas-httphandlerrunner": "^2.0",
-        "dragonmantank/cron-expression": "^3.0"
+        "dragonmantank/cron-expression": "^3.0",
+        "halaxa/json-machine": "^1.0"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",

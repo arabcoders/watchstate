@@ -7,6 +7,8 @@ use App\Libs\Extends\Date;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 if (!function_exists('env')) {
     function env(string $key, mixed $default = null): mixed
@@ -248,5 +250,21 @@ if (!function_exists('jsonResponse')) {
                          JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
                      )
         );
+    }
+}
+if (!function_exists('httpClientChunks')) {
+    /**
+     * Handle Response Stream as Chunks
+     *
+     * @param ResponseStreamInterface $responseStream
+     * @return Generator
+     *
+     * @throws TransportExceptionInterface
+     */
+    function httpClientChunks(ResponseStreamInterface $responseStream): Generator
+    {
+        foreach ($responseStream as $chunk) {
+            yield $chunk->getContent();
+        }
     }
 }

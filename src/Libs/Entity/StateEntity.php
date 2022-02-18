@@ -6,25 +6,8 @@ namespace App\Libs\Entity;
 
 use RuntimeException;
 
-final class StateEntity
+final class StateEntity implements StateInterface
 {
-    public const TYPE_MOVIE = 'movie';
-    public const TYPE_EPISODE = 'episode';
-    private static array $entityKeys = [
-        'id',
-        'type',
-        'updated',
-        'watched',
-        'meta',
-        'guid_plex',
-        'guid_imdb',
-        'guid_tvdb',
-        'guid_tmdb',
-        'guid_tvmaze',
-        'guid_tvrage',
-        'guid_anidb',
-    ];
-
     private array $data = [];
 
     /**
@@ -46,7 +29,7 @@ final class StateEntity
     public function __construct(array $data)
     {
         foreach ($data as $key => $val) {
-            if (!in_array($key, self::$entityKeys)) {
+            if (!in_array($key, StateInterface::ENTITY_KEYS)) {
                 continue;
             }
 
@@ -71,6 +54,11 @@ final class StateEntity
         }
 
         $this->data = $this->getAll();
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self($data);
     }
 
     public function diff(): array
@@ -99,7 +87,20 @@ final class StateEntity
 
     public function getAll(): array
     {
-        return array_intersect_key((array)$this, array_flip(self::$entityKeys));
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'updated' => $this->updated,
+            'watched' => $this->watched,
+            'meta' => $this->meta,
+            'guid_plex' => $this->guid_plex,
+            'guid_imdb' => $this->guid_imdb,
+            'guid_tvdb' => $this->guid_tvdb,
+            'guid_tmdb' => $this->guid_tmdb,
+            'guid_tvmaze' => $this->guid_tvmaze,
+            'guid_tvrage' => $this->guid_tvrage,
+            'guid_anidb' => $this->guid_anidb,
+        ];
     }
 
     public function isChanged(): bool
@@ -109,8 +110,8 @@ final class StateEntity
 
     public function hasGuids(): bool
     {
-        foreach ($this->getAll() as $key => $val) {
-            if (null !== $this->{$key} && str_starts_with($key, 'guid_')) {
+        foreach (StateInterface::ENTITY_GUIDS as $key) {
+            if (null !== $this->{$key}) {
                 return true;
             }
         }
@@ -118,7 +119,7 @@ final class StateEntity
         return false;
     }
 
-    public function apply(StateEntity $entity, bool $guidOnly = false): self
+    public function apply(StateInterface $entity, bool $guidOnly = false): self
     {
         if ($this->isEqual($entity)) {
             return $this;
@@ -135,7 +136,7 @@ final class StateEntity
         return $this;
     }
 
-    private function isEqual(StateEntity $entity): bool
+    private function isEqual(StateInterface $entity): bool
     {
         foreach ($this->getAll() as $key => $val) {
             $checkedValue = $this->isEqualValue($key, $entity);
@@ -147,7 +148,7 @@ final class StateEntity
         return true;
     }
 
-    private function isEqualValue(string $key, StateEntity $entity): bool
+    private function isEqualValue(string $key, StateInterface $entity): bool
     {
         if ($key === 'updated' || $key === 'watched') {
             return !($entity->updated > $this->updated && $entity->watched !== $this->watched);
@@ -160,7 +161,7 @@ final class StateEntity
         return true;
     }
 
-    private function updateValue(string $key, StateEntity $entity): void
+    private function updateValue(string $key, StateInterface $entity): void
     {
         if ($key === 'updated' || $key === 'watched') {
             if ($entity->updated > $this->updated && $entity->watched !== $this->watched) {
@@ -173,10 +174,5 @@ final class StateEntity
         if (null !== ($entity->{$key} ?? null) && $this->{$key} !== $entity->{$key}) {
             $this->{$key} = $entity->{$key};
         }
-    }
-
-    public static function getEntityKeys(): array
-    {
-        return self::$entityKeys;
     }
 }

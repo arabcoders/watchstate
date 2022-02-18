@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use DateTimeInterface;
@@ -50,9 +50,9 @@ interface ServerInterface
      * Parse Server Specific Webhook event. for play/unplayed event.
      *
      * @param ServerRequestInterface $request
-     * @return StateEntity|null
+     * @return StateInterface|null
      */
-    public static function parseWebhook(ServerRequestInterface $request): StateEntity|null;
+    public static function parseWebhook(ServerRequestInterface $request): StateInterface|null;
 
     /**
      * Import Watch state.

@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
@@ -14,10 +15,12 @@ use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateTimeInterface;
 use JsonException;
+use JsonMachine\Items;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use stdClass;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -72,7 +75,7 @@ class PlexServer implements ServerInterface
         return $this;
     }
 
-    public static function parseWebhook(ServerRequestInterface $request): StateEntity
+    public static function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         $payload = ag($request->getParsedBody(), 'payload', null);
 
@@ -97,7 +100,7 @@ class PlexServer implements ServerInterface
         }
 
         $meta = match ($type) {
-            StateEntity::TYPE_MOVIE => [
+            StateInterface::TYPE_MOVIE => [
                 'via' => $via,
                 'title' => ag($json, 'Metadata.title', ag($json, 'Metadata.originalTitle', '??')),
                 'year' => ag($json, 'Metadata.year', 0000),
@@ -106,7 +109,7 @@ class PlexServer implements ServerInterface
                     'event' => $event,
                 ],
             ],
-            StateEntity::TYPE_EPISODE => [
+            StateInterface::TYPE_EPISODE => [
                 'via' => $via,
                 'series' => ag($json, 'Metadata.grandparentTitle', '??'),
                 'year' => ag($json, 'Metadata.year', 0000),
@@ -146,7 +149,7 @@ class PlexServer implements ServerInterface
             ...self::getGuids($type, $guids)
         ];
 
-        return new StateEntity($row);
+        return Container::get(StateInterface::class)::fromArray($row);
     }
 
     private function getHeaders(): array
@@ -160,6 +163,14 @@ class PlexServer implements ServerInterface
 
         if (null !== ($this->options['timeout'] ?? null)) {
             $opts['timeout'] = $this->options['timeout'];
+        }
+
+        if (null !== ($this->options['proxy'] ?? null)) {
+            $opts['proxy'] = $this->options['proxy'];
+        }
+
+        if (null !== ($this->options['no_proxy'] ?? null)) {
+            $opts['no_proxy'] = $this->options['no_proxy'];
         }
 
         if (null !== ($this->options['max_duration'] ?? null)) {
@@ -253,7 +264,7 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
-            $type = $type === 'movie' ? StateEntity::TYPE_MOVIE : StateEntity::TYPE_EPISODE;
+            $type = $type === 'movie' ? StateInterface::TYPE_MOVIE : StateInterface::TYPE_EPISODE;
             $cName = sprintf('(%s) - (%s:%s)', $title, $type, $key);
 
             if (null !== $ignoreIds && in_array($key, $ignoreIds)) {
@@ -331,17 +342,25 @@ class PlexServer implements ServerInterface
                             return;
                         }
 
-                        $content = $response->getContent(false);
-
-                        $this->logger->debug(
-                            sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/MediaContainer/Metadata',
+                            ],
                         );
-                        $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : '***EMPTY***');
-                        $this->logger->debug('===[ End ]===');
 
-                        $payload = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-
-                        unset($content);
+                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        foreach ($it as $entity) {
+                            $this->processImport($mapper, $type, $cName, $entity, $after);
+                        }
+                        $this->logger->notice(
+                            sprintf(
+                                'Finished Parsing %s - %s (%d objects) response.',
+                                $this->name,
+                                $cName,
+                                Data::get("{$this->name}.{$type}_total")
+                            )
+                        );
                     } catch (JsonException $e) {
                         $this->logger->error(
                             sprintf(
@@ -353,8 +372,6 @@ class PlexServer implements ServerInterface
                         );
                         return;
                     }
-
-                    $this->processImport($mapper, $type, $cName, $payload['MediaContainer']['Metadata'] ?? [], $after);
                 };
             },
             function (string $cName, string $type, UriInterface|string $url) {
@@ -369,8 +386,8 @@ class PlexServer implements ServerInterface
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            function (string $cName, string $type) use ($mapper) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type) {
+            function (string $cName, string $type) use ($mapper, $after) {
+                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
                     try {
                         if (200 !== $response->getStatusCode()) {
                             $this->logger->error(
@@ -383,17 +400,26 @@ class PlexServer implements ServerInterface
                             );
                             return;
                         }
-                        $content = $response->getContent(false);
 
-                        $this->logger->debug(
-                            sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/MediaContainer/Metadata',
+                            ],
                         );
-                        $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : '***EMPTY***');
-                        $this->logger->debug('===[ End ]===');
 
-                        $payload = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-
-                        unset($content);
+                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        foreach ($it as $entity) {
+                            $this->processExport($mapper, $type, $cName, $entity, $after);
+                        }
+                        $this->logger->notice(
+                            sprintf(
+                                'Finished Parsing %s - %s (%d objects) response.',
+                                $this->name,
+                                $cName,
+                                Data::get("{$this->name}.{$type}_total")
+                            )
+                        );
                     } catch (JsonException $e) {
                         $this->logger->error(
                             sprintf(
@@ -405,8 +431,6 @@ class PlexServer implements ServerInterface
                         );
                         return;
                     }
-
-                    $this->processExport($mapper, $type, $cName, $payload['MediaContainer']['Metadata'] ?? []);
                 };
             },
             function (string $cName, string $type, UriInterface|string $url) {
@@ -418,123 +442,116 @@ class PlexServer implements ServerInterface
         );
     }
 
-    protected function processExport(ExportInterface $mapper, string $type, string $library, array $items): void
-    {
-        $x = 0;
-        $total = count($items);
-        Data::increment($this->name, $type . '_total', count($items));
+    protected function processExport(
+        ExportInterface $mapper,
+        string $type,
+        string $library,
+        StdClass $item,
+        DateTimeInterface|null $after = null
+    ): void {
+        Data::increment($this->name, $type . '_total');
 
-        foreach ($items as $item) {
-            try {
-                $x++;
-                if (StateEntity::TYPE_MOVIE === $type) {
-                    $iName = sprintf(
-                        '%s - %s - [%s (%d)]',
+        try {
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $iName = sprintf(
+                    '%s - %s - [%s (%d)]',
+                    $this->name,
+                    $library,
+                    $item->title ?? $item->originalTitle ?? '??',
+                    $item->year ?? 0000
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - %s - [%s - (%dx%d) - %s]',
                         $this->name,
                         $library,
-                        $item['title'] ?? $item['originalTitle'] ?? '??',
-                        $item['year'] ?? 0000
-                    );
-                } else {
-                    $iName = trim(
-                        sprintf(
-                            '%s - %s - [%s - (%dx%d) - %s]',
-                            $this->name,
-                            $library,
-                            $item['grandparentTitle'] ?? $item['originalTitle'] ?? '??',
-                            $item['parentIndex'] ?? 0,
-                            $item['index'] ?? 0,
-                            $item['title'] ?? $item['originalTitle'] ?? '',
-                        )
-                    );
-                }
-
-                if (null === ($item['Guid'] ?? null)) {
-                    $item['Guid'] = [['id' => $item['guid']]];
-                } else {
-                    $item['Guid'][] = ['id' => $item['guid']];
-                }
-
-                if (!$this->hasSupportedIds($item['Guid'])) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. No supported guid.', $total, $x, $iName),
-                        $item['Guid'] ?? []
-                    );
-                    Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                    continue;
-                }
-
-                $date = (int)($item['lastViewedAt'] ?? $item['updatedAt'] ?? $item['addedAt'] ?? 0);
-
-                if (0 === $date) {
-                    $this->logger->error(sprintf('(%d/%d) Ignoring %s. No date is set.', $total, $x, $iName));
-                    Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                    continue;
-                }
-
-                $date = makeDate($date);
-                $isWatched = (int)(bool)($item['viewCount'] ?? false);
-
-                $guids = self::getGuids($type, $item['Guid'] ?? []);
-
-                if (null === ($entity = $mapper->findByIds($guids))) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. Not found in db.', $total, $x, $iName),
-                        $item['ProviderIds'] ?? []
-                    );
-                    Data::increment($this->name, $type . '_ignored_not_found_in_db');
-                    continue;
-                }
-
-                if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
-                    if ($date->getTimestamp() >= $entity->updated) {
-                        $this->logger->debug(
-                            sprintf('(%d/%d) Ignoring %s. Date is newer then what in db.', $total, $x, $iName)
-                        );
-                        Data::increment($this->name, $type . '_ignored_date_is_newer');
-
-                        continue;
-                    }
-                }
-
-                if ($isWatched === $entity->watched) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. State is unchanged.', $total, $x, $iName)
-                    );
-                    Data::increment($this->name, $type . '_ignored_state_unchanged');
-                    continue;
-                }
-
-                $this->logger->debug(sprintf('(%d/%d) Queuing %s.', $total, $x, $iName), ['url' => $this->url]);
-
-                $url = $this->url->withPath('/:' . (1 === $entity->watched ? '/scrobble' : '/unscrobble'))
-                    ->withQuery(
-                        http_build_query(
-                            [
-                                'identifier' => 'com.plexapp.plugins.library',
-                                'key' => $item['ratingKey'],
-                            ]
-                        )
-                    );
-
-                $mapper->queue(
-                    $this->http->request(
-                        'GET',
-                        (string)$url,
-                        array_replace_recursive(
-                            $this->getHeaders(),
-                            [
-                                'user_data' => [
-                                    'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
-                                    'itemName' => $iName,
-                                ],
-                            ]
-                        )
+                        $item->grandparentTitle ?? $item->originalTitle ?? '??',
+                        $item->parentIndex ?? 0,
+                        $item->index ?? 0,
+                        $item->title ?? $item->originalTitle ?? '',
                     )
                 );
-            } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
             }
+
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
+
+            if (0 === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
+            }
+
+            if (null !== $after && $date >= $after->getTimestamp()) {
+                $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
+                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                return;
+            }
+
+            if (null === ($item->Guid ?? null)) {
+                $item->Guid = [['id' => $item->guid]];
+            } else {
+                $item->Guid[] = ['id' => $item->guid];
+            }
+
+            if (!$this->hasSupportedIds($item->Guid)) {
+                $this->logger->debug(sprintf('Ignoring %s. No supported guid.', $iName), $item->Guid ?? []);
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $isWatched = (int)(bool)($item->viewCount ?? false);
+
+            $guids = self::getGuids($type, $item->Guid ?? []);
+
+            if (null === ($entity = $mapper->findByIds($guids))) {
+                $this->logger->debug(sprintf('Ignoring %s. Not found in db.', $iName), $item->ProviderIds ?? []);
+                Data::increment($this->name, $type . '_ignored_not_found_in_db');
+                return;
+            }
+
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if ($date >= $entity->updated) {
+                    $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
+                    Data::increment($this->name, $type . '_ignored_date_is_newer');
+                    return;
+                }
+            }
+
+            if ($isWatched === $entity->watched) {
+                $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
+                Data::increment($this->name, $type . '_ignored_state_unchanged');
+                return;
+            }
+
+            $this->logger->debug(sprintf('Queuing %s.', $iName), ['url' => $this->url]);
+
+            $url = $this->url->withPath('/:' . (1 === $entity->watched ? '/scrobble' : '/unscrobble'))->withQuery(
+                http_build_query(
+                    [
+                        'identifier' => 'com.plexapp.plugins.library',
+                        'key' => $item->ratingKey,
+                    ]
+                )
+            );
+
+            $mapper->queue(
+                $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive(
+                        $this->getHeaders(),
+                        [
+                            'user_data' => [
+                                'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
+                                'itemName' => $iName,
+                            ],
+                        ]
+                    )
+                )
+            );
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage());
         }
     }
 
@@ -542,108 +559,99 @@ class PlexServer implements ServerInterface
         ImportInterface $mapper,
         string $type,
         string $library,
-        array $items,
+        StdClass $item,
         DateTimeInterface|null $after = null
     ): void {
-        $total = count($items);
-        Data::increment($this->name, $type . '_total', $total);
+        try {
+            Data::increment($this->name, $type . '_total');
 
-        $this->logger->notice(
-            sprintf('Parsing Successful %s - %s (%d) object response.', $this->name, $library, $total)
-        );
-
-        foreach ($items as $item) {
-            try {
-                if (StateEntity::TYPE_MOVIE === $type) {
-                    $iName = sprintf(
-                        '%s - %s - [%s (%d)]',
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $iName = sprintf(
+                    '%s - %s - [%s (%d)]',
+                    $this->name,
+                    $library,
+                    $item->title ?? $item->originalTitle ?? '??',
+                    $item->year ?? 0000
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - %s - [%s - (%dx%d) - %s]',
                         $this->name,
                         $library,
-                        $item['title'] ?? $item['originalTitle'] ?? '??',
-                        $item['year'] ?? 0000
-                    );
-                } else {
-                    $iName = trim(
-                        sprintf(
-                            '%s - %s - [%s - (%dx%d) - %s]',
-                            $this->name,
-                            $library,
-                            $item['grandparentTitle'] ?? $item['originalTitle'] ?? '??',
-                            $item['parentIndex'] ?? 0,
-                            $item['index'] ?? 0,
-                            $item['title'] ?? $item['originalTitle'] ?? '',
-                        )
-                    );
-                }
-
-                if (null === ($item['Guid'] ?? null)) {
-                    $item['Guid'] = [['id' => $item['guid']]];
-                } else {
-                    $item['Guid'][] = ['id' => $item['guid']];
-                }
-
-                if (!$this->hasSupportedIds($item['Guid'] ?? [])) {
-                    $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item['Guid'] ?? []);
-                    Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                    continue;
-                }
-
-                $date = (int)($item['lastViewedAt'] ?? $item['updatedAt'] ?? $item['addedAt'] ?? 0);
-
-                if (0 === $date) {
-                    $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
-                    Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                    continue;
-                }
-
-                if (StateEntity::TYPE_MOVIE === $type) {
-                    $meta = [
-                        'via' => $this->name,
-                        'title' => $item['title'] ?? $item['originalTitle'] ?? '??',
-                        'year' => $item['year'] ?? 0000,
-                        'date' => makeDate($item['originallyAvailableAt'] ?? 'now')->format('Y-m-d'),
-                    ];
-                } else {
-                    $meta = [
-                        'via' => $this->name,
-                        'series' => $item['grandparentTitle'] ?? '??',
-                        'year' => $item['year'] ?? 0000,
-                        'season' => $item['parentIndex'] ?? 0,
-                        'episode' => $item['index'] ?? 0,
-                        'title' => $item['title'] ?? $item['originalTitle'] ?? '??',
-                        'date' => makeDate($item['originallyAvailableAt'] ?? 'now')->format('Y-m-d'),
-                    ];
-                }
-
-                $row = [
-                    'type' => $type,
-                    'updated' => $date,
-                    'watched' => (int)(bool)($item['viewCount'] ?? false),
-                    'meta' => $meta,
-                    ...self::getGuids($type, $item['Guid'] ?? [])
-                ];
-
-                $mapper->add($this->name, $iName, new StateEntity($row), [
-                    'after' => $after,
-                    self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
-                ]);
-            } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
+                        $item->grandparentTitle ?? $item->originalTitle ?? '??',
+                        $item->parentIndex ?? 0,
+                        $item->index ?? 0,
+                        $item->title ?? $item->originalTitle ?? '',
+                    )
+                );
             }
-        }
 
-        $this->logger->notice(sprintf('Finished Parsing %s - %s response.', $this->name, $library));
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
+
+            if (0 === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
+            }
+
+            if (null === ($item->Guid ?? null)) {
+                $item->Guid = [['id' => $item->guid]];
+            } else {
+                $item->Guid[] = ['id' => $item->guid];
+            }
+
+            if (!$this->hasSupportedIds($item->Guid)) {
+                $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item->Guid ?? []);
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $meta = [
+                    'via' => $this->name,
+                    'title' => $item->title ?? $item->originalTitle ?? '??',
+                    'year' => $item->year ?? 0000,
+                    'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+                ];
+            } else {
+                $meta = [
+                    'via' => $this->name,
+                    'series' => $item->grandparentTitle ?? '??',
+                    'year' => $item->year ?? 0000,
+                    'season' => $item->parentIndex ?? 0,
+                    'episode' => $item->index ?? 0,
+                    'title' => $item->title ?? $item->originalTitle ?? '??',
+                    'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+                ];
+            }
+
+            $row = [
+                'type' => $type,
+                'updated' => $date,
+                'watched' => (int)(bool)($item->viewCount ?? false),
+                'meta' => $meta,
+                ...self::getGuids($type, $item->Guid ?? [])
+            ];
+
+            $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
+                'after' => $after,
+                self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+        }
     }
 
     protected static function getGuids(string $type, array $guids): array
     {
         $guid = [];
         foreach ($guids as $_id) {
-            if (empty($_id['id'])) {
+            if (empty($_id->id)) {
                 continue;
             }
 
-            [$key, $value] = explode('://', $_id['id']);
+            [$key, $value] = explode('://', $_id->id);
             $key = strtolower($key);
 
             if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
@@ -667,11 +675,11 @@ class PlexServer implements ServerInterface
     protected function hasSupportedIds(array $guids): bool
     {
         foreach ($guids as $_id) {
-            if (empty($_id['id'])) {
+            if (empty($_id->id)) {
                 continue;
             }
 
-            [$key, $value] = explode('://', $_id['id']);
+            [$key, $value] = explode('://', $_id->id);
             $key = strtolower($key);
 
             if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {

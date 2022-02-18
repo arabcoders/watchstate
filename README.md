@@ -57,7 +57,7 @@ after configuring your servers at `config/servers.yaml` you should import your c
 following command.
 
 ```bash
-docker exec -ti watchstate console state:import -vvrm
+docker exec -ti watchstate console state:import -vvrm --mapper-preload
 ```
 
 #### TIP

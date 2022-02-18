@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers;
 
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Storage\StorageInterface;
 use Countable;
+use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 
 interface ImportInterface extends Countable
@@ -19,6 +20,15 @@ interface ImportInterface extends Countable
      * @return self
      */
     public function setUp(array $opts): self;
+
+    /**
+     * Preload data from storage as usable entity.
+     *
+     * @param DateTimeInterface|null $date
+     *
+     * @return self
+     */
+    public function loadData(DateTimeInterface|null $date = null): self;
 
     /**
      * Inject Logger.
@@ -51,37 +61,37 @@ interface ImportInterface extends Countable
      *
      * @param string $bucket bucket name.
      * @param string $name Item name.
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      * @param array $opts
      *
      * @return self
      */
-    public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self;
+    public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self;
 
     /**
      * Get Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
-     * @return null|StateEntity
+     * @return null|StateInterface
      */
-    public function get(StateEntity $entity): null|StateEntity;
+    public function get(StateInterface $entity): null|StateInterface;
 
     /**
      * Has Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
      * @return bool
      */
-    public function has(StateEntity $entity): bool;
+    public function has(StateInterface $entity): bool;
 
     /**
      * Remove Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
      * @return bool
      */
-    public function remove(StateEntity $entity): bool;
+    public function remove(StateInterface $entity): bool;
 }

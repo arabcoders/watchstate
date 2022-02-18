@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Mappers\Import;
 
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
@@ -16,9 +16,11 @@ use Throwable;
 final class DirectMapper implements ImportInterface
 {
     private array $operations = [
-        StateEntity::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
-        StateEntity::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+        StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+        StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
     ];
+
+    private int $changed = 0;
 
     public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
@@ -42,12 +44,17 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
+    public function loadData(DateTimeInterface|null $date = null): ImportInterface
+    {
+        return $this;
+    }
+
     public function commit(): mixed
     {
         return $this->operations;
     }
 
-    public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self
+    public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
             $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $name));
@@ -72,6 +79,7 @@ final class DirectMapper implements ImportInterface
                 return $this;
             }
 
+            $this->changed++;
             Data::increment($bucket, $entity->type . '_added');
             $this->operations[$entity->type]['added']++;
             $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
@@ -83,6 +91,7 @@ final class DirectMapper implements ImportInterface
             // -- check for updated GUIDs.
             if ($item->apply($entity, guidOnly: true)->isChanged()) {
                 try {
+                    $this->changed++;
                     $this->storage->update($item);
                     $this->operations[$entity->type]['updated']++;
                     $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
@@ -105,6 +114,7 @@ final class DirectMapper implements ImportInterface
                 // -- check for updated GUIDs.
                 if ($item->apply($entity, guidOnly: true)->isChanged()) {
                     try {
+                        $this->changed++;
                         $this->storage->update($item);
                         $this->operations[$entity->type]['updated']++;
                         $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
@@ -133,6 +143,7 @@ final class DirectMapper implements ImportInterface
                 return $this;
             }
 
+            $this->changed++;
             Data::increment($bucket, $entity->type . '_updated');
             $this->operations[$entity->type]['updated']++;
         } else {
@@ -142,17 +153,17 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
-    public function get(StateEntity $entity): null|StateEntity
+    public function get(StateInterface $entity): null|StateInterface
     {
         return $this->storage->get($entity);
     }
 
-    public function has(StateEntity $entity): bool
+    public function has(StateInterface $entity): bool
     {
         return null !== $this->storage->get($entity);
     }
 
-    public function remove(StateEntity $entity): bool
+    public function remove(StateInterface $entity): bool
     {
         return $this->storage->remove($entity);
     }
@@ -164,6 +175,6 @@ final class DirectMapper implements ImportInterface
 
     public function count(): int
     {
-        return 0;
+        return $this->changed;
     }
 }

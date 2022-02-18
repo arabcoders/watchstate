@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
@@ -14,10 +15,12 @@ use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateTimeInterface;
 use JsonException;
+use JsonMachine\Items;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use StdClass;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -74,7 +77,7 @@ class JellyfinServer implements ServerInterface
         return $this;
     }
 
-    public static function parseWebhook(ServerRequestInterface $request): StateEntity
+    public static function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         if (null === ($json = json_decode($request->getBody()->getContents(), true))) {
             throw new HttpException('No payload.', 400);
@@ -101,7 +104,7 @@ class JellyfinServer implements ServerInterface
         $date = $json['LastPlayedDate'] ?? $json['DateCreated'] ?? $json['PremiereDate'] ?? $json['Timestamp'] ?? null;
 
         $meta = match ($type) {
-            StateEntity::TYPE_MOVIE => [
+            StateInterface::TYPE_MOVIE => [
                 'via' => $via,
                 'title' => ag($json, 'Name', '??'),
                 'year' => ag($json, 'Year', 0000),
@@ -109,7 +112,7 @@ class JellyfinServer implements ServerInterface
                     'event' => $event,
                 ],
             ],
-            StateEntity::TYPE_EPISODE => [
+            StateInterface::TYPE_EPISODE => [
                 'via' => $via,
                 'series' => ag($json, 'SeriesName', '??'),
                 'year' => ag($json, 'Year', 0000),
@@ -141,7 +144,7 @@ class JellyfinServer implements ServerInterface
             ...self::getGuids($type, $guids)
         ];
 
-        return new StateEntity($row);
+        return Container::get(StateInterface::class)::fromArray($row);
     }
 
     private function getHeaders(): array
@@ -154,6 +157,14 @@ class JellyfinServer implements ServerInterface
 
         if (null !== ($this->options['timeout'] ?? null)) {
             $opts['timeout'] = $this->options['timeout'];
+        }
+
+        if (null !== ($this->options['proxy'] ?? null)) {
+            $opts['proxy'] = $this->options['proxy'];
+        }
+
+        if (null !== ($this->options['no_proxy'] ?? null)) {
+            $opts['no_proxy'] = $this->options['no_proxy'];
         }
 
         if (null !== ($this->options['max_duration'] ?? null)) {
@@ -272,7 +283,7 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
-            $type = $type === 'movies' ? StateEntity::TYPE_MOVIE : StateEntity::TYPE_EPISODE;
+            $type = $type === 'movies' ? StateInterface::TYPE_MOVIE : StateInterface::TYPE_EPISODE;
             $cName = sprintf('(%s) - (%s:%s)', $title, $type, $key);
 
             if (null !== $ignoreIds && in_array($key, $ignoreIds, true)) {
@@ -340,30 +351,38 @@ class JellyfinServer implements ServerInterface
         return $this->getLibraries(
             function (string $cName, string $type) use ($after, $mapper) {
                 return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
+                    try {
+                        if (200 !== $response->getStatusCode()) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    $this->name,
+                                    $cName,
+                                    $response->getStatusCode()
+                                )
+                            );
+                            return;
+                        }
+
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/Items',
+                            ],
+                        );
+
+                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        foreach ($it as $entity) {
+                            $this->processImport($mapper, $type, $cName, $entity, $after);
+                        }
+                        $this->logger->notice(
                             sprintf(
-                                'Request to %s - %s responded with (%d) unexpected code.',
+                                'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,
                                 $cName,
-                                $response->getStatusCode()
+                                Data::get("{$this->name}.{$type}_total")
                             )
                         );
-                        return;
-                    }
-
-                    try {
-                        $content = $response->getContent(false);
-
-                        $this->logger->debug(
-                            sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
-                        );
-                        $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : '***EMPTY***');
-                        $this->logger->debug('===[ End ]===');
-
-                        $payload = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-
-                        unset($content);
                     } catch (JsonException $e) {
                         $this->logger->error(
                             sprintf(
@@ -375,8 +394,6 @@ class JellyfinServer implements ServerInterface
                         );
                         return;
                     }
-
-                    $this->processImport($mapper, $type, $cName, $payload['Items'] ?? [], $after);
                 };
             },
             function (string $cName, string $type, UriInterface|string $url) {
@@ -391,32 +408,40 @@ class JellyfinServer implements ServerInterface
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            function (string $cName, string $type) use ($mapper) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
+            function (string $cName, string $type) use ($mapper, $after) {
+                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
+                    try {
+                        if (200 !== $response->getStatusCode()) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    $this->name,
+                                    $cName,
+                                    $response->getStatusCode()
+                                )
+                            );
+                            return;
+                        }
+
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/Items',
+                            ],
+                        );
+
+                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        foreach ($it as $entity) {
+                            $this->processExport($mapper, $type, $cName, $entity, $after);
+                        }
+                        $this->logger->notice(
                             sprintf(
-                                'Request to %s - %s responded with (%d) unexpected code.',
+                                'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,
                                 $cName,
-                                $response->getStatusCode()
+                                Data::get("{$this->name}.{$type}_total")
                             )
                         );
-                        return;
-                    }
-
-                    try {
-                        $content = $response->getContent(false);
-
-                        $this->logger->debug(
-                            sprintf('===[ Sample from %s - %s - response ]===', $this->name, $cName)
-                        );
-                        $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : '***EMPTY***');
-                        $this->logger->debug('===[ End ]===');
-
-                        $payload = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-
-                        unset($content);
                     } catch (JsonException $e) {
                         $this->logger->error(
                             sprintf(
@@ -428,8 +453,6 @@ class JellyfinServer implements ServerInterface
                         );
                         return;
                     }
-
-                    $this->processExport($mapper, $type, $cName, $payload['Items'] ?? []);
                 };
             },
             function (string $cName, string $type, UriInterface|string $url) {
@@ -441,109 +464,109 @@ class JellyfinServer implements ServerInterface
         );
     }
 
-    protected function processExport(ExportInterface $mapper, string $type, string $library, array $items): void
-    {
-        $x = 0;
-        $total = count($items);
-        Data::increment($this->name, $type . '_total', $total);
+    protected function processExport(
+        ExportInterface $mapper,
+        string $type,
+        string $library,
+        StdClass $item,
+        DateTimeInterface|null $after = null
+    ): void {
+        Data::increment($this->name, $type . '_total');
 
-        foreach ($items as $item) {
-            try {
-                $x++;
-
-                if (StateEntity::TYPE_MOVIE === $type) {
-                    $iName = sprintf(
-                        '%s - %s - [%s (%d)]',
+        try {
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $iName = sprintf(
+                    '%s - %s - [%s (%d)]',
+                    $this->name,
+                    $library,
+                    $item->Name ?? $item->OriginalTitle ?? '??',
+                    $item->ProductionYear ?? 0000
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - %s - [%s - (%dx%d) - %s]',
                         $this->name,
                         $library,
-                        $item['Name'] ?? $item['OriginalTitle'] ?? '??',
-                        $item['ProductionYear'] ?? 0000
-                    );
-                } else {
-                    $iName = trim(
-                        sprintf(
-                            '%s - %s - [%s - (%dx%d) - %s]',
-                            $this->name,
-                            $library,
-                            $item['SeriesName'] ?? '??',
-                            $item['ParentIndexNumber'] ?? 0,
-                            $item['IndexNumber'] ?? 0,
-                            $item['Name'] ?? ''
-                        )
-                    );
-                }
-
-                if (!$this->hasSupportedIds($item['ProviderIds'] ?? [])) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. No supported guid.', $total, $x, $iName),
-                        $item['ProviderIds'] ?? []
-                    );
-                    Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                    continue;
-                }
-
-                $date = $item['UserData']['LastPlayedDate'] ?? $item['DateCreated'] ?? $item['PremiereDate'] ?? null;
-
-                if (null === $date) {
-                    $this->logger->error(sprintf('(%d/%d) Ignoring %s. No date is set.', $total, $x, $iName));
-                    Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                    continue;
-                }
-
-                $date = makeDate($date);
-
-                $guids = self::getGuids($type, $item['ProviderIds'] ?? []);
-
-                if (null === ($entity = $mapper->findByIds($guids))) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. Not found in db.', $total, $x, $iName),
-                        $item['ProviderIds'] ?? []
-                    );
-                    Data::increment($this->name, $type . '_ignored_not_found_in_db');
-                    continue;
-                }
-
-                if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
-                    if ($date->getTimestamp() >= $entity->updated) {
-                        $this->logger->debug(
-                            sprintf('(%d/%d) Ignoring %s. Date is newer then what in db.', $total, $x, $iName)
-                        );
-                        Data::increment($this->name, $type . '_ignored_date_is_newer');
-
-                        continue;
-                    }
-                }
-
-                $isWatched = (int)(bool)($item['UserData']['Played'] ?? false);
-
-                if ($isWatched === $entity->watched) {
-                    $this->logger->debug(
-                        sprintf('(%d/%d) Ignoring %s. State is unchanged.', $total, $x, $iName)
-                    );
-                    Data::increment($this->name, $type . '_ignored_state_unchanged');
-                    continue;
-                }
-
-                $this->logger->debug(sprintf('(%d/%d) Queuing %s.', $total, $x, $iName), ['url' => $this->url]);
-
-                $mapper->queue(
-                    $this->http->request(
-                        1 === $entity->watched ? 'POST' : 'DELETE',
-                        (string)$this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item['Id'])),
-                        array_replace_recursive(
-                            $this->getHeaders(),
-                            [
-                                'user_data' => [
-                                    'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
-                                    'itemName' => $iName,
-                                ],
-                            ]
-                        )
+                        $item->SeriesName ?? '??',
+                        $item->ParentIndexNumber ?? 0,
+                        $item->IndexNumber ?? 0,
+                        $item->Name ?? ''
                     )
                 );
-            } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
             }
+
+            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
+
+            if (null === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
+            }
+
+            $date = strtotime($date);
+
+            if (null !== $after && $date >= $after->getTimestamp()) {
+                $this->logger->debug(sprintf('Ignoring %s. Ignored date is equal or newer than lastSync.', $iName));
+                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                return;
+            }
+
+            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
+                $this->logger->debug(
+                    sprintf('Ignoring %s. No supported guid.', $iName),
+                    (array)($item->ProviderIds ?? [])
+                );
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $guids = self::getGuids($type, (array)($item->ProviderIds ?? []));
+
+            if (null === ($entity = $mapper->findByIds($guids))) {
+                $this->logger->debug(
+                    sprintf('Ignoring %s. Not found in db.', $iName),
+                    (array)($item->ProviderIds ?? [])
+                );
+                Data::increment($this->name, $type . '_ignored_not_found_in_db');
+                return;
+            }
+
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if ($date >= $entity->updated) {
+                    $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
+                    Data::increment($this->name, $type . '_ignored_date_is_newer');
+                    return;
+                }
+            }
+
+            $isWatched = (int)(bool)($item->UserData?->Played ?? false);
+
+            if ($isWatched === $entity->watched) {
+                $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
+                Data::increment($this->name, $type . '_ignored_state_unchanged');
+                return;
+            }
+
+            $this->logger->debug(sprintf('Queuing %s.', $iName));
+
+            $mapper->queue(
+                $this->http->request(
+                    1 === $entity->watched ? 'POST' : 'DELETE',
+                    (string)$this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item->Id)),
+                    array_replace_recursive(
+                        $this->getHeaders(),
+                        [
+                            'user_data' => [
+                                'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
+                                'itemName' => $iName,
+                            ],
+                        ]
+                    )
+                )
+            );
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage());
         }
     }
 
@@ -551,91 +574,93 @@ class JellyfinServer implements ServerInterface
         ImportInterface $mapper,
         string $type,
         string $library,
-        array $items,
+        StdClass $item,
         DateTimeInterface|null $after = null
     ): void {
-        $total = count($items);
-        Data::increment($this->name, $type . '_total', $total);
+        try {
+            Data::increment($this->name, $type . '_total');
 
-        $this->logger->notice(
-            sprintf('Parsing Successful %s - %s (%d) object response.', $this->name, $library, $total)
-        );
-
-        foreach ($items as $item) {
-            try {
-                if (StateEntity::TYPE_MOVIE === $type) {
-                    $iName = sprintf(
-                        '%s - %s - [%s (%d)]',
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $iName = sprintf(
+                    '%s - %s - [%s (%d)]',
+                    $this->name,
+                    $library,
+                    $item->Name ?? $item->OriginalTitle ?? '??',
+                    $item->ProductionYear ?? 0000
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - %s - [%s - (%dx%d) - %s]',
                         $this->name,
                         $library,
-                        $item['Name'] ?? $item['OriginalTitle'] ?? '??',
-                        $item['ProductionYear'] ?? 0000
-                    );
-                } else {
-                    $iName = trim(
-                        sprintf(
-                            '%s - %s - [%s - (%dx%d) - %s]',
-                            $this->name,
-                            $library,
-                            $item['SeriesName'] ?? '??',
-                            $item['ParentIndexNumber'] ?? 0,
-                            $item['IndexNumber'] ?? 0,
-                            $item['Name'] ?? ''
-                        )
-                    );
-                }
-
-                if (!$this->hasSupportedIds($item['ProviderIds'] ?? [])) {
-                    $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item['ProviderIds'] ?? []);
-                    Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                    continue;
-                }
-
-                $date = $item['UserData']['LastPlayedDate'] ?? $item['DateCreated'] ?? $item['PremiereDate'] ?? null;
-
-                if (null === $date) {
-                    $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
-                    Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                    continue;
-                }
-
-                if (StateEntity::TYPE_MOVIE === $type) {
-                    $meta = [
-                        'via' => $this->name,
-                        'title' => $item['Name'] ?? $item['OriginalTitle'] ?? '??',
-                        'year' => $item['ProductionYear'] ?? 0000,
-                        'date' => makeDate($item['PremiereDate'] ?? $item['ProductionYear'] ?? 'now')->format('Y-m-d'),
-                    ];
-                } else {
-                    $meta = [
-                        'via' => $this->name,
-                        'series' => $item['SeriesName'] ?? '??',
-                        'year' => $item['ProductionYear'] ?? 0000,
-                        'season' => $item['ParentIndexNumber'] ?? 0,
-                        'episode' => $item['IndexNumber'] ?? 0,
-                        'title' => $item['Name'] ?? '',
-                        'date' => makeDate($item['PremiereDate'] ?? $item['ProductionYear'] ?? 'now')->format('Y-m-d'),
-                    ];
-                }
-
-                $row = [
-                    'type' => $type,
-                    'updated' => makeDate($date)->getTimestamp(),
-                    'watched' => (int)(bool)($item['UserData']['Played'] ?? false),
-                    'meta' => $meta,
-                    ...self::getGuids($type, $item['ProviderIds'] ?? []),
-                ];
-
-                $mapper->add($this->name, $iName, new StateEntity($row), [
-                    'after' => $after,
-                    self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
-                ]);
-            } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
+                        $item->SeriesName ?? '??',
+                        $item->ParentIndexNumber ?? 0,
+                        $item->IndexNumber ?? 0,
+                        $item->Name ?? ''
+                    )
+                );
             }
-        }
 
-        $this->logger->notice(sprintf('Finished Parsing %s - %s response.', $this->name, $library));
+            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
+
+            if (null === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
+            }
+
+            $date = strtotime($date);
+
+            if (null !== $after && $date >= $after->getTimestamp()) {
+                $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
+                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                return;
+            }
+
+            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
+                $this->logger->debug(
+                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
+                    (array)($item->ProviderIds ?? [])
+                );
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $meta = [
+                    'via' => $this->name,
+                    'title' => $item->Name ?? $item->OriginalTitle ?? '??',
+                    'year' => $item->ProductionYear ?? 0000,
+                    'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+                ];
+            } else {
+                $meta = [
+                    'via' => $this->name,
+                    'series' => $item->SeriesName ?? '??',
+                    'year' => $item->ProductionYear ?? 0000,
+                    'season' => $item->ParentIndexNumber ?? 0,
+                    'episode' => $item->IndexNumber ?? 0,
+                    'title' => $item->Name ?? '',
+                    'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+                ];
+            }
+
+            $row = [
+                'type' => $type,
+                'updated' => $date,
+                'watched' => (int)(bool)($item->UserData?->Played ?? false),
+                'meta' => $meta,
+                ...self::getGuids($type, (array)($item->ProviderIds ?? [])),
+            ];
+
+            $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
+                'after' => $after,
+                self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage());
+        }
     }
 
     protected static function getGuids(string $type, array $ids): array
