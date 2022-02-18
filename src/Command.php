@@ -46,7 +46,7 @@ class Command extends BaseCommand
             'PHP_VERSION' => PHP_VERSION,
             'PHP_VERSION_ID' => PHP_VERSION_ID,
             'PHP_OS' => PHP_OS,
-            'DOCKER' => env('in_docker') ? 'Yes' : 'No',
+            'DOCKER' => env('IN_DOCKER') ? 'Yes' : 'No',
             'SYSTEM' => php_uname('s') . ' ' . php_uname('r') . ' ' . php_uname('v') . ' ' . php_uname('m'),
             'DOCUMENT_ROOT' => env('IN_DOCKER') ? '/docker/' : '/cli',
             'REMOTE_ADDR' => '127.0.0.1',
