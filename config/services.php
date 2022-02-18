@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Libs\Config;
+use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\CurlHttpClient;
@@ -22,5 +24,8 @@ return (function (): array {
                 );
             }
         ],
+        StateInterface::class => [
+            'class' => fn() => new StateEntity([])
+        ]
     ];
 })();

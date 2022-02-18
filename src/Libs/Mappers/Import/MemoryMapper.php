@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Libs\Mappers\Import;
 
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
-use DateTimeImmutable;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 
@@ -19,7 +18,7 @@ final class MemoryMapper implements ImportInterface
     /**
      * Load all entities.
      *
-     * @var array<int,StateEntity>
+     * @var array<int,StateInterface>
      */
     private array $objects = [];
 
@@ -44,15 +43,7 @@ final class MemoryMapper implements ImportInterface
      */
     private array $changed = [];
 
-    /**
-     * @var bool Has the data been loaded from store?
-     */
-    private bool $loaded = false;
-
-    /**
-     * @var bool Lazy load data from storage. Otherwise, load all.
-     */
-    private bool $lazyLoad = false;
+    private bool $fullyLoaded = false;
 
     public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
@@ -73,52 +64,45 @@ final class MemoryMapper implements ImportInterface
 
     public function setUp(array $opts): ImportInterface
     {
-        $this->lazyLoad = true === (bool)($opts['lazyload'] ?? false);
+        return $this;
+    }
+
+    public function loadData(DateTimeInterface|null $date = null): self
+    {
+        if (!empty($this->objects)) {
+            return $this;
+        }
+
+        if (null === $date) {
+            $this->fullyLoaded = true;
+        }
+
+        foreach ($this->storage->getAll($date) as $entity) {
+            if (null !== ($this->objects[$entity->id] ?? null)) {
+                continue;
+            }
+            $this->objects[$entity->id] = $entity;
+            $this->addGuids($this->objects[$entity->id], $entity->id);
+        }
+
         return $this;
     }
 
     public function commit(): mixed
     {
-        $state = $this->storage->commit($this->getChanged());
+        $state = $this->storage->commit(
+            array_intersect_key(
+                $this->objects,
+                $this->changed
+            )
+        );
 
         $this->reset();
 
         return $state;
     }
 
-    public function loadData(DateTimeImmutable|null $date = null): self
-    {
-        if (true === $this->loaded) {
-            return $this;
-        }
-
-        if ($this->lazyLoad) {
-            $this->loaded = true;
-            return $this;
-        }
-
-        foreach ($this->storage->getAll($date) as $index => $entity) {
-            $this->objects[$index] = $entity;
-            $this->addGuids($this->objects[$index], $index);
-        }
-
-        $this->loaded = true;
-
-        return $this;
-    }
-
-    public function getChanged(): array
-    {
-        $arr = [];
-
-        foreach ($this->changed as $id) {
-            $arr[] = &$this->objects[$id];
-        }
-
-        return $arr;
-    }
-
-    public function add(string $bucket, string $name, StateEntity $entity, array $opts = []): self
+    public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
             $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $name));
@@ -195,14 +179,14 @@ final class MemoryMapper implements ImportInterface
         return $this;
     }
 
-    private function addGuids(StateEntity $entity, int $pointer): void
+    private function addGuids(StateInterface $entity, int $pointer): void
     {
         foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
             $this->guids[$key] = $pointer;
         }
     }
 
-    public function get(StateEntity $entity): null|StateEntity
+    public function get(StateInterface $entity): null|StateInterface
     {
         foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
@@ -210,7 +194,11 @@ final class MemoryMapper implements ImportInterface
             }
         }
 
-        if (true === $this->lazyLoad && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (true === $this->fullyLoaded) {
+            return null;
+        }
+
+        if (null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[] = $lazyEntity;
             $id = array_key_last($this->objects);
             $this->addGuids($this->objects[$id], $id);
@@ -220,12 +208,12 @@ final class MemoryMapper implements ImportInterface
         return null;
     }
 
-    public function has(StateEntity $entity): bool
+    public function has(StateInterface $entity): bool
     {
         return null !== $this->get($entity);
     }
 
-    public function remove(StateEntity $entity): bool
+    public function remove(StateInterface $entity): bool
     {
         if (false === ($pointer = $this->getPointer($entity))) {
             return false;
@@ -247,11 +235,11 @@ final class MemoryMapper implements ImportInterface
     /**
      * Is the object already mapped?
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
      * @return int|bool int pointer for the object, Or false if not registered.
      */
-    private function getPointer(StateEntity $entity): int|bool
+    private function getPointer(StateInterface $entity): int|bool
     {
         foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
@@ -264,7 +252,7 @@ final class MemoryMapper implements ImportInterface
             }
         }
 
-        if (true === $this->lazyLoad && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[] = $lazyEntity;
             $id = array_key_last($this->objects);
             $this->addGuids($this->objects[$id], $id);
@@ -276,9 +264,7 @@ final class MemoryMapper implements ImportInterface
 
     public function reset(): self
     {
-        $this->objects = [];
-        $this->guids = [];
-        $this->removed = [];
+        $this->objects = $this->guids = $this->removed = [];
 
         return $this;
     }

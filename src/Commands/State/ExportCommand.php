@@ -35,10 +35,23 @@ class ExportCommand extends Command
     {
         $this->setName('state:export')
             ->setDescription('Export watch state to servers.')
-            ->addOption('read-mapper', null, InputOption::VALUE_OPTIONAL, 'Configured mapper.', $this->mapper::class)
+            ->addOption('mapper-class', null, InputOption::VALUE_OPTIONAL, 'Configured mapper.', $this->mapper::class)
+            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export.')
+            ->addOption(
+                'proxy',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'By default the HTTP client uses your ENV: HTTP_PROXY.'
+            )
+            ->addOption(
+                'no-proxy',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
+            )
             ->addOption(
                 'servers-filter',
                 's',
@@ -132,13 +145,16 @@ class ExportCommand extends Command
 
         $requests = [];
 
-        if (count($list) >= 1) {
-            $this->mapper->loadData();
-        }
 
         if (null !== $logger) {
             $this->logger = $logger;
             $this->mapper->setLogger($logger);
+        }
+
+        if (count($list) >= 1 && $input->getOption('mapper-preload')) {
+            $this->logger->info('Preloading all mapper data.');
+            $this->mapper->loadData();
+            $this->logger->info('Finished preloading mapper data.');
         }
 
         foreach ($list as $server) {
@@ -152,6 +168,14 @@ class ExportCommand extends Command
 
             if ($input->getOption('ignore-date')) {
                 $opts[ServerInterface::OPT_EXPORT_IGNORE_DATE] = true;
+            }
+
+            if ($input->getOption('proxy')) {
+                $opts['proxy'] = $input->getOption('proxy');
+            }
+
+            if ($input->getOption('no-proxy')) {
+                $opts['no_proxy'] = $input->getOption('no-proxy');
             }
 
             $class = $class->setUp(

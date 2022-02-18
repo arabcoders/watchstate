@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Storage\PDO;
 
-use App\Libs\Entity\StateEntity;
+use App\Libs\Container;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Storage\StorageInterface;
 use Closure;
 use DateTimeInterface;
@@ -42,16 +43,14 @@ final class PDOAdapter implements StorageInterface
     {
         $arr = [];
 
-        $sql = sprintf("SELECT * FROM %s", $this->escapeIdentifier('state'));
+        $sql = "SELECT * FROM state";
 
         if (null !== $date) {
-            $sql .= sprintf(' WHERE %s > %d', $this->escapeIdentifier('updated'), $date->getTimestamp());
+            $sql .= ' WHERE updated > ' . $date->getTimestamp();
         }
 
-        $stmt = $this->pdo->query($sql);
-
-        foreach ($stmt as $row) {
-            $arr[] = new StateEntity($row);
+        foreach ($this->pdo->query($sql) as $row) {
+            $arr[] = Container::get(StateInterface::class)::fromArray($row);
         }
 
         return $arr;
@@ -79,13 +78,7 @@ final class PDOAdapter implements StorageInterface
         $this->driver = $this->getDriver();
 
         if (!in_array($this->driver, $this->supported)) {
-            throw new RuntimeException(
-                sprintf(
-                    '\'%s\' Backend engine is not supported right now. only \'%s\' are supported.',
-                    $this->driver,
-                    implode(', ', $this->supported)
-                )
-            );
+            throw new RuntimeException(sprintf('%s Driver is not supported.', $this->driver));
         }
 
         if (null !== ($exec = ag($opts, "exec.{$this->driver}")) && is_array($exec)) {
@@ -104,7 +97,7 @@ final class PDOAdapter implements StorageInterface
         return $this;
     }
 
-    public function insert(StateEntity $entity): StateEntity
+    public function insert(StateInterface $entity): StateInterface
     {
         if (null === $this->pdo) {
             throw new RuntimeException('Setup(): method was not called.');
@@ -146,7 +139,7 @@ final class PDOAdapter implements StorageInterface
         return $entity;
     }
 
-    public function update(StateEntity $entity): StateEntity
+    public function update(StateInterface $entity): StateInterface
     {
         if (null === $this->pdo) {
             throw new RuntimeException('Setup(): method was not called.');
@@ -180,35 +173,25 @@ final class PDOAdapter implements StorageInterface
         return $entity;
     }
 
-    public function get(StateEntity $entity): StateEntity|null
+    public function get(StateInterface $entity): StateInterface|null
     {
         if (null === $this->pdo) {
             throw new RuntimeException('Setup(): method was not called.');
         }
 
         if (null !== $entity->id) {
-            $stmt = $this->pdo->prepare(
-                sprintf(
-                    'SELECT * FROM %s WHERE %s = :id LIMIT 1',
-                    $this->escapeIdentifier('state'),
-                    $this->escapeIdentifier('id'),
-                )
-            );
-
-            if (false === ($stmt->execute(['id' => $entity->id]))) {
-                return null;
-            }
+            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$entity->id);
 
             if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
                 return null;
             }
 
-            return new StateEntity($row);
+            return Container::get(StateInterface::class)::fromArray($row);
         }
 
         $cond = $where = [];
-        foreach ($entity::getEntityKeys() as $key) {
-            if (null === $entity->{$key} || !str_starts_with($key, 'guid_')) {
+        foreach (StateInterface::ENTITY_GUIDS as $key) {
+            if (null === $entity->{$key}) {
                 continue;
             }
             $cond[$key] = $entity->{$key};
@@ -240,10 +223,77 @@ final class PDOAdapter implements StorageInterface
             return null;
         }
 
-        return new StateEntity($row);
+        return Container::get(StateInterface::class)::fromArray($row);
     }
 
-    public function remove(StateEntity $entity): bool
+    public function matchAnyId(array $ids): StateInterface|null
+    {
+        if (null === $this->pdo) {
+            throw new RuntimeException('Setup(): method was not called.');
+        }
+
+        if (null !== ($ids['id'] ?? null)) {
+            $stmt = $this->pdo->prepare(
+                sprintf(
+                    'SELECT * FROM %s WHERE %s = :id LIMIT 1',
+                    $this->escapeIdentifier('state'),
+                    $this->escapeIdentifier('id'),
+                )
+            );
+
+            if (false === ($stmt->execute(['id' => $ids['id']]))) {
+                return null;
+            }
+
+            if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
+                return null;
+            }
+
+            return Container::get(StateInterface::class)::fromArray($row);
+        }
+
+        $cond = $where = [];
+
+        foreach ($ids as $_val) {
+            if (null === $_val || !str_starts_with($_val, 'guid_')) {
+                continue;
+            }
+
+            [$key, $val] = explode('://', $_val);
+
+            $cond[$key] = $val;
+        }
+
+        if (empty($cond)) {
+            return null;
+        }
+
+        foreach ($cond as $key => $_) {
+            $where[] = $this->escapeIdentifier($key) . ' = :' . $key;
+        }
+
+        $sqlWhere = implode(' OR ', $where);
+
+        $stmt = $this->pdo->prepare(
+            sprintf(
+                "SELECT * FROM %s WHERE %s LIMIT 1",
+                $this->escapeIdentifier('state'),
+                $sqlWhere
+            )
+        );
+
+        if (false === $stmt->execute($cond)) {
+            throw new RuntimeException('Unable to prepare sql statement');
+        }
+
+        if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
+            return null;
+        }
+
+        return Container::get(StateInterface::class)::fromArray($row);
+    }
+
+    public function remove(StateInterface $entity): bool
     {
         if (null === $entity->id && !$entity->hasGuids()) {
             return false;
@@ -287,8 +337,8 @@ final class PDOAdapter implements StorageInterface
 
         return $this->transactional(function () use ($entities) {
             $list = [
-                StateEntity::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
-                StateEntity::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
             ];
 
             $count = count($entities);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Export;
 
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Storage\StorageInterface;
@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 final class ExportMapper implements ExportInterface
 {
     /**
-     * @var array<int|string,StateEntity> Holds Entities.
+     * @var array<int|string,StateInterface> Holds Entities.
      */
     private array $objects = [];
 
@@ -29,10 +29,7 @@ final class ExportMapper implements ExportInterface
      */
     private array $queue = [];
 
-    /**
-     * @var bool Lazy lode entities.
-     */
-    private bool $lazyLoad = false;
+    private bool $fullyLoaded = false;
 
     public function __construct(private StorageInterface $storage)
     {
@@ -52,8 +49,6 @@ final class ExportMapper implements ExportInterface
 
     public function setUp(array $opts): self
     {
-        $this->lazyLoad = true === (bool)($opts['lazyload'] ?? false);
-
         return $this;
     }
 
@@ -63,7 +58,11 @@ final class ExportMapper implements ExportInterface
             return $this;
         }
 
-        foreach ($this->storage->getAll(false === $this->lazyLoad ? null : $date) as $entity) {
+        if (null === $date) {
+            $this->fullyLoaded = true;
+        }
+
+        foreach ($this->storage->getAll($date) as $entity) {
             if (null !== ($this->objects[$entity->id] ?? null)) {
                 continue;
             }
@@ -86,25 +85,32 @@ final class ExportMapper implements ExportInterface
         return $this;
     }
 
-    private function addGuids(StateEntity $entity, int|string $pointer): void
+    private function addGuids(StateInterface $entity, int|string $pointer): void
     {
         foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
             $this->guids[$key] = $pointer;
         }
     }
 
-    public function findByIds(array $ids): null|StateEntity
+    public function findByIds(array $ids): null|StateInterface
     {
-        foreach (Guid::fromArray($ids)->getPointers() as $key) {
+        $pointers = Guid::fromArray($ids)->getPointers();
+        foreach ($pointers as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
                 return $this->objects[$this->guids[$key]];
             }
         }
 
+        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->matchAnyId($pointers))) {
+            $this->objects[$lazyEntity->id] = $lazyEntity;
+            $this->addGuids($this->objects[$lazyEntity->id], $lazyEntity->id);
+            return $this->objects[$lazyEntity->id];
+        }
+
         return null;
     }
 
-    public function get(StateEntity $entity): null|StateEntity
+    public function get(StateInterface $entity): null|StateInterface
     {
         if (null !== $entity->id && null !== ($this->objects[$entity->id] ?? null)) {
             return $this->objects[$entity->id];
@@ -116,7 +122,7 @@ final class ExportMapper implements ExportInterface
             }
         }
 
-        if (true === $this->lazyLoad && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[$lazyEntity->id] = $lazyEntity;
             $this->addGuids($this->objects[$lazyEntity->id], $lazyEntity->id);
             return $this->objects[$lazyEntity->id];
@@ -125,16 +131,14 @@ final class ExportMapper implements ExportInterface
         return null;
     }
 
-    public function has(StateEntity $entity): bool
+    public function has(StateInterface $entity): bool
     {
         return null !== $this->get($entity);
     }
 
     public function reset(): self
     {
-        $this->objects = [];
-        $this->guids = [];
-        $this->queue = [];
+        $this->objects = $this->guids = $this->queue = [];
 
         return $this;
     }

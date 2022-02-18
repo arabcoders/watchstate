@@ -38,7 +38,7 @@ class Command extends BaseCommand
             'UNIQUE_ID'
         ];
 
-        $url = '/cli/' . Config::get('name') . '/' . Config::get('version') . '/' . $this->getName();
+        $url = '/cli/' . $this->getName();
         $data['meta']['url'] = $data['meta']['simple_url'] = $url;
         $data['meta']['get'] = $data['meta']['env'] = [];
         $data['meta']['SERVER'] = array_replace_recursive($data['meta']['SERVER'], [
@@ -51,7 +51,7 @@ class Command extends BaseCommand
             'DOCUMENT_ROOT' => env('IN_DOCKER') ? '/docker/' : '/cli',
             'REMOTE_ADDR' => '127.0.0.1',
             'SERVER_ADDR' => '127.0.0.1',
-            'SERVER_NAME' => env('IN_DOCKER') ? 'docker.vm' : 'cli.php'
+            'SERVER_NAME' => (env('IN_DOCKER') ? 'docker' : 'cli') . '.watchstate.' . Config::get('version')
         ]);
 
         foreach ($removeKeys as $key) {

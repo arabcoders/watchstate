@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Storage;
 
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
@@ -36,43 +36,43 @@ interface StorageInterface
     /**
      * Insert Entity immediately.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
-     * @return StateEntity Return given entity with valid $id
+     * @return StateInterface Return given entity with valid $id
      */
-    public function insert(StateEntity $entity): StateEntity;
+    public function insert(StateInterface $entity): StateInterface;
 
     /**
      * Update Entity immediately.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
-     * @return StateEntity Return the given entity.
+     * @return StateInterface Return the given entity.
      */
-    public function update(StateEntity $entity): StateEntity;
+    public function update(StateInterface $entity): StateInterface;
 
     /**
      * Get Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
-     * @return StateEntity|null
+     * @return StateInterface|null
      */
-    public function get(StateEntity $entity): StateEntity|null;
+    public function get(StateInterface $entity): StateInterface|null;
 
     /**
      * Remove Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
      * @return bool
      */
-    public function remove(StateEntity $entity): bool;
+    public function remove(StateInterface $entity): bool;
 
     /**
      * Insert/Update Entities.
      *
-     * @param array<StateEntity> $entities
+     * @param array<StateInterface> $entities
      *
      * @return array
      */
@@ -83,9 +83,18 @@ interface StorageInterface
      *
      * @param DateTimeInterface|null $date Get Entities That has changed since given time.
      *
-     * @return array<StateEntity>
+     * @return array<StateInterface>
      */
     public function getAll(DateTimeInterface|null $date = null): array;
+
+    /**
+     * Get Entity Using array of ids.
+     *
+     * @param array $ids
+     *
+     * @return StateInterface|null
+     */
+    public function matchAnyId(array $ids): StateInterface|null;
 
     /**
      * Migrate Backend Storage Schema.

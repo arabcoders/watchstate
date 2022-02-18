@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers;
 
-use App\Libs\Entity\StateEntity;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
@@ -22,7 +22,7 @@ interface ExportInterface
     public function setUp(array $opts): self;
 
     /**
-     * Load data from storage.
+     * Preload data from storage as usable entity.
      *
      * @param DateTimeInterface|null $date
      *
@@ -33,7 +33,7 @@ interface ExportInterface
     /**
      * Get All Queued Entities.
      *
-     * @return array<string,array<int|string,StateEntity>
+     * @return array<string,array<int|string,StateInterface>
      */
     public function getQueue(): array;
 
@@ -67,27 +67,27 @@ interface ExportInterface
     /**
      * Get Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
-     * @return null|StateEntity
+     * @return null|StateInterface
      */
-    public function get(StateEntity $entity): null|StateEntity;
+    public function get(StateInterface $entity): null|StateInterface;
 
     /**
      * Find Entity By Ids.
      *
      * @param array $ids
      *
-     * @return StateEntity|null
+     * @return StateInterface|null
      */
-    public function findByIds(array $ids): null|StateEntity;
+    public function findByIds(array $ids): null|StateInterface;
 
     /**
      * Has Entity.
      *
-     * @param StateEntity $entity
+     * @param StateInterface $entity
      *
      * @return bool
      */
-    public function has(StateEntity $entity): bool;
+    public function has(StateInterface $entity): bool;
 }

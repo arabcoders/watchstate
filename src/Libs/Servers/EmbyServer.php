@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Libs\Config;
-use App\Libs\Entity\StateEntity;
+use App\Libs\Container;
+use App\Libs\Entity\StateInterface;
 use App\Libs\HttpException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -35,7 +36,7 @@ class EmbyServer extends JellyfinServer
         return (new self($this->http, $this->logger))->setState($name, $url, $token, $userId, $options);
     }
 
-    public static function parseWebhook(ServerRequestInterface $request): StateEntity
+    public static function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         $payload = ag($request->getParsedBody(), 'data', null);
 
@@ -66,7 +67,7 @@ class EmbyServer extends JellyfinServer
         }
 
         $meta = match ($type) {
-            StateEntity::TYPE_MOVIE => [
+            StateInterface::TYPE_MOVIE => [
                 'via' => $via,
                 'title' => ag($json, 'Item.Name', ag($json, 'Item.OriginalTitle', '??')),
                 'year' => ag($json, 'Item.ProductionYear', 0000),
@@ -81,7 +82,7 @@ class EmbyServer extends JellyfinServer
                     'event' => $event,
                 ],
             ],
-            StateEntity::TYPE_EPISODE => [
+            StateInterface::TYPE_EPISODE => [
                 'via' => $via,
                 'series' => ag($json, 'Item.SeriesName', '??'),
                 'year' => ag($json, 'Item.ProductionYear', 0000),
@@ -114,6 +115,6 @@ class EmbyServer extends JellyfinServer
             ...self::getGuids($type, ag($json, 'Item.ProviderIds', []))
         ];
 
-        return new StateEntity($row);
+        return Container::get(StateInterface::class)::fromArray($row);
     }
 }
