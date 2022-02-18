@@ -11,7 +11,7 @@ if [ ! -f "/app/vendor/autoload.php" ]; then
   if [ ! -f "/usr/bin/composer" ]; then
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
   fi
-  runuser -u www-data -- composer --ansi --working-dir=/app/ -o --no-dev --no-progress --no-cache install
+  runuser -u www-data -- composer --ansi --working-dir=/app/ -o --no-progress --no-cache install
 fi
 
 if [ ! -f "/usr/bin/console" ]; then

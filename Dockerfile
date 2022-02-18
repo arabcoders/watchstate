@@ -22,7 +22,7 @@ RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     cp /app/docker/files/cron.sh /usr/bin/run-app-cron && \
     rm -rf /app/docker/ /app/var/ /app/docs/ /app/.github/ && \
     chmod +x /usr/bin/run-app-cron /usr/bin/console /usr/bin/entrypoint-docker && \
-    /usr/bin/composer --ansi --working-dir=/app/ -o --no-dev --no-progress --no-cache install && \
+    /usr/bin/composer --ansi --working-dir=/app/ -o --no-progress --no-cache install && \
     chown -R www-data:www-data /app /config
 
 ENTRYPOINT ["/usr/bin/entrypoint-docker"]
