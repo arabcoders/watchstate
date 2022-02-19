@@ -5,3 +5,4 @@
 !./docker/config/.gitignore
 ./var/*
 !./var/.gitignore
+.phpunit.result.cache

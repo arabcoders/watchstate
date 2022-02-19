@@ -6,6 +6,7 @@ namespace App\Libs\Storage\PDO;
 
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use Closure;
 use DateTimeInterface;
@@ -14,7 +15,6 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -28,38 +28,26 @@ final class PDOAdapter implements StorageInterface
     ];
 
     private PDO|null $pdo = null;
-    private string|null $driver = null;
     private bool $viaCommit = false;
 
-    private PDOStatement|null $stmtInsert = null;
-    private PDOStatement|null $stmtUpdate = null;
-    private PDOStatement|null $stmtDelete = null;
+    /**
+     * Cache Prepared Statements.
+     *
+     * @var array<array-key, PDOStatement>
+     */
+    private array $stmt = [
+        'insert' => null,
+        'update' => null,
+    ];
 
     public function __construct(private LoggerInterface $logger)
     {
     }
 
-    public function getAll(DateTimeInterface|null $date = null): array
-    {
-        $arr = [];
-
-        $sql = "SELECT * FROM state";
-
-        if (null !== $date) {
-            $sql .= ' WHERE updated > ' . $date->getTimestamp();
-        }
-
-        foreach ($this->pdo->query($sql) as $row) {
-            $arr[] = Container::get(StateInterface::class)::fromArray($row);
-        }
-
-        return $arr;
-    }
-
     public function setUp(array $opts): StorageInterface
     {
         if (null === ($opts['dsn'] ?? null)) {
-            throw new RuntimeException('No storage.opts.dsn (Data Source Name) was provided.');
+            throw new StorageException('No storage.opts.dsn (Data Source Name) was provided.', 10);
         }
 
         $this->pdo = new PDO(
@@ -75,13 +63,13 @@ final class PDOAdapter implements StorageInterface
             )
         );
 
-        $this->driver = $this->getDriver();
+        $driver = $this->getDriver();
 
-        if (!in_array($this->driver, $this->supported)) {
-            throw new RuntimeException(sprintf('%s Driver is not supported.', $this->driver));
+        if (!in_array($driver, $this->supported)) {
+            throw new StorageException(sprintf('%s Driver is not supported.', $driver), 11);
         }
 
-        if (null !== ($exec = ag($opts, "exec.{$this->driver}")) && is_array($exec)) {
+        if (null !== ($exec = ag($opts, "exec.{$driver}")) && is_array($exec)) {
             foreach ($exec as $cmd) {
                 $this->pdo->exec($cmd);
             }
@@ -90,17 +78,10 @@ final class PDOAdapter implements StorageInterface
         return $this;
     }
 
-    public function setLogger(LoggerInterface $logger): StorageInterface
-    {
-        $this->logger = $logger;
-
-        return $this;
-    }
-
     public function insert(StateInterface $entity): StateInterface
     {
         if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
         }
 
         try {
@@ -111,24 +92,24 @@ final class PDOAdapter implements StorageInterface
             }
 
             if (null !== $data['id']) {
-                throw new RuntimeException(
-                    sprintf('Trying to insert already saved entity #%s', $data['id'])
+                throw new StorageException(
+                    sprintf('Trying to insert already saved entity #%s', $data['id']), 21
                 );
             }
 
             unset($data['id']);
 
-            if (null === $this->stmtInsert) {
-                $this->stmtInsert = $this->pdo->prepare(
-                    $this->pdoInsert('state', array_keys($data))
+            if (null === ($this->stmt['insert'] ?? null)) {
+                $this->stmt['insert'] = $this->pdo->prepare(
+                    $this->pdoInsert('state', StateInterface::ENTITY_KEYS)
                 );
             }
 
-            $this->stmtInsert->execute($data);
+            $this->stmt['insert']->execute($data);
 
             $entity->id = (int)$this->pdo->lastInsertId();
         } catch (PDOException $e) {
-            $this->stmtInsert = null;
+            $this->stmt['insert'] = null;
             if (false === $this->viaCommit) {
                 $this->logger->error($e->getMessage(), $entity->meta ?? []);
                 return $entity;
@@ -136,13 +117,56 @@ final class PDOAdapter implements StorageInterface
             throw $e;
         }
 
-        return $entity;
+        return $entity->updateOriginal();
+    }
+
+    public function get(StateInterface $entity): StateInterface|null
+    {
+        if (null === $this->pdo) {
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+        }
+
+        $arr = array_intersect_key(
+            $entity->getAll(),
+            array_flip(StateInterface::ENTITY_GUIDS)
+        );
+
+        if (null !== $entity->id) {
+            $arr['id'] = $entity->id;
+        }
+
+        return $this->matchAnyId($arr, $entity);
+    }
+
+    public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array
+    {
+        if (null === $this->pdo) {
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+        }
+
+        $arr = [];
+
+        $sql = 'SELECT * FROM state';
+
+        if (null !== $date) {
+            $sql .= ' WHERE updated > ' . $date->getTimestamp();
+        }
+
+        if (null === $class) {
+            $class = Container::get(StateInterface::class);
+        }
+
+        foreach ($this->pdo->query($sql) as $row) {
+            $arr[] = $class::fromArray($row);
+        }
+
+        return $arr;
     }
 
     public function update(StateInterface $entity): StateInterface
     {
         if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
         }
 
         try {
@@ -153,16 +177,18 @@ final class PDOAdapter implements StorageInterface
             }
 
             if (null === $data['id']) {
-                throw new RuntimeException('Trying to update unsaved entity');
+                throw new StorageException('Trying to update unsaved entity', 51);
             }
 
-            if (null === $this->stmtUpdate) {
-                $this->stmtUpdate = $this->pdo->prepare($this->pdoUpdate('state', array_keys($data)));
+            if (null === ($this->stmt['update'] ?? null)) {
+                $this->stmt['update'] = $this->pdo->prepare(
+                    $this->pdoUpdate('state', StateInterface::ENTITY_KEYS)
+                );
             }
 
-            $this->stmtUpdate->execute($data);
+            $this->stmt['update']->execute($data);
         } catch (PDOException $e) {
-            $this->stmtUpdate = null;
+            $this->stmt['update'] = null;
             if (false === $this->viaCommit) {
                 $this->logger->error($e->getMessage(), $entity->meta ?? []);
                 return $entity;
@@ -170,31 +196,35 @@ final class PDOAdapter implements StorageInterface
             throw $e;
         }
 
-        return $entity;
+        return $entity->updateOriginal();
     }
 
-    public function get(StateInterface $entity): StateInterface|null
+    public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null
     {
         if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
         }
 
-        if (null !== $entity->id) {
-            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$entity->id);
+        if (null === $class) {
+            $class = Container::get(StateInterface::class);
+        }
+
+        if (null !== ($ids['id'] ?? null)) {
+            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$ids['id']);
 
             if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
                 return null;
             }
 
-            return Container::get(StateInterface::class)::fromArray($row);
+            return $class::fromArray($row);
         }
 
         $cond = $where = [];
         foreach (StateInterface::ENTITY_GUIDS as $key) {
-            if (null === $entity->{$key}) {
+            if (null === ($ids[$key] ?? null)) {
                 continue;
             }
-            $cond[$key] = $entity->{$key};
+            $cond[$key] = $ids[$key];
         }
 
         if (empty($cond)) {
@@ -202,106 +232,47 @@ final class PDOAdapter implements StorageInterface
         }
 
         foreach ($cond as $key => $_) {
-            $where[] = $this->escapeIdentifier($key) . ' = :' . $key;
+            $where[] = $key . ' = :' . $key;
         }
 
         $sqlWhere = implode(' OR ', $where);
 
-        $stmt = $this->pdo->prepare(
-            sprintf(
-                "SELECT * FROM %s WHERE %s LIMIT 1",
-                $this->escapeIdentifier('state'),
-                $sqlWhere
-            )
-        );
+        $cachedKey = md5($sqlWhere);
 
-        if (false === $stmt->execute($cond)) {
-            throw new RuntimeException('Unable to prepare sql statement');
-        }
+        try {
+            if (null === ($this->stmt[$cachedKey] ?? null)) {
+                $this->stmt[$cachedKey] = $this->pdo->prepare("SELECT * FROM state WHERE {$sqlWhere}");
+            }
 
-        if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
-            return null;
-        }
+            if (false === $this->stmt[$cachedKey]->execute($cond)) {
+                $this->stmt[$cachedKey] = null;
+                throw new StorageException('Failed to execute sql query.', 61);
+            }
 
-        return Container::get(StateInterface::class)::fromArray($row);
-    }
-
-    public function matchAnyId(array $ids): StateInterface|null
-    {
-        if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
-        }
-
-        if (null !== ($ids['id'] ?? null)) {
-            $stmt = $this->pdo->prepare(
-                sprintf(
-                    'SELECT * FROM %s WHERE %s = :id LIMIT 1',
-                    $this->escapeIdentifier('state'),
-                    $this->escapeIdentifier('id'),
-                )
-            );
-
-            if (false === ($stmt->execute(['id' => $ids['id']]))) {
+            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
                 return null;
             }
 
-            if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-
-            return Container::get(StateInterface::class)::fromArray($row);
+            return $class::fromArray($row);
+        } catch (PDOException|StorageException $e) {
+            $this->stmt[$cachedKey] = null;
+            throw $e;
         }
-
-        $cond = $where = [];
-
-        foreach ($ids as $_val) {
-            if (null === $_val || !str_starts_with($_val, 'guid_')) {
-                continue;
-            }
-
-            [$key, $val] = explode('://', $_val);
-
-            $cond[$key] = $val;
-        }
-
-        if (empty($cond)) {
-            return null;
-        }
-
-        foreach ($cond as $key => $_) {
-            $where[] = $this->escapeIdentifier($key) . ' = :' . $key;
-        }
-
-        $sqlWhere = implode(' OR ', $where);
-
-        $stmt = $this->pdo->prepare(
-            sprintf(
-                "SELECT * FROM %s WHERE %s LIMIT 1",
-                $this->escapeIdentifier('state'),
-                $sqlWhere
-            )
-        );
-
-        if (false === $stmt->execute($cond)) {
-            throw new RuntimeException('Unable to prepare sql statement');
-        }
-
-        if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
-            return null;
-        }
-
-        return Container::get(StateInterface::class)::fromArray($row);
     }
 
     public function remove(StateInterface $entity): bool
     {
+        if (null === $this->pdo) {
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+        }
+
         if (null === $entity->id && !$entity->hasGuids()) {
             return false;
         }
 
         try {
             if (null === $entity->id) {
-                if (null === $dbEntity = $this->get($entity)) {
+                if (null === ($dbEntity = $this->get($entity))) {
                     return false;
                 }
                 $id = $dbEntity->id;
@@ -309,20 +280,9 @@ final class PDOAdapter implements StorageInterface
                 $id = $entity->id;
             }
 
-            if (null === $this->stmtDelete) {
-                $this->stmtDelete = $this->pdo->prepare(
-                    sprintf(
-                        'DELETE FROM %s WHERE %s = :id',
-                        $this->escapeIdentifier('state'),
-                        $this->escapeIdentifier('id'),
-                    )
-                );
-            }
-
-            $this->stmtDelete->execute(['id' => $id]);
+            $this->pdo->query('DELETE FROM state WHERE id = ' . (int)$id);
         } catch (PDOException $e) {
             $this->logger->error($e->getMessage());
-            $this->stmtDelete = null;
             return false;
         }
 
@@ -332,7 +292,7 @@ final class PDOAdapter implements StorageInterface
     public function commit(array $entities): array
     {
         if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
         }
 
         return $this->transactional(function () use ($entities) {
@@ -377,6 +337,45 @@ final class PDOAdapter implements StorageInterface
         });
     }
 
+    public function migrations(string $dir, InputInterface $input, OutputInterface $output, array $opts = []): mixed
+    {
+        if (null === $this->pdo) {
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+        }
+
+        $class = new PDOMigrations($this->pdo);
+
+        return match (strtolower($dir)) {
+            StorageInterface::MIGRATE_UP => $class->up($input, $output),
+            StorageInterface::MIGRATE_DOWN => $class->down($output),
+            default => throw new StorageException(sprintf('Unknown direction \'%s\' was given.', $dir), 91),
+        };
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function makeMigration(string $name, OutputInterface $output, array $opts = []): mixed
+    {
+        if (null === $this->pdo) {
+            throw new StorageException('Setup(): method was not called.');
+        }
+
+        return (new PDOMigrations($this->pdo))->make($name, $output);
+    }
+
+    public function maintenance(InputInterface $input, OutputInterface $output, array $opts = []): mixed
+    {
+        return (new PDOMigrations($this->pdo))->runMaintenance();
+    }
+
+    public function setLogger(LoggerInterface $logger): StorageInterface
+    {
+        $this->logger = $logger;
+
+        return $this;
+    }
+
     /**
      * Wrap Transaction.
      *
@@ -410,6 +409,22 @@ final class PDOAdapter implements StorageInterface
     }
 
     /**
+     * Get PDO Driver.
+     *
+     * @return string
+     */
+    private function getDriver(): string
+    {
+        $driver = $this->pdo->getAttribute($this->pdo::ATTR_DRIVER_NAME);
+
+        if (empty($driver) || !is_string($driver)) {
+            $driver = 'unknown';
+        }
+
+        return strtolower($driver);
+    }
+
+    /**
      * Generate SQL Insert Statement.
      *
      * @param string $table
@@ -418,7 +433,7 @@ final class PDOAdapter implements StorageInterface
      */
     private function pdoInsert(string $table, array $columns): string
     {
-        $queryString = 'INSERT INTO ' . $this->escapeIdentifier($table) . ' (%{columns}) VALUES(%{values})';
+        $queryString = "INSERT INTO {$table} (%(columns)) VALUES(%(values))";
 
         $sql_columns = $sql_placeholder = [];
 
@@ -427,12 +442,12 @@ final class PDOAdapter implements StorageInterface
                 continue;
             }
 
-            $sql_columns[] = $this->escapeIdentifier($column, true);
-            $sql_placeholder[] = ':' . $this->escapeIdentifier($column, false);
+            $sql_columns[] = $column;
+            $sql_placeholder[] = ':' . $column;
         }
 
         $queryString = str_replace(
-            ['%{columns}', '%{values}'],
+            ['%(columns)', '%(values)'],
             [implode(', ', $sql_columns), implode(', ', $sql_placeholder)],
             $queryString
         );
@@ -449,11 +464,8 @@ final class PDOAdapter implements StorageInterface
      */
     private function pdoUpdate(string $table, array $columns): string
     {
-        $queryString = sprintf(
-            'UPDATE %s SET ${place} = ${holder} WHERE %s = :id',
-            $this->escapeIdentifier($table, true),
-            $this->escapeIdentifier('id', true)
-        );
+        /** @noinspection SqlWithoutWhere */
+        $queryString = "UPDATE {$table} SET %(place) = %(holder) WHERE id = :id";
 
         $placeholders = [];
 
@@ -461,95 +473,14 @@ final class PDOAdapter implements StorageInterface
             if ('id' === $column) {
                 continue;
             }
-            $placeholders[] = sprintf(
-                '%1$s = :%2$s',
-                $this->escapeIdentifier($column, true),
-                $this->escapeIdentifier($column, false)
-            );
+            $placeholders[] = sprintf('%1$s = :%1$s', $column);
         }
 
-        return trim(str_replace('${place} = ${holder}', implode(', ', $placeholders), $queryString));
-    }
-
-    private function escapeIdentifier(string $text, bool $quote = true): string
-    {
-        // table or column has to be valid ASCII name.
-        // this is opinionated, but we only allow [a-zA-Z0-9_] in column/table name.
-        if (!preg_match('#\w#', $text)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Invalid identifier "%s": Column/table must be valid ASCII code.',
-                    $text
-                )
-            );
-        }
-
-        // The first character cannot be [0-9]:
-        if (preg_match('/^\d/', $text)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Invalid identifier "%s": Must begin with a letter or underscore.',
-                    $text
-                )
-            );
-        }
-
-        if (!$quote) {
-            return $text;
-        }
-
-        return match ($this->driver) {
-            'mssql' => '[' . $text . ']',
-            'mysql' => '`' . $text . '`',
-            default => '"' . $text . '"',
-        };
+        return trim(str_replace('%(place) = %(holder)', implode(', ', $placeholders), $queryString));
     }
 
     public function __destruct()
     {
-        $this->stmtDelete = $this->stmtUpdate = $this->stmtInsert = null;
-    }
-
-    public function migrations(string $dir, InputInterface $input, OutputInterface $output, array $opts = []): mixed
-    {
-        if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
-        }
-
-        $class = new PDOMigrations($this->pdo);
-
-        return match ($dir) {
-            StorageInterface::MIGRATE_UP => $class->up($input, $output),
-            StorageInterface::MIGRATE_DOWN => $class->down($output),
-            default => throw new RuntimeException(sprintf('Unknown direction \'%s\' was given.', $dir)),
-        };
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function makeMigration(string $name, OutputInterface $output, array $opts = []): void
-    {
-        if (null === $this->pdo) {
-            throw new RuntimeException('Setup(): method was not called.');
-        }
-
-        (new PDOMigrations($this->pdo))->make($name, $output);
-    }
-
-    public function maintenance(InputInterface $input, OutputInterface $output, array $opts = []): mixed
-    {
-        return (new PDOMigrations($this->pdo))->runMaintenance();
-    }
-
-    private function getDriver(): string
-    {
-        $driver = $this->pdo->getAttribute($this->pdo::ATTR_DRIVER_NAME);
-
-        if (empty($driver) || !is_string($driver)) {
-            $driver = 'unknown';
-        }
-
-        return strtolower($driver);
+        $this->stmt = [];
     }
 }

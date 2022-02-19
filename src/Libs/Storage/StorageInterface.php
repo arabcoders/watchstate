@@ -26,14 +26,6 @@ interface StorageInterface
     public function setUp(array $opts): self;
 
     /**
-     * Inject Logger.
-     *
-     * @param LoggerInterface $logger
-     * @return $this
-     */
-    public function setLogger(LoggerInterface $logger): self;
-
-    /**
      * Insert Entity immediately.
      *
      * @param StateInterface $entity
@@ -41,6 +33,25 @@ interface StorageInterface
      * @return StateInterface Return given entity with valid $id
      */
     public function insert(StateInterface $entity): StateInterface;
+
+    /**
+     * Get Entity.
+     *
+     * @param StateInterface $entity
+     *
+     * @return StateInterface|null
+     */
+    public function get(StateInterface $entity): StateInterface|null;
+
+    /**
+     * Load entities from backend.
+     *
+     * @param DateTimeInterface|null $date Get Entities That has changed since given time, if null get all.
+     * @param StateInterface|null $class Create objects based on given class, if null use default class.
+     *
+     * @return array<StateInterface>
+     */
+    public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array;
 
     /**
      * Update Entity immediately.
@@ -52,13 +63,14 @@ interface StorageInterface
     public function update(StateInterface $entity): StateInterface;
 
     /**
-     * Get Entity.
+     * Get Entity Using array of ids.
      *
-     * @param StateInterface $entity
+     * @param array $ids
+     * @param StateInterface|null $class Create object based on given class, if null use default class.
      *
      * @return StateInterface|null
      */
-    public function get(StateInterface $entity): StateInterface|null;
+    public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null;
 
     /**
      * Remove Entity.
@@ -77,24 +89,6 @@ interface StorageInterface
      * @return array
      */
     public function commit(array $entities): array;
-
-    /**
-     * Load All Entities From backend.
-     *
-     * @param DateTimeInterface|null $date Get Entities That has changed since given time.
-     *
-     * @return array<StateInterface>
-     */
-    public function getAll(DateTimeInterface|null $date = null): array;
-
-    /**
-     * Get Entity Using array of ids.
-     *
-     * @param array $ids
-     *
-     * @return StateInterface|null
-     */
-    public function matchAnyId(array $ids): StateInterface|null;
 
     /**
      * Migrate Backend Storage Schema.
@@ -124,6 +118,17 @@ interface StorageInterface
      * @param string $name
      * @param OutputInterface $output
      * @param array $opts
+     *
+     * @return mixed can return migration file name in supported cases.
      */
-    public function makeMigration(string $name, OutputInterface $output, array $opts = []): void;
+    public function makeMigration(string $name, OutputInterface $output, array $opts = []): mixed;
+
+    /**
+     * Inject Logger.
+     *
+     * @param LoggerInterface $logger
+     * @return $this
+     */
+    public function setLogger(LoggerInterface $logger): self;
+
 }

@@ -10,6 +10,9 @@
             "*": "dist"
         }
     },
+    "scripts": {
+        "test": "vendor/bin/phpunit --colors=always"
+    },
     "require": {
         "php": ">=8.1",
         "ext-pdo": "*",
@@ -33,7 +36,13 @@
     "require-dev": {
         "roave/security-advisories": "dev-latest",
         "symfony/var-dumper": "^6.0",
-        "perftools/php-profiler": "^1.0"
+        "perftools/php-profiler": "^1.0",
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
     },
     "autoload": {
         "files": [
