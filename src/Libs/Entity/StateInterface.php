@@ -81,4 +81,5 @@ interface StateInterface
      */
     public function apply(StateInterface $entity, bool $guidOnly = false): StateInterface;
 
+    public function updateOriginal(): StateInterface;
 }

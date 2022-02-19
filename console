@@ -10,21 +10,7 @@ if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-if (!defined('BASE_MEMORY')) {
-    define('BASE_MEMORY', memory_get_usage());
-}
-
-if (!defined('BASE_PEAK_MEMORY')) {
-    define('BASE_PEAK_MEMORY', memory_get_peak_usage());
-}
-
-if (!defined('DS')) {
-    define('DS', DIRECTORY_SEPARATOR);
-}
-
-if (!defined('ROOT_PATH')) {
-    define('ROOT_PATH', realpath(__DIR__));
-}
+require __DIR__ . '/pre_init.php';
 
 set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
     $errno = $number & error_reporting();
@@ -68,13 +54,13 @@ set_exception_handler(function (Throwable $e) {
     exit(1);
 });
 
-if (!file_exists(__DIR__ . DS . 'vendor' . DS . 'autoload.php')) {
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
     fwrite(STDERR, 'Composer dependencies are missing. Run the following commands.' . PHP_EOL);
-    fwrite(STDERR, sprintf('cd %s', dirname(__DIR__)) . PHP_EOL);
+    fwrite(STDERR, sprintf('cd %s', __DIR__) . PHP_EOL);
     fwrite(STDERR, 'composer install --optimize-autoloader' . PHP_EOL);
     exit(1);
 }
 
-require __DIR__ . DS . 'vendor' . DS . 'autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 (new App\Libs\KernelConsole())->boot()->runConsole();

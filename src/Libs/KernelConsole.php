@@ -59,14 +59,14 @@ class KernelConsole
 
         // -- load user config.
         (function () {
-            $path = Config::get('path') . DS . 'config' . DS . 'config.yaml';
+            $path = Config::get('path') . '/config/config.yaml';
             if (file_exists($path)) {
                 Config::init(function () use ($path) {
                     return array_replace_recursive(Config::getAll(), Yaml::parseFile($path));
                 });
             }
 
-            $path = Config::get('path') . DS . 'config' . DS . 'servers.yaml';
+            $path = Config::get('path') . '/config/servers.yaml';
             if (file_exists($path)) {
                 Config::save('servers', Yaml::parseFile($path));
             }

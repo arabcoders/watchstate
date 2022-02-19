@@ -15,8 +15,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 class DumpCommand extends Command
 {
     private static array $configs = [
-        'servers' => 'config' . DS . 'servers.yaml',
-        'config' => 'config' . DS . 'config.yaml',
+        'servers' => 'config/servers.yaml',
+        'config' => 'config/config.yaml',
     ];
 
     protected function configure(): void
@@ -51,7 +51,7 @@ class DumpCommand extends Command
             throw new RuntimeException(sprintf('Unable to write to location path. \'%s\'.', $path));
         }
 
-        $file = $path . DS . self::$configs[$type];
+        $file = $path . '/' . self::$configs[$type];
 
         if (file_exists($file) && !$input->getOption('override')) {
             $message = sprintf('File exists at \'%s\'. use [-w, --override] flag to overwrite the file.', $file);
@@ -60,7 +60,6 @@ class DumpCommand extends Command
         }
 
         $kvSore = [
-            'DS' => DS,
             'path' => Config::get('path'),
         ];
 
@@ -69,7 +68,7 @@ class DumpCommand extends Command
             str_replace(
                 array_map(fn($n) => '%(' . $n . ')', array_keys($kvSore)),
                 array_values($kvSore),
-                file_get_contents(ROOT_PATH . DS . self::$configs[$type])
+                file_get_contents(ROOT_PATH . '/' . self::$configs[$type])
             )
         );
 

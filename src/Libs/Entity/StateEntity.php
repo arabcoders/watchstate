@@ -136,6 +136,12 @@ final class StateEntity implements StateInterface
         return $this;
     }
 
+    public function updateOriginal(): StateInterface
+    {
+        $this->data = $this->getAll();
+        return $this;
+    }
+
     private function isEqual(StateInterface $entity): bool
     {
         foreach ($this->getAll() as $key => $val) {
