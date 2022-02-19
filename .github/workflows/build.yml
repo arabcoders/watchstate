@@ -11,13 +11,12 @@ on:
 
 jobs:
   unit-tests:
-    name: PHP ${{ matrix.php }} - ${{ matrix.stability }}
+    name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
         php: [ 8.1 ]
-        stability: [ prefer-stable ]
     steps:
       - uses: actions/checkout@v2
       - name: Setup PHP
@@ -34,9 +33,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ matrix.php }}-${{ matrix.stability }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ matrix.php }}-${{ matrix.stability }}-composer-
-      - run: composer install --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+          key: ${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ matrix.php }}-composer-
+      - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer run test
 
   publish_docker_images:
