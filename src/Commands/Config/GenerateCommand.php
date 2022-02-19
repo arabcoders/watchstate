@@ -27,7 +27,7 @@ class GenerateCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $yaml = [];
-        $config = Config::get('path') . DS . 'config' . DS . 'config.yaml';
+        $config = Config::get('path') . '/config/config.yaml';
 
 
         if (file_exists($config)) {

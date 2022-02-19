@@ -266,7 +266,7 @@ class ImportCommand extends Command
 
         // -- Update Server.yaml with new lastSync date.
         file_put_contents(
-            $newConfig ?? Config::get('path') . DS . 'config' . DS . 'servers.yaml',
+            $newConfig ?? Config::get('path') . '/config/servers.yaml',
             Yaml::dump(Config::get('servers', []), 8, 2)
         );
 

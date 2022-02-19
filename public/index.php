@@ -16,21 +16,7 @@ error_reporting(E_ALL);
 ini_set('error_reporting', 'On');
 ini_set('display_errors', 'Off');
 
-if (!defined('BASE_MEMORY')) {
-    define('BASE_MEMORY', memory_get_usage());
-}
-
-if (!defined('BASE_PEAK_MEMORY')) {
-    define('BASE_PEAK_MEMORY', memory_get_peak_usage());
-}
-
-if (!defined('DS')) {
-    define('DS', DIRECTORY_SEPARATOR);
-}
-
-if (!defined('ROOT_PATH')) {
-    define('ROOT_PATH', realpath(__DIR__ . '..' . DS));
-}
+require __DIR__ . '/../pre_init.php';
 
 set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
     $errno = $number & error_reporting();

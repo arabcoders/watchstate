@@ -204,7 +204,7 @@ if (!function_exists('ag_delete')) {
 if (!function_exists('fixPath')) {
     function fixPath(string $path): string
     {
-        return rtrim(implode(DS, explode(DS, $path)), DS);
+        return rtrim(implode(DIRECTORY_SEPARATOR, explode(DIRECTORY_SEPARATOR, $path)), DIRECTORY_SEPARATOR);
     }
 }
 
@@ -231,7 +231,7 @@ if (!function_exists('saveWebhookPayload')) {
         ];
 
         @file_put_contents(
-            Config::get('path') . DS . 'logs' . DS . sprintf('webhook.%s.json', $name),
+            Config::get('path') . '/logs/' . sprintf('webhook.%s.json', $name),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }

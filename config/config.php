@@ -17,7 +17,7 @@ return (function () {
         'version' => 'v0.0.10-alpha',
         'tz' => null,
         'path' => fixPath(
-            env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . DS . '..' . DS . 'var'))
+            env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))
         ),
     ];
 
@@ -26,7 +26,7 @@ return (function () {
         'opts' => [
             'dsn' => env(
                 'WS_STORAGE_PDO_DSN',
-                fn() => 'sqlite:' . ag($config, 'path') . DS . 'db' . DS . 'watchstate.db'
+                fn() => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db'
             ),
             'username' => null,
             'password' => null,
@@ -76,7 +76,7 @@ return (function () {
             'options' => [
                 'save.handler' => 'file',
                 'save.handler.file' => [
-                    'filename' => ag($config, 'path') . DS . 'logs' . DS . 'profiler_' . gmdate('Y_m_d_His') . '.json'
+                    'filename' => ag($config, 'path') . '/logs/profiler_' . gmdate('Y_m_d_His') . '.json'
                 ],
             ],
         ],
@@ -93,7 +93,7 @@ return (function () {
             'type' => 'stream',
             'enabled' => env('WS_LOGGER_FILE_ENABLE', false),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
-            'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'path') . DS . 'logs' . DS . 'app.log'),
+            'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'path') . '/logs/app.log'),
         ],
         'syslog' => [
             'type' => 'syslog',

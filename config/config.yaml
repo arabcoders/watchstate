@@ -6,7 +6,7 @@ logger:
     enabled: true
     type: stream
     level: ERROR
-    filename: '%(path)%(DS)logs%(DS)app.log'
+    filename: '%(path)%/logs/app.log'
   syslog:
     enabled: false
     type: syslog

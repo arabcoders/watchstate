@@ -21,8 +21,8 @@ final class PDOMigrations
 
     public function __construct(private PDO $pdo)
     {
-        $this->path = __DIR__ . DS . 'Migrations';
-        $this->versionFile = Config::get('path') . DS . 'db' . DS . 'pdo_migrations_version';
+        $this->path = __DIR__ . '/Migrations';
+        $this->versionFile = Config::get('path') . '/db/pdo_migrations_version';
         $this->driver = $this->getDriver();
     }
 
@@ -104,10 +104,10 @@ final class PDOMigrations
 
         $fileName = sprintf('%s_%d_%s.sql', $this->driver, time(), $name);
 
-        $file = $this->path . DS . $fileName;
+        $file = $this->path . '/' . $fileName;
 
         if (!touch($file)) {
-            throw new RuntimeException(sprintf('Unable to create new migration at \'%s\'.', $this->path . DS));
+            throw new RuntimeException(sprintf('Unable to create new migration at \'%s\'.', $this->path));
         }
 
         file_put_contents(
@@ -171,7 +171,7 @@ final class PDOMigrations
     {
         $migrations = [];
 
-        foreach ((array)glob($this->path . DS . '*.sql') as $file) {
+        foreach ((array)glob($this->path . '/*.sql') as $file) {
             if (!is_string($file) || false === ($f = realpath($file))) {
                 throw new RuntimeException(sprintf('Unable to get real path to \'%s\'', $file));
             }
