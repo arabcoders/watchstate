@@ -87,7 +87,7 @@ final class ExportMapper implements ExportInterface
 
     private function addGuids(StateInterface $entity, int|string $pointer): void
     {
-        foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
+        foreach ($entity->getPointers() as $key) {
             $this->guids[$key] = $pointer;
         }
     }
@@ -116,7 +116,7 @@ final class ExportMapper implements ExportInterface
             return $this->objects[$entity->id];
         }
 
-        foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
+        foreach ($entity->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
                 return $this->objects[$this->guids[$key]];
             }

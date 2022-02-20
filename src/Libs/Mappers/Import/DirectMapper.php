@@ -49,6 +49,15 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
+    public function getObjects(array $opts = []): array
+    {
+        return [];
+    }
+
+    public function getObjectsCount(): int
+    {
+        return 0;
+    }
     public function commit(): mixed
     {
         return $this->operations;

@@ -72,6 +72,13 @@ interface StateInterface
     public function hasGuids(): bool;
 
     /**
+     * Get GUID Pointers.
+     *
+     * @return array
+     */
+    public function getPointers(): array;
+
+    /**
      * Apply changes to entity.
      *
      * @param StateInterface $entity

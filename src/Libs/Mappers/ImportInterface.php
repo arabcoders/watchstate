@@ -31,33 +31,8 @@ interface ImportInterface extends Countable
     public function loadData(DateTimeInterface|null $date = null): self;
 
     /**
-     * Inject Logger.
-     *
-     * @param LoggerInterface $logger
-     *
-     * @return self
-     */
-    public function setLogger(LoggerInterface $logger): self;
-
-    /**
-     * Inject Storage.
-     *
-     * @param StorageInterface $storage
-     *
-     * @return self
-     */
-    public function SetStorage(StorageInterface $storage): self;
-
-    /**
-     * Commit Entities to storage backend.
-     *
-     * @return mixed
-     */
-    public function commit(): mixed;
-
-    /**
      * Add Entity. it has to search for
-     * existing entity if found and update it.
+     * existing entity, and if found update it.
      *
      * @param string $bucket bucket name.
      * @param string $name Item name.
@@ -67,6 +42,13 @@ interface ImportInterface extends Countable
      * @return self
      */
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self;
+
+    /**
+     * Commit Entities to storage backend.
+     *
+     * @return mixed
+     */
+    public function commit(): mixed;
 
     /**
      * Get Entity.
@@ -94,4 +76,45 @@ interface ImportInterface extends Countable
      * @return bool
      */
     public function remove(StateInterface $entity): bool;
+
+    /**
+     * Reset Mapper State.
+     *
+     * @return ImportInterface
+     */
+    public function reset(): ImportInterface;
+
+    /**
+     * Get loaded objects.
+     *
+     * @param array $opts
+     *
+     * @return array<StateInterface>
+     */
+    public function getObjects(array $opts = []): array;
+
+    /**
+     * Get loaded objects count.
+     *
+     * @return int
+     */
+    public function getObjectsCount(): int;
+
+    /**
+     * Inject Logger.
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return self
+     */
+    public function setLogger(LoggerInterface $logger): self;
+
+    /**
+     * Inject Storage.
+     *
+     * @param StorageInterface $storage
+     *
+     * @return self
+     */
+    public function SetStorage(StorageInterface $storage): self;
 }

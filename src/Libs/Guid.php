@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class Guid
 {
-    private const LOOKUP_KEY = '%s://%s';
+    public const LOOKUP_KEY = '%s://%s';
 
     public const GUID_PLEX = 'guid_plex';
     public const GUID_IMDB = 'guid_imdb';
