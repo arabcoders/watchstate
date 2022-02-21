@@ -77,6 +77,7 @@ class MemoryMapperTest extends TestCase
 
         $this->assertSame(2, $this->mapper->getObjectsCount());
     }
+
     public function test_loadData_date_conditions(): void
     {
         $time = time();
@@ -132,6 +133,134 @@ class MemoryMapperTest extends TestCase
             ],
             $this->mapper->commit()
         );
+
         $this->assertCount(0, $this->mapper);
     }
+
+    public function test_get_conditions(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+
+        // -- expect null as we haven't added anything to db yet.
+        $this->assertNull($this->mapper->get($testEpisode));
+
+        $this->storage->commit([$testEpisode, $testMovie]);
+
+        clone $testMovie2 = $testMovie;
+        clone $testEpisode2 = $testEpisode;
+        $testMovie2->id = 2;
+        $testEpisode2->id = 1;
+
+        $this->assertSame($testEpisode2->getAll(), $this->mapper->get($testEpisode)->getAll());
+        $this->assertSame($testMovie2->getAll(), $this->mapper->get($testMovie)->getAll());
+    }
+
+    public function test_get_fully_loaded_conditions(): void
+    {
+        $time = time();
+
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+        $testEpisode->updated = $time;
+
+        $this->mapper->loadData();
+
+        $this->storage->commit([$testEpisode, $testMovie]);
+
+        $this->assertNull($this->mapper->get($testMovie));
+        $this->assertNull($this->mapper->get($testEpisode));
+
+        $this->mapper->loadData(makeDate($time - 1));
+        $this->assertInstanceOf(StateInterface::class, $this->mapper->get($testEpisode));
+    }
+
+    public function test_commit_conditions(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+
+        $this->mapper->add('test', 'movie', $testMovie)
+            ->add('test', 'episode', $testEpisode);
+
+        $this->assertSame(
+            [
+                StateInterface::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+            ],
+            $this->mapper->commit()
+        );
+
+        $testMovie->guid_anidb = StateInterface::TYPE_MOVIE . '/1';
+        $testEpisode->guid_anidb = StateInterface::TYPE_EPISODE . '/1';
+
+        $this->assertSame(
+            [
+                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+            ],
+            $this->mapper->add('test', 'movie', $testMovie)->add('test', 'episode', $testEpisode)->commit()
+        );
+    }
+
+    public function test_remove_conditions(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+
+        $this->assertFalse($this->mapper->remove($testEpisode));
+        $this->mapper->add('test', 'episode', $testEpisode)->add('test', 'movie', $testMovie)->commit();
+        $this->assertTrue($this->mapper->remove($testEpisode));
+    }
+
+    public function test_has_conditions(): void
+    {
+        $testEpisode = new StateEntity($this->testEpisode);
+        $this->assertFalse($this->mapper->has($testEpisode));
+        $this->storage->commit([$testEpisode]);
+        $this->assertTrue($this->mapper->has($testEpisode));
+    }
+
+    public function test_has_fully_loaded_conditions(): void
+    {
+        $time = time();
+
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+        $testEpisode->updated = $time;
+
+        $this->mapper->loadData();
+        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->assertFalse($this->mapper->has($testEpisode));
+        $this->mapper->loadData(makeDate($time - 1));
+        $this->assertTrue($this->mapper->has($testEpisode));
+    }
+
+    public function test_reset_conditions(): void
+    {
+        $testEpisode = new StateEntity($this->testEpisode);
+        $this->assertCount(0, $this->mapper);
+
+        $this->mapper->add('test', 'episode', $testEpisode);
+        $this->assertCount(1, $this->mapper);
+
+        $this->mapper->reset();
+        $this->assertCount(0, $this->mapper);
+    }
+
+    public function test_getObjects_conditions(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+
+        $this->assertCount(0, $this->mapper->getObjects());
+
+        $this->storage->commit([$testMovie, $testEpisode]);
+
+        $this->mapper->loadData();
+
+        $this->assertCount(2, $this->mapper->getObjects());
+        $this->assertCount(0, $this->mapper->reset()->getObjects());
+    }
+
 }

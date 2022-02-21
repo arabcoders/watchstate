@@ -44,13 +44,6 @@ interface ImportInterface extends Countable
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self;
 
     /**
-     * Commit Entities to storage backend.
-     *
-     * @return mixed
-     */
-    public function commit(): mixed;
-
-    /**
      * Get Entity.
      *
      * @param StateInterface $entity
@@ -58,6 +51,22 @@ interface ImportInterface extends Countable
      * @return null|StateInterface
      */
     public function get(StateInterface $entity): null|StateInterface;
+
+    /**
+     * Remove Entity.
+     *
+     * @param StateInterface $entity
+     *
+     * @return bool
+     */
+    public function remove(StateInterface $entity): bool;
+
+    /**
+     * Commit Entities to storage backend.
+     *
+     * @return mixed
+     */
+    public function commit(): mixed;
 
     /**
      * Has Entity.
@@ -68,14 +77,6 @@ interface ImportInterface extends Countable
      */
     public function has(StateInterface $entity): bool;
 
-    /**
-     * Remove Entity.
-     *
-     * @param StateInterface $entity
-     *
-     * @return bool
-     */
-    public function remove(StateInterface $entity): bool;
 
     /**
      * Reset Mapper State.

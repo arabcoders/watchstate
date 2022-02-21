@@ -46,13 +46,7 @@ final class MemoryMapper implements ImportInterface
 
     public function loadData(DateTimeInterface|null $date = null): self
     {
-        if (!empty($this->objects)) {
-            return $this;
-        }
-
-        if (null === $date) {
-            $this->fullyLoaded = true;
-        }
+        $this->fullyLoaded = null === $date;
 
         foreach ($this->storage->getAll($date, $this->options['class'] ?? null) as $entity) {
             if (null !== ($this->objects[$entity->id] ?? null)) {
@@ -63,16 +57,6 @@ final class MemoryMapper implements ImportInterface
         }
 
         return $this;
-    }
-
-    public function getObjects(array $opts = []): array
-    {
-        return $this->objects;
-    }
-
-    public function getObjectsCount(): int
-    {
-        return count($this->objects);
     }
 
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
@@ -152,17 +136,6 @@ final class MemoryMapper implements ImportInterface
         return $this;
     }
 
-    public function commit(): mixed
-    {
-        $state = $this->storage->commit(
-            array_intersect_key($this->objects, $this->changed)
-        );
-
-        $this->reset();
-
-        return $state;
-    }
-
     public function get(StateInterface $entity): null|StateInterface
     {
         foreach ($entity->getPointers() as $key) {
@@ -185,11 +158,6 @@ final class MemoryMapper implements ImportInterface
         return null;
     }
 
-    public function has(StateInterface $entity): bool
-    {
-        return null !== $this->get($entity);
-    }
-
     public function remove(StateInterface $entity): bool
     {
         if (false === ($pointer = $this->getPointer($entity))) {
@@ -206,14 +174,45 @@ final class MemoryMapper implements ImportInterface
 
         unset($this->objects[$pointer]);
 
+        if (null !== ($this->changed[$pointer] ?? null)) {
+            unset($this->changed[$pointer]);
+        }
+
         return true;
+    }
+
+    public function commit(): mixed
+    {
+        $state = $this->storage->commit(
+            array_intersect_key($this->objects, $this->changed)
+        );
+
+        $this->reset();
+
+        return $state;
+    }
+
+    public function has(StateInterface $entity): bool
+    {
+        return null !== $this->get($entity);
     }
 
     public function reset(): self
     {
+        $this->fullyLoaded = false;
         $this->objects = $this->changed = $this->guids = [];
 
         return $this;
+    }
+
+    public function getObjects(array $opts = []): array
+    {
+        return $this->objects;
+    }
+
+    public function getObjectsCount(): int
+    {
+        return count($this->objects);
     }
 
     public function count(): int
@@ -263,6 +262,13 @@ final class MemoryMapper implements ImportInterface
     {
         foreach ($entity->getPointers() as $key) {
             $this->guids[$key] = $pointer;
+        }
+    }
+
+    public function __destruct()
+    {
+        if (false === ($this->options['disable_autocommit'] ?? false) && $this->count() >= 1) {
+            $this->commit();
         }
     }
 }
