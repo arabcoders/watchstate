@@ -6,7 +6,6 @@ namespace App\Libs\Mappers\Import;
 
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
@@ -16,32 +15,21 @@ use Psr\Log\LoggerInterface;
 final class MemoryMapper implements ImportInterface
 {
     /**
-     * Load all entities.
-     *
-     * @var array<int,StateInterface>
+     * @var array<int,StateInterface> Load all entities.
      */
     private array $objects = [];
 
     /**
-     * Map GUIDs to entities.
-     *
-     * @var array<string,int>
+     * @var array<string,int> Map GUIDs to entities.
      */
     private array $guids = [];
 
     /**
-     * Map Deleted GUIDs.
-     *
-     * @var array<int,int>
-     */
-    private array $removed = [];
-
-    /**
-     * List Changed Entities.
-     *
-     * @var array<int,int>
+     * @var array<int,int> List Changed Entities.
      */
     private array $changed = [];
+
+    private array $options = [];
 
     private bool $fullyLoaded = false;
 
@@ -49,35 +37,18 @@ final class MemoryMapper implements ImportInterface
     {
     }
 
-    public function setLogger(LoggerInterface $logger): self
-    {
-        $this->logger = $logger;
-        $this->storage->setLogger($logger);
-        return $this;
-    }
-
-    public function setStorage(StorageInterface $storage): self
-    {
-        $this->storage = $storage;
-        return $this;
-    }
-
     public function setUp(array $opts): ImportInterface
     {
+        $this->options = $opts;
+
         return $this;
     }
 
     public function loadData(DateTimeInterface|null $date = null): self
     {
-        if (!empty($this->objects)) {
-            return $this;
-        }
+        $this->fullyLoaded = null === $date;
 
-        if (null === $date) {
-            $this->fullyLoaded = true;
-        }
-
-        foreach ($this->storage->getAll($date) as $entity) {
+        foreach ($this->storage->getAll($date, $this->options['class'] ?? null) as $entity) {
             if (null !== ($this->objects[$entity->id] ?? null)) {
                 continue;
             }
@@ -86,20 +57,6 @@ final class MemoryMapper implements ImportInterface
         }
 
         return $this;
-    }
-
-    public function commit(): mixed
-    {
-        $state = $this->storage->commit(
-            array_intersect_key(
-                $this->objects,
-                $this->changed
-            )
-        );
-
-        $this->reset();
-
-        return $state;
     }
 
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
@@ -179,16 +136,9 @@ final class MemoryMapper implements ImportInterface
         return $this;
     }
 
-    private function addGuids(StateInterface $entity, int $pointer): void
-    {
-        foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
-            $this->guids[$key] = $pointer;
-        }
-    }
-
     public function get(StateInterface $entity): null|StateInterface
     {
-        foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
+        foreach ($entity->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
                 return $this->objects[$this->guids[$key]];
             }
@@ -208,11 +158,6 @@ final class MemoryMapper implements ImportInterface
         return null;
     }
 
-    public function has(StateInterface $entity): bool
-    {
-        return null !== $this->get($entity);
-    }
-
     public function remove(StateInterface $entity): bool
     {
         if (false === ($pointer = $this->getPointer($entity))) {
@@ -221,7 +166,7 @@ final class MemoryMapper implements ImportInterface
 
         $this->storage->remove($this->objects[$pointer]);
 
-        foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
+        foreach ($entity->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
                 unset($this->guids[$key]);
             }
@@ -229,7 +174,63 @@ final class MemoryMapper implements ImportInterface
 
         unset($this->objects[$pointer]);
 
+        if (null !== ($this->changed[$pointer] ?? null)) {
+            unset($this->changed[$pointer]);
+        }
+
         return true;
+    }
+
+    public function commit(): mixed
+    {
+        $state = $this->storage->commit(
+            array_intersect_key($this->objects, $this->changed)
+        );
+
+        $this->reset();
+
+        return $state;
+    }
+
+    public function has(StateInterface $entity): bool
+    {
+        return null !== $this->get($entity);
+    }
+
+    public function reset(): self
+    {
+        $this->fullyLoaded = false;
+        $this->objects = $this->changed = $this->guids = [];
+
+        return $this;
+    }
+
+    public function getObjects(array $opts = []): array
+    {
+        return $this->objects;
+    }
+
+    public function getObjectsCount(): int
+    {
+        return count($this->objects);
+    }
+
+    public function count(): int
+    {
+        return count($this->changed);
+    }
+
+    public function setLogger(LoggerInterface $logger): self
+    {
+        $this->logger = $logger;
+        $this->storage->setLogger($logger);
+        return $this;
+    }
+
+    public function setStorage(StorageInterface $storage): self
+    {
+        $this->storage = $storage;
+        return $this;
     }
 
     /**
@@ -241,13 +242,8 @@ final class MemoryMapper implements ImportInterface
      */
     private function getPointer(StateInterface $entity): int|bool
     {
-        foreach (Guid::fromArray($entity->getAll())->getPointers() as $key) {
+        foreach ($entity->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
-                if (isset($this->removed[$this->guids[$key]])) {
-                    unset($this->guids[$key]);
-                    continue;
-                }
-
                 return $this->guids[$key];
             }
         }
@@ -262,15 +258,17 @@ final class MemoryMapper implements ImportInterface
         return false;
     }
 
-    public function reset(): self
+    private function addGuids(StateInterface $entity, int $pointer): void
     {
-        $this->objects = $this->guids = $this->removed = [];
-
-        return $this;
+        foreach ($entity->getPointers() as $key) {
+            $this->guids[$key] = $pointer;
+        }
     }
 
-    public function count(): int
+    public function __destruct()
     {
-        return count($this->changed);
+        if (false === ($this->options['disable_autocommit'] ?? false) && $this->count() >= 1) {
+            $this->commit();
+        }
     }
 }

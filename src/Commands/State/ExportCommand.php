@@ -11,6 +11,7 @@ use App\Libs\Data;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Servers\ServerInterface;
+use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -23,8 +24,11 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 class ExportCommand extends Command
 {
-    public function __construct(private ExportInterface $mapper, private LoggerInterface $logger)
-    {
+    public function __construct(
+        private StorageInterface $storage,
+        private ExportInterface $mapper,
+        private LoggerInterface $logger
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -35,8 +39,6 @@ class ExportCommand extends Command
     {
         $this->setName('state:export')
             ->setDescription('Export watch state to servers.')
-            ->addOption('mapper-class', null, InputOption::VALUE_OPTIONAL, 'Configured mapper.', $this->mapper::class)
-            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export.')
@@ -66,13 +68,19 @@ class ExportCommand extends Command
                 'Ignore date comparison, and update server watched state to match database.'
             )
             ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
-            ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
-                'stats-filter',
+                'mapper-class',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'Filter final status output e.g. (servername.key)',
-                null
+                'Configured mapper.',
+                afterLast($this->mapper::class, '\\')
+            )
+            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
+            ->addOption(
+                'storage-pdo-single-transaction',
+                null,
+                InputOption::VALUE_NONE,
+                'Set Single transaction mode for PDO driver.'
             );
     }
 
@@ -155,6 +163,10 @@ class ExportCommand extends Command
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');
+        }
+
+        if ($input->getOption('storage-pdo-single-transaction')) {
+            $this->storage->singleTransaction();
         }
 
         foreach ($list as $server) {

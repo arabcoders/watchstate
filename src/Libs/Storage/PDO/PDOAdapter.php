@@ -30,6 +30,8 @@ final class PDOAdapter implements StorageInterface
     private PDO|null $pdo = null;
     private bool $viaCommit = false;
 
+    private bool $singleTransaction = false;
+
     /**
      * Cache Prepared Statements.
      *
@@ -73,6 +75,10 @@ final class PDOAdapter implements StorageInterface
             foreach ($exec as $cmd) {
                 $this->pdo->exec($cmd);
             }
+        }
+
+        if (true === ($opts['singleTransaction'] ?? false)) {
+            $this->singleTransaction();
         }
 
         return $this;
@@ -358,7 +364,7 @@ final class PDOAdapter implements StorageInterface
     public function makeMigration(string $name, OutputInterface $output, array $opts = []): mixed
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.');
+            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
         }
 
         return (new PDOMigrations($this->pdo))->make($name, $output);
@@ -377,6 +383,23 @@ final class PDOAdapter implements StorageInterface
     }
 
     /**
+     * Enable Single Transaction mode.
+     *
+     * @return bool
+     */
+    public function singleTransaction(): bool
+    {
+        $this->singleTransaction = true;
+        $this->logger->notice('Single transaction mode');
+
+        if (false === $this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+        }
+
+        return $this->pdo->inTransaction();
+    }
+
+    /**
      * Wrap Transaction.
      *
      * @param Closure(PDO): mixed $callback
@@ -386,7 +409,7 @@ final class PDOAdapter implements StorageInterface
      */
     private function transactional(Closure $callback): mixed
     {
-        $autoStartTransaction = false === $this->pdo->inTransaction();
+        $autoStartTransaction = false === $this->singleTransaction && false === $this->pdo->inTransaction();
 
         try {
             if (!$autoStartTransaction) {
@@ -481,6 +504,10 @@ final class PDOAdapter implements StorageInterface
 
     public function __destruct()
     {
+        if (true === $this->singleTransaction && $this->pdo->inTransaction()) {
+            $this->pdo->commit();
+        }
+
         $this->stmt = [];
     }
 }

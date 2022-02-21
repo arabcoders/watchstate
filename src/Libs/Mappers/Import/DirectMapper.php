@@ -26,19 +26,6 @@ final class DirectMapper implements ImportInterface
     {
     }
 
-    public function setLogger(LoggerInterface $logger): self
-    {
-        $this->logger = $logger;
-        $this->storage->setLogger($logger);
-        return $this;
-    }
-
-    public function setStorage(StorageInterface $storage): self
-    {
-        $this->storage = $storage;
-        return $this;
-    }
-
     public function setUp(array $opts): ImportInterface
     {
         return $this;
@@ -47,11 +34,6 @@ final class DirectMapper implements ImportInterface
     public function loadData(DateTimeInterface|null $date = null): ImportInterface
     {
         return $this;
-    }
-
-    public function commit(): mixed
-    {
-        return $this->operations;
     }
 
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
@@ -153,6 +135,37 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
+    public function setLogger(LoggerInterface $logger): self
+    {
+        $this->logger = $logger;
+        $this->storage->setLogger($logger);
+        return $this;
+    }
+
+    public function setStorage(StorageInterface $storage): self
+    {
+        $this->storage = $storage;
+        return $this;
+    }
+
+    public function getObjects(array $opts = []): array
+    {
+        return [];
+    }
+
+    public function getObjectsCount(): int
+    {
+        return 0;
+    }
+
+    public function commit(): mixed
+    {
+        $this->reset();
+
+        return $this->operations;
+    }
+
+
     public function get(StateInterface $entity): null|StateInterface
     {
         return $this->storage->get($entity);
@@ -170,6 +183,8 @@ final class DirectMapper implements ImportInterface
 
     public function reset(): self
     {
+        $this->changed = 0;
+
         return $this;
     }
 

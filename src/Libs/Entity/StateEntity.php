@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Entity;
 
+use App\Libs\Guid;
 use RuntimeException;
 
 final class StateEntity implements StateInterface
@@ -140,6 +141,13 @@ final class StateEntity implements StateInterface
     {
         $this->data = $this->getAll();
         return $this;
+    }
+
+    public function getPointers(): array
+    {
+        return Guid::fromArray(
+            array_intersect_key((array)$this, array_flip(StateInterface::ENTITY_GUIDS))
+        )->getPointers();
     }
 
     private function isEqual(StateInterface $entity): bool

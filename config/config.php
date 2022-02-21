@@ -30,12 +30,13 @@ return (function () {
             ),
             'username' => null,
             'password' => null,
-            'options' => [],
             'exec' => [
                 'sqlite' => [
-                    'PRAGMA journal_mode=WAL'
+                    'PRAGMA journal_mode=MEMORY',
+                    'PRAGMA SYNCHRONOUS=OFF'
                 ],
             ],
+            'singleTransaction' => env('WS_STORAGE_PDO_ST', false),
         ],
     ];
 
@@ -47,11 +48,11 @@ return (function () {
 
     $config['mapper'] = [
         'import' => [
-            'type' => env('WS_IMPORT_MAPPER', MemoryMapper::class),
+            'type' => env('WS_MAPPER_IMPORT', MemoryMapper::class),
             'opts' => [],
         ],
         'export' => [
-            'type' => env('WS_EXPORT_MAPPER', ExportMapper::class),
+            'type' => env('WS_MAPPER_EXPORT', ExportMapper::class),
             'opts' => [],
         ],
     ];

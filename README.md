@@ -1,17 +1,17 @@
-# Warning
+# Watch State Sync
 
-This is an early release version, expect bugs and edge cases that we haven't encountered. Please keep that in mind
-before running this tool. while its works for me, it might not work for your setup.
-
-# Watch State Sync (Early Preview)
-
-A commandline based tool to sync watch state between different media servers.
+CLI based tool to sync watch state between different media servers.
 
 # Introduction
 
 Ever wanted to sync your watch state without having to rely on 3rd party service like trakt.tv? then this tool is for
 you. I had multiple problems with Plex trakt.tv plugin which led to my account being banned at trakt.tv, and on top of
 that the plugin no longer supported. And I like to keep my own data locally if possible.
+
+# v1.0.0 tagging.
+
+The features set is complete, and works, however the API still unstable as such there will be no v1 tag until we
+finalize the API and finish writing tests.
 
 # Supported Media servers.
 
@@ -119,7 +119,7 @@ logger output, log memory usage and print them to the screen.
 
 ## How to change Import mapper.
 
-Set the environment variable `WS_IMPORT_MAPPER` to `DirectMapper` or edit the ``config/config.yaml`` and add the
+Set the environment variable `WS_MAPPER_IMPORT` to `DirectMapper` or edit the ``config/config.yaml`` and add the
 following lines
 
 ```yaml
