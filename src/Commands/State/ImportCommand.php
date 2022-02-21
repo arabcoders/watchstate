@@ -12,6 +12,7 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
+use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -24,8 +25,11 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ImportCommand extends Command
 {
-    public function __construct(private ImportInterface $mapper, private LoggerInterface $logger)
-    {
+    public function __construct(
+        private StorageInterface $storage,
+        private ImportInterface $mapper,
+        private LoggerInterface $logger
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -36,8 +40,6 @@ class ImportCommand extends Command
     {
         $this->setName('state:import')
             ->setDescription('Import watch state from servers.')
-            ->addOption('mapper-class', null, InputOption::VALUE_OPTIONAL, 'Configured Mapper.', $this->mapper::class)
-            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import.')
@@ -74,6 +76,20 @@ class ImportCommand extends Command
                 InputOption::VALUE_OPTIONAL,
                 'Filter final status output e.g. (servername.key)',
                 null
+            )
+            ->addOption(
+                'mapper-class',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Configured Mapper.',
+                afterLast($this->mapper::class, '\\')
+            )
+            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
+            ->addOption(
+                'storage-pdo-single-transaction',
+                null,
+                InputOption::VALUE_NONE,
+                'Set Single transaction mode for PDO driver.'
             );
     }
 
@@ -156,6 +172,10 @@ class ImportCommand extends Command
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');
+        }
+
+        if ($input->getOption('storage-pdo-single-transaction')) {
+            $this->storage->singleTransaction();
         }
 
         foreach ($list as $server) {

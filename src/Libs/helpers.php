@@ -357,3 +357,20 @@ if (!function_exists('serveHttpRequest')) {
         }
     }
 }
+
+if (!function_exists('afterLast')) {
+    function afterLast(string $subject, string $search): string
+    {
+        if (empty($search)) {
+            return $subject;
+        }
+
+        $position = mb_strrpos($subject, $search, 0);
+
+        if (false === $position) {
+            return $subject;
+        }
+
+        return mb_substr($subject, $position + mb_strlen($search));
+    }
+}
