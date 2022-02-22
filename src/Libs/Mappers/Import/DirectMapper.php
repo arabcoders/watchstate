@@ -74,6 +74,9 @@ final class DirectMapper implements ImportInterface
             if ($item->apply($entity, guidOnly: true)->isChanged()) {
                 try {
                     $this->changed++;
+                    if (!empty($entity->meta)) {
+                        $item->meta = $entity->meta;
+                    }
                     $this->storage->update($item);
                     $this->operations[$entity->type]['updated']++;
                     $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
@@ -97,6 +100,9 @@ final class DirectMapper implements ImportInterface
                 if ($item->apply($entity, guidOnly: true)->isChanged()) {
                     try {
                         $this->changed++;
+                        if (!empty($entity->meta)) {
+                            $item->meta = $entity->meta;
+                        }
                         $this->storage->update($item);
                         $this->operations[$entity->type]['updated']++;
                         $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
