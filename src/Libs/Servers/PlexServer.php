@@ -138,10 +138,10 @@ class PlexServer implements ServerInterface
 
         $isWatched = (int)(bool)ag($json, 'Metadata.viewCount', 0);
 
-        $date = (int)ag(
-            $json,
-            'Metadata.lastViewedAt',
-            ag($json, 'Metadata.updatedAt', ag($json, 'Metadata.addedAt', 0))
+        $date = max(
+            (int)ag($json, 'Metadata.updatedAt', 0),
+            (int)ag($json, 'Metadata.lastViewedAt', 0),
+            (int)ag($json, 'Metadata.addedAt', 0)
         );
 
         if (0 === $date) {
