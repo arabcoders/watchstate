@@ -77,7 +77,7 @@ class PlexServer implements ServerInterface
 
     public static function parseWebhook(ServerRequestInterface $request): StateInterface
     {
-        $payload = ag($request->getParsedBody(), 'payload', null);
+        $payload = ag($request->getParsedBody() ?? [], 'payload', null);
 
         if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
             throw new HttpException('No payload.', 400);
@@ -124,8 +124,17 @@ class PlexServer implements ServerInterface
             default => throw new HttpException('Invalid content type.', 400),
         };
 
-        $guids = ag($json, 'Metadata.Guid', []);
-        $guids[] = ['id' => ag($json, 'Metadata.guid')];
+        if (null === ($json['Metadata']['Guid'] ?? null)) {
+            $json['Metadata']['Guid'] = [
+                [
+                    'id' => ag($json, 'Metadata.guid')
+                ]
+            ];
+        } else {
+            $json['Metadata']['Guid'][] = [
+                'id' => ag($json, 'Metadata.guid')
+            ];
+        }
 
         $isWatched = (int)(bool)ag($json, 'Metadata.viewCount', 0);
 
@@ -139,14 +148,12 @@ class PlexServer implements ServerInterface
             throw new HttpException('Invalid Content date.', 400);
         }
 
-        $meta['payload'] = $json;
-
         $row = [
             'type' => $type,
             'updated' => $date,
             'watched' => $isWatched,
             'meta' => $meta,
-            ...self::getGuids($type, $guids)
+            ...self::getGuids($type, $json['Metadata']['Guid'] ?? [])
         ];
 
         return Container::get(StateInterface::class)::fromArray($row);
@@ -647,11 +654,13 @@ class PlexServer implements ServerInterface
     {
         $guid = [];
         foreach ($guids as $_id) {
-            if (empty($_id->id)) {
+            $val = is_object($_id) ? $_id->id : $_id['id'];
+
+            if (empty($val)) {
                 continue;
             }
 
-            [$key, $value] = explode('://', $_id->id);
+            [$key, $value] = explode('://', $val);
             $key = strtolower($key);
 
             if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
