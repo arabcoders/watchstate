@@ -91,6 +91,9 @@ final class MemoryMapper implements ImportInterface
             // -- check for updated GUIDs.
             if ($this->objects[$pointer]->apply($entity, guidOnly: true)->isChanged()) {
                 $this->changed[$pointer] = $pointer;
+                if (!empty($entity->meta)) {
+                    $this->objects[$pointer]->meta = $entity->meta;
+                }
                 Data::increment($bucket, $entity->type . '_updated');
                 $this->addGuids($this->objects[$pointer], $pointer);
                 $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $this->objects[$pointer]->diff());
@@ -108,6 +111,9 @@ final class MemoryMapper implements ImportInterface
                 // -- check for updated GUIDs.
                 if ($this->objects[$pointer]->apply($entity, guidOnly: true)->isChanged()) {
                     $this->changed[$pointer] = $pointer;
+                    if (!empty($entity->meta)) {
+                        $this->objects[$pointer]->meta = $entity->meta;
+                    }
                     Data::increment($bucket, $entity->type . '_updated');
                     $this->addGuids($this->objects[$pointer], $pointer);
                     $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $this->objects[$pointer]->diff());
