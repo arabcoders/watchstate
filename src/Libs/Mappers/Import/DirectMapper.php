@@ -141,16 +141,41 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
-    public function setLogger(LoggerInterface $logger): self
+    public function get(StateInterface $entity): null|StateInterface
     {
-        $this->logger = $logger;
-        $this->storage->setLogger($logger);
-        return $this;
+        return $this->storage->get($entity);
     }
 
-    public function setStorage(StorageInterface $storage): self
+    public function remove(StateInterface $entity): bool
     {
-        $this->storage = $storage;
+        return $this->storage->remove($entity);
+    }
+
+    public function commit(): mixed
+    {
+        $op = $this->operations;
+
+        $this->reset();
+
+        return $op;
+    }
+
+    public function has(StateInterface $entity): bool
+    {
+        return null !== $this->storage->get($entity);
+    }
+
+    public function reset(): self
+    {
+        $this->changed = 0;
+
+        $this->operations[StateInterface::TYPE_EPISODE]['added'] = 0;
+        $this->operations[StateInterface::TYPE_EPISODE]['updated'] = 0;
+        $this->operations[StateInterface::TYPE_EPISODE]['failed'] = 0;
+        $this->operations[StateInterface::TYPE_MOVIE]['added'] = 0;
+        $this->operations[StateInterface::TYPE_MOVIE]['updated'] = 0;
+        $this->operations[StateInterface::TYPE_MOVIE]['failed'] = 0;
+
         return $this;
     }
 
@@ -164,33 +189,16 @@ final class DirectMapper implements ImportInterface
         return 0;
     }
 
-    public function commit(): mixed
+    public function setLogger(LoggerInterface $logger): self
     {
-        $this->reset();
-
-        return $this->operations;
+        $this->logger = $logger;
+        $this->storage->setLogger($logger);
+        return $this;
     }
 
-
-    public function get(StateInterface $entity): null|StateInterface
+    public function setStorage(StorageInterface $storage): self
     {
-        return $this->storage->get($entity);
-    }
-
-    public function has(StateInterface $entity): bool
-    {
-        return null !== $this->storage->get($entity);
-    }
-
-    public function remove(StateInterface $entity): bool
-    {
-        return $this->storage->remove($entity);
-    }
-
-    public function reset(): self
-    {
-        $this->changed = 0;
-
+        $this->storage = $storage;
         return $this;
     }
 

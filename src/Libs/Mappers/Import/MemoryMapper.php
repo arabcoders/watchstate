@@ -144,6 +144,10 @@ final class MemoryMapper implements ImportInterface
 
     public function get(StateInterface $entity): null|StateInterface
     {
+        if (null !== $entity->id && null !== ($this->objects[$entity->id] ?? null)) {
+            return $this->objects[$entity->id];
+        }
+
         foreach ($entity->getPointers() as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
                 return $this->objects[$this->guids[$key]];

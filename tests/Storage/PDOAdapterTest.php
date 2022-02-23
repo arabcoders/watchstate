@@ -19,35 +19,8 @@ use Symfony\Component\Console\Output\NullOutput;
 
 class PDOAdapterTest extends TestCase
 {
-    private array $testEpisode = [
-        'id' => null,
-        'type' => StateInterface::TYPE_EPISODE,
-        'updated' => 0,
-        'watched' => 1,
-        'meta' => [],
-        'guid_plex' => StateInterface::TYPE_EPISODE . '/1',
-        'guid_imdb' => StateInterface::TYPE_EPISODE . '/2',
-        'guid_tvdb' => StateInterface::TYPE_EPISODE . '/3',
-        'guid_tmdb' => StateInterface::TYPE_EPISODE . '/4',
-        'guid_tvmaze' => StateInterface::TYPE_EPISODE . '/5',
-        'guid_tvrage' => StateInterface::TYPE_EPISODE . '/6',
-        'guid_anidb' => StateInterface::TYPE_EPISODE . '/7',
-    ];
-
-    private array $testMovie = [
-        'id' => null,
-        'type' => StateInterface::TYPE_MOVIE,
-        'updated' => 1,
-        'watched' => 1,
-        'meta' => [],
-        'guid_plex' => StateInterface::TYPE_MOVIE . '/10',
-        'guid_imdb' => StateInterface::TYPE_MOVIE . '/20',
-        'guid_tvdb' => StateInterface::TYPE_MOVIE . '/30',
-        'guid_tmdb' => StateInterface::TYPE_MOVIE . '/40',
-        'guid_tvmaze' => StateInterface::TYPE_MOVIE . '/50',
-        'guid_tvrage' => StateInterface::TYPE_MOVIE . '/60',
-        'guid_anidb' => StateInterface::TYPE_MOVIE . '/70',
-    ];
+    private array $testMovie = [];
+    private array $testEpisode = [];
 
     private StorageInterface|null $storage = null;
 
@@ -55,6 +28,9 @@ class PDOAdapterTest extends TestCase
     {
         $this->output = new NullOutput();
         $this->input = new ArrayInput([]);
+
+        $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
+        $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
 
         $this->storage = new PDOAdapter(new CliLogger($this->output));
         $this->storage->setUp(['dsn' => 'sqlite::memory:']);
@@ -304,6 +280,7 @@ class PDOAdapterTest extends TestCase
         $storage = new PDOAdapter(new CliLogger($this->output));
         $storage->migrations('f', new ArrayInput([]), new NullOutput());
     }
+
     public function test_migrations_call_with_wrong_direction_exception(): void
     {
         $this->expectException(StorageException::class);

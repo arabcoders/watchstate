@@ -16,35 +16,8 @@ use Symfony\Component\Console\Output\NullOutput;
 
 class MemoryMapperTest extends TestCase
 {
-    private array $testEpisode = [
-        'id' => null,
-        'type' => StateInterface::TYPE_EPISODE,
-        'updated' => 0,
-        'watched' => 1,
-        'meta' => [],
-        'guid_plex' => StateInterface::TYPE_EPISODE . '/1',
-        'guid_imdb' => StateInterface::TYPE_EPISODE . '/2',
-        'guid_tvdb' => StateInterface::TYPE_EPISODE . '/3',
-        'guid_tmdb' => StateInterface::TYPE_EPISODE . '/4',
-        'guid_tvmaze' => StateInterface::TYPE_EPISODE . '/5',
-        'guid_tvrage' => StateInterface::TYPE_EPISODE . '/6',
-        'guid_anidb' => StateInterface::TYPE_EPISODE . '/7',
-    ];
-
-    private array $testMovie = [
-        'id' => null,
-        'type' => StateInterface::TYPE_MOVIE,
-        'updated' => 1,
-        'watched' => 1,
-        'meta' => [],
-        'guid_plex' => StateInterface::TYPE_MOVIE . '/10',
-        'guid_imdb' => StateInterface::TYPE_MOVIE . '/20',
-        'guid_tvdb' => StateInterface::TYPE_MOVIE . '/30',
-        'guid_tmdb' => StateInterface::TYPE_MOVIE . '/40',
-        'guid_tvmaze' => StateInterface::TYPE_MOVIE . '/50',
-        'guid_tvrage' => StateInterface::TYPE_MOVIE . '/60',
-        'guid_anidb' => StateInterface::TYPE_MOVIE . '/70',
-    ];
+    private array $testMovie = [];
+    private array $testEpisode = [];
 
     private MemoryMapper|null $mapper = null;
     private StorageInterface|null $storage = null;
@@ -53,6 +26,10 @@ class MemoryMapperTest extends TestCase
     {
         $this->output = new NullOutput();
         $this->input = new ArrayInput([]);
+
+        $this->testMovie = require __DIR__ . '/../../Fixtures/MovieEntity.php';
+        $this->testEpisode = require __DIR__ . '/../../Fixtures/EpisodeEntity.php';
+
         $logger = new CliLogger($this->output);
 
         $this->storage = new PDOAdapter($logger);
