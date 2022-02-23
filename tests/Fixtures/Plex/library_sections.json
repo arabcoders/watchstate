@@ -1,0 +1,113 @@
+{
+    "name": "Get Plex Library sections",
+    "expects": {
+        "method": "GET",
+        "uri": "/library/sections",
+        "headers": {
+            "includes": [
+                "X-Plex-Token"
+            ]
+        }
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "includes": {
+                "X-Plex-Protocol": "1.0"
+            }
+        },
+        "payload": {
+            "MediaContainer": {
+                "Directory": [
+                    {
+                        "Location": [
+                            {
+                                "id": 69,
+                                "path": "/media/tv"
+                            }
+                        ],
+                        "agent": "tv.plex.agents.series",
+                        "allowSync": true,
+                        "art": "/:/resources/show-fanart.jpg",
+                        "composite": "/library/sections/1/composite/1645563796",
+                        "content": true,
+                        "contentChangedAt": 11238897,
+                        "createdAt": 1499601519,
+                        "directory": true,
+                        "filters": true,
+                        "hidden": 0,
+                        "key": "1",
+                        "language": "en-US",
+                        "refreshing": false,
+                        "scannedAt": 1645563796,
+                        "scanner": "Plex TV Series",
+                        "thumb": "/:/resources/show.png",
+                        "title": "TV Shows",
+                        "type": "show",
+                        "updatedAt": 1645563845,
+                        "uuid": "d03f8ea3-5410-4e59-8c68-cf32e2eab647"
+                    },
+                    {
+                        "Location": [
+                            {
+                                "id": 77,
+                                "path": "/media/movies"
+                            }
+                        ],
+                        "agent": "tv.plex.agents.movie",
+                        "allowSync": true,
+                        "art": "/:/resources/movie-fanart.jpg",
+                        "composite": "/library/sections/2/composite/1645563791",
+                        "content": true,
+                        "contentChangedAt": 11258113,
+                        "createdAt": 1499601583,
+                        "directory": true,
+                        "filters": true,
+                        "hidden": 0,
+                        "key": "2",
+                        "language": "en-US",
+                        "refreshing": false,
+                        "scannedAt": 1645563791,
+                        "scanner": "Plex Movie",
+                        "thumb": "/:/resources/movie.png",
+                        "title": "Movies",
+                        "type": "movie",
+                        "updatedAt": 1645596751,
+                        "uuid": "aa72f94e-a32a-4584-8b15-baeec86c7842"
+                    },
+                    {
+                        "Location": [
+                            {
+                                "id": 80,
+                                "path": "/media/audio_books"
+                            }
+                        ],
+                        "agent": "com.plexapp.agents.audiobooks",
+                        "allowSync": true,
+                        "art": "/:/resources/artist-fanart.jpg",
+                        "composite": "/library/sections/17/composite/1645563789",
+                        "content": true,
+                        "contentChangedAt": 10543326,
+                        "createdAt": 1633451372,
+                        "directory": true,
+                        "filters": true,
+                        "hidden": 0,
+                        "key": "17",
+                        "language": "en",
+                        "refreshing": false,
+                        "scannedAt": 1645563789,
+                        "scanner": "Plex Music Scanner",
+                        "thumb": "/:/resources/artist.png",
+                        "title": "Audio Books",
+                        "type": "artist",
+                        "updatedAt": 1645563845,
+                        "uuid": "489e927e-4be1-4766-9580-c3d5c4f89402"
+                    }
+                ],
+                "allowSync": false,
+                "size": 3,
+                "title1": "Plex Library"
+            }
+        }
+    }
+}

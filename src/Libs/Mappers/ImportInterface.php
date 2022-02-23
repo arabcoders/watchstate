@@ -77,7 +77,6 @@ interface ImportInterface extends Countable
      */
     public function has(StateInterface $entity): bool;
 
-
     /**
      * Reset Mapper State.
      *

@@ -31,13 +31,6 @@ interface ExportInterface
     public function loadData(DateTimeInterface|null $date = null): self;
 
     /**
-     * Get All Queued Entities.
-     *
-     * @return array<string,array<int|string,StateInterface>
-     */
-    public function getQueue(): array;
-
-    /**
      * Queue State change request.
      *
      * @param ResponseInterface $request
@@ -45,24 +38,6 @@ interface ExportInterface
      * @return self
      */
     public function queue(ResponseInterface $request): self;
-
-    /**
-     * Inject Logger.
-     *
-     * @param LoggerInterface $logger
-     *
-     * @return self
-     */
-    public function setLogger(LoggerInterface $logger): self;
-
-    /**
-     * Inject Storage.
-     *
-     * @param StorageInterface $storage
-     *
-     * @return self
-     */
-    public function SetStorage(StorageInterface $storage): self;
 
     /**
      * Get Entity.
@@ -90,4 +65,53 @@ interface ExportInterface
      * @return bool
      */
     public function has(StateInterface $entity): bool;
+
+    /**
+     * Get All Queued Entities.
+     *
+     * @return array<string,array<int|string,StateInterface>
+     */
+    public function getQueue(): array;
+
+    /**
+     * Reset Mapper State.
+     *
+     * @return ExportInterface
+     */
+    public function reset(): self;
+
+    /**
+     * Get loaded objects.
+     *
+     * @param array $opts
+     *
+     * @return array<StateInterface>
+     */
+    public function getObjects(array $opts = []): array;
+
+    /**
+     * Get loaded objects count.
+     *
+     * @return int
+     */
+    public function getObjectsCount(): int;
+
+    /**
+     * Inject Logger.
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return self
+     */
+    public function setLogger(LoggerInterface $logger): self;
+
+    /**
+     * Inject Storage.
+     *
+     * @param StorageInterface $storage
+     *
+     * @return self
+     */
+    public function SetStorage(StorageInterface $storage): self;
+
 }

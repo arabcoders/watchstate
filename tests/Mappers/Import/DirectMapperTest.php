@@ -16,35 +16,8 @@ use Symfony\Component\Console\Output\NullOutput;
 
 class DirectMapperTest extends TestCase
 {
-    private array $testEpisode = [
-        'id' => null,
-        'type' => StateInterface::TYPE_EPISODE,
-        'updated' => 0,
-        'watched' => 1,
-        'meta' => [],
-        'guid_plex' => StateInterface::TYPE_EPISODE . '/1',
-        'guid_imdb' => StateInterface::TYPE_EPISODE . '/2',
-        'guid_tvdb' => StateInterface::TYPE_EPISODE . '/3',
-        'guid_tmdb' => StateInterface::TYPE_EPISODE . '/4',
-        'guid_tvmaze' => StateInterface::TYPE_EPISODE . '/5',
-        'guid_tvrage' => StateInterface::TYPE_EPISODE . '/6',
-        'guid_anidb' => StateInterface::TYPE_EPISODE . '/7',
-    ];
-
-    private array $testMovie = [
-        'id' => null,
-        'type' => StateInterface::TYPE_MOVIE,
-        'updated' => 1,
-        'watched' => 1,
-        'meta' => [],
-        'guid_plex' => StateInterface::TYPE_MOVIE . '/10',
-        'guid_imdb' => StateInterface::TYPE_MOVIE . '/20',
-        'guid_tvdb' => StateInterface::TYPE_MOVIE . '/30',
-        'guid_tmdb' => StateInterface::TYPE_MOVIE . '/40',
-        'guid_tvmaze' => StateInterface::TYPE_MOVIE . '/50',
-        'guid_tvrage' => StateInterface::TYPE_MOVIE . '/60',
-        'guid_anidb' => StateInterface::TYPE_MOVIE . '/70',
-    ];
+    private array $testMovie = [];
+    private array $testEpisode = [];
 
     private DirectMapper|null $mapper = null;
     private StorageInterface|null $storage = null;
@@ -53,6 +26,10 @@ class DirectMapperTest extends TestCase
     {
         $this->output = new NullOutput();
         $this->input = new ArrayInput([]);
+
+        $this->testMovie = require __DIR__ . '/../../Fixtures/MovieEntity.php';
+        $this->testEpisode = require __DIR__ . '/../../Fixtures/EpisodeEntity.php';
+
         $logger = new CliLogger($this->output);
 
         $this->storage = new PDOAdapter($logger);
@@ -122,6 +99,48 @@ class DirectMapperTest extends TestCase
         $this->assertTrue($this->mapper->remove($testEpisode));
     }
 
+    public function test_commit_conditions(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+        $testEpisode = new StateEntity($this->testEpisode);
+
+        // -- expect 0 as we have not modified or added new item yet.
+        $this->assertCount(0, $this->mapper);
+
+        $this->mapper->add('test', 'test1', $testEpisode)->add('test', 'test2', $testMovie);
+
+        $this->assertCount(2, $this->mapper);
+
+        $this->assertSame(
+            [
+                StateInterface::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+            ],
+            $this->mapper->commit()
+        );
+
+        $this->assertSame(
+            [
+                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+            ],
+            $this->mapper->commit()
+        );
+
+        $testEpisode->guid_tvrage = StateInterface::TYPE_EPISODE . '/1';
+        $testMovie->guid_tvrage = StateInterface::TYPE_MOVIE . '/1';
+
+        $this->mapper->add('test', 'test1', $testEpisode)->add('test', 'test2', $testMovie);
+
+        $this->assertSame(
+            [
+                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+            ],
+            $this->mapper->commit()
+        );
+    }
+
     public function test_has_conditions(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
@@ -141,17 +160,4 @@ class DirectMapperTest extends TestCase
         $this->mapper->reset();
         $this->assertCount(0, $this->mapper);
     }
-
-    public function test_getObjects_conditions(): void
-    {
-        $testMovie = new StateEntity($this->testMovie);
-        $testEpisode = new StateEntity($this->testEpisode);
-
-        $this->assertCount(0, $this->mapper->getObjects());
-
-        $this->storage->commit([$testMovie, $testEpisode]);
-
-        $this->assertCount(0, $this->mapper->loadData()->getObjects());
-    }
-
 }

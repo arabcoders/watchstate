@@ -29,26 +29,18 @@ final class ExportMapper implements ExportInterface
      */
     private array $queue = [];
 
+    private array $options = [];
+
     private bool $fullyLoaded = false;
 
     public function __construct(private StorageInterface $storage)
     {
     }
 
-    public function setLogger(LoggerInterface $logger): self
-    {
-        $this->storage->setLogger($logger);
-        return $this;
-    }
-
-    public function setStorage(StorageInterface $storage): self
-    {
-        $this->storage = $storage;
-        return $this;
-    }
-
     public function setUp(array $opts): self
     {
+        $this->options = $opts;
+
         return $this;
     }
 
@@ -56,7 +48,7 @@ final class ExportMapper implements ExportInterface
     {
         $this->fullyLoaded = null === $date;
 
-        foreach ($this->storage->getAll($date) as $entity) {
+        foreach ($this->storage->getAll($date, $this->options['class'] ?? null) as $entity) {
             if (null !== ($this->objects[$entity->id] ?? null)) {
                 continue;
             }
@@ -67,39 +59,11 @@ final class ExportMapper implements ExportInterface
         return $this;
     }
 
-    public function getQueue(): array
-    {
-        return $this->queue;
-    }
-
     public function queue(ResponseInterface $request): self
     {
         $this->queue[] = $request;
 
         return $this;
-    }
-
-    public function findByIds(array $ids): null|StateInterface
-    {
-        $pointers = Guid::fromArray($ids)->getPointers();
-
-        foreach ($pointers as $key) {
-            if (null !== ($this->guids[$key] ?? null)) {
-                return $this->objects[$this->guids[$key]];
-            }
-        }
-
-        if (true === $this->fullyLoaded) {
-            return null;
-        }
-
-        if (null !== ($lazyEntity = $this->storage->matchAnyId($ids))) {
-            $this->objects[$lazyEntity->id] = $lazyEntity;
-            $this->addGuids($this->objects[$lazyEntity->id], $lazyEntity->id);
-            return $this->objects[$lazyEntity->id];
-        }
-
-        return null;
     }
 
     public function get(StateInterface $entity): null|StateInterface
@@ -127,9 +91,37 @@ final class ExportMapper implements ExportInterface
         return null;
     }
 
+    public function findByIds(array $ids): null|StateInterface
+    {
+        $pointers = Guid::fromArray($ids)->getPointers();
+
+        foreach ($pointers as $key) {
+            if (null !== ($this->guids[$key] ?? null)) {
+                return $this->objects[$this->guids[$key]];
+            }
+        }
+
+        if (true === $this->fullyLoaded) {
+            return null;
+        }
+
+        if (null !== ($lazyEntity = $this->storage->matchAnyId($ids))) {
+            $this->objects[$lazyEntity->id] = $lazyEntity;
+            $this->addGuids($this->objects[$lazyEntity->id], $lazyEntity->id);
+            return $this->objects[$lazyEntity->id];
+        }
+
+        return null;
+    }
+
     public function has(StateInterface $entity): bool
     {
         return null !== $this->get($entity);
+    }
+
+    public function getQueue(): array
+    {
+        return $this->queue;
     }
 
     public function reset(): self
@@ -137,6 +129,28 @@ final class ExportMapper implements ExportInterface
         $this->fullyLoaded = false;
         $this->objects = $this->guids = $this->queue = [];
 
+        return $this;
+    }
+
+    public function getObjects(array $opts = []): array
+    {
+        return $this->objects;
+    }
+
+    public function getObjectsCount(): int
+    {
+        return count($this->objects);
+    }
+
+    public function setLogger(LoggerInterface $logger): self
+    {
+        $this->storage->setLogger($logger);
+        return $this;
+    }
+
+    public function setStorage(StorageInterface $storage): self
+    {
+        $this->storage = $storage;
         return $this;
     }
 
