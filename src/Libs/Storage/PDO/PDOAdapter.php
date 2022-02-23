@@ -128,10 +128,6 @@ final class PDOAdapter implements StorageInterface
 
     public function get(StateInterface $entity): StateInterface|null
     {
-        if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
-        }
-
         $arr = array_intersect_key(
             $entity->getAll(),
             array_flip(StateInterface::ENTITY_GUIDS)
@@ -139,6 +135,10 @@ final class PDOAdapter implements StorageInterface
 
         if (null !== $entity->id) {
             $arr['id'] = $entity->id;
+        }
+
+        if (empty($arr)) {
+            return null;
         }
 
         return $this->matchAnyId($arr, $entity);
