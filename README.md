@@ -203,6 +203,17 @@ Select the following events
 
 * Item Added
 * User Data Saved
+* Playback Start
+* Playback Stop
+
+##### Item Type:
+
+* Movies
+* Episodes
+
+### Send All Properties (ignores template)
+
+Enable this one as well.
 
 Click `save`
 

@@ -10,6 +10,7 @@ use RuntimeException;
 final class StateEntity implements StateInterface
 {
     private array $data = [];
+    private bool $tainted = false;
 
     /**
      * User Addressable Variables.
@@ -148,6 +149,17 @@ final class StateEntity implements StateInterface
         return Guid::fromArray(
             array_intersect_key((array)$this, array_flip(StateInterface::ENTITY_GUIDS))
         )->getPointers();
+    }
+
+    public function setIsTainted(bool $isTainted): StateInterface
+    {
+        $this->tainted = $isTainted;
+        return $this;
+    }
+
+    public function isTainted(): bool
+    {
+        return $this->tainted;
     }
 
     private function isEqual(StateInterface $entity): bool

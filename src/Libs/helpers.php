@@ -332,6 +332,20 @@ if (!function_exists('serveHttpRequest')) {
                 return jsonResponse(status: 200, body: $entity->getAll());
             }
 
+            if (true === $entity->isTainted()) {
+                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
+                    if (!empty($entity->meta)) {
+                        $backend->meta = $entity->meta;
+                    }
+                    $backend = $storage->update($backend);
+                    return jsonResponse(status: 200, body: $backend->getAll());
+                }
+                return new Response(
+                    status:  200,
+                    headers: ['X-Status' => 'Nothing updated, entity state is tainted.']
+                );
+            }
+
             if ($backend->updated > $entity->updated) {
                 if ($backend->apply($entity, guidOnly: true)->isChanged()) {
                     if (!empty($entity->meta)) {
