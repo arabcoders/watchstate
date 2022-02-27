@@ -409,24 +409,20 @@ final class PDOAdapter implements StorageInterface
      */
     private function transactional(Closure $callback): mixed
     {
-        $autoStartTransaction = false === $this->singleTransaction && false === $this->pdo->inTransaction();
+        if (true === $this->pdo->inTransaction()) {
+            return $callback($this->pdo);
+        }
 
         try {
-            if (!$autoStartTransaction) {
-                $this->pdo->beginTransaction();
-            }
+            $this->pdo->beginTransaction();
 
             $result = $callback($this->pdo);
 
-            if (!$autoStartTransaction) {
-                $this->pdo->commit();
-            }
+            $this->pdo->commit();
 
             return $result;
         } catch (PDOException $e) {
-            if (!$autoStartTransaction && $this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
+            $this->pdo->rollBack();
             throw $e;
         }
     }
