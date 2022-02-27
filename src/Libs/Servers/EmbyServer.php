@@ -24,6 +24,12 @@ class EmbyServer extends JellyfinServer
         'playback.scrobble',
     ];
 
+    protected const WEBHOOK_TAINTED_EVENTS = [
+        'playback.pause',
+        'playback.start',
+        'playback.stop',
+    ];
+
     public function setUp(
         string $name,
         UriInterface $url,
@@ -53,7 +59,7 @@ class EmbyServer extends JellyfinServer
         }
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(sprintf('Not allowed Type [%s]', $type), 200);
+            throw new HttpException(afterLast(__CLASS__, '\\') . ': ' . sprintf('Not allowed Type [%s]', $type), 200);
         }
 
         $type = strtolower($type);
@@ -115,6 +121,8 @@ class EmbyServer extends JellyfinServer
             ...self::getGuids($type, ag($json, 'Item.ProviderIds', []))
         ];
 
-        return Container::get(StateInterface::class)::fromArray($row);
+        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
+            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
+        );
     }
 }

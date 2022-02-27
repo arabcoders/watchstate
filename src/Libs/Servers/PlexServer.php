@@ -45,7 +45,19 @@ class PlexServer implements ServerInterface
 
     protected const WEBHOOK_ALLOWED_EVENTS = [
         'library.new',
+        'library.on.deck',
+        'media.play',
+        'media.stop',
+        'media.resume',
+        'media.pause',
         'media.scrobble',
+    ];
+
+    protected const WEBHOOK_TAINTED_EVENTS = [
+        'media.play',
+        'media.stop',
+        'media.resume',
+        'media.pause',
     ];
 
     protected UriInterface|null $url = null;
@@ -156,7 +168,9 @@ class PlexServer implements ServerInterface
             ...self::getGuids($type, $json['Metadata']['Guid'] ?? [])
         ];
 
-        return Container::get(StateInterface::class)::fromArray($row);
+        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
+            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
+        );
     }
 
     private function getHeaders(): array

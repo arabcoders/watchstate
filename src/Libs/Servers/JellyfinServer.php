@@ -48,6 +48,11 @@ class JellyfinServer implements ServerInterface
         'UserDataSaved',
     ];
 
+    protected const WEBHOOK_TAINTED_EVENTS = [
+        'PlaybackStart',
+        'PlaybackStop',
+    ];
+
     protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected string|null $user = null;
@@ -144,7 +149,9 @@ class JellyfinServer implements ServerInterface
             ...self::getGuids($type, $guids)
         ];
 
-        return Container::get(StateInterface::class)::fromArray($row);
+        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
+            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
+        );
     }
 
     private function getHeaders(): array
