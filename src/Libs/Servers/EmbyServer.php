@@ -35,11 +35,12 @@ class EmbyServer extends JellyfinServer
         UriInterface $url,
         string|int|null $token = null,
         string|int|null $userId = null,
+        array $persist = [],
         array $options = []
     ): ServerInterface {
         $options['emby'] = true;
 
-        return (new self($this->http, $this->logger))->setState($name, $url, $token, $userId, $options);
+        return (new self($this->http, $this->logger))->setState($name, $url, $token, $userId, $persist, $options);
     }
 
     public static function parseWebhook(ServerRequestInterface $request): StateInterface

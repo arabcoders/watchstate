@@ -169,7 +169,7 @@ class ExportCommand extends Command
             $this->storage->singleTransaction();
         }
 
-        foreach ($list as $server) {
+        foreach ($list as &$server) {
             $name = ag($server, 'name');
             Data::addBucket($name);
 
@@ -195,8 +195,13 @@ class ExportCommand extends Command
                 url:     new Uri(ag($server, 'server.url')),
                 token:   ag($server, 'server.token', null),
                 userId:  ag($server, 'server.user', null),
+                persist: ag($server, 'server.persist', [
+                             'foo' => 'kk'
+                         ]),
                 options: $opts
             );
+
+            $server['class'] = $class;
 
             if (null !== $logger) {
                 $class = $class->setLogger($logger);
@@ -226,7 +231,10 @@ class ExportCommand extends Command
             }
         }
 
+        unset($server);
+
         $this->logger->notice(sprintf('Waiting on (%d) (Compare State) Requests.', count($requests)));
+
         foreach ($requests as $response) {
             $requestData = $response->getInfo('user_data');
             try {
@@ -239,34 +247,46 @@ class ExportCommand extends Command
                 $requestData['error']($e);
             }
         }
+
         $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($requests)));
 
         $changes = $this->mapper->getQueue();
+        $total = count($changes);
 
-        if (empty($changes)) {
-            $this->logger->notice('No State change detected.');
-            return self::SUCCESS;
-        }
-
-        $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', count($changes)));
-        foreach ($changes as $response) {
-            $requestData = $response->getInfo('user_data');
-            try {
-                if (200 !== $response->getStatusCode()) {
-                    throw new ServerException($response);
+        if ($total >= 1) {
+            $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', $total));
+            foreach ($changes as $response) {
+                $requestData = $response->getInfo('user_data');
+                try {
+                    if (200 !== $response->getStatusCode()) {
+                        throw new ServerException($response);
+                    }
+                    $this->logger->debug(
+                        sprintf(
+                            'Processed: State (%s) - %s',
+                            ag($requestData, 'state', '??'),
+                            ag($requestData, 'itemName', '??'),
+                        )
+                    );
+                } catch (ExceptionInterface $e) {
+                    $this->logger->error($e->getMessage());
                 }
-                $this->logger->debug(
-                    sprintf(
-                        'Processed: State (%s) - %s',
-                        ag($requestData, 'state', '??'),
-                        ag($requestData, 'itemName', '??'),
-                    )
-                );
-            } catch (ExceptionInterface $e) {
-                $this->logger->error($e->getMessage());
             }
+            $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', $total));
+        } else {
+            $this->logger->notice('No state change detected.');
         }
-        $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($changes)));
+
+        foreach ($list as $server) {
+            if (null === ($name = ag($server, 'name'))) {
+                continue;
+            }
+
+            Config::save(
+                sprintf('servers.%s.persist', $name),
+                $server['class']->getPersist()
+            );
+        }
 
         // -- Update Server.yaml with new lastSync date.
         file_put_contents(

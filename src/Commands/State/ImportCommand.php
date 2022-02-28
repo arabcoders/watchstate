@@ -178,7 +178,7 @@ class ImportCommand extends Command
             $this->storage->singleTransaction();
         }
 
-        foreach ($list as $server) {
+        foreach ($list as &$server) {
             $name = ag($server, 'name');
             Data::addBucket($name);
 
@@ -207,6 +207,8 @@ class ImportCommand extends Command
                 options: $opts
             );
 
+            $server['class'] = $class;
+
             if (null !== $logger) {
                 $class = $class->setLogger($logger);
             }
@@ -234,6 +236,8 @@ class ImportCommand extends Command
                 Config::save(sprintf('servers.%s.import.lastSync', $name), time());
             }
         }
+
+        unset($server);
 
         $this->logger->notice(sprintf('Waiting on (%d) HTTP Requests.', count($queue)));
 
@@ -281,6 +285,17 @@ class ImportCommand extends Command
                     $operations[StateInterface::TYPE_EPISODE]['updated'] ?? 0,
                     $operations[StateInterface::TYPE_EPISODE]['failed'] ?? 0,
                 )
+            );
+        }
+
+        foreach ($list as $server) {
+            if (null === ($name = ag($server, 'name'))) {
+                continue;
+            }
+
+            Config::save(
+                sprintf('servers.%s.persist', $name),
+                $server['class']->getPersist()
             );
         }
 

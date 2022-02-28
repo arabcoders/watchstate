@@ -21,11 +21,12 @@ interface ServerInterface
     /**
      * Initiate Server. It should return **NEW OBJECT**
      *
-     * @param string $name
-     * @param UriInterface $url
-     * @param null|int|string $token
-     * @param null|int|string $userId
-     * @param array $options
+     * @param string $name Server name
+     * @param UriInterface $url Server url
+     * @param null|int|string $token Server Token
+     * @param null|int|string $userId Server user Id
+     * @param array $persist persistent data saved by server.
+     * @param array $options array of options.
      *
      * @return self
      */
@@ -34,6 +35,7 @@ interface ServerInterface
         UriInterface $url,
         null|string|int $token = null,
         null|string|int $userId = null,
+        array $persist = [],
         array $options = []
     ): self;
 
@@ -73,4 +75,20 @@ interface ServerInterface
      * @return array<array-key,ResponseInterface>
      */
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
+
+    /**
+     * Get all persistent data.
+     *
+     * @return array
+     */
+    public function getPersist(): array;
+
+    /**
+     * Add persistent data to config.
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return ServerInterface
+     */
+    public function addPersist(string $key, mixed $value): ServerInterface;
 }

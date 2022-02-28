@@ -65,6 +65,7 @@ class PlexServer implements ServerInterface
     protected array $options = [];
     protected string $name = '';
     protected bool $loaded = false;
+    protected array $persist = [];
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
@@ -75,9 +76,21 @@ class PlexServer implements ServerInterface
         UriInterface $url,
         string|int|null $token = null,
         string|int|null $userId = null,
+        array $persist = [],
         array $options = []
     ): ServerInterface {
-        return (new self($this->http, $this->logger))->setState($name, $url, $token, $options);
+        return (new self($this->http, $this->logger))->setState($name, $url, $token, $persist, $options);
+    }
+
+    public function getPersist(): array
+    {
+        return $this->persist;
+    }
+
+    public function addPersist(string $key, mixed $value): ServerInterface
+    {
+        $this->persist = ag_set($this->persist, $key, $value);
+        return $this;
     }
 
     public function setLogger(LoggerInterface $logger): ServerInterface
@@ -182,27 +195,7 @@ class PlexServer implements ServerInterface
             ],
         ];
 
-        if (null !== ($this->options['timeout'] ?? null)) {
-            $opts['timeout'] = $this->options['timeout'];
-        }
-
-        if (null !== ($this->options['proxy'] ?? null)) {
-            $opts['proxy'] = $this->options['proxy'];
-        }
-
-        if (null !== ($this->options['no_proxy'] ?? null)) {
-            $opts['no_proxy'] = $this->options['no_proxy'];
-        }
-
-        if (null !== ($this->options['max_duration'] ?? null)) {
-            $opts['max_duration'] = $this->options['max_duration'];
-        }
-
-        if (true === ($this->options['http2'] ?? false)) {
-            $opts['http_version'] = '2.0';
-        }
-
-        return $opts;
+        return array_replace_recursive($opts, $this->options['client'] ?? []);
     }
 
     protected function getLibraries(Closure $ok, Closure $error): array
@@ -717,6 +710,7 @@ class PlexServer implements ServerInterface
         string $name,
         UriInterface $url,
         string|int|null $token = null,
+        array $persist = [],
         array $opts = []
     ): ServerInterface {
         if (true === $this->loaded) {
@@ -728,6 +722,7 @@ class PlexServer implements ServerInterface
         $this->token = $token;
         $this->options = $opts;
         $this->loaded = true;
+        $this->persist = $persist;
 
         return $this;
     }
