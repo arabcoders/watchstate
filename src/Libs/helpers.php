@@ -228,15 +228,15 @@ if (!function_exists('saveWebhookPayload')) {
     function saveWebhookPayload(ServerRequestInterface $request, string $name, array $parsed = [])
     {
         $content = [
-            'q' => $request->getQueryParams(),
-            'p' => $request->getParsedBody(),
-            's' => $request->getServerParams(),
-            'b' => $request->getBody()->getContents(),
-            'd' => $parsed,
+            'query' => $request->getQueryParams(),
+            'parsed' => $request->getParsedBody(),
+            'server' => $request->getServerParams(),
+            'body' => $request->getBody()->getContents(),
+            'cParsed' => $parsed,
         ];
 
         @file_put_contents(
-            Config::get('path') . '/logs/' . sprintf('webhook.%s.json', $name),
+            Config::get('path') . '/logs/' . sprintf('webhook.%s.%d.json', $name, time()),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
