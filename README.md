@@ -147,13 +147,16 @@ my_home_server:
     # Plex: for plex managed users the X-Plex-Token acts as userId.
     user: user-id
     export:
+        webhook: true # Enable exporting to this server via push event recevie.
         enabled: true # Enable export.
     import:
         enabled: true # Enable import.
     options:
-        http2: false # Enable HTTP/2 support for faster http requests (server must support http 2.0).
         importUnwatched: false # By default, We do not import unwatched state to enable it set to true. 
         exportIgnoreDate: false # By default, we respect the server watch date. To override the check, set this to true.
+        client: # underlying http client settings https://symfony.com/doc/current/reference/configuration/framework.html#http-client
+            http_version: 1.0|2.0 # Change HTTP Protocol used.
+
 ```
 
 # Start Webhook Server.
