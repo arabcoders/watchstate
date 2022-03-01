@@ -147,7 +147,7 @@ my_home_server:
     # Plex: for plex managed users the X-Plex-Token acts as userId.
     user: user-id
     export:
-        webhook: true # Enable exporting to this server via push event recevie.
+        webhook: true # Enable exporting to this server via push event receive.
         enabled: true # Enable export.
     import:
         enabled: true # Enable import.
