@@ -10,6 +10,7 @@ use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
 use App\Libs\Storage\PDO\PDOAdapter;
 use Monolog\Logger;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 return (function () {
     $config = [
@@ -69,6 +70,13 @@ return (function () {
                     ],
                 ],
             ],
+        ],
+    ];
+
+    $config['cache'] = [
+        'adapter' => FilesystemAdapter::class,
+        'config' => [
+            'directory' => env('WS_CACHE_DIR', fn() => ag($config, 'path') . '/cache'),
         ],
     ];
 
