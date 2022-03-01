@@ -6,4 +6,5 @@ return [
     '%(path)/db',
     '%(path)/logs',
     '%(path)/config',
+    '%(path)/cache',
 ];

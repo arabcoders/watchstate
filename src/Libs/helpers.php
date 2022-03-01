@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\Date;
 use App\Libs\HttpException;
 use App\Libs\Servers\ServerInterface;
@@ -12,6 +13,7 @@ use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
@@ -328,7 +330,8 @@ if (!function_exists('serveHttpRequest')) {
             $storage = Container::get(StorageInterface::class);
 
             if (null === ($backend = $storage->get($entity))) {
-                $storage->insert($entity);
+                $entity = $storage->insert($entity);
+                queuePush($entity);
                 return jsonResponse(status: 200, body: $entity->getAll());
             }
 
@@ -364,6 +367,8 @@ if (!function_exists('serveHttpRequest')) {
             if ($backend->apply($entity)->isChanged()) {
                 $backend = $storage->update($backend);
 
+                queuePush($backend);
+
                 return jsonResponse(status: 200, body: $backend->getAll());
             }
 
@@ -376,6 +381,27 @@ if (!function_exists('serveHttpRequest')) {
             }
 
             return jsonResponse(status: $e->getCode(), body: ['error' => true, 'message' => $e->getMessage()]);
+        }
+    }
+}
+
+if (!function_exists('queuePush')) {
+    function queuePush(StateInterface $entity): void
+    {
+        if (!$entity->hasGuids()) {
+            return;
+        }
+
+        try {
+            $cache = Container::get(CacheInterface::class);
+
+            $list = $cache->get('queue', []);
+
+            $list[] = $entity->getAll();
+
+            $cache->set('queue', $list);
+        } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+            Container::get(LoggerInterface::class)->error($e->getMessage(), $e->getTrace());
         }
     }
 }

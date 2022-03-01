@@ -19,6 +19,8 @@ use JsonMachine\Items;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use StdClass;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -61,11 +63,19 @@ class JellyfinServer implements ServerInterface
     protected bool $loaded = false;
     protected bool $isEmby = false;
     protected array $persist = [];
+    protected string $cacheKey;
+    protected array $cacheData = [];
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
+    public function __construct(
+        protected HttpClientInterface $http,
+        protected LoggerInterface $logger,
+        protected CacheInterface $cache
+    ) {
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function setUp(
         string $name,
         UriInterface $url,
@@ -74,7 +84,14 @@ class JellyfinServer implements ServerInterface
         array $persist = [],
         array $options = []
     ): ServerInterface {
-        return (new self($this->http, $this->logger))->setState($name, $url, $token, $userId, $persist, $options);
+        return (new self($this->http, $this->logger, $this->cache))->setState(
+            $name,
+            $url,
+            $token,
+            $userId,
+            $persist,
+            $options
+        );
     }
 
     public function getPersist(): array
@@ -167,7 +184,7 @@ class JellyfinServer implements ServerInterface
         );
     }
 
-    private function getHeaders(): array
+    protected function getHeaders(): array
     {
         $opts = [
             'headers' => [
@@ -404,6 +421,150 @@ class JellyfinServer implements ServerInterface
             }
         );
     }
+
+    public function pushStates(array $entities, DateTimeInterface|null $after = null): array
+    {
+        $requests = [];
+
+        foreach ($entities as &$entity) {
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if (null !== $after && $after->getTimestamp() > $entity->updated) {
+                    $entity = null;
+                    continue;
+                }
+            }
+
+            $entity->jf_id = null;
+            $entity->plex_guid = null;
+
+            if (!$entity->hasGuids()) {
+                continue;
+            }
+
+            foreach ($entity->getPointers() as $guid) {
+                if (null === ($this->cacheData[$guid] ?? null)) {
+                    continue;
+                }
+                $entity->jf_id = $this->cacheData[$guid];
+                break;
+            }
+        }
+
+        unset($entity);
+
+        foreach ($entities as $entity) {
+            if (null === ($entity->jf_id ?? null)) {
+                continue;
+            }
+
+            try {
+                $requests[] = $this->http->request(
+                    'GET',
+                    (string)$this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
+                        http_build_query(
+                            [
+                                'ids' => $entity->jf_id,
+                                'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
+                                'enableUserData' => 'true',
+                                'enableImages' => 'false',
+                            ]
+                        )
+                    ),
+                    array_replace_recursive($this->getHeaders(), [
+                        'user_data' => [
+                            'state' => &$entity,
+                        ]
+                    ])
+                );
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage());
+            }
+        }
+
+        $stateRequests = [];
+
+        foreach ($requests as $response) {
+            try {
+                $json = ag(
+                        json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR),
+                        'Items',
+                        []
+                    )[0] ?? [];
+
+                $state = $response->getInfo('user_data')['state'];
+                assert($state instanceof StateInterface);
+
+                if (StateInterface::TYPE_MOVIE === $state->type) {
+                    $iName = sprintf(
+                        '%s - [%s (%d)]',
+                        $this->name,
+                        $state->meta['title'] ?? '??',
+                        $state->meta['year'] ?? 0000,
+                    );
+                } else {
+                    $iName = trim(
+                        sprintf(
+                            '%s - [%s - (%dx%d) - %s]',
+                            $this->name,
+                            $state->meta['series'] ?? '??',
+                            $state->meta['season'] ?? 0,
+                            $state->meta['episode'] ?? 0,
+                            $state->meta['title'] ?? '??',
+                        )
+                    );
+                }
+
+                if (empty($json)) {
+                    $this->logger->notice(sprintf('Ignoring %s. does not exists.', $iName));
+                    continue;
+                }
+
+                $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
+
+                $date = ag($json, 'UserData.LastPlayedDate', ag($json, 'DateCreated', ag($json, 'PremiereDate', null)));
+
+                if (null === $date) {
+                    $this->logger->notice(sprintf('Ignoring %s. No date is set.', $iName));
+                    continue;
+                }
+
+                $date = strtotime($date);
+
+                if ($state->watched === $isWatched) {
+                    $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
+                    continue;
+                }
+
+                if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    if ($date >= $state->updated) {
+                        $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
+                        continue;
+                    }
+                }
+
+                $stateRequests[] = $this->http->request(
+                    1 === $state->watched ? 'POST' : 'DELETE',
+                    (string)$this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, ag($json, 'Id'))),
+                    array_replace_recursive(
+                        $this->getHeaders(),
+                        [
+                            'user_data' => [
+                                'state' => 1 === $state->watched ? 'Watched' : 'Unwatched',
+                                'itemName' => $iName,
+                            ],
+                        ]
+                    )
+                );
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage());
+            }
+        }
+
+        unset($requests);
+
+        return $stateRequests;
+    }
+
 
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
@@ -646,12 +807,18 @@ class JellyfinServer implements ServerInterface
                 ];
             }
 
+            $guids = self::getGuids($type, (array)($item->ProviderIds ?? []));
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->Id;
+            }
+
             $row = [
                 'type' => $type,
                 'updated' => $date,
                 'watched' => (int)(bool)($item->UserData?->Played ?? false),
                 'meta' => $meta,
-                ...self::getGuids($type, (array)($item->ProviderIds ?? [])),
+                ...$guids,
             ];
 
             $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
@@ -701,6 +868,19 @@ class JellyfinServer implements ServerInterface
         return false;
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function __destruct()
+    {
+        if (!empty($this->cacheData)) {
+            $this->cache->set($this->cacheKey, $this->cacheData);
+        }
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
     public function setState(
         string $name,
         UriInterface $url,
@@ -715,6 +895,12 @@ class JellyfinServer implements ServerInterface
 
         if (null === $userId && null === ($opts['user'] ?? null)) {
             throw new RuntimeException('Jellyfin/Emby media servers: require userId to be set.');
+        }
+
+        $this->cacheKey = md5(__CLASS__ . '.' . $name . $userId . $url);
+
+        if ($this->cache->has($this->cacheKey)) {
+            $this->cacheData = $this->cache->get($this->cacheKey);
         }
 
         $this->name = $name;

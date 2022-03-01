@@ -19,6 +19,8 @@ use JsonMachine\Items;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use stdClass;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -66,11 +68,19 @@ class PlexServer implements ServerInterface
     protected string $name = '';
     protected bool $loaded = false;
     protected array $persist = [];
+    protected string $cacheKey = '';
+    protected array $cacheData = [];
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
+    public function __construct(
+        protected HttpClientInterface $http,
+        protected LoggerInterface $logger,
+        protected CacheInterface $cache
+    ) {
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function setUp(
         string $name,
         UriInterface $url,
@@ -79,7 +89,7 @@ class PlexServer implements ServerInterface
         array $persist = [],
         array $options = []
     ): ServerInterface {
-        return (new self($this->http, $this->logger))->setState($name, $url, $token, $persist, $options);
+        return (new self($this->http, $this->logger, $this->cache))->setState($name, $url, $token, $persist, $options);
     }
 
     public function getPersist(): array
@@ -397,6 +407,154 @@ class PlexServer implements ServerInterface
         );
     }
 
+    public function pushStates(array $entities, DateTimeInterface|null $after = null): array
+    {
+        $requests = [];
+
+        foreach ($entities as &$entity) {
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if (null !== $after && $after->getTimestamp() > $entity->updated) {
+                    $entity = null;
+                    continue;
+                }
+            }
+
+            if (null !== $entity->guid_plex) {
+                continue;
+            }
+
+            foreach ($entity->getPointers() as $guid) {
+                if (null === ($this->cacheData[$guid] ?? null)) {
+                    continue;
+                }
+                $entity->guid_plex = $this->cacheData[$guid];
+                break;
+            }
+
+            if (null === $entity->guid_plex) {
+                $entity = null;
+            }
+        }
+
+        unset($entity);
+
+        foreach ($entities as $entity) {
+            if (null === $entity) {
+                continue;
+            }
+
+            try {
+                $url = $this->url->withPath('/library/all')->withQuery(
+                    http_build_query(
+                        [
+                            'guid' => 'plex://' . $entity->guid_plex,
+                            'includeGuids' => 1,
+                        ]
+                    )
+                );
+
+                $requests[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($this->getHeaders(), [
+                        'user_data' => [
+                            'state' => &$entity,
+                        ]
+                    ])
+                );
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage());
+            }
+        }
+
+        $stateRequests = [];
+
+        foreach ($requests as $response) {
+            try {
+                $json = ag(
+                    json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR),
+                    'MediaContainer.Metadata',
+                    []
+                );
+
+                $state = $response->getInfo('user_data')['state'];
+                assert($state instanceof StateInterface);
+
+                if (StateInterface::TYPE_MOVIE === $state->type) {
+                    $iName = sprintf(
+                        '%s - [%s (%d)]',
+                        $this->name,
+                        $state->meta['title'] ?? '??',
+                        $state->meta['year'] ?? 0000,
+                    );
+                } else {
+                    $iName = trim(
+                        sprintf(
+                            '%s - [%s - (%dx%d) - %s]',
+                            $this->name,
+                            $state->meta['series'] ?? '??',
+                            $state->meta['season'] ?? 0,
+                            $state->meta['episode'] ?? 0,
+                            $state->meta['title'] ?? '??',
+                        )
+                    );
+                }
+
+                if (empty($json)) {
+                    $this->logger->notice(sprintf('Ignoring %s. does not exists.', $iName));
+                    continue;
+                }
+
+                $isWatched = (int)(bool)ag($json, 'viewCount', 0);
+
+                $date = max(
+                    (int)ag($json, 'updatedAt', 0),
+                    (int)ag($json, 'lastViewedAt', 0),
+                    (int)ag($json, 'addedAt', 0)
+                );
+
+                if ($state->watched === $isWatched) {
+                    $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
+                    continue;
+                }
+
+                if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    if ($date >= $state->updated) {
+                        $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
+                        continue;
+                    }
+                }
+
+                $stateRequests[] = $this->http->request(
+                    'GET',
+                    (string)$this->url->withPath((1 === $state->watched ? '/:/scrobble' : '/:/unscrobble'))->withQuery(
+                        http_build_query(
+                            [
+                                'identifier' => 'com.plexapp.plugins.library',
+                                'key' => ag($json, 'ratingKey'),
+                            ]
+                        )
+                    ),
+                    array_replace_recursive(
+                        $this->getHeaders(),
+                        [
+                            'user_data' => [
+                                'state' => 1 === $state->watched ? 'Watched' : 'Unwatched',
+                                'itemName' => $iName,
+                            ],
+                        ]
+                    )
+                );
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage());
+            }
+        }
+
+        unset($requests);
+
+        return $stateRequests;
+    }
+
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
@@ -640,12 +798,18 @@ class PlexServer implements ServerInterface
                 ];
             }
 
+            $guids = self::getGuids($type, $item->Guid ?? []);
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
+
             $row = [
                 'type' => $type,
                 'updated' => $date,
                 'watched' => (int)(bool)($item->viewCount ?? false),
                 'meta' => $meta,
-                ...self::getGuids($type, $item->Guid ?? [])
+                ...$guids
             ];
 
             $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
@@ -706,6 +870,19 @@ class PlexServer implements ServerInterface
         return false;
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function __destruct()
+    {
+        if (!empty($this->cacheData)) {
+            $this->cache->set($this->cacheKey, $this->cacheData);
+        }
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
     public function setState(
         string $name,
         UriInterface $url,
@@ -715,6 +892,12 @@ class PlexServer implements ServerInterface
     ): ServerInterface {
         if (true === $this->loaded) {
             throw new RuntimeException('setState: already called once');
+        }
+
+        $this->cacheKey = md5(__CLASS__ . '.' . $name . $url);
+
+        if ($this->cache->has($this->cacheKey)) {
+            $this->cacheData = $this->cache->get($this->cacheKey);
         }
 
         $this->name = $name;

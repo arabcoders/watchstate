@@ -77,6 +77,16 @@ interface ServerInterface
     public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
 
     /**
+     * Export Queued States.
+     *
+     * @param array<StateInterface> $entities
+     * @param DateTimeInterface|null $after
+     *
+     * @return array
+     */
+    public function pushStates(array $entities, DateTimeInterface|null $after = null): array;
+
+    /**
      * Get all persistent data.
      *
      * @return array
