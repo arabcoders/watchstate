@@ -28,6 +28,7 @@
         "symfony/http-client": "^6.0",
         "league/container": "^4.0",
         "psr/http-client": "^1.0",
+        "psr/simple-cache": "^3.0",
         "nyholm/psr7": "^1.5",
         "nyholm/psr7-server": "^1.0",
         "laminas/laminas-httphandlerrunner": "^2.0",
