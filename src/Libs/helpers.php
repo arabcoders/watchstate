@@ -397,7 +397,7 @@ if (!function_exists('queuePush')) {
 
             $list = $cache->get('queue', []);
 
-            $list[] = $entity->getAll();
+            $list[$entity->id] = $entity->getAll();
 
             $cache->set('queue', $list);
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
