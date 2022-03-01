@@ -282,6 +282,8 @@ if (!function_exists('serveHttpRequest')) {
      */
     function serveHttpRequest(ServerRequestInterface $request): ResponseInterface
     {
+        $logger = Container::get(LoggerInterface::class);
+
         try {
             if (true !== Config::get('webhook.enabled', false)) {
                 throw new HttpException('Webhook is disabled via config.', 500);
@@ -324,6 +326,7 @@ if (!function_exists('serveHttpRequest')) {
             $entity = $backend::parseWebhook($request);
 
             if (null === $entity || !$entity->hasGuids()) {
+                $logger->error('No GUIDs.');
                 return new Response(status: 200, headers: ['X-Status' => 'No GUIDs.']);
             }
 
@@ -332,8 +335,11 @@ if (!function_exists('serveHttpRequest')) {
             if (null === ($backend = $storage->get($entity))) {
                 $entity = $storage->insert($entity);
                 queuePush($entity);
+                $logger->error('New Item Added');
                 return jsonResponse(status: 200, body: $entity->getAll());
             }
+
+            $b2 = clone $backend;
 
             if (true === $entity->isTainted()) {
                 if ($backend->apply($entity, guidOnly: true)->isChanged()) {
@@ -343,6 +349,9 @@ if (!function_exists('serveHttpRequest')) {
                     $backend = $storage->update($backend);
                     return jsonResponse(status: 200, body: $backend->getAll());
                 }
+
+                $logger->error('Nothing updated, entity state is tainted.');
+
                 return new Response(
                     status:  200,
                     headers: ['X-Status' => 'Nothing updated, entity state is tainted.']
@@ -358,6 +367,8 @@ if (!function_exists('serveHttpRequest')) {
                     return jsonResponse(status: 200, body: $backend->getAll());
                 }
 
+                $logger->error('Entity date is older than what available in storage.');
+
                 return new Response(
                     status:  200,
                     headers: ['X-Status' => 'Entity date is older than what available in storage.']
@@ -368,13 +379,22 @@ if (!function_exists('serveHttpRequest')) {
                 $backend = $storage->update($backend);
 
                 queuePush($backend);
+                $logger->error('Entity Updated');
 
                 return jsonResponse(status: 200, body: $backend->getAll());
             }
 
+            $logger->error(
+                'Entity unchanged.',
+                [
+                    'backend' => $b2->getAll(),
+                    'entity' => $entity->getAll(),
+                    'diff' => $backend->diff()
+                ]
+            );
             return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
         } catch (HttpException $e) {
-            Container::get(LoggerInterface::class)->error($e->getMessage());
+            $logger->error($e->getMessage());
 
             if (200 === $e->getCode()) {
                 return new Response(status: $e->getCode(), headers: ['X-Status' => $e->getMessage()]);

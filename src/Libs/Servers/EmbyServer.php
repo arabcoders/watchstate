@@ -64,10 +64,6 @@ class EmbyServer extends JellyfinServer
         $event = ag($json, 'Event', 'unknown');
         $type = ag($json, 'Item.Type', 'not_found');
 
-        if (true === Config::get('webhook.debug')) {
-            saveWebhookPayload($request, "emby.{$via}.{$event}", $json);
-        }
-
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(afterLast(__CLASS__, '\\') . ': ' . sprintf('Not allowed Type [%s]', $type), 200);
         }
@@ -75,12 +71,10 @@ class EmbyServer extends JellyfinServer
         $type = strtolower($type);
 
         if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('Not allowed Event [%s]', $event), 200);
+            throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
-        if (null === ($date = ag($json, 'Item.DateCreated', null))) {
-            throw new HttpException('No DateCreated value is set.', 200);
-        }
+        $date = time();
 
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
@@ -125,15 +119,21 @@ class EmbyServer extends JellyfinServer
 
         $row = [
             'type' => $type,
-            'updated' => makeDate($date)->getTimestamp(),
+            'updated' => $date,
             'watched' => $isWatched,
             'meta' => $meta,
             ...self::getGuids($type, ag($json, 'Item.ProviderIds', []))
         ];
 
-        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
+        $item = Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
             in_array($event, self::WEBHOOK_TAINTED_EVENTS)
         );
+
+        if (true === Config::get('webhook.debug')) {
+            saveWebhookPayload($request, "emby.{$via}.{$event}", $json + ['entity' => $item->getAll()]);
+        }
+
+        return $item;
     }
 
     public function pushStates(array $entities, DateTimeInterface|null $after = null): array
@@ -163,7 +163,10 @@ class EmbyServer extends JellyfinServer
                 $guids = [];
 
                 foreach ($entity->getPointers() as $pointer) {
-                    if (false === preg_match('#(.+?)://\w+?/(.+)#s', $pointer, $matches)) {
+                    if (str_starts_with($pointer, 'guid_plex://')) {
+                        continue;
+                    }
+                    if (false === preg_match('#guid_(.+?)://\w+?/(.+)#s', $pointer, $matches)) {
                         continue;
                     }
                     $guids[] = sprintf('%s.%s', $matches[1], $matches[2]);

@@ -127,11 +127,11 @@ class PlexServer implements ServerInterface
         }
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(sprintf('Not allowed Type [%s]', $type), 200);
+            throw new HttpException(sprintf('%s: Not allowed Type [%s]', afterLast(__CLASS__, '\\'), $type), 200);
         }
 
         if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('Not allowed Event [%s]', $event), 200);
+            throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
         $meta = match ($type) {
@@ -180,7 +180,7 @@ class PlexServer implements ServerInterface
         );
 
         if (0 === $date) {
-            throw new HttpException('Invalid Content date.', 400);
+            throw new HttpException(sprintf('%s: Invalid Content date.', afterLast(__CLASS__, '\\')), 400);
         }
 
         $row = [
@@ -471,11 +471,9 @@ class PlexServer implements ServerInterface
 
         foreach ($requests as $response) {
             try {
-                $json = ag(
-                    json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR),
-                    'MediaContainer.Metadata',
-                    []
-                );
+                $content = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+                $json = ag($content, 'MediaContainer.Metadata', [])[0] ?? [];
 
                 $state = $response->getInfo('user_data')['state'];
                 assert($state instanceof StateInterface);

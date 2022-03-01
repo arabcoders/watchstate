@@ -133,7 +133,7 @@ class JellyfinServer implements ServerInterface
         $type = strtolower($type);
 
         if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('Not allowed Event [%s]', $event), 200);
+            throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
         $date = $json['LastPlayedDate'] ?? $json['DateCreated'] ?? $json['PremiereDate'] ?? $json['Timestamp'] ?? null;
@@ -453,7 +453,28 @@ class JellyfinServer implements ServerInterface
         unset($entity);
 
         foreach ($entities as $entity) {
+            if (StateInterface::TYPE_MOVIE === $entity->type) {
+                $iName = sprintf(
+                    '%s - [%s (%d)]',
+                    $this->name,
+                    $entity->meta['title'] ?? '??',
+                    $entity->meta['year'] ?? 0000,
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - [%s - (%dx%d) - %s]',
+                        $this->name,
+                        $entity->meta['series'] ?? '??',
+                        $entity->meta['season'] ?? 0,
+                        $entity->meta['episode'] ?? 0,
+                        $entity->meta['title'] ?? '??',
+                    )
+                );
+            }
+
             if (null === ($entity->jf_id ?? null)) {
+                $this->logger->notice(sprintf('Ignoring %s. Not found in cache.', $iName));
                 continue;
             }
 

@@ -10,6 +10,7 @@ use App\Commands\Scheduler\Run;
 use App\Commands\Scheduler\RunClosure;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
+use App\Commands\State\QueueCommand;
 use App\Commands\Storage\MaintenanceCommand;
 use App\Commands\Storage\MakeCommand;
 use App\Commands\Storage\MigrationsCommand;
@@ -26,4 +27,5 @@ return [
     'scheduler:list' => Lists::class,
     'scheduler:run' => Run::class,
     'scheduler:closure' => RunClosure::class,
+    'webhooks:queued' => QueueCommand::class,
 ];
