@@ -183,11 +183,11 @@ class ExportCommand extends Command
             }
 
             if ($input->getOption('proxy')) {
-                $opts['proxy'] = $input->getOption('proxy');
+                $opts['client']['proxy'] = $input->getOption('proxy');
             }
 
             if ($input->getOption('no-proxy')) {
-                $opts['no_proxy'] = $input->getOption('no-proxy');
+                $opts['client']['no_proxy'] = $input->getOption('no-proxy');
             }
 
             $class = $class->setUp(
