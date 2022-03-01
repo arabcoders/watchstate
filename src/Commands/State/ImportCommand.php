@@ -204,6 +204,7 @@ class ImportCommand extends Command
                 url:     new Uri(ag($server, 'server.url')),
                 token:   ag($server, 'server.token', null),
                 userId:  ag($server, 'server.user', null),
+                persist: ag($server, 'server.persist', []),
                 options: $opts
             );
 
