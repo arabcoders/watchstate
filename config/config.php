@@ -178,6 +178,15 @@ return (function () {
                 '-vvr' => null,
             ]
         ],
+        'push' => [
+            Task::NAME => 'push',
+            Task::ENABLED => (bool)env('WS_CRON_PUSH', true),
+            Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
+            Task::COMMAND => '@webhooks:queued',
+            Task::ARGS => [
+                '-vvr' => null,
+            ]
+        ],
     ];
 
     return $config;
