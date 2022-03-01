@@ -38,9 +38,8 @@ class QueueCommand extends Command
     protected function configure(): void
     {
         $this->setName('webhooks:queued')
-            ->setDescription('Push Webhook Queued watchstate events.')
+            ->setDescription('Push webhook queued watch state events.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is done.')
             ->addOption(
                 'proxy',
@@ -55,19 +54,11 @@ class QueueCommand extends Command
                 'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
             )
             ->addOption(
-                'servers-filter',
-                's',
-                InputOption::VALUE_OPTIONAL,
-                'Sync selected servers, comma seperated. \'s1,s2\'.',
-                ''
-            )
-            ->addOption(
                 'ignore-date',
                 null,
                 InputOption::VALUE_NONE,
                 'Ignore date comparison, and update server watched state to match database.'
-            )
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.');
+            );
     }
 
     /**
@@ -76,7 +67,7 @@ class QueueCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->cache->has('queue')) {
-            $output->writeln('<info>No Items was queued.</info>', OutputInterface::VERBOSITY_DEBUG);
+            $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_DEBUG);
             return self::SUCCESS;
         }
 
@@ -88,31 +79,17 @@ class QueueCommand extends Command
 
         if (empty($entities)) {
             $this->cache->delete('queue');
-            $output->writeln('<info>No Items was queued.</info>', OutputInterface::VERBOSITY_DEBUG);
+            $output->writeln('<info>No items in the queued.</info>', OutputInterface::VERBOSITY_DEBUG);
             return self::SUCCESS;
         }
 
         $list = [];
-        $serversFilter = (string)$input->getOption('servers-filter');
-        $selected = explode(',', $serversFilter);
-        $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if ($isCustom && !in_array($serverName, $selected, true)) {
-                $output->writeln(
-                    sprintf(
-                        '<error>Ignoring \'%s\' as requested by [-s, --servers-filter] filter.</error>',
-                        $serverName
-                    ),
-                    OutputInterface::VERBOSITY_VERBOSE
-                );
-                continue;
-            }
-
-            if (!$isCustom && true !== ag($server, 'export.webhook')) {
+            if (true !== ag($server, 'export.webhook')) {
                 $output->writeln(
                     sprintf('<error>Ignoring \'%s\' as requested by \'servers.yaml\'.</error>', $serverName),
                     OutputInterface::VERBOSITY_VERBOSE
@@ -145,15 +122,13 @@ class QueueCommand extends Command
         }
 
         if (empty($list)) {
-            throw new RuntimeException(
-                $isCustom ? '--servers-filter/-s did not return any server.' : 'No servers were found.'
-            );
+            throw new RuntimeException('No servers were found.');
         }
 
         $logger = null;
 
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
+        if ($input->getOption('redirect-logger')) {
+            $logger = new CliLogger($output, false);
         }
 
         $requests = [];
