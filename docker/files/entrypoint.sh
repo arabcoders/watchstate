@@ -42,7 +42,7 @@ if [ ! -f "/config/config/servers.yaml" ]; then
   /usr/bin/console config:dump servers
 fi
 
-if [ "1" == "${WS_WEBHOOK_ENABLE}" ] && [ -f "/etc/caddy/Caddyfile" ]; then
+if [ -f "/etc/caddy/Caddyfile" ]; then
   caddy start -config /etc/caddy/Caddyfile
 fi
 

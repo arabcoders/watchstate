@@ -46,7 +46,7 @@ final class WebhookCommand extends Command
                 'l',
                 InputOption::VALUE_OPTIONAL,
                 'Change default API key random generator length.',
-                (int)Config::get('apiKeysLength', 16)
+                (int)Config::get('webhook.keyLength', 16)
             )
             ->addOption(
                 'status',
@@ -56,6 +56,12 @@ final class WebhookCommand extends Command
                     'Enable/Disable the webhook api for this server. Expected value are [%s]',
                     implode('|', array_keys(self::WEBHOOK_STATUS_VALUES))
                 )
+            )
+            ->addOption(
+                'require-ips',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Comma seperated ips/cdr to link a server to specific ips. Mainly for Plex.',
             )
             ->addOption(
                 'push',
@@ -150,6 +156,11 @@ final class WebhookCommand extends Command
             $status = self::WEBHOOK_STATUS_VALUES[$statusName];
 
             Config::save($ref . '.webhook.push', (bool)$status);
+        }
+
+        // -- webhook.ips
+        if ($input->getOption('require-ips')) {
+            Config::save($ref . '.webhook.ips', explode(',', $input->getOption('require-ips')));
         }
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));

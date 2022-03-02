@@ -7,6 +7,9 @@ my_jellyfin_server:
     enabled: true
   import:
     enabled: true
+  webhook:
+    enabled: true
+    push: true
 
 my_emby_server:
   type: emby
@@ -17,6 +20,9 @@ my_emby_server:
     enabled: true
   import:
     enabled: true
+  webhook:
+    enabled: true
+    push: true
 
 my_plex_server:
   type: plex
@@ -26,3 +32,6 @@ my_plex_server:
     enabled: true
   import:
     enabled: true
+  webhook:
+    enabled: true
+    push: true

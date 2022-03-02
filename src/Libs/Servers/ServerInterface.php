@@ -52,9 +52,9 @@ interface ServerInterface
      * Parse Server Specific Webhook event. for play/unplayed event.
      *
      * @param ServerRequestInterface $request
-     * @return StateInterface|null
+     * @return StateInterface
      */
-    public static function parseWebhook(ServerRequestInterface $request): StateInterface|null;
+    public function parseWebhook(ServerRequestInterface $request): StateInterface;
 
     /**
      * Import Watch state.
@@ -84,7 +84,7 @@ interface ServerInterface
      *
      * @return array
      */
-    public function pushStates(array $entities, DateTimeInterface|null $after = null): array;
+    public function push(array $entities, DateTimeInterface|null $after = null): array;
 
     /**
      * Get all persistent data.

@@ -112,19 +112,14 @@ class JellyfinServer implements ServerInterface
         return $this;
     }
 
-    public static function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         if (null === ($json = json_decode($request->getBody()->getContents(), true))) {
             throw new HttpException('No payload.', 400);
         }
 
-        $via = str_replace(' ', '_', ag($json, 'ServerName', 'Webhook'));
         $event = ag($json, 'NotificationType', 'unknown');
         $type = ag($json, 'ItemType', 'not_found');
-
-        if (true === Config::get('webhook.debug')) {
-            saveWebhookPayload($request, "jellyfin.{$via}.{$event}", $json);
-        }
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(sprintf('Not allowed Type [%s]', $type), 200);
@@ -136,11 +131,11 @@ class JellyfinServer implements ServerInterface
             throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
-        $date = $json['LastPlayedDate'] ?? $json['DateCreated'] ?? $json['PremiereDate'] ?? $json['Timestamp'] ?? null;
+        $date = time();
 
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
-                'via' => $via,
+                'via' => $this->name,
                 'title' => ag($json, 'Name', '??'),
                 'year' => ag($json, 'Year', 0000),
                 'webhook' => [
@@ -148,7 +143,7 @@ class JellyfinServer implements ServerInterface
                 ],
             ],
             StateInterface::TYPE_EPISODE => [
-                'via' => $via,
+                'via' => $this->name,
                 'series' => ag($json, 'SeriesName', '??'),
                 'year' => ag($json, 'Year', 0000),
                 'season' => ag($json, 'SeasonNumber', 0),
@@ -169,15 +164,25 @@ class JellyfinServer implements ServerInterface
             }
         }
 
+        $guids = self::getGuids($type, $guids);
+
+        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Item.ItemId');
+        }
+
         $isWatched = (int)(bool)ag($json, 'Played', ag($json, 'PlayedToCompletion', 0));
 
         $row = [
             'type' => $type,
-            'updated' => makeDate($date)->getTimestamp(),
+            'updated' => $date,
             'watched' => $isWatched,
             'meta' => $meta,
-            ...self::getGuids($type, $guids)
+            ...$guids
         ];
+
+        if (true === Config::get('webhook.debug')) {
+            saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
+        }
 
         return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
             in_array($event, self::WEBHOOK_TAINTED_EVENTS)
@@ -422,7 +427,7 @@ class JellyfinServer implements ServerInterface
         );
     }
 
-    public function pushStates(array $entities, DateTimeInterface|null $after = null): array
+    public function push(array $entities, DateTimeInterface|null $after = null): array
     {
         $requests = [];
 

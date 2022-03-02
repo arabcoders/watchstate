@@ -110,21 +110,16 @@ class PlexServer implements ServerInterface
         return $this;
     }
 
-    public static function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         $payload = ag($request->getParsedBody() ?? [], 'payload', null);
 
         if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
-            throw new HttpException('No payload.', 400);
+            throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 
-        $via = str_replace(' ', '_', ag($json, 'Server.title', 'Webhook'));
         $type = ag($json, 'Metadata.type');
         $event = ag($json, 'event', null);
-
-        if (true === Config::get('webhook.debug')) {
-            saveWebhookPayload($request, "plex.{$via}.{$event}", $json);
-        }
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(sprintf('%s: Not allowed Type [%s]', afterLast(__CLASS__, '\\'), $type), 200);
@@ -136,7 +131,7 @@ class PlexServer implements ServerInterface
 
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
-                'via' => $via,
+                'via' => $this->name,
                 'title' => ag($json, 'Metadata.title', ag($json, 'Metadata.originalTitle', '??')),
                 'year' => ag($json, 'Metadata.year', 0000),
                 'date' => makeDate(ag($json, 'Metadata.originallyAvailableAt', 'now'))->format('Y-m-d'),
@@ -145,7 +140,7 @@ class PlexServer implements ServerInterface
                 ],
             ],
             StateInterface::TYPE_EPISODE => [
-                'via' => $via,
+                'via' => $this->name,
                 'series' => ag($json, 'Metadata.grandparentTitle', '??'),
                 'year' => ag($json, 'Metadata.year', 0000),
                 'season' => ag($json, 'Metadata.parentIndex', 0),
@@ -156,7 +151,7 @@ class PlexServer implements ServerInterface
                     'event' => $event,
                 ],
             ],
-            default => throw new HttpException('Invalid content type.', 400),
+            default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
         };
 
         if (null === ($json['Metadata']['Guid'] ?? null)) {
@@ -173,14 +168,12 @@ class PlexServer implements ServerInterface
 
         $isWatched = (int)(bool)ag($json, 'Metadata.viewCount', 0);
 
-        $date = max(
-            (int)ag($json, 'Metadata.updatedAt', 0),
-            (int)ag($json, 'Metadata.lastViewedAt', 0),
-            (int)ag($json, 'Metadata.addedAt', 0)
-        );
+        $date = time();
 
-        if (0 === $date) {
-            throw new HttpException(sprintf('%s: Invalid Content date.', afterLast(__CLASS__, '\\')), 400);
+        $guids = self::getGuids($type, $json['Metadata']['Guid'] ?? []);
+
+        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Metadata.guid');
         }
 
         $row = [
@@ -188,8 +181,12 @@ class PlexServer implements ServerInterface
             'updated' => $date,
             'watched' => $isWatched,
             'meta' => $meta,
-            ...self::getGuids($type, $json['Metadata']['Guid'] ?? [])
+            ...$guids
         ];
+
+        if (true === Config::get('webhook.debug')) {
+            saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
+        }
 
         return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
             in_array($event, self::WEBHOOK_TAINTED_EVENTS)
@@ -407,7 +404,7 @@ class PlexServer implements ServerInterface
         );
     }
 
-    public function pushStates(array $entities, DateTimeInterface|null $after = null): array
+    public function push(array $entities, DateTimeInterface|null $after = null): array
     {
         $requests = [];
 

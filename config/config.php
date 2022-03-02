@@ -42,9 +42,9 @@ return (function () {
     ];
 
     $config['webhook'] = [
-        'enabled' => true,
-        'debug' => false,
-        'apikey' => null,
+        'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
+        'keyLength' => (int)env('WS_WEBHOOK_KEY_LENGTH', 16),
+        'ipHeader' => env('WS_WEBHOOK_IP_HEADER', 'REMOTE_ADDR'),
     ];
 
     $config['mapper'] = [

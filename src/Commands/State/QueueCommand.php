@@ -89,7 +89,7 @@ class QueueCommand extends Command
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if (true !== ag($server, 'export.webhook')) {
+            if (true !== ag($server, 'webhook.push')) {
                 $output->writeln(
                     sprintf('<error>Ignoring \'%s\' as requested by \'servers.yaml\'.</error>', $serverName),
                     OutputInterface::VERBOSITY_VERBOSE
@@ -173,7 +173,7 @@ class QueueCommand extends Command
                 $class = $class->setLogger($logger);
             }
 
-            array_push($requests, ...$class->pushStates($entities));
+            array_push($requests, ...$class->push($entities));
         }
 
         unset($server);
@@ -188,7 +188,7 @@ class QueueCommand extends Command
                     if (200 !== $response->getStatusCode()) {
                         throw new ServerException($response);
                     }
-                    $this->logger->debug(
+                    $this->logger->info(
                         sprintf(
                             'Processed: State (%s) - %s',
                             ag($requestData, 'state', '??'),

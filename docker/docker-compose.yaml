@@ -7,7 +7,6 @@ services:
     environment:
       WS_UID: ${UID:-1000}
       WS_GID: ${GID:-1000}
-      WS_WEBHOOK_ENABLE: 1
       WS_CRON_IMPORT: 1
       WS_CRON_EXPORT: 1
       WS_CRON_EXPORT_AT: '*/2 * * * *'

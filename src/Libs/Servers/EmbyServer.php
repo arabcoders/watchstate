@@ -7,6 +7,7 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Guid;
 use App\Libs\HttpException;
 use DateTimeInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -52,7 +53,7 @@ class EmbyServer extends JellyfinServer
         );
     }
 
-    public static function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         $payload = ag($request->getParsedBody(), 'data', null);
 
@@ -60,7 +61,6 @@ class EmbyServer extends JellyfinServer
             throw new HttpException('No payload.', 400);
         }
 
-        $via = str_replace(' ', '_', ag($json, 'Server.Name', 'Webhook'));
         $event = ag($json, 'Event', 'unknown');
         $type = ag($json, 'Item.Type', 'not_found');
 
@@ -78,7 +78,7 @@ class EmbyServer extends JellyfinServer
 
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
-                'via' => $via,
+                'via' => $this->name,
                 'title' => ag($json, 'Item.Name', ag($json, 'Item.OriginalTitle', '??')),
                 'year' => ag($json, 'Item.ProductionYear', 0000),
                 'date' => makeDate(
@@ -93,7 +93,7 @@ class EmbyServer extends JellyfinServer
                 ],
             ],
             StateInterface::TYPE_EPISODE => [
-                'via' => $via,
+                'via' => $this->name,
                 'series' => ag($json, 'Item.SeriesName', '??'),
                 'year' => ag($json, 'Item.ProductionYear', 0000),
                 'season' => ag($json, 'Item.ParentIndexNumber', 0),
@@ -117,26 +117,30 @@ class EmbyServer extends JellyfinServer
             $isWatched = (int)(bool)ag($json, 'Item.Played', ag($json, 'Item.PlayedToCompletion', 0));
         }
 
+        $guids = self::getGuids($type, ag($json, 'Item.ProviderIds', []));
+
+        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Item.Id');
+        }
+
         $row = [
             'type' => $type,
             'updated' => $date,
             'watched' => $isWatched,
             'meta' => $meta,
-            ...self::getGuids($type, ag($json, 'Item.ProviderIds', []))
+            ...$guids
         ];
 
-        $item = Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
-            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
-        );
-
         if (true === Config::get('webhook.debug')) {
-            saveWebhookPayload($request, "emby.{$via}.{$event}", $json + ['entity' => $item->getAll()]);
+            saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
         }
 
-        return $item;
+        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
+            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
+        );
     }
 
-    public function pushStates(array $entities, DateTimeInterface|null $after = null): array
+    public function push(array $entities, DateTimeInterface|null $after = null): array
     {
         $requests = [];
 

@@ -8,10 +8,12 @@ Ever wanted to sync your watch state without having to rely on 3rd party service
 you. I had multiple problems with Plex trakt.tv plugin which led to my account being banned at trakt.tv, and on top of
 that the plugin no longer supported. And I like to keep my own data locally if possible.
 
-# v1.0.0 tagging.
+# v1.x tagging.
 
-The features set is complete, and works, however the API still unstable as such there will be no v1 tag until we
-finalize the API and finish writing tests.
+The tool is already working, I personally started using it as early as v0.0.4-alpha, The reason we haven't tagged it
+v1.x yet is the API not stable yet and i keep changing and refining the code to get slight performances upgrade and that
+sometimes require breaking changes and tests and docs are not up yet. As such once we are satisfied with tool the API,
+tests and docs We will tag it.
 
 # Supported Media servers.
 
@@ -33,9 +35,6 @@ services:
         environment:
             WS_UID: ${UID:-1000} # Set container operation user id.
             WS_GID: ${GID:-1000} # Set container operation group id.
-            WS_WEBHOOK_ENABLE: 0 # Enable webhook listening server. Disabled by default.
-            WS_CRON_IMPORT: 0 # Enable manual pulling of watch state from servers. Disabled by default.
-            WS_CRON_EXPORT: 1 # Enable manual push of watch state back to servers. Disabled by default.
         ports:
             - "8081:80" # webhook listener port
         volumes:
@@ -51,10 +50,8 @@ docker-compose up -d
 # First time
 
 You have to set up your servers in `config/servers.yaml` you will have examples inside the file, after editing the file
-remove the unused servers examples.
-
-after configuring your servers at `config/servers.yaml` you should import your current watch state by running the
-following command.
+remove the unused servers examples. after configuring your servers you should import your current watch state by running
+the following command.
 
 ```bash
 docker exec -ti watchstate console state:import -vvrm --mapper-preload
@@ -72,44 +69,74 @@ be careful it might crash your terminal depending on how many servers and media 
 now that you have imported your watch state, you can stop manually running the command again. and rely on the webhooks
 to update the watch state.
 
-To enable webhook listening server, Edit the `WS_WEBHOOK_ENABLE` variable by setting its value to `1`. If the variable
-does not exist or is set to value other than `1` it will not start the included caddy server.
+To start receiving webhook events from servers you need to do few more steps.
 
-If you don't want to use webhook events to update the watch state, and want to rely on manual polling the servers for
-state change, then set the value of `WS_CRON_IMPORT` to `1`. By default, we run import every hour. However, you can
-change the schedule by adding another variable `WS_CRON_IMPORT_AT` and set it value to valid cron timing. for
-example, `0 */2 * * *` it will run every two hours instead of 1 hour.
+# Steps to enable webhook servers
 
-# Push watch state
+Run the following commands to generate api key for each server
 
-To manually push your watch state back to servers you can run the following command
+```sh
+$ docker exec -ti watchstate console servers:webhook [SERVER_NAME] --status=enable --push==enable --generate
+
+Server '[SERVER_NAME]' Webhook API key is: random_string
+```
+
+---
+
+#### TIP:
+
+If you have multiple plex servers and use the same account for all, Then you have to make all plex servers point to the
+same API key, you still keep them separate but have the same `webhook.token` value, Then for all plex servers you have
+to whitelist IPs for each server.
 
 ```bash
-docker exec -ti watchstate console state:export -vvr 
+docker exec -ti watchstate console servers:webhook [PLEX_SERVER_1] --require-ips 'comma seperated list of ips and CIDR'
+docker exec -ti watchstate console servers:webhook [PLEX_SERVER_2] --require-ips '10.0.0.0/8,172.23.0.1,etc...'
+```
+
+The reason for this is, because Plex link webhook to user account instead of server, as such for all servers you have
+your account linked to will use the same token. This limitation we cannot change from our side, we have sent a feature
+request to plex about this. But it's unlikely that plex will implement the suggestions. As a workaround use the
+require-ip until such time plex starts treating webhooks seriously.
+
+---
+
+If you don't want to use webhook and want to rely on manual polling the servers for state change, then set the value
+of `WS_CRON_IMPORT` to `1`. By default, we run import every hour. However, you can change the schedule by adding another
+variable `WS_CRON_IMPORT_AT` and set it value to valid cron timing. for example, `0 */2 * * *` it will run every two
+hours instead of 1 hour.
+
+# Export watch state
+
+To manually export your watch state back to servers you can run the following command
+
+```bash
+docker exec -ti watchstate console state:export --mapper-preload -vvr
 ```
 
 to sync specific server/s, use the `--servers-filter` which accept comma seperated list of server names.
 
 ```bash
-docker exec -ti watchstate console state:export -vvr --servers-filter 'server1,server2' 
+docker exec -ti watchstate console state:export -vvr --mapper-preload --servers-filter 'server1,server2' 
 ```
 
-If you want to automate the pushing of your watch state back to servers, set the value of `WS_CRON_EXPORT` to `1`. By
-default, we run export every 90 minutes. However, you can change the schedule by adding another variable
-called `WS_CRON_EXPORT_AT` and set it value to valid cron timing. for example, `0 */3 * * *` it will run every three
-hours instead of 90 minutes.
+If you want to automate the exporting of your watch state back to servers, then set the value of `WS_CRON_EXPORT` to `1`
+. By default, we run export every 90 minutes. However, you can change the schedule by adding another variable
+called `WS_CRON_EXPORT_AT` and set its value to valid cron expression. for example, `0 */3 * * *` it will run every
+three hours instead of 90 minutes.
 
 # Memory usage (Import)
 
 The default mapper we use is called `MemoryMapper` this mapper store the entire state in memory during import operation,
 by doing so we gain massive speed up. However, this approach has drawbacks mainly **large memory usage**. Depending on
-your media count, it might use 1GB+ or more of memory. Tests done on 2k movies and 70k episodes and 4 servers. Ofc the
-memory will be freed as as as the comparison is done.
+your media count, it might use 1GB+ or more of memory. Tests done on 2k movies and 70k episodes and 4 servers. Of course
+the memory will be freed as as as the comparisons is done.
 
 However, If you are on a memory constraint system, there is an alternative mapper implementation called `DirectMapper`
 , this implementation works directly via db the only thing stored in memory is the api call body. which get removed as
-soon as it's parsed. The drawback for this mapper is it's like really slow for large libraries. It has to do 3x call to
-db for each time.
+soon as it's parsed. The drawbacks for this mapper is that it's really slow for large libraries. It has to do 3x call to
+db for each item. you can use '--storage-pdo-single-transaction' to speed it up a little, but it is still slower by
+factor of 2x or more compared to `MemoryMapper`.
 
 To see memory usage during the operation run the import command with following flags. `-vvvrm` these flags will redirect
 logger output, log memory usage and print them to the screen.
@@ -119,21 +146,14 @@ logger output, log memory usage and print them to the screen.
 
 ## How to change Import mapper.
 
-Set the environment variable `WS_MAPPER_IMPORT` to `DirectMapper` or edit the ``config/config.yaml`` and add the
-following lines
-
-```yaml
-mapper:
-    import:
-        type: DirectMapper
-```
+Set the environment variable `WS_MAPPER_IMPORT` to `DirectMapper`
 
 # Servers.yaml
 
 Example of working server with all options. You can have as many servers as you want.
 
 ```yaml
-my_home_server:
+my_home_server: # *DO NOT* use spaces for server name,
     type: jellyfin|emby|plex # Choose one
     url: 'https://mymedia.example.com' # The URL for the media server api
     # User API Token.
@@ -147,43 +167,63 @@ my_home_server:
     # Plex: for plex managed users the X-Plex-Token acts as userId.
     user: user-id
     export:
-        webhook: true # Enable exporting to this server via push event receive.
         enabled: true # Enable export.
     import:
         enabled: true # Enable import.
     options:
-        importUnwatched: false # By default, We do not import unwatched state to enable it set to true. 
-        exportIgnoreDate: false # By default, we respect the server watch date. To override the check, set this to true.
+        importUnwatched: true|false # By default, We do not import unwatched state to enable it set to true. 
+        exportIgnoreDate: true|false # By default, we respect the server watch date. To override the check, set this to true.
         client: # underlying http client settings https://symfony.com/doc/current/reference/configuration/framework.html#http-client
             http_version: 1.0|2.0 # Change HTTP Protocol used.
+    webhook:
+        enable: true|false # enable receiving webhook events from this server.
+        token: 'random_string' # Server specific api key.
+        push: true|false # Enable push state back to this server when watchstate tool receive webhook event.
+        ips: # optional, mostly for Plex Multi server setups.
+            - '10.0.0.0/8' # whitelist ips that are allowed to use this API key.
 
 ```
 
-# Start Webhook Server.
+# Start receiving Webhook Events.
 
-The default container includes webserver to listen for webhook events, to enable the server. edit
-your `docker-compose.yaml` file, and set the environment variable `WS_WEBHOOK_ENABLE` to `1`.
+By default, the official container includes a small http server exposed at port `80`, we don't support SSL inside
+container, so we recommend running a reverse proxy in front of the tool.
 
-View the contents of your `config/config.yaml` and take note of the `webhook.apikey`. if the apikey does not exist run
-the following command.
+#### Example nginx reverse proxy.
 
-```bash
-docker exec -ti watchstate console config:generate 
+```nginx
+server {
+    server_name watchstate.domain.example;
+    
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Host                   $host;
+        proxy_set_header X-Real-IP              $remote_addr;
+        proxy_set_header X-Forwarded-For        $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto      $scheme;
+        proxy_set_header X-Forwarded-Protocol   $scheme;
+        proxy_set_header X-Forwarded-Host       $http_host;
+        proxy_set_header Upgrade                $http_upgrade;
+        proxy_pass http://localhost:8081/;
+    }
+}
 ```
 
-it should populate your `config.yaml` with randomly generated key, and it will be printed to your screen. Adding webhook
+### Adding webhook to server
+
 to your server the url will be dependent on how you expose the server, but typically it will be like this:
 
-`http://localhost:8081/?type=[SERVER_TYPE]&apikey=[YOUR_API_KEY]`
+#### Webhook URL
 
-### [SERVER_TYPE]
+Via reverse proxy : `https://watchstate.domain.example/?apikey=[YOUR_API_KEY]`.
 
-Change the parameter to one of supported backends. e.g. `emby, plex or jellyfin`. it should match the server type that
-you are adding the link to, Each server type has different webhook payload.
+Via Direct container: `https://localhost:8081/?apikey=[YOUR_API_KEY]`
 
 ### [YOUR_API_KEY]
 
-Change this parameter to your api key you can find it by viewing `config/config.yaml` under the key of `webhook.apikey`.
+Change this parameter to your server specific ``webhook.token`` value. You can find it by viewing `config/config.yaml`
+under the key of `webhook.token`. if the key does not exist please refer to the steps described at **Steps to enable
+webhook servers**.
 
 # Configuring Media servers to send webhook events.
 
@@ -198,7 +238,7 @@ Choose whatever name you want.
 
 ##### Webhook Url:
 
-`http://localhost:8081/?type=jellyfin&apikey=[YOUR_API_KEY]`
+`http://localhost:8081/?apikey=[YOUR_API_KEY]`
 
 ##### Notification Type:
 
@@ -226,7 +266,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook Url:
 
-`http://localhost:8081/?type=emby&apikey=[YOUR_API_KEY]`
+`http://localhost:8081/?&apikey=[YOUR_API_KEY]`
 
 ##### Webhook Events
 
@@ -243,16 +283,9 @@ Go to your plex WebUI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 
 ##### URL:
 
-`http://localhost:8081/?type=plex&apikey=[YOUR_API_KEY]`
+`http://localhost:8081/?&apikey=[YOUR_API_KEY]`
 
 Click `Save Changes`
-
-# Finally
-
-after making sure everything is running smoothly, edit your `docker-compose.yaml` file and enable the exporting of your
-watch state back to servers. by setting the value of `WS_CRON_EXPORT` to `1`.
-
-restart your docker container for changes to take effect.
 
 # FAQ
 

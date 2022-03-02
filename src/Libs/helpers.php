@@ -7,9 +7,11 @@ use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\Date;
 use App\Libs\HttpException;
+use App\Libs\IpUtils;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Response;
+use Nyholm\Psr7\Uri;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -277,22 +279,11 @@ if (!function_exists('httpClientChunks')) {
 }
 
 if (!function_exists('serveHttpRequest')) {
-    /**
-     * @throws ReflectionException
-     */
     function serveHttpRequest(ServerRequestInterface $request): ResponseInterface
     {
         $logger = Container::get(LoggerInterface::class);
 
         try {
-            if (true !== Config::get('webhook.enabled', false)) {
-                throw new HttpException('Webhook is disabled via config.', 500);
-            }
-
-            if (null === Config::get('webhook.apikey', null)) {
-                throw new HttpException('No webhook.apikey is set in config.', 500);
-            }
-
             // -- get apikey from header or query.
             $apikey = $request->getHeaderLine('x-apikey');
             if (empty($apikey)) {
@@ -302,31 +293,77 @@ if (!function_exists('serveHttpRequest')) {
                 }
             }
 
-            if (!hash_equals(Config::get('webhook.apikey'), $apikey)) {
+            $server = [];
+            Config::get('servers', []);
+
+            $userIp = $request->getServerParams()[Config::get('webhook.ipHeader', 'REMOTE_ADDR')] ?? '127.0.0.1';
+
+            // -- Find Server
+            foreach (Config::get('servers', []) as $name => $info) {
+                if (null === ag($info, 'webhook.token')) {
+                    continue;
+                }
+
+                if (!hash_equals(ag($info, 'webhook.token'), $apikey)) {
+                    continue;
+                }
+
+                $ips = ag($info, 'webhook.ips', null);
+
+                if (!empty($ips) && !IpUtils::checkIp($userIp, $ips)) {
+                    continue;
+                }
+
+                $server = array_replace_recursive(['name' => $name], $info);
+                break;
+            }
+
+            if (empty($server)) {
                 throw new HttpException('Invalid API key was given.', 401);
             }
 
-            if (null === ($type = ag($request->getQueryParams(), 'type', null))) {
-                throw new HttpException('No type was given via type= query.', 400);
+            if (true !== ag($server, 'webhook.enabled')) {
+                throw new HttpException(
+                    sprintf(
+                        'Webhook API is disabled for \'%s\' via config.',
+                        ag($server, 'name')
+                    ), 500
+                );
             }
 
-            $types = Config::get('supported', []);
+            $type = ag($server, 'type');
+            $supported = Config::get('supported', []);
 
-            if (null === ($backend = ag($types, $type))) {
-                throw new HttpException('Invalid server type was given.', 400);
+            if (!isset($supported[$type])) {
+                throw new HttpException(
+                    sprintf('Server \'%s\' Used unsupported \'%s\' backend.', ag($server, 'name'), $type),
+                    500
+                );
             }
 
-            $class = new ReflectionClass($backend);
-
-            if (!$class->implementsInterface(ServerInterface::class)) {
-                throw new HttpException('Invalid Parser Class.', 500);
+            if (null === ag($server, 'url')) {
+                throw new HttpException(
+                    sprintf('Server \'%s\' has no url set.', ag($server, 'name')),
+                    500
+                );
             }
 
-            /** @var ServerInterface $backend */
-            $entity = $backend::parseWebhook($request);
+            $class = Container::get($supported[$type]);
+            assert($class instanceof ServerInterface);
 
-            if (null === $entity || !$entity->hasGuids()) {
-                return new Response(status: 200, headers: ['X-Status' => 'No GUIDs.']);
+            $class = $class->setUp(
+                name:    ag($server, 'name'),
+                url:     new Uri(ag($server, 'url')),
+                token:   ag($server, 'token', null),
+                userId:  ag($server, 'user', null),
+                persist: ag($server, 'persist', []),
+                options: ag($server, 'options', [])
+            );
+
+            $entity = $class->parseWebhook($request);
+
+            if (!$entity->hasGuids()) {
+                return new Response(status: 204, headers: ['X-Status' => 'No GUIDs.']);
             }
 
             $storage = Container::get(StorageInterface::class);
@@ -376,11 +413,11 @@ if (!function_exists('serveHttpRequest')) {
 
             return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
         } catch (HttpException $e) {
-            $logger->error($e->getMessage());
-
             if (200 === $e->getCode()) {
                 return new Response(status: $e->getCode(), headers: ['X-Status' => $e->getMessage()]);
             }
+
+            $logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
 
             return jsonResponse(status: $e->getCode(), body: ['error' => true, 'message' => $e->getMessage()]);
         }
