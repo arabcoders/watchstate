@@ -12,6 +12,7 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
+use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
@@ -174,7 +175,7 @@ class ImportCommand extends Command
             $this->logger->info('Finished preloading mapper data.');
         }
 
-        if ($input->getOption('storage-pdo-single-transaction')) {
+        if (($this->storage instanceof PDOAdapter) && $input->getOption('storage-pdo-single-transaction')) {
             $this->storage->singleTransaction();
         }
 

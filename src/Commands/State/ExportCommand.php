@@ -11,6 +11,7 @@ use App\Libs\Data;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Servers\ServerInterface;
+use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
@@ -165,7 +166,7 @@ class ExportCommand extends Command
             $this->logger->info('Finished preloading mapper data.');
         }
 
-        if ($input->getOption('storage-pdo-single-transaction')) {
+        if (($this->storage instanceof PDOAdapter) && $input->getOption('storage-pdo-single-transaction')) {
             $this->storage->singleTransaction();
         }
 
@@ -218,7 +219,7 @@ class ExportCommand extends Command
                 );
             }
 
-            array_push($requests, ...$class->push($this->mapper, $after));
+            array_push($requests, ...$class->export($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_export_update', $name))) {
                 $this->logger->notice(
