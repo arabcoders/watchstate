@@ -553,7 +553,7 @@ class PlexServer implements ServerInterface
         return $stateRequests;
     }
 
-    public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array
+    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
             function (string $cName, string $type) use ($mapper, $after) {

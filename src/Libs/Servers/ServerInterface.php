@@ -74,7 +74,7 @@ interface ServerInterface
      *
      * @return array<array-key,ResponseInterface>
      */
-    public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
+    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
 
     /**
      * Export Queued States.
