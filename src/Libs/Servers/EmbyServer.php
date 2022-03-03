@@ -53,6 +53,35 @@ class EmbyServer extends JellyfinServer
         );
     }
 
+    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
+    {
+        $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+
+        if (!str_starts_with($userAgent, 'Emby Server/')) {
+            return $request;
+        }
+
+        $body = clone $request->getBody();
+
+        if (null === ($json = json_decode((string)$body, true))) {
+            return $request;
+        }
+
+        $attributes = [
+            'SERVER_ID' => ag($json, 'Server.Id', ''),
+            'SERVER_NAME' => ag($json, 'Server.Name', ''),
+            'SERVER_VERSION' => afterLast($userAgent, '/'),
+            'USER_ID' => ag($json, 'User.Id', ''),
+            'USER_NAME' => ag($json, 'User.Name', ''),
+        ];
+
+        foreach ($attributes as $key => $val) {
+            $request = $request->withAttribute($key, $val);
+        }
+
+        return $request;
+    }
+
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         $payload = ag($request->getParsedBody(), 'data', null);

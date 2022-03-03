@@ -110,6 +110,35 @@ class PlexServer implements ServerInterface
         return $this;
     }
 
+    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
+    {
+        $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+
+        if (!str_starts_with($userAgent, 'PlexMediaServer/')) {
+            return $request;
+        }
+
+        $payload = ag($request->getParsedBody() ?? [], 'payload', null);
+
+        if (null === $payload) {
+            return $request;
+        }
+
+        $attributes = [
+            'SERVER_ID' => ag($payload, 'Server.uuid', ''),
+            'SERVER_NAME' => ag($payload, 'Server.title', ''),
+            'SERVER_VERSION' => afterLast($userAgent, '/'),
+            'USER_ID' => ag($payload, 'Account.id', ''),
+            'USER_NAME' => ag($payload, 'Account.title', ''),
+        ];
+
+        foreach ($attributes as $key => $val) {
+            $request = $request->withAttribute($key, $val);
+        }
+
+        return $request;
+    }
+
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         $payload = ag($request->getParsedBody() ?? [], 'payload', null);

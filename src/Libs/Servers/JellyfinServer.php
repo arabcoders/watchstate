@@ -112,6 +112,35 @@ class JellyfinServer implements ServerInterface
         return $this;
     }
 
+    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
+    {
+        $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+
+        if (!str_starts_with($userAgent, 'Jellyfin-Server/')) {
+            return $request;
+        }
+
+        $body = clone $request->getBody();
+
+        if (null === ($json = json_decode((string)$body, true))) {
+            return $request;
+        }
+
+        $attributes = [
+            'SERVER_ID' => ag($json, 'ServerId', ''),
+            'SERVER_NAME' => ag($json, 'ServerName', ''),
+            'SERVER_VERSION' => afterLast($userAgent, '/'),
+            'USER_ID' => ag($json, 'UserId', ''),
+            'USER_NAME' => ag($json, 'NotificationUsername', ''),
+        ];
+
+        foreach ($attributes as $key => $val) {
+            $request = $request->withAttribute($key, $val);
+        }
+
+        return $request;
+    }
+
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         if (null === ($json = json_decode($request->getBody()->getContents(), true))) {
