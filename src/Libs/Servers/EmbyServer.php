@@ -57,13 +57,13 @@ class EmbyServer extends JellyfinServer
     {
         $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
-        if (!str_starts_with($userAgent, 'Emby Server/')) {
+        if (false === Config::get('webhook.debug', false) && !str_starts_with($userAgent, 'Emby Server/')) {
             return $request;
         }
 
-        $body = clone $request->getBody();
+        $payload = ag($request->getParsedBody(), 'data', null);
 
-        if (null === ($json = json_decode((string)$body, true))) {
+        if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
             return $request;
         }
 
@@ -84,23 +84,23 @@ class EmbyServer extends JellyfinServer
 
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
-        $payload = ag($request->getParsedBody(), 'data', null);
+        $payload = ag($request->getParsedBody() ?? [], 'data', null);
 
         if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
-            throw new HttpException('No payload.', 400);
+            throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 
         $event = ag($json, 'Event', 'unknown');
         $type = ag($json, 'Item.Type', 'not_found');
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(afterLast(__CLASS__, '\\') . ': ' . sprintf('Not allowed Type [%s]', $type), 200);
+            throw new HttpException(sprintf('%s: Not allowed type [%s]', afterLast(__CLASS__, '\\'), $type), 200);
         }
 
         $type = strtolower($type);
 
         if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
+            throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
         $date = time();
@@ -135,7 +135,7 @@ class EmbyServer extends JellyfinServer
                     'event' => $event,
                 ],
             ],
-            default => throw new HttpException('Invalid content type.', 400),
+            default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
         };
 
         if ('item.markplayed' === $event || 'playback.scrobble' === $event) {

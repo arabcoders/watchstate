@@ -112,28 +112,35 @@ class PlexServer implements ServerInterface
 
     public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
     {
-        $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+        try {
+            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
-        if (!str_starts_with($userAgent, 'PlexMediaServer/')) {
-            return $request;
-        }
+            if (false === Config::get('webhook.debug', false) && !str_starts_with($userAgent, 'PlexMediaServer/')) {
+                return $request;
+            }
 
-        $payload = ag($request->getParsedBody() ?? [], 'payload', null);
+            $payload = ag($request->getParsedBody(), 'payload', null);
 
-        if (null === $payload) {
-            return $request;
-        }
+            if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
+                return $request;
+            }
 
-        $attributes = [
-            'SERVER_ID' => ag($payload, 'Server.uuid', ''),
-            'SERVER_NAME' => ag($payload, 'Server.title', ''),
-            'SERVER_VERSION' => afterLast($userAgent, '/'),
-            'USER_ID' => ag($payload, 'Account.id', ''),
-            'USER_NAME' => ag($payload, 'Account.title', ''),
-        ];
+            $attributes = [
+                'SERVER_ID' => ag($json, 'Server.uuid', ''),
+                'SERVER_NAME' => ag($json, 'Server.title', ''),
+                'SERVER_VERSION' => afterLast($userAgent, '/'),
+                'USER_ID' => ag($json, 'Account.id', ''),
+                'USER_NAME' => ag($json, 'Account.title', ''),
+            ];
 
-        foreach ($attributes as $key => $val) {
-            $request = $request->withAttribute($key, $val);
+            foreach ($attributes as $key => $val) {
+                $request = $request->withAttribute($key, $val);
+            }
+        } catch (Throwable $e) {
+            Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
 
         return $request;
@@ -151,11 +158,11 @@ class PlexServer implements ServerInterface
         $event = ag($json, 'event', null);
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(sprintf('%s: Not allowed Type [%s]', afterLast(__CLASS__, '\\'), $type), 200);
+            throw new HttpException(sprintf('%s: Not allowed type [%s]', afterLast(__CLASS__, '\\'), $type), 200);
         }
 
         if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
+            throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
         $meta = match ($type) {

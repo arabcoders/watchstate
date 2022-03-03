@@ -16,6 +16,7 @@ use Closure;
 use DateTimeInterface;
 use JsonException;
 use JsonMachine\Items;
+use Nyholm\Psr7\Stream;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -116,13 +117,16 @@ class JellyfinServer implements ServerInterface
     {
         $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
-        if (!str_starts_with($userAgent, 'Jellyfin-Server/')) {
+        if (false === Config::get('webhook.debug', false) && !str_starts_with($userAgent, 'Jellyfin-Server/')) {
             return $request;
         }
 
-        $body = clone $request->getBody();
+        $body = $request->getBody()->getContents();
 
-        if (null === ($json = json_decode((string)$body, true))) {
+        // -- re-attach body to request.
+        $request = $request->withBody(Stream::create($body));
+
+        if (null === ($json = json_decode($body, true))) {
             return $request;
         }
 
@@ -144,20 +148,20 @@ class JellyfinServer implements ServerInterface
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
         if (null === ($json = json_decode($request->getBody()->getContents(), true))) {
-            throw new HttpException('No payload.', 400);
+            throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 
         $event = ag($json, 'NotificationType', 'unknown');
         $type = ag($json, 'ItemType', 'not_found');
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(sprintf('Not allowed Type [%s]', $type), 200);
+            throw new HttpException(sprintf('%s: Not allowed type [%s]', afterLast(__CLASS__, '\\'), $type), 200);
         }
 
         $type = strtolower($type);
 
         if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('%s: Not allowed Event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
+            throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
         $date = time();
@@ -182,7 +186,7 @@ class JellyfinServer implements ServerInterface
                     'event' => $event,
                 ],
             ],
-            default => throw new HttpException('Invalid content type.', 400),
+            default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
         };
 
         $guids = [];

@@ -236,6 +236,7 @@ if (!function_exists('saveWebhookPayload')) {
             'parsed' => $request->getParsedBody(),
             'server' => $request->getServerParams(),
             'body' => $request->getBody()->getContents(),
+            'attributes' => $request->getAttributes(),
             'cParsed' => $parsed,
         ];
 
@@ -293,11 +294,12 @@ if (!function_exists('preServeHttpRequest')) {
 if (!function_exists('serveHttpRequest')) {
     function serveHttpRequest(ServerRequestInterface $request): ResponseInterface
     {
-        $request = preServeHttpRequest($request);
 
         $logger = Container::get(LoggerInterface::class);
 
         try {
+            $request = preServeHttpRequest($request);
+
             // -- get apikey from header or query.
             $apikey = $request->getHeaderLine('x-apikey');
             if (empty($apikey)) {
