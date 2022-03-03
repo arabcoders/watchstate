@@ -294,7 +294,6 @@ if (!function_exists('preServeHttpRequest')) {
 if (!function_exists('serveHttpRequest')) {
     function serveHttpRequest(ServerRequestInterface $request): ResponseInterface
     {
-
         $logger = Container::get(LoggerInterface::class);
 
         try {
@@ -330,6 +329,12 @@ if (!function_exists('serveHttpRequest')) {
                     continue;
                 }
 
+                $uuid = ag($info, 'webhook.uuid', null);
+
+                if (null !== $uuid && $uuid !== $request->getAttribute('SERVER_ID', null)) {
+                    continue;
+                }
+
                 $server = array_replace_recursive(['name' => $name], $info);
                 break;
             }
@@ -338,12 +343,13 @@ if (!function_exists('serveHttpRequest')) {
                 throw new HttpException('Invalid API key was given.', 401);
             }
 
-            if (true !== ag($server, 'webhook.enabled')) {
+            if (true !== ag($server, 'webhook.import')) {
                 throw new HttpException(
                     sprintf(
-                        'Webhook API is disabled for \'%s\' via config.',
+                        'Import via webhook for this server \'%s\' is disabled.',
                         ag($server, 'name')
-                    ), 500
+                    ),
+                    500
                 );
             }
 

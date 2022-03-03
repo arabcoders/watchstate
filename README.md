@@ -76,7 +76,7 @@ To start receiving webhook events from servers you need to do few more steps.
 Run the following commands to generate api key for each server
 
 ```sh
-$ docker exec -ti watchstate console servers:webhook [SERVER_NAME] --status=enable --push==enable --generate
+$ docker exec -ti watchstate console servers:edit [SERVER_NAME] --webhook-import-status=enable --webhook-push-status=enable --webhook-key-generate
 
 Server '[SERVER_NAME]' Webhook API key is: random_string
 ```
@@ -90,8 +90,22 @@ same API key, you still keep them separate but have the same `webhook.token` val
 to whitelist IPs for each server.
 
 ```bash
-docker exec -ti watchstate console servers:webhook [PLEX_SERVER_1] --require-ips 'comma seperated list of ips and CIDR'
-docker exec -ti watchstate console servers:webhook [PLEX_SERVER_2] --require-ips '10.0.0.0/8,172.23.0.1,etc...'
+docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-require-ips 'comma seperated list of ips/CIDR'
+docker exec -ti watchstate console servers:edit [PLEX_SERVER_2] --webhook-require-ips '10.0.0.0/8,172.23.0.1,etc...'
+```
+
+You can also use server unique ID to identify the server, however you have to get the server ID manually by visiting
+server settings > General then look at the ID in the URL for example
+
+`https://app.plex.tv/desktop/#!/settings/server/[RANDOM_STRING]/settings/general`
+
+##### [RANDOM_STRING]
+
+will be a randomly generated string that looks like the 2nd example.
+
+```bash
+docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-server-uuid '[RANDOM_STRING]'
+docker exec -ti watchstate console servers:edit [PLEX_SERVER_2] --webhook-server-uuid '0d4d365add01145852146d0c25b3776c1effc507'
 ```
 
 The reason for this is, because Plex link webhook to user account instead of server, as such for all servers you have

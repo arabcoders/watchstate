@@ -15,5 +15,5 @@ return [
     'scheduler:closure' => App\Commands\Scheduler\RunClosure::class,
     'webhooks:queued' => App\Commands\State\QueueCommand::class,
     'servers:list' => App\Commands\Servers\ListCommand::class,
-    'servers:webhook' => App\Commands\Servers\WebhookCommand::class,
+    'servers:edit' => App\Commands\Servers\EditCommand::class,
 ];

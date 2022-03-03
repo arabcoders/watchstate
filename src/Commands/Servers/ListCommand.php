@@ -44,9 +44,10 @@ final class ListCommand extends Command
                 'Name',
                 'Type',
                 'URL',
-                'Webhook',
-                'Last Import at',
-                'Last Export at'
+                'WH Import',
+                'WH Push',
+                'Last Manual Import at',
+                'Last Manual Export at'
             ]
         );
 
@@ -55,7 +56,8 @@ final class ListCommand extends Command
                 $name,
                 ag($server, 'type'),
                 ag($server, 'url'),
-                ag($server, 'webhook.token') && ag($server, 'webhook.enabled') ? 'Enabled' : 'Disabled',
+                ag($server, 'webhook.token') && ag($server, 'webhook.import') ? 'Enabled' : 'Disabled',
+                true === ag($server, 'webhook.push') ? 'Enabled' : 'Disabled',
                 ($lastImportSync = ag($server, 'import.lastSync')) ? makeDate($lastImportSync) : 'Never',
                 ($lastExportSync = ag($server, 'export.lastSync')) ? makeDate($lastExportSync) : 'Never',
             ];
