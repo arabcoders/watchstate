@@ -16,7 +16,6 @@ use Closure;
 use DateTimeInterface;
 use JsonException;
 use JsonMachine\Items;
-use Nyholm\Psr7\Stream;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -123,12 +122,11 @@ class JellyfinServer implements ServerInterface
 
         $body = $request->getBody()->getContents();
 
-        // -- re-attach body to request.
-        $request = $request->withBody(Stream::create($body));
-
         if (null === ($json = json_decode($body, true))) {
             return $request;
         }
+
+        $request = $request->withParsedBody($json);
 
         $attributes = [
             'SERVER_ID' => ag($json, 'ServerId', ''),
@@ -147,7 +145,7 @@ class JellyfinServer implements ServerInterface
 
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
-        if (null === ($json = json_decode($request->getBody()->getContents(), true))) {
+        if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 

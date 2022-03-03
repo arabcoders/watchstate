@@ -61,7 +61,7 @@ class EmbyServer extends JellyfinServer
             return $request;
         }
 
-        $payload = ag($request->getParsedBody(), 'data', null);
+        $payload = ag($request->getParsedBody() ?? [], 'data', null);
 
         if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
             return $request;

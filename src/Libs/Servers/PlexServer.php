@@ -119,7 +119,7 @@ class PlexServer implements ServerInterface
                 return $request;
             }
 
-            $payload = ag($request->getParsedBody(), 'payload', null);
+            $payload = ag($request->getParsedBody() ?? [], 'payload', null);
 
             if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
                 return $request;
