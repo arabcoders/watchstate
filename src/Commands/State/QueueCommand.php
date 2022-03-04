@@ -11,7 +11,6 @@ use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Servers\ServerInterface;
-use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -114,11 +113,8 @@ class QueueCommand extends Command
                 return self::FAILURE;
             }
 
-            $list[] = [
-                'name' => $serverName,
-                'kind' => $supported[$type],
-                'server' => $server,
-            ];
+            $server['name'] = $serverName;
+            $list[$serverName] = $server;
         }
 
         if (empty($list)) {
@@ -137,13 +133,8 @@ class QueueCommand extends Command
             $this->logger = $logger;
         }
 
-        foreach ($list as &$server) {
-            $name = ag($server, 'name');
+        foreach ($list as $name => &$server) {
             Data::addBucket($name);
-
-            $class = Container::getNew(ag($server, 'kind'));
-            assert($class instanceof ServerInterface);
-
             $opts = ag($server, 'server.options', []);
 
             if ($input->getOption('ignore-date')) {
@@ -158,22 +149,14 @@ class QueueCommand extends Command
                 $opts['client']['no_proxy'] = $input->getOption('no-proxy');
             }
 
-            $class = $class->setUp(
-                name:    $name,
-                url:     new Uri(ag($server, 'server.url')),
-                token:   ag($server, 'server.token', null),
-                userId:  ag($server, 'server.user', null),
-                persist: ag($server, 'server.persist', []),
-                options: $opts
-            );
-
-            $server['class'] = $class;
+            $server['options'] = $opts;
+            $server['class'] = makeServer($server, $name);
 
             if (null !== $logger) {
-                $class = $class->setLogger($logger);
+                $server['class'] = $server['class']->setLogger($logger);
             }
 
-            array_push($requests, ...$class->push($entities));
+            array_push($requests, ...$server['class']->push($entities));
         }
 
         unset($server);
@@ -209,10 +192,7 @@ class QueueCommand extends Command
                 continue;
             }
 
-            Config::save(
-                sprintf('servers.%s.persist', $name),
-                $server['class']->getPersist()
-            );
+            Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
         }
 
         // -- Update Server.yaml

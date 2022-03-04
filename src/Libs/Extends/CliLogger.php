@@ -79,14 +79,7 @@ final class CliLogger implements LoggerInterface
         $message = '[' . makeDate() . '] logger.' . ($levels[$level] ?? $level) . ': ' . $debug . $message;
 
         if (!empty($context)) {
-            $list = [];
-
-            foreach ($context as $key => $val) {
-                $val = (is_array($val) ? json_encode($val, flags: JSON_UNESCAPED_SLASHES) : ($val ?? 'None'));
-                $list[] = sprintf("(%s: %s)", $key, $val);
-            }
-
-            $message .= ' [' . implode(', ', $list) . ']';
+            $message .= ' [' . arrayToString($context) . ']';
         }
 
         $this->output->writeln($message, $this->levelMapper[$level] ?? OutputInterface::VERBOSITY_NORMAL);

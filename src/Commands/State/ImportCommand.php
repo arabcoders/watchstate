@@ -6,7 +6,6 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
@@ -14,7 +13,6 @@ use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
-use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -142,11 +140,8 @@ class ImportCommand extends Command
                 return self::FAILURE;
             }
 
-            $list[] = [
-                'name' => $serverName,
-                'kind' => $supported[$type],
-                'server' => $server,
-            ];
+            $server['name'] = $serverName;
+            $list[$serverName] = $server;
         }
 
         if (empty($list)) {
@@ -179,12 +174,8 @@ class ImportCommand extends Command
             $this->storage->singleTransaction();
         }
 
-        foreach ($list as &$server) {
-            $name = ag($server, 'name');
+        foreach ($list as $name => &$server) {
             Data::addBucket($name);
-
-            $class = Container::get(ag($server, 'kind'));
-            assert($class instanceof ServerInterface);
 
             $opts = ag($server, 'server.options', []);
 
@@ -200,19 +191,11 @@ class ImportCommand extends Command
                 $opts['client']['no_proxy'] = $input->getOption('no-proxy');
             }
 
-            $class = $class->setUp(
-                name:    $name,
-                url:     new Uri(ag($server, 'server.url')),
-                token:   ag($server, 'server.token', null),
-                userId:  ag($server, 'server.user', null),
-                persist: ag($server, 'server.persist', []),
-                options: $opts
-            );
-
-            $server['class'] = $class;
+            $server['options'] = $opts;
+            $server['class'] = makeServer($server, $name);
 
             if (null !== $logger) {
-                $class = $class->setLogger($logger);
+                $server['class'] = $server['class']->setLogger($logger);
             }
 
             $after = $input->getOption('force-full') ? null : ag($server, 'server.import.lastSync', null);
@@ -228,7 +211,7 @@ class ImportCommand extends Command
                 );
             }
 
-            array_push($queue, ...$class->pull($this->mapper, $after));
+            array_push($queue, ...$server['class']->pull($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
                 $this->logger->notice(
@@ -263,9 +246,17 @@ class ImportCommand extends Command
         unset($queue);
         $this->logger->notice('Finished waiting HTTP Requests.');
 
-        $this->logger->notice(sprintf('Committing (%d) Changes.', count($this->mapper)));
+        $total = count($this->mapper);
+
+        if ($total >= 1) {
+            $this->logger->notice(sprintf('Committing (%d) Changes.', $total));
+        }
+
         $operations = $this->mapper->commit();
-        $this->logger->notice('Finished Committing the changes.');
+
+        if ($total >= 1) {
+            $this->logger->notice('Finished Committing the changes.');
+        }
 
         if ($input->getOption('stats-show')) {
             Data::add('operations', 'stats', $operations);

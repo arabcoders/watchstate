@@ -353,36 +353,13 @@ if (!function_exists('serveHttpRequest')) {
                 );
             }
 
-            $type = ag($server, 'type');
-            $supported = Config::get('supported', []);
-
-            if (!isset($supported[$type])) {
-                throw new HttpException(
-                    sprintf('Server \'%s\' Used unsupported \'%s\' backend.', ag($server, 'name'), $type),
-                    500
-                );
+            try {
+                $server['class'] = makeServer($server, $server['name']);
+            } catch (RuntimeException $e) {
+                throw new HttpException($e->getMessage(), 500);
             }
 
-            if (null === ag($server, 'url')) {
-                throw new HttpException(
-                    sprintf('Server \'%s\' has no url set.', ag($server, 'name')),
-                    500
-                );
-            }
-
-            $class = Container::get($supported[$type]);
-            assert($class instanceof ServerInterface);
-
-            $class = $class->setUp(
-                name:    ag($server, 'name'),
-                url:     new Uri(ag($server, 'url')),
-                token:   ag($server, 'token', null),
-                userId:  ag($server, 'user', null),
-                persist: ag($server, 'persist', []),
-                options: ag($server, 'options', [])
-            );
-
-            $entity = $class->parseWebhook($request);
+            $entity = $server['class']->parseWebhook($request);
 
             if (!$entity->hasGuids()) {
                 return new Response(status: 204, headers: ['X-Status' => 'No GUIDs.']);
@@ -481,5 +458,65 @@ if (!function_exists('afterLast')) {
         }
 
         return mb_substr($subject, $position + mb_strlen($search));
+    }
+}
+
+if (!function_exists('makeServer')) {
+    /**
+     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, persist:array, options:array} $server
+     * @param string|null $name server name.
+     * @return ServerInterface
+     *
+     * @throws RuntimeException if configuration is wrong.
+     */
+    function makeServer(array $server, string|null $name = null): ServerInterface
+    {
+        if (null === ($serverType = ag($server, 'type'))) {
+            throw new RuntimeException('No server type was selected.');
+        }
+
+        if (null === ag($server, 'url')) {
+            throw new RuntimeException('No url was set for server.');
+        }
+
+        if (null === ($class = Config::get("supported.{$serverType}", null))) {
+            throw new RuntimeException(
+                sprintf(
+                    'Unexpected server type was given. Was expecting [%s] but got \'%s\' instead.',
+                    $serverType,
+                    implode('|', Config::get("supported", []))
+                )
+            );
+        }
+
+        return Container::getNew($class)->setUp(
+            name:    $name ?? ag($server, 'name', fn() => md5(ag($server, 'url'))),
+            url:     new Uri(ag($server, 'url')),
+            token:   ag($server, 'token', null),
+            userId:  ag($server, 'user', null),
+            persist: ag($server, 'persist', []),
+            options: ag($server, 'options', []),
+        );
+    }
+}
+
+if (!function_exists('arrayToString')) {
+    function arrayToString(array $arr, string $separator = ', '): string
+    {
+        $list = [];
+
+        foreach ($arr as $key => $val) {
+            if (is_object($val)) {
+                $val = spl_object_hash($val);
+            } elseif (is_array($val)) {
+                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES);
+            } else {
+                $val = $val ?? 'None';
+            }
+
+            $list[] = sprintf("(%s: %s)", $key, $val);
+        }
+
+        return implode($separator, $list);
     }
 }
