@@ -23,6 +23,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 class ExportCommand extends Command
 {
+    public const TASK_NAME = 'export';
+
     public function __construct(
         private StorageInterface $storage,
         private ExportInterface $mapper,

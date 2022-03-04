@@ -753,7 +753,7 @@ class JellyfinServer implements ServerInterface
             $guids = $this->getGuids($type, (array)($item->ProviderIds ?? []));
 
             foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
+                $this->cacheData[$guid] = $item->Id;
             }
 
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;

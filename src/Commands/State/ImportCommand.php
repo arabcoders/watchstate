@@ -24,6 +24,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ImportCommand extends Command
 {
+    public const TASK_NAME = 'import';
+
     public function __construct(
         private StorageInterface $storage,
         private ImportInterface $mapper,

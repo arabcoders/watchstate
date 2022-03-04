@@ -15,6 +15,7 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -22,8 +23,10 @@ use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
-class QueueCommand extends Command
+class PushCommand extends Command
 {
+    public const TASK_NAME = 'push';
+
     public function __construct(
         private LoggerInterface $logger,
         private CacheInterface $cache
@@ -36,10 +39,11 @@ class QueueCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('webhooks:queued')
-            ->setDescription('Push webhook queued watch state events.')
+        $this->setName('state:push')
+            ->setDescription('Push queued state change events.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is done.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
+            ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is successful.')
             ->addOption(
                 'proxy',
                 null,
@@ -56,8 +60,9 @@ class QueueCommand extends Command
                 'ignore-date',
                 null,
                 InputOption::VALUE_NONE,
-                'Ignore date comparison, and update server watched state to match database.'
-            );
+                'Ignore date comparison. Push db state to the server regardless of date.'
+            )
+            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.');
     }
 
     /**
@@ -79,6 +84,50 @@ class QueueCommand extends Command
         if (empty($entities)) {
             $this->cache->delete('queue');
             $output->writeln('<info>No items in the queued.</info>', OutputInterface::VERBOSITY_DEBUG);
+            return self::SUCCESS;
+        }
+
+        if ($input->getOption('queue-show')) {
+            $table = new Table($output);
+            $rows = [];
+            $table->setHeaders(
+                [
+                    'ID',
+                    'Type',
+                    'Date',
+                    'Via',
+                    'Main Title',
+                    'Year | Episode',
+                    'Watched'
+                ]
+            );
+
+            foreach ($entities as $entity) {
+                $number = '( ' . ag($entity->meta, 'year', 0) . ' )';
+
+                if (StateInterface::TYPE_EPISODE === $entity->type) {
+                    $number .= sprintf(
+                        ' - S%sE%s',
+                        str_pad((string)($entity->meta['season'] ?? 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)($entity->meta['episode'] ?? 0), 2, '0', STR_PAD_LEFT),
+                    );
+                }
+
+                $rows[] = [
+                    $entity->id,
+                    $entity->type,
+                    makeDate($entity->updated),
+                    ag($entity->meta, 'via', '??'),
+                    ag($entity->meta, 'series', ag($entity->meta, 'title', '??')),
+                    $number,
+                    $entity->watched ? 'Yes' : 'No',
+                ];
+            }
+
+            $table->setRows($rows);
+
+            $table->render();
+
             return self::SUCCESS;
         }
 
@@ -123,8 +172,8 @@ class QueueCommand extends Command
 
         $logger = null;
 
-        if ($input->getOption('redirect-logger')) {
-            $logger = new CliLogger($output, false);
+        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
+            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
         }
 
         $requests = [];
