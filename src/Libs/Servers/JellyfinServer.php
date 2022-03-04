@@ -961,7 +961,9 @@ class JellyfinServer implements ServerInterface
      */
     public function __destruct()
     {
-        $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        if (!empty($this->cacheKey)) {
+            $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        }
     }
 
     /**
