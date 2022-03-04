@@ -15,7 +15,7 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.13-alpha',
+        'version' => 'v0.0.16-alpha',
         'tz' => null,
         'path' => fixPath(
             env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))
