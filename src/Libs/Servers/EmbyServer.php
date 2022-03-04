@@ -146,7 +146,16 @@ class EmbyServer extends JellyfinServer
             $isWatched = (int)(bool)ag($json, 'Item.Played', ag($json, 'Item.PlayedToCompletion', 0));
         }
 
-        $guids = self::getGuids($type, ag($json, 'Item.ProviderIds', []));
+        $guids = ag($json, 'Item.ProviderIds', []);
+
+        if (!$this->hasSupportedIds($guids)) {
+            throw new HttpException(
+                sprintf('%s: No supported GUID was given. [%s]', afterLast(__CLASS__, '\\'), arrayToString($guids)),
+                400
+            );
+        }
+
+        $guids = $this->getGuids($type, $guids);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Item.Id');
@@ -209,21 +218,19 @@ class EmbyServer extends JellyfinServer
                     continue;
                 }
 
-                $url = $this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
-                    http_build_query(
-                        [
-                            'Recursive' => 'true',
-                            'Fields' => 'ProviderIds,DateCreated',
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                            'AnyProviderIdEquals' => implode(',', $guids),
-                        ]
-                    )
-                );
-
                 $requests[] = $this->http->request(
                     'GET',
-                    (string)$url,
+                    (string)$this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
+                        http_build_query(
+                            [
+                                'Recursive' => 'true',
+                                'Fields' => 'ProviderIds,DateCreated',
+                                'enableUserData' => 'true',
+                                'enableImages' => 'false',
+                                'AnyProviderIdEquals' => implode(',', $guids),
+                            ]
+                        )
+                    ),
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'state' => &$entity,
@@ -275,14 +282,6 @@ class EmbyServer extends JellyfinServer
 
                 $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
 
-                $date = ag($json, 'UserData.LastPlayedDate', ag($json, 'DateCreated', ag($json, 'PremiereDate', null)));
-
-                if (null === $date) {
-                    $this->logger->notice(sprintf('Ignoring %s. No date is set.', $iName));
-                    continue;
-                }
-
-                $date = strtotime($date);
 
                 if ($state->watched === $isWatched) {
                     $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
@@ -290,6 +289,19 @@ class EmbyServer extends JellyfinServer
                 }
 
                 if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    $date = ag(
+                        $json,
+                        'UserData.LastPlayedDate',
+                        ag($json, 'DateCreated', ag($json, 'PremiereDate', null))
+                    );
+
+                    if (null === $date) {
+                        $this->logger->notice(sprintf('Ignoring %s. No date is set.', $iName));
+                        continue;
+                    }
+
+                    $date = strtotime($date);
+
                     if ($date >= $state->updated) {
                         $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
                         continue;
@@ -310,7 +322,7 @@ class EmbyServer extends JellyfinServer
                     )
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
+                $this->logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
             }
         }
 

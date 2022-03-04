@@ -13,6 +13,7 @@ use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use Closure;
+use DateInterval;
 use DateTimeInterface;
 use JsonException;
 use JsonMachine\Items;
@@ -206,7 +207,18 @@ class PlexServer implements ServerInterface
 
         $date = time();
 
-        $guids = self::getGuids($type, $json['Metadata']['Guid'] ?? []);
+        if (!$this->hasSupportedIds($json['Metadata']['Guid'] ?? [])) {
+            throw new HttpException(
+                sprintf(
+                    '%s: No supported GUID was given. [%s]',
+                    afterLast(__CLASS__, '\\'),
+                    arrayToString($json['Metadata']['Guid'] ?? [])
+                ),
+                400
+            );
+        }
+
+        $guids = $this->getGuids($type, $json['Metadata']['Guid'] ?? []);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Metadata.guid');
@@ -261,12 +273,6 @@ class PlexServer implements ServerInterface
 
             $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
-            $content = $response->getContent(false);
-
-            $this->logger->debug(sprintf('===[ Sample from %s List library response ]===', $this->name));
-            $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : 'Empty response body');
-            $this->logger->debug('===[ End ]===');
-
             if (200 !== $response->getStatusCode()) {
                 $this->logger->error(
                     sprintf(
@@ -279,8 +285,7 @@ class PlexServer implements ServerInterface
                 return [];
             }
 
-            $json = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-            unset($content);
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
 
             $listDirs = ag($json, 'MediaContainer.Directory', []);
 
@@ -407,9 +412,11 @@ class PlexServer implements ServerInterface
                         );
 
                         $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+
                         foreach ($it as $entity) {
                             $this->processImport($mapper, $type, $cName, $entity, $after);
                         }
+
                         $this->logger->notice(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
@@ -477,18 +484,16 @@ class PlexServer implements ServerInterface
             }
 
             try {
-                $url = $this->url->withPath('/library/all')->withQuery(
-                    http_build_query(
-                        [
-                            'guid' => 'plex://' . $entity->guid_plex,
-                            'includeGuids' => 1,
-                        ]
-                    )
-                );
-
                 $requests[] = $this->http->request(
                     'GET',
-                    (string)$url,
+                    (string)$this->url->withPath('/library/all')->withQuery(
+                        http_build_query(
+                            [
+                                'guid' => 'plex://' . $entity->guid_plex,
+                                'includeGuids' => 1,
+                            ]
+                        )
+                    ),
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'state' => &$entity,
@@ -496,7 +501,7 @@ class PlexServer implements ServerInterface
                     ])
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
+                $this->logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
             }
         }
 
@@ -538,18 +543,23 @@ class PlexServer implements ServerInterface
 
                 $isWatched = (int)(bool)ag($json, 'viewCount', 0);
 
-                $date = max(
-                    (int)ag($json, 'updatedAt', 0),
-                    (int)ag($json, 'lastViewedAt', 0),
-                    (int)ag($json, 'addedAt', 0)
-                );
-
                 if ($state->watched === $isWatched) {
                     $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
                     continue;
                 }
 
                 if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    $date = max(
+                        (int)ag($json, 'updatedAt', 0),
+                        (int)ag($json, 'lastViewedAt', 0),
+                        (int)ag($json, 'addedAt', 0)
+                    );
+
+                    if (0 === $date) {
+                        $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
+                        continue;
+                    }
+
                     if ($date >= $state->updated) {
                         $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
                         continue;
@@ -558,14 +568,15 @@ class PlexServer implements ServerInterface
 
                 $stateRequests[] = $this->http->request(
                     'GET',
-                    (string)$this->url->withPath((1 === $state->watched ? '/:/scrobble' : '/:/unscrobble'))->withQuery(
-                        http_build_query(
-                            [
-                                'identifier' => 'com.plexapp.plugins.library',
-                                'key' => ag($json, 'ratingKey'),
-                            ]
-                        )
-                    ),
+                    (string)$this->url->withPath((1 === $state->watched ? '/:/scrobble' : '/:/unscrobble'))
+                        ->withQuery(
+                            http_build_query(
+                                [
+                                    'identifier' => 'com.plexapp.plugins.library',
+                                    'key' => ag($json, 'ratingKey'),
+                                ]
+                            )
+                        ),
                     array_replace_recursive(
                         $this->getHeaders(),
                         [
@@ -577,7 +588,7 @@ class PlexServer implements ServerInterface
                     )
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage());
+                $this->logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
             }
         }
 
@@ -595,7 +606,7 @@ class PlexServer implements ServerInterface
                         if (200 !== $response->getStatusCode()) {
                             $this->logger->error(
                                 sprintf(
-                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    'Request to %s - %s responded with unexpected http status code (%d).',
                                     $this->name,
                                     $cName,
                                     $response->getStatusCode()
@@ -612,9 +623,11 @@ class PlexServer implements ServerInterface
                         );
 
                         $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+
                         foreach ($it as $entity) {
                             $this->processExport($mapper, $type, $cName, $entity, $after);
                         }
+
                         $this->logger->notice(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
@@ -630,7 +643,11 @@ class PlexServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
-                            )
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ]
                         );
                         return;
                     }
@@ -639,7 +656,11 @@ class PlexServer implements ServerInterface
             function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
-                    ['url' => $url]
+                    [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'url' => $url
+                    ]
                 );
             }
         );
@@ -677,6 +698,24 @@ class PlexServer implements ServerInterface
                 );
             }
 
+            if (null === ($item->Guid ?? null)) {
+                $item->Guid = [['id' => $item->guid]];
+            } else {
+                $item->Guid[] = ['id' => $item->guid];
+            }
+
+            if (!$this->hasSupportedIds($item->Guid)) {
+                $this->logger->debug(sprintf('Ignoring %s. No supported guid.', $iName), $item->Guid ?? []);
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $guids = $this->getGuids($type, $item->Guid ?? []);
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
+
             $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
             if (0 === $date) {
@@ -691,21 +730,7 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (null === ($item->Guid ?? null)) {
-                $item->Guid = [['id' => $item->guid]];
-            } else {
-                $item->Guid[] = ['id' => $item->guid];
-            }
-
-            if (!$this->hasSupportedIds($item->Guid)) {
-                $this->logger->debug(sprintf('Ignoring %s. No supported guid.', $iName), $item->Guid ?? []);
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                return;
-            }
-
             $isWatched = (int)(bool)($item->viewCount ?? false);
-
-            $guids = self::getGuids($type, $item->Guid ?? []);
 
             if (null === ($entity = $mapper->findByIds($guids))) {
                 $this->logger->debug(sprintf('Ignoring %s. Not found in db.', $iName), $item->ProviderIds ?? []);
@@ -729,19 +754,18 @@ class PlexServer implements ServerInterface
 
             $this->logger->debug(sprintf('Queuing %s.', $iName), ['url' => $this->url]);
 
-            $url = $this->url->withPath('/:' . (1 === $entity->watched ? '/scrobble' : '/unscrobble'))->withQuery(
-                http_build_query(
-                    [
-                        'identifier' => 'com.plexapp.plugins.library',
-                        'key' => $item->ratingKey,
-                    ]
-                )
-            );
-
             $mapper->queue(
                 $this->http->request(
                     'GET',
-                    (string)$url,
+                    (string)$this->url->withPath('/:' . (1 === $entity->watched ? '/scrobble' : '/unscrobble'))
+                        ->withQuery(
+                            http_build_query(
+                                [
+                                    'identifier' => 'com.plexapp.plugins.library',
+                                    'key' => $item->ratingKey,
+                                ]
+                            )
+                        ),
                     array_replace_recursive(
                         $this->getHeaders(),
                         [
@@ -754,7 +778,10 @@ class PlexServer implements ServerInterface
                 )
             );
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
     }
 
@@ -790,14 +817,6 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
-                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
-                Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                return;
-            }
-
             if (null === ($item->Guid ?? null)) {
                 $item->Guid = [['id' => $item->guid]];
             } else {
@@ -807,6 +826,20 @@ class PlexServer implements ServerInterface
             if (!$this->hasSupportedIds($item->Guid)) {
                 $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item->Guid ?? []);
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $guids = $this->getGuids($type, $item->Guid ?? []);
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
+
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
+
+            if (0 === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
 
@@ -829,12 +862,6 @@ class PlexServer implements ServerInterface
                 ];
             }
 
-            $guids = self::getGuids($type, $item->Guid ?? []);
-
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
-            }
-
             $row = [
                 'type' => $type,
                 'updated' => $date,
@@ -848,13 +875,17 @@ class PlexServer implements ServerInterface
                 self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
         }
     }
 
-    protected static function getGuids(string $type, array $guids): array
+    protected function getGuids(string $type, array $guids): array
     {
         $guid = [];
+
         foreach ($guids as $_id) {
             $val = is_object($_id) ? $_id->id : $_id['id'];
 
@@ -886,11 +917,13 @@ class PlexServer implements ServerInterface
     protected function hasSupportedIds(array $guids): bool
     {
         foreach ($guids as $_id) {
-            if (empty($_id->id)) {
+            $val = is_object($_id) ? $_id->id : $_id['id'];
+
+            if (empty($val)) {
                 continue;
             }
 
-            [$key, $value] = explode('://', $_id->id);
+            [$key, $value] = explode('://', $val);
             $key = strtolower($key);
 
             if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
@@ -906,9 +939,7 @@ class PlexServer implements ServerInterface
      */
     public function __destruct()
     {
-        if (!empty($this->cacheData)) {
-            $this->cache->set($this->cacheKey, $this->cacheData);
-        }
+        $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
     }
 
     /**
@@ -922,7 +953,12 @@ class PlexServer implements ServerInterface
         array $opts = []
     ): ServerInterface {
         if (true === $this->loaded) {
-            throw new RuntimeException('setState: already called once');
+            throw new RuntimeException(
+                sprintf(
+                    '%s->setState(): Has already been called.',
+                    afterLast(__CLASS__, '\\')
+                )
+            );
         }
 
         $this->cacheKey = md5(__CLASS__ . '.' . $name . $url);

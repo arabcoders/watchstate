@@ -13,6 +13,7 @@ use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use Closure;
+use DateInterval;
 use DateTimeInterface;
 use JsonException;
 use JsonMachine\Items;
@@ -195,7 +196,14 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        $guids = self::getGuids($type, $guids);
+        if (!$this->hasSupportedIds($guids)) {
+            throw new HttpException(
+                sprintf('%s: No supported GUID was given. [%s]', afterLast(__CLASS__, '\\'), arrayToString($guids)),
+                400
+            );
+        }
+
+        $guids = $this->getGuids($type, $guids);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Item.ItemId');
@@ -275,12 +283,6 @@ class JellyfinServer implements ServerInterface
 
             $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
-            $content = $response->getContent(false);
-
-            $this->logger->debug(sprintf('===[ Sample from %s List library response ]===', $this->name));
-            $this->logger->debug(!empty($content) ? mb_substr($content, 0, 200) : 'Empty response body');
-            $this->logger->debug('===[ End ]===');
-
             if (200 !== $response->getStatusCode()) {
                 $this->logger->error(
                     sprintf(
@@ -293,8 +295,7 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
 
-            $json = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-            unset($content);
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
 
             $listDirs = ag($json, 'Items', []);
 
@@ -304,12 +305,19 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
         } catch (ExceptionInterface $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             Data::add($this->name, 'no_import_update', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error(
-                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage())
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
             );
             Data::add($this->name, 'no_import_update', true);
             return [];
@@ -425,9 +433,11 @@ class JellyfinServer implements ServerInterface
                         );
 
                         $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+
                         foreach ($it as $entity) {
                             $this->processImport($mapper, $type, $cName, $entity, $after);
                         }
+
                         $this->logger->notice(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
@@ -452,7 +462,11 @@ class JellyfinServer implements ServerInterface
             function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
-                    ['url' => $url]
+                    [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'url' => $url
+                    ]
                 );
             }
         );
@@ -578,21 +592,25 @@ class JellyfinServer implements ServerInterface
 
                 $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
 
-                $date = ag($json, 'UserData.LastPlayedDate', ag($json, 'DateCreated', ag($json, 'PremiereDate', null)));
-
-                if (null === $date) {
-                    $this->logger->notice(sprintf('Ignoring %s. No date is set.', $iName));
-                    continue;
-                }
-
-                $date = strtotime($date);
-
                 if ($state->watched === $isWatched) {
                     $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
                     continue;
                 }
 
                 if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                    $date = ag(
+                        $json,
+                        'UserData.LastPlayedDate',
+                        ag($json, 'DateCreated', ag($json, 'PremiereDate', null))
+                    );
+
+                    if (null === $date) {
+                        $this->logger->notice(sprintf('Ignoring %s. No date is set.', $iName));
+                        continue;
+                    }
+
+                    $date = strtotime($date);
+
                     if ($date >= $state->updated) {
                         $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
                         continue;
@@ -631,7 +649,7 @@ class JellyfinServer implements ServerInterface
                         if (200 !== $response->getStatusCode()) {
                             $this->logger->error(
                                 sprintf(
-                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    'Request to %s - %s responded unexpected http status code with (%d).',
                                     $this->name,
                                     $cName,
                                     $response->getStatusCode()
@@ -648,9 +666,11 @@ class JellyfinServer implements ServerInterface
                         );
 
                         $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+
                         foreach ($it as $entity) {
                             $this->processExport($mapper, $type, $cName, $entity, $after);
                         }
+
                         $this->logger->notice(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
@@ -666,7 +686,11 @@ class JellyfinServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
-                            )
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ]
                         );
                         return;
                     }
@@ -675,7 +699,11 @@ class JellyfinServer implements ServerInterface
             function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
-                    ['url' => $url]
+                    [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'url' => $url
+                    ]
                 );
             }
         );
@@ -713,6 +741,21 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
+            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
+                $this->logger->debug(
+                    sprintf('Ignoring %s. No supported guid.', $iName),
+                    (array)($item->ProviderIds ?? [])
+                );
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $guids = $this->getGuids($type, (array)($item->ProviderIds ?? []));
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
+
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
 
             if (null === $date) {
@@ -728,17 +771,6 @@ class JellyfinServer implements ServerInterface
                 Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
                 return;
             }
-
-            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
-                $this->logger->debug(
-                    sprintf('Ignoring %s. No supported guid.', $iName),
-                    (array)($item->ProviderIds ?? [])
-                );
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                return;
-            }
-
-            $guids = self::getGuids($type, (array)($item->ProviderIds ?? []));
 
             if (null === ($entity = $mapper->findByIds($guids))) {
                 $this->logger->debug(
@@ -783,7 +815,10 @@ class JellyfinServer implements ServerInterface
                 )
             );
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
     }
 
@@ -819,6 +854,21 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
+            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
+                $this->logger->debug(
+                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
+                    (array)($item->ProviderIds ?? [])
+                );
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $guids = $this->getGuids($type, (array)($item->ProviderIds ?? []));
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->Id;
+            }
+
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
 
             if (null === $date) {
@@ -828,21 +878,6 @@ class JellyfinServer implements ServerInterface
             }
 
             $date = strtotime($date);
-
-            if (null !== $after && $date >= $after->getTimestamp()) {
-                $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
-                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
-                return;
-            }
-
-            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
-                $this->logger->debug(
-                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
-                    (array)($item->ProviderIds ?? [])
-                );
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                return;
-            }
 
             if (StateInterface::TYPE_MOVIE === $type) {
                 $meta = [
@@ -863,12 +898,6 @@ class JellyfinServer implements ServerInterface
                 ];
             }
 
-            $guids = self::getGuids($type, (array)($item->ProviderIds ?? []));
-
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->Id;
-            }
-
             $row = [
                 'type' => $type,
                 'updated' => $date,
@@ -882,11 +911,14 @@ class JellyfinServer implements ServerInterface
                 self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
             ]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
         }
     }
 
-    protected static function getGuids(string $type, array $ids): array
+    protected function getGuids(string $type, array $ids): array
     {
         $guid = [];
 
@@ -929,9 +961,7 @@ class JellyfinServer implements ServerInterface
      */
     public function __destruct()
     {
-        if (!empty($this->cacheData)) {
-            $this->cache->set($this->cacheKey, $this->cacheData);
-        }
+        $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
     }
 
     /**
@@ -946,11 +976,21 @@ class JellyfinServer implements ServerInterface
         array $opts = []
     ): ServerInterface {
         if (true === $this->loaded) {
-            throw new RuntimeException('setState: already called once');
+            throw new RuntimeException(
+                sprintf(
+                    '%s->setState(): Has already been called.',
+                    afterLast(__CLASS__, '\\')
+                )
+            );
         }
 
         if (null === $userId && null === ($opts['user'] ?? null)) {
-            throw new RuntimeException('Jellyfin/Emby media servers: require userId to be set.');
+            throw new RuntimeException(
+                sprintf(
+                    '%s->setState(): Requires a userID to be set.',
+                    afterLast(__CLASS__, '\\')
+                )
+            );
         }
 
         $this->cacheKey = md5(__CLASS__ . '.' . $name . $userId . $url);
