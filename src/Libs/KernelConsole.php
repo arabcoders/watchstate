@@ -143,7 +143,13 @@ class KernelConsole
         try {
             $response = $fn($request);
         } catch (Throwable $e) {
-            Container::get(LoggerInterface::class)->error($e->getMessage());
+            Container::get(LoggerInterface::class)->error(
+                $e->getMessage(),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]
+            );
             $response = new Response(500);
         }
 
