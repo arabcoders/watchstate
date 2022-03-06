@@ -95,6 +95,54 @@ class JellyfinServer implements ServerInterface
         );
     }
 
+    public function getServerUUID(): int|string|null
+    {
+        try {
+            $this->logger->debug(
+                sprintf('Requesting system info from %s.', $this->name),
+                ['url' => $this->url->getHost()]
+            );
+
+            $url = $this->url->withPath('/system/Info');
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+
+                return null;
+            }
+
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+
+            return ag($json, 'Id', null);
+        } catch (ExceptionInterface $e) {
+            $this->logger->error(
+                sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            );
+            return null;
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            );
+            return null;
+        }
+    }
+
     public function getPersist(): array
     {
         return $this->persist;

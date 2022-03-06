@@ -44,7 +44,7 @@ services:
 After creating your docker-compose file, start the container.
 
 ```bash
-docker-compose up -d
+$ docker-compose up -d
 ```
 
 # First time
@@ -54,7 +54,7 @@ remove the unused servers examples. after configuring your servers you should im
 the following command.
 
 ```bash
-docker exec -ti watchstate console state:import -vvrm --mapper-preload
+$ docker exec -ti watchstate console state:import -vvrm --mapper-preload
 ```
 
 #### TIP
@@ -64,19 +64,19 @@ be careful it might crash your terminal depending on how many servers and media 
 
 ---
 
-# Pull watch state.
+# Pulling watch state.
 
 now that you have imported your watch state, you can stop manually running the command again. and rely on the webhooks
 to update the watch state.
 
 To start receiving webhook events from servers you need to do few more steps.
 
-# Steps to enable webhook servers
+# Steps to enable webhook receivers
 
 Run the following commands to generate api key for each server
 
 ```sh
-$ docker exec -ti watchstate console servers:edit [SERVER_NAME] --webhook-import-status=enable --webhook-push-status=enable --webhook-key-generate
+$ docker exec -ti watchstate console servers:edit [SERVER_NAME] --webhook-import=enable --webhook-push=enable --webhook-token-generate
 
 Server '[SERVER_NAME]' Webhook API key is: random_string
 ```
@@ -85,40 +85,23 @@ Server '[SERVER_NAME]' Webhook API key is: random_string
 
 #### TIP:
 
-If you have multiple plex servers and use the same account for all, Then you have to make all plex servers point to the
-same API key, you still keep them separate but have the same `webhook.token` value.
-
-The reason for these workarounds is that Plex link webhook to user account instead of server, as such all servers you
-have linked your account into will use the same token. This limitation we cannot change from our side. So Use of the
-listed workarounds. You have to do this changes for ALL plex servers added. you can use both workarounds. but one should
-suffice.
-
-### Workaround 1 (Whitelist IPS)
-
-Whitelist IPs for each server by running the following command
+If you have multiple plex servers and use the same plex account for all of them, you have to unify the API key, by
+running the following command
 
 ```bash
-docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-require-ips 'comma seperated list of ips/CIDR, 10.0.0.0/8,172.23.0.1'
+$ docker exec -ti watchstate console servers:unify plex 
+Plex global webhook API key is: [random_string]
 ```
 
-### Workaround 2 (Use Server Unique ID)
-
-To identify server via UUID, you have to get the server ID manually by visiting plex > settings > General then look at
-the ID in the URL bar for example:
-
-`https://app.plex.tv/desktop/#!/settings/server/[RANDOM_STRING]/settings/general`
-
-##### [RANDOM_STRING]
-
-Will be a randomly generated string. Then run the following command
+The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
+identify the servers, The unify command will do the necessary adjustments to `servers.yaml` to handle multi plex setup.
+for more information run.
 
 ```bash
-docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-server-uuid '[RANDOM_STRING]'
+$ docker exec -ti watchstate console help servers:unify 
 ```
 
-The reason for these workarounds is, because Plex link webhook to user account instead of server, as such all servers
-you have linked your account into will use the same token. This limitation we cannot change from our side. So Use of the
-listed workarounds.
+This command is not limited to plex, you can unify API key for all supported backend servers.
 
 ---
 
@@ -132,13 +115,13 @@ hours instead of 1 hour.
 To manually export your watch state back to servers you can run the following command
 
 ```bash
-docker exec -ti watchstate console state:export --mapper-preload -vvr
+$ docker exec -ti watchstate console state:export --mapper-preload -vvr
 ```
 
 to sync specific server/s, use the `--servers-filter` which accept comma seperated list of server names.
 
 ```bash
-docker exec -ti watchstate console state:export -vvr --mapper-preload --servers-filter 'server1,server2' 
+$ docker exec -ti watchstate console state:export -vvr --mapper-preload --servers-filter 'server1,server2' 
 ```
 
 If you want to automate the exporting of your watch state back to servers, then set the value of `WS_CRON_EXPORT` to `1`
@@ -171,7 +154,7 @@ Set the environment variable `WS_MAPPER_IMPORT` to `DirectMapper`
 
 # Servers.yaml
 
-Example of working server with all options. You can have as many servers as you want.
+Example of working server. You can have as many servers as you want.
 
 ```yaml
 my_home_server: # *DO NOT* use spaces for server name,
@@ -185,24 +168,22 @@ my_home_server: # *DO NOT* use spaces for server name,
     # Get your user ID. For Jellyfin/emby only.
     # Jellyfin : Dashboard > Server > Users > click your user > copy the userId= value
     # Emby: Manage Emby server > Server > Users > click your user > copy the userId= value
-    # Plex: for plex managed users the X-Plex-Token acts as userId.
+    # Plex: for plex managed users the X-Plex-Token acts as userId. Therefore, no need to set.
     user: user-id
     export:
         enabled: true # Enable export.
     import:
         enabled: true # Enable import.
+    webhook:
+        import: true|false # enable receiving webhook events from this server.
+        token: 'random_string' # Server specific api key.
+        push: true|false # Enable push state back to this server when watchstate tool receive webhook event.
+        uuid: 'random_string' # Server unique identifier.
     options:
         importUnwatched: true|false # By default, We do not import unwatched state to enable it set to true. 
         exportIgnoreDate: true|false # By default, we respect the server watch date. To override the check, set this to true.
         client: # underlying http client settings https://symfony.com/doc/current/reference/configuration/framework.html#http-client
             http_version: 1.0|2.0 # Change HTTP Protocol used.
-    webhook:
-        enable: true|false # enable receiving webhook events from this server.
-        token: 'random_string' # Server specific api key.
-        push: true|false # Enable push state back to this server when watchstate tool receive webhook event.
-        ips: # optional, mostly for Plex Multi server setups.
-            - '10.0.0.0/8' # whitelist ips that are allowed to use this API key.
-
 ```
 
 # Start receiving Webhook Events.
@@ -236,15 +217,22 @@ to your server the url will be dependent on how you expose the server, but typic
 
 #### Webhook URL
 
-Via reverse proxy : `https://watchstate.domain.example/?apikey=[YOUR_API_KEY]`.
+Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
 
-Via Direct container: `https://localhost:8081/?apikey=[YOUR_API_KEY]`
+Directly to container: `https://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
 
-### [YOUR_API_KEY]
+If your server support sending headers then omit the query parameter '?apikey=[WEBHOOK_TOKEN]', and add new this header
 
-Change this parameter to your server specific ``webhook.token`` value. You can find it by viewing `config/config.yaml`
-under the key of `webhook.token`. if the key does not exist please refer to the steps described at **Steps to enable
-webhook servers**.
+```http request
+X-apikey: [WEBHOOK_TOKEN]
+```
+
+it's more secure that way.
+
+#### [WEBHOOK_TOKEN]
+
+Should match the server specific ``webhook.token`` value. in `server.yaml`. if the key does not exist please refer to
+the steps described at **Steps to enable webhook servers**.
 
 # Configuring Media servers to send webhook events.
 
@@ -317,7 +305,7 @@ Click `Save Changes`
 Add the server, disable the import operation, and enable export. Then run the following commands.
 
 ```bash
-docker exec -ti watchstate console state:export -vvrm --ignore-date --force-full --servers-filter [SERVER_NAME]
+$ docker exec -ti watchstate console state:export -vvrm --ignore-date --force-full --servers-filter [SERVER_NAME]
 ```
 
 ### [SERVER_NAME]

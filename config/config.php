@@ -18,7 +18,7 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.16-alpha',
+        'version' => 'v0.0.17-alpha',
         'tz' => null,
         'path' => fixPath(
             env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))
@@ -46,7 +46,7 @@ return (function () {
 
     $config['webhook'] = [
         'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
-        'keyLength' => (int)env('WS_WEBHOOK_KEY_LENGTH', 16),
+        'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
         'ipHeader' => env('WS_WEBHOOK_IP_HEADER', 'REMOTE_ADDR'),
     ];
 
@@ -162,7 +162,7 @@ return (function () {
     $config['tasks'] = [
         ImportCommand::TASK_NAME => [
             Task::NAME => ImportCommand::TASK_NAME,
-            Task::ENABLED => (bool)env('WS_CRON_IMPORT', true),
+            Task::ENABLED => (bool)env('WS_CRON_IMPORT', false),
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
@@ -180,7 +180,7 @@ return (function () {
         ],
         PushCommand::TASK_NAME => [
             Task::NAME => PushCommand::TASK_NAME,
-            Task::ENABLED => (bool)env('WS_CRON_PUSH', true),
+            Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
             Task::ARGS => [
