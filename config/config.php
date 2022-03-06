@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Commands\State\ExportCommand;
+use App\Commands\State\ImportCommand;
+use App\Commands\State\PushCommand;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Scheduler\Task;
@@ -10,11 +13,12 @@ use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
 use App\Libs\Storage\PDO\PDOAdapter;
 use Monolog\Logger;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.13-alpha',
+        'version' => 'v0.0.16-alpha',
         'tz' => null,
         'path' => fixPath(
             env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))
@@ -41,9 +45,9 @@ return (function () {
     ];
 
     $config['webhook'] = [
-        'enabled' => true,
-        'debug' => false,
-        'apikey' => null,
+        'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
+        'keyLength' => (int)env('WS_WEBHOOK_KEY_LENGTH', 16),
+        'ipHeader' => env('WS_WEBHOOK_IP_HEADER', 'REMOTE_ADDR'),
     ];
 
     $config['mapper'] = [
@@ -69,6 +73,13 @@ return (function () {
                     ],
                 ],
             ],
+        ],
+    ];
+
+    $config['cache'] = [
+        'adapter' => FilesystemAdapter::class,
+        'config' => [
+            'directory' => env('WS_CACHE_DIR', fn() => ag($config, 'path') . '/cache'),
         ],
     ];
 
@@ -119,11 +130,8 @@ return (function () {
             'display_errors' => 0,
             'error_log' => env('IN_DOCKER') ? '/proc/self/fd/2' : 'syslog',
             'syslog.ident' => 'php-fpm',
-            'post_max_size' => '650M',
-            'upload_max_filesize' => '300M',
             'memory_limit' => '265M',
             'pcre.jit' => 1,
-            'gd.jpeg_ignore_warning' => 1,
             'opcache.enable' => 1,
             'opcache.memory_consumption' => 128,
             'opcache.interned_strings_buffer' => 8,
@@ -152,8 +160,8 @@ return (function () {
     ];
 
     $config['tasks'] = [
-        'import' => [
-            Task::NAME => 'import',
+        ImportCommand::TASK_NAME => [
+            Task::NAME => ImportCommand::TASK_NAME,
             Task::ENABLED => (bool)env('WS_CRON_IMPORT', true),
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
@@ -161,11 +169,20 @@ return (function () {
                 '-vvr' => null,
             ]
         ],
-        'export' => [
-            Task::NAME => 'export',
-            Task::ENABLED => (bool)env('WS_CRON_EXPORT', true),
+        ExportCommand::TASK_NAME => [
+            Task::NAME => ExportCommand::TASK_NAME,
+            Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
             Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
+            Task::ARGS => [
+                '-vvr' => null,
+            ]
+        ],
+        PushCommand::TASK_NAME => [
+            Task::NAME => PushCommand::TASK_NAME,
+            Task::ENABLED => (bool)env('WS_CRON_PUSH', true),
+            Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
+            Task::COMMAND => '@state:push',
             Task::ARGS => [
                 '-vvr' => null,
             ]

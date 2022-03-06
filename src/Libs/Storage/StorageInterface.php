@@ -130,11 +130,4 @@ interface StorageInterface
      * @return $this
      */
     public function setLogger(LoggerInterface $logger): self;
-
-    /**
-     * Enable Single Transaction mode.
-     *
-     * @return bool
-     */
-    public function singleTransaction(): bool;
 }

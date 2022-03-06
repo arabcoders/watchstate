@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\Date;
 use App\Libs\HttpException;
+use App\Libs\IpUtils;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Response;
+use Nyholm\Psr7\Uri;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
@@ -228,15 +232,16 @@ if (!function_exists('saveWebhookPayload')) {
     function saveWebhookPayload(ServerRequestInterface $request, string $name, array $parsed = [])
     {
         $content = [
-            'q' => $request->getQueryParams(),
-            'p' => $request->getParsedBody(),
-            's' => $request->getServerParams(),
-            'b' => $request->getBody()->getContents(),
-            'd' => $parsed,
+            'query' => $request->getQueryParams(),
+            'parsed' => $request->getParsedBody(),
+            'server' => $request->getServerParams(),
+            'body' => $request->getBody()->getContents(),
+            'attributes' => $request->getAttributes(),
+            'cParsed' => $parsed,
         ];
 
         @file_put_contents(
-            Config::get('path') . '/logs/' . sprintf('webhook.%s.json', $name),
+            Config::get('path') . '/logs/' . sprintf('webhook.%s.%d.json', $name, time()),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
@@ -274,20 +279,25 @@ if (!function_exists('httpClientChunks')) {
     }
 }
 
+if (!function_exists('preServeHttpRequest')) {
+    function preServeHttpRequest(ServerRequestInterface $request): ServerRequestInterface
+    {
+        foreach (Config::get('supported', []) as $server) {
+            assert($server instanceof ServerInterface);
+            $request = $server::processRequest($request);
+        }
+
+        return $request;
+    }
+}
+
 if (!function_exists('serveHttpRequest')) {
-    /**
-     * @throws ReflectionException
-     */
     function serveHttpRequest(ServerRequestInterface $request): ResponseInterface
     {
-        try {
-            if (true !== Config::get('webhook.enabled', false)) {
-                throw new HttpException('Webhook is disabled via config.', 500);
-            }
+        $logger = Container::get(LoggerInterface::class);
 
-            if (null === Config::get('webhook.apikey', null)) {
-                throw new HttpException('No webhook.apikey is set in config.', 500);
-            }
+        try {
+            $request = preServeHttpRequest($request);
 
             // -- get apikey from header or query.
             $apikey = $request->getHeaderLine('x-apikey');
@@ -298,37 +308,68 @@ if (!function_exists('serveHttpRequest')) {
                 }
             }
 
-            if (!hash_equals(Config::get('webhook.apikey'), $apikey)) {
+            $server = [];
+            Config::get('servers', []);
+
+            $userIp = $request->getServerParams()[Config::get('webhook.ipHeader', 'REMOTE_ADDR')] ?? '127.0.0.1';
+
+            // -- Find Server
+            foreach (Config::get('servers', []) as $name => $info) {
+                if (null === ag($info, 'webhook.token')) {
+                    continue;
+                }
+
+                if (!hash_equals(ag($info, 'webhook.token'), $apikey)) {
+                    continue;
+                }
+
+                $ips = ag($info, 'webhook.ips', null);
+
+                if (!empty($ips) && !IpUtils::checkIp($userIp, $ips)) {
+                    continue;
+                }
+
+                $uuid = ag($info, 'webhook.uuid', null);
+
+                if (null !== $uuid && $uuid !== $request->getAttribute('SERVER_ID', null)) {
+                    continue;
+                }
+
+                $server = array_replace_recursive(['name' => $name], $info);
+                break;
+            }
+
+            if (empty($server)) {
                 throw new HttpException('Invalid API key was given.', 401);
             }
 
-            if (null === ($type = ag($request->getQueryParams(), 'type', null))) {
-                throw new HttpException('No type was given via type= query.', 400);
+            if (true !== ag($server, 'webhook.import')) {
+                throw new HttpException(
+                    sprintf(
+                        'Import via webhook for this server \'%s\' is disabled.',
+                        ag($server, 'name')
+                    ),
+                    500
+                );
             }
 
-            $types = Config::get('supported', []);
-
-            if (null === ($backend = ag($types, $type))) {
-                throw new HttpException('Invalid server type was given.', 400);
+            try {
+                $server['class'] = makeServer($server, $server['name']);
+            } catch (RuntimeException $e) {
+                throw new HttpException($e->getMessage(), 500);
             }
 
-            $class = new ReflectionClass($backend);
+            $entity = $server['class']->parseWebhook($request);
 
-            if (!$class->implementsInterface(ServerInterface::class)) {
-                throw new HttpException('Invalid Parser Class.', 500);
-            }
-
-            /** @var ServerInterface $backend */
-            $entity = $backend::parseWebhook($request);
-
-            if (null === $entity || !$entity->hasGuids()) {
-                return new Response(status: 200, headers: ['X-Status' => 'No GUIDs.']);
+            if (!$entity->hasGuids()) {
+                return new Response(status: 204, headers: ['X-Status' => 'No GUIDs.']);
             }
 
             $storage = Container::get(StorageInterface::class);
 
             if (null === ($backend = $storage->get($entity))) {
-                $storage->insert($entity);
+                $entity = $storage->insert($entity);
+                queuePush($entity);
                 return jsonResponse(status: 200, body: $entity->getAll());
             }
 
@@ -340,6 +381,7 @@ if (!function_exists('serveHttpRequest')) {
                     $backend = $storage->update($backend);
                     return jsonResponse(status: 200, body: $backend->getAll());
                 }
+
                 return new Response(
                     status:  200,
                     headers: ['X-Status' => 'Nothing updated, entity state is tainted.']
@@ -364,18 +406,40 @@ if (!function_exists('serveHttpRequest')) {
             if ($backend->apply($entity)->isChanged()) {
                 $backend = $storage->update($backend);
 
+                queuePush($backend);
                 return jsonResponse(status: 200, body: $backend->getAll());
             }
 
             return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
         } catch (HttpException $e) {
-            Container::get(LoggerInterface::class)->error($e->getMessage());
-
             if (200 === $e->getCode()) {
                 return new Response(status: $e->getCode(), headers: ['X-Status' => $e->getMessage()]);
             }
 
+            $logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+
             return jsonResponse(status: $e->getCode(), body: ['error' => true, 'message' => $e->getMessage()]);
+        }
+    }
+}
+
+if (!function_exists('queuePush')) {
+    function queuePush(StateInterface $entity): void
+    {
+        if (!$entity->hasGuids()) {
+            return;
+        }
+
+        try {
+            $cache = Container::get(CacheInterface::class);
+
+            $list = $cache->get('queue', []);
+
+            $list[$entity->id] = $entity->getAll();
+
+            $cache->set('queue', $list);
+        } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+            Container::get(LoggerInterface::class)->error($e->getMessage(), $e->getTrace());
         }
     }
 }
@@ -394,5 +458,65 @@ if (!function_exists('afterLast')) {
         }
 
         return mb_substr($subject, $position + mb_strlen($search));
+    }
+}
+
+if (!function_exists('makeServer')) {
+    /**
+     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, persist:array, options:array} $server
+     * @param string|null $name server name.
+     * @return ServerInterface
+     *
+     * @throws RuntimeException if configuration is wrong.
+     */
+    function makeServer(array $server, string|null $name = null): ServerInterface
+    {
+        if (null === ($serverType = ag($server, 'type'))) {
+            throw new RuntimeException('No server type was selected.');
+        }
+
+        if (null === ag($server, 'url')) {
+            throw new RuntimeException('No url was set for server.');
+        }
+
+        if (null === ($class = Config::get("supported.{$serverType}", null))) {
+            throw new RuntimeException(
+                sprintf(
+                    'Unexpected server type was given. Was expecting [%s] but got \'%s\' instead.',
+                    $serverType,
+                    implode('|', Config::get("supported", []))
+                )
+            );
+        }
+
+        return Container::getNew($class)->setUp(
+            name:    $name ?? ag($server, 'name', fn() => md5(ag($server, 'url'))),
+            url:     new Uri(ag($server, 'url')),
+            token:   ag($server, 'token', null),
+            userId:  ag($server, 'user', null),
+            persist: ag($server, 'persist', []),
+            options: ag($server, 'options', []),
+        );
+    }
+}
+
+if (!function_exists('arrayToString')) {
+    function arrayToString(array $arr, string $separator = ', '): string
+    {
+        $list = [];
+
+        foreach ($arr as $key => $val) {
+            if (is_object($val)) {
+                $val = spl_object_hash($val);
+            } elseif (is_array($val)) {
+                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES);
+            } else {
+                $val = $val ?? 'None';
+            }
+
+            $list[] = sprintf("(%s: %s)", $key, $val);
+        }
+
+        return implode($separator, $list);
     }
 }

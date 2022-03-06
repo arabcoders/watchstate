@@ -19,13 +19,14 @@ interface ServerInterface
     public const OPT_EXPORT_IGNORE_DATE = 'exportIgnoreDate';
 
     /**
-     * Initiate Server. It should return **NEW OBJECT**
+     * Initiate server. It should return **NEW OBJECT**
      *
-     * @param string $name
-     * @param UriInterface $url
-     * @param null|int|string $token
-     * @param null|int|string $userId
-     * @param array $options
+     * @param string $name Server name
+     * @param UriInterface $url Server url
+     * @param null|int|string $token Server Token
+     * @param null|int|string $userId Server user Id
+     * @param array $persist persistent data saved by server.
+     * @param array $options array of options.
      *
      * @return self
      */
@@ -34,11 +35,12 @@ interface ServerInterface
         UriInterface $url,
         null|string|int $token = null,
         null|string|int $userId = null,
+        array $persist = [],
         array $options = []
     ): self;
 
     /**
-     * Inject Logger.
+     * Inject logger.
      *
      * @param LoggerInterface $logger
      *
@@ -47,15 +49,23 @@ interface ServerInterface
     public function setLogger(LoggerInterface $logger): ServerInterface;
 
     /**
-     * Parse Server Specific Webhook event. for play/unplayed event.
+     * Process The request For attributes extraction.
      *
      * @param ServerRequestInterface $request
-     * @return StateInterface|null
+     * @return ServerRequestInterface
      */
-    public static function parseWebhook(ServerRequestInterface $request): StateInterface|null;
+    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface;
 
     /**
-     * Import Watch state.
+     * Parse server specific webhook event. for play/unplayed event.
+     *
+     * @param ServerRequestInterface $request
+     * @return StateInterface
+     */
+    public function parseWebhook(ServerRequestInterface $request): StateInterface;
+
+    /**
+     * Import watch state.
      *
      * @param ImportInterface $mapper
      * @param DateTimeInterface|null $after
@@ -65,12 +75,38 @@ interface ServerInterface
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array;
 
     /**
-     * Export Watch State to Server.
+     * Export watch state to server.
      *
      * @param ExportInterface $mapper
      * @param DateTimeInterface|null $after
      *
      * @return array<array-key,ResponseInterface>
      */
-    public function push(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
+    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
+
+    /**
+     * Push webhook queued states.
+     *
+     * @param array<StateInterface> $entities
+     * @param DateTimeInterface|null $after
+     *
+     * @return array
+     */
+    public function push(array $entities, DateTimeInterface|null $after = null): array;
+
+    /**
+     * Get all persistent data.
+     *
+     * @return array
+     */
+    public function getPersist(): array;
+
+    /**
+     * Add persistent data to config.
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return ServerInterface
+     */
+    public function addPersist(string $key, mixed $value): ServerInterface;
 }

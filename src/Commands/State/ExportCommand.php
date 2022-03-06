@@ -6,13 +6,12 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Servers\ServerInterface;
+use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
-use Nyholm\Psr7\Uri;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -24,6 +23,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 class ExportCommand extends Command
 {
+    public const TASK_NAME = 'export';
+
     public function __construct(
         private StorageInterface $storage,
         private ExportInterface $mapper,
@@ -95,32 +96,40 @@ class ExportCommand extends Command
         }
 
         $list = [];
+        $logger = null;
         $serversFilter = (string)$input->getOption('servers-filter');
         $selected = explode(',', $serversFilter);
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
-        foreach (Config::get('servers', []) as $serverName => $server) {
+        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
+            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
+        }
+
+        if (null !== $logger) {
+            $this->logger = $logger;
+            $this->mapper->setLogger($logger);
+        }
+
+        foreach (Config::get('servers', []) as $name => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if ($isCustom && !in_array($serverName, $selected, true)) {
+            if ($isCustom && !in_array($name, $selected, true)) {
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by --servers-filter.', $name));
                 continue;
             }
 
             if (true !== ag($server, 'export.enabled')) {
-                $output->writeln(
-                    sprintf('<error>Ignoring \'%s\' as requested by \'servers.yaml\'.</error>', $serverName),
-                    OutputInterface::VERBOSITY_VERBOSE
-                );
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by \'servers.yaml\'.', $name));
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $output->writeln(
+                $this->logger->error(
                     sprintf(
-                        '<error>Server \'%s\' Used Unsupported type. Expecting one of \'%s\' but got \'%s\' instead.</error>',
-                        $serverName,
-                        implode(', ', array_keys($supported)),
+                        'Unexpected type for server \'%s\'. Was Expecting one of [%s], but got \'%s\' instead.',
+                        $name,
+                        implode('|', array_keys($supported)),
                         $type
                     )
                 );
@@ -128,35 +137,18 @@ class ExportCommand extends Command
             }
 
             if (null === ag($server, 'url')) {
-                $output->writeln(sprintf('<error>Server \'%s\' has no url.</error>', $serverName));
+                $this->logger->error(sprintf('Server \'%s\' has no URL.', $name));
                 return self::FAILURE;
             }
 
-            $list[] = [
-                'name' => $serverName,
-                'kind' => $supported[$type],
-                'server' => $server,
-            ];
+            $server['name'] = $name;
+            $list[$name] = $server;
         }
 
         if (empty($list)) {
             throw new RuntimeException(
-                $isCustom ? '--servers-filter/-s did not return any server.' : 'No server were found.'
+                $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No server were found.'
             );
-        }
-
-        $logger = null;
-
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
-        }
-
-        $requests = [];
-
-
-        if (null !== $logger) {
-            $this->logger = $logger;
-            $this->mapper->setLogger($logger);
         }
 
         if (count($list) >= 1 && $input->getOption('mapper-preload')) {
@@ -165,16 +157,14 @@ class ExportCommand extends Command
             $this->logger->info('Finished preloading mapper data.');
         }
 
-        if ($input->getOption('storage-pdo-single-transaction')) {
+        if (($this->storage instanceof PDOAdapter) && $input->getOption('storage-pdo-single-transaction')) {
             $this->storage->singleTransaction();
         }
 
-        foreach ($list as $server) {
-            $name = ag($server, 'name');
-            Data::addBucket($name);
+        $requests = [];
 
-            $class = Container::get(ag($server, 'kind'));
-            assert($class instanceof ServerInterface);
+        foreach ($list as $name => &$server) {
+            Data::addBucket($name);
 
             $opts = ag($server, 'server.options', []);
 
@@ -183,23 +173,18 @@ class ExportCommand extends Command
             }
 
             if ($input->getOption('proxy')) {
-                $opts['proxy'] = $input->getOption('proxy');
+                $opts['client']['proxy'] = $input->getOption('proxy');
             }
 
             if ($input->getOption('no-proxy')) {
-                $opts['no_proxy'] = $input->getOption('no-proxy');
+                $opts['client']['no_proxy'] = $input->getOption('no-proxy');
             }
 
-            $class = $class->setUp(
-                name:    $name,
-                url:     new Uri(ag($server, 'server.url')),
-                token:   ag($server, 'server.token', null),
-                userId:  ag($server, 'server.user', null),
-                options: $opts
-            );
+            $server['options'] = $opts;
+            $server['class'] = makeServer($server, $name);
 
             if (null !== $logger) {
-                $class = $class->setLogger($logger);
+                $server['class'] = $server['class']->setLogger($logger);
             }
 
             $after = $input->getOption('force-full') ? null : ag($server, 'server.import.lastSync', null);
@@ -215,7 +200,7 @@ class ExportCommand extends Command
                 );
             }
 
-            array_push($requests, ...$class->push($this->mapper, $after));
+            array_push($requests, ...$server['class']->export($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_export_update', $name))) {
                 $this->logger->notice(
@@ -226,7 +211,10 @@ class ExportCommand extends Command
             }
         }
 
+        unset($server);
+
         $this->logger->notice(sprintf('Waiting on (%d) (Compare State) Requests.', count($requests)));
+
         foreach ($requests as $response) {
             $requestData = $response->getInfo('user_data');
             try {
@@ -239,36 +227,47 @@ class ExportCommand extends Command
                 $requestData['error']($e);
             }
         }
+
         $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($requests)));
 
         $changes = $this->mapper->getQueue();
+        $total = count($changes);
 
-        if (empty($changes)) {
-            $this->logger->notice('No State change detected.');
-            return self::SUCCESS;
-        }
-
-        $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', count($changes)));
-        foreach ($changes as $response) {
-            $requestData = $response->getInfo('user_data');
-            try {
-                if (200 !== $response->getStatusCode()) {
-                    throw new ServerException($response);
+        if ($total >= 1) {
+            $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', $total));
+            foreach ($changes as $response) {
+                $requestData = $response->getInfo('user_data');
+                try {
+                    if (200 !== $response->getStatusCode()) {
+                        throw new ServerException($response);
+                    }
+                    $this->logger->debug(
+                        sprintf(
+                            'Processed: State (%s) - %s',
+                            ag($requestData, 'state', '??'),
+                            ag($requestData, 'itemName', '??'),
+                        )
+                    );
+                } catch (ExceptionInterface $e) {
+                    $this->logger->error($e->getMessage());
                 }
-                $this->logger->debug(
-                    sprintf(
-                        'Processed: State (%s) - %s',
-                        ag($requestData, 'state', '??'),
-                        ag($requestData, 'itemName', '??'),
-                    )
-                );
-            } catch (ExceptionInterface $e) {
-                $this->logger->error($e->getMessage());
             }
+            $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', $total));
+        } else {
+            $this->logger->notice('No state change detected.');
         }
-        $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($changes)));
 
-        // -- Update Server.yaml with new lastSync date.
+        foreach ($list as $server) {
+            if (null === ($name = ag($server, 'name'))) {
+                continue;
+            }
+
+            Config::save(
+                sprintf('servers.%s.persist', $name),
+                $server['class']->getPersist()
+            );
+        }
+
         file_put_contents(
             $newConfig ?? Config::get('path') . '/config/servers.yaml',
             Yaml::dump(Config::get('servers', []), 8, 2)

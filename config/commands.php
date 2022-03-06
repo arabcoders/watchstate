@@ -2,28 +2,18 @@
 
 declare(strict_types=1);
 
-use App\Commands\Config\DumpCommand;
-use App\Commands\Config\GenerateCommand;
-use App\Commands\Config\PHPCommand;
-use App\Commands\Scheduler\Lists;
-use App\Commands\Scheduler\Run;
-use App\Commands\Scheduler\RunClosure;
-use App\Commands\State\ExportCommand;
-use App\Commands\State\ImportCommand;
-use App\Commands\Storage\MaintenanceCommand;
-use App\Commands\Storage\MakeCommand;
-use App\Commands\Storage\MigrationsCommand;
-
 return [
-    'config:dump' => DumpCommand::class,
-    'config:generate' => GenerateCommand::class,
-    'config:php' => PHPCommand::class,
-    'state:import' => ImportCommand::class,
-    'state:export' => ExportCommand::class,
-    'storage:maintenance' => MaintenanceCommand::class,
-    'storage:migrations' => MigrationsCommand::class,
-    'storage:make' => MakeCommand::class,
-    'scheduler:list' => Lists::class,
-    'scheduler:run' => Run::class,
-    'scheduler:closure' => RunClosure::class,
+    'config:dump' => App\Commands\Config\DumpCommand::class,
+    'config:php' => App\Commands\Config\PHPCommand::class,
+    'state:import' => App\Commands\State\ImportCommand::class,
+    'state:export' => App\Commands\State\ExportCommand::class,
+    'state:push' => App\Commands\State\PushCommand::class,
+    'storage:maintenance' => App\Commands\Storage\MaintenanceCommand::class,
+    'storage:migrations' => App\Commands\Storage\MigrationsCommand::class,
+    'storage:make' => App\Commands\Storage\MakeCommand::class,
+    'scheduler:list' => App\Commands\Scheduler\Lists::class,
+    'scheduler:run' => App\Commands\Scheduler\Run::class,
+    'scheduler:closure' => App\Commands\Scheduler\RunClosure::class,
+    'servers:list' => App\Commands\Servers\ListCommand::class,
+    'servers:edit' => App\Commands\Servers\EditCommand::class,
 ];
