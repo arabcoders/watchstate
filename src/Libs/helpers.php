@@ -7,7 +7,6 @@ use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\Date;
 use App\Libs\HttpException;
-use App\Libs\IpUtils;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use Nyholm\Psr7\Response;
@@ -311,8 +310,6 @@ if (!function_exists('serveHttpRequest')) {
             $server = [];
             Config::get('servers', []);
 
-            $userIp = $request->getServerParams()[Config::get('webhook.ipHeader', 'REMOTE_ADDR')] ?? '127.0.0.1';
-
             // -- Find Server
             foreach (Config::get('servers', []) as $name => $info) {
                 if (null === ag($info, 'webhook.token')) {
@@ -320,12 +317,6 @@ if (!function_exists('serveHttpRequest')) {
                 }
 
                 if (!hash_equals(ag($info, 'webhook.token'), $apikey)) {
-                    continue;
-                }
-
-                $ips = ag($info, 'webhook.ips', null);
-
-                if (!empty($ips) && !IpUtils::checkIp($userIp, $ips)) {
                     continue;
                 }
 
