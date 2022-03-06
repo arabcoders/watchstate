@@ -16,4 +16,5 @@ return [
     'scheduler:closure' => App\Commands\Scheduler\RunClosure::class,
     'servers:list' => App\Commands\Servers\ListCommand::class,
     'servers:edit' => App\Commands\Servers\EditCommand::class,
+    'servers:unify' => App\Commands\Servers\UnifyCommand::class,
 ];
