@@ -29,7 +29,11 @@ final class ViewCommand extends Command
                 ''
             )
             ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
-            ->addArgument('filter', InputArgument::OPTIONAL, '');
+            ->addArgument(
+                'filter',
+                InputArgument::OPTIONAL,
+                'Can be any key from servers yaml, use dot notion to access sub keys, for example webhook.token'
+            );
     }
 
     /**
