@@ -93,6 +93,54 @@ class PlexServer implements ServerInterface
         return (new self($this->http, $this->logger, $this->cache))->setState($name, $url, $token, $persist, $options);
     }
 
+    public function getServerUUID(): int|string|null
+    {
+        try {
+            $this->logger->debug(
+                sprintf('Requesting system info from %s.', $this->name),
+                ['url' => $this->url->getHost()]
+            );
+
+            $url = $this->url->withPath('/');
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+
+                return null;
+            }
+
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+
+            return ag($json, 'MediaContainer.machineIdentifier', null);
+        } catch (ExceptionInterface $e) {
+            $this->logger->error(
+                sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            );
+            return null;
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            );
+            return null;
+        }
+    }
+
     public function getPersist(): array
     {
         return $this->persist;
@@ -295,12 +343,22 @@ class PlexServer implements ServerInterface
                 return [];
             }
         } catch (ExceptionInterface $e) {
-            $this->logger->error(sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()));
+            $this->logger->error(
+                sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            );
             Data::add($this->name, 'no_import_update', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error(
-                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage())
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
             );
             Data::add($this->name, 'no_import_update', true);
             return [];
@@ -363,7 +421,11 @@ class PlexServer implements ServerInterface
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
                     sprintf('Request to %s library - %s failed. Reason: %s', $this->name, $cName, $e->getMessage()),
-                    ['url' => $url]
+                    [
+                        'url' => $url,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
                 );
                 continue;
             }
@@ -432,7 +494,11 @@ class PlexServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
-                            )
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
                         );
                         return;
                     }
@@ -441,7 +507,11 @@ class PlexServer implements ServerInterface
             function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
-                    ['url' => $url]
+                    [
+                        'url' => $url,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
                 );
             }
         );
@@ -657,9 +727,9 @@ class PlexServer implements ServerInterface
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     [
+                        'url' => $url,
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
-                        'url' => $url
                     ]
                 );
             }

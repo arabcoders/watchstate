@@ -6,8 +6,8 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Extends\CliLogger;
 use Exception;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -31,6 +31,7 @@ final class EditCommand extends Command
 
         $this->setName('servers:edit')
             ->setDescription('Edit Server settings.')
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption(
                 'type',
                 null,
@@ -56,7 +57,7 @@ final class EditCommand extends Command
                 'user',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Change server User Id.'
+                'Change server user ID.'
             )
             ->addOption(
                 'export-status',
@@ -99,13 +100,19 @@ final class EditCommand extends Command
                 'webhook-require-ips',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Comma seperated ips/CIDR to link a server to specific ips. Useful for Multi Plex servers setup.',
+                'Comma seperated IPS/CIDR to link a server to specific IPS. Useful for Multi Plex servers setup.',
             )
             ->addOption(
                 'webhook-server-uuid',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Limit this server specific UUID. Useful for Multi Plex servers setup.',
+                'Limit this server to specific UUID. Useful for Multi Plex servers setup.',
+            )
+            ->addOption(
+                'webhook-update-server-uuid',
+                null,
+                InputOption::VALUE_NONE,
+                'Get the server unique id from server.'
             )
             ->addOption(
                 'webhook-push-status',
@@ -125,7 +132,7 @@ final class EditCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('use-config'))) {
             if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                throw new RuntimeException('Unable to read data given config.');
+                $output->writeln('<error>Unable to read data given config.</error>');
             }
             Config::save('servers', Yaml::parseFile($config));
         } else {
@@ -136,7 +143,10 @@ final class EditCommand extends Command
         $ref = "servers.{$name}";
 
         if (null === Config::get("{$ref}.type", null)) {
-            throw new RuntimeException(sprintf('No server named \'%s\' was found in %s.', $name, $config));
+            $output->writeln(
+                sprintf('<error>No server named \'%s\' was found in %s.</error>', $name, $config)
+            );
+            return self::FAILURE;
         }
 
         // -- $type
@@ -236,7 +246,9 @@ final class EditCommand extends Command
             if (!Config::get("{$ref}.webhook.token") || $input->getOption('webhook-key-regenerate')) {
                 $apiToken = bin2hex(random_bytes($input->getOption('api-key-length')));
 
-                $output->writeln(sprintf('<info>Server \'%s\' Webhook API key is: %s</info>', $name, $apiToken));
+                $output->writeln(
+                    sprintf('<info>The API key for \'%s\' webhook endpoint is: %s</info>', $name, $apiToken)
+                );
 
                 Config::save("{$ref}.webhook.token", $apiToken);
             }
@@ -259,7 +271,7 @@ final class EditCommand extends Command
 
             $status = self::ON_OFF_FLAGS[$statusName];
 
-            Config::save($ref . '.webhook.import', (bool)$status);
+            Config::save("{$ref}.webhook.import", (bool)$status);
         }
 
         // -- $ref.webhook.push
@@ -278,17 +290,46 @@ final class EditCommand extends Command
                 return self::INVALID;
             }
 
-            Config::save($ref . '.webhook.push', (bool)self::ON_OFF_FLAGS[$statusName]);
+            Config::save("{$ref}.webhook.push", (bool)self::ON_OFF_FLAGS[$statusName]);
         }
 
         // -- $ref.webhook.ips
         if ($input->getOption('webhook-require-ips')) {
-            Config::save($ref . '.webhook.ips', explode(',', $input->getOption('webhook-require-ips')));
+            Config::save("{$ref}.webhook.ips", explode(',', $input->getOption('webhook-require-ips')));
         }
 
         // -- $ref.webhook.uuid
         if ($input->getOption('webhook-server-uuid')) {
-            Config::save($ref . '.webhook.uuid', $input->getOption('webhook-server-uuid'));
+            Config::save("{$ref}.webhook.uuid", $input->getOption('webhook-server-uuid'));
+        }
+
+        // -- $ref.webhook.uid (Pull from server)
+        if ($input->getOption('webhook-update-server-uuid')) {
+            $server = makeServer(Config::get($ref), $name);
+            if ($input->getOption('redirect-logger')) {
+                $server->setLogger(new CliLogger($output, false));
+            }
+
+            $uuid = $server->getServerUUID();
+
+            if (null === $uuid) {
+                $output->writeln(
+                    sprintf(
+                        '<error>Unable to get \'%s\' server unique id. Please manually set it at `server.yaml` under key of `webhook.uuid`</error>',
+                        $name
+                    )
+                );
+
+                return self::FAILURE;
+            }
+
+            $output->writeln(
+                sprintf('<info>Updating \'%s\' server unique id to: %s</info>', $name, $uuid)
+            );
+
+            if (Config::get("{$ref}.webhook.uuid") !== $uuid) {
+                Config::save("{$ref}.webhook.uuid", $uuid);
+            }
         }
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));

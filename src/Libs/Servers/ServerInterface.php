@@ -109,4 +109,11 @@ interface ServerInterface
      * @return ServerInterface
      */
     public function addPersist(string $key, mixed $value): ServerInterface;
+
+    /**
+     * Get Server Unique ID.
+     *
+     * @return int|string|null
+     */
+    public function getServerUUID(): int|string|null;
 }

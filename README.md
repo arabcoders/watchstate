@@ -89,36 +89,25 @@ If you have multiple plex servers and use the same account for all, Then you hav
 same API key, you still keep them separate but have the same `webhook.token` value.
 
 The reason for these workarounds is that Plex link webhook to user account instead of server, as such all servers you
-have linked your account into will use the same token. This limitation we cannot change from our side. So Use of the
-listed workarounds. You have to do this changes for ALL plex servers added. you can use both workarounds. but one should
-suffice.
+have linked your account into will use the same token. This limitation we cannot change from our side. So, use one of
+the listed workarounds. You have to do this changes for ALL plex servers added, you can use both workarounds. but one
+should suffice.
 
-### Workaround 1 (Whitelist IPS)
+### Workaround 1 (Server Unique ID)
+
+Run the following command
+
+```bash
+docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-update-server-uuid
+```
+
+### Workaround 2 (Whitelist IPS)
 
 Whitelist IPs for each server by running the following command
 
 ```bash
-docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-require-ips 'comma seperated list of ips/CIDR, 10.0.0.0/8,172.23.0.1'
+docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-require-ips 'comma seperated list of IP/CIDR, i.e. 10.0.0.0/8,172.23.0.1'
 ```
-
-### Workaround 2 (Use Server Unique ID)
-
-To identify server via UUID, you have to get the server ID manually by visiting plex > settings > General then look at
-the ID in the URL bar for example:
-
-`https://app.plex.tv/desktop/#!/settings/server/[RANDOM_STRING]/settings/general`
-
-##### [RANDOM_STRING]
-
-Will be a randomly generated string. Then run the following command
-
-```bash
-docker exec -ti watchstate console servers:edit [PLEX_SERVER_1] --webhook-server-uuid '[RANDOM_STRING]'
-```
-
-The reason for these workarounds is, because Plex link webhook to user account instead of server, as such all servers
-you have linked your account into will use the same token. This limitation we cannot change from our side. So Use of the
-listed workarounds.
 
 ---
 
