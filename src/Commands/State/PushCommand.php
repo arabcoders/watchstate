@@ -62,7 +62,8 @@ class PushCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison. Push db state to the server regardless of date.'
             )
-            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.');
+            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.')
+            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.');
     }
 
     /**
@@ -244,11 +245,13 @@ class PushCommand extends Command
             Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
         }
 
-        // -- Update Server.yaml
-        file_put_contents(
-            Config::get('path') . '/config/servers.yaml',
-            Yaml::dump(Config::get('servers', []), 8, 2)
-        );
+        $config = Config::get('path') . '/config/servers.yaml';
+
+        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+            copy($config, $config . '.bak');
+        }
+
+        file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
         if (!$input->getOption('keep-queue')) {
             $this->cache->delete('queue');

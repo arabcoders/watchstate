@@ -69,7 +69,6 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Import unwatched state (note: It Will set items to unwatched if the server has newer date on items)'
             )
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
                 'stats-filter',
@@ -91,17 +90,21 @@ class ImportCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Set Single transaction mode for PDO driver.'
-            );
+            )
+            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
+            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
-        if (($newConfig = $input->getOption('use-config'))) {
-            if (!is_string($newConfig) || !is_file($newConfig) || !is_readable($newConfig)) {
+        if (($config = $input->getOption('use-config'))) {
+            if (!is_string($config) || !is_file($config) || !is_readable($config)) {
                 throw new RuntimeException('Unable to read data given config.');
             }
-            Config::save('servers', Yaml::parseFile($newConfig));
+            Config::save('servers', Yaml::parseFile($config));
+        } else {
+            $config = Config::get('path') . '/config/servers.yaml';
         }
 
         $list = [];
@@ -294,11 +297,11 @@ class ImportCommand extends Command
             );
         }
 
-        // -- Update Server.yaml with new lastSync date.
-        file_put_contents(
-            $newConfig ?? Config::get('path') . '/config/servers.yaml',
-            Yaml::dump(Config::get('servers', []), 8, 2)
-        );
+        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+            copy($config, $config . '.bak');
+        }
+
+        file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
         return self::SUCCESS;
     }
