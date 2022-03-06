@@ -46,7 +46,7 @@ return (function () {
 
     $config['webhook'] = [
         'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
-        'keyLength' => (int)env('WS_WEBHOOK_KEY_LENGTH', 16),
+        'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
         'ipHeader' => env('WS_WEBHOOK_IP_HEADER', 'REMOTE_ADDR'),
     ];
 

@@ -57,70 +57,65 @@ final class EditCommand extends Command
                 'user',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Change server user ID.'
+                'Change server user id.'
             )
             ->addOption(
-                'export-status',
+                'export-enabled',
                 null,
                 InputOption::VALUE_REQUIRED,
                 sprintf('Enable/Disable manual exporting to this server. Expected value is one of [%s]', $values)
             )
             ->addOption(
-                'import-status',
+                'import-enabled',
                 null,
                 InputOption::VALUE_REQUIRED,
                 sprintf('Enable/Disable manual importing from this server. Expected value is one of [%s]', $values)
             )
             ->addOption(
-                'webhook-key-generate',
+                'webhook-token-generate',
                 null,
                 InputOption::VALUE_NONE,
-                'Generate API key for this server. *WILL NOT* override existing key.'
+                'Generate webhook token for the server. It will not override existing one.'
             )
             ->addOption(
-                'webhook-key-regenerate',
+                'webhook-token-regenerate',
                 null,
                 InputOption::VALUE_NONE,
-                'Regenerate API key, it will invalidate old keys please update related server config.'
+                'Re-generate webhook token. It will invalidate old token.'
             )
             ->addOption(
-                'webhook-key-length',
+                'webhook-token-length',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'Change default API key random generator length.',
-                (int)Config::get('webhook.keyLength', 16)
+                'Change the bytes length of webhook token.',
+                (int)Config::get('webhook.tokenLength', 16)
             )
             ->addOption(
-                'webhook-import-status',
+                'webhook-import',
                 null,
                 InputOption::VALUE_REQUIRED,
-                sprintf('Enable/Disable the webhook api for this server. Expected value is one of [%s]', $values)
+                sprintf('Enable/Disable the webhook endpoint for this server. Expected value is one of [%s]', $values)
             )
             ->addOption(
-                'webhook-require-ips',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Comma seperated IPS/CIDR to link a server to specific IPS. Useful for Multi Plex servers setup.',
-            )
-            ->addOption(
-                'webhook-server-uuid',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Limit this server to specific UUID. Useful for Multi Plex servers setup.',
-            )
-            ->addOption(
-                'webhook-update-server-uuid',
-                null,
-                InputOption::VALUE_NONE,
-                'Get the server unique id from server.'
-            )
-            ->addOption(
-                'webhook-push-status',
+                'webhook-push',
                 null,
                 InputOption::VALUE_REQUIRED,
                 sprintf('Enable/Disable pushing to this server on webhook events. Expected value are [%s]', $values)
             )
+            ->addOption(
+                'webhook-uuid',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Limit this webhook token endpoint to specific server unique id.',
+            )
+            ->addOption(
+                'webhook-uuid-from-server',
+                null,
+                InputOption::VALUE_NONE,
+                'Pull the server unique id from directly from server.'
+            )
             ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
+            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
@@ -206,13 +201,13 @@ final class EditCommand extends Command
         }
 
         // -- $ref.export.enabled
-        if ($input->getOption('export-status')) {
-            $statusName = strtolower($input->getOption('export-status'));
+        if ($input->getOption('export-enabled')) {
+            $statusName = strtolower($input->getOption('export-enabled'));
 
             if (!array_key_exists($statusName, self::ON_OFF_FLAGS)) {
                 $output->writeln(
                     sprintf(
-                        '<error>Unexpected value for --export-status, was expecting one of [%s] but got \'%s\' instead.',
+                        '<error>Unexpected value for --export-enabled, was expecting one of [%s] but got \'%s\' instead.',
                         implode('|', array_keys(self::ON_OFF_FLAGS)),
                         $statusName
                     )
@@ -224,13 +219,13 @@ final class EditCommand extends Command
         }
 
         // -- $ref.import.enabled
-        if ($input->getOption('import-status')) {
-            $statusName = strtolower($input->getOption('import-status'));
+        if ($input->getOption('import-enabled')) {
+            $statusName = strtolower($input->getOption('import-enabled'));
 
             if (!array_key_exists($statusName, self::ON_OFF_FLAGS)) {
                 $output->writeln(
                     sprintf(
-                        '<error>Unexpected value for --import-status, was expecting one of [%s] but got \'%s\' instead.',
+                        '<error>Unexpected value for --import-enabled, was expecting one of [%s] but got \'%s\' instead.',
                         implode('|', array_keys(self::ON_OFF_FLAGS)),
                         $statusName
                     )
@@ -242,9 +237,9 @@ final class EditCommand extends Command
         }
 
         // -- $ref.webhook.token
-        if ($input->getOption('webhook-key-generate') || $input->getOption('webhook-key-regenerate')) {
-            if (!Config::get("{$ref}.webhook.token") || $input->getOption('webhook-key-regenerate')) {
-                $apiToken = bin2hex(random_bytes($input->getOption('api-key-length')));
+        if ($input->getOption('webhook-token-generate') || $input->getOption('webhook-token-regenerate')) {
+            if (!Config::get("{$ref}.webhook.token") || $input->getOption('webhook-token-regenerate')) {
+                $apiToken = bin2hex(random_bytes($input->getOption('webhook-token-length')));
 
                 $output->writeln(
                     sprintf('<info>The API key for \'%s\' webhook endpoint is: %s</info>', $name, $apiToken)
@@ -254,14 +249,14 @@ final class EditCommand extends Command
             }
         }
 
-        // -- $ref.webhook.enabled
-        if ($input->getOption('webhook-import-status')) {
-            $statusName = strtolower($input->getOption('webhook-import-status'));
+        // -- $ref.webhook.import
+        if ($input->getOption('webhook-import')) {
+            $statusName = strtolower($input->getOption('webhook-import'));
 
             if (!array_key_exists($statusName, self::ON_OFF_FLAGS)) {
                 $output->writeln(
                     sprintf(
-                        '<error>Unexpected value for --webhook-import-status, was expecting one of [%s] but got \'%s\' instead.',
+                        '<error>Unexpected value for --webhook-import, was expecting one of [%s] but got \'%s\' instead.',
                         implode('|', array_keys(self::ON_OFF_FLAGS)),
                         $statusName
                     )
@@ -275,13 +270,13 @@ final class EditCommand extends Command
         }
 
         // -- $ref.webhook.push
-        if ($input->getOption('webhook-push-status')) {
-            $statusName = strtolower($input->getOption('webhook-push-status'));
+        if ($input->getOption('webhook-push')) {
+            $statusName = strtolower($input->getOption('webhook-push'));
 
             if (!array_key_exists($statusName, self::ON_OFF_FLAGS)) {
                 $output->writeln(
                     sprintf(
-                        '<error>Unexpected value for --webhook-push-status, was expecting one of [%s] but got \'%s\' instead.',
+                        '<error>Unexpected value for --webhook-push, was expecting one of [%s] but got \'%s\' instead.',
                         implode('|', array_keys(self::ON_OFF_FLAGS)),
                         $statusName
                     )
@@ -293,18 +288,13 @@ final class EditCommand extends Command
             Config::save("{$ref}.webhook.push", (bool)self::ON_OFF_FLAGS[$statusName]);
         }
 
-        // -- $ref.webhook.ips
-        if ($input->getOption('webhook-require-ips')) {
-            Config::save("{$ref}.webhook.ips", explode(',', $input->getOption('webhook-require-ips')));
-        }
-
         // -- $ref.webhook.uuid
-        if ($input->getOption('webhook-server-uuid')) {
-            Config::save("{$ref}.webhook.uuid", $input->getOption('webhook-server-uuid'));
+        if ($input->getOption('webhook-uuid')) {
+            Config::save("{$ref}.webhook.uuid", $input->getOption('webhook-uuid'));
         }
 
         // -- $ref.webhook.uid (Pull from server)
-        if ($input->getOption('webhook-update-server-uuid')) {
+        if ($input->getOption('webhook-uuid-from-server')) {
             $server = makeServer(Config::get($ref), $name);
             if ($input->getOption('redirect-logger')) {
                 $server->setLogger(new CliLogger($output, false));
@@ -315,7 +305,7 @@ final class EditCommand extends Command
             if (null === $uuid) {
                 $output->writeln(
                     sprintf(
-                        '<error>Unable to get \'%s\' server unique id. Please manually set it at `server.yaml` under key of `webhook.uuid`</error>',
+                        '<error>Unable to get \'%s\' unique id. Set it manually via [--webhook-uuid=UNIQUE_ID] flag</error>',
                         $name
                     )
                 );
@@ -323,13 +313,16 @@ final class EditCommand extends Command
                 return self::FAILURE;
             }
 
-            $output->writeln(
-                sprintf('<info>Updating \'%s\' server unique id to: %s</info>', $name, $uuid)
-            );
-
             if (Config::get("{$ref}.webhook.uuid") !== $uuid) {
+                $output->writeln(
+                    sprintf('<info>Updating \'%s\' server unique id to: %s</info>', $name, $uuid)
+                );
                 Config::save("{$ref}.webhook.uuid", $uuid);
             }
+        }
+
+        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+            copy($config, $config . '.bak');
         }
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
