@@ -99,7 +99,7 @@ class JellyfinServer implements ServerInterface
     {
         try {
             $this->logger->debug(
-                sprintf('Requesting system info from %s.', $this->name),
+                sprintf('Requesting server Unique id info from %s.', $this->name),
                 ['url' => $this->url->getHost()]
             );
 
@@ -141,6 +141,55 @@ class JellyfinServer implements ServerInterface
             );
             return null;
         }
+    }
+
+    public function getUsersList(array $server = []): array|null
+    {
+        try {
+            $this->logger->debug(
+                sprintf('Requesting users list info from %s.', $this->name),
+                ['url' => $this->url->getHost()]
+            );
+
+            $response = $this->http->request('GET', (string)$this->url->withPath('/Users/'), $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+
+                return null;
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return null;
+        }
+
+        $list = [];
+
+        foreach ($json ?? [] as $user) {
+            $date = $user['LastActivityDate'] ?? $user['LastLoginDate'] ?? null;
+
+            $list[] = [
+                'user_id' => ag($user, 'Id'),
+                'username' => ag($user, 'Name'),
+                'is_admin' => ag($user, 'Policy.IsAdministrator') ? 'Yes' : 'No',
+                'is_hidden' => ag($user, 'Policy.IsHidden') ? 'Yes' : 'No',
+                'is_disabled' => ag($user, 'Policy.IsDisabled') ? 'Yes' : 'No',
+                'updated_at' => null !== $date ? makeDate($date) : 'Never',
+            ];
+        }
+
+        return $list;
     }
 
     public function getPersist(): array

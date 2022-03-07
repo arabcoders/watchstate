@@ -320,8 +320,12 @@ if (!function_exists('serveHttpRequest')) {
                     continue;
                 }
 
-                $uuid = ag($info, 'webhook.uuid', null);
+                $userId = ag($info, 'user_id', null);
+                if (null !== $userId && $userId !== $request->getAttribute('USER_ID', null)) {
+                    continue;
+                }
 
+                $uuid = ag($info, 'webhook.uuid', null);
                 if (null !== $uuid && $uuid !== $request->getAttribute('SERVER_ID', null)) {
                     continue;
                 }
@@ -498,9 +502,20 @@ if (!function_exists('arrayToString')) {
 
         foreach ($arr as $key => $val) {
             if (is_object($val)) {
-                $val = spl_object_hash($val);
-            } elseif (is_array($val)) {
-                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES);
+                if (($val instanceof JsonSerializable)) {
+                    $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                } elseif (($val instanceof Stringable) || method_exists($val, '__toString')) {
+                    $val = (string)$val;
+                } else {
+                    $val = [
+                        spl_object_hash($val) => get_class($val),
+                        ...(array)$val
+                    ];
+                }
+            }
+
+            if (is_array($val)) {
+                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             } else {
                 $val = $val ?? 'None';
             }

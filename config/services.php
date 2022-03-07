@@ -6,6 +6,8 @@ use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use Monolog\Logger;
+use Nyholm\Psr7\Uri;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
@@ -35,6 +37,11 @@ return (function (): array {
 
         CacheInterface::class => [
             'class' => fn() => new Psr16Cache(new FilesystemAdapter(directory: Config::get('cache.config.directory')))
+        ],
+
+        UriInterface::class => [
+            'class' => fn() => new Uri(''),
+            'shared' => false,
         ],
     ];
 })();

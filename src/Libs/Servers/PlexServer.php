@@ -97,7 +97,7 @@ class PlexServer implements ServerInterface
     {
         try {
             $this->logger->debug(
-                sprintf('Requesting system info from %s.', $this->name),
+                sprintf('Requesting server Unique id info from %s.', $this->name),
                 ['url' => $this->url->getHost()]
             );
 
@@ -139,6 +139,64 @@ class PlexServer implements ServerInterface
             );
             return null;
         }
+    }
+
+    public function getUsersList(array $server = []): array|null
+    {
+        try {
+            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
+                'plex.tv'
+            )->withPath(
+                '/api/v2/home/users/'
+            );
+
+            $this->logger->debug(sprintf('Requesting users list from %s.', $this->name), ['url' => $url->getHost()]);
+
+            $response = $this->http->request('GET', (string)$url, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'X-Plex-Token' => $this->token,
+                    'X-Plex-Client-Identifier' => ag($server, 'webhook.uuid', fn() => $this->getServerUUID()),
+                ],
+            ]);
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+
+                return null;
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return null;
+        }
+
+        $list = [];
+
+        foreach (ag($json, 'users', []) as $user) {
+            $username = $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? '??';
+
+            $list[] = [
+                'user_id' => ag($user, 'id'),
+                'username' => $username,
+                'is_admin' => ag($user, 'admin') ? 'Yes' : 'No',
+                'is_guest' => ag($user, 'guest') ? 'Yes' : 'No',
+                'is_restricted' => ag($user, 'restricted') ? 'Yes' : 'No',
+                'updated_at' => isset($user['updatedAt']) ? makeDate($user['updatedAt']) : 'Never',
+            ];
+        }
+
+        return $list;
     }
 
     public function getPersist(): array

@@ -116,4 +116,13 @@ interface ServerInterface
      * @return int|string|null
      */
     public function getServerUUID(): int|string|null;
+
+    /**
+     * Return List of users from server.
+     *
+     * @param array $server server bucket.
+     *
+     * @return array|null null if not implemented or backend does not support users.
+     */
+    public function getUsersList(array $server = []): array|null;
 }
