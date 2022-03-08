@@ -25,6 +25,7 @@ interface ServerInterface
      * @param UriInterface $url Server url
      * @param null|int|string $token Server Token
      * @param null|int|string $userId Server user Id
+     * @param string|int|null $uuid
      * @param array $persist persistent data saved by server.
      * @param array $options array of options.
      *
@@ -35,6 +36,7 @@ interface ServerInterface
         UriInterface $url,
         null|string|int $token = null,
         null|string|int $userId = null,
+        null|string|int $uuid = null,
         array $persist = [],
         array $options = []
     ): self;
@@ -113,16 +115,18 @@ interface ServerInterface
     /**
      * Get Server Unique ID.
      *
+     * @param bool $forceRefresh force read uuid from server.
+     *
      * @return int|string|null
      */
-    public function getServerUUID(): int|string|null;
+    public function getServerUUID(bool $forceRefresh = false): int|string|null;
 
     /**
      * Return List of users from server.
      *
-     * @param array $server server bucket.
+     * @param array $opts
      *
      * @return array|null null if not implemented or backend does not support users.
      */
-    public function getUsersList(array $server = []): array|null;
+    public function getUsersList(array $opts = []): array|null;
 }

@@ -61,11 +61,12 @@ class JellyfinServer implements ServerInterface
     protected string|null $user = null;
     protected array $options = [];
     protected string $name = '';
-    protected bool $loaded = false;
+    protected bool $initialized = false;
     protected bool $isEmby = false;
     protected array $persist = [];
     protected string $cacheKey;
     protected array $cacheData = [];
+    protected string|int|null $uuid = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -82,21 +83,50 @@ class JellyfinServer implements ServerInterface
         UriInterface $url,
         string|int|null $token = null,
         string|int|null $userId = null,
+        string|int|null $uuid = null,
         array $persist = [],
         array $options = []
     ): ServerInterface {
-        return (new self($this->http, $this->logger, $this->cache))->setState(
-            $name,
-            $url,
-            $token,
-            $userId,
-            $persist,
-            $options
-        );
+        if (null === $token) {
+            throw new RuntimeException(afterLast(__CLASS__, '\\') . '->setState(): No token is set.');
+        }
+
+        $cloned = clone $this;
+
+        $cloned->cacheData = [];
+        $cloned->name = $name;
+        $cloned->url = $url;
+        $cloned->token = $token;
+        $cloned->uuid = $uuid;
+        $cloned->user = $userId;
+        $cloned->persist = $persist;
+        $cloned->isEmby = (bool)($options['emby'] ?? false);
+        $cloned->initialized = true;
+
+        $cloned->cacheKey = $options['cache_key'] ?? md5(__CLASS__ . '.' . $name . ($userId ?? $token) . $url);
+
+        if ($cloned->cache->has($cloned->cacheKey)) {
+            $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
+        }
+
+        if (null !== ($options['emby'] ?? null)) {
+            unset($options['emby']);
+        }
+
+        $cloned->options = $options;
+        $cloned->initialized = true;
+
+        return $cloned;
     }
 
-    public function getServerUUID(): int|string|null
+    public function getServerUUID(bool $forceRefresh = false): int|string|null
     {
+        if (false === $forceRefresh && null !== $this->uuid) {
+            return $this->uuid;
+        }
+
+        $this->checkConfig(checkUser: false);
+
         try {
             $this->logger->debug(
                 sprintf('Requesting server Unique id info from %s.', $this->name),
@@ -143,8 +173,10 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    public function getUsersList(array $server = []): array|null
+    public function getUsersList(array $opts = []): array|null
     {
+        $this->checkConfig(checkUser: false);
+
         try {
             $this->logger->debug(
                 sprintf('Requesting users list info from %s.', $this->name),
@@ -179,7 +211,7 @@ class JellyfinServer implements ServerInterface
         foreach ($json ?? [] as $user) {
             $date = $user['LastActivityDate'] ?? $user['LastLoginDate'] ?? null;
 
-            $list[] = [
+            $data = [
                 'user_id' => ag($user, 'Id'),
                 'username' => ag($user, 'Name'),
                 'is_admin' => ag($user, 'Policy.IsAdministrator') ? 'Yes' : 'No',
@@ -187,6 +219,12 @@ class JellyfinServer implements ServerInterface
                 'is_disabled' => ag($user, 'Policy.IsDisabled') ? 'Yes' : 'No',
                 'updated_at' => null !== $date ? makeDate($date) : 'Never',
             ];
+
+            if (true === ($opts['tokens'] ?? false)) {
+                $data['token'] = $this->token;
+            }
+
+            $list[] = $data;
         }
 
         return $list;
@@ -349,17 +387,7 @@ class JellyfinServer implements ServerInterface
 
     protected function getLibraries(Closure $ok, Closure $error): array
     {
-        if (!($this->url instanceof UriInterface)) {
-            throw new RuntimeException('No host was set.');
-        }
-
-        if (null === $this->token) {
-            throw new RuntimeException('No token was set.');
-        }
-
-        if (null === $this->user) {
-            throw new RuntimeException('No User was set.');
-        }
+        $this->checkConfig(true);
 
         try {
             $this->logger->debug(
@@ -571,6 +599,8 @@ class JellyfinServer implements ServerInterface
 
     public function push(array $entities, DateTimeInterface|null $after = null): array
     {
+        $this->checkConfig(true);
+
         $requests = [];
 
         foreach ($entities as &$entity) {
@@ -1063,60 +1093,23 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
-    public function setState(
-        string $name,
-        UriInterface $url,
-        string|int|null $token = null,
-        string|int|null $userId = null,
-        array $persist = [],
-        array $opts = []
-    ): ServerInterface {
-        if (true === $this->loaded) {
-            throw new RuntimeException(
-                sprintf(
-                    '%s->setState(): Has already been called.',
-                    afterLast(__CLASS__, '\\')
-                )
-            );
-        }
-
-        if (null === $userId && null === ($opts['user'] ?? null)) {
-            throw new RuntimeException(
-                sprintf(
-                    '%s->setState(): Requires a userID to be set.',
-                    afterLast(__CLASS__, '\\')
-                )
-            );
-        }
-
-        $this->cacheKey = md5(__CLASS__ . '.' . $name . $userId . $url);
-
-        if ($this->cache->has($this->cacheKey)) {
-            $this->cacheData = $this->cache->get($this->cacheKey);
-        }
-
-        $this->name = $name;
-        $this->url = $url;
-        $this->token = $token;
-        $this->user = $userId ?? $opts['user'];
-        $this->persist = $persist;
-        $this->isEmby = (bool)($opts['emby'] ?? false);
-
-        if (null !== ($opts['emby'] ?? null)) {
-            unset($opts['emby']);
-        }
-
-        $this->options = $opts;
-        $this->loaded = true;
-
-        return $this;
-    }
-
     protected static function afterString(string $subject, string $search): string
     {
         return empty($search) ? $subject : array_reverse(explode($search, $subject, 2))[0];
+    }
+
+    protected function checkConfig(bool $checkUrl = true, bool $checkToken = true, bool $checkUser = true): void
+    {
+        if (true === $checkUrl && !($this->url instanceof UriInterface)) {
+            throw new RuntimeException(afterLast(__CLASS__, '\\') . ': No host was set.');
+        }
+
+        if (true === $checkToken && null === $this->token) {
+            throw new RuntimeException(afterLast(__CLASS__, '\\') . ': No token was set.');
+        }
+
+        if (true === $checkUser && null === $this->user) {
+            throw new RuntimeException(afterLast(__CLASS__, '\\') . ': No User was set.');
+        }
     }
 }

@@ -25,12 +25,8 @@ final class RemoteCommand extends Command
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
             ->addOption('list-users', null, InputOption::VALUE_NONE, 'List Server users.')
-            ->addOption(
-                'use-token',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Use given api token instead of configured one in servers.yaml'
-            )
+            ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
+            ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
@@ -68,7 +64,7 @@ final class RemoteCommand extends Command
             $server->setLogger(new CliLogger($output));
         }
 
-        if ($input->getOption('list-users')) {
+        if ($input->getOption('list-users') || $input->getOption('list-users-with-tokens')) {
             $this->listUsers($input, $output, $server, $config);
         }
 
@@ -81,7 +77,13 @@ final class RemoteCommand extends Command
         ServerInterface $server,
         array $config = []
     ): void {
-        $users = $server->getUsersList($config);
+        $opts = [];
+
+        if ($input->getOption('list-users-with-tokens')) {
+            $opts['tokens'] = true;
+        }
+
+        $users = $server->getUsersList($opts);
 
         if (null === $users) {
             $output->writeln(
