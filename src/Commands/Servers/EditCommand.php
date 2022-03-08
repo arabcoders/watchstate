@@ -16,7 +16,7 @@ use Symfony\Component\Yaml\Yaml;
 
 final class EditCommand extends Command
 {
-    private const ON_OFF_FLAGS = [
+    public const ON_OFF_FLAGS = [
         'enabled' => true,
         'enable' => true,
         'yes' => true,
@@ -58,6 +58,18 @@ final class EditCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Change server user id.'
+            )
+            ->addOption(
+                'uuid',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Change server unique id.',
+            )
+            ->addOption(
+                'uuid-from-server',
+                null,
+                InputOption::VALUE_NONE,
+                'Pull the server unique id directly from server.'
             )
             ->addOption(
                 'export-enabled',
@@ -103,16 +115,19 @@ final class EditCommand extends Command
                 sprintf('Enable/Disable pushing to this server on webhook events. Expected value are [%s]', $values)
             )
             ->addOption(
-                'webhook-uuid',
+                'webhook-match-user',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Limit this webhook token endpoint to specific server unique id.',
+                sprintf('Enable/Disable user check on webhook request. Expected value is one of [%s]', $values)
             )
             ->addOption(
-                'webhook-uuid-from-server',
+                'webhook-match-uuid',
                 null,
-                InputOption::VALUE_NONE,
-                'Pull the server unique id from directly from server.'
+                InputOption::VALUE_REQUIRED,
+                sprintf(
+                    'Enable/Disable server unique id check on webhook request. Expected value is one of [%s]',
+                    $values
+                )
             )
             ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
             ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.')
@@ -124,10 +139,13 @@ final class EditCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        $error = false;
+
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('use-config'))) {
             if (!is_string($config) || !is_file($config) || !is_readable($config)) {
                 $output->writeln('<error>Unable to read data given config.</error>');
+                return self::FAILURE;
             }
             Config::save('servers', Yaml::parseFile($config));
         } else {
@@ -154,20 +172,20 @@ final class EditCommand extends Command
                         $input->getOption('type')
                     )
                 );
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.type", $input->getOption('type'));
             }
-
-            Config::save("{$ref}.type", $input->getOption('type'));
         }
 
         // -- $ref.url
         if ($input->getOption('url')) {
             if (!filter_var($input->getOption('url'), FILTER_VALIDATE_URL)) {
                 $output->writeln(sprintf('<error>Invalid --url value \'%s\' was given.', $input->getOption('url')));
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.url", $input->getOption('url'));
             }
-
-            Config::save("{$ref}.url", $input->getOption('url'));
         }
 
         // -- $ref.user
@@ -179,10 +197,10 @@ final class EditCommand extends Command
                         get_debug_type($input->getOption('user'))
                     )
                 );
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.user", $input->getOption('user'));
             }
-
-            Config::save("{$ref}.user", $input->getOption('user'));
         }
 
         // -- $ref.token
@@ -194,10 +212,58 @@ final class EditCommand extends Command
                         get_debug_type($input->getOption('token'))
                     )
                 );
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.token", $input->getOption('token'));
             }
+        }
 
-            Config::save("{$ref}.token", $input->getOption('token'));
+        // -- $ref.uuid
+        if ($input->getOption('uuid')) {
+            if (!is_string($input->getOption('uuid')) && !is_int($input->getOption('uuid'))) {
+                $output->writeln(
+                    sprintf(
+                        '<error>Expecting --uuid value to be string or integer. but got \'%s\' instead.',
+                        get_debug_type($input->getOption('uuid'))
+                    )
+                );
+                $error = true;
+            } else {
+                Config::save("{$ref}.uuid", $input->getOption('uuid'));
+            }
+        }
+
+        // -- $ref.uid (Pull from server)
+        if ($input->getOption('uuid-from-server')) {
+            try {
+                $server = makeServer(Config::get($ref), $name);
+
+                if ($input->getOption('redirect-logger')) {
+                    $server->setLogger(new CliLogger($output, false));
+                }
+
+                $uuid = $server->getServerUUID(true);
+
+                if (null === $uuid) {
+                    $output->writeln(
+                        sprintf(
+                            '<error>Unable to get \'%s\' unique id. Set it manually via [--uuid=UNIQUE_ID] flag</error>',
+                            $name
+                        )
+                    );
+                    $error = true;
+                } else {
+                    if (Config::get("{$ref}.uuid") !== $uuid) {
+                        $output->writeln(
+                            sprintf('<info>Updating \'%s\' server unique id to: %s</info>', $name, $uuid)
+                        );
+                        Config::save("{$ref}.uuid", $uuid);
+                    }
+                }
+            } catch (\Throwable $e) {
+                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                $error = true;
+            }
         }
 
         // -- $ref.export.enabled
@@ -212,10 +278,10 @@ final class EditCommand extends Command
                         $statusName
                     )
                 );
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.export.enabled", (bool)self::ON_OFF_FLAGS[$statusName]);
             }
-
-            Config::save("{$ref}.export.enabled", (bool)self::ON_OFF_FLAGS[$statusName]);
         }
 
         // -- $ref.import.enabled
@@ -230,22 +296,27 @@ final class EditCommand extends Command
                         $statusName
                     )
                 );
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.export.enabled", (bool)self::ON_OFF_FLAGS[$statusName]);
             }
-
-            Config::save("{$ref}.export.enabled", (bool)self::ON_OFF_FLAGS[$statusName]);
         }
 
         // -- $ref.webhook.token
         if ($input->getOption('webhook-token-generate') || $input->getOption('webhook-token-regenerate')) {
             if (!Config::get("{$ref}.webhook.token") || $input->getOption('webhook-token-regenerate')) {
-                $apiToken = bin2hex(random_bytes($input->getOption('webhook-token-length')));
+                try {
+                    $apiToken = bin2hex(random_bytes($input->getOption('webhook-token-length')));
 
-                $output->writeln(
-                    sprintf('<info>The API key for \'%s\' webhook endpoint is: %s</info>', $name, $apiToken)
-                );
+                    $output->writeln(
+                        sprintf('<info>The API key for \'%s\' webhook endpoint is: %s</info>', $name, $apiToken)
+                    );
 
-                Config::save("{$ref}.webhook.token", $apiToken);
+                    Config::save("{$ref}.webhook.token", $apiToken);
+                } catch (\Throwable $e) {
+                    $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                    $error = true;
+                }
             }
         }
 
@@ -261,12 +332,10 @@ final class EditCommand extends Command
                         $statusName
                     )
                 );
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.webhook.import", (bool)self::ON_OFF_FLAGS[$statusName]);
             }
-
-            $status = self::ON_OFF_FLAGS[$statusName];
-
-            Config::save("{$ref}.webhook.import", (bool)$status);
         }
 
         // -- $ref.webhook.push
@@ -281,43 +350,34 @@ final class EditCommand extends Command
                         $statusName
                     )
                 );
-
-                return self::INVALID;
+                $error = true;
+            } else {
+                Config::save("{$ref}.webhook.push", (bool)self::ON_OFF_FLAGS[$statusName]);
             }
-
-            Config::save("{$ref}.webhook.push", (bool)self::ON_OFF_FLAGS[$statusName]);
         }
 
-        // -- $ref.webhook.uuid
-        if ($input->getOption('webhook-uuid')) {
-            Config::save("{$ref}.webhook.uuid", $input->getOption('webhook-uuid'));
-        }
+        // -- $ref.webhook.match.user
+        if ($input->getOption('webhook-match-user')) {
+            $statusName = strtolower($input->getOption('webhook-match-user'));
 
-        // -- $ref.webhook.uid (Pull from server)
-        if ($input->getOption('webhook-uuid-from-server')) {
-            $server = makeServer(Config::get($ref), $name);
-            if ($input->getOption('redirect-logger')) {
-                $server->setLogger(new CliLogger($output, false));
-            }
-
-            $uuid = $server->getServerUUID();
-
-            if (null === $uuid) {
+            if (!array_key_exists($statusName, self::ON_OFF_FLAGS)) {
                 $output->writeln(
                     sprintf(
-                        '<error>Unable to get \'%s\' unique id. Set it manually via [--webhook-uuid=UNIQUE_ID] flag</error>',
-                        $name
+                        '<error>Unexpected value for --webhook-match-user, was expecting one of [%s] but got \'%s\' instead.',
+                        implode('|', array_keys(self::ON_OFF_FLAGS)),
+                        $statusName
                     )
                 );
-
-                return self::FAILURE;
-            }
-
-            if (Config::get("{$ref}.webhook.uuid") !== $uuid) {
-                $output->writeln(
-                    sprintf('<info>Updating \'%s\' server unique id to: %s</info>', $name, $uuid)
-                );
-                Config::save("{$ref}.webhook.uuid", $uuid);
+                $error = true;
+            } else {
+                if (null === Config::get("{$ref}.user")) {
+                    $output->writeln(
+                        '<error>ERROR: To enable user matching in webhook context, please set the user first using --user flag.'
+                    );
+                    $error = true;
+                } else {
+                    Config::save("{$ref}.webhook.match.user", (bool)self::ON_OFF_FLAGS[$statusName]);
+                }
             }
         }
 
@@ -327,6 +387,6 @@ final class EditCommand extends Command
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
-        return self::SUCCESS;
+        return false !== $error ? self::SUCCESS : self::FAILURE;
     }
 }

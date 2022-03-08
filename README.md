@@ -161,15 +161,25 @@ my_home_server: # *DO NOT* use spaces for server name,
     type: jellyfin|emby|plex # Choose one
     url: 'https://mymedia.example.com' # The URL for the media server api
     # User API Token.
+    # ----
     # Jellyfin: Create API token via (Dashboard > Advanced > API keys > +)
     # Emby: Create API token via (Manage Emby server > Advanced > API keys > + New Api Key)
     # Plex: see on how to get your plex-token https://support.plex.tv/articles/204059436
     token: user-api-token
-    # Get your user ID. For Jellyfin/emby only.
+    # Get your user ID.
+    # ----
+    # after adding the sever you can run
+    # console servers:remote --list-users -- my_home_server    
     # Jellyfin : Dashboard > Server > Users > click your user > copy the userId= value
     # Emby: Manage Emby server > Server > Users > click your user > copy the userId= value
-    # Plex: for plex managed users the X-Plex-Token acts as userId. Therefore, no need to set.
+    # For Plex: 
+    # if you're only using single account to access your library, then there is no need to set this up,
+    # However, if you are using managed users, please run 'console servers:remote --list-users -- [SERVER_NAME]'
+    # and set the reported user id from there. as plex uses different IDs if you have managed users or not.
+    # for typical 1 user setup, the ID usually 1.
     user: user-id
+    # Server Unique ID. can be generated using 'console servers:edit --uuid-from-server -- my_home_server'    
+    uuid: 'random_string' # Server unique identifier.
     export:
         enabled: true # Enable export.
     import:
@@ -178,7 +188,9 @@ my_home_server: # *DO NOT* use spaces for server name,
         import: true|false # enable receiving webhook events from this server.
         token: 'random_string' # Server specific api key.
         push: true|false # Enable push state back to this server when watchstate tool receive webhook event.
-        uuid: 'random_string' # Server unique identifier.
+        match:
+            uuid: true|false # ignore webhook request if the server unique id does not match the saved uuid. (disabled if uuid: is not set). 
+            user: true|false # ignore webhook request if the reported user id does not match saved user.(disabled if user: is not set).
     options:
         importUnwatched: true|false # By default, We do not import unwatched state to enable it set to true. 
         exportIgnoreDate: true|false # By default, we respect the server watch date. To override the check, set this to true.

@@ -321,12 +321,14 @@ if (!function_exists('serveHttpRequest')) {
                 }
 
                 $userId = ag($info, 'user_id', null);
-                if (null !== $userId && $userId !== $request->getAttribute('USER_ID', null)) {
+                $matchUser = true === ag($info, 'webhook.match.user') && null !== $userId;
+                if (true === $matchUser && $userId !== $request->getAttribute('USER_ID', null)) {
                     continue;
                 }
 
-                $uuid = ag($info, 'webhook.uuid', null);
-                if (null !== $uuid && $uuid !== $request->getAttribute('SERVER_ID', null)) {
+                $uuid = ag($info, 'uuid', null);
+                $matchUUID = true === ag($info, 'webhook.match.uuid') && null !== $uuid;
+                if (true === $matchUUID && $uuid !== $request->getAttribute('SERVER_ID', null)) {
                     continue;
                 }
 
@@ -489,6 +491,7 @@ if (!function_exists('makeServer')) {
             url:     new Uri(ag($server, 'url')),
             token:   ag($server, 'token', null),
             userId:  ag($server, 'user', null),
+            uuid:    ag($server, 'uuid', null),
             persist: ag($server, 'persist', []),
             options: ag($server, 'options', []),
         );
@@ -524,5 +527,16 @@ if (!function_exists('arrayToString')) {
         }
 
         return implode($separator, $list);
+    }
+}
+
+if (!function_exists('commandContext')) {
+    function commandContext(): string
+    {
+        if (env('IN_DOCKER')) {
+            return sprintf('docker exec -ti %s console ', env('CONTAINER_NAME', 'watchstate'));
+        }
+
+        return ($_SERVER['argv'][0] ?? 'php console') . ' ';
     }
 }
