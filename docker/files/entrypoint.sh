@@ -42,11 +42,11 @@ if [ ! -f "/config/config/servers.yaml" ]; then
   /usr/bin/console config:dump servers
 fi
 
-if [ -f "/etc/caddy/Caddyfile" ]; then
+if [ ! -z "${WS_DISABLE_HTTP}" ] && [ -f "/etc/caddy/Caddyfile" ]; then
   caddy start -config /etc/caddy/Caddyfile
 fi
 
-if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ]; then
+if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}"]; then
   /usr/sbin/crond -b -l 2
 fi
 
