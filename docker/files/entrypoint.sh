@@ -33,11 +33,6 @@ fi
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
 
-if [ ! -f "/config/config/config.yaml" ]; then
-  /usr/bin/console config:dump config
-  /usr/bin/console config:generate -q
-fi
-
 if [ ! -f "/config/config/servers.yaml" ]; then
   /usr/bin/console config:dump servers
 fi
