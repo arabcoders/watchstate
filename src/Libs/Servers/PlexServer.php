@@ -63,14 +63,16 @@ class PlexServer implements ServerInterface
         'media.pause',
     ];
 
+    protected bool $initialized = false;
     protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected array $options = [];
     protected string $name = '';
-    protected bool $loaded = false;
     protected array $persist = [];
     protected string $cacheKey = '';
     protected array $cacheData = [];
+    protected string|int|null $uuid = null;
+    protected string|null $user = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -87,17 +89,42 @@ class PlexServer implements ServerInterface
         UriInterface $url,
         string|int|null $token = null,
         string|int|null $userId = null,
+        string|int|null $uuid = null,
         array $persist = [],
         array $options = []
     ): ServerInterface {
-        return (new self($this->http, $this->logger, $this->cache))->setState($name, $url, $token, $persist, $options);
+        $cloned = clone $this;
+
+        $cloned->cacheData = [];
+        $cloned->name = $name;
+        $cloned->url = $url;
+        $cloned->token = $token;
+        $cloned->user = $userId;
+        $cloned->uuid = $uuid;
+        $cloned->options = $options;
+        $cloned->persist = $persist;
+        $cloned->cacheKey = $opts['cache_key'] ?? md5(__CLASS__ . '.' . $name . $url);
+
+        if ($cloned->cache->has($cloned->cacheKey)) {
+            $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
+        }
+
+        $cloned->initialized = true;
+
+        return $cloned;
     }
 
-    public function getServerUUID(): int|string|null
+    public function getServerUUID(bool $forceRefresh = false): int|string|null
     {
+        if (false === $forceRefresh && null !== $this->uuid) {
+            return $this->uuid;
+        }
+
+        $this->checkConfig();
+
         try {
             $this->logger->debug(
-                sprintf('Requesting system info from %s.', $this->name),
+                sprintf('Requesting server Unique id info from %s.', $this->name),
                 ['url' => $this->url->getHost()]
             );
 
@@ -119,7 +146,9 @@ class PlexServer implements ServerInterface
 
             $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
 
-            return ag($json, 'MediaContainer.machineIdentifier', null);
+            $this->uuid = ag($json, 'MediaContainer.machineIdentifier', null);
+
+            return $this->uuid;
         } catch (ExceptionInterface $e) {
             $this->logger->error(
                 sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()),
@@ -139,6 +168,70 @@ class PlexServer implements ServerInterface
             );
             return null;
         }
+    }
+
+    public function getUsersList(array $opts = []): array|null
+    {
+        $this->checkConfig(checkUrl: false);
+
+        try {
+            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
+                'plex.tv'
+            )->withPath(
+                '/api/v2/home/users/'
+            );
+
+            $this->logger->debug(sprintf('Requesting users list from %s.', $this->name), ['url' => $url->getHost()]);
+
+            $response = $this->http->request('GET', (string)$url, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'X-Plex-Token' => $this->token,
+                    'X-Plex-Client-Identifier' => $this->getServerUUID(),
+                ],
+            ]);
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+
+                return null;
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return null;
+        }
+
+        $list = [];
+
+        foreach (ag($json, 'users', []) as $user) {
+            $data = [
+                'user_id' => ag($user, 'id'),
+                'username' => $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? '??',
+                'is_admin' => ag($user, 'admin') ? 'Yes' : 'No',
+                'is_guest' => ag($user, 'guest') ? 'Yes' : 'No',
+                'is_restricted' => ag($user, 'restricted') ? 'Yes' : 'No',
+                'updated_at' => isset($user['updatedAt']) ? makeDate($user['updatedAt']) : 'Never',
+            ];
+
+            if (true === ($opts['tokens'] ?? false)) {
+                $data['token'] = $this->getUserToken($user['uuid']);
+            }
+
+            $list[] = $data;
+        }
+
+        return $list;
     }
 
     public function getPersist(): array
@@ -303,13 +396,7 @@ class PlexServer implements ServerInterface
 
     protected function getLibraries(Closure $ok, Closure $error): array
     {
-        if (null === $this->url) {
-            throw new RuntimeException('No host was set.');
-        }
-
-        if (null === $this->token) {
-            throw new RuntimeException('No token was set.');
-        }
+        $this->checkConfig();
 
         try {
             $this->logger->debug(
@@ -519,6 +606,8 @@ class PlexServer implements ServerInterface
 
     public function push(array $entities, DateTimeInterface|null $after = null): array
     {
+        $this->checkConfig();
+
         $requests = [];
 
         foreach ($entities as &$entity) {
@@ -1009,43 +1098,101 @@ class PlexServer implements ServerInterface
      */
     public function __destruct()
     {
-        if (!empty($this->cacheKey)) {
+        if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
             $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
         }
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
-    public function setState(
-        string $name,
-        UriInterface $url,
-        string|int|null $token = null,
-        array $persist = [],
-        array $opts = []
-    ): ServerInterface {
-        if (true === $this->loaded) {
-            throw new RuntimeException(
-                sprintf(
-                    '%s->setState(): Has already been called.',
-                    afterLast(__CLASS__, '\\')
-                )
+    private function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
+    {
+        if (true === $checkUrl && !($this->url instanceof UriInterface)) {
+            throw new RuntimeException(afterLast(__CLASS__, '\\') . ': No host was set.');
+        }
+
+        if (true === $checkToken && null === $this->token) {
+            throw new RuntimeException(afterLast(__CLASS__, '\\') . ': No token was set.');
+        }
+    }
+
+    private function getUserToken(int|string $userId): int|string|null
+    {
+        try {
+            $uuid = $this->getServerUUID();
+
+            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
+                'plex.tv'
+            )->withPath(sprintf('/api/v2/home/users/%s/switch', $userId));
+
+            $this->logger->debug(
+                sprintf('Requesting temp token for user id %s from %s.', $userId, $this->name),
+                ['url' => $url->getHost() . $url->getPath()]
             );
+
+            $response = $this->http->request('POST', (string)$url, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'X-Plex-Token' => $this->token,
+                    'X-Plex-Client-Identifier' => $uuid,
+                ],
+            ]);
+
+            if (201 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+
+                return null;
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+            $tempToken = ag($json, 'authToken', null);
+
+            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
+                'plex.tv'
+            )->withPath('/api/v2/resources')
+                ->withQuery(
+                    http_build_query(
+                        [
+                            'includeIPv6' => 1,
+                            'includeHttps' => 1,
+                            'includeRelay' => 1,
+                        ]
+                    )
+                );
+
+            $this->logger->debug(
+                sprintf('Requesting real server token for user id %s from %s.', $userId, $this->name),
+                ['url' => $url->getHost() . $url->getPath()]
+            );
+
+            $response = $this->http->request('GET', (string)$url, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'X-Plex-Token' => $tempToken,
+                    'X-Plex-Client-Identifier' => $uuid,
+                ],
+            ]);
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            foreach ($json ?? [] as $server) {
+                if (ag($server, 'clientIdentifier') !== $uuid) {
+                    continue;
+                }
+                return ag($server, 'accessToken');
+            }
+
+            return null;
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return null;
         }
-
-        $this->cacheKey = md5(__CLASS__ . '.' . $name . $url);
-
-        if ($this->cache->has($this->cacheKey)) {
-            $this->cacheData = $this->cache->get($this->cacheKey);
-        }
-
-        $this->name = $name;
-        $this->url = $url;
-        $this->token = $token;
-        $this->options = $opts;
-        $this->loaded = true;
-        $this->persist = $persist;
-
-        return $this;
     }
 }

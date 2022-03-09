@@ -34,7 +34,7 @@ class DirectMapperTest extends TestCase
 
         $this->storage = new PDOAdapter($logger);
         $this->storage->setUp(['dsn' => 'sqlite::memory:']);
-        $this->storage->migrations('up', $this->input, $this->output);
+        $this->storage->migrations('up');
 
         $this->mapper = new DirectMapper($logger, $this->storage);
         $this->mapper->setUp(['class' => new StateEntity([])]);

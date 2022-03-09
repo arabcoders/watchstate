@@ -6,7 +6,6 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Extends\CliLogger;
 use Exception;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -143,31 +142,18 @@ final class UnifyCommand extends Command
         foreach ($list as $serverName => $server) {
             $ref = ag($server, 'ref');
 
-            if (null !== Config::get("{$ref}.webhook.uuid", null)) {
+            if (null !== Config::get("{$ref}.uuid", null)) {
                 continue;
             }
 
-            $server = makeServer(Config::get($ref), $serverName);
-
-            if ($input->getOption('redirect-logger')) {
-                $server->setLogger(new CliLogger($output));
-            }
-
-            $uuid = $server->getServerUUID();
-
-            if (null === $uuid) {
-                $output->writeln(
-                    sprintf(
-                        '<error>Unable to get \'%s\' server unique id. Please manually update the config at \'%s\' under key of `webhook.uuid`</error>',
-                        $serverName,
-                        $config
-                    )
-                );
-
-                return self::FAILURE;
-            }
-
-            Config::save("{$ref}.webhook.uuid", $uuid);
+            $output->writeln(sprintf('<error>ERROR %s: does not have server unique id set.</error>', $serverName));
+            $output->writeln('<comment>Please run this command to update server info.</comment>');
+            $output->writeln(sprintf(commandContext() . 'servers:edit --uuid-from-server -- \'%s\' ', $serverName));
+            $output->writeln('<comment>Or manually set the uuid using the following command.</comment>');
+            $output->writeln(
+                sprintf(commandContext() . 'servers:edit --uuid=[SERVER_UNIQUE_ID] -- \'%s\' ', $serverName)
+            );
+            return self::FAILURE;
         }
 
         $apiToken = array_keys($keys ?? [])[0] ?? bin2hex(random_bytes($input->getOption('webhook-token-length')));

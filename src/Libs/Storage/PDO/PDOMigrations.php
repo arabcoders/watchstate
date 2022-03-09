@@ -4,37 +4,54 @@ declare(strict_types=1);
 
 namespace App\Libs\Storage\PDO;
 
-use App\Command;
 use App\Libs\Config;
 use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
 final class PDOMigrations
 {
     private string $path;
     private string $versionFile;
     private string $driver;
+    private array $files = [];
 
-    public function __construct(private PDO $pdo)
+    public function __construct(private PDO $pdo, private LoggerInterface $logger)
     {
         $this->path = __DIR__ . '/Migrations';
         $this->versionFile = Config::get('path') . '/db/pdo_migrations_version';
         $this->driver = $this->getDriver();
     }
 
-    public function up(InputInterface $input, OutputInterface $output): int
+    public function setLogger(LoggerInterface $logger): self
     {
-        if ($input->hasOption('fresh') && $input->getOption('fresh')) {
+        $this->logger = $logger;
+        return $this;
+    }
+
+    public function isMigrated(): bool
+    {
+        $version = $this->getVersion();
+
+        foreach ($this->parseFiles() as $migrate) {
+            if ($version >= ($migrate['id'] ?? 0)) {
+                continue;
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    public function up(array $opts = []): int
+    {
+        if (true === ($opts['fresh'] ?? false)) {
             $version = 0;
         } else {
             $version = $this->getVersion();
         }
-
-        $dir = StorageInterface::MIGRATE_UP;
 
         $run = 0;
 
@@ -43,62 +60,45 @@ final class PDOMigrations
                 continue;
             }
 
-            $run++;
-
-            if (!ag($migrate, $dir)) {
-                $output->writeln(
+            if (null === ag($migrate, StorageInterface::MIGRATE_UP, null)) {
+                $this->logger->debug(
                     sprintf(
-                        '<error>Migration #%d - %s has no %s. Skipping.</error>',
+                        'Migration #%d - %s has no up path, Skipping.',
                         ag($migrate, 'id'),
-                        ag($migrate, 'name'),
-                        $dir
-                    ),
-                    OutputInterface::VERBOSITY_DEBUG
+                        ag($migrate, 'name')
+                    )
                 );
+                continue;
             }
 
-            $output->writeln(
-                sprintf(
-                    '<info>Applying Migration #%d - %s (%s)</info>',
-                    ag($migrate, 'id'),
-                    ag($migrate, 'name'),
-                    $dir
-                )
-            );
+            $run++;
 
-            $data = ag($migrate, $dir);
+            $this->logger->info(sprintf('Applying Migration #%d - %s', ag($migrate, 'id'), ag($migrate, 'name')));
 
-            $output->writeln(
-                sprintf('<comment>Applying %s.</comment>', PHP_EOL . $data),
-                OutputInterface::VERBOSITY_DEBUG
-            );
-
-            $this->pdo->exec((string)$data);
+            $this->pdo->exec((string)ag($migrate, StorageInterface::MIGRATE_UP));
             $this->setVersion(ag($migrate, 'id'));
         }
 
-        $message = !$run ? sprintf('<comment>No migrations is needed. Version @ %d</comment>', $version) : sprintf(
-            '<info>Applied %s migrations. Version @ %d</info>',
-            $run,
-            $this->getVersion()
-        );
+        if (0 === $run) {
+            $this->logger->debug(sprintf('No migrations is needed. Version @ %d', $version));
+        } else {
+            $this->logger->info(sprintf('Applied (%d) migrations. Version is at number %d', $run, $this->getVersion()));
+        }
 
-        $output->writeln($message);
-
-        return Command::SUCCESS;
+        return 0;
     }
 
-    public function down(OutputInterface $output): int
+    public function down(): int
     {
-        $output->writeln('<comment>This driver does not support down migrations at this time.</comment>');
+        $this->logger->info('This driver does not support down migrations at this time.');
 
-        return Command::SUCCESS;
+        return 0;
     }
 
     /**
      * @throws Exception
      */
-    public function make(string $name, OutputInterface $output): string
+    public function make(string $name): string
     {
         $name = str_replace(chr(040), '_', $name);
 
@@ -124,7 +124,9 @@ final class PDOMigrations
         SQL
         );
 
-        $output->writeln(sprintf('<info>Created new Migration file at \'%s\'.</info>', $file));
+        $this->logger->info(
+            sprintf('Created new Migration file at \'%s\'.</>', $file)
+        );
 
         return $file;
     }
@@ -171,14 +173,10 @@ final class PDOMigrations
     {
         $migrations = [];
 
-        foreach ((array)glob($this->path . '/*.sql') as $file) {
-            if (!is_string($file) || false === ($f = realpath($file))) {
-                throw new RuntimeException(sprintf('Unable to get real path to \'%s\'', $file));
-            }
-
+        foreach ($this->getFiles() as $file) {
             [$type, $id, $name] = (array)preg_split(
                 '#^(\w+)_(\d+)_(.+)\.sql$#',
-                basename($f),
+                basename($file),
                 -1,
                 PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
             );
@@ -191,7 +189,7 @@ final class PDOMigrations
 
             [$up, $down] = (array)preg_split(
                 '/^-- #\s+?migrate_down\b/im',
-                (string)file_get_contents($f),
+                (string)file_get_contents($file),
                 -1,
                 PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
             );
@@ -203,11 +201,28 @@ final class PDOMigrations
                 'type' => $type,
                 'id' => $id,
                 'name' => $name,
-                'up' => $up,
-                'down' => $down,
+                StorageInterface::MIGRATE_UP => $up,
+                StorageInterface::MIGRATE_DOWN => $down,
             ];
         }
 
         return $migrations;
+    }
+
+    private function getFiles(): array
+    {
+        if (!empty($this->files)) {
+            return $this->files;
+        }
+
+        foreach ((array)glob($this->path . '/*.sql') as $file) {
+            if (!is_string($file) || false === ($f = realpath($file))) {
+                throw new RuntimeException(sprintf('Unable to get real path to \'%s\'', $file));
+            }
+
+            $this->files[] = $f;
+        }
+
+        return $this->files;
     }
 }

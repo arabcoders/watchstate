@@ -9,7 +9,7 @@ if [ -z "${WS_DATA_PATH}" ]; then
   WS_DATA_PATH="/config"
 fi
 
-if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ]; then
+if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}" ]; then
   LOGFILE="${WS_DATA_PATH}/logs/cron/${NOW}.log"
 
   if [ ! -d "${WS_DATA_PATH}/logs/cron/" ]; then

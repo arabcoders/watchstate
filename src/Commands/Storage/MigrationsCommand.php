@@ -22,13 +22,18 @@ final class MigrationsCommand extends Command
     {
         $this->setName('storage:migrations')
             ->setDescription('Update storage backend schema.')
-            ->addOption('extra', null, InputOption::VALUE_OPTIONAL, 'Extra options.', null)
             ->addOption('fresh', 'f', InputOption::VALUE_NONE, 'Start migrations from start.')
             ->addArgument('direction', InputArgument::OPTIONAL, 'Migrations path (up/down).', 'up');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        return $this->storage->migrations($input->getArgument('direction'), $input, $output);
+        $opts = [];
+
+        if ($input->getOption('fresh')) {
+            $opts['fresh'] = true;
+        }
+
+        return $this->storage->migrations($input->getArgument('direction'), $opts);
     }
 }

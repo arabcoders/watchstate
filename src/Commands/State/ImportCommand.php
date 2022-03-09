@@ -150,9 +150,13 @@ class ImportCommand extends Command
         }
 
         if (empty($list)) {
-            throw new RuntimeException(
-                $isCustom ? '--servers-filter/-s did not return any server.' : 'No server were found.'
+            $output->writeln(
+                sprintf(
+                    '<error>%s</error>',
+                    $isCustom ? '--servers-filter/-s did not return any servers.' : 'No servers were found.'
+                )
             );
+            return self::FAILURE;
         }
 
         $logger = null;

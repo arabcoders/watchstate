@@ -7,8 +7,6 @@ namespace App\Libs\Storage;
 use App\Libs\Entity\StateInterface;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
 interface StorageInterface
 {
@@ -94,34 +92,36 @@ interface StorageInterface
      * Migrate Backend Storage Schema.
      *
      * @param string $dir direction {@see MIGRATE_UP}, {@see MIGRATE_DOWN}
-     * @param InputInterface $input
-     * @param OutputInterface $output
      * @param array $opts
      *
      * @return mixed
      */
-    public function migrations(string $dir, InputInterface $input, OutputInterface $output, array $opts = []): mixed;
+    public function migrations(string $dir, array $opts = []): mixed;
+
+    /**
+     * Does the backend storage need to run migrations?
+     *
+     * @return bool
+     */
+    public function isMigrated(): bool;
 
     /**
      * Run Maintenance on backend storage.
      *
-     * @param InputInterface $input
-     * @param OutputInterface $output
      * @param array $opts
      * @return mixed
      */
-    public function maintenance(InputInterface $input, OutputInterface $output, array $opts = []): mixed;
+    public function maintenance(array $opts = []): mixed;
 
     /**
      * Make Migration.
      *
      * @param string $name
-     * @param OutputInterface $output
      * @param array $opts
      *
      * @return mixed can return migration file name in supported cases.
      */
-    public function makeMigration(string $name, OutputInterface $output, array $opts = []): mixed;
+    public function makeMigration(string $name, array $opts = []): mixed;
 
     /**
      * Inject Logger.

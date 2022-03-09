@@ -320,9 +320,15 @@ if (!function_exists('serveHttpRequest')) {
                     continue;
                 }
 
-                $uuid = ag($info, 'webhook.uuid', null);
+                $userId = ag($info, 'user_id', null);
+                $matchUser = true === ag($info, 'webhook.match.user') && null !== $userId;
+                if (true === $matchUser && $userId !== $request->getAttribute('USER_ID', null)) {
+                    continue;
+                }
 
-                if (null !== $uuid && $uuid !== $request->getAttribute('SERVER_ID', null)) {
+                $uuid = ag($info, 'uuid', null);
+                $matchUUID = true === ag($info, 'webhook.match.uuid') && null !== $uuid;
+                if (true === $matchUUID && $uuid !== $request->getAttribute('SERVER_ID', null)) {
                     continue;
                 }
 
@@ -485,6 +491,7 @@ if (!function_exists('makeServer')) {
             url:     new Uri(ag($server, 'url')),
             token:   ag($server, 'token', null),
             userId:  ag($server, 'user', null),
+            uuid:    ag($server, 'uuid', null),
             persist: ag($server, 'persist', []),
             options: ag($server, 'options', []),
         );
@@ -498,9 +505,20 @@ if (!function_exists('arrayToString')) {
 
         foreach ($arr as $key => $val) {
             if (is_object($val)) {
-                $val = spl_object_hash($val);
-            } elseif (is_array($val)) {
-                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES);
+                if (($val instanceof JsonSerializable)) {
+                    $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                } elseif (($val instanceof Stringable) || method_exists($val, '__toString')) {
+                    $val = (string)$val;
+                } else {
+                    $val = [
+                        spl_object_hash($val) => get_class($val),
+                        ...(array)$val
+                    ];
+                }
+            }
+
+            if (is_array($val)) {
+                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             } else {
                 $val = $val ?? 'None';
             }
@@ -509,5 +527,16 @@ if (!function_exists('arrayToString')) {
         }
 
         return implode($separator, $list);
+    }
+}
+
+if (!function_exists('commandContext')) {
+    function commandContext(): string
+    {
+        if (env('IN_DOCKER')) {
+            return sprintf('docker exec -ti %s console ', env('CONTAINER_NAME', 'watchstate'));
+        }
+
+        return ($_SERVER['argv'][0] ?? 'php console') . ' ';
     }
 }

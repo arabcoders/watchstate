@@ -10,6 +10,7 @@ use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Closure;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
@@ -26,6 +27,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
+use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
@@ -36,6 +38,21 @@ class KernelConsole
 
     public function __construct()
     {
+        // -- Load user custom variables.
+        (function () {
+            if (null === ($dataPath = env('WS_DATA_PATH', null))) {
+                $dataPath = env('IN_DOCKER') ? '/config' : __DIR__ . '/../../var';
+            }
+
+            if (!is_writable($dataPath)) {
+                throw new RuntimeException(sprintf('Unable to write to data directory \'%s\'.', $dataPath));
+            }
+
+            if (file_exists($dataPath . '/config/env')) {
+                (new Dotenv())->overload($dataPath . '/config/env');
+            }
+        })();
+
         Container::init();
 
         Config::init(require __DIR__ . '/../../config/config.php');
@@ -287,7 +304,7 @@ class KernelConsole
 
     private function setupStorage(Logger $logger): void
     {
-        $storage = Config::get('storage.type', 'PDOStorage');
+        $storage = Config::get('storage.type', PDOAdapter::class);
 
         if (class_exists($storage)) {
             $classFQN = $storage;
@@ -312,9 +329,21 @@ class KernelConsole
 
         Container::add(
             StorageInterface::class,
-            fn() => Container::get(ReflectionContainer::class)?->get($classFQN)?->setup(
-                Config::get('storage.opts', [])
-            ),
+            function () use ($classFQN) {
+                $pdo = Container::get(ReflectionContainer::class)?->get($classFQN)?->setup(
+                    Config::get('storage.opts', [])
+                );
+
+                if (null === $pdo) {
+                    throw new RuntimeException(sprintf('Unable to create instance of \'%s\' class.', $classFQN));
+                }
+
+                if (true !== $pdo->isMigrated()) {
+                    $pdo->migrations(StorageInterface::MIGRATE_UP);
+                }
+
+                return $pdo;
+            },
         );
     }
 

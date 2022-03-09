@@ -149,9 +149,13 @@ class ExportCommand extends Command
         }
 
         if (empty($list)) {
-            throw new RuntimeException(
-                $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No server were found.'
+            $output->writeln(
+                sprintf(
+                    '<error>%s</error>',
+                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No server were found.'
+                )
             );
+            return self::FAILURE;
         }
 
         if (count($list) >= 1 && $input->getOption('mapper-preload')) {

@@ -1,37 +1,58 @@
-my_jellyfin_server:
-  type: jellyfin
-  url: 'http://172.23.0.12:8096'
-  token: api-token
-  user: user-id
-  export:
-    enabled: true
-  import:
-    enabled: true
-  webhook:
-    enabled: true
-    push: true
+my_home_server: # *DO NOT* use spaces for server name
+  # Your Server type.
+  type: 'jellyfin|emby|plex'
+  # Your server api url.
+  url: 'https://mymedia.example.com' # The URL for the media server api
+  # User API Token.
+  # ----
+  # Jellyfin: Create API token via (Dashboard > Advanced > API keys > +)
+  # Emby: Create API token via (Manage Emby server > Advanced > API keys > + New Api Key)
+  # Plex: see on how to get your plex-token https://support.plex.tv/articles/204059436
+  token: 'user-api-token'
 
-my_emby_server:
-  type: emby
-  url: 'http://172.23.0.13:8096'
-  token: api-token
-  user: user-id
-  export:
-    enabled: true
-  import:
-    enabled: true
-  webhook:
-    enabled: true
-    push: true
+  # Set your server User ID if needed.
+  # ----
+  # Jellyfin : Dashboard > Server > Users > click your user > copy the userId= value
+  # Emby     : Manage Emby server > Server > Users > click your user > copy the userId= value
+  # For Plex :
+  # there is no easy way to figure out the user id, and usually there is no need to set user id for plex unless
+  # you have managed users or have shared libraries.
+  # to know more please read the MULTIUSER.md file.
+  user: 'user-id'
 
-my_plex_server:
-  type: plex
-  url: 'http://172.23.0.11:32400'
-  token: X-Plex-Token
+  # Server unique id.
+  # can be generated using 'console servers:edit --uuid-from-server -- my_home_server'
+  uuid: 'random_string' # Server unique identifier.
+
   export:
+    # Enable export to this server set false to disable.
     enabled: true
   import:
+    # Enable import from this server set false to disable.
     enabled: true
   webhook:
-    enabled: true
-    push: true
+    # Server specific api key to link request to this specific entry.
+    token: 'random_string'
+    # enable receiving webhook events from this server.
+    import: true|false
+    # Enable push state back to this server when watchstate tool receive webhook event.
+    push: true|false
+    # Require conditions to be met when webhook request is received.
+    match:
+      # Enable/Disable the checking of server unique id in webhook context.
+      uuid: true|false
+      # Enable/Disable the checking of user id in webhook context.
+      user: true|false
+  # options that we don't think it's needed but may help some specific cases.
+  options:
+    # By default, we do not import unwatched state, except in webhook context.
+    # To enable importing unwatched episodes via state:import set this to true. or use --import-unwatched flag.
+    importUnwatched: true|false
+    # We respect the server watch date. to override the check, set this to true
+    exportIgnoreDate: true|false
+    # HTTP client request options.
+    # Usually you should not alter any of those unless you know what you are doing.
+    # remove this if you don't need them, they are here for example’s sake only.
+    # for more info visit:  https://symfony.com/doc/current/reference/configuration/framework.html#http-client
+    client:
+      http_version: 1.0 # For example can be either 1.0 or 2.0

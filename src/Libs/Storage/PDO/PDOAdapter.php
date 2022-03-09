@@ -15,8 +15,6 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
 final class PDOAdapter implements StorageInterface
 {
@@ -87,7 +85,10 @@ final class PDOAdapter implements StorageInterface
     public function insert(StateInterface $entity): StateInterface
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
         try {
@@ -147,7 +148,10 @@ final class PDOAdapter implements StorageInterface
     public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
         $arr = [];
@@ -172,7 +176,10 @@ final class PDOAdapter implements StorageInterface
     public function update(StateInterface $entity): StateInterface
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
         try {
@@ -208,7 +215,10 @@ final class PDOAdapter implements StorageInterface
     public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
         if (null === $class) {
@@ -269,7 +279,10 @@ final class PDOAdapter implements StorageInterface
     public function remove(StateInterface $entity): bool
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
         if (null === $entity->id && !$entity->hasGuids()) {
@@ -298,7 +311,10 @@ final class PDOAdapter implements StorageInterface
     public function commit(array $entities): array
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
         return $this->transactional(function () use ($entities) {
@@ -343,36 +359,54 @@ final class PDOAdapter implements StorageInterface
         });
     }
 
-    public function migrations(string $dir, InputInterface $input, OutputInterface $output, array $opts = []): mixed
+    public function migrations(string $dir, array $opts = []): mixed
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
-        $class = new PDOMigrations($this->pdo);
+        $class = new PDOMigrations($this->pdo, $this->logger);
 
         return match (strtolower($dir)) {
-            StorageInterface::MIGRATE_UP => $class->up($input, $output),
-            StorageInterface::MIGRATE_DOWN => $class->down($output),
+            StorageInterface::MIGRATE_UP => $class->up(),
+            StorageInterface::MIGRATE_DOWN => $class->down(),
             default => throw new StorageException(sprintf('Unknown direction \'%s\' was given.', $dir), 91),
         };
+    }
+
+    public function isMigrated(): bool
+    {
+        if (null === $this->pdo) {
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
+        }
+
+        return (new PDOMigrations($this->pdo, $this->logger))->isMigrated();
     }
 
     /**
      * @throws Exception
      */
-    public function makeMigration(string $name, OutputInterface $output, array $opts = []): mixed
+    public function makeMigration(string $name, array $opts = []): mixed
     {
         if (null === $this->pdo) {
-            throw new StorageException('Setup(): method was not called.', StorageException::SETUP_NOT_CALLED);
+            throw new StorageException(
+                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
+                StorageException::SETUP_NOT_CALLED
+            );
         }
 
-        return (new PDOMigrations($this->pdo))->make($name, $output);
+        return (new PDOMigrations($this->pdo, $this->logger))->make($name);
     }
 
-    public function maintenance(InputInterface $input, OutputInterface $output, array $opts = []): mixed
+    public function maintenance(array $opts = []): mixed
     {
-        return (new PDOMigrations($this->pdo))->runMaintenance();
+        return (new PDOMigrations($this->pdo, $this->logger))->runMaintenance();
     }
 
     public function setLogger(LoggerInterface $logger): StorageInterface

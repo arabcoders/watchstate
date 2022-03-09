@@ -24,7 +24,7 @@ final class MaintenanceCommand extends Command
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $this->storage->maintenance($input, $output);
+        $this->storage->maintenance();
 
         return self::SUCCESS;
     }
