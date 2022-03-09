@@ -8,7 +8,6 @@ use App\Command;
 use App\Libs\Storage\StorageInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 final class MakeCommand extends Command
@@ -21,14 +20,15 @@ final class MakeCommand extends Command
     protected function configure(): void
     {
         $this->setName('storage:make')
-            ->setDescription('Create Storage backend migration.')
-            ->addOption('extra', null, InputOption::VALUE_OPTIONAL, 'Extra options.', null)
+            ->setDescription('Create storage backend migration.')
             ->addArgument('name', InputArgument::REQUIRED, 'Migration name.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $this->storage->makeMigration($input->getArgument('name'), $output);
+        $file = $this->storage->makeMigration($input->getArgument('name'));
+
+        $output->writeln(sprintf('<info>Created new migration at \'%s\'.</info>', $file));
 
         return self::SUCCESS;
     }
