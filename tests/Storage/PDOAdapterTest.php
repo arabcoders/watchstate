@@ -34,7 +34,7 @@ class PDOAdapterTest extends TestCase
 
         $this->storage = new PDOAdapter(new CliLogger($this->output));
         $this->storage->setUp(['dsn' => 'sqlite::memory:']);
-        $this->storage->migrations('up', $this->input, $this->output);
+        $this->storage->migrations('up');
     }
 
     /** StorageInterface::setUp */
@@ -278,13 +278,13 @@ class PDOAdapterTest extends TestCase
         $this->expectException(StorageException::class);
         $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
         $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->migrations('f', new ArrayInput([]), new NullOutput());
+        $storage->migrations('f');
     }
 
     public function test_migrations_call_with_wrong_direction_exception(): void
     {
         $this->expectException(StorageException::class);
         $this->expectExceptionCode(91);
-        $this->storage->migrations('not_dd', new ArrayInput([]), new NullOutput());
+        $this->storage->migrations('not_dd');
     }
 }
