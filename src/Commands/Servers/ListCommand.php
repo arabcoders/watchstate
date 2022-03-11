@@ -9,6 +9,7 @@ use App\Libs\Config;
 use Exception;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -19,8 +20,8 @@ final class ListCommand extends Command
     protected function configure(): void
     {
         $this->setName('servers:list')
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
-            ->setDescription('List active servers.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->setDescription('List servers.');
     }
 
     /**
@@ -29,11 +30,13 @@ final class ListCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('use-config'))) {
-            if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                throw new RuntimeException('Unable to read data given config.');
+        if (($config = $input->getOption('config'))) {
+            try {
+                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+            } catch (RuntimeException $e) {
+                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                return self::FAILURE;
             }
-            Config::save('servers', Yaml::parseFile($config));
         }
 
         $list = [];
@@ -41,31 +44,47 @@ final class ListCommand extends Command
         $table = new Table($output);
         $table->setHeaders(
             [
-                'Name',
-                'Type',
-                'URL',
-                'WH Import',
-                'WH Push',
-                'Last Manual Import at',
-                'Last Manual Export at'
+                'Server Name',
+                'Server Type',
+                'Webhook: Import',
+                'Webhook: Push',
+                'Scheduled Task: Import',
+                'Scheduled Task: Export'
             ]
         );
 
-        foreach (Config::get('servers', []) as $name => $server) {
+        $x = 0;
+        $servers = Config::get('servers', []);
+        $count = count($servers);
+
+        foreach ($servers as $name => $server) {
+            $x++;
+            if (true === ag($server, 'import.enabled')) {
+                $importStatus = ($date = ag($server, 'import.lastSync')) ? makeDate($date) : 'Never';
+            } else {
+                $importStatus = 'Disabled';
+            }
+            if (true === ag($server, 'export.enabled')) {
+                $exportStatus = ($date = ag($server, 'export.lastSync')) ? makeDate($date) : 'Never';
+            } else {
+                $exportStatus = 'Disabled';
+            }
+
             $list[] = [
                 $name,
-                ag($server, 'type'),
-                ag($server, 'url'),
+                ucfirst(ag($server, 'type')),
                 ag($server, 'webhook.token') && ag($server, 'webhook.import') ? 'Enabled' : 'Disabled',
                 true === ag($server, 'webhook.push') ? 'Enabled' : 'Disabled',
-                ($lastImportSync = ag($server, 'import.lastSync')) ? makeDate($lastImportSync) : 'Never',
-                ($lastExportSync = ag($server, 'export.lastSync')) ? makeDate($lastExportSync) : 'Never',
+                $importStatus,
+                $exportStatus,
             ];
+
+            if ($x < $count) {
+                $list[] = new TableSeparator();
+            }
         }
 
-        $table->setRows($list);
-
-        $table->render();
+        $table->setStyle('box')->setRows($list)->render();
 
         return self::SUCCESS;
     }

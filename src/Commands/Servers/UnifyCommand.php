@@ -6,29 +6,19 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
-use Exception;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 
 final class UnifyCommand extends Command
 {
     protected function configure(): void
     {
-        $supported = array_keys(Config::get('supported', []));
-
         $this->setName('servers:unify')
             ->setDescription('Unify [ServerType] webhook API key.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption(
-                'webhook-token-length',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Change default API key random generator length.',
-                (int)Config::get('webhook.tokenLength', 16)
-            )
             ->addOption(
                 'servers-filter',
                 's',
@@ -36,28 +26,35 @@ final class UnifyCommand extends Command
                 'Only Unify selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
-            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.')
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument(
                 'type',
                 InputArgument::REQUIRED,
-                sprintf('Server type to unify. Expecting one of [%s]', implode('|', $supported)),
+                sprintf(
+                    'Server type to unify. Expecting one of [%s]',
+                    implode('|', array_keys(Config::get('supported', [])))
+                ),
             );
     }
 
-    /**
-     * @throws Exception
-     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('use-config'))) {
-            if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                $output->writeln('<error>Unable to read data from given config.</error>');
+        $custom = false;
+        if (($config = $input->getOption('config'))) {
+            try {
+                $this->checkCustomServersFile($config);
+                $custom = true;
+                Config::save('servers', Yaml::parseFile($config));
+            } catch (\RuntimeException $e) {
+                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                return self::FAILURE;
             }
-            Config::save('servers', Yaml::parseFile($config));
         } else {
             $config = Config::get('path') . '/config/servers.yaml';
+            if (!file_exists($config)) {
+                touch($config);
+            }
         }
 
         $type = strtolower((string)$input->getArgument('type'));
@@ -111,7 +108,12 @@ final class UnifyCommand extends Command
             $list[$serverName] = $server;
 
             if (null === ($apiToken = ag($server, 'webhook.token', null))) {
-                $apiToken = bin2hex(random_bytes($input->getOption('webhook-token-length')));
+                try {
+                    $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
+                } catch (Throwable $e) {
+                    $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                    return self::FAILURE;
+                }
             }
 
             $keys[$apiToken] = 1;
@@ -138,7 +140,7 @@ final class UnifyCommand extends Command
             return self::SUCCESS;
         }
 
-        // -- check for uuid before unifying.
+        // -- check for server unique identifier before unifying.
         foreach ($list as $serverName => $server) {
             $ref = ag($server, 'ref');
 
@@ -148,22 +150,23 @@ final class UnifyCommand extends Command
 
             $output->writeln(sprintf('<error>ERROR %s: does not have server unique id set.</error>', $serverName));
             $output->writeln('<comment>Please run this command to update server info.</comment>');
-            $output->writeln(sprintf(commandContext() . 'servers:edit --uuid-from-server -- \'%s\' ', $serverName));
-            $output->writeln('<comment>Or manually set the uuid using the following command.</comment>');
-            $output->writeln(
-                sprintf(commandContext() . 'servers:edit --uuid=[SERVER_UNIQUE_ID] -- \'%s\' ', $serverName)
-            );
+            $output->writeln(sprintf(commandContext() . 'servers:manage \'%s\' ', $serverName));
             return self::FAILURE;
         }
 
-        $apiToken = array_keys($keys ?? [])[0] ?? bin2hex(random_bytes($input->getOption('webhook-token-length')));
+        try {
+            $apiToken = array_keys($keys ?? [])[0] ?? bin2hex(random_bytes(Config::get('webhook.tokenLength')));
+        } catch (Throwable $e) {
+            $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+            return self::FAILURE;
+        }
 
         foreach ($list as $server) {
             $ref = ag($server, 'ref');
             Config::save("{$ref}.webhook.token", $apiToken);
         }
 
-        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+        if (false === $custom) {
             copy($config, $config . '.bak');
         }
 
