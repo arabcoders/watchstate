@@ -33,10 +33,6 @@ fi
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
 
-if [ ! -f "/config/config/servers.yaml" ]; then
-  /usr/bin/console config:dump servers
-fi
-
 if [ ! -z "${WS_DISABLE_HTTP}" ] && [ -f "/etc/caddy/Caddyfile" ]; then
   caddy start -config /etc/caddy/Caddyfile
 fi
