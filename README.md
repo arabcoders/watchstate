@@ -29,13 +29,13 @@ create your `docker-compose.yaml` file
 version: '3.3'
 services:
     watchstate:
-        image: arabcoders/watchstate:latest
+        image: arabcoders/watchstate:dev-latest
         container_name: watchstate
         restart: unless-stopped
         environment:
-            WS_CRON_PUSH: 1
-            WS_CRON_IMPORT: 1
-            WS_CRON_EXPORT: 1
+            WS_CRON_PUSH: 1      # Enable push scheduled task.
+            WS_CRON_IMPORT: 1    # Enable import scheduled task.
+            WS_CRON_EXPORT: 1    # Enable export scheduled task.
             WS_UID: ${UID:-1000} # Set container operation user id.
             WS_GID: ${GID:-1000} # Set container operation group id.
         ports:
