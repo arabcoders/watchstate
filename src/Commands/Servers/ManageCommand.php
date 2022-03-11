@@ -59,7 +59,7 @@ final class ManageCommand extends Command
             }
         } else {
             $config = Config::get('path') . '/config/servers.yaml';
-            if (file_exists($config)) {
+            if (!file_exists($config)) {
                 touch($config);
             }
             $servers = Config::get('servers', []);
