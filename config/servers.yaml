@@ -21,7 +21,6 @@ my_home_server: # *DO NOT* use spaces for server name
   user: 'user-id'
 
   # Server unique id.
-  # can be generated using 'console servers:edit --uuid-from-server -- my_home_server'
   uuid: 'random_string' # Server unique identifier.
 
   export:

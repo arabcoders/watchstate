@@ -33,12 +33,15 @@ services:
         container_name: watchstate
         restart: unless-stopped
         environment:
+            WS_CRON_PUSH: 1
+            WS_CRON_IMPORT: 1
+            WS_CRON_EXPORT: 1
             WS_UID: ${UID:-1000} # Set container operation user id.
             WS_GID: ${GID:-1000} # Set container operation group id.
         ports:
             - "8081:80" # webhook listener port
         volumes:
-            - ./:/config:rw # mount current directory to container /config directory.
+            - ${PWD}/:/config:rw # mount current directory to container /config directory.
 ```
 
 After creating your docker-compose file, start the container.
@@ -49,13 +52,22 @@ $ docker-compose up -d
 
 # First time
 
-You have to set up your servers in `config/servers.yaml` you will have examples inside the file, after editing the file
-remove the unused servers examples. after configuring your servers you should import your current watch state by running
-the following command.
+After starting the container, you have to add your media servers, to do so run the following command
+
+```bash
+$ docker exec -ti watchstate console servers:manage [SERVER_NAME] --add
+```
+
+This command will ask you for some questions to add your servers, you can run the command as many times as you want, if
+you want to edit the config again or if you made mistake just run the same command without `--add` flag.
+
+After adding your servers, You should import your current watch state by running the following command.
 
 ```bash
 $ docker exec -ti watchstate console state:import -vvrm --mapper-preload
 ```
+
+---
 
 #### TIP
 
@@ -71,15 +83,21 @@ to update the watch state.
 
 To start receiving webhook events from servers you need to do few more steps.
 
-# Steps to enable webhook receivers
+# Enable Webhooks events for specific server.
 
-Run the following commands to generate api key for each server
+To see the server specific api key run the following command
 
-```sh
-$ docker exec -ti watchstate console servers:edit [SERVER_NAME] --webhook-import=enable --webhook-push=enable --webhook-token-generate
-
-Server '[SERVER_NAME]' Webhook API key is: random_string
+```bash
+$ docker exec -ti watchstate console servers:view --servers-filter [SERVER_NAME] -- webhook.token 
 ```
+
+If you see 'Not configured, or invalid key.' or empty value. run the following command
+
+```bash
+$ docker exec -ti watchstate console servers:manage [SERVER_NAME] --regenerate-api-key
+```
+
+Run the other command again to see your api key.
 
 ---
 
@@ -94,8 +112,8 @@ Plex global webhook API key is: [random_string]
 ```
 
 The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
-identify the servers, The unify command will do the necessary adjustments to `servers.yaml` to handle multi plex setup.
-for more information run.
+identify the servers, The unify command will do the necessary adjustments handle multi plex server setup. for more
+information run.
 
 ```bash
 $ docker exec -ti watchstate console help servers:unify 
@@ -105,10 +123,11 @@ This command is not limited to plex, you can unify API key for all supported bac
 
 ---
 
-If you don't want to use webhook and want to rely on manual polling the servers for state change, then set the value
-of `WS_CRON_IMPORT` to `1`. By default, we run import every hour. However, you can change the schedule by adding another
-variable `WS_CRON_IMPORT_AT` and set it value to valid cron timing. for example, `0 */2 * * *` it will run every two
-hours instead of 1 hour.
+If you don't want to use webhook and want to rely on scheduled task for importing, then set the value
+of `WS_CRON_IMPORT` to `1`. By default, we run import the timer is set to run every hour. However, you can change the
+scheduled task timer by adding another variable `WS_CRON_IMPORT_AT` and set it value to valid cron expression. for
+example, `0 */2 * * *` it will run every two hours instead of 1 hour. beware, this operation is somewhat costly as it's
+pulls the entire server library.
 
 # Export watch state
 
@@ -124,79 +143,9 @@ to sync specific server/s, use the `--servers-filter` which accept comma seperat
 $ docker exec -ti watchstate console state:export -vvr --mapper-preload --servers-filter 'server1,server2' 
 ```
 
-If you want to automate the exporting of your watch state back to servers, then set the value of `WS_CRON_EXPORT` to `1`
-. By default, we run export every 90 minutes. However, you can change the schedule by adding another variable
-called `WS_CRON_EXPORT_AT` and set its value to valid cron expression. for example, `0 */3 * * *` it will run every
-three hours instead of 90 minutes.
-
-# Memory usage (Import)
-
-The default mapper we use is called `MemoryMapper` this mapper store the entire state in memory during import operation,
-by doing so we gain massive speed up. However, this approach has drawbacks mainly **large memory usage**. Depending on
-your media count, it might use 1GB+ or more of memory. Tests done on 2k movies and 70k episodes and 4 servers. Of course
-the memory will be freed as as as the comparisons is done.
-
-However, If you are on a memory constraint system, there is an alternative mapper implementation called `DirectMapper`
-, this implementation works directly via db the only thing stored in memory is the api call body. which get removed as
-soon as it's parsed. The drawbacks for this mapper is that it's really slow for large libraries. It has to do 3x call to
-db for each item. you can use '--storage-pdo-single-transaction' to speed it up a little, but it is still slower by
-factor of 2x or more compared to `MemoryMapper`.
-
-To see memory usage during the operation run the import command with following flags. `-vvvrm` these flags will redirect
-logger output, log memory usage and print them to the screen.
-
-``bash docker exec -ti watchstate console state:import -vvvrm
-``
-
-## How to change Import mapper.
-
-Set the environment variable `WS_MAPPER_IMPORT` to `DirectMapper`
-
-# Servers.yaml
-
-Example of working server. You can have as many servers as you want.
-
-```yaml
-my_home_server: # *DO NOT* use spaces for server name,
-    type: jellyfin|emby|plex # Choose one
-    url: 'https://mymedia.example.com' # The URL for the media server api
-    # User API Token.
-    # ----
-    # Jellyfin: Create API token via (Dashboard > Advanced > API keys > +)
-    # Emby: Create API token via (Manage Emby server > Advanced > API keys > + New Api Key)
-    # Plex: see on how to get your plex-token https://support.plex.tv/articles/204059436
-    token: user-api-token
-    # Get your user ID.
-    # ----
-    # after adding the sever you can run
-    # console servers:remote --list-users -- my_home_server    
-    # Jellyfin : Dashboard > Server > Users > click your user > copy the userId= value
-    # Emby: Manage Emby server > Server > Users > click your user > copy the userId= value
-    # For Plex: 
-    # if you're only using single account to access your library, then there is no need to set this up,
-    # However, if you are using managed users, please run 'console servers:remote --list-users -- [SERVER_NAME]'
-    # and set the reported user id from there. as plex uses different IDs if you have managed users or not.
-    # for typical 1 user setup, the ID usually 1.
-    user: user-id
-    # Server Unique ID. can be generated using 'console servers:edit --uuid-from-server -- my_home_server'    
-    uuid: 'random_string' # Server unique identifier.
-    export:
-        enabled: true # Enable export.
-    import:
-        enabled: true # Enable import.
-    webhook:
-        import: true|false # enable receiving webhook events from this server.
-        token: 'random_string' # Server specific api key.
-        push: true|false # Enable push state back to this server when watchstate tool receive webhook event.
-        match:
-            uuid: true|false # ignore webhook request if the server unique id does not match the saved uuid. (disabled if uuid: is not set). 
-            user: true|false # ignore webhook request if the reported user id does not match saved user.(disabled if user: is not set).
-    options:
-        importUnwatched: true|false # By default, We do not import unwatched state to enable it set to true. 
-        exportIgnoreDate: true|false # By default, we respect the server watch date. To override the check, set this to true.
-        client: # underlying http client settings https://symfony.com/doc/current/reference/configuration/framework.html#http-client
-            http_version: 1.0|2.0 # Change HTTP Protocol used.
-```
+To enable the export scheduled task set the value of `WS_CRON_EXPORT` to `1`. By default, we run export every 90
+minutes. However, you can change the schedule by adding another variable called `WS_CRON_EXPORT_AT` and set its value to
+valid cron expression. for example, `0 */3 * * *` it will run every three hours instead of 90 minutes.
 
 # Start receiving Webhook Events.
 
@@ -217,7 +166,6 @@ server {
         proxy_set_header X-Forwarded-Proto      $scheme;
         proxy_set_header X-Forwarded-Protocol   $scheme;
         proxy_set_header X-Forwarded-Host       $http_host;
-        proxy_set_header Upgrade                $http_upgrade;
         proxy_pass http://localhost:8081/;
     }
 }
@@ -308,6 +256,21 @@ Go to your plex WebUI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 
 Click `Save Changes`
 
+# Webhook limitations
+
+# Plex
+
+Does not send webhooks events for "marked as watched/unwatched", or you added more than 1 item at time i.e. folder
+import.
+
+# Emby
+
+Emby does not send webhooks events for newly added items.
+
+# Jellyfin
+
+None that we are aware of.
+
 # FAQ
 
 ---
@@ -336,3 +299,9 @@ Note: for Plex managed users you can log in via managed user and then extract th
 userId for plex)
 
 For jellyfin/emby, you can use same api-token and just replace the userId.
+
+### Q3: Sometimes episodes/movies don't make to webhook receiver
+
+as stated in webhook limitation sometimes servers don't make it easy to receive those events, as such, to complement
+webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to re-sync the
+state of map of server guids, as webhook push support rely entirely on local data of each server.

@@ -69,4 +69,41 @@ class Command extends BaseCommand
     {
         return self::SUCCESS;
     }
+
+    /**
+     * Check Given servers config.
+     *
+     * @param string $config custom servers.yaml file.
+     * @return string
+     *
+     * @throws RuntimeException if there is problem with given config.
+     */
+    protected function checkCustomServersFile(string $config): string
+    {
+        if (!file_exists($config) || !is_file($config)) {
+            throw new RuntimeException(
+                sprintf('ERROR: Config file \'%s\' does not exists.', $config)
+            );
+        }
+
+        if (!is_readable($config)) {
+            throw new RuntimeException(
+                sprintf(
+                    'ERROR: Unable to read config file \'%s\'. (Check Permissions)',
+                    $config
+                )
+            );
+        }
+
+        if (!is_writable($config)) {
+            throw new RuntimeException(
+                sprintf(
+                    'ERROR: Unable to edit config file \'%s\'. (Check Permissions)',
+                    $config
+                )
+            );
+        }
+
+        return $config;
+    }
 }

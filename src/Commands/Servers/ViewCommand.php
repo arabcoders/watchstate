@@ -9,6 +9,7 @@ use App\Libs\Config;
 use Exception;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -20,7 +21,7 @@ final class ViewCommand extends Command
     protected function configure(): void
     {
         $this->setName('servers:view')
-            ->setDescription('View Server/s settings.')
+            ->setDescription('View Servers settings.')
             ->addOption(
                 'servers-filter',
                 's',
@@ -28,11 +29,11 @@ final class ViewCommand extends Command
                 'View selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,
-                'Can be any key from servers yaml, use dot notion to access sub keys, for example webhook.token'
+                'Can be any key from config, use dot notion to access sub keys, for example "webhook.token"'
             );
     }
 
@@ -42,11 +43,13 @@ final class ViewCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('use-config'))) {
-            if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                $output->writeln('<error>Unable to read data given config.</error>');
+        if (($config = $input->getOption('config'))) {
+            try {
+                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+            } catch (RuntimeException $e) {
+                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                return self::FAILURE;
             }
-            Config::save('servers', Yaml::parseFile($config));
         }
 
         $list = [];
@@ -67,8 +70,7 @@ final class ViewCommand extends Command
                 continue;
             }
 
-            $server['name'] = $serverName;
-            $list[$serverName] = $server;
+            $list[$serverName] = ['name' => $serverName, ...$server];
         }
 
         if (empty($list)) {
@@ -77,17 +79,26 @@ final class ViewCommand extends Command
             );
         }
 
+        $x = 0;
+        $count = count($list);
+
         $rows = [];
         foreach ($list as $serverName => $server) {
+            $x++;
             $rows[] = [
                 $serverName,
-                Yaml::dump(ag($server, $filter, 'Not configured, or invalid key.'), 8, 2)
+                trim(Yaml::dump(ag($server, $filter, 'Not configured, or invalid key.'), 8, 2))
             ];
+
+            if ($x < $count) {
+                $rows[] = new TableSeparator();
+            }
         }
 
-        (new Table($output))->setHeaders(['Server', 'Filter: ' . (empty($filter) ? 'None' : $filter)])->setRows(
-            $rows
-        )->render();
+        (new Table($output))->setStyle('box')
+            ->setHeaders(['Server', 'Filter: ' . (empty($filter) ? 'None' : $filter)]
+            )->setRows($rows)
+            ->render();
 
         return self::SUCCESS;
     }

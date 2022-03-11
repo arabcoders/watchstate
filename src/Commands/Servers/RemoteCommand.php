@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Servers\ServerInterface;
+use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,23 +22,25 @@ final class RemoteCommand extends Command
     protected function configure(): void
     {
         $this->setName('servers:remote')
-            ->setDescription('Get info from server.')
+            ->setDescription('Get info from the remote server.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
             ->addOption('list-users', null, InputOption::VALUE_NONE, 'List Server users.')
             ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
             ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('use-config'))) {
-            if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                $output->writeln('<error>Unable to read data given config.</error>');
+        if (($config = $input->getOption('config'))) {
+            try {
+                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+            } catch (RuntimeException $e) {
+                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                return self::FAILURE;
             }
-            Config::save('servers', Yaml::parseFile($config));
         }
 
         $name = $input->getArgument('name');
