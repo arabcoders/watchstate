@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Servers\ServerInterface;
+use JsonException;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
@@ -16,6 +17,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 final class RemoteCommand extends Command
 {
@@ -31,6 +33,10 @@ final class RemoteCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
+    /**
+     * @throws ExceptionInterface
+     * @throws JsonException
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
@@ -68,17 +74,20 @@ final class RemoteCommand extends Command
         }
 
         if ($input->getOption('list-users') || $input->getOption('list-users-with-tokens')) {
-            $this->listUsers($input, $output, $server, $config);
+            $this->listUsers($input, $output, $server);
         }
 
         return self::SUCCESS;
     }
 
+    /**
+     * @throws JsonException
+     * @throws ExceptionInterface
+     */
     private function listUsers(
         InputInterface $input,
         OutputInterface $output,
         ServerInterface $server,
-        array $config = []
     ): void {
         $opts = [];
 
@@ -87,17 +96,6 @@ final class RemoteCommand extends Command
         }
 
         $users = $server->getUsersList($opts);
-
-        if (null === $users) {
-            $output->writeln(
-                sprintf(
-                    '<error>%s: \'%s\' Does not support users concept.</error>',
-                    ag($config, 'type'),
-                    ag($config, 'name'),
-                )
-            );
-            return;
-        }
 
         if (count($users) < 1) {
             $output->writeln('<comment>No users reported by server.</comment>');

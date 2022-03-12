@@ -8,9 +8,11 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use DateTimeInterface;
+use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 interface ServerInterface
@@ -118,6 +120,9 @@ interface ServerInterface
      * @param bool $forceRefresh force read uuid from server.
      *
      * @return int|string|null
+     *
+     * @throws JsonException May throw if json decoding fails.
+     * @throws ExceptionInterface May be thrown if there is HTTP request errors.
      */
     public function getServerUUID(bool $forceRefresh = false): int|string|null;
 
@@ -126,7 +131,10 @@ interface ServerInterface
      *
      * @param array $opts
      *
-     * @return array|null null if not implemented or backend does not support users.
+     * @return array empty error if not supported.
+     *
+     * @throws JsonException May throw if json decoding fails.
+     * @throws ExceptionInterface May be thrown if there is HTTP request errors.
      */
-    public function getUsersList(array $opts = []): array|null;
+    public function getUsersList(array $opts = []): array;
 }
