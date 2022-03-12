@@ -34,10 +34,16 @@ final class ManageCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        if ($input->getOption('no-interaction')) {
+        if (function_exists('stream_isatty') && defined('STDERR')) {
+            $tty = stream_isatty(STDERR);
+        } else {
+            $tty = true;
+        }
+
+        if (false === $tty || $input->getOption('no-interaction')) {
             $output->writeln('<error>ERROR: This command require interaction.</error>');
             $output->writeln(
-                '<comment>If you are running this tool inside docker run you have to enable interaction</comment>'
+                '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
             );
             $output->writeln(
                 '<comment>For example: docker exec -ti watchstate console servers:manage my_home_server</comment>'
@@ -52,7 +58,7 @@ final class ManageCommand extends Command
             try {
                 $this->checkCustomServersFile($config);
                 $custom = true;
-                $servers = Yaml::parseFile($config);
+                $servers = (array)Yaml::parseFile($config);
             } catch (\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
@@ -62,7 +68,7 @@ final class ManageCommand extends Command
             if (!file_exists($config)) {
                 touch($config);
             }
-            $servers = Config::get('servers', []);
+            $servers = (array)Config::get('servers', []);
         }
 
         $add = $input->getOption('add');
@@ -179,8 +185,21 @@ final class ManageCommand extends Command
         // -- $name.uuid
         (function () use ($input, $output, &$u, $name) {
             try {
-                $chosen = ag($u, 'uuid', fn() => makeServer($u, $name)->getServerUUID(true));
-            } catch (Throwable) {
+                $output->writeln(
+                    '<info>Trying to get server unique identifier from given information... Please wait</info>'
+                );
+
+                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
+                $chosen = ag($u, 'uuid', fn() => makeServer($server, $name)->getServerUUID(true));
+            } catch (Throwable $e) {
+                $output->writeln('<error>Failed to get the server unique identifier.</error>');
+                $output->writeln(
+                    sprintf(
+                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
+                        afterLast(get_class($e), '\\'),
+                        $e->getMessage()
+                    )
+                );
                 $chosen = null;
             }
 
@@ -244,8 +263,14 @@ final class ManageCommand extends Command
             $chosen = ag($u, 'user');
 
             try {
+                $output->writeln(
+                    '<info>Trying to get users list from server Please wait</info>'
+                );
+
                 $list = $map = $ids = [];
-                $users = makeServer($u, $name)->getUsersList();
+                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
+                $users = makeServer($server, $name)->getUsersList();
+
                 if (empty($users)) {
                     throw new \RuntimeException('Empty users list returned');
                 }
@@ -279,8 +304,13 @@ final class ManageCommand extends Command
 
                 return;
             } catch (Throwable $e) {
+                $output->writeln('<error>Failed to get the users list from server.</error>');
                 $output->writeln(
-                    sprintf('<error>Failed to get user list from server. \'%s\' </error>', $e->getMessage())
+                    sprintf(
+                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
+                        afterLast(get_class($e), '\\'),
+                        $e->getMessage()
+                    )
                 );
             }
 
