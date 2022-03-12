@@ -1,11 +1,23 @@
 #!/usr/bin/env sh
-set -e
+set -eo pipefail
 
 WS_UID=${WS_UID:-1000}
 WS_GID=${WS_GID:-1000}
+WS_NO_CHOWN=${WS_NO_CHOWN:-0}
+WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
+WS_CRON_IMPORT=${WS_CRON_IMPORT:-0}
+WS_CRON_PUSH=${WS_CRON_PUSH:-0}
+WS_CRON_EXPORT=${WS_CRON_EXPORT:-0}
 
-usermod -u ${WS_UID} www-data
-groupmod -g ${WS_GID} www-data
+set -u
+
+if [ "${WS_UID}" != "$(id -u www-data)" ]; then
+  usermod -u ${WS_UID} www-data
+fi
+
+if [ "${WS_GID}" != "$(id -g www-data)" ]; then
+  groupmod -g ${WS_GID} www-data
+fi
 
 if [ ! -f "/app/vendor/autoload.php" ]; then
   if [ ! -f "/usr/bin/composer" ]; then
@@ -24,7 +36,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
   chmod +x /usr/bin/run-app-cron
 fi
 
-if [ -z "${WS_NO_CHOWN}" ]; then
+if [ 0 == "${WS_NO_CHOWN}" ]; then
   chown -R www-data:www-data /config
 fi
 
@@ -33,11 +45,13 @@ fi
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
 
-if [ ! -z "${WS_DISABLE_HTTP}" ] && [ -f "/etc/caddy/Caddyfile" ]; then
+if [ 0 == "${WS_DISABLE_HTTP}" ] && [ -f "/etc/caddy/Caddyfile" ]; then
+  echo "Starting Caddy server.."
   caddy start -config /etc/caddy/Caddyfile
 fi
 
-if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}"]; then
+if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}" ]; then
+  echo "Starting cron..."
   /usr/sbin/crond -b -l 2
 fi
 

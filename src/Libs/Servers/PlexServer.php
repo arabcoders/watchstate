@@ -122,95 +122,63 @@ class PlexServer implements ServerInterface
 
         $this->checkConfig();
 
-        try {
-            $this->logger->debug(
-                sprintf('Requesting server Unique id info from %s.', $this->name),
-                ['url' => $this->url->getHost()]
-            );
+        $this->logger->debug(
+            sprintf('Requesting server Unique id info from %s.', $this->name),
+            ['url' => $this->url->getHost()]
+        );
 
-            $url = $this->url->withPath('/');
+        $url = $this->url->withPath('/');
 
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    sprintf(
-                        'Request to %s responded with unexpected code (%d).',
-                        $this->name,
-                        $response->getStatusCode()
-                    )
-                );
-
-                return null;
-            }
-
-            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
-
-            $this->uuid = ag($json, 'MediaContainer.machineIdentifier', null);
-
-            return $this->uuid;
-        } catch (ExceptionInterface $e) {
+        if (200 !== $response->getStatusCode()) {
             $this->logger->error(
-                sprintf('Request to %s failed. Reason: \'%s\'.', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ],
+                sprintf(
+                    'Request to %s responded with unexpected code (%d).',
+                    $this->name,
+                    $response->getStatusCode()
+                )
             );
-            return null;
-        } catch (JsonException $e) {
-            $this->logger->error(
-                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ],
-            );
+
             return null;
         }
+
+        $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->uuid = ag($json, 'MediaContainer.machineIdentifier', null);
+
+        return $this->uuid;
     }
 
-    public function getUsersList(array $opts = []): array|null
+    public function getUsersList(array $opts = []): array
     {
         $this->checkConfig(checkUrl: false);
 
-        try {
-            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
-                'plex.tv'
-            )->withPath(
-                '/api/v2/home/users/'
+        $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
+            'plex.tv'
+        )->withPath(
+            '/api/v2/home/users/'
+        );
+
+        $response = $this->http->request('GET', (string)$url, [
+            'headers' => [
+                'Accept' => 'application/json',
+                'X-Plex-Token' => $this->token,
+                'X-Plex-Client-Identifier' => $this->getServerUUID(),
+            ],
+        ]);
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException(
+                sprintf(
+                    'Request to %s responded with unexpected code (%d).',
+                    $this->name,
+                    $response->getStatusCode()
+                )
             );
-
-            $this->logger->debug(sprintf('Requesting users list from %s.', $this->name), ['url' => $url->getHost()]);
-
-            $response = $this->http->request('GET', (string)$url, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'X-Plex-Token' => $this->token,
-                    'X-Plex-Client-Identifier' => $this->getServerUUID(),
-                ],
-            ]);
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    sprintf(
-                        'Request to %s responded with unexpected code (%d).',
-                        $this->name,
-                        $response->getStatusCode()
-                    )
-                );
-
-                return null;
-            }
-
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return null;
         }
+
+        $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
 
         $list = [];
 
