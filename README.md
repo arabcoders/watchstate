@@ -274,7 +274,8 @@ None that we are aware of.
 
 # Globally supported environment variables.  
 
-- (string) `WS_DATA_PATH` WHERE data stored.
+- (string) `WS_DATA_PATH` Where key data stored (config|db).
+- (string) `WS_TMP_DIR` Where temp data stored. (logs|cache). Defaults to `WS_DATA_PATH` if not set. 
 - (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
 - (string) `WS_STORAGE_PDO_USERNAME` PDO username
 - (string) `WS_STORAGE_PDO_PASSWORD` PDO password
@@ -283,15 +284,14 @@ None that we are aware of.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
 - (string) `WS_MAPPER_IMPORT` the import mapper implementation.
 - (string) `WS_MAPPER_EXPORT` the export mapper implementation.
-- (string) `WS_CACHE_DIR` where to store cache data. by default, it's stored in `WS_DATA_PATH`/cache
 - (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
-- (int) `WS_LOGGER_STDERR_LEVEL` level to log.
+- (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
 - (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
-- (int) `WS_LOGGER_FILE_LEVEL` level to log.
+- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
 - (string) `WS_LOGGER_FILE` fullpath for log file for example, by default, it's `/config/logs/app.log`
 - (bool) `WS_LOGGER_SYSLOG_ENABLED` enable syslog logger.
 - (int) `WS_LOGGER_SYSLOG_FACILITY` syslog logging facility
-- (int) `WS_LOGGER_SYSLOG_LEVEL` level to log.
+- (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
 - (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
 - (int) `WS_CRON_IMPORT` enable import scheduled task.
 - (int) `WS_CRON_EXPORT` enable export scheduled task.
@@ -308,8 +308,6 @@ None that we are aware of.
 - (int) `WS_GID` Container group ID
 
 # FAQ
-
----
 
 ### Q1: How to update new server watched state without overwriting the existing watch state?
 
