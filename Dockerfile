@@ -29,6 +29,6 @@ ENTRYPOINT ["/usr/bin/entrypoint-docker"]
 
 WORKDIR /config
 
-EXPOSE 9000 80
+EXPOSE 9000 80 443
 
 CMD ["php-fpm"]
