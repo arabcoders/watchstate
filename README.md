@@ -10,10 +10,8 @@ that the plugin no longer supported. And I like to keep my own data locally if p
 
 # v1.x tagging.
 
-The tool is already working, I personally started using it as early as v0.0.4-alpha, The reason we haven't tagged it
-v1.x yet is the API not stable yet and i keep changing and refining the code to get slight performances upgrade and that
-sometimes require breaking changes and tests and docs are not up yet. As such once we are satisfied with tool the API,
-tests and docs We will tag it.
+The tool is already working, The reason why it's not tagged v1.x yet is the API and config are not stable yet.
+Therefore, Once we are satisfied with tool the API and config we will tag it.
 
 # Supported Media servers.
 
@@ -33,6 +31,7 @@ services:
         container_name: watchstate
         restart: unless-stopped
         environment:
+            # For more ENV variables please read at the bottom of README.md
             WS_CRON_PUSH: 1      # Enable push scheduled task.
             WS_CRON_IMPORT: 1    # Enable import scheduled task.
             WS_CRON_EXPORT: 1    # Enable export scheduled task.
@@ -55,7 +54,7 @@ $ docker-compose up -d
 After starting the container, you have to add your media servers, to do so run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:manage [SERVER_NAME] --add
+$ docker exec -ti watchstate console servers:manage -add -- [SERVER_NAME]
 ```
 
 This command will ask you for some questions to add your servers, you can run the command as many times as you want, if
@@ -69,21 +68,12 @@ $ docker exec -ti watchstate console state:import -vvrm --mapper-preload
 
 ---
 
-#### TIP
-
-To see the whole sync operation information you could run the command with `-vvvr` it will show all debug information,
-be careful it might crash your terminal depending on how many servers and media you have. the output is excessive.
-
----
-
 # Pulling watch state.
 
 now that you have imported your watch state, you can stop manually running the command again. and rely on the webhooks
-to update the watch state.
+to update the watch state. To start receiving webhook events from servers you need to do few more steps.
 
-To start receiving webhook events from servers you need to do few more steps.
-
-# Enable Webhooks events for specific server.
+### Enable Webhooks events for specific server.
 
 To see the server specific api key run the following command
 
@@ -94,7 +84,7 @@ $ docker exec -ti watchstate console servers:view --servers-filter [SERVER_NAME]
 If you see 'Not configured, or invalid key.' or empty value. run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:manage [SERVER_NAME] --regenerate-api-key
+$ docker exec -ti watchstate console servers:manage --regenerate-api-key -- [SERVER_NAME] 
 ```
 
 Run the other command again to see your api key.
@@ -112,7 +102,7 @@ Plex global webhook API key is: [random_string]
 ```
 
 The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
-identify the servers, The unify command will do the necessary adjustments handle multi plex server setup. for more
+identify the servers, The unify command will do the necessary adjustments to handle multi plex server setup. for more
 information run.
 
 ```bash
@@ -123,11 +113,21 @@ This command is not limited to plex, you can unify API key for all supported bac
 
 ---
 
-If you don't want to use webhook and want to rely on scheduled task for importing, then set the value
-of `WS_CRON_IMPORT` to `1`. By default, we run import the timer is set to run every hour. However, you can change the
-scheduled task timer by adding another variable `WS_CRON_IMPORT_AT` and set it value to valid cron expression. for
+If you don't want to use webhooks and want to rely only on scheduled task for importing, then set the value
+of `WS_CRON_IMPORT` to `1`. By default, we run the import command every hour. However, you can change the scheduled task
+timer by adding another variable `WS_CRON_IMPORT_AT` and set it value to valid cron expression. for
 example, `0 */2 * * *` it will run every two hours instead of 1 hour. beware, this operation is somewhat costly as it's
 pulls the entire server library.
+
+---
+
+#### TIP
+
+You should still have `WS_CRON_IMPORT` enabled as sometimes plex does not really report new items, or report them in a
+way that is not compatible with the way we handle webhooks events. running the import command regularly helps keep
+healthy `GUIDS <> serverInternalID mapping` relations.
+
+---
 
 # Export watch state
 
@@ -149,8 +149,9 @@ valid cron expression. for example, `0 */3 * * *` it will run every three hours 
 
 # Start receiving Webhook Events.
 
-By default, the official container includes a small http server exposed at port `80`, we don't support SSL inside
-container, so we recommend running a reverse proxy in front of the tool.
+By default, the official container includes a small http server exposed at port `80`, we officially don't support HTTPS
+inside the container for the HTTP server. However, for the adventurous people we expose port 443 as well, as such you
+can customize the Caddyfile to support SSL. and do the necessary adjustments. However, do not expect us to help with it.
 
 #### Example nginx reverse proxy.
 
@@ -271,6 +272,41 @@ Emby does not send webhooks events for newly added items.
 
 None that we are aware of.
 
+# Globally supported environment variables.  
+
+- (string) `WS_DATA_PATH` WHERE data stored.
+- (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
+- (string) `WS_STORAGE_PDO_USERNAME` PDO username
+- (string) `WS_STORAGE_PDO_PASSWORD` PDO password
+- (bool) `WS_STORAGE_PDO_ST` enable single transaction mode globally.
+- (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
+- (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
+- (string) `WS_MAPPER_IMPORT` the import mapper implementation.
+- (string) `WS_MAPPER_EXPORT` the export mapper implementation.
+- (string) `WS_CACHE_DIR` where to store cache data. by default, it's stored in `WS_DATA_PATH`/cache
+- (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
+- (int) `WS_LOGGER_STDERR_LEVEL` level to log.
+- (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
+- (int) `WS_LOGGER_FILE_LEVEL` level to log.
+- (string) `WS_LOGGER_FILE` fullpath for log file for example, by default, it's `/config/logs/app.log`
+- (bool) `WS_LOGGER_SYSLOG_ENABLED` enable syslog logger.
+- (int) `WS_LOGGER_SYSLOG_FACILITY` syslog logging facility
+- (int) `WS_LOGGER_SYSLOG_LEVEL` level to log.
+- (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
+- (int) `WS_CRON_IMPORT` enable import scheduled task.
+- (int) `WS_CRON_EXPORT` enable export scheduled task.
+- (int) `WS_CRON_PUSH` enable push scheduled task.
+- (string) `WS_CRON_IMPORT_AT` cron expression timer.
+- (string) `WS_CRON_EXPORT` cron expression timer.
+- (string) `WS_CRON_PUSH` cron expression timer.
+
+# Container specific environment variables
+
+- (int) `WS_NO_CHOWN` do not change ownership of `/config` inside container.
+- (int) `WS_DISABLE_HTTP` disable included http server.
+- (int) `WS_UID` Container user ID
+- (int) `WS_GID` Container group ID
+
 # FAQ
 
 ---
@@ -290,15 +326,21 @@ Replace `[SERVER_NAME]` with what you have chosen to name your server in config 
 this command will force export your current database state back to the selected server. If the operation is successful
 you can then enable the import feature if you want.
 
+---
+
 ### Q2: Is there support for Multi-user setup?
 
-No, Not at this time. The database design centered on single user. However, It's possible to run container for each
-user.
+No, The database design centered on single user. However, It's possible to run container for each user.
 
-Note: for Plex managed users you can log in via managed user and then extract the user x-plex-token (this token acts as
-userId for plex)
+Note: for Plex managed users run the following command to extract each managed user token.
+
+```bash
+$ docker exec -ti console servers:remote --list-users-with-tokens -- my_plex_1
+```
 
 For jellyfin/emby, you can use same api-token and just replace the userId.
+
+---
 
 ### Q3: Sometimes episodes/movies don't make to webhook receiver
 
