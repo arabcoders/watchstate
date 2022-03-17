@@ -32,8 +32,8 @@ return (function () {
                 'WS_STORAGE_PDO_DSN',
                 fn() => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db'
             ),
-            'username' => null,
-            'password' => null,
+            'username' => env('WS_STORAGE_PDO_USERNAME', null),
+            'password' => env('WS_STORAGE_PDO_PASSWORD', null),
             'exec' => [
                 'sqlite' => [
                     'PRAGMA journal_mode=MEMORY',
@@ -47,7 +47,6 @@ return (function () {
     $config['webhook'] = [
         'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
         'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
-        'ipHeader' => env('WS_WEBHOOK_IP_HEADER', 'REMOTE_ADDR'),
     ];
 
     $config['mapper'] = [
@@ -112,7 +111,7 @@ return (function () {
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
             'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', false),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
-            'name' => ag($config, 'name'),
+            'name' => env('WS_LOGGER_SYSLOG_NAME', ag($config, 'name')),
         ],
     ];
 
@@ -167,6 +166,8 @@ return (function () {
             Task::COMMAND => '@state:import',
             Task::ARGS => [
                 '-vvr' => null,
+                '--mapper-preload' => null,
+                '--storage-pdo-single-transaction' => null,
             ]
         ],
         ExportCommand::TASK_NAME => [
@@ -175,7 +176,9 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
             Task::ARGS => [
-                '-vvr' => null,
+                '--mapper-preload' => null,
+                '--storage-pdo-single-transaction' => null,
+                '-vvrm'
             ]
         ],
         PushCommand::TASK_NAME => [
@@ -184,7 +187,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
             Task::ARGS => [
-                '-vvr' => null,
+                '-vvrm' => null,
             ]
         ],
     ];
