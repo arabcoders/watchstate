@@ -49,7 +49,7 @@ class KernelConsole
             }
 
             if (file_exists($dataPath . '/config/env')) {
-                (new Dotenv())->overload($dataPath . '/config/env');
+                (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/env');
             }
         })();
 
@@ -182,16 +182,20 @@ class KernelConsole
         }
 
         if (!($path = Config::get('path'))) {
-            throw new RuntimeException('No app path was set in config path or WS_DATA_PATH ENV');
+            throw new RuntimeException('No ENV:WS_DATA_PATH was set.');
         }
 
-        if (!file_exists($path)) {
-            if (!@mkdir($path, 0755, true) && !is_dir($path)) {
-                throw new RuntimeException(sprintf('Unable to create "%s" Directory.', $path));
-            }
+        if (!($tmpDir = Config::get('tmpDir'))) {
+            throw new RuntimeException('No ENV:WS_TMP_DIR was set.');
         }
 
         $fn = function (string $key, string $path): string {
+            if (!file_exists($path)) {
+                if (!@mkdir($path, 0755, true) && !is_dir($path)) {
+                    throw new RuntimeException(sprintf('Unable to create "%s" Directory.', $path));
+                }
+            }
+
             if (!is_dir($path)) {
                 throw new RuntimeException(sprintf('%s is not a directory.', $key));
             }
@@ -219,10 +223,13 @@ class KernelConsole
             return DIRECTORY_SEPARATOR !== $path ? rtrim($path, DIRECTORY_SEPARATOR) : $path;
         };
 
-        $path = $fn('path', $path);
+        $list = [
+            '%(path)' => $fn('path', $path),
+            '%(tmpDir)' => $fn('tmpDir', $tmpDir),
+        ];
 
         foreach (require $dirList as $dir) {
-            $dir = str_replace('%(path)', $path, $dir);
+            $dir = str_replace(array_keys($list), array_values($list), $dir);
 
             if (!file_exists($dir)) {
                 if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
