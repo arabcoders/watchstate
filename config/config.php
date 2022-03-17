@@ -167,7 +167,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
-                '-vvr' => null,
+                '-vvrm' => null,
                 '--mapper-preload' => null,
                 '--storage-pdo-single-transaction' => null,
             ]
@@ -180,7 +180,7 @@ return (function () {
             Task::ARGS => [
                 '--mapper-preload' => null,
                 '--storage-pdo-single-transaction' => null,
-                '-vvrm'
+                '-vvrm' => null,
             ]
         ],
         PushCommand::TASK_NAME => [
