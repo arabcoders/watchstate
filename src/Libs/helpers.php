@@ -234,13 +234,13 @@ if (!function_exists('saveWebhookPayload')) {
             'query' => $request->getQueryParams(),
             'parsed' => $request->getParsedBody(),
             'server' => $request->getServerParams(),
-            'body' => $request->getBody()->getContents(),
+            'body' => (string)$request->getBody(),
             'attributes' => $request->getAttributes(),
             'cParsed' => $parsed,
         ];
 
         @file_put_contents(
-            Config::get('path') . '/logs/' . sprintf('webhook.%s.%d.json', $name, time()),
+            Config::get('tmpDir') . '/webhooks/' . sprintf('webhook.%s.%d.json', $name, time()),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }

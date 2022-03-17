@@ -223,7 +223,7 @@ class JellyfinServer implements ServerInterface
             return $request;
         }
 
-        $body = $request->getBody()->getContents();
+        $body = (string)$request->getBody();
 
         if (null === ($json = json_decode($body, true))) {
             return $request;

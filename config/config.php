@@ -18,12 +18,14 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.1-beta',
+        'version' => 'v0.0.0',
         'tz' => null,
         'path' => fixPath(
             env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))
         ),
     ];
+
+    $config['tmpDir'] = fixPath(env('WS_TMP_DIR', fn() => ag($config, 'path')));
 
     $config['storage'] = [
         'type' => PDOAdapter::class,
@@ -78,7 +80,7 @@ return (function () {
     $config['cache'] = [
         'adapter' => FilesystemAdapter::class,
         'config' => [
-            'directory' => env('WS_CACHE_DIR', fn() => ag($config, 'path') . '/cache'),
+            'directory' => ag($config, 'tmpDir') . '/cache',
         ],
     ];
 
@@ -87,7 +89,7 @@ return (function () {
             'options' => [
                 'save.handler' => 'file',
                 'save.handler.file' => [
-                    'filename' => ag($config, 'path') . '/logs/profiler_' . gmdate('Y_m_d_His') . '.json'
+                    'filename' => ag($config, 'tmpDir') . '/profiler/profiler_' . gmdate('Y_m_d_His') . '.json'
                 ],
             ],
         ],
@@ -104,7 +106,7 @@ return (function () {
             'type' => 'stream',
             'enabled' => env('WS_LOGGER_FILE_ENABLE', false),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
-            'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'path') . '/logs/app.log'),
+            'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'tmpDir') . '/logs/app.log'),
         ],
         'syslog' => [
             'type' => 'syslog',
@@ -165,7 +167,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
-                '-vvr' => null,
+                '-vvrm' => null,
                 '--mapper-preload' => null,
                 '--storage-pdo-single-transaction' => null,
             ]
@@ -178,7 +180,7 @@ return (function () {
             Task::ARGS => [
                 '--mapper-preload' => null,
                 '--storage-pdo-single-transaction' => null,
-                '-vvrm'
+                '-vvrm' => null,
             ]
         ],
         PushCommand::TASK_NAME => [
