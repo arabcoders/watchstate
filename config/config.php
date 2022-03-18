@@ -13,16 +13,13 @@ use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
 use App\Libs\Storage\PDO\PDOAdapter;
 use Monolog\Logger;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 return (function () {
     $config = [
         'name' => 'WatchState',
         'version' => 'v0.0.0',
         'tz' => null,
-        'path' => fixPath(
-            env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))
-        ),
+        'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
     ];
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', fn() => ag($config, 'path')));
@@ -30,10 +27,7 @@ return (function () {
     $config['storage'] = [
         'type' => PDOAdapter::class,
         'opts' => [
-            'dsn' => env(
-                'WS_STORAGE_PDO_DSN',
-                fn() => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db'
-            ),
+            'dsn' => env('WS_STORAGE_PDO_DSN', fn() => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db'),
             'username' => env('WS_STORAGE_PDO_USERNAME', null),
             'password' => env('WS_STORAGE_PDO_PASSWORD', null),
             'exec' => [
@@ -41,6 +35,8 @@ return (function () {
                     'PRAGMA journal_mode=MEMORY',
                     'PRAGMA SYNCHRONOUS=OFF'
                 ],
+                'pgsql' => [],
+                'mysql' => [],
             ],
             'singleTransaction' => env('WS_STORAGE_PDO_ST', false),
         ],
@@ -74,13 +70,6 @@ return (function () {
                     ],
                 ],
             ],
-        ],
-    ];
-
-    $config['cache'] = [
-        'adapter' => FilesystemAdapter::class,
-        'config' => [
-            'directory' => ag($config, 'tmpDir') . '/cache',
         ],
     ];
 
