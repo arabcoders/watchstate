@@ -63,7 +63,7 @@ final class PDOAdapter implements StorageInterface
                 )
             );
         } catch (PDOException $e) {
-            throw new \RuntimeException(sprintf('Unable to connect to storage backend. \'%s\'.', $e->getMessage()));
+            throw new \PDOException(sprintf('Unable to connect to storage backend. \'%s\'.', $e->getMessage()));
         }
 
         $driver = $this->getDriver();
