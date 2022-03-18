@@ -12,7 +12,6 @@ use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
 use Error;
-use PDOException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
@@ -48,7 +47,7 @@ class PDOAdapterTest extends TestCase
 
     public function test_setup_throw_exception_if_invalid_dsn(): void
     {
-        $this->expectException(PDOException::class);
+        $this->expectException(StorageException::class);
         $storage = new PDOAdapter(new CliLogger($this->output));
         $storage->setUp(['dsn' => 'not_real_driver::foo']);
     }

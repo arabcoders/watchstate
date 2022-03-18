@@ -21,8 +21,8 @@ final class PDOMigrations
     public function __construct(private PDO $pdo, private LoggerInterface $logger)
     {
         $this->path = __DIR__ . '/Migrations';
-        $this->versionFile = Config::get('path') . '/db/pdo_migrations_version';
         $this->driver = $this->getDriver();
+        $this->versionFile = Config::get('path') . sprintf('/db/%s.migration', $this->driver);
     }
 
     public function setLogger(LoggerInterface $logger): self

@@ -20,9 +20,8 @@ final class PDOAdapter implements StorageInterface
 {
     private array $supported = [
         'sqlite',
-        // @TODO For v1.x support mysql/pgsql
-        //'mysql',
-        //'pgsql'
+        'mysql',
+        'pgsql'
     ];
 
     private PDO|null $pdo = null;
@@ -50,18 +49,22 @@ final class PDOAdapter implements StorageInterface
             throw new StorageException('No storage.opts.dsn (Data Source Name) was provided.', 10);
         }
 
-        $this->pdo = new PDO(
-            $opts['dsn'], $opts['username'] ?? null, $opts['password'] ?? null,
-            array_replace_recursive(
-                [
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_STRINGIFY_FETCHES => false,
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                ],
-                $opts['options'] ?? []
-            )
-        );
+        try {
+            $this->pdo = new PDO(
+                $opts['dsn'], $opts['username'] ?? null, $opts['password'] ?? null,
+                array_replace_recursive(
+                    [
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                        PDO::ATTR_STRINGIFY_FETCHES => false,
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    ],
+                    $opts['options'] ?? []
+                )
+            );
+        } catch (PDOException $e) {
+            throw new StorageException(sprintf('Unable to connect to storage backend. \'%s\'.', $e->getMessage()));
+        }
 
         $driver = $this->getDriver();
 
