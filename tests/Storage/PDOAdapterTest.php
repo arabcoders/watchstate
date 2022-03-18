@@ -12,7 +12,6 @@ use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
 use Error;
-use PDOException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
