@@ -207,7 +207,7 @@ class ImportCommand extends Command
                 $server['class'] = $server['class']->setLogger($logger);
             }
 
-            $after = $input->getOption('force-full') ? null : ag($server, 'server.import.lastSync', null);
+            $after = true === $input->getOption('force-full') ? null : ag($server, 'import.lastSync', null);
 
             if (null === $after) {
                 $this->logger->notice(
