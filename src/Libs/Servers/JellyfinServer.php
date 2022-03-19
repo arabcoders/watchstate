@@ -524,13 +524,13 @@ class JellyfinServer implements ServerInterface
                             ],
                         );
 
-                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
 
                         foreach ($it as $entity) {
                             $this->processImport($mapper, $type, $cName, $entity, $after);
                         }
 
-                        $this->logger->notice(
+                        $this->logger->info(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,
@@ -680,7 +680,7 @@ class JellyfinServer implements ServerInterface
                 }
 
                 if (empty($json)) {
-                    $this->logger->notice(sprintf('Ignoring %s. does not exists.', $iName));
+                    $this->logger->info(sprintf('Ignoring %s. does not exists.', $iName));
                     continue;
                 }
 
@@ -699,7 +699,7 @@ class JellyfinServer implements ServerInterface
                     );
 
                     if (null === $date) {
-                        $this->logger->notice(sprintf('Ignoring %s. No date is set.', $iName));
+                        $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
                         continue;
                     }
 
@@ -759,13 +759,13 @@ class JellyfinServer implements ServerInterface
                             ],
                         );
 
-                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
 
                         foreach ($it as $entity) {
                             $this->processExport($mapper, $type, $cName, $entity, $after);
                         }
 
-                        $this->logger->notice(
+                        $this->logger->info(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,

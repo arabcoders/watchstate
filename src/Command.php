@@ -7,12 +7,15 @@ namespace App;
 use App\Libs\Config;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command as BaseCommand;
+use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Xhgui\Profiler\Profiler;
 
 class Command extends BaseCommand
 {
+    use LockableTrait;
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {
@@ -63,6 +66,25 @@ class Command extends BaseCommand
         $profiler->save($data);
 
         return $status;
+    }
+
+    protected function single(\Closure $closure, OutputInterface $output): int
+    {
+        try {
+            if (!$this->lock($this->getName())) {
+                $output->writeln(
+                    sprintf(
+                        '<error>The command \'%s\' is already running in another process.</error>',
+                        $this->getName()
+                    )
+                );
+
+                return self::SUCCESS;
+            }
+            return $closure();
+        } finally {
+            $this->release();
+        }
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

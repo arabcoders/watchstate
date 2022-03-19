@@ -11,7 +11,6 @@ use App\Libs\Scheduler\Task;
 use App\Libs\Servers\EmbyServer;
 use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
-use App\Libs\Storage\PDO\PDOAdapter;
 use Monolog\Logger;
 
 return (function () {
@@ -25,7 +24,6 @@ return (function () {
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', fn() => ag($config, 'path')));
 
     $config['storage'] = [
-        'type' => PDOAdapter::class,
         'opts' => [
             'dsn' => env('WS_STORAGE_PDO_DSN', fn() => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db'),
             'username' => env('WS_STORAGE_PDO_USERNAME', null),
@@ -38,7 +36,6 @@ return (function () {
                 'pgsql' => [],
                 'mysql' => [],
             ],
-            'singleTransaction' => env('WS_STORAGE_PDO_ST', false),
         ],
     ];
 
@@ -49,11 +46,11 @@ return (function () {
 
     $config['mapper'] = [
         'import' => [
-            'type' => env('WS_MAPPER_IMPORT', MemoryMapper::class),
+            'type' => MemoryMapper::class,
             'opts' => [],
         ],
         'export' => [
-            'type' => env('WS_MAPPER_EXPORT', ExportMapper::class),
+            'type' => ExportMapper::class,
             'opts' => [],
         ],
     ];
@@ -156,9 +153,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
-                '-vvrm' => null,
-                '--mapper-preload' => null,
-                '--storage-pdo-single-transaction' => null,
+                '-vr' => null,
             ]
         ],
         ExportCommand::TASK_NAME => [
@@ -168,8 +163,7 @@ return (function () {
             Task::COMMAND => '@state:export',
             Task::ARGS => [
                 '--mapper-preload' => null,
-                '--storage-pdo-single-transaction' => null,
-                '-vvrm' => null,
+                '-vr' => null,
             ]
         ],
         PushCommand::TASK_NAME => [
@@ -178,7 +172,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
             Task::ARGS => [
-                '-vvrm' => null,
+                '-vr' => null,
             ]
         ],
     ];

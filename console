@@ -63,4 +63,4 @@ if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 require __DIR__ . '/vendor/autoload.php';
 
-(new App\Libs\KernelConsole())->boot()->runConsole();
+(new App\Libs\Initializer())->boot()->runConsole();

@@ -62,14 +62,24 @@ class PushCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison. Push db state to the server regardless of date.'
             )
-            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.')
-            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.');
+            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.');
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @throws InvalidArgumentException
+     */
+    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    {
+        return $this->single(fn(): int => $this->process($input, $output), $output);
     }
 
     /**
      * @throws InvalidArgumentException
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->cache->has('queue')) {
             $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_DEBUG);
@@ -247,7 +257,7 @@ class PushCommand extends Command
 
         $config = Config::get('path') . '/config/servers.yaml';
 
-        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+        if (is_writable(dirname($config))) {
             copy($config, $config . '.bak');
         }
 

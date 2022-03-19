@@ -19,7 +19,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-final class Lists extends Command
+final class ListCommand extends Command
 {
     protected function configure(): void
     {
@@ -46,8 +46,8 @@ final class Lists extends Command
             ]
         );
 
-        foreach (Run::getTasks() as $task) {
-            $task = Run::fixTask($task);
+        foreach (RunCommand::getTasks() as $task) {
+            $task = RunCommand::fixTask($task);
 
             $timer = $task[Task::RUN_AT] ?? TaskTimer::everyMinute(5);
             if ((!$timer instanceof CronExpression)) {
@@ -62,7 +62,7 @@ final class Lists extends Command
                 $task[Task::COMMAND] = 'Closure';
             } else {
                 if (($task[Task::COMMAND] instanceof Closure)) {
-                    $task[Task::COMMAND] = RunClosure::runClosure($task[Task::COMMAND], $task[Task::CONFIG]);
+                    $task[Task::COMMAND] = RunClosureCommand::runClosure($task[Task::COMMAND], $task[Task::CONFIG]);
                 }
 
                 if (!is_string($task[Task::COMMAND])) {

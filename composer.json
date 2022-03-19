@@ -27,6 +27,7 @@
         "symfony/process": "^6.0",
         "symfony/http-client": "^6.0",
         "symfony/dotenv": "^6.0",
+        "symfony/lock": "^6.0",
         "league/container": "^4.0",
         "psr/http-client": "^1.0",
         "psr/simple-cache": "^3.0",
