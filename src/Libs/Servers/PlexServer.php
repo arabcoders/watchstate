@@ -275,6 +275,22 @@ class PlexServer implements ServerInterface
             throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
+        $ignoreIds = null;
+
+        if (null !== ($this->options['ignore'] ?? null)) {
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', $this->options['ignore']));
+        }
+
+        if (null !== $ignoreIds && in_array(ag($json, 'Metadata.librarySectionID', '???'), $ignoreIds)) {
+            throw new HttpException(
+                sprintf(
+                    '%s: Library id \'%s\' is ignored.',
+                    afterLast(__CLASS__, '\\'),
+                    ag($json, 'Metadata.librarySectionID', '???')
+                ), 200
+            );
+        }
+
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
                 'via' => $this->name,
