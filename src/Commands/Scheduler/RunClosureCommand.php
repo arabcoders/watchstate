@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
-final class RunClosure extends Command
+final class RunClosureCommand extends Command
 {
     public function __construct(private LoggerInterface $logger)
     {
@@ -38,13 +38,13 @@ final class RunClosure extends Command
             throw new RuntimeException('Invalid Task name was given.');
         }
 
-        $tasks = Run::getTasks();
+        $tasks = RunCommand::getTasks();
 
         if (!array_key_exists($runTask, $tasks)) {
             throw new RuntimeException(sprintf('Task \'%s\' was not found in Tasks config file.', $runTask));
         }
 
-        $task = Run::fixTask($tasks[$runTask]);
+        $task = RunCommand::fixTask($tasks[$runTask]);
 
         $isRunnable = ($task[Task::COMMAND] instanceof Closure) && false === $task[Task::USE_CLOSURE_AS_COMMAND];
 

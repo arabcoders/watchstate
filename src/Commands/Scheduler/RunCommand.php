@@ -18,7 +18,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-final class Run extends Command
+final class RunCommand extends Command
 {
     private Scheduler $scheduler;
     private array $registered = [];
@@ -136,7 +136,7 @@ final class Run extends Command
             $task[Task::COMMAND] = $cli . ' scheduler:closure ' . escapeshellarg($task[Task::NAME]);
         } else {
             if (($task[Task::COMMAND] instanceof Closure)) {
-                $task[Task::COMMAND] = RunClosure::runClosure($task[Task::COMMAND], $task[Task::CONFIG]);
+                $task[Task::COMMAND] = RunClosureCommand::runClosure($task[Task::COMMAND], $task[Task::CONFIG]);
             }
 
             if (!is_string($task[Task::COMMAND])) {
