@@ -6,15 +6,19 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -43,7 +47,7 @@ class ImportCommand extends Command
             ->setDescription('Import watch state from servers.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
-            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import.')
+            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. (ignore lastSync date)')
             ->addOption(
                 'proxy',
                 null,
@@ -77,34 +81,31 @@ class ImportCommand extends Command
                 'Filter final status output e.g. (servername.key)',
                 null
             )
-            ->addOption(
-                'mapper-class',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Configured Mapper.',
-                afterLast($this->mapper::class, '\\')
-            )
-            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
-            ->addOption(
-                'storage-pdo-single-transaction',
-                null,
-                InputOption::VALUE_NONE,
-                'Set Single transaction mode for PDO driver.'
-            )
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
-            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.');
+            ->addOption('mapper-direct', null, InputOption::VALUE_NONE, 'Use less memory hungry mapper.')
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        return $this->single(fn(): int => $this->process($input, $output), $output);
+    }
+
+    protected function process(InputInterface $input, OutputInterface $output): int
+    {
         // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('use-config'))) {
+        if (($config = $input->getOption('config'))) {
             if (!is_string($config) || !is_file($config) || !is_readable($config)) {
                 throw new RuntimeException('Unable to read data given config.');
             }
             Config::save('servers', Yaml::parseFile($config));
+            $custom = true;
         } else {
+            $custom = false;
             $config = Config::get('path') . '/config/servers.yaml';
+        }
+
+        if ($input->getOption('mapper-direct')) {
+            $this->mapper = Container::get(DirectMapper::class);
         }
 
         $list = [];
@@ -173,13 +174,13 @@ class ImportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
-        if (count($list) >= 1 && $input->getOption('mapper-preload')) {
+        if (count($list) >= 1 && !$input->getOption('mapper-direct')) {
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');
         }
 
-        if (($this->storage instanceof PDOAdapter) && $input->getOption('storage-pdo-single-transaction')) {
+        if ($this->storage instanceof PDOAdapter) {
             $this->storage->singleTransaction();
         }
 
@@ -270,24 +271,26 @@ class ImportCommand extends Command
         if ($input->getOption('stats-show')) {
             Data::add('operations', 'stats', $operations);
             $output->writeln(
-                json_encode(
-                    Data::get($input->getOption('stats-filter')),
-                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-                ),
-                OutputInterface::OUTPUT_NORMAL
+                Yaml::dump(Data::get($input->getOption('stats-filter'), []), 8, 2)
             );
         } else {
-            $output->writeln(
-                sprintf(
-                    '<info>Movies [A: %d - U: %d - F: %d] - Episodes [A: %d - U: %d - F: %d]</info>',
-                    $operations[StateInterface::TYPE_MOVIE]['added'] ?? 0,
-                    $operations[StateInterface::TYPE_MOVIE]['updated'] ?? 0,
-                    $operations[StateInterface::TYPE_MOVIE]['failed'] ?? 0,
-                    $operations[StateInterface::TYPE_EPISODE]['added'] ?? 0,
-                    $operations[StateInterface::TYPE_EPISODE]['updated'] ?? 0,
-                    $operations[StateInterface::TYPE_EPISODE]['failed'] ?? 0,
-                )
-            );
+            $a = [
+                [
+                    'Type' => ucfirst(StateInterface::TYPE_MOVIE),
+                    'Added' => $operations[StateInterface::TYPE_MOVIE]['added'] ?? 'None',
+                    'Updated' => $operations[StateInterface::TYPE_MOVIE]['updated'] ?? 'None',
+                    'Failed' => $operations[StateInterface::TYPE_MOVIE]['failed'] ?? 'None',
+                ],
+                new TableSeparator(),
+                [
+                    'Type' => ucfirst(StateInterface::TYPE_EPISODE),
+                    'Added' => $operations[StateInterface::TYPE_EPISODE]['added'] ?? 'None',
+                    'Updated' => $operations[StateInterface::TYPE_EPISODE]['updated'] ?? 'None',
+                    'Failed' => $operations[StateInterface::TYPE_EPISODE]['failed'] ?? 'None',
+                ],
+            ];
+
+            (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
         }
 
         foreach ($list as $server) {
@@ -301,7 +304,7 @@ class ImportCommand extends Command
             );
         }
 
-        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+        if (false === $custom && is_writable(dirname($config))) {
             copy($config, $config . '.bak');
         }
 

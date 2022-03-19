@@ -42,7 +42,7 @@ class ExportCommand extends Command
             ->setDescription('Export watch state to servers.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
-            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export.')
+            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. (will ignore lastSync date)')
             ->addOption(
                 'proxy',
                 null,
@@ -68,33 +68,26 @@ class ExportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison, and update server watched state to match database.'
             )
-            ->addOption(
-                'mapper-class',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Configured mapper.',
-                afterLast($this->mapper::class, '\\')
-            )
             ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
-            ->addOption(
-                'storage-pdo-single-transaction',
-                null,
-                InputOption::VALUE_NONE,
-                'Set Single transaction mode for PDO driver.'
-            )
-            ->addOption('use-config', null, InputOption::VALUE_REQUIRED, 'Use different servers.yaml.')
-            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Do not create copy servers.yaml before editing.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        return $this->single(fn(): int => $this->process($input, $output), $output);
+    }
+
+    protected function process(InputInterface $input, OutputInterface $output): int
+    {
         // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('use-config'))) {
+        if (($config = $input->getOption('config'))) {
             if (!is_string($config) || !is_file($config) || !is_readable($config)) {
                 throw new RuntimeException('Unable to read data given config.');
             }
+            $custom = true;
             Config::save('servers', Yaml::parseFile($config));
         } else {
+            $custom = false;
             $config = Config::get('path') . '/config/servers.yaml';
         }
 
@@ -164,7 +157,7 @@ class ExportCommand extends Command
             $this->logger->info('Finished preloading mapper data.');
         }
 
-        if (($this->storage instanceof PDOAdapter) && $input->getOption('storage-pdo-single-transaction')) {
+        if (($this->storage instanceof PDOAdapter)) {
             $this->storage->singleTransaction();
         }
 
@@ -275,7 +268,7 @@ class ExportCommand extends Command
             );
         }
 
-        if (!$input->getOption('no-backup') && is_writable(dirname($config))) {
+        if (false === $custom && is_writable(dirname($config))) {
             copy($config, $config . '.bak');
         }
 

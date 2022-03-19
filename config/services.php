@@ -5,6 +5,13 @@ declare(strict_types=1);
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Mappers\Export\ExportMapper;
+use App\Libs\Mappers\ExportInterface;
+use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\ImportInterface;
+use App\Libs\Storage\PDO\PDOAdapter;
+use App\Libs\Storage\StorageInterface;
 use Monolog\Logger;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
@@ -42,6 +49,68 @@ return (function (): array {
         UriInterface::class => [
             'class' => fn() => new Uri(''),
             'shared' => false,
+        ],
+
+        StorageInterface::class => [
+            'class' => function (LoggerInterface $logger): StorageInterface {
+                $adapter = (new PDOAdapter($logger))->setUp(Config::get('storage.opts', []));
+
+                if (true !== $adapter->isMigrated()) {
+                    $adapter->migrations(StorageInterface::MIGRATE_UP);
+                }
+
+                return $adapter;
+            },
+            'args' => [
+                LoggerInterface::class,
+            ],
+        ],
+
+        MemoryMapper::class => [
+            'class' => function (LoggerInterface $logger, StorageInterface $storage): ImportInterface {
+                return (new MemoryMapper($logger, $storage))->setUp(Config::get('mapper.import.opts', []));
+            },
+            'args' => [
+                LoggerInterface::class,
+                StorageInterface::class,
+            ],
+        ],
+
+        DirectMapper::class => [
+            'class' => function (LoggerInterface $logger, StorageInterface $storage): ImportInterface {
+                return (new DirectMapper($logger, $storage))->setUp(Config::get('mapper.import.opts', []));
+            },
+            'args' => [
+                LoggerInterface::class,
+                StorageInterface::class,
+            ],
+        ],
+
+        ImportInterface::class => [
+            'class' => function (ImportInterface $mapper): ImportInterface {
+                return $mapper;
+            },
+            'args' => [
+                MemoryMapper::class
+            ],
+        ],
+
+        ExportMapper::class => [
+            'class' => function (StorageInterface $storage): ExportInterface {
+                return (new ExportMapper($storage))->setUp(Config::get('mapper.export.opts', []));
+            },
+            'args' => [
+                StorageInterface::class,
+            ],
+        ],
+
+        ExportInterface::class => [
+            'class' => function (ExportInterface $mapper): ExportInterface {
+                return $mapper;
+            },
+            'args' => [
+                ExportMapper::class
+            ],
         ],
     ];
 })();

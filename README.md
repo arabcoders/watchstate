@@ -8,7 +8,7 @@ Ever wanted to sync your watch state without having to rely on 3rd party service
 you. I had multiple problems with Plex trakt.tv plugin which led to my account being banned at trakt.tv, and on top of
 that the plugin no longer supported. And I like to keep my own data locally if possible.
 
-# v1.x tagging.
+# v1 tag.
 
 The tool is already working, The reason why it's not tagged v1.x yet is the API and config are not stable yet.
 Therefore, Once we are satisfied with tool the API and config we will tag it.
@@ -32,9 +32,6 @@ services:
         restart: unless-stopped
         environment:
             # For more ENV variables please read at the bottom of README.md
-            WS_CRON_PUSH: 1      # Enable push scheduled task.
-            WS_CRON_IMPORT: 1    # Enable import scheduled task.
-            WS_CRON_EXPORT: 1    # Enable export scheduled task.
             WS_UID: ${UID:-1000} # Set container operation user id.
             WS_GID: ${GID:-1000} # Set container operation group id.
         ports:
@@ -54,7 +51,7 @@ $ docker-compose up -d
 After starting the container, you have to add your media servers, to do so run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:manage -add -- [SERVER_NAME]
+$ docker exec -ti watchstate console servers:manage --add -- [SERVER_NAME]
 ```
 
 This command will ask you for some questions to add your servers, you can run the command as many times as you want, if
@@ -63,7 +60,7 @@ you want to edit the config again or if you made mistake just run the same comma
 After adding your servers, You should import your current watch state by running the following command.
 
 ```bash
-$ docker exec -ti watchstate console state:import -vvrm --mapper-preload
+$ docker exec -ti watchstate console state:import -vvrm
 ```
 
 ---
@@ -279,11 +276,8 @@ None that we are aware of.
 - (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
 - (string) `WS_STORAGE_PDO_USERNAME` PDO username
 - (string) `WS_STORAGE_PDO_PASSWORD` PDO password
-- (bool) `WS_STORAGE_PDO_ST` enable single transaction mode globally.
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
-- (string) `WS_MAPPER_IMPORT` the import mapper implementation.
-- (string) `WS_MAPPER_EXPORT` the export mapper implementation.
 - (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
 - (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
 - (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
