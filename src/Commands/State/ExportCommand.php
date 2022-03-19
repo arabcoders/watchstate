@@ -116,7 +116,7 @@ class ExportCommand extends Command
             }
 
             if (true !== ag($server, 'export.enabled')) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by \'servers.yaml\'.', $name));
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by \'%s\'.', $name, $config));
                 continue;
             }
 
@@ -157,7 +157,7 @@ class ExportCommand extends Command
             $this->logger->info('Finished preloading mapper data.');
         }
 
-        if (($this->storage instanceof PDOAdapter)) {
+        if ($this->storage instanceof PDOAdapter) {
             $this->storage->singleTransaction();
         }
 

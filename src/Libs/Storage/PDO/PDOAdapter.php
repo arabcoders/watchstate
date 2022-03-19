@@ -423,7 +423,7 @@ final class PDOAdapter implements StorageInterface
     public function singleTransaction(): bool
     {
         $this->singleTransaction = true;
-        $this->logger->notice('Single transaction mode');
+        $this->logger->info('Single transaction mode');
 
         if (false === $this->pdo->inTransaction()) {
             $this->pdo->beginTransaction();

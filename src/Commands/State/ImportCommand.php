@@ -114,35 +114,45 @@ class ImportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
+        $logger = null;
+
+        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
+            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
+        }
+
+        if (null !== $logger) {
+            $this->logger = $logger;
+            $this->mapper->setLogger($logger);
+        }
+
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($serverName, $selected, true)) {
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by --servers-filter.', $serverName));
                 continue;
             }
 
             if (true !== ag($server, 'import.enabled')) {
-                $output->writeln(
-                    sprintf('<error>Ignoring \'%s\' as requested by \'servers.yaml\'.</error>', $serverName),
-                    OutputInterface::VERBOSITY_VERBOSE
-                );
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by \'%s\'.', $serverName, $config));
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $output->writeln(
+                $this->logger->error(
                     sprintf(
-                        '<error>Server \'%s\' Used Unsupported type. Expecting one of \'%s\' but got \'%s\' instead.</error>',
+                        'Unexpected type for server \'%s\'. Was Expecting one of [%s], but got \'%s\' instead.',
                         $serverName,
-                        implode(', ', array_keys($supported)),
+                        implode('|', array_keys($supported)),
                         $type
                     )
                 );
+
                 return self::FAILURE;
             }
 
             if (null === ag($server, 'url')) {
-                $output->writeln(sprintf('<error>Server \'%s\' has no url.</error>', $serverName));
+                $this->logger->error(sprintf('Server \'%s\' has no URL.', $serverName));
                 return self::FAILURE;
             }
 
@@ -160,19 +170,8 @@ class ImportCommand extends Command
             return self::FAILURE;
         }
 
-        $logger = null;
-
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
-        }
-
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
-
-        if (null !== $logger) {
-            $this->logger = $logger;
-            $this->mapper->setLogger($logger);
-        }
 
         if (count($list) >= 1 && !$input->getOption('mapper-direct')) {
             $this->logger->info('Preloading all mapper data.');
@@ -263,10 +262,6 @@ class ImportCommand extends Command
         }
 
         $operations = $this->mapper->commit();
-
-        if ($total >= 1) {
-            $this->logger->notice('Finished Committing the changes.');
-        }
 
         if ($input->getOption('stats-show')) {
             Data::add('operations', 'stats', $operations);

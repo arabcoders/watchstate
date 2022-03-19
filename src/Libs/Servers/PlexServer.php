@@ -544,13 +544,13 @@ class PlexServer implements ServerInterface
                             ],
                         );
 
-                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
 
                         foreach ($it as $entity) {
                             $this->processImport($mapper, $type, $cName, $entity, $after);
                         }
 
-                        $this->logger->notice(
+                        $this->logger->info(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,
@@ -765,13 +765,13 @@ class PlexServer implements ServerInterface
                             ],
                         );
 
-                        $this->logger->notice(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
 
                         foreach ($it as $entity) {
                             $this->processExport($mapper, $type, $cName, $entity, $after);
                         }
 
-                        $this->logger->notice(
+                        $this->logger->info(
                             sprintf(
                                 'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,
