@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'config:dump' => App\Commands\Config\DumpCommand::class,
     'config:php' => App\Commands\Config\PHPCommand::class,
     'state:import' => App\Commands\State\ImportCommand::class,
     'state:export' => App\Commands\State\ExportCommand::class,
