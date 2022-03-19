@@ -78,10 +78,6 @@ final class PDOAdapter implements StorageInterface
             }
         }
 
-        if (true === ($opts['singleTransaction'] ?? false)) {
-            $this->singleTransaction();
-        }
-
         return $this;
     }
 

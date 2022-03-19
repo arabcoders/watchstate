@@ -133,7 +133,11 @@ final class PDOMigrations
 
     public function runMaintenance(): int|bool
     {
-        return $this->pdo->exec('VACUUM;');
+        if ('sqlite' === $this->driver) {
+            return $this->pdo->exec('VACUUM;');
+        }
+
+        return false;
     }
 
     private function getVersion(): int
