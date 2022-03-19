@@ -6,16 +6,9 @@ namespace App\Libs;
 
 use App\Cli;
 use App\Libs\Extends\ConsoleOutput;
-use App\Libs\Mappers\Export\ExportMapper;
-use App\Libs\Mappers\ExportInterface;
-use App\Libs\Mappers\Import\MemoryMapper;
-use App\Libs\Mappers\ImportInterface;
-use App\Libs\Storage\PDO\PDOAdapter;
-use App\Libs\Storage\StorageInterface;
 use Closure;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
-use League\Container\ReflectionContainer;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
@@ -31,25 +24,21 @@ use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-class KernelConsole
+final class Initializer
 {
     private Cli $cli;
     private ConsoleOutput $cliOutput;
 
     public function __construct()
     {
-        // -- Load user custom variables.
+        // -- Load user custom environment variables.
         (function () {
-            if (null === ($dataPath = env('WS_DATA_PATH', null))) {
-                $dataPath = env('IN_DOCKER') ? '/config' : __DIR__ . '/../../var';
-            }
+            $dataPath = env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : __DIR__ . '/../../var');
 
-            if (!is_writable($dataPath)) {
-                throw new RuntimeException(sprintf('Unable to write to data directory \'%s\'.', $dataPath));
-            }
-
-            if (file_exists($dataPath . '/config/env')) {
-                (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/env');
+            if (file_exists($dataPath . '/config/.env')) {
+                (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/.env');
+            } elseif (file_exists(__DIR__ . '/../../.env')) {
+                (new Dotenv())->usePutenv(true)->overload(__DIR__ . '/../../.env');
             }
         })();
 
@@ -65,18 +54,14 @@ class KernelConsole
         $this->cli = new Cli(Container::getContainer());
     }
 
-    /**
-     * This Code Only Run once.
-     *
-     * @return $this
-     */
     public function boot(): self
     {
         $this->createDirectories();
 
-        // -- load user config.
+        // -- Load user custom settings.
         (function () {
             $path = Config::get('path') . '/config/config.yaml';
+
             if (file_exists($path)) {
                 Config::init(function () use ($path) {
                     return array_replace_recursive(Config::getAll(), Yaml::parseFile($path));
@@ -84,6 +69,7 @@ class KernelConsole
             }
 
             $path = Config::get('path') . '/config/servers.yaml';
+
             if (file_exists($path)) {
                 Config::save('servers', Yaml::parseFile($path));
             }
@@ -114,10 +100,6 @@ class KernelConsole
             );
             exit(1);
         });
-
-        $this->setupStorage($logger);
-        $this->setupImportMapper($logger);
-        $this->setupExportMapper($logger);
 
         return $this;
     }
@@ -164,7 +146,7 @@ class KernelConsole
                 $e->getMessage(),
                 [
                     'file' => $e->getFile(),
-                    'line' => $e->getLine(),
+                    'line' => $e->getLine()
                 ]
             );
             $response = new Response(500);
@@ -237,121 +219,6 @@ class KernelConsole
                 }
             }
         }
-    }
-
-    private function setupImportMapper(Logger $logger): void
-    {
-        $mapper = Config::get('mapper.import.type', MemoryMapper::class);
-
-        if (class_exists($mapper)) {
-            $classFQN = $mapper;
-        } else {
-            $classFQN = '\\App\\Libs\\Mappers\\Import\\' . $mapper;
-        }
-
-        if (!class_exists($classFQN)) {
-            $message = sprintf('User defined object mapper \'%s\' is not found.', $mapper);
-            $logger->error($message, ['class' => $classFQN]);
-            exit(1);
-        }
-
-        if (!is_subclass_of($classFQN, ImportInterface::class)) {
-            $message = sprintf(
-                'User defined object mapper \'%s\' is incompatible. It does not implements the required interface.',
-                $mapper
-            );
-            $logger->error($message, ['class' => $classFQN]);
-            exit(2);
-        }
-
-        Container::add(
-            ImportInterface::class,
-            [
-                'class' => fn() => Container::get(ReflectionContainer::class)->get($classFQN)
-                    ?->setup(Config::get('mapper.import.opts', []))
-                    ?->setStorage(Container::get(StorageInterface::class)),
-            ]
-        );
-    }
-
-    private function setupExportMapper(Logger $logger): void
-    {
-        $mapper = Config::get('mapper.export.type', ExportMapper::class);
-
-        if (class_exists($mapper)) {
-            $classFQN = $mapper;
-        } else {
-            $classFQN = '\\App\\Libs\\Mappers\\Export\\' . $mapper;
-        }
-
-        if (!class_exists($classFQN)) {
-            $message = sprintf('User defined object mapper \'%s\' is not found.', $mapper);
-            $logger->error($message, ['class' => $classFQN]);
-            exit(1);
-        }
-
-        if (!is_subclass_of($classFQN, ExportInterface::class)) {
-            $message = sprintf(
-                'User defined object mapper \'%s\' is incompatible. It does not implements the required interface.',
-                $mapper
-            );
-            $logger->error($message, ['class' => $classFQN]);
-            exit(2);
-        }
-
-        Container::add(
-            ExportInterface::class,
-            [
-                'class' => fn() => Container::get(ReflectionContainer::class)->get($classFQN)
-                    ?->setup(Config::get('mapper.export.opts', []))
-                    ?->setStorage(Container::get(StorageInterface::class)),
-            ]
-        );
-    }
-
-    private function setupStorage(Logger $logger): void
-    {
-        $storage = Config::get('storage.type', PDOAdapter::class);
-
-        if (class_exists($storage)) {
-            $classFQN = $storage;
-        } else {
-            $classFQN = '\\App\\Libs\\Storage\\' . $storage;
-        }
-
-        if (!class_exists($classFQN)) {
-            $message = sprintf('User defined Storage backend \'%s\' is not found.', $storage);
-            $logger->error($message, ['class' => $classFQN]);
-            exit(3);
-        }
-
-        if (!is_subclass_of($classFQN, StorageInterface::class)) {
-            $message = sprintf(
-                'Storage backend \'%s\' is incompatible. It does not implements the required interface.',
-                $storage
-            );
-            $logger->error($message, ['class' => $classFQN]);
-            exit(4);
-        }
-
-        Container::add(
-            StorageInterface::class,
-            function () use ($classFQN) {
-                $pdo = Container::get(ReflectionContainer::class)?->get($classFQN)?->setup(
-                    Config::get('storage.opts', [])
-                );
-
-                if (null === $pdo) {
-                    throw new RuntimeException(sprintf('Unable to create instance of \'%s\' class.', $classFQN));
-                }
-
-                if (true !== $pdo->isMigrated()) {
-                    $pdo->migrations(StorageInterface::MIGRATE_UP);
-                }
-
-                return $pdo;
-            },
-        );
     }
 
     private function setupLoggers(Logger $logger, array $loggers): void

@@ -33,7 +33,7 @@ if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
 
 require __DIR__ . '/../vendor/autoload.php';
 
-(new App\Libs\KernelConsole())->boot()->runHttp(
+(new App\Libs\Initializer())->boot()->runHttp(
     function (ServerRequestInterface $request) {
         return serveHttpRequest($request);
     }
