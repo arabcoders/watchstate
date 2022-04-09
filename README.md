@@ -10,8 +10,7 @@ that the plugin no longer supported. And I like to keep my own data locally if p
 
 # v1 tag.
 
-The tool is already working, The reason why it's not tagged v1.x yet is the API and config are not stable yet.
-Therefore, Once we are satisfied with tool the API and config we will tag it.
+The tool is already working, The reason why it's not tagged v1.x, is i haven't yet decided if I like the config style.
 
 # Supported Media servers.
 
@@ -269,30 +268,33 @@ Emby does not send webhooks events for newly added items.
 
 None that we are aware of.
 
-# Globally supported environment variables.  
+# Globally supported environment variables.
 
 - (string) `WS_DATA_PATH` Where key data stored (config|db).
-- (string) `WS_TMP_DIR` Where temp data stored. (logs|cache). Defaults to `WS_DATA_PATH` if not set. 
+- (string) `WS_TMP_DIR` Where temp data stored. (logs|cache). Defaults to `WS_DATA_PATH` if not set.
 - (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
 - (string) `WS_STORAGE_PDO_USERNAME` PDO username
 - (string) `WS_STORAGE_PDO_PASSWORD` PDO password
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
 - (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
-- (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
+- (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
+  100|200|250|300|400|500|550|600).
 - (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
-- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
+- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
+  100|200|250|300|400|500|550|600).
 - (string) `WS_LOGGER_FILE` fullpath for log file for example, by default, it's `/config/logs/app.log`
 - (bool) `WS_LOGGER_SYSLOG_ENABLED` enable syslog logger.
 - (int) `WS_LOGGER_SYSLOG_FACILITY` syslog logging facility
-- (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY, 100|200|250|300|400|500|550|600).
+- (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
+  100|200|250|300|400|500|550|600).
 - (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
 - (int) `WS_CRON_IMPORT` enable import scheduled task.
 - (int) `WS_CRON_EXPORT` enable export scheduled task.
 - (int) `WS_CRON_PUSH` enable push scheduled task.
 - (string) `WS_CRON_IMPORT_AT` cron expression timer.
-- (string) `WS_CRON_EXPORT` cron expression timer.
-- (string) `WS_CRON_PUSH` cron expression timer.
+- (string) `WS_CRON_EXPORT_AT` cron expression timer.
+- (string) `WS_CRON_PUSH_AT` cron expression timer.
 
 # Container specific environment variables
 
