@@ -3,7 +3,7 @@ services:
   watchstate:
     container_name: watchstate
     restart: unless-stopped
-    build: .
+    build: ../
     environment:
       WS_UID: ${UID:-1000}
       WS_GID: ${GID:-1000}

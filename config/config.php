@@ -17,7 +17,7 @@ return (function () {
     $config = [
         'name' => 'WatchState',
         'version' => 'v0.0.0',
-        'tz' => null,
+        'tz' => env('WS_TS', 'UTC'),
         'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
     ];
 
