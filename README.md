@@ -12,7 +12,7 @@ that the plugin no longer supported. And I like to keep my own data locally if p
 
 The tool is already working, The reason why it's not tagged v1.x, is i haven't yet decided if I like the config style.
 
-# Supported Media servers.
+# Supported media servers.
 
 * Plex
 * Emby
@@ -69,7 +69,7 @@ $ docker exec -ti watchstate console state:import -vvrm
 now that you have imported your watch state, you can stop manually running the command again. and rely on the webhooks
 to update the watch state. To start receiving webhook events from servers you need to do few more steps.
 
-### Enable Webhooks events for specific server.
+### Enable webhooks events for specific server.
 
 To see the server specific api key run the following command
 
@@ -143,7 +143,7 @@ To enable the export scheduled task set the value of `WS_CRON_EXPORT` to `1`. By
 minutes. However, you can change the schedule by adding another variable called `WS_CRON_EXPORT_AT` and set its value to
 valid cron expression. for example, `0 */3 * * *` it will run every three hours instead of 90 minutes.
 
-# Start receiving Webhook Events.
+# Start receiving webhook events.
 
 By default, the official container includes a small http server exposed at port `80`, we officially don't support HTTPS
 inside the container for the HTTP server. However, for the adventurous people we expose port 443 as well, as such you
@@ -204,7 +204,7 @@ Choose whatever name you want.
 
 ##### Webhook Url:
 
-`http://localhost:8081/?apikey=[YOUR_API_KEY]`
+`http://localhost:8081`
 
 ##### Notification Type:
 
@@ -222,7 +222,13 @@ Select the following events
 
 ### Send All Properties (ignores template)
 
-Enable this one as well.
+Toggle this checkbox.
+
+### Add Request Header
+
+Key: `X-apikey`
+
+Value: `[YOUR_API_KEY]`
 
 Click `save`
 
