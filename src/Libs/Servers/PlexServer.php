@@ -72,7 +72,7 @@ class PlexServer implements ServerInterface
     protected string $cacheKey = '';
     protected array $cacheData = [];
     protected string|int|null $uuid = null;
-    protected string|null $user = null;
+    protected string|int|null $user = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -656,7 +656,19 @@ class PlexServer implements ServerInterface
 
                 $json = ag($content, 'MediaContainer.Metadata', [])[0] ?? [];
 
-                $state = $response->getInfo('user_data')['state'];
+                $state = $response->getInfo('user_data')['state'] ?? null;
+
+                if (null === $state) {
+                    $this->logger->error(
+                        sprintf(
+                            'Request failed with code \'%d\'.',
+                            $response->getStatusCode(),
+                        ),
+                        $response->getHeaders()
+                    );
+                    continue;
+                }
+
                 assert($state instanceof StateInterface);
 
                 if (StateInterface::TYPE_MOVIE === $state->type) {
