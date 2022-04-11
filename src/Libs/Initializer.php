@@ -33,12 +33,13 @@ final class Initializer
     {
         // -- Load user custom environment variables.
         (function () {
-            $dataPath = env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : __DIR__ . '/../../var');
+            if (file_exists(__DIR__ . '/../../.env')) {
+                (new Dotenv())->usePutenv(true)->overload(__DIR__ . '/../../.env');
+            }
 
+            $dataPath = env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : __DIR__ . '/../../var');
             if (file_exists($dataPath . '/config/.env')) {
                 (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/.env');
-            } elseif (file_exists(__DIR__ . '/../../.env')) {
-                (new Dotenv())->usePutenv(true)->overload(__DIR__ . '/../../.env');
             }
         })();
 
@@ -58,14 +59,11 @@ final class Initializer
     {
         $this->createDirectories();
 
-        // -- Load user custom settings.
         (function () {
             $path = Config::get('path') . '/config/config.yaml';
 
             if (file_exists($path)) {
-                Config::init(function () use ($path) {
-                    return array_replace_recursive(Config::getAll(), Yaml::parseFile($path));
-                });
+                Config::init(fn() => array_replace_recursive(Config::getAll(), Yaml::parseFile($path)));
             }
 
             $path = Config::get('path') . '/config/servers.yaml';
@@ -75,16 +73,15 @@ final class Initializer
             }
         })();
 
-        if (Config::get('tz')) {
-            date_default_timezone_set(Config::get('tz'));
-        }
+        date_default_timezone_set(Config::get('tz', 'UTC'));
 
         $logger = Container::get(LoggerInterface::class);
 
         $this->setupLoggers($logger, Config::get('logger'));
 
         set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
-            if (0 === error_reporting()) {
+            $errno = $number & error_reporting();
+            if (0 === $errno) {
                 return;
             }
 
@@ -134,6 +131,7 @@ final class Initializer
         EmitterInterface|null $emitter = null
     ): void {
         $emitter = $emitter ?? new SapiEmitter();
+
         if (null === $request) {
             $factory = new Psr17Factory();
             $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))->fromGlobals();

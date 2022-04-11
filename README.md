@@ -295,6 +295,7 @@ None that we are aware of.
 - (string) `WS_CRON_IMPORT_AT` cron expression timer.
 - (string) `WS_CRON_EXPORT_AT` cron expression timer.
 - (string) `WS_CRON_PUSH_AT` cron expression timer.
+- (string) `WS_TZ` Set timezone for example, `UTC`
 
 # Container specific environment variables
 

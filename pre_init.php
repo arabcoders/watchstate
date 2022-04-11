@@ -13,3 +13,15 @@ if (!defined('BASE_PEAK_MEMORY')) {
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', realpath(__DIR__));
 }
+
+if (!defined('STDIN')) {
+    define('STDIN', fopen('php://stdin', 'rb'));
+}
+
+if (!defined('STDOUT')) {
+    define('STDOUT', fopen('php://stdout', 'wb'));
+}
+
+if (!defined('STDERR')) {
+    define('STDERR', fopen('php://stderr', 'wb'));
+}
