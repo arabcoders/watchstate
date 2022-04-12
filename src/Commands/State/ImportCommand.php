@@ -186,7 +186,7 @@ class ImportCommand extends Command
         foreach ($list as $name => &$server) {
             Data::addBucket($name);
 
-            $opts = ag($server, 'server.options', []);
+            $opts = ag($server, 'options', []);
 
             if ($input->getOption('import-unwatched')) {
                 $opts[ServerInterface::OPT_IMPORT_UNWATCHED] = true;

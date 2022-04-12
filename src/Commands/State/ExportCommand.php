@@ -166,7 +166,7 @@ class ExportCommand extends Command
         foreach ($list as $name => &$server) {
             Data::addBucket($name);
 
-            $opts = ag($server, 'server.options', []);
+            $opts = ag($server, 'options', []);
 
             if ($input->getOption('ignore-date')) {
                 $opts[ServerInterface::OPT_EXPORT_IGNORE_DATE] = true;
