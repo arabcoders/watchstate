@@ -61,6 +61,7 @@ return (function () {
                 'headers' => [
                     'User-Agent' => 'WatchState/' . ag($config, 'version'),
                 ],
+                'timeout' => 300.0,
                 'extra' => [
                     'curl' => [
                         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
