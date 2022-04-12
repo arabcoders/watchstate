@@ -8,10 +8,6 @@ Ever wanted to sync your watch state without having to rely on 3rd party service
 you. I had multiple problems with Plex trakt.tv plugin which led to my account being banned at trakt.tv, and on top of
 that the plugin no longer supported. And I like to keep my own data locally if possible.
 
-# v1 tag.
-
-The tool is already working, The reason why it's not tagged v1.x, is i haven't yet decided if I like the config style.
-
 # Supported media servers.
 
 * Plex
@@ -312,7 +308,7 @@ None that we are aware of.
 
 # FAQ
 
-### Q1: How to update new server watched state without overwriting the existing watch state?
+### Q: How to update new server watched state without overwriting the existing watch state?
 
 Add the server, disable the import operation, and enable export. Then run the following commands.
 
@@ -329,7 +325,7 @@ you can then enable the import feature if you want.
 
 ---
 
-### Q2: Is there support for Multi-user setup?
+### Q: Is there support for Multi-user setup?
 
 No, The database design centered on single user. However, It's possible to run container for each user.
 
@@ -343,8 +339,26 @@ For jellyfin/emby, you can use same api-token and just replace the userId.
 
 ---
 
-### Q3: Sometimes episodes/movies don't make to webhook receiver
+### Q: Sometimes episodes/movies don't make to webhook receiver
 
 as stated in webhook limitation sometimes servers don't make it easy to receive those events, as such, to complement
 webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to re-sync the
 state of map of server guids, as webhook push support rely entirely on local data of each server.
+
+----
+
+### Q: Can this tool run without docker?
+
+Yes, if you have the required PHP version and the needed extensions. to run this tool you need the following `php8.1`,
+and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`, `php8.1-curl`, `php8.1-sqlite3` once you
+have the environment ready you can clone this repository and then run
+
+```bash
+$ php console
+```
+
+The app should save your data into `./var` directory. If you want to change the directory you can export the environment
+variable `WS_DATA_PATH` for console and browser. you can add a file called `.env` in main tool directory with the
+environment variables. take look at the files inside docker directory to know how to run the scheduled tasks and ofc if
+you want a webhook support you would need a http server like nginx, caddy or apache. 
+
