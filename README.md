@@ -22,7 +22,7 @@ create your `docker-compose.yaml` file
 version: '3.3'
 services:
     watchstate:
-        image: arabcoders/watchstate:dev-latest
+        image: arabcoders/watchstate:latest
         container_name: watchstate
         restart: unless-stopped
         environment:
