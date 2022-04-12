@@ -360,5 +360,12 @@ $ php console
 The app should save your data into `./var` directory. If you want to change the directory you can export the environment
 variable `WS_DATA_PATH` for console and browser. you can add a file called `.env` in main tool directory with the
 environment variables. take look at the files inside docker directory to know how to run the scheduled tasks and ofc if
-you want a webhook support you would need a http server like nginx, caddy or apache. 
+you want a webhook support you would need a http server like nginx, caddy or apache.
 
+---
+
+### Q: Some records keep getting updated even through the state hasn't changed??
+
+Most likely the problem is incorrect GUID reported from servers, in our testing we noticed that at least few hundred
+records in thetvdb that get reported by plex have incorrect imdb, which in turns conflicts sometimes with jellyfin/emby
+there is nothing we can do beside have the problematic records reported to thetvdb site mods to fix their db entries.
