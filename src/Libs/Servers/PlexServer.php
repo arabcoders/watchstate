@@ -555,7 +555,7 @@ class PlexServer implements ServerInterface
                                 'Finished Parsing %s - %s (%d objects) response.',
                                 $this->name,
                                 $cName,
-                                Data::get("{$this->name}.{$type}_total")
+                                Data::get("{$this->name}.{$cName}_total")
                             )
                         );
                     } catch (JsonException $e) {
@@ -948,6 +948,7 @@ class PlexServer implements ServerInterface
         DateTimeInterface|null $after = null
     ): void {
         try {
+            Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
 
             if (StateInterface::TYPE_MOVIE === $type) {
