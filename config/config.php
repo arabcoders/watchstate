@@ -91,7 +91,7 @@ return (function () {
         ],
         'file' => [
             'type' => 'stream',
-            'enabled' => env('WS_LOGGER_FILE_ENABLE', false),
+            'enabled' => env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
             'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'tmpDir') . '/logs/app.log'),
         ],
