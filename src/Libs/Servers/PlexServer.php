@@ -888,7 +888,10 @@ class PlexServer implements ServerInterface
             $isWatched = (int)(bool)($item->viewCount ?? false);
 
             if (null === ($entity = $mapper->findByIds($guids))) {
-                $this->logger->debug(sprintf('Ignoring %s. Not found in db.', $iName), $item->ProviderIds ?? []);
+                $this->logger->debug(
+                    sprintf('Ignoring %s. [State: %s] - Not found in db.', $iName, $isWatched ? 'Played' : 'Unplayed'),
+                    $item->Guid ?? []
+                );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
                 return;
             }

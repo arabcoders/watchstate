@@ -866,9 +866,11 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
+            $isWatched = (int)(bool)($item->UserData?->Played ?? false);
+
             if (null === ($entity = $mapper->findByIds($guids))) {
                 $this->logger->debug(
-                    sprintf('Ignoring %s. Not found in db.', $iName),
+                    sprintf('Ignoring %s. [State: %s] - Not found in db.', $iName, $isWatched ? 'Played' : 'Unplayed'),
                     (array)($item->ProviderIds ?? [])
                 );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
@@ -883,7 +885,6 @@ class JellyfinServer implements ServerInterface
                 }
             }
 
-            $isWatched = (int)(bool)($item->UserData?->Played ?? false);
 
             if ($isWatched === $entity->watched) {
                 $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
