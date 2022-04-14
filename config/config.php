@@ -154,7 +154,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
-                '-vr' => null,
+                '-v' => null,
             ]
         ],
         ExportCommand::TASK_NAME => [
@@ -164,7 +164,7 @@ return (function () {
             Task::COMMAND => '@state:export',
             Task::ARGS => [
                 '--mapper-preload' => null,
-                '-vr' => null,
+                '-v' => null,
             ]
         ],
         PushCommand::TASK_NAME => [
@@ -173,7 +173,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
             Task::ARGS => [
-                '-vr' => null,
+                '-v' => null,
             ]
         ],
     ];
