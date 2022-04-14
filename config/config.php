@@ -61,6 +61,7 @@ return (function () {
                 'headers' => [
                     'User-Agent' => 'WatchState/' . ag($config, 'version'),
                 ],
+                'timeout' => 300.0,
                 'extra' => [
                     'curl' => [
                         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
@@ -90,7 +91,7 @@ return (function () {
         ],
         'file' => [
             'type' => 'stream',
-            'enabled' => env('WS_LOGGER_FILE_ENABLE', false),
+            'enabled' => env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
             'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'tmpDir') . '/logs/app.log'),
         ],
@@ -153,7 +154,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
             Task::ARGS => [
-                '-vr' => null,
+                '-v' => null,
             ]
         ],
         ExportCommand::TASK_NAME => [
@@ -163,7 +164,7 @@ return (function () {
             Task::COMMAND => '@state:export',
             Task::ARGS => [
                 '--mapper-preload' => null,
-                '-vr' => null,
+                '-v' => null,
             ]
         ],
         PushCommand::TASK_NAME => [
@@ -172,7 +173,7 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
             Task::ARGS => [
-                '-vr' => null,
+                '-v' => null,
             ]
         ],
     ];

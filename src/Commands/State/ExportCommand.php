@@ -56,6 +56,12 @@ class ExportCommand extends Command
                 'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
             )
             ->addOption(
+                'timeout',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Set request timeout in seconds'
+            )
+            ->addOption(
                 'servers-filter',
                 's',
                 InputOption::VALUE_OPTIONAL,
@@ -178,6 +184,10 @@ class ExportCommand extends Command
 
             if ($input->getOption('no-proxy')) {
                 $opts['client']['no_proxy'] = $input->getOption('no-proxy');
+            }
+
+            if ($input->getOption('timeout')) {
+                $opts['client']['timeout'] = $input->getOption('timeout');
             }
 
             $server['options'] = $opts;
