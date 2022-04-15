@@ -320,7 +320,7 @@ if (!function_exists('serveHttpRequest')) {
                     continue;
                 }
 
-                $userId = ag($info, 'user_id', null);
+                $userId = ag($info, 'user', null);
                 $matchUser = true === ag($info, 'webhook.match.user') && null !== $userId;
                 if (true === $matchUser && $userId !== $request->getAttribute('USER_ID', null)) {
                     continue;
