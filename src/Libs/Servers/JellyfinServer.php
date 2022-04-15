@@ -552,7 +552,7 @@ class JellyfinServer implements ServerInterface
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
                             sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty section? report error: \'%s\'.',
+                                'Failed to find media items path in %s - %s - response. Most likely empty section? reported error: \'%s\'.',
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
@@ -805,7 +805,7 @@ class JellyfinServer implements ServerInterface
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
                             sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty section? report error: \'%s\'.',
+                                'Failed to find media items path in %s - %s - response. Most likely empty section? reported error: \'%s\'.',
                                 $this->name,
                                 $cName,
                                 $e->getMessage()

@@ -576,7 +576,7 @@ class PlexServer implements ServerInterface
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
                             sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty library? report error: \'%s\'.',
+                                'Failed to find media items path in %s - %s - response. Most likely empty library? reported error: \'%s\'.',
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
@@ -823,7 +823,7 @@ class PlexServer implements ServerInterface
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
                             sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty library? report error: \'%s\'.',
+                                'Failed to find media items path in %s - %s - response. Most likely empty library? reported error: \'%s\'.',
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
