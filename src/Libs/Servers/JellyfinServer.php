@@ -16,6 +16,7 @@ use Closure;
 use DateInterval;
 use DateTimeInterface;
 use JsonException;
+use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -548,6 +549,20 @@ class JellyfinServer implements ServerInterface
                             )
                         );
                         return;
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                'Failed to find media items path in %s - %s - response. Most likely empty section? report error: \'%s\'.',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
+                        );
+                        return;
                     }
                 };
             },
@@ -785,6 +800,20 @@ class JellyfinServer implements ServerInterface
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
                             ]
+                        );
+                        return;
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                'Failed to find media items path in %s - %s - response. Most likely empty section? report error: \'%s\'.',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
                         );
                         return;
                     }

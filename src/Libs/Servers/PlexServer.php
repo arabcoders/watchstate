@@ -16,6 +16,7 @@ use Closure;
 use DateInterval;
 use DateTimeInterface;
 use JsonException;
+use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -572,6 +573,20 @@ class PlexServer implements ServerInterface
                             ],
                         );
                         return;
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                'Failed to find media items path in %s - %s - response. Most likely empty library? report error: \'%s\'.',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
+                        );
+                        return;
                     }
                 };
             },
@@ -803,6 +818,20 @@ class PlexServer implements ServerInterface
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
                             ]
+                        );
+                        return;
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                'Failed to find media items path in %s - %s - response. Most likely empty library? report error: \'%s\'.',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
                         );
                         return;
                     }
@@ -1052,6 +1081,10 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
+            if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                $val = $this->parseLegacyAgents($val);
+            }
+
             [$key, $value] = explode('://', $val);
             $key = strtolower($key);
 
@@ -1082,6 +1115,10 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
+            if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                $val = $this->parseLegacyAgents($val);
+            }
+
             [$key, $value] = explode('://', $val);
             $key = strtolower($key);
 
@@ -1100,6 +1137,42 @@ class PlexServer implements ServerInterface
     {
         if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
             $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        }
+    }
+
+    /**
+     * Parse old Plex Content Agents
+     *
+     * @param string $agent
+     *
+     * @return string
+     */
+    private function parseLegacyAgents(string $agent): string
+    {
+        $this->logger->debug('Parsing Legacy plex content agent.', ['guid' => $agent]);
+
+        // -- Example of agents
+        // -- com.plexapp.agents.imdb://295648
+        // -- com.plexapp.agents.tmdb://tt0054215
+        // -- com.plexapp.agents.thetvdb://295648/6/14?lang=en
+        // -- com.plexapp.agents.hama://(agent)-(id)
+
+        try {
+            if (true === str_contains($agent, 'hama://')) {
+                if (1 === preg_match('/(.+)-(.+)/', afterLast($agent, 'hama://'), $matches)) {
+                    return $matches[1] . '://' . $matches[2];
+                }
+            }
+
+            $id = afterlast($agent, 'agents.');
+            $agentGuid = explode('://', $id);
+            $agent = $agentGuid[0];
+            $guid = explode('/', $agentGuid[1])[0];
+
+            return $agent . '://' . $guid;
+        } catch (Throwable $e) {
+            $this->logger->error('Unable to match Legacy plex agent.', ['guid' => $agent, 'e' => $e->getMessage()]);
+            return $agent;
         }
     }
 
