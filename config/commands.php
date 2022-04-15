@@ -23,4 +23,5 @@ return [
     'servers:unify' => App\Commands\Servers\UnifyCommand::class,
     'servers:view' => App\Commands\Servers\ViewCommand::class,
     'servers:remote' => App\Commands\Servers\RemoteCommand::class,
+    'servers:edit' => App\Commands\Servers\EditCommand::class,
 ];
