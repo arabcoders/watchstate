@@ -50,6 +50,8 @@ class JellyfinServer implements ServerInterface
     protected const WEBHOOK_ALLOWED_EVENTS = [
         'ItemAdded',
         'UserDataSaved',
+        'PlaybackStart',
+        'PlaybackStop',
     ];
 
     protected const WEBHOOK_TAINTED_EVENTS = [
@@ -322,7 +324,7 @@ class JellyfinServer implements ServerInterface
             ...$guids
         ];
 
-        if (true === Config::get('webhook.debug')) {
+        if (true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug')) {
             saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
         }
 
