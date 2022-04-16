@@ -262,6 +262,17 @@ Click `Save Changes`
 Does not send webhooks events for "marked as watched/unwatched", or you added more than 1 item at time i.e. folder
 import.
 
+If you have multiuser setup, please will still report the admin account user_id as 1 even though when you get the list
+of users ids it shows completely different user ID, so when you initially set up your server for multiuser, select your
+admin account and after finishing you have to set the value manually to `1`. to do so please do the following
+
+```bash
+$ docker exec -ti watchstate console servers:edit --key user --set 1 -- [SERVER_NAME]
+```
+
+This only for the main admin account, other managed/home/external users, you should leave the user as it is reported by
+plex.
+
 # Emby
 
 Emby does not send webhooks events for newly added items.
