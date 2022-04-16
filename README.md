@@ -234,7 +234,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook Url:
 
-`http://localhost:8081/?&apikey=[YOUR_API_KEY]`
+`http://localhost:8081/?apikey=[YOUR_API_KEY]`
 
 ##### Webhook Events
 
@@ -251,7 +251,7 @@ Go to your plex WebUI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 
 ##### URL:
 
-`http://localhost:8081/?&apikey=[YOUR_API_KEY]`
+`http://localhost:8081/?apikey=[YOUR_API_KEY]`
 
 Click `Save Changes`
 
