@@ -228,7 +228,7 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(ServerRequestInterface $request, string $name, array $parsed = [])
+    function saveWebhookPayload(ServerRequestInterface $request, string $name, array $parsed = []): void
     {
         $content = [
             'query' => $request->getQueryParams(),
@@ -241,6 +241,24 @@ if (!function_exists('saveWebhookPayload')) {
 
         @file_put_contents(
             Config::get('tmpDir') . '/webhooks/' . sprintf('webhook.%s.%d.json', $name, time()),
+            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        );
+    }
+}
+
+if (!function_exists('saveRequestPayload')) {
+    function saveRequestPayload(ServerRequestInterface $request): void
+    {
+        $content = [
+            'query' => $request->getQueryParams(),
+            'parsed' => $request->getParsedBody(),
+            'server' => $request->getServerParams(),
+            'body' => (string)$request->getBody(),
+            'attributes' => $request->getAttributes(),
+        ];
+
+        @file_put_contents(
+            Config::get('tmpDir') . '/webhooks/' . sprintf('request.%d.json', time()),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
@@ -261,6 +279,7 @@ if (!function_exists('jsonResponse')) {
         );
     }
 }
+
 if (!function_exists('httpClientChunks')) {
     /**
      * Handle Response Stream as Chunks
@@ -293,9 +312,14 @@ if (!function_exists('preServeHttpRequest')) {
 if (!function_exists('serveHttpRequest')) {
     function serveHttpRequest(ServerRequestInterface $request): ResponseInterface
     {
+        $log = [];
         $logger = Container::get(LoggerInterface::class);
 
         try {
+            if (true === (bool)env('WS_REQUEST_DEBUG') || null !== ag($request->getQueryParams(), 'rdebug')) {
+                saveRequestPayload($request);
+            }
+
             $request = preServeHttpRequest($request);
 
             // -- get apikey from header or query.
@@ -303,6 +327,7 @@ if (!function_exists('serveHttpRequest')) {
             if (empty($apikey)) {
                 $apikey = ag($request->getQueryParams(), 'apikey', '');
                 if (empty($apikey)) {
+                    $log[] = 'No api key in  headers or query';
                     throw new HttpException('No API key was given.', 400);
                 }
             }
@@ -327,10 +352,12 @@ if (!function_exists('serveHttpRequest')) {
                 if (true === (true === ag($info, 'webhook.match.user') && null !== $userId)) {
                     if (null === ($requestUser = $request->getAttribute('USER_ID', null))) {
                         $validUser = false;
+                        $log[] = 'Request user is not set';
                         continue;
                     }
                     if ((string)$userId !== (string)$requestUser) {
                         $validUser = false;
+                        $log[] = sprintf('Request user [%s] does not match config user [%s]', $requestUser, $userId);
                         continue;
                     }
                     $validUser = true;
@@ -341,11 +368,13 @@ if (!function_exists('serveHttpRequest')) {
                 if (true === (true === ag($info, 'webhook.match.uuid') && null !== $uuid)) {
                     if (null === ($requestServerId = $request->getAttribute('SERVER_ID', null))) {
                         $validUUid = false;
+                        $log[] = 'Request server unique id is not set';
                         continue;
                     }
 
                     if ((string)$uuid !== (string)$requestServerId) {
                         $validUUid = false;
+                        $log[] = sprintf('Request UUID [%s] does not match config UUID [%s]', $requestServerId, $uuid);
                         continue;
                     }
 
@@ -368,6 +397,7 @@ if (!function_exists('serveHttpRequest')) {
             }
 
             if (true !== ag($server, 'webhook.import')) {
+                $log[] = 'Import disabled for this server';
                 throw new HttpException(
                     sprintf(
                         'Import via webhook for this server \'%s\' is disabled.',
@@ -380,6 +410,7 @@ if (!function_exists('serveHttpRequest')) {
             try {
                 $server['class'] = makeServer($server, $server['name']);
             } catch (RuntimeException $e) {
+                $log[] = 'Creating Instance of the Backend has failed.';
                 throw new HttpException($e->getMessage(), 500);
             }
 
@@ -405,7 +436,7 @@ if (!function_exists('serveHttpRequest')) {
                         $backend->meta = $entity->meta;
                     }
                     $backend = $storage->update($backend);
-                    return jsonResponse(status: 200, body: $backend->getAll(),headers:[
+                    return jsonResponse(status: 200, body: $backend->getAll(), headers: [
                         'X-Status' => 'Event is tainted. Only GUIDs updated.',
                     ]);
                 }
@@ -453,6 +484,7 @@ if (!function_exists('serveHttpRequest')) {
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'attributes' => $request->getAttributes(),
+                'log' => $log,
             ]);
 
             return jsonResponse(

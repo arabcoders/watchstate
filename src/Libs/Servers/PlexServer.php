@@ -358,7 +358,7 @@ class PlexServer implements ServerInterface
             ...$guids
         ];
 
-        if (true === Config::get('webhook.debug')) {
+        if (true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug')) {
             saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
         }
 
@@ -850,6 +850,82 @@ class PlexServer implements ServerInterface
         );
     }
 
+    public function cache(): array
+    {
+        return $this->getLibraries(
+            function (string $cName, string $type) {
+                return function (ResponseInterface $response) use ($cName, $type) {
+                    try {
+                        if (200 !== $response->getStatusCode()) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Request to %s - %s responded with (%d) unexpected code.',
+                                    $this->name,
+                                    $cName,
+                                    $response->getStatusCode()
+                                )
+                            );
+                            return;
+                        }
+
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/MediaContainer/Metadata',
+                            ],
+                        );
+
+                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+
+                        foreach ($it as $entity) {
+                            $this->processForCache($type, $entity);
+                        }
+
+                        $this->logger->info(sprintf('Finished Parsing %s - %s response.', $this->name, $cName));
+                    } catch (JsonException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                'Failed to decode %s - %s - response. Reason: \'%s\'.',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
+                        );
+                        return;
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                'Failed to find media items path in %s - %s - response. Most likely empty library? reported error: \'%s\'.',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                            ],
+                        );
+                        return;
+                    }
+                };
+            },
+            function (string $cName, string $type, UriInterface|string $url) {
+                return fn(Throwable $e) => $this->logger->error(
+                    sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
+                    [
+                        'url' => $url,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
+                );
+            }
+        );
+    }
+
     protected function processExport(
         ExportInterface $mapper,
         string $type,
@@ -1062,6 +1138,32 @@ class PlexServer implements ServerInterface
                 'after' => $after,
                 self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
             ]);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+        }
+    }
+
+    protected function processForCache(string $type, StdClass $item): void
+    {
+        try {
+            if (null === ($item->Guid ?? null)) {
+                $item->Guid = [['id' => $item->guid]];
+            } else {
+                $item->Guid[] = ['id' => $item->guid];
+            }
+
+            if (!$this->hasSupportedIds($item->Guid)) {
+                return;
+            }
+
+            $guids = $this->getGuids($type, $item->Guid ?? []);
+
+            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),

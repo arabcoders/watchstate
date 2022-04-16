@@ -25,6 +25,9 @@ class EmbyServer extends JellyfinServer
         'item.markplayed',
         'item.markunplayed',
         'playback.scrobble',
+        'playback.pause',
+        'playback.start',
+        'playback.stop',
     ];
 
     protected const WEBHOOK_TAINTED_EVENTS = [
@@ -163,7 +166,7 @@ class EmbyServer extends JellyfinServer
             ...$guids
         ];
 
-        if (true === Config::get('webhook.debug')) {
+        if (true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug')) {
             saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
         }
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Commands\State\CacheCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
@@ -83,20 +84,21 @@ return (function () {
     ];
 
     $config['logger'] = [
-        'stderr' => [
-            'type' => 'stream',
-            'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
-            'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
-            'filename' => 'php://stderr',
-        ],
         'file' => [
             'type' => 'stream',
             'enabled' => env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
             'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'tmpDir') . '/logs/app.log'),
         ],
+        'stderr' => [
+            'type' => 'stream',
+            'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
+            'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
+            'filename' => 'php://stderr',
+        ],
         'syslog' => [
             'type' => 'syslog',
+            'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
             'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', false),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
@@ -172,6 +174,15 @@ return (function () {
             Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
+            Task::ARGS => [
+                '-v' => null,
+            ]
+        ],
+        CacheCommand::TASK_NAME => [
+            Task::NAME => CacheCommand::TASK_NAME,
+            Task::ENABLED => (bool)env('WS_CRON_CACHE', true),
+            Task::RUN_AT => (string)env('WS_CRON_CACHE_AT', '0 */6 * * *'),
+            Task::COMMAND => '@state:cache',
             Task::ARGS => [
                 '-v' => null,
             ]

@@ -228,7 +228,7 @@ final class Initializer
                 throw new RuntimeException(sprintf('Logger: \'%s\' has no type set.', $name));
             }
 
-            if (true !== ag($context, 'enabled')) {
+            if (true !== (bool)ag($context, 'enabled')) {
                 continue;
             }
 
