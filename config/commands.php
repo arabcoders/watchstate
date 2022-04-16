@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     // config:
     'config:php' => App\Commands\Config\PHPCommand::class,
+    'config:env' => App\Commands\Config\EnvCommand::class,
     // -- state:
     'state:import' => App\Commands\State\ImportCommand::class,
     'state:export' => App\Commands\State\ExportCommand::class,
