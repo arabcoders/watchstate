@@ -289,6 +289,7 @@ None that we are aware of.
 - (string) `WS_STORAGE_PDO_USERNAME` PDO username
 - (string) `WS_STORAGE_PDO_PASSWORD` PDO password
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
+- (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
 - (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
 - (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
@@ -380,3 +381,20 @@ you want a webhook support you would need a http server like nginx, caddy or apa
 Most likely the problem is incorrect GUID reported from servers, in our testing we noticed that at least few hundred
 records in thetvdb that get reported by plex have incorrect imdb, which in turns conflicts sometimes with jellyfin/emby
 there is nothing we can do beside have the problematic records reported to thetvdb site mods to fix their db entries.
+
+----
+
+### Q: I keep on seeing "No supported GUID was given." in logs?
+
+This most likely means, the item being reported by the media server is not matched, in jellyfin/emby edit metadata and
+make sure there are External IDs listed in the metadata. like tvdb/imdb etc. For plex click the (...), and click Fix
+match.
+
+### Q: I enabled strict user match to allow only my user to update the state, webhook requests are failing?
+
+If this relates to jellyfin, then please make sure you have ticked "Send All Properties (ignores template)", if it's
+plex and your account is main account then update the user id to 1 by running the following command:
+
+```bash
+$ docker exec -ti watchstate console servers:edit --key user --set 1 -- [PLEX_SERVER_NAME]
+```

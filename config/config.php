@@ -83,20 +83,22 @@ return (function () {
     ];
 
     $config['logger'] = [
-        'stderr' => [
-            'type' => 'stream',
-            'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
-            'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
-            'filename' => 'php://stderr',
-        ],
         'file' => [
             'type' => 'stream',
             'enabled' => env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
             'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'tmpDir') . '/logs/app.log'),
         ],
+        'stderr' => [
+            'type' => 'stream',
+            'docker' => true,
+            'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
+            'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
+            'filename' => 'php://stderr',
+        ],
         'syslog' => [
             'type' => 'syslog',
+            'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
             'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', false),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
