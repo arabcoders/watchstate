@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Commands\State\CacheCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
@@ -91,7 +92,6 @@ return (function () {
         ],
         'stderr' => [
             'type' => 'stream',
-            'docker' => true,
             'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
             'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
             'filename' => 'php://stderr',
@@ -174,6 +174,15 @@ return (function () {
             Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
+            Task::ARGS => [
+                '-v' => null,
+            ]
+        ],
+        CacheCommand::TASK_NAME => [
+            Task::NAME => CacheCommand::TASK_NAME,
+            Task::ENABLED => (bool)env('WS_CRON_CACHE', true),
+            Task::RUN_AT => (string)env('WS_CRON_CACHE_AT', '0 */6 * * *'),
+            Task::COMMAND => '@state:cache',
             Task::ARGS => [
                 '-v' => null,
             ]

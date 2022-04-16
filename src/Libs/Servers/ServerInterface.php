@@ -79,6 +79,13 @@ interface ServerInterface
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array;
 
     /**
+     * Pull and cache GUIDs relations.
+     *
+     * @return array
+     */
+    public function cache(): array;
+
+    /**
      * Export watch state to server.
      *
      * @param ExportInterface $mapper

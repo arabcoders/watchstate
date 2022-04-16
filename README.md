@@ -288,6 +288,7 @@ None that we are aware of.
 - (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
 - (string) `WS_STORAGE_PDO_USERNAME` PDO username
 - (string) `WS_STORAGE_PDO_PASSWORD` PDO password
+- (string) `WS_TZ` Set timezone for example, `UTC`
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
 - (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
@@ -304,12 +305,13 @@ None that we are aware of.
   100|200|250|300|400|500|550|600).
 - (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
 - (int) `WS_CRON_IMPORT` enable import scheduled task.
-- (int) `WS_CRON_EXPORT` enable export scheduled task.
-- (int) `WS_CRON_PUSH` enable push scheduled task.
 - (string) `WS_CRON_IMPORT_AT` cron expression timer.
+- (int) `WS_CRON_EXPORT` enable export scheduled task.
 - (string) `WS_CRON_EXPORT_AT` cron expression timer.
+- (int) `WS_CRON_PUSH` enable push scheduled task.
 - (string) `WS_CRON_PUSH_AT` cron expression timer.
-- (string) `WS_TZ` Set timezone for example, `UTC`
+- (int) `WS_CRON_CACHE` enable caching of GUIDs relations.
+- (string) `WS_CRON_CACHE_AT` cron expression timer.
 
 # Container specific environment variables
 
