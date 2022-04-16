@@ -310,6 +310,8 @@ if (!function_exists('serveHttpRequest')) {
             $server = [];
             Config::get('servers', []);
 
+            $validUser = $validUUid = null;
+
             // -- Find Server
             foreach (Config::get('servers', []) as $name => $info) {
                 if (null === ag($info, 'webhook.token')) {
@@ -321,15 +323,33 @@ if (!function_exists('serveHttpRequest')) {
                 }
 
                 $userId = ag($info, 'user', null);
-                $matchUser = true === ag($info, 'webhook.match.user') && null !== $userId;
-                if (true === $matchUser && $userId !== $request->getAttribute('USER_ID', null)) {
-                    continue;
+
+                if (true === (true === ag($info, 'webhook.match.user') && null !== $userId)) {
+                    if (null === ($requestUser = $request->getAttribute('USER_ID', null))) {
+                        $validUser = false;
+                        continue;
+                    }
+                    if ((string)$userId !== (string)$requestUser) {
+                        $validUser = false;
+                        continue;
+                    }
+                    $validUser = true;
                 }
 
                 $uuid = ag($info, 'uuid', null);
-                $matchUUID = true === ag($info, 'webhook.match.uuid') && null !== $uuid;
-                if (true === $matchUUID && $uuid !== $request->getAttribute('SERVER_ID', null)) {
-                    continue;
+
+                if (true === (true === ag($info, 'webhook.match.uuid') && null !== $uuid)) {
+                    if (null === ($requestServerId = $request->getAttribute('SERVER_ID', null))) {
+                        $validUUid = false;
+                        continue;
+                    }
+
+                    if ((string)$uuid !== (string)$requestServerId) {
+                        $validUUid = false;
+                        continue;
+                    }
+
+                    $validUUid = true;
                 }
 
                 $server = array_replace_recursive(['name' => $name], $info);
@@ -337,7 +357,14 @@ if (!function_exists('serveHttpRequest')) {
             }
 
             if (empty($server)) {
-                throw new HttpException('Invalid API key was given.', 401);
+                if (false === $validUser) {
+                    $message = 'API key is valid, User checks failed.';
+                } elseif (false === $validUUid) {
+                    $message = 'API key and user check is valid, Server unique id checks failed.';
+                } else {
+                    $message = 'Invalid API key was given.';
+                }
+                throw new HttpException($message, 401);
             }
 
             if (true !== ag($server, 'webhook.import')) {
@@ -367,7 +394,9 @@ if (!function_exists('serveHttpRequest')) {
             if (null === ($backend = $storage->get($entity))) {
                 $entity = $storage->insert($entity);
                 queuePush($entity);
-                return jsonResponse(status: 200, body: $entity->getAll());
+                return jsonResponse(status: 200, body: $entity->getAll(), headers: [
+                    'X-Status' => 'Added new entity.'
+                ]);
             }
 
             if (true === $entity->isTainted()) {
@@ -376,7 +405,9 @@ if (!function_exists('serveHttpRequest')) {
                         $backend->meta = $entity->meta;
                     }
                     $backend = $storage->update($backend);
-                    return jsonResponse(status: 200, body: $backend->getAll());
+                    return jsonResponse(status: 200, body: $backend->getAll(),headers:[
+                        'X-Status' => 'Event is tainted. Only GUIDs updated.',
+                    ]);
                 }
 
                 return new Response(
@@ -391,7 +422,9 @@ if (!function_exists('serveHttpRequest')) {
                         $backend->meta = $entity->meta;
                     }
                     $backend = $storage->update($backend);
-                    return jsonResponse(status: 200, body: $backend->getAll());
+                    return jsonResponse(status: 200, body: $backend->getAll(), headers: [
+                        'X-Status' => 'No watch state updated. Only GUIDs updated.',
+                    ]);
                 }
 
                 return new Response(
@@ -404,7 +437,10 @@ if (!function_exists('serveHttpRequest')) {
                 $backend = $storage->update($backend);
 
                 queuePush($backend);
-                return jsonResponse(status: 200, body: $backend->getAll());
+
+                return jsonResponse(status: 200, body: $backend->getAll(), headers: [
+                    'X-Status' => 'Item Queued.',
+                ]);
             }
 
             return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
@@ -413,9 +449,22 @@ if (!function_exists('serveHttpRequest')) {
                 return new Response(status: $e->getCode(), headers: ['X-Status' => $e->getMessage()]);
             }
 
-            $logger->error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+            $logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'attributes' => $request->getAttributes(),
+            ]);
 
-            return jsonResponse(status: $e->getCode(), body: ['error' => true, 'message' => $e->getMessage()]);
+            return jsonResponse(
+                status:  $e->getCode(),
+                body:    [
+                             'error' => true,
+                             'message' => $e->getMessage()
+                         ],
+                headers: [
+                             'X-Status' => $e->getMessage(),
+                         ]
+            );
         }
     }
 }

@@ -45,9 +45,9 @@ fi
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
 
-if [ 0 == "${WS_DISABLE_HTTP}" ] && [ -f "/etc/caddy/Caddyfile" ]; then
-  echo "Starting Caddy server.."
-  caddy start -config /etc/caddy/Caddyfile
+if [ 0 == "${WS_DISABLE_HTTP}" ]; then
+  echo "Starting Nginx server.."
+  nginx
 fi
 
 if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}" ]; then
