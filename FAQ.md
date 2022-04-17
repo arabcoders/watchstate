@@ -102,6 +102,6 @@ please direct your questions to the maintainer of plugin to fix this bug.
 
 --- 
 
-### Q: When using jellyfin webhook plugin, Sometimes there are events with user info?
+### Q: When using jellyfin webhook plugin, Sometimes there are events with no user info?
 
 This is also a bug in jellyfin webhook, please direct your questions to the maintainer of plugin. 
