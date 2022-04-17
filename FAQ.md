@@ -90,4 +90,18 @@ $ docker exec -ti watchstate console servers:edit --key user --set 1 -- [PLEX_SE
 ### Q: Does this tool require webhooks to work?
 
 No, You can use the task scheduler or on demand sync if you want. However, we recommend the webhook method as it's the
-most efficient method to gather play state.    
+most efficient method to gather play state.
+
+--- 
+
+### Q: When i use jellyfin, i sometimes see double events?
+
+This likely to a reported bug
+in [Clicking save sometimes add another entry. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
+please direct your questions to the maintainer of plugin to fix this bug. 
+
+--- 
+
+### Q: When using jellyfin webhook plugin, Sometimes there are events with user info?
+
+This is also a bug in jellyfin webhook, please direct your questions to the maintainer of plugin. 
