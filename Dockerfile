@@ -23,7 +23,7 @@ RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     rm -rf /app/docker/ /app/var/ /app/docs/ /app/.github/ && \
     chmod +x /usr/bin/run-app-cron /usr/bin/console /usr/bin/entrypoint-docker && \
     /usr/bin/composer --working-dir=/app/ -o --no-progress --no-cache install && \
-    chown -R www-data:www-data /app /config
+    chown -R www-data:www-data /app /config /var/lib/nginx/
 
 ENTRYPOINT ["/usr/bin/entrypoint-docker"]
 

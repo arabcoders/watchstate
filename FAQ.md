@@ -98,10 +98,17 @@ most efficient method to gather play state.
 
 This likely to a reported bug
 in [Clicking save sometimes add another entry. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
-please direct your questions to the maintainer of plugin to fix this bug. 
+please direct your questions to the maintainer of plugin to fix this bug.
 
 --- 
 
 ### Q: When using jellyfin webhook plugin, Sometimes there are events with no user info?
 
-This is also a bug in jellyfin webhook, please direct your questions to the maintainer of plugin. 
+This is also a bug in jellyfin webhook, please direct your questions to the maintainer of plugin.
+
+---
+
+### Q: I keep on seeing "..., entity state is tainted." what does that means?
+
+Tainted events are events that are not used to update the watch state, but they are interesting enough for us to keep
+around for other benefits like updating the GUID mapping for items. It's normal do not worry about it. 
