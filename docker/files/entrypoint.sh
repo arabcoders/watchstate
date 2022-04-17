@@ -37,7 +37,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
 fi
 
 if [ 0 == "${WS_NO_CHOWN}" ]; then
-  chown -R www-data:www-data /config
+  chown -R www-data:www-data /config /var/lib/nginx/
 fi
 
 /usr/bin/console config:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
