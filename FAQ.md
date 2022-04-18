@@ -96,19 +96,23 @@ most efficient method to gather play state.
 
 ### Q: When i use jellyfin, i sometimes see double events?
 
-This likely to a reported bug
-in [Clicking save sometimes add another entry. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
-please direct your questions to the maintainer of plugin to fix this bug.
-
---- 
-
-### Q: When using jellyfin webhook plugin, Sometimes there are events with no user info?
-
-This is also a bug in jellyfin webhook, please direct your questions to the maintainer of plugin.
+This likely a bug in resulted from [jf webhook. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
+Just reload the page make sure there is only one watchstate event.
 
 ---
 
 ### Q: I keep on seeing "..., entity state is tainted." what does that means?
 
 Tainted events are events that are not used to update the watch state, but they are interesting enough for us to keep
-around for other benefits like updating the GUID mapping for items. It's normal do not worry about it. 
+around for other benefits like updating the GUID mapping for items. It's normal do not worry about it.
+
+---
+
+### Q: How can I see the database history?
+
+```bash
+$ docker exec -ti watchstate console db:list
+```
+
+This command will give you access to see the database entries. by default, it will show the last 20 events, however you
+can run the same command with --help to see more options to extend the list or to filter the results.

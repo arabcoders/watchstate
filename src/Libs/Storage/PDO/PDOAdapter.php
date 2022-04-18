@@ -415,6 +415,15 @@ final class PDOAdapter implements StorageInterface
         return $this;
     }
 
+    public function getPdo(): PDO
+    {
+        if (null === $this->pdo) {
+            throw new \RuntimeException('PDO is not initialized yet.');
+        }
+
+        return $this->pdo;
+    }
+
     /**
      * Enable Single Transaction mode.
      *

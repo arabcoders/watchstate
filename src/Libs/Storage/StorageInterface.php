@@ -6,7 +6,9 @@ namespace App\Libs\Storage;
 
 use App\Libs\Entity\StateInterface;
 use DateTimeInterface;
+use PDO;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 interface StorageInterface
 {
@@ -130,4 +132,12 @@ interface StorageInterface
      * @return $this
      */
     public function setLogger(LoggerInterface $logger): self;
+
+    /**
+     * Get Underlying PDO Instance.
+     *
+     * @return PDO
+     * @throws RuntimeException if PDO is not initialized yet.
+     */
+    public function getPdo(): PDO;
 }
