@@ -70,6 +70,8 @@ class EmbyServer extends JellyfinServer
             'SERVER_VERSION' => afterLast($userAgent, '/'),
             'USER_ID' => ag($json, 'User.Id', ''),
             'USER_NAME' => ag($json, 'User.Name', ''),
+            'WH_EVENT' => ag($json, 'Event', 'not_set'),
+            'WH_TYPE' => ag($json, 'Item.Type', 'not_set'),
         ];
 
         foreach ($attributes as $key => $val) {

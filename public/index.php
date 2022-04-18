@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Psr\Http\Message\ServerRequestInterface;
-
 error_reporting(E_ALL);
 ini_set('error_reporting', 'On');
 ini_set('display_errors', 'Off');
@@ -46,4 +44,4 @@ set_exception_handler(function (Throwable $e) {
     exit(1);
 });
 
-(new App\Libs\Initializer())->boot()->runHttp(fn(ServerRequestInterface $request) => serveHttpRequest($request));
+(new App\Libs\Initializer())->boot()->runHttp();

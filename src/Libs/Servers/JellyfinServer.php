@@ -240,6 +240,8 @@ class JellyfinServer implements ServerInterface
             'SERVER_VERSION' => afterLast($userAgent, '/'),
             'USER_ID' => ag($json, 'UserId', ''),
             'USER_NAME' => ag($json, 'NotificationUsername', ''),
+            'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
+            'WH_TYPE' => ag($json, 'ItemType', 'not_set'),
         ];
 
         foreach ($attributes as $key => $val) {
