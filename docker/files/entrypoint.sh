@@ -36,7 +36,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
   chmod +x /usr/bin/run-app-cron
 fi
 
-if [ 0 == "${WS_NO_CHOWN}" ]; then
+if [ -z "${WS_NO_CHOWN}" ]; then
   chown -R www-data:www-data /config /var/lib/nginx/
 fi
 
@@ -45,12 +45,12 @@ fi
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
 
-if [ 0 == "${WS_DISABLE_HTTP}" ]; then
+if [ -z "${WS_DISABLE_HTTP}" ]; then
   echo "Starting Nginx server.."
   nginx
 fi
 
-if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}" ]; then
+if [ -z "${WS_DISABLE_CRON}" ]; then
   echo "Starting cron..."
   /usr/sbin/crond -b -l 2
 fi
