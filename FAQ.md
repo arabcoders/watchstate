@@ -28,9 +28,9 @@ For jellyfin/emby, you can use same api-token and just replace the userId.
 
 ---
 
-### Q: Sometimes episodes/movies don't make to webhook receiver
+### Q: Sometimes episodes or movies don't make it to webhook server?
 
-as stated in webhook limitation sometimes servers don't make it easy to receive those events, as such, to complement
+As stated in webhook limitation sometimes servers don't make it easy to receive those events, as such, to complement
 webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to re-sync the
 state of map of server guids, as webhook push support rely entirely on local data of each server.
 
@@ -60,7 +60,7 @@ you want a webhook support you would need a frontend proxy for `php8.1-fpm` like
 
 ---
 
-### Q: Some records keep getting updated even through the state hasn't changed??
+### Q: Some records keep getting updated even when the state did not change?
 
 This most likely relates to incorrect GUID reported from servers, in our testing we noticed that at least few hundred
 records in thetvdb that get reported by plex have incorrect imdb, which in turns conflicts sometimes with jellyfin/emby
@@ -78,7 +78,7 @@ match.
 
 ### Q: I enabled strict user match to allow only my user to update the state, webhook requests are failing?
 
-If this relates to jellyfin, then please make sure you have ticked "Send All Properties (ignores template)", if it's
+If this relates to jellyfin, then please make sure you have selected "Send All Properties (ignores template)", if it's
 plex and your account is main account then update the user id to 1 by running the following command:
 
 ```bash
