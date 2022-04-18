@@ -5,6 +5,7 @@ WS_UID=${WS_UID:-1000}
 WS_GID=${WS_GID:-1000}
 WS_NO_CHOWN=${WS_NO_CHOWN:-0}
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
+WS_DISABLE_CRON=${WS_DISABLE_CRON:-0}
 WS_CRON_IMPORT=${WS_CRON_IMPORT:-0}
 WS_CRON_PUSH=${WS_CRON_PUSH:-0}
 WS_CRON_EXPORT=${WS_CRON_EXPORT:-0}
@@ -23,7 +24,7 @@ if [ ! -f "/app/vendor/autoload.php" ]; then
   if [ ! -f "/usr/bin/composer" ]; then
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
   fi
-  runuser -u www-data -- composer --ansi --working-dir=/app/ -o --no-progress --no-cache install
+  runuser -u www-data -- composer --ansi --working-dir=/app/ -o --no-progress --no-dev --no-cache install
 fi
 
 if [ ! -f "/usr/bin/console" ]; then
@@ -36,7 +37,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
   chmod +x /usr/bin/run-app-cron
 fi
 
-if [ -z "${WS_NO_CHOWN}" ]; then
+if [ 0 == "${WS_NO_CHOWN}" ]; then
   chown -R www-data:www-data /config /var/lib/nginx/
 fi
 
@@ -45,12 +46,12 @@ fi
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
 
-if [ -z "${WS_DISABLE_HTTP}" ]; then
+if [ 0 == "${WS_DISABLE_HTTP}" ]; then
   echo "Starting Nginx server.."
   nginx
 fi
 
-if [ -z "${WS_DISABLE_CRON}" ]; then
+if [ 0 == "${WS_DISABLE_CRON}" ]; then
   echo "Starting cron..."
   /usr/sbin/crond -b -l 2
 fi

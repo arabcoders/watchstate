@@ -15,15 +15,16 @@ RUN mv "${PHP_INI_DIR}/php.ini-production" "${PHP_INI_DIR}/php.ini" && chmod +x 
 
 COPY . /app
 
+RUN composer --working-dir=/app/ -o --no-progress --no-dev --no-cache install
+
 RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     cp /app/docker/files/nginx.conf /etc/nginx/nginx.conf && \
     cp /app/docker/files/fpm.conf /usr/local/etc/php-fpm.d/docker.conf && \
     cp /app/docker/files/entrypoint.sh /usr/bin/entrypoint-docker && \
     cp /app/docker/files/app_console.sh /usr/bin/console && \
     cp /app/docker/files/cron.sh /usr/bin/run-app-cron && \
-    rm -rf /app/docker/ /app/var/ /app/docs/ /app/.github/ && \
+    rm -rf /app/docker/ /app/var/ /app/.github/ && \
     chmod +x /usr/bin/run-app-cron /usr/bin/console /usr/bin/entrypoint-docker && \
-    /usr/bin/composer --working-dir=/app/ -o --no-progress --no-cache install && \
     chown -R www-data:www-data /app /config /var/lib/nginx/
 
 ENTRYPOINT ["/usr/bin/entrypoint-docker"]
