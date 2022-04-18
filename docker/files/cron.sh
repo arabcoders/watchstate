@@ -1,25 +1,33 @@
 #!/usr/bin/env sh
 
+UID=$(id -u)
 NOW=$(date +"%Y_%m_%d")
 WS_UID=${WS_UID:-1000}
 WS_GID=${WS_GID:-1000}
+WS_CRON_DEBUG=${WS_CRON_DEBUG:-'v'}
 
 # check for data path.
 if [ -z "${WS_DATA_PATH}" ]; then
   WS_DATA_PATH="/config"
 fi
 
-if [ "1" == "${WS_CRON_IMPORT}" ] || [ "1" == "${WS_CRON_EXPORT}" ] || [ "1" == "${WS_CRON_PUSH}" ]; then
-  LOGFILE="${WS_DATA_PATH}/logs/cron/${NOW}.log"
+LOGFILE="${WS_DATA_PATH}/logs/cron/${NOW}.log"
 
-  if [ ! -d "${WS_DATA_PATH}/logs/cron/" ]; then
+# Check cron logs path.
+if [ ! -d "${WS_DATA_PATH}/logs/cron/" ]; then
+  if [ 0 == "${UID}" ]; then
     runuser -u www-data -- mkdir -p "${WS_DATA_PATH}/logs/cron/"
+  else
+    mkdir -p "${WS_DATA_PATH}/logs/cron/"
   fi
+fi
 
-  if [ ! -f "${LOGFILE}" ]; then
-    runuser -u www-data -- touch "${LOGFILE}"
-    chown ${WS_UID}:${WS_GID} "${LOGFILE}"
-  fi
+if [ 0 == "${UID}" ]; then
+  OUTPUT=$(runuser -u www-data -- /usr/bin/console scheduler:run -o -${WS_CRON_DEBUG})
+else
+  OUTPUT=$(/usr/bin/console scheduler:run -o -${WS_CRON_DEBUG})
+fi
 
-  /usr/bin/console scheduler:run -o >>"${LOGFILE}"
+if [ ! -z "${OUTPUT}" ]; then
+  echo ${OUTPUT} >${LOGFILE}
 fi
