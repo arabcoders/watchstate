@@ -242,6 +242,8 @@ class PlexServer implements ServerInterface
                 'SERVER_VERSION' => afterLast($userAgent, '/'),
                 'USER_ID' => ag($json, 'Account.id', ''),
                 'USER_NAME' => ag($json, 'Account.title', ''),
+                'WH_EVENT' => ag($json, 'event', 'not_set'),
+                'WH_TYPE' => ag($json, 'Metadata.type', 'not_set'),
             ];
 
             foreach ($attributes as $key => $val) {

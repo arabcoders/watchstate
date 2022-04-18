@@ -6,6 +6,7 @@ namespace App\Libs;
 
 use App\Cli;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Storage\StorageInterface;
 use Closure;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
@@ -123,12 +124,14 @@ final class Initializer
     /**
      * Handle HTTP Request.
      *
-     * @param Closure(ServerRequestInterface): ResponseInterface $fn
+     * @param ServerRequestInterface|null $request
+     * @param EmitterInterface|null $emitter
+     * @param null|Closure(ServerRequestInterface): ResponseInterface $fn
      */
     public function runHttp(
-        Closure $fn,
         ServerRequestInterface|null $request = null,
-        EmitterInterface|null $emitter = null
+        EmitterInterface|null $emitter = null,
+        Closure|null $fn = null,
     ): void {
         $emitter = $emitter ?? new SapiEmitter();
 
@@ -138,7 +141,7 @@ final class Initializer
         }
 
         try {
-            $response = $fn($request);
+            $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
         } catch (Throwable $e) {
             Container::get(LoggerInterface::class)->error(
                 $e->getMessage(),
@@ -151,6 +154,217 @@ final class Initializer
         }
 
         $emitter->emit($response);
+    }
+
+    private function defaultHttpServer(ServerRequestInterface $request): ResponseInterface
+    {
+        $log = [];
+        $logger = Container::get(LoggerInterface::class);
+
+        try {
+            if (true === (bool)env('WS_REQUEST_DEBUG') || null !== ag($request->getQueryParams(), 'rdebug')) {
+                saveRequestPayload($request);
+            }
+
+            $request = preServeHttpRequest($request);
+
+            // -- get apikey from header or query.
+            $apikey = $request->getHeaderLine('x-apikey');
+            if (empty($apikey)) {
+                $apikey = ag($request->getQueryParams(), 'apikey', '');
+                if (empty($apikey)) {
+                    $log[] = 'No api key in  headers or query';
+                    throw new HttpException('No API key was given.', 400);
+                }
+            }
+
+            $server = [];
+            Config::get('servers', []);
+
+            $validUser = $validUUid = null;
+
+            // -- Find Server
+            foreach (Config::get('servers', []) as $name => $info) {
+                if (null === ag($info, 'webhook.token')) {
+                    continue;
+                }
+
+                if (!hash_equals(ag($info, 'webhook.token'), $apikey)) {
+                    continue;
+                }
+
+                $userId = ag($info, 'user', null);
+
+                if (true === (true === ag($info, 'webhook.match.user') && null !== $userId)) {
+                    if (null === ($requestUser = $request->getAttribute('USER_ID', null))) {
+                        $validUser = false;
+                        $log[] = 'Request user is not set';
+                        continue;
+                    }
+                    if ((string)$userId !== (string)$requestUser) {
+                        $validUser = false;
+                        $log[] = sprintf(
+                            'Request user [%s] does not match config user [%s]',
+                            $requestUser ?? 'NO USER_ID',
+                            $userId
+                        );
+                        continue;
+                    }
+                    $validUser = true;
+                }
+
+                $uuid = ag($info, 'uuid', null);
+
+                if (true === (true === ag($info, 'webhook.match.uuid') && null !== $uuid)) {
+                    if (null === ($requestServerId = $request->getAttribute('SERVER_ID', null))) {
+                        $validUUid = false;
+                        $log[] = 'Request server unique id is not set';
+                        continue;
+                    }
+
+                    if ((string)$uuid !== (string)$requestServerId) {
+                        $validUUid = false;
+                        $log[] = sprintf(
+                            'Request UUID [%s] does not match config UUID [%s]',
+                            $requestServerId ?? 'NO SERVER_ID',
+                            $uuid
+                        );
+                        continue;
+                    }
+
+                    $validUUid = true;
+                }
+
+                $server = array_replace_recursive(['name' => $name], $info);
+                break;
+            }
+
+            if (empty($server)) {
+                if (false === $validUser) {
+                    $message = 'API key is valid, User checks failed.';
+                } elseif (false === $validUUid) {
+                    $message = 'API key and user check is valid, Server unique id checks failed.';
+                } else {
+                    $message = 'Invalid API key was given.';
+                }
+                throw new HttpException($message, 401);
+            }
+
+            if (true !== ag($server, 'webhook.import')) {
+                $log[] = 'Import disabled for this server';
+                throw new HttpException(
+                    sprintf(
+                        'Import via webhook for this server \'%s\' is disabled.',
+                        ag($server, 'name')
+                    ),
+                    500
+                );
+            }
+
+            try {
+                $server['class'] = makeServer($server, $server['name']);
+            } catch (RuntimeException $e) {
+                $log[] = 'Creating Instance of the Backend has failed.';
+                throw new HttpException($e->getMessage(), 500);
+            }
+
+            $entity = $server['class']->parseWebhook($request);
+
+            if (!$entity->hasGuids()) {
+                return new Response(status: 204, headers: [
+                    'X-Status' => 'No GUIDs.',
+                    'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                    'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                ]);
+            }
+
+            $storage = Container::get(StorageInterface::class);
+
+            if (null === ($backend = $storage->get($entity))) {
+                $entity = $storage->insert($entity);
+                queuePush($entity);
+                return jsonResponse(status: 200, body: $entity->getAll(), headers: [
+                    'X-Status' => 'Added new entity.',
+                    'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                    'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                ]);
+            }
+
+            if (true === $entity->isTainted()) {
+                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
+                    if (!empty($entity->meta)) {
+                        $backend->meta = $entity->meta;
+                    }
+                    $backend = $storage->update($backend);
+                    return jsonResponse(status: 200, body: $backend->getAll(), headers: [
+                        'X-Status' => 'Event is tainted. Only GUIDs updated.',
+                        'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                        'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                    ]);
+                }
+
+                return new Response(status: 200, headers: [
+                    'X-Status' => 'Nothing updated, entity state is tainted.',
+                    'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                    'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                ]);
+            }
+
+            if ($backend->updated > $entity->updated) {
+                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
+                    if (!empty($entity->meta)) {
+                        $backend->meta = $entity->meta;
+                    }
+                    $backend = $storage->update($backend);
+                    return jsonResponse(status: 200, body: $backend->getAll(), headers: [
+                        'X-Status' => 'No watch state updated. Only GUIDs updated.',
+                        'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                        'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                    ]);
+                }
+
+                return new Response(status: 200, headers: [
+                    'X-Status' => 'Entity date is older than what available in storage.',
+                    'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                    'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                ]);
+            }
+
+            if ($backend->apply($entity)->isChanged()) {
+                $backend = $storage->update($backend);
+
+                queuePush($backend);
+
+                return jsonResponse(status: 200, body: $backend->getAll(), headers: [
+                    'X-Status' => 'Item Queued.',
+                    'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                    'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                ]);
+            }
+
+            return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
+        } catch (HttpException $e) {
+            if (200 === $e->getCode()) {
+                return new Response(status: $e->getCode(), headers: [
+                    'X-Status' => $e->getMessage(),
+                    'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                    'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                ]);
+            }
+
+            $logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'attributes' => $request->getAttributes(),
+                'log' => $log,
+            ]);
+
+            return jsonResponse($e->getCode(), ['error' => true, 'message' => $e->getMessage()], [
+                'X-Status' => $e->getMessage(),
+                'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+            ]);
+        }
     }
 
     private function createDirectories(): void

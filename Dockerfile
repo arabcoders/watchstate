@@ -17,6 +17,7 @@ COPY . /app
 
 RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     cp /app/docker/files/nginx.conf /etc/nginx/nginx.conf && \
+    cp /app/docker/files/fpm.conf /usr/local/etc/php-fpm.d/docker.conf && \
     cp /app/docker/files/entrypoint.sh /usr/bin/entrypoint-docker && \
     cp /app/docker/files/app_console.sh /usr/bin/console && \
     cp /app/docker/files/cron.sh /usr/bin/run-app-cron && \
