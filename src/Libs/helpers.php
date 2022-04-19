@@ -239,7 +239,7 @@ if (!function_exists('saveWebhookPayload')) {
 
         @file_put_contents(
             Config::get('tmpDir') . '/webhooks/' . sprintf(
-                'webhook.%s.%d.json',
+                'webhook.%s.%s.json',
                 $name,
                 (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),

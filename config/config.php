@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Commands\Config\PruneCommand;
 use App\Commands\State\CacheCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
@@ -20,6 +21,11 @@ return (function () {
         'version' => 'v0.0.0',
         'tz' => env('WS_TS', 'UTC'),
         'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
+        'logs' => [
+            'prune' => [
+                'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
+            ],
+        ],
     ];
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', fn() => ag($config, 'path')));
@@ -183,6 +189,15 @@ return (function () {
             Task::ENABLED => (bool)env('WS_CRON_CACHE', true),
             Task::RUN_AT => (string)env('WS_CRON_CACHE_AT', '0 */6 * * *'),
             Task::COMMAND => '@state:cache',
+            Task::ARGS => [
+                '-v' => null,
+            ]
+        ],
+        PruneCommand::TASK_NAME => [
+            Task::NAME => PruneCommand::TASK_NAME,
+            Task::ENABLED => (bool)env('WS_CRON_PRUNE', true),
+            Task::RUN_AT => (string)env('WS_CRON_CACHE_AT', '0 */12 * * *'),
+            Task::COMMAND => '@config:prune',
             Task::ARGS => [
                 '-v' => null,
             ]
