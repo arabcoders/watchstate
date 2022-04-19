@@ -1256,15 +1256,29 @@ class PlexServer implements ServerInterface
         $this->logger->debug('Parsing Legacy plex content agent.', ['guid' => $agent]);
 
         // -- Example of agents
-        // -- com.plexapp.agents.imdb://295648
-        // -- com.plexapp.agents.tmdb://tt0054215
-        // -- com.plexapp.agents.thetvdb://295648/6/14?lang=en
+        // -- com.plexapp.agents.imdb://(id)
+        // -- com.plexapp.agents.tmdb://(id)
+        // -- com.plexapp.agents.themoviedb://(id)?lang=en
+        // -- com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
+        // -- com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
+        // -- com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
         // -- com.plexapp.agents.hama://(agent)-(id)
 
         try {
+            if (str_starts_with($agent, 'com.plexapp.agents.none')) {
+                return $agent;
+            }
+
+            $replacer = [
+                'agents.themoviedb' => 'agents.tmdb',
+                'agents.thetvdb' => 'agents.tvdb',
+            ];
+
+            $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
+
             if (true === str_contains($agent, 'hama://')) {
                 if (1 === preg_match('/(.+)-(.+)/', afterLast($agent, 'hama://'), $matches)) {
-                    return $matches[1] . '://' . $matches[2];
+                    return $matches[1] . '://' . before($matches[2], '?');
                 }
             }
 
@@ -1273,7 +1287,7 @@ class PlexServer implements ServerInterface
             $agent = $agentGuid[0];
             $guid = explode('/', $agentGuid[1])[0];
 
-            return $agent . '://' . $guid;
+            return $agent . '://' . before($guid, '?');
         } catch (Throwable $e) {
             $this->logger->error('Unable to match Legacy plex agent.', ['guid' => $agent, 'e' => $e->getMessage()]);
             return $agent;

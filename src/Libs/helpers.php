@@ -352,6 +352,13 @@ if (!function_exists('afterLast')) {
     }
 }
 
+if (!function_exists('before')) {
+    function before(string $subject, string $search): string
+    {
+        return $search === '' ? $subject : explode($search, $subject)[0];
+    }
+}
+
 if (!function_exists('makeServer')) {
     /**
      * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, persist:array, options:array} $server
