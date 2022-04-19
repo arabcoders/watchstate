@@ -6,6 +6,7 @@ return [
     // config:
     'config:php' => App\Commands\Config\PHPCommand::class,
     'config:env' => App\Commands\Config\EnvCommand::class,
+    'config:prune' => App\Commands\Config\PruneCommand::class,
     // -- state:
     'state:import' => App\Commands\State\ImportCommand::class,
     'state:export' => App\Commands\State\ExportCommand::class,

@@ -312,6 +312,8 @@ None that we are aware of.
 - (string) `WS_CRON_PUSH_AT` cron expression timer.
 - (int) `WS_CRON_CACHE` enable caching of GUIDs relations.
 - (string) `WS_CRON_CACHE_AT` cron expression timer.
+- (string) `WS_LOGS_PRUNE_AFTER` Delete logs older than specified time, set to `disable` to disable logs pruning. it
+  follows php [strtotime](https://www.php.net/strtotime) function rules.
 
 # Container specific environment variables
 
