@@ -6,6 +6,7 @@ namespace App\Commands\Scheduler;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Scheduler\Scheduler;
 use App\Libs\Scheduler\Task;
 use App\Libs\Scheduler\TaskTimer;
@@ -22,6 +23,7 @@ final class RunCommand extends Command
 {
     private Scheduler $scheduler;
     private array $registered = [];
+    private array $logs = [];
 
     public function __construct(Scheduler $scheduler)
     {
@@ -33,8 +35,8 @@ final class RunCommand extends Command
     protected function configure(): void
     {
         $this->setName('scheduler:run')
-            ->addOption('show-output', 'o', InputOption::VALUE_NONE, 'Show tasks output.')
             ->addOption('no-headers', 'g', InputOption::VALUE_NONE, 'Do not prefix output with headers.')
+            ->addOption('save-log', null, InputOption::VALUE_NONE, 'Save Tasks Output to file.')
             ->addArgument('task', InputArgument::OPTIONAL, 'Run specific task.', null)
             ->setDescription('Run Scheduled Tasks.');
     }
@@ -74,41 +76,60 @@ final class RunCommand extends Command
         $count = count($executedTasks);
 
         if (0 === $count) {
-            $output->writeln(
+            $this->write(
                 '!{date} <info>No Tasks Scheduled to run at this time.</info>',
+                $input,
+                $output,
                 OutputInterface::VERBOSITY_VERY_VERBOSE
             );
         }
 
-        if ($input->getOption('show-output')) {
-            $tasks = array_reverse($executedTasks);
-            $noHeaders = (bool)$input->getOption('no-headers');
+        $tasks = array_reverse($executedTasks);
+        $noHeaders = (bool)$input->getOption('no-headers');
 
-            foreach ($tasks as $task) {
-                $taskOutput = trim($task->getOutput());
+        foreach ($tasks as $task) {
+            $taskOutput = trim($task->getOutput());
 
-                if (empty($taskOutput)) {
-                    continue;
-                }
+            if (empty($taskOutput)) {
+                continue;
+            }
 
-                if (false === $noHeaders) {
-                    $output->writeln('--------------------------');
-                    $output->writeln('Command: ' . $task->getCommand() . ' ' . $task->getArgs());
-                    $output->writeln('--------------------------');
-                    $output->writeln(sprintf('Task %s Output.', $task->getName()));
-                    $output->writeln('--------------------------');
-                    $output->writeln('');
-                }
+            if (false === $noHeaders) {
+                $this->write('--------------------------', $input, $output);
+                $this->write('Command: ' . $task->getCommand() . ' ' . $task->getArgs(), $input, $output);
+                $this->write('--------------------------', $input, $output);
+                $this->write(sprintf('Task %s Output.', $task->getName()), $input, $output);
+                $this->write('--------------------------', $input, $output);
+                $this->write('', $input, $output);
+            }
 
-                $output->writeln($taskOutput);
+            $this->write($taskOutput, $input, $output);
 
-                if (false === $noHeaders) {
-                    $output->writeln('');
-                }
+            if (false === $noHeaders) {
+                $this->write('', $input, $output);
             }
         }
 
+        if ($input->getOption('save-log')) {
+            $logfile = Config::get('tmpDir') . '/logs/crons/' . gmdate('Y_m_d') . '.log';
+            file_put_contents($logfile, implode(PHP_EOL, $this->logs) . PHP_EOL, FILE_APPEND);
+        }
+
         return self::SUCCESS;
+    }
+
+    private function write(
+        string $text,
+        InputInterface $input,
+        OutputInterface $output,
+        int $level = OutputInterface::OUTPUT_NORMAL
+    ): void {
+        assert($output instanceof ConsoleOutput);
+        $output->writeln($text, $level);
+
+        if ($input->getOption('save-log')) {
+            $this->logs[] = $output->getLastMessage();
+        }
     }
 
     public static function getTasks(): array
