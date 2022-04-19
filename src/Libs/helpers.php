@@ -238,7 +238,11 @@ if (!function_exists('saveWebhookPayload')) {
         ];
 
         @file_put_contents(
-            Config::get('tmpDir') . '/webhooks/' . sprintf('webhook.%s.%d.json', $name, time()),
+            Config::get('tmpDir') . '/webhooks/' . sprintf(
+                'webhook.%s.%d.json',
+                $name,
+                (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
+            ),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
@@ -256,7 +260,10 @@ if (!function_exists('saveRequestPayload')) {
         ];
 
         @file_put_contents(
-            Config::get('tmpDir') . '/webhooks/' . sprintf('request.%d.json', time()),
+            Config::get('tmpDir') . '/webhooks/' . sprintf(
+                'request.%s.json',
+                (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
+            ),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }

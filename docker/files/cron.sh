@@ -4,7 +4,7 @@ UID=$(id -u)
 NOW=$(date +"%Y_%m_%d")
 WS_UID=${WS_UID:-1000}
 WS_GID=${WS_GID:-1000}
-WS_CRON_DEBUG=${WS_CRON_DEBUG:-'v'}
+WS_CRON_DEBUG=${WS_CRON_DEBUG:-v}
 
 # check for data path.
 if [ -z "${WS_DATA_PATH}" ]; then
@@ -23,11 +23,7 @@ if [ ! -d "${WS_DATA_PATH}/logs/cron/" ]; then
 fi
 
 if [ 0 == "${UID}" ]; then
-  OUTPUT=$(runuser -u www-data -- /usr/bin/console scheduler:run -o -${WS_CRON_DEBUG})
+  runuser -u www-data -- /usr/bin/console scheduler:run -o -${WS_CRON_DEBUG} >>${LOGFILE}
 else
-  OUTPUT=$(/usr/bin/console scheduler:run -o -${WS_CRON_DEBUG})
-fi
-
-if [ ! -z "${OUTPUT}" ]; then
-  echo ${OUTPUT} >${LOGFILE}
+  /usr/bin/console scheduler:run -o -${WS_CRON_DEBUG} >>${LOGFILE}
 fi
