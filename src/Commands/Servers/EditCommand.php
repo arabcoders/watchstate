@@ -34,6 +34,14 @@ final class EditCommand extends Command
 
         $value = $input->getOption('set');
 
+        if (null !== $value && $input->getOption('delete')) {
+            $output->writeln(
+                '<error>ERROR: cannot use both [-s, --set] and [-d, --delete] flags as the same time.</error>'
+            );
+
+            return self::FAILURE;
+        }
+
         $custom = false;
 
         // -- Use Custom servers.yaml file.
@@ -61,17 +69,17 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if ($value === ag($servers, "{$name}.{$key}")) {
-            $output->writeln('<comment>Not updating. Value already matches.</comment>');
-            return self::SUCCESS;
-        }
-
         if (null === $value && !$input->getOption('delete')) {
             $output->writeln(ag($servers, "{$name}.{$key}"));
             return self::SUCCESS;
         }
 
         if (null !== $value) {
+            if ($value === ag($servers, "{$name}.{$key}")) {
+                $output->writeln('<comment>Not updating. Value already matches.</comment>');
+                return self::SUCCESS;
+            }
+
             $value = ctype_digit($value) ? (int)$value : (string)$value;
             $servers = ag_set($servers, "{$name}.{$key}", $value);
 
@@ -86,6 +94,11 @@ final class EditCommand extends Command
         }
 
         if ($input->getOption('delete')) {
+            if (null === ag($servers, "{$name}.{$key}")) {
+                $output->writeln(sprintf('<error>Server:\'%s\' key \'%s\' does not exists.</error>', $name, $key));
+                return self::FAILURE;
+            }
+
             $servers = ag_delete($servers, "{$name}.{$key}");
             $output->writeln(sprintf('<info>Deleted server:\'%s\' key \'%s\'.</info>', $name, $key));
         }
