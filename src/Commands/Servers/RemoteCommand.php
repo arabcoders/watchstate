@@ -26,6 +26,7 @@ final class RemoteCommand extends Command
         $this->setName('servers:remote')
             ->setDescription('Get info from the remote server.')
             ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
+            ->addOption('list-libraries', null, InputOption::VALUE_NONE, 'List Server Libraries.')
             ->addOption('list-users', null, InputOption::VALUE_NONE, 'List Server users.')
             ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
             ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
@@ -77,6 +78,10 @@ final class RemoteCommand extends Command
             $this->listUsers($input, $output, $server);
         }
 
+        if ($input->getOption('list-libraries')) {
+            $this->listLibraries($output, $server);
+        }
+
         return self::SUCCESS;
     }
 
@@ -116,5 +121,32 @@ final class RemoteCommand extends Command
         }
 
         (new Table($output))->setStyle('box')->setHeaders(array_keys($users[0]))->setRows($list)->render();
+    }
+
+    private function listLibraries(
+        OutputInterface $output,
+        ServerInterface $server,
+    ): void {
+        $libraries = $server->listLibraries();
+
+        if (count($libraries) < 1) {
+            $output->writeln('<comment>No users reported by server.</comment>');
+            return;
+        }
+
+        $list = [];
+        $x = 0;
+        $count = count($libraries);
+
+        foreach ($libraries as $user) {
+            $x++;
+            $values = array_values($user);
+            $list[] = $values;
+            if ($x < $count) {
+                $list[] = new TableSeparator();
+            }
+        }
+
+        (new Table($output))->setStyle('box')->setHeaders(array_keys($libraries[0]))->setRows($list)->render();
     }
 }

@@ -144,4 +144,12 @@ interface ServerInterface
      * @throws ExceptionInterface May be thrown if there is HTTP request errors.
      */
     public function getUsersList(array $opts = []): array;
+
+    /**
+     * Return list of server libraries.
+     *
+     * @return array
+     */
+    public function listLibraries(): array;
+
 }
