@@ -590,7 +590,7 @@ class PlexServer implements ServerInterface
             $isIgnored = null !== $ignoreIds && in_array($key, $ignoreIds);
 
             $list[] = [
-                'id' => $key,
+                'ID' => $key,
                 'Title' => $title,
                 'Type' => $type,
                 'Ignored' => $isIgnored ? 'Yes' : 'No',

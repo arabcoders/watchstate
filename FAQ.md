@@ -116,3 +116,63 @@ $ docker exec -ti watchstate console db:list
 
 This command will give you access to see the database entries. by default, it will show the last 20 events, however you
 can run the same command with --help to see more options to extend the list or to filter the results.
+
+---
+
+### Q: Can I ignore specific libraries from being processed?
+
+Yes, First run the following command
+
+```bash
+$ docker exec -ti watchstate console servers:remote --list-libraries -- [SERVER_NAME] 
+```
+
+it should show you list of given server libraries, you are mainly interested in the ID column. take note of the library
+id, after that run the following command to ignore the libraries. The `options.ignore` accepts comma seperated list of
+ids to ignore.
+
+```bash
+$ docker exec -ti watchstate console servers:edit --key options.ignore --set 'id1,id2,id3' -- [SERVER_NAME] 
+```
+
+If ignored a library by mistake you can run the same command again and omit the id, or you can just delete the key
+entirely by running the following command
+
+```bash
+$ docker exec -ti watchstate console servers:edit --delete --key options.ignore -- [SERVER_NAME] 
+```
+
+---
+
+### Q: I get tired of writing the whole command everytime is there an easy way to do the commands?
+
+Since there is no way to access the command interface outside docker, you can create small shell script to at least omit
+part of command that you have to write for example create new file named
+
+```bash
+$ echo 'docker exec -ti watchstate console "$@"' > ws
+$ chmod +x ws
+```
+
+after that you can do `ws command` for example, `ws db:list`
+
+---
+
+### Q: I am using media servers hosted behind TLS/SSL, and see errors related to http2
+
+Sometimes there are problems related to http/2.0, so before reporting bug please try running the following command
+
+```bash
+$ docker exec -ti watchstate console servers:edit--key options.client.http_version --set 1.0 -- [SERVER_NAME] 
+```
+
+if it does not fix your problem, please open issue about it.
+
+We use [symfony/httpClient](https://symfony.com/doc/current/http_client.html) internally, So any options available in [
+configuration](https://symfony.com/doc/current/http_client.html#configuration) section, can be used
+under `options.client.` key for example if you want to increase the timeout you can do
+
+```bash
+$ docker exec -ti watchstate console servers:edit--key options.client.timeout --set 300 -- [SERVER_NAME] 
+```
+
