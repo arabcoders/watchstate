@@ -21,6 +21,7 @@ final class EditCommand extends Command
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
+            ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
@@ -31,8 +32,13 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if (null === ($value = $input->getOption('set'))) {
-            $output->writeln('<error>ERROR: [-s, --set] flag is required.</error>');
+        $value = $input->getOption('set');
+
+        if (null !== $value && $input->getOption('delete')) {
+            $output->writeln(
+                '<error>ERROR: cannot use both [-s, --set] and [-d, --delete] flags as the same time.</error>'
+            );
+
             return self::FAILURE;
         }
 
@@ -63,21 +69,39 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if ($value === ag($servers, "{$name}.{$key}")) {
-            $output->writeln('<comment>Not updating. Value already matches.</comment>');
+        if (null === $value && !$input->getOption('delete')) {
+            $output->writeln(ag($servers, "{$name}.{$key}"));
             return self::SUCCESS;
         }
 
-        $servers = ag_set($servers, "{$name}.{$key}", $value);
+        if (null !== $value) {
+            if ($value === ag($servers, "{$name}.{$key}")) {
+                $output->writeln('<comment>Not updating. Value already matches.</comment>');
+                return self::SUCCESS;
+            }
 
-        $output->writeln(
-            sprintf(
-                '<info>Updated server:\'%s\' key \'%s\' with value of \'%s\' </info>',
-                $name,
-                $key,
-                $value
-            )
-        );
+            $value = ctype_digit($value) ? (int)$value : (string)$value;
+            $servers = ag_set($servers, "{$name}.{$key}", $value);
+
+            $output->writeln(
+                sprintf(
+                    '<info>Updated server:\'%s\' key \'%s\' with value of \'%s\'.</info>',
+                    $name,
+                    $key,
+                    $value
+                )
+            );
+        }
+
+        if ($input->getOption('delete')) {
+            if (null === ag($servers, "{$name}.{$key}")) {
+                $output->writeln(sprintf('<error>Server:\'%s\' key \'%s\' does not exists.</error>', $name, $key));
+                return self::FAILURE;
+            }
+
+            $servers = ag_delete($servers, "{$name}.{$key}");
+            $output->writeln(sprintf('<info>Deleted server:\'%s\' key \'%s\'.</info>', $name, $key));
+        }
 
         if (false === $custom) {
             copy($config, $config . '.bak');

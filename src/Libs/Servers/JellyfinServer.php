@@ -504,6 +504,91 @@ class JellyfinServer implements ServerInterface
         return $promises;
     }
 
+    public function listLibraries(): array
+    {
+        $this->checkConfig(true);
+
+        try {
+            $this->logger->debug(
+                sprintf('Requesting libraries From %s.', $this->name),
+                ['url' => $this->url->getHost()]
+            );
+
+            $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
+                http_build_query(
+                    [
+                        'Recursive' => 'false',
+                        'Fields' => 'ProviderIds',
+                        'enableUserData' => 'true',
+                        'enableImages' => 'false',
+                    ]
+                )
+            );
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+                return [];
+            }
+
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+
+            $listDirs = ag($json, 'Items', []);
+
+            if (empty($listDirs)) {
+                $this->logger->error(sprintf('No libraries found at %s.', $this->name));
+                return [];
+            }
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        }
+
+        $ignoreIds = null;
+
+        if (null !== ($this->options['ignore'] ?? null)) {
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', $this->options['ignore']));
+        }
+
+        $list = [];
+
+        foreach ($listDirs as $section) {
+            $key = (string)ag($section, 'Id');
+            $title = ag($section, 'Name', '???');
+            $type = ag($section, 'CollectionType', 'unknown');
+            $isIgnored = null !== $ignoreIds && in_array($key, $ignoreIds);
+
+            $list[] = [
+                'ID' => $key,
+                'Title' => $title,
+                'Type' => $type,
+                'Ignored' => $isIgnored ? 'Yes' : 'No',
+                'Supported' => 'movies' !== $type && 'tvshows' !== $type ? 'No' : 'Yes',
+            ];
+        }
+
+        return $list;
+    }
+
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
