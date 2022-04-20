@@ -1141,7 +1141,7 @@ class JellyfinServer implements ServerInterface
             }
 
             if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
-                $this->logger->debug(
+                $this->logger->notice(
                     sprintf('Ignoring %s. No valid GUIDs.', $iName),
                     (array)($item->ProviderIds ?? [])
                 );
