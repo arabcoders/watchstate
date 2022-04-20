@@ -62,7 +62,7 @@ final class MemoryMapper implements ImportInterface
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
-            $this->logger->debug(sprintf('Ignoring %s. No valid GUIDs.', $name));
+            $this->logger->notice(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
         }

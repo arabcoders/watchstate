@@ -135,7 +135,7 @@ ids to ignore.
 $ docker exec -ti watchstate console servers:edit --key options.ignore --set 'id1,id2,id3' -- [SERVER_NAME] 
 ```
 
-If ignored a library by mistake you can run the same command again and omit the id, or you can just delete the key
+If you ignored a library by mistake you can run the same command again and omit the id, or you can just delete the key
 entirely by running the following command
 
 ```bash
@@ -163,7 +163,7 @@ after that you can do `ws command` for example, `ws db:list`
 Sometimes there are problems related to http/2.0, so before reporting bug please try running the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:edit--key options.client.http_version --set 1.0 -- [SERVER_NAME] 
+$ docker exec -ti watchstate console servers:edit --key options.client.http_version --set 1.0 -- [SERVER_NAME] 
 ```
 
 if it does not fix your problem, please open issue about it.
@@ -173,6 +173,6 @@ configuration](https://symfony.com/doc/current/http_client.html#configuration) s
 under `options.client.` key for example if you want to increase the timeout you can do
 
 ```bash
-$ docker exec -ti watchstate console servers:edit--key options.client.timeout --set 300 -- [SERVER_NAME] 
+$ docker exec -ti watchstate console servers:edit --key options.client.timeout --set 300 -- [SERVER_NAME] 
 ```
 
