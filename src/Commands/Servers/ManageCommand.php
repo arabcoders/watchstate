@@ -24,7 +24,6 @@ final class ManageCommand extends Command
         $this->setName('servers:manage')
             ->setDescription('Manage Server settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Server')
-            ->addOption('regenerate-api-key', 'g', InputOption::VALUE_NONE, 'Re-generate webhook apikey')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
@@ -494,10 +493,10 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.webhook.token
-        (function () use ($input, $output, &$u, $name) {
+        (function () use ($output, &$u, $name) {
             $cond = true === ag($u, 'webhook.import') && null === ag($u, 'webhook.token');
 
-            if (true === $cond || $input->getOption('regenerate-api-key')) {
+            if (true === $cond) {
                 try {
                     $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 

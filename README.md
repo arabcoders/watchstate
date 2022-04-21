@@ -43,6 +43,18 @@ $ docker-compose up -d
 
 # First time
 
+Please run the following command to see all available commands you can also run help on each command to get more info.
+
+```bash
+# Show all commands.
+$ docker exec -ti watchstate console list
+
+# Show help document for each command.
+$ docker exec -ti watchstate console help state:import
+```
+
+---
+
 After starting the container, you have to add your media servers, to do so run the following command
 
 ```bash
@@ -76,10 +88,8 @@ $ docker exec -ti watchstate console servers:view --servers-filter [SERVER_NAME]
 If you see 'Not configured, or invalid key.' or empty value. run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:manage --regenerate-api-key -- [SERVER_NAME] 
+$ docker exec -ti watchstate console servers:edit --regenerate-api-key -- [SERVER_NAME] 
 ```
-
-Run the other command again to see your api key.
 
 ---
 
