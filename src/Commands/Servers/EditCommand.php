@@ -11,6 +11,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 
 final class EditCommand extends Command
 {
@@ -21,27 +22,13 @@ final class EditCommand extends Command
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
-            ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value')
+            ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
+            ->addOption('regenerate-api-key', 'g', InputOption::VALUE_NONE, 'Re-generate webhook api key.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        if (null === ($key = $input->getOption('key'))) {
-            $output->writeln('<error>ERROR: [-k, --key] flag is required.</error>');
-            return self::FAILURE;
-        }
-
-        $value = $input->getOption('set');
-
-        if (null !== $value && $input->getOption('delete')) {
-            $output->writeln(
-                '<error>ERROR: cannot use both [-s, --set] and [-d, --delete] flags as the same time.</error>'
-            );
-
-            return self::FAILURE;
-        }
-
         $custom = false;
 
         // -- Use Custom servers.yaml file.
@@ -64,48 +51,80 @@ final class EditCommand extends Command
 
         $name = $input->getArgument('name');
 
-        if (null === ag($servers, "{$name}.type", null)) {
+        if (null === ($server = ag($servers, $name, null))) {
             $output->writeln(sprintf('<error>ERROR: Server \'%s\' not found.</error>', $name));
             return self::FAILURE;
         }
 
-        if (null === $value && !$input->getOption('delete')) {
-            $output->writeln(ag($servers, "{$name}.{$key}"));
-            return self::SUCCESS;
-        }
+        if ($input->getOption('regenerate-api-key')) {
+            try {
+                $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 
-        if (null !== $value) {
-            if ($value === ag($servers, "{$name}.{$key}")) {
-                $output->writeln('<comment>Not updating. Value already matches.</comment>');
-                return self::SUCCESS;
+                $output->writeln(
+                    sprintf('<info>The API key for \'%s\' webhook endpoint is: \'%s\'.</info>', $name, $apiToken)
+                );
+
+                $server = ag_set($server, 'webhook.token', $apiToken);
+            } catch (Throwable $e) {
+                $output->writeln(sprintf('<error>ERROR: %s</error>', $e->getMessage()));
+                return self::FAILURE;
             }
-
-            $value = ctype_digit($value) ? (int)$value : (string)$value;
-            $servers = ag_set($servers, "{$name}.{$key}", $value);
-
-            $output->writeln(
-                sprintf(
-                    '<info>Updated server:\'%s\' key \'%s\' with value of \'%s\'.</info>',
-                    $name,
-                    $key,
-                    $value
-                )
-            );
-        }
-
-        if ($input->getOption('delete')) {
-            if (null === ag($servers, "{$name}.{$key}")) {
-                $output->writeln(sprintf('<error>Server:\'%s\' key \'%s\' does not exists.</error>', $name, $key));
+        } else {
+            if (null === ($key = $input->getOption('key'))) {
+                $output->writeln('<error>ERROR: [-k, --key] flag is required.</error>');
                 return self::FAILURE;
             }
 
-            $servers = ag_delete($servers, "{$name}.{$key}");
-            $output->writeln(sprintf('<info>Deleted server:\'%s\' key \'%s\'.</info>', $name, $key));
+            $value = $input->getOption('set');
+
+            if (null !== $value && $input->getOption('delete')) {
+                $output->writeln(
+                    '<error>ERROR: cannot use both [-s, --set] and [-d, --delete] flags as the same time.</error>'
+                );
+
+                return self::FAILURE;
+            }
+
+            if (null === $value && !$input->getOption('delete')) {
+                $output->writeln(ag($server, $key));
+                return self::SUCCESS;
+            }
+
+            if (null !== $value) {
+                if ($value === ag($server, $key)) {
+                    $output->writeln('<comment>Not updating. Value already matches.</comment>');
+                    return self::SUCCESS;
+                }
+
+                $value = ctype_digit($value) ? (int)$value : (string)$value;
+                $server = ag_set($server, $key, $value);
+
+                $output->writeln(
+                    sprintf(
+                        '<info>Updated server:\'%s\' key \'%s\' with value of \'%s\'.</info>',
+                        $name,
+                        $key,
+                        $value
+                    )
+                );
+            }
+
+            if ($input->getOption('delete')) {
+                if (false === ag_exists($server, $key)) {
+                    $output->writeln(sprintf('<error>Server:\'%s\' key \'%s\' does not exists.</error>', $name, $key));
+                    return self::FAILURE;
+                }
+
+                $server = ag_delete($server, $key);
+                $output->writeln(sprintf('<info>Deleted server:\'%s\' key \'%s\'.</info>', $name, $key));
+            }
         }
 
         if (false === $custom) {
             copy($config, $config . '.bak');
         }
+
+        $servers = ag_set($servers, $name, $server);
 
         file_put_contents($config, Yaml::dump($servers, 8, 2));
 
