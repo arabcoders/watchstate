@@ -9,4 +9,5 @@ return [
     '%(tmpDir)/cache',
     '%(tmpDir)/profiler',
     '%(tmpDir)/webhooks',
+    '%(tmpDir)/debug',
 ];
