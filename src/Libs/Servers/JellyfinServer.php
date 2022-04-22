@@ -18,6 +18,7 @@ use DateTimeInterface;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
+use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -614,6 +615,9 @@ class JellyfinServer implements ServerInterface
                                 [
                                     'pointer' => '/Items',
                                 ],
+                                [
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                ]
                             );
 
                             $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
@@ -881,6 +885,9 @@ class JellyfinServer implements ServerInterface
                                 [
                                     'pointer' => '/Items',
                                 ],
+                                [
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                ]
                             );
 
                             $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
@@ -982,6 +989,9 @@ class JellyfinServer implements ServerInterface
                                 [
                                     'pointer' => '/Items',
                                 ],
+                                [
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                ]
                             );
 
                             $this->logger->info(

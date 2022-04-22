@@ -18,6 +18,7 @@ use DateTimeInterface;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
+use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -626,6 +627,9 @@ class PlexServer implements ServerInterface
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
+                                [
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                ]
                             );
 
                             $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
@@ -891,6 +895,9 @@ class PlexServer implements ServerInterface
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
+                                [
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                ]
                             );
 
                             $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
@@ -898,7 +905,7 @@ class PlexServer implements ServerInterface
                             foreach ($it as $entity) {
                                 $this->processExport($mapper, $type, $cName, $entity, $after);
                             }
-                        }catch (PathNotFoundException $e) {
+                        } catch (PathNotFoundException $e) {
                             $this->logger->error(
                                 sprintf(
                                     'Failed to find media items path in %s - %s - response. Most likely empty library?',
@@ -992,6 +999,9 @@ class PlexServer implements ServerInterface
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
+                                [
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                ]
                             );
 
                             $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
@@ -999,7 +1009,7 @@ class PlexServer implements ServerInterface
                             foreach ($it as $entity) {
                                 $this->processForCache($type, $entity);
                             }
-                        }catch (PathNotFoundException $e) {
+                        } catch (PathNotFoundException $e) {
                             $this->logger->error(
                                 sprintf(
                                     'Failed to find media items path in %s - %s - response. Most likely empty library?',
