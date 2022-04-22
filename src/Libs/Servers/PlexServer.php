@@ -1429,8 +1429,8 @@ class PlexServer implements ServerInterface
          * com.plexapp.agents.hama://(agent)-(id)
          * com.plexapp.agents.hama://(agent)-(id)
          * @see https://github.com/ArabCoders/watchstate/issues/69
-         * com.plexapp.agents.xbmcnfotv://(id)/(season)/(episode)?lang=xn
          * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
+         * Disabled - com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn
          */
 
         try {
@@ -1442,7 +1442,7 @@ class PlexServer implements ServerInterface
                 'agents.themoviedb' => 'agents.tmdb',
                 'agents.thetvdb' => 'agents.tvdb',
                 'agents.xbmcnfo://' => 'agents.imdb://',
-                'agents.xbmcnfotv://' => 'agents.tvdb://',
+                //'agents.xbmcnfotv://' => 'agents.tvdb://',
             ];
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
