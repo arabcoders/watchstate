@@ -607,17 +607,50 @@ class JellyfinServer implements ServerInterface
                             return;
                         }
 
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/Items',
-                            ],
-                        );
+                        // -- sandbox external library code to prevent complete failure when error occurs.
+                        try {
+                            $it = Items::fromIterable(
+                                httpClientChunks($this->http->stream($response)),
+                                [
+                                    'pointer' => '/Items',
+                                ],
+                            );
 
-                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
-                        foreach ($it as $entity) {
-                            $this->processImport($mapper, $type, $cName, $entity, $after);
+                            foreach ($it as $entity) {
+                                $this->processImport($mapper, $type, $cName, $entity, $after);
+                            }
+                        } catch (PathNotFoundException $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Failed to find media items path in %s - %s - response. Most likely empty section?',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
+                        } catch (Throwable $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Unable to parse %s - %s response.',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
                         }
 
                         $this->logger->info(
@@ -636,20 +669,6 @@ class JellyfinServer implements ServerInterface
                                 $cName,
                                 $e->getMessage()
                             )
-                        );
-                        return;
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty section? reported error: \'%s\'.',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
                         );
                         return;
                     }
@@ -856,17 +875,49 @@ class JellyfinServer implements ServerInterface
                             return;
                         }
 
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/Items',
-                            ],
-                        );
+                        try {
+                            $it = Items::fromIterable(
+                                httpClientChunks($this->http->stream($response)),
+                                [
+                                    'pointer' => '/Items',
+                                ],
+                            );
 
-                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
 
-                        foreach ($it as $entity) {
-                            $this->processExport($mapper, $type, $cName, $entity, $after);
+                            foreach ($it as $entity) {
+                                $this->processExport($mapper, $type, $cName, $entity, $after);
+                            }
+                        } catch (PathNotFoundException $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Failed to find media items path in %s - %s - response. Most likely empty section?',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
+                        } catch (Throwable $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Unable to parse %s - %s response.',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
                         }
 
                         $this->logger->info(
@@ -889,20 +940,6 @@ class JellyfinServer implements ServerInterface
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
                             ]
-                        );
-                        return;
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty section? reported error: \'%s\'.',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
                         );
                         return;
                     }
@@ -939,17 +976,51 @@ class JellyfinServer implements ServerInterface
                             return;
                         }
 
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/Items',
-                            ],
-                        );
+                        try {
+                            $it = Items::fromIterable(
+                                httpClientChunks($this->http->stream($response)),
+                                [
+                                    'pointer' => '/Items',
+                                ],
+                            );
 
-                        $this->logger->info(sprintf('Processing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(
+                                sprintf('Processing Successful %s - %s response.', $this->name, $cName)
+                            );
 
-                        foreach ($it as $entity) {
-                            $this->processForCache($type, $entity);
+                            foreach ($it as $entity) {
+                                $this->processForCache($type, $entity);
+                            }
+                        } catch (PathNotFoundException $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Failed to find media items path in %s - %s - response. Most likely empty section?',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
+                        } catch (Throwable $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Unable to parse %s - %s response.',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
                         }
 
                         $this->logger->info(sprintf('Finished Parsing %s - %s response.', $this->name, $cName));
@@ -961,20 +1032,6 @@ class JellyfinServer implements ServerInterface
                                 $cName,
                                 $e->getMessage()
                             )
-                        );
-                        return;
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty section? reported error: \'%s\'.',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
                         );
                         return;
                     }
