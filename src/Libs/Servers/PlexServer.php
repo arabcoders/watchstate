@@ -619,17 +619,50 @@ class PlexServer implements ServerInterface
                             return;
                         }
 
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/MediaContainer/Metadata',
-                            ],
-                        );
+                        // -- sandbox external library code to prevent complete failure when error occurs.
+                        try {
+                            $it = Items::fromIterable(
+                                httpClientChunks($this->http->stream($response)),
+                                [
+                                    'pointer' => '/MediaContainer/Metadata',
+                                ],
+                            );
 
-                        $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
-                        foreach ($it as $entity) {
-                            $this->processImport($mapper, $type, $cName, $entity, $after);
+                            foreach ($it as $entity) {
+                                $this->processImport($mapper, $type, $cName, $entity, $after);
+                            }
+                        } catch (PathNotFoundException $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Failed to find media items path in %s - %s - response. Most likely empty library?',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
+                        } catch (Throwable $e) {
+                            $this->logger->error(
+                                sprintf(
+                                    'Unable to parse %s - %s response.',
+                                    $this->name,
+                                    $cName,
+                                ),
+                                [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'error' => $e->getMessage(),
+                                ],
+                            );
+                            return;
                         }
 
                         $this->logger->info(
@@ -644,20 +677,6 @@ class PlexServer implements ServerInterface
                         $this->logger->error(
                             sprintf(
                                 'Failed to decode %s - %s - response. Reason: \'%s\'.',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
-                        );
-                        return;
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                'Failed to find media items path in %s - %s - response. Most likely empty library? reported error: \'%s\'.',
                                 $this->name,
                                 $cName,
                                 $e->getMessage()
