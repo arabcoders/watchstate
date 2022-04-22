@@ -618,7 +618,9 @@ class JellyfinServer implements ServerInterface
                                     'pointer' => '/Items',
                                 ],
                                 [
-                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                    'decoder' => new ErrorWrappingDecoder(
+                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    )
                                 ]
                             );
 
@@ -894,7 +896,9 @@ class JellyfinServer implements ServerInterface
                                     'pointer' => '/Items',
                                 ],
                                 [
-                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                    'decoder' => new ErrorWrappingDecoder(
+                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    )
                                 ]
                             );
 
@@ -1004,7 +1008,9 @@ class JellyfinServer implements ServerInterface
                                     'pointer' => '/Items',
                                 ],
                                 [
-                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                    'decoder' => new ErrorWrappingDecoder(
+                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    )
                                 ]
                             );
 

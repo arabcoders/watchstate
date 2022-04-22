@@ -630,7 +630,9 @@ class PlexServer implements ServerInterface
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
                                 [
-                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                    'decoder' => new ErrorWrappingDecoder(
+                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    )
                                 ]
                             );
 
@@ -904,7 +906,9 @@ class PlexServer implements ServerInterface
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
                                 [
-                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                    'decoder' => new ErrorWrappingDecoder(
+                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    )
                                 ]
                             );
 
@@ -1014,7 +1018,9 @@ class PlexServer implements ServerInterface
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
                                 [
-                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                    'decoder' => new ErrorWrappingDecoder(
+                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    )
                                 ]
                             );
 
