@@ -1347,14 +1347,21 @@ class PlexServer implements ServerInterface
     {
         $this->logger->debug('Parsing Legacy plex content agent.', ['guid' => $agent]);
 
-        // -- Example of agents
-        // -- com.plexapp.agents.imdb://(id)
-        // -- com.plexapp.agents.tmdb://(id)
-        // -- com.plexapp.agents.themoviedb://(id)?lang=en
-        // -- com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
-        // -- com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
-        // -- com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
-        // -- com.plexapp.agents.hama://(agent)-(id)
+        /**
+         * Example of old plex agents.
+         *
+         * com.plexapp.agents.imdb://(id)?lang=en
+         * com.plexapp.agents.tmdb://(id)?lang=en
+         * com.plexapp.agents.themoviedb://(id)?lang=en
+         * com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
+         * com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
+         * com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
+         * com.plexapp.agents.hama://(agent)-(id)
+         * com.plexapp.agents.hama://(agent)-(id)
+         * @see https://github.com/ArabCoders/watchstate/issues/69
+         * com.plexapp.agents.xbmcnfotv://(id)/(season)/(episode)?lang=xn
+         * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
+         */
 
         try {
             if (str_starts_with($agent, 'com.plexapp.agents.none')) {
@@ -1364,6 +1371,8 @@ class PlexServer implements ServerInterface
             $replacer = [
                 'agents.themoviedb' => 'agents.tmdb',
                 'agents.thetvdb' => 'agents.tvdb',
+                'agents.xbmcnfo://' => 'agents.imdb://',
+                'agents.xbmcnfotv://' => 'agents.tvdb://',
             ];
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
