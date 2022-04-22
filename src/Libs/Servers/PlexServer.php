@@ -18,6 +18,9 @@ use DateTimeInterface;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
+use JsonMachine\JsonDecoder\DecodingError;
+use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
+use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -626,11 +629,20 @@ class PlexServer implements ServerInterface
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
+                                [
+                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                ]
                             );
 
                             $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
                             foreach ($it as $entity) {
+                                if ($entity instanceof DecodingError) {
+                                    $this->logger->debug(
+                                        sprintf('Failed to decode one result of %s - %s response.', $this->name, $cName)
+                                    );
+                                    continue;
+                                }
                                 $this->processImport($mapper, $type, $cName, $entity, $after);
                             }
                         } catch (PathNotFoundException $e) {
@@ -891,14 +903,23 @@ class PlexServer implements ServerInterface
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
+                                [
+                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                ]
                             );
 
-                            $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
                             foreach ($it as $entity) {
+                                if ($entity instanceof DecodingError) {
+                                    $this->logger->debug(
+                                        sprintf('Failed to decode one result of %s - %s response.', $this->name, $cName)
+                                    );
+                                    continue;
+                                }
                                 $this->processExport($mapper, $type, $cName, $entity, $after);
                             }
-                        }catch (PathNotFoundException $e) {
+                        } catch (PathNotFoundException $e) {
                             $this->logger->error(
                                 sprintf(
                                     'Failed to find media items path in %s - %s - response. Most likely empty library?',
@@ -992,14 +1013,23 @@ class PlexServer implements ServerInterface
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
+                                [
+                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
+                                ]
                             );
 
-                            $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
                             foreach ($it as $entity) {
+                                if ($entity instanceof DecodingError) {
+                                    $this->logger->debug(
+                                        sprintf('Failed to decode one result of %s - %s response.', $this->name, $cName)
+                                    );
+                                    continue;
+                                }
                                 $this->processForCache($type, $entity);
                             }
-                        }catch (PathNotFoundException $e) {
+                        } catch (PathNotFoundException $e) {
                             $this->logger->error(
                                 sprintf(
                                     'Failed to find media items path in %s - %s - response. Most likely empty library?',
@@ -1237,7 +1267,12 @@ class PlexServer implements ServerInterface
                     }
                 }
 
-                $this->logger->notice(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item->Guid ?? []);
+                $this->logger->notice(
+                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
+                    [
+                        'guids' => empty($item->Guid) ? 'None' : $item->Guid,
+                    ]
+                );
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
             }
@@ -1414,8 +1449,8 @@ class PlexServer implements ServerInterface
          * com.plexapp.agents.hama://(agent)-(id)
          * com.plexapp.agents.hama://(agent)-(id)
          * @see https://github.com/ArabCoders/watchstate/issues/69
-         * com.plexapp.agents.xbmcnfotv://(id)/(season)/(episode)?lang=xn
          * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
+         * Disabled - com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn
          */
 
         try {
@@ -1427,7 +1462,7 @@ class PlexServer implements ServerInterface
                 'agents.themoviedb' => 'agents.tmdb',
                 'agents.thetvdb' => 'agents.tvdb',
                 'agents.xbmcnfo://' => 'agents.imdb://',
-                'agents.xbmcnfotv://' => 'agents.tvdb://',
+                //'agents.xbmcnfotv://' => 'agents.tvdb://',
             ];
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
