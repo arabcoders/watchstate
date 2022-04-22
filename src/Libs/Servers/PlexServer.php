@@ -18,6 +18,8 @@ use DateTimeInterface;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
+use JsonMachine\JsonDecoder\DecodingError;
+use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -628,13 +630,19 @@ class PlexServer implements ServerInterface
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
                                 [
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
                                 ]
                             );
 
                             $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
                             foreach ($it as $entity) {
+                                if ($entity instanceof DecodingError) {
+                                    $this->logger->debug(
+                                        sprintf('Failed to decode one result of %s - %s response.', $this->name, $cName)
+                                    );
+                                    continue;
+                                }
                                 $this->processImport($mapper, $type, $cName, $entity, $after);
                             }
                         } catch (PathNotFoundException $e) {
@@ -896,13 +904,19 @@ class PlexServer implements ServerInterface
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
                                 [
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
                                 ]
                             );
 
-                            $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
                             foreach ($it as $entity) {
+                                if ($entity instanceof DecodingError) {
+                                    $this->logger->debug(
+                                        sprintf('Failed to decode one result of %s - %s response.', $this->name, $cName)
+                                    );
+                                    continue;
+                                }
                                 $this->processExport($mapper, $type, $cName, $entity, $after);
                             }
                         } catch (PathNotFoundException $e) {
@@ -1000,13 +1014,19 @@ class PlexServer implements ServerInterface
                                     'pointer' => '/MediaContainer/Metadata',
                                 ],
                                 [
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                    new ErrorWrappingDecoder(new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE))
                                 ]
                             );
 
-                            $this->logger->info(sprintf('Parsing Successful %s - %s response.', $this->name, $cName));
+                            $this->logger->info(sprintf('Parsing %s - %s response.', $this->name, $cName));
 
                             foreach ($it as $entity) {
+                                if ($entity instanceof DecodingError) {
+                                    $this->logger->debug(
+                                        sprintf('Failed to decode one result of %s - %s response.', $this->name, $cName)
+                                    );
+                                    continue;
+                                }
                                 $this->processForCache($type, $entity);
                             }
                         } catch (PathNotFoundException $e) {
