@@ -48,6 +48,10 @@ final class PruneCommand extends Command
                 'path' => Config::get('tmpDir') . '/webhooks',
                 'filter' => '*.json',
             ],
+            [
+                'path' => Config::get('tmpDir') . '/debug',
+                'filter' => '*.json',
+            ],
         ];
 
         /** @var array<SplFileInfo> $files */

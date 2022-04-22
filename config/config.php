@@ -79,6 +79,7 @@ return (function () {
     ];
 
     $config['debug'] = [
+        'import' => (bool)env('WS_DEBUG_IMPORT', false),
         'profiler' => [
             'options' => [
                 'save.handler' => 'file',

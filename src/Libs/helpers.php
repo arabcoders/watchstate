@@ -260,7 +260,7 @@ if (!function_exists('saveRequestPayload')) {
         ];
 
         @file_put_contents(
-            Config::get('tmpDir') . '/webhooks/' . sprintf(
+            Config::get('tmpDir') . '/debug/' . sprintf(
                 'request.%s.json',
                 (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),

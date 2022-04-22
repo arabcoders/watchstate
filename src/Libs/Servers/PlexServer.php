@@ -1169,6 +1169,14 @@ class PlexServer implements ServerInterface
             }
 
             if (!$this->hasSupportedIds($item->Guid)) {
+                if (true === Config::get('debug.import')) {
+                    $name = $this->name . '.' . ($item->ratingKey ?? 'r' . random_int(1, PHP_INT_MAX)) . '.json';
+
+                    if (!file_exists($name)) {
+                        file_put_contents($name, json_encode($item, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                    }
+                }
+
                 $this->logger->notice(sprintf('Ignoring %s. No valid GUIDs.', $iName), $item->Guid ?? []);
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
