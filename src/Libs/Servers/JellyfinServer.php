@@ -1219,9 +1219,13 @@ class JellyfinServer implements ServerInterface
                     }
                 }
 
+                $guids = (array)($item->ProviderIds ?? []);
+
                 $this->logger->notice(
                     sprintf('Ignoring %s. No valid GUIDs.', $iName),
-                    (array)($item->ProviderIds ?? [])
+                    [
+                        'guids' => empty($guids) ? 'None' : $guids
+                    ]
                 );
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
