@@ -525,6 +525,66 @@ class PlexServer implements ServerInterface
         return $promises;
     }
 
+    public function search(string $query, int $limit = 25): array
+    {
+        $this->checkConfig();
+
+        try {
+            $this->logger->debug(
+                sprintf('Search for \'%s\' in %s.', $query, $this->name),
+                ['url' => $this->url->getHost()]
+            );
+
+            $url = $this->url->withPath('/hubs/search')->withQuery(
+                http_build_query(
+                    [
+                        'query' => $query,
+                        'limit' => $limit,
+                        'includeGuids' => 1,
+                        'includeExternalMedia' => 0,
+                        'includeCollections' => 0,
+                    ]
+                )
+            );
+
+            $this->logger->debug('Request', ['url' => $url]);
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+                Data::add($this->name, 'no_import_update', true);
+                return [];
+            }
+
+            $list = [];
+
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+
+            foreach (ag($json, 'MediaContainer.Hub', []) as $item) {
+                $type = ag($item, 'type');
+
+                if ('show' !== $type && 'movie' !== $type) {
+                    continue;
+                }
+
+                foreach (ag($item, 'Metadata', []) as $subItem) {
+                    $list[] = $subItem;
+                }
+            }
+
+            return $list;
+        } catch (ExceptionInterface|JsonException $e) {
+            throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
     public function listLibraries(): array
     {
         $this->checkConfig();

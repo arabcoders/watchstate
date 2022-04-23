@@ -30,6 +30,9 @@ final class RemoteCommand extends Command
             ->addOption('list-users', null, InputOption::VALUE_NONE, 'List Server users.')
             ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
             ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
+            ->addOption('search', null, InputOption::VALUE_REQUIRED, 'Search query')
+            ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit', 25)
+            ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml]', 'json')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
@@ -80,6 +83,10 @@ final class RemoteCommand extends Command
 
         if ($input->getOption('list-libraries')) {
             $this->listLibraries($output, $server);
+        }
+
+        if ($input->getOption('search') && $input->getOption('search-limit')) {
+            $this->search($server, $output, $input);
         }
 
         return self::SUCCESS;
@@ -148,5 +155,21 @@ final class RemoteCommand extends Command
         }
 
         (new Table($output))->setStyle('box')->setHeaders(array_keys($libraries[0]))->setRows($list)->render();
+    }
+
+    private function search(ServerInterface $server, OutputInterface $output, InputInterface $input): void
+    {
+        $result = $server->search($input->getOption('search'), (int)$input->getOption('search-limit'));
+
+        if (empty($result)) {
+            $output->writeln(sprintf('<error>No results found for \'%s\'.</error>', $input->getOption('search')));
+            exit(1);
+        }
+
+        if ('json' === $input->getOption('search-output')) {
+            $output->writeln(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        } else {
+            $output->writeln(Yaml::dump($result, 8, 2));
+        }
     }
 }

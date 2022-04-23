@@ -176,3 +176,18 @@ under `options.client.` key for example if you want to increase the timeout you 
 $ docker exec -ti watchstate console servers:edit --key options.client.timeout --set 300 -- [SERVER_NAME] 
 ```
 
+---
+
+### Q: Can I search my server remote libraries?
+
+Yes, Run the following command
+
+```bash
+$ docker exec -ti console server servers:remote --search '[searchTerm]' -- [SERVER_NAME]
+```
+
+Flags:
+
+* (required) `--search` Search query. For example, `GUNDAM`.
+* (optional) `--search-limit` To limit returned results. Defaults to `25`.
+* (optional) `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.

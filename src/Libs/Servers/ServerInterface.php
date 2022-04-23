@@ -61,7 +61,7 @@ interface ServerInterface
     public static function processRequest(ServerRequestInterface $request): ServerRequestInterface;
 
     /**
-     * Parse server specific webhook event. for play/unplayed event.
+     * Parse server specific webhook event. for play/un-played event.
      *
      * @param ServerRequestInterface $request
      * @return StateInterface
@@ -104,6 +104,15 @@ interface ServerInterface
      * @return array
      */
     public function push(array $entities, DateTimeInterface|null $after = null): array;
+
+    /**
+     * Search server libraries.
+     *
+     * @param string $query
+     * @param int $limit
+     * @return array
+     */
+    public function search(string $query, int $limit = 25): array;
 
     /**
      * Get all persistent data.
