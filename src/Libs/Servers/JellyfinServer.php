@@ -28,6 +28,7 @@ use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use StdClass;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -505,6 +506,52 @@ class JellyfinServer implements ServerInterface
         }
 
         return $promises;
+    }
+
+    public function search(string $query, int $limit = 25): array
+    {
+        $this->checkConfig(true);
+
+        try {
+            $this->logger->debug(
+                sprintf('Search for \'%s\' in %s.', $query, $this->name),
+                ['url' => $this->url->getHost()]
+            );
+
+            $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
+                http_build_query(
+                    [
+                        'searchTerm' => $query,
+                        'Limit' => $limit,
+                        'Recursive' => 'true',
+                        'Fields' => 'ProviderIds',
+                        'enableUserData' => 'true',
+                        'enableImages' => 'false',
+                        'IncludeItemTypes' => 'Episode,Movie,Series',
+                    ]
+                )
+            );
+
+            $this->logger->debug('Request', ['url' => $url]);
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Request to %s responded with unexpected code (%d).',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+            }
+
+            $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+
+            return ag($json, 'Items', []);
+        } catch (ExceptionInterface|JsonException $e) {
+            throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
+        }
     }
 
     public function listLibraries(): array
