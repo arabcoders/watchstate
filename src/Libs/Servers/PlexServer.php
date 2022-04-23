@@ -1334,7 +1334,7 @@ class PlexServer implements ServerInterface
                 }
 
                 $this->logger->notice(
-                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
+                    sprintf('Ignoring %s. No valid GUIDs. Possibly unmatched item?', $iName),
                     [
                         'guids' => empty($item->Guid) ? 'None' : $item->Guid,
                     ]

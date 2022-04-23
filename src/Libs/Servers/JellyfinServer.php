@@ -1295,7 +1295,10 @@ class JellyfinServer implements ServerInterface
                 $guids = (array)($item->ProviderIds ?? []);
 
                 $this->logger->notice(
-                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
+                    sprintf(
+                        'Ignoring %s. No valid GUIDs. Possibly unmatched item?',
+                        $iName
+                    ),
                     [
                         'guids' => empty($guids) ? 'None' : $guids
                     ]
