@@ -136,13 +136,13 @@ healthy `GUIDS <> serverInternalID mapping` relations.
 To manually export your watch state back to servers you can run the following command
 
 ```bash
-$ docker exec -ti watchstate console state:export --mapper-preload -vvr
+$ docker exec -ti watchstate console state:export -vvr
 ```
 
 to sync specific server/s, use the `--servers-filter` which accept comma seperated list of server names.
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvr --mapper-preload --servers-filter 'server1,server2' 
+$ docker exec -ti watchstate console state:export -vvr --servers-filter 'server1,server2' 
 ```
 
 To enable the export scheduled task set the value of `WS_CRON_EXPORT` to `1`. By default, we run export every 90
@@ -316,6 +316,7 @@ None that we are aware of.
 - (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
 - (int) `WS_CRON_IMPORT` enable import scheduled task.
 - (string) `WS_CRON_IMPORT_AT` cron expression timer.
+- (bool) `WS_CRON_IMPORT_UNWATCHED` Allow the import task to import unwatched items. Defaults to `false`.
 - (int) `WS_CRON_EXPORT` enable export scheduled task.
 - (string) `WS_CRON_EXPORT_AT` cron expression timer.
 - (int) `WS_CRON_PUSH` enable push scheduled task.
@@ -330,6 +331,7 @@ None that we are aware of.
 
 - (int) `WS_NO_CHOWN` do not change ownership of `/config` inside container.
 - (int) `WS_DISABLE_HTTP` disable included http server.
+- (int) `WS_DISABLE_CRON` disable included task scheduler.
 - (int) `WS_UID` Container user ID
 - (int) `WS_GID` Container group ID
 

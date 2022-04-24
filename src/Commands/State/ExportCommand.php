@@ -74,7 +74,6 @@ class ExportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison, and update server watched state to match database.'
             )
-            ->addOption('mapper-preload', null, InputOption::VALUE_NONE, 'Preload Mapper database into memory.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -157,7 +156,7 @@ class ExportCommand extends Command
             return self::FAILURE;
         }
 
-        if (count($list) >= 1 && $input->getOption('mapper-preload')) {
+        if (count($list) >= 1) {
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');
