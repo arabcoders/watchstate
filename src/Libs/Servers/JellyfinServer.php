@@ -427,7 +427,7 @@ class JellyfinServer implements ServerInterface
         $ignoreIds = null;
 
         if (null !== ($this->options['ignore'] ?? null)) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', $this->options['ignore']));
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$this->options['ignore']));
         }
 
         $promises = [];
@@ -1295,7 +1295,10 @@ class JellyfinServer implements ServerInterface
                 $guids = (array)($item->ProviderIds ?? []);
 
                 $this->logger->notice(
-                    sprintf('Ignoring %s. No valid GUIDs.', $iName),
+                    sprintf(
+                        'Ignoring %s. No valid GUIDs. Possibly unmatched item?',
+                        $iName
+                    ),
                     [
                         'guids' => empty($guids) ? 'None' : $guids
                     ]
