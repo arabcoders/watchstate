@@ -117,9 +117,10 @@ This command is not limited to plex, you can unify API key for all supported bac
 
 If you don't want to use webhooks and want to rely only on scheduled task for importing, then set the value
 of `WS_CRON_IMPORT` to `1`. By default, we run the import command every hour. However, you can change the scheduled task
-timer by adding another variable `WS_CRON_IMPORT_AT` and set it value to valid cron expression. for
+timer by adding another variable `WS_CRON_IMPORT_AT` and set its value to valid cron expression. for
 example, `0 */2 * * *` it will run every two hours instead of 1 hour. beware, this operation is somewhat costly as it's
-pulls the entire server library.
+pulls the entire server library. You can also set `WS_CRON_IMPORT_UNWATCHED` to `1` allow the task to pull unwatched
+items.
 
 ---
 

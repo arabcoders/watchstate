@@ -191,3 +191,10 @@ Flags:
 * (required) `--search` Search query. For example, `GUNDAM`.
 * (optional) `--search-limit` To limit returned results. Defaults to `25`.
 * (optional) `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
+
+---
+
+### Q: Can Task scheduler import unwatched episodes?
+
+Yes, Set the environment variable `WS_CRON_IMPORT_UNWATCHED` in your `docker-compose.yaml` and restart your container
+for changes to take effect.
