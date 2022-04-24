@@ -284,7 +284,7 @@ class PlexServer implements ServerInterface
         $ignoreIds = null;
 
         if (null !== ($this->options['ignore'] ?? null)) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', $this->options['ignore']));
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$this->options['ignore']));
         }
 
         if (null !== $ignoreIds && in_array(ag($json, 'Metadata.librarySectionID', '???'), $ignoreIds)) {
