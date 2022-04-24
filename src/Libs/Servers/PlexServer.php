@@ -1512,8 +1512,7 @@ class PlexServer implements ServerInterface
          * com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
          * com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
          * com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
-         * com.plexapp.agents.hama://(agent)-(id)
-         * com.plexapp.agents.hama://(agent)-(id)
+         * com.plexapp.agents.hama://(db)-(id)
          * @see https://github.com/ArabCoders/watchstate/issues/69
          * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
          * Disabled - com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn

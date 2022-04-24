@@ -198,3 +198,21 @@ Flags:
 
 Yes, Set the environment variable `WS_CRON_IMPORT_UNWATCHED` in your `docker-compose.yaml` and restart your container
 for changes to take effect.
+
+---
+
+### Q: Can this tool work with alternative Plex agents?
+
+Those are all supported plex agents currently:
+
+* com.plexapp.agents.imdb://(id)?lang=en
+* com.plexapp.agents.tmdb://(id)?lang=en
+* com.plexapp.agents.themoviedb://(id)?lang=en
+* com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
+* com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
+* com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
+* com.plexapp.agents.hama://(db)-(id)
+* com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
+
+`com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn` This agent is not supported as it does not provide
+unique episode id.
