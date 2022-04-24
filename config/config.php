@@ -172,7 +172,6 @@ return (function () {
             Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
             Task::ARGS => [
-                '--mapper-preload' => null,
                 '-v' => null,
             ]
         ],
@@ -204,6 +203,10 @@ return (function () {
             ]
         ],
     ];
+
+    if (true === (bool)env('WS_CRON_IMPORT_UNWATCHED', false)) {
+        $config['tasks'][ImportCommand::TASK_NAME][Task::ARGS]['--import-unwatched'] = null;
+    }
 
     return $config;
 })();
