@@ -327,6 +327,8 @@ None that we are aware of.
 - (string) `WS_LOGS_PRUNE_AFTER` Delete logs older than specified time, set to `disable` to disable logs pruning. it
   follows php [strtotime](https://www.php.net/strtotime) function rules.
 - (bool) `WS_DEBUG_IMPORT` Whether to log invalid GUID items from server in `${WS_TMP_DIR}/debug`.
+- (bool) `WS_IMPORT_PROMOTE_GUID_ERROR` By default we log this error to `INFO` if this variable set to true it will
+  promote it to `NOTICE` level.
 
 # Container specific environment variables
 

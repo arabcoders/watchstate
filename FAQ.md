@@ -203,16 +203,23 @@ for changes to take effect.
 
 ### Q: Can this tool work with alternative Plex agents?
 
-Those are all supported plex agents currently:
+#### Supported Agents GUIDs:
 
+* plex://(type)/(id)
+* tvdb://(id)
+* imdb://(id)
+* tmdb://(id)
 * com.plexapp.agents.imdb://(id)?lang=en
 * com.plexapp.agents.tmdb://(id)?lang=en
 * com.plexapp.agents.themoviedb://(id)?lang=en
-* com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
-* com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
-* com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
 * com.plexapp.agents.hama://(db)-(id)
-* com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
+* com.plexapp.agents.xbmcnfo://(id)?lang=en
 
-`com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn` This agent is not supported as it does not provide
-unique episode id.
+#### Unsupported Agents:
+
+* com.plexapp.agents.tvdb://(show-id)/(season)/(episode)?lang=en
+* com.plexapp.agents.thetvdb://(show-id)/(season)/(episode)?lang=en
+* com.plexapp.agents.tvmaze://(show-id)/(season)/(episode)?lang=en
+* com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=en
+
+Those agents do not provide episode unique ID thus will not work with the way we do syncing.
