@@ -21,9 +21,11 @@ final class DirectMapper implements ImportInterface
     ];
 
     private int $changed = 0;
+    private string $guidErrorLevel = 'info';
 
     public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
+        $this->guidErrorLevel = true === (bool)env('WS_IMPORT_PROMOTE_GUID_ERROR', false) ? 'notice' : 'info';
     }
 
     public function setUp(array $opts): ImportInterface
@@ -39,7 +41,7 @@ final class DirectMapper implements ImportInterface
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
-            $this->logger->notice(sprintf('Ignoring %s. No valid GUIDs.', $name));
+            $this->logger->{$this->guidErrorLevel}(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
         }

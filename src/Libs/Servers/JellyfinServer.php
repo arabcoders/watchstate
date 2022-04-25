@@ -28,7 +28,6 @@ use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use StdClass;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -75,11 +74,14 @@ class JellyfinServer implements ServerInterface
     protected array $cacheData = [];
     protected string|int|null $uuid = null;
 
+    protected string $guidErrorLevel = 'info';
+
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
         protected CacheInterface $cache
     ) {
+        $this->guidErrorLevel = true === (bool)env('WS_IMPORT_PROMOTE_GUID_ERROR', false) ? 'notice' : 'info';
     }
 
     /**
@@ -1294,7 +1296,7 @@ class JellyfinServer implements ServerInterface
 
                 $guids = (array)($item->ProviderIds ?? []);
 
-                $this->logger->notice(
+                $this->logger->{$this->guidErrorLevel}(
                     sprintf(
                         'Ignoring %s. No valid GUIDs. Possibly unmatched item?',
                         $iName

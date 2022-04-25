@@ -78,11 +78,14 @@ class PlexServer implements ServerInterface
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
 
+    protected string $guidErrorLevel = 'info';
+
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
         protected CacheInterface $cache
     ) {
+        $this->guidErrorLevel = true === (bool)env('WS_IMPORT_PROMOTE_GUID_ERROR', false) ? 'notice' : 'info';
     }
 
     /**
@@ -1333,7 +1336,7 @@ class PlexServer implements ServerInterface
                     }
                 }
 
-                $this->logger->notice(
+                $this->logger->{$this->guidErrorLevel}(
                     sprintf('Ignoring %s. No valid GUIDs. Possibly unmatched item?', $iName),
                     [
                         'guids' => empty($item->Guid) ? 'None' : $item->Guid,
@@ -1501,22 +1504,37 @@ class PlexServer implements ServerInterface
      */
     private function parseLegacyAgents(string $agent): string
     {
-        $this->logger->debug('Parsing Legacy plex content agent.', ['guid' => $agent]);
-
         /**
          * Example of old plex agents.
          *
          * com.plexapp.agents.imdb://(id)?lang=en
          * com.plexapp.agents.tmdb://(id)?lang=en
          * com.plexapp.agents.themoviedb://(id)?lang=en
-         * com.plexapp.agents.tvdb://(id)/(season)/(episode)?lang=en
-         * com.plexapp.agents.thetvdb://(id)/(season)/(episode)?lang=en
-         * com.plexapp.agents.tvmaze://(id)/(season)/(episode))?lang=en
          * com.plexapp.agents.hama://(db)-(id)
-         * @see https://github.com/ArabCoders/watchstate/issues/69
          * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
-         * Disabled - com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn
+         * @Disabled For:
+         * com.plexapp.agents.tvdb://(show-id)/(season)/(episode)?lang=en
+         * com.plexapp.agents.thetvdb://(show-id)/(season)/(episode)?lang=en
+         * com.plexapp.agents.tvmaze://(show-id)/(season)/(episode))?lang=en
+         * com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn
          */
+
+        $this->logger->debug('Parsing Legacy plex content agent.', ['guid' => $agent]);
+
+        $disabled = [
+            'com.plexapp.agents.tvdb',
+            'com.plexapp.agents.thetvdb',
+            'com.plexapp.agents.tvmaze',
+            'com.plexapp.agents.xbmcnfotv',
+        ];
+
+        if (in_array(before($agent, '://'), $disabled)) {
+            $this->logger->{$this->guidErrorLevel}(
+                'Unable to parse GUID as it does not provide episode unique id',
+                ['guid' => $agent]
+            );
+            return $agent;
+        }
 
         try {
             if (str_starts_with($agent, 'com.plexapp.agents.none')) {
@@ -1525,9 +1543,7 @@ class PlexServer implements ServerInterface
 
             $replacer = [
                 'agents.themoviedb' => 'agents.tmdb',
-                'agents.thetvdb' => 'agents.tvdb',
                 'agents.xbmcnfo://' => 'agents.imdb://',
-                //'agents.xbmcnfotv://' => 'agents.tvdb://',
             ];
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
