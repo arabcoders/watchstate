@@ -45,6 +45,15 @@ class PlexServer implements ServerInterface
         'anidb' => Guid::GUID_ANIDB,
     ];
 
+    protected const DISABLED_GUID_AGENTS = [
+        'local',
+        'com.plexapp.agents.none',
+        'com.plexapp.agents.tvdb',
+        'com.plexapp.agents.thetvdb',
+        'com.plexapp.agents.tvmaze',
+        'com.plexapp.agents.xbmcnfotv',
+    ];
+
     protected const WEBHOOK_ALLOWED_TYPES = [
         'movie',
         'episode',
@@ -78,14 +87,11 @@ class PlexServer implements ServerInterface
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
 
-    protected string $guidErrorLevel = 'info';
-
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
         protected CacheInterface $cache
     ) {
-        $this->guidErrorLevel = true === (bool)env('WS_IMPORT_PROMOTE_GUID_ERROR', false) ? 'notice' : 'info';
     }
 
     /**
@@ -1336,12 +1342,13 @@ class PlexServer implements ServerInterface
                     }
                 }
 
-                $this->logger->{$this->guidErrorLevel}(
+                $this->logger->info(
                     sprintf('Ignoring %s. No valid GUIDs. Possibly unmatched item?', $iName),
                     [
                         'guids' => empty($item->Guid) ? 'None' : $item->Guid,
                     ]
                 );
+
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
             }
@@ -1389,7 +1396,6 @@ class PlexServer implements ServerInterface
 
             $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
                 'after' => $after,
-                self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
             ]);
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [
@@ -1513,37 +1519,22 @@ class PlexServer implements ServerInterface
          * com.plexapp.agents.hama://(db)-(id)
          * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
          * @Disabled For:
+         * local://(id)
+         * com.plexapp.agents.none://(gid)?lang=en
          * com.plexapp.agents.tvdb://(show-id)/(season)/(episode)?lang=en
          * com.plexapp.agents.thetvdb://(show-id)/(season)/(episode)?lang=en
          * com.plexapp.agents.tvmaze://(show-id)/(season)/(episode))?lang=en
          * com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn
          */
 
-        $this->logger->debug('Parsing Legacy plex content agent.', ['guid' => $agent]);
-
-        $disabled = [
-            'com.plexapp.agents.tvdb',
-            'com.plexapp.agents.thetvdb',
-            'com.plexapp.agents.tvmaze',
-            'com.plexapp.agents.xbmcnfotv',
-        ];
-
-        if (in_array(before($agent, '://'), $disabled)) {
-            $this->logger->{$this->guidErrorLevel}(
-                'Unable to parse GUID as it does not provide episode unique id',
-                ['guid' => $agent]
-            );
+        if (true === in_array(before($agent, '://'), self::DISABLED_GUID_AGENTS)) {
             return $agent;
         }
 
         try {
-            if (str_starts_with($agent, 'com.plexapp.agents.none')) {
-                return $agent;
-            }
-
             $replacer = [
-                'agents.themoviedb' => 'agents.tmdb',
-                'agents.xbmcnfo://' => 'agents.imdb://',
+                'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
+                'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.imdb://',
             ];
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
@@ -1554,7 +1545,7 @@ class PlexServer implements ServerInterface
                 }
             }
 
-            $id = afterlast($agent, 'agents.');
+            $id = afterLast($agent, 'agents.');
             $agentGuid = explode('://', $id);
             $agent = $agentGuid[0];
             $guid = explode('/', $agentGuid[1])[0];
