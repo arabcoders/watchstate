@@ -153,7 +153,7 @@ valid cron expression. for example, `0 */3 * * *` it will run every three hours 
 
 By default, the official container includes a small http server exposed at port `80`, we officially don't support HTTPS
 inside the container for the HTTP server. However, for the adventurous people we expose port 443 as well, as such you
-can customize the Caddyfile to support SSL. and do the necessary adjustments. However, do not expect us to help with it.
+can customize the `docker/files/nginx.conf` to support SSL. and do the necessary adjustments. However, do not expect us to help with it.
 
 #### Example nginx reverse proxy.
 
