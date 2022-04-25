@@ -222,4 +222,4 @@ for changes to take effect.
 * com.plexapp.agents.tvmaze://(show-id)/(season)/(episode)?lang=en
 * com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=en
 
-Those agents do not provide episode unique ID thus will not work with the way we do syncing.
+Those agents do not provide Unique ID, and thus will not work with this tool.
