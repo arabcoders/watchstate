@@ -7,7 +7,6 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
-use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
@@ -21,11 +20,9 @@ final class DirectMapper implements ImportInterface
     ];
 
     private int $changed = 0;
-    private string $guidErrorLevel = 'info';
 
     public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
-        $this->guidErrorLevel = true === (bool)env('WS_IMPORT_PROMOTE_GUID_ERROR', false) ? 'notice' : 'info';
     }
 
     public function setUp(array $opts): ImportInterface
@@ -41,7 +38,7 @@ final class DirectMapper implements ImportInterface
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
         if (!$entity->hasGuids()) {
-            $this->logger->{$this->guidErrorLevel}(sprintf('Ignoring %s. No valid GUIDs.', $name));
+            $this->logger->info(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
         }
@@ -49,12 +46,6 @@ final class DirectMapper implements ImportInterface
         $item = $this->get($entity);
 
         if (null === $entity->id && null === $item) {
-            if (0 === $entity->watched && true !== ($opts[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
-                $this->logger->debug(sprintf('Ignoring %s. Not watched.', $name));
-                Data::increment($bucket, $entity->type . '_ignored_not_watched');
-                return $this;
-            }
-
             try {
                 $this->storage->insert($entity);
             } catch (Throwable $e) {
@@ -67,31 +58,6 @@ final class DirectMapper implements ImportInterface
             Data::increment($bucket, $entity->type . '_added');
             $this->operations[$entity->type]['added']++;
             $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
-            return $this;
-        }
-
-        // -- Ignore unwatched Item.
-        if (0 === $entity->watched && true !== ($opts[ServerInterface::OPT_IMPORT_UNWATCHED] ?? false)) {
-            // -- check for updated GUIDs.
-            if ($item->apply($entity, guidOnly: true)->isChanged()) {
-                try {
-                    $this->changed++;
-                    if (!empty($entity->meta)) {
-                        $item->meta = $entity->meta;
-                    }
-                    $this->storage->update($item);
-                    $this->operations[$entity->type]['updated']++;
-                    $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $item->diff());
-                    return $this;
-                } catch (Throwable $e) {
-                    $this->operations[$entity->type]['failed']++;
-                    Data::append($bucket, 'storage_error', $e->getMessage());
-                    return $this;
-                }
-            }
-
-            $this->logger->debug(sprintf('Ignoring %s. Not watched.', $name));
-            Data::increment($bucket, $entity->type . '_ignored_not_watched');
             return $this;
         }
 

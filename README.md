@@ -119,8 +119,7 @@ If you don't want to use webhooks and want to rely only on scheduled task for im
 of `WS_CRON_IMPORT` to `1`. By default, we run the import command every hour. However, you can change the scheduled task
 timer by adding another variable `WS_CRON_IMPORT_AT` and set its value to valid cron expression. for
 example, `0 */2 * * *` it will run every two hours instead of 1 hour. beware, this operation is somewhat costly as it's
-pulls the entire server library. You can also set `WS_CRON_IMPORT_UNWATCHED` to `1` allow the task to pull unwatched
-items.
+pulls the entire server library.
 
 ---
 
@@ -304,39 +303,39 @@ None that we are aware of.
 - (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
 - (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
-- (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
-  100|200|250|300|400|500|550|600).
+- (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
 - (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
-- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
-  100|200|250|300|400|500|550|600).
+- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
 - (string) `WS_LOGGER_FILE` full path for log file. By default, it's stored at `$(WS_TMP_DIR)/logs/app.log`
 - (bool) `WS_LOGGER_SYSLOG_ENABLED` enable syslog logger.
 - (int) `WS_LOGGER_SYSLOG_FACILITY` syslog logging facility
-- (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY,
-  100|200|250|300|400|500|550|600).
+- (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
 - (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
 - (int) `WS_CRON_IMPORT` enable import scheduled task.
 - (string) `WS_CRON_IMPORT_AT` cron expression timer.
-- (bool) `WS_CRON_IMPORT_UNWATCHED` Allow the import task to import unwatched items. Defaults to `false`.
+- (string) `WS_CRON_IMPORT_DEBUG_LEVEL` set debug level, to see unmatched items set to `-vv`. Defaults to `-v`
 - (int) `WS_CRON_EXPORT` enable export scheduled task.
 - (string) `WS_CRON_EXPORT_AT` cron expression timer.
+- (string) `WS_CRON_EXPORT_DEBUG_LEVEL` set debug level. Defaults to `-v`
 - (int) `WS_CRON_PUSH` enable push scheduled task.
 - (string) `WS_CRON_PUSH_AT` cron expression timer.
+- (string) `WS_CRON_PUSH_DEBUG_LEVEL` set debug level. Defaults to `-v`
 - (int) `WS_CRON_CACHE` enable caching of GUIDs relations.
 - (string) `WS_CRON_CACHE_AT` cron expression timer.
+- (string) `WS_CRON_CACHE_DEBUG_LEVEL` set debug level. Defaults to `-v`
 - (string) `WS_LOGS_PRUNE_AFTER` Delete logs older than specified time, set to `disable` to disable logs pruning. it
   follows php [strtotime](https://www.php.net/strtotime) function rules.
 - (bool) `WS_DEBUG_IMPORT` Whether to log invalid GUID items from server in `${WS_TMP_DIR}/debug`.
-- (bool) `WS_IMPORT_PROMOTE_GUID_ERROR` By default we log this error to `INFO` if this variable set to true it will
-  promote it to `NOTICE` level.
 
 # Container specific environment variables
 
-- (int) `WS_NO_CHOWN` do not change ownership of `/config` inside container.
-- (int) `WS_DISABLE_HTTP` disable included http server.
-- (int) `WS_DISABLE_CRON` disable included task scheduler.
-- (int) `WS_UID` Container user ID
-- (int) `WS_GID` Container group ID
+- (int) `WS_NO_CHOWN` do not change ownership needed paths inside container.
+- (int) `WS_DISABLE_HTTP` disable included HTTP Server.
+- (int) `WS_DISABLE_CRON` disable included Task Scheduler.
+- (int) `WS_UID` Container app user ID.
+- (int) `WS_GID` Container app group ID.
+
+---
 
 # FAQ
 

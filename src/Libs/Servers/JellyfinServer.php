@@ -74,14 +74,11 @@ class JellyfinServer implements ServerInterface
     protected array $cacheData = [];
     protected string|int|null $uuid = null;
 
-    protected string $guidErrorLevel = 'info';
-
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
         protected CacheInterface $cache
     ) {
-        $this->guidErrorLevel = true === (bool)env('WS_IMPORT_PROMOTE_GUID_ERROR', false) ? 'notice' : 'info';
     }
 
     /**
@@ -1296,7 +1293,7 @@ class JellyfinServer implements ServerInterface
 
                 $guids = (array)($item->ProviderIds ?? []);
 
-                $this->logger->{$this->guidErrorLevel}(
+                $this->logger->info(
                     sprintf(
                         'Ignoring %s. No valid GUIDs. Possibly unmatched item?',
                         $iName
@@ -1355,8 +1352,7 @@ class JellyfinServer implements ServerInterface
             ];
 
             $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
-                'after' => $after,
-                self::OPT_IMPORT_UNWATCHED => (bool)($this->options[self::OPT_IMPORT_UNWATCHED] ?? false),
+                'after' => $after
             ]);
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [

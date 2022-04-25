@@ -12,7 +12,6 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
-use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
@@ -64,7 +63,7 @@ class ImportCommand extends Command
                 'timeout',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Set request timeout in seconds'
+                'Set request timeout in seconds for each request.'
             )
             ->addOption(
                 'servers-filter',
@@ -77,7 +76,7 @@ class ImportCommand extends Command
                 'import-unwatched',
                 null,
                 InputOption::VALUE_NONE,
-                'Import unwatched state (note: It Will set items to unwatched if the server has newer date on items)'
+                '--DEPRECATED-- will be removed in v1.x. We import the item regardless of watched/unwatched state.'
             )
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
@@ -87,7 +86,12 @@ class ImportCommand extends Command
                 'Filter final status output e.g. (servername.key)',
                 null
             )
-            ->addOption('mapper-direct', null, InputOption::VALUE_NONE, 'Use less memory hungry mapper.')
+            ->addOption(
+                'mapper-direct',
+                null,
+                InputOption::VALUE_NONE,
+                'Uses less memory. However, it\'s significantly slower then default mapper.'
+            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -193,10 +197,6 @@ class ImportCommand extends Command
             Data::addBucket($name);
 
             $opts = ag($server, 'options', []);
-
-            if ($input->getOption('import-unwatched')) {
-                $opts[ServerInterface::OPT_IMPORT_UNWATCHED] = true;
-            }
 
             if ($input->getOption('proxy')) {
                 $opts['client']['proxy'] = $input->getOption('proxy');

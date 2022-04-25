@@ -194,32 +194,16 @@ Flags:
 
 ---
 
-### Q: Can Task scheduler import unwatched episodes?
-
-Yes, Set the environment variable `WS_CRON_IMPORT_UNWATCHED` in your `docker-compose.yaml` and restart your container
-for changes to take effect.
-
----
-
 ### Q: Can this tool work with alternative Plex agents?
 
 #### Supported Agents GUIDs:
 
-* plex://(type)/(id)
-* tvdb://(id)
-* imdb://(id)
-* tmdb://(id)
-* com.plexapp.agents.imdb://(id)?lang=en
-* com.plexapp.agents.tmdb://(id)?lang=en
-* com.plexapp.agents.themoviedb://(id)?lang=en
-* com.plexapp.agents.hama://(db)-(id)
-* com.plexapp.agents.xbmcnfo://(id)?lang=en
-
-#### Unsupported Agents:
-
-* com.plexapp.agents.tvdb://(show-id)/(season)/(episode)?lang=en
-* com.plexapp.agents.thetvdb://(show-id)/(season)/(episode)?lang=en
-* com.plexapp.agents.tvmaze://(show-id)/(season)/(episode)?lang=en
-* com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=en
-
-Those agents do not provide episode unique ID thus will not work with the way we do syncing.
+* plex://(type)/(id) `New Plex Agent`
+* tvdb://(id) `New Plex Agent`
+* imdb://(id) `New Plex Agent`
+* tmdb://(id) `New Plex Agent`
+* com.plexapp.agents.imdb://(id)?lang=en `(Old plex agents)`
+* com.plexapp.agents.tmdb://(id)?lang=en `(Old plex agents)`
+* com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents)`
+* com.plexapp.agents.hama://(db)-(id) `(anime agent parser)`
+* com.plexapp.agents.xbmcnfo://(id)?lang=en `( xbmc nfo parser agent)`
