@@ -51,9 +51,26 @@ return (function (): array {
             'shared' => false,
         ],
 
+        PDO::class => [
+            'class' => function (): PDO {
+                $pdo = new PDO(dsn: Config::get('storage.dsn'), options: [
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::ATTR_STRINGIFY_FETCHES => false,
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                ]);
+
+                foreach (Config::get('storage.exec', []) as $cmd) {
+                    $pdo->exec($cmd);
+                }
+
+                return $pdo;
+            },
+        ],
+
         StorageInterface::class => [
-            'class' => function (LoggerInterface $logger): StorageInterface {
-                $adapter = (new PDOAdapter($logger))->setUp(Config::get('storage.opts', []));
+            'class' => function (LoggerInterface $logger, PDO $pdo): StorageInterface {
+                $adapter = new PDOAdapter($logger, $pdo);
 
                 if (true !== $adapter->isMigrated()) {
                     $adapter->migrations(StorageInterface::MIGRATE_UP);
@@ -63,6 +80,7 @@ return (function (): array {
             },
             'args' => [
                 LoggerInterface::class,
+                PDO::class,
             ],
         ],
 

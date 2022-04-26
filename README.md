@@ -1,22 +1,12 @@
-# Watch State Sync
+# WatchState
 
-CLI based tool to sync watch state between different media servers.
+WatchState is a CLI based tool to sync your watch state between different media servers, without relying on 3rd parties
+services, like trakt.tv, This tool support `Plex Media Server`, `Emby` and `Jellyfin` out of the box currently, with
+plans for future expansion for other media servers.
 
-# Introduction
+# Install
 
-Ever wanted to sync your watch state without having to rely on 3rd party service like trakt.tv? then this tool is for
-you. I had multiple problems with Plex trakt.tv plugin which led to my account being banned at trakt.tv, and on top of
-that the plugin no longer supported. And I like to keep my own data locally if possible.
-
-# Supported media servers.
-
-* Plex
-* Emby
-* Jellyfin
-
-## Install
-
-create your `docker-compose.yaml` file
+create your `docker-compose.yaml` file:
 
 ```yaml
 version: '3.3'
@@ -26,7 +16,7 @@ services:
         container_name: watchstate
         restart: unless-stopped
         environment:
-            # For more ENV variables please read at the bottom of README.md
+            # For more environment variables please read at the bottom of this page.
             WS_UID: ${UID:-1000} # Set container operation user id.
             WS_GID: ${GID:-1000} # Set container operation group id.
         ports:
@@ -43,7 +33,7 @@ $ docker-compose up -d
 
 # First time
 
-Please run the following command to see all available commands you can also run help on each command to get more info.
+Run the following command to see all available commands you can also run help on each command to get more info.
 
 ```bash
 # Show all commands.
@@ -153,7 +143,8 @@ valid cron expression. for example, `0 */3 * * *` it will run every three hours 
 
 By default, the official container includes a small http server exposed at port `80`, we officially don't support HTTPS
 inside the container for the HTTP server. However, for the adventurous people we expose port 443 as well, as such you
-can customize the Caddyfile to support SSL. and do the necessary adjustments. However, do not expect us to help with it.
+can customize the `docker/files/nginx.conf` to support SSL. and do the necessary adjustments. However, do not expect us
+to help with it.
 
 #### Example nginx reverse proxy.
 
@@ -194,8 +185,8 @@ it's more secure that way.
 
 #### [WEBHOOK_TOKEN]
 
-Should match the server specific ``webhook.token`` value. in `server.yaml`. if the key does not exist please refer to
-the steps described at **Steps to enable webhook servers**.
+Should match the server specific ``webhook.token`` value. Refer to the steps described
+at **[Steps to enable webhook servers](#enable-webhooks-events-for-specific-server)**.
 
 # Configuring Media servers to send webhook events.
 
@@ -272,8 +263,8 @@ Click `Save Changes`
 Does not send webhooks events for "marked as watched/unwatched", or you added more than 1 item at time i.e. folder
 import.
 
-If you have multiuser setup, please will still report the admin account user_id as 1 even though when you get the list
-of users ids it shows completely different user ID, so when you initially set up your server for multiuser, select your
+If you have multi-user setup, Plex will still report the admin account user id as 1 even though when you get the list
+of users ids it shows completely different user ID, so when you initially set up your server for multi-user, select your
 admin account and after finishing you have to set the value manually to `1`. to do so please do the following
 
 ```bash
@@ -289,15 +280,13 @@ Emby does not send webhooks events for newly added items.
 
 # Jellyfin
 
-None that we are aware of.
+If you don't select a user id there, sometimes the plugin will send itemAdd event without user info, and thus will fail
+the check if you happen to enable `match user id`.
 
-# Globally supported environment variables.
+# Tool specific environment variables.
 
 - (string) `WS_DATA_PATH` Where key data stored (config|db).
 - (string) `WS_TMP_DIR` Where temp data stored. (logs|cache). Defaults to `WS_DATA_PATH` if not set.
-- (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
-- (string) `WS_STORAGE_PDO_USERNAME` PDO username
-- (string) `WS_STORAGE_PDO_PASSWORD` PDO password
 - (string) `WS_TZ` Set timezone for example, `UTC`
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
 - (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.
@@ -327,7 +316,7 @@ None that we are aware of.
   follows php [strtotime](https://www.php.net/strtotime) function rules.
 - (bool) `WS_DEBUG_IMPORT` Whether to log invalid GUID items from server in `${WS_TMP_DIR}/debug`.
 
-# Container specific environment variables
+# Container specific environment variables.
 
 - (int) `WS_NO_CHOWN` do not change ownership needed paths inside container.
 - (int) `WS_DISABLE_HTTP` disable included HTTP Server.
@@ -339,4 +328,4 @@ None that we are aware of.
 
 # FAQ
 
-For some common questions, Please take look at this [frequently asked questions](FAQ.md) page.
+For some common questions, Take look at this [frequently asked questions](FAQ.md) page.

@@ -18,13 +18,6 @@ use Psr\Log\LoggerInterface;
 
 final class PDOAdapter implements StorageInterface
 {
-    private array $supported = [
-        'sqlite',
-        'mysql',
-        'pgsql'
-    ];
-
-    private PDO|null $pdo = null;
     private bool $viaCommit = false;
 
     private bool $singleTransaction = false;
@@ -39,57 +32,12 @@ final class PDOAdapter implements StorageInterface
         'update' => null,
     ];
 
-    public function __construct(private LoggerInterface $logger)
+    public function __construct(private LoggerInterface $logger, private PDO $pdo)
     {
-    }
-
-    public function setUp(array $opts): StorageInterface
-    {
-        if (null === ($opts['dsn'] ?? null)) {
-            throw new StorageException('No storage.opts.dsn (Data Source Name) was provided.', 10);
-        }
-
-        try {
-            $this->pdo = new PDO(
-                $opts['dsn'], $opts['username'] ?? null, $opts['password'] ?? null,
-                array_replace_recursive(
-                    [
-                        PDO::ATTR_EMULATE_PREPARES => false,
-                        PDO::ATTR_STRINGIFY_FETCHES => false,
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    ],
-                    $opts['options'] ?? []
-                )
-            );
-        } catch (PDOException $e) {
-            throw new StorageException(sprintf('Unable to connect to storage backend. \'%s\'.', $e->getMessage()));
-        }
-
-        $driver = $this->getDriver();
-
-        if (!in_array($driver, $this->supported)) {
-            throw new StorageException(sprintf('%s Driver is not supported.', $driver), 11);
-        }
-
-        if (null !== ($exec = ag($opts, "exec.{$driver}")) && is_array($exec)) {
-            foreach ($exec as $cmd) {
-                $this->pdo->exec($cmd);
-            }
-        }
-
-        return $this;
     }
 
     public function insert(StateInterface $entity): StateInterface
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         try {
             $data = $entity->getAll();
 
@@ -146,13 +94,6 @@ final class PDOAdapter implements StorageInterface
 
     public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         $arr = [];
 
         $sql = 'SELECT * FROM state';
@@ -174,13 +115,6 @@ final class PDOAdapter implements StorageInterface
 
     public function update(StateInterface $entity): StateInterface
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         try {
             $data = $entity->getAll();
 
@@ -213,13 +147,6 @@ final class PDOAdapter implements StorageInterface
 
     public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         if (null === $class) {
             $class = Container::get(StateInterface::class);
         }
@@ -277,13 +204,6 @@ final class PDOAdapter implements StorageInterface
 
     public function remove(StateInterface $entity): bool
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         if (null === $entity->id && !$entity->hasGuids()) {
             return false;
         }
@@ -309,13 +229,6 @@ final class PDOAdapter implements StorageInterface
 
     public function commit(array $entities): array
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         return $this->transactional(function () use ($entities) {
             $list = [
                 StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
@@ -360,13 +273,6 @@ final class PDOAdapter implements StorageInterface
 
     public function migrations(string $dir, array $opts = []): mixed
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         $class = new PDOMigrations($this->pdo, $this->logger);
 
         return match (strtolower($dir)) {
@@ -378,13 +284,6 @@ final class PDOAdapter implements StorageInterface
 
     public function isMigrated(): bool
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         return (new PDOMigrations($this->pdo, $this->logger))->isMigrated();
     }
 
@@ -393,13 +292,6 @@ final class PDOAdapter implements StorageInterface
      */
     public function makeMigration(string $name, array $opts = []): mixed
     {
-        if (null === $this->pdo) {
-            throw new StorageException(
-                afterLast(__CLASS__, '\\') . '->setUp(): method was not called.',
-                StorageException::SETUP_NOT_CALLED
-            );
-        }
-
         return (new PDOMigrations($this->pdo, $this->logger))->make($name);
     }
 
@@ -417,10 +309,6 @@ final class PDOAdapter implements StorageInterface
 
     public function getPdo(): PDO
     {
-        if (null === $this->pdo) {
-            throw new \RuntimeException('PDO is not initialized yet.');
-        }
-
         return $this->pdo;
     }
 
@@ -467,22 +355,6 @@ final class PDOAdapter implements StorageInterface
             $this->pdo->rollBack();
             throw $e;
         }
-    }
-
-    /**
-     * Get PDO Driver.
-     *
-     * @return string
-     */
-    private function getDriver(): string
-    {
-        $driver = $this->pdo->getAttribute($this->pdo::ATTR_DRIVER_NAME);
-
-        if (empty($driver) || !is_string($driver)) {
-            $driver = 'unknown';
-        }
-
-        return strtolower($driver);
     }
 
     /**

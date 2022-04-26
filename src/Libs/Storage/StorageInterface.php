@@ -17,15 +17,6 @@ interface StorageInterface
     public const MIGRATE_DOWN = 'down';
 
     /**
-     * Initiate Driver.
-     *
-     * @param array $opts
-     *
-     * @return $this
-     */
-    public function setUp(array $opts): self;
-
-    /**
      * Insert Entity immediately.
      *
      * @param StateInterface $entity

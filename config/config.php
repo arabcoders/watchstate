@@ -19,7 +19,7 @@ return (function () {
     $config = [
         'name' => 'WatchState',
         'version' => 'v0.0.0',
-        'tz' => env('WS_TS', 'UTC'),
+        'tz' => env('WS_TZ', 'UTC'),
         'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
         'logs' => [
             'prune' => [
@@ -31,18 +31,18 @@ return (function () {
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', fn() => ag($config, 'path')));
 
     $config['storage'] = [
-        'opts' => [
-            'dsn' => env('WS_STORAGE_PDO_DSN', fn() => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db'),
-            'username' => env('WS_STORAGE_PDO_USERNAME', null),
-            'password' => env('WS_STORAGE_PDO_PASSWORD', null),
-            'exec' => [
-                'sqlite' => [
-                    'PRAGMA journal_mode=MEMORY',
-                    'PRAGMA SYNCHRONOUS=OFF'
-                ],
-                'pgsql' => [],
-                'mysql' => [],
-            ],
+        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db',
+        'username' => null,
+        'password' => null,
+        'options' => [
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_STRINGIFY_FETCHES => false,
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ],
+        'exec' => [
+            'PRAGMA journal_mode=MEMORY',
+            'PRAGMA SYNCHRONOUS=OFF'
         ],
     ];
 
