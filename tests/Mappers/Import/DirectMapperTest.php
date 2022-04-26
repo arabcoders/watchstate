@@ -10,6 +10,7 @@ use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
+use PDO;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
@@ -32,8 +33,7 @@ class DirectMapperTest extends TestCase
 
         $logger = new CliLogger($this->output);
 
-        $this->storage = new PDOAdapter($logger);
-        $this->storage->setUp(['dsn' => 'sqlite::memory:']);
+        $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
         $this->storage->migrations('up');
 
         $this->mapper = new DirectMapper($logger, $this->storage);

@@ -287,9 +287,6 @@ the check if you happen to enable `match user id`.
 
 - (string) `WS_DATA_PATH` Where key data stored (config|db).
 - (string) `WS_TMP_DIR` Where temp data stored. (logs|cache). Defaults to `WS_DATA_PATH` if not set.
-- (string) `WS_STORAGE_PDO_DSN` PDO Data source Name, if you want to change from sqlite.
-- (string) `WS_STORAGE_PDO_USERNAME` PDO username
-- (string) `WS_STORAGE_PDO_PASSWORD` PDO password
 - (string) `WS_TZ` Set timezone for example, `UTC`
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
 - (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.

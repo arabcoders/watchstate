@@ -12,6 +12,7 @@ use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
 use Error;
+use PDO;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
@@ -31,35 +32,8 @@ class PDOAdapterTest extends TestCase
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
 
-        $this->storage = new PDOAdapter(new CliLogger($this->output));
-        $this->storage->setUp(['dsn' => 'sqlite::memory:']);
+        $this->storage = new PDOAdapter(new CliLogger($this->output), new PDO('sqlite::memory:'));
         $this->storage->migrations('up');
-    }
-
-    /** StorageInterface::setUp */
-    public function test_setup_throw_exception_if_no_dsn(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(10);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->setUp([]);
-    }
-
-    public function test_setup_throw_exception_if_invalid_dsn(): void
-    {
-        $this->expectException(StorageException::class);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->setUp(['dsn' => 'not_real_driver::foo']);
-    }
-
-    /** StorageInterface::insert */
-    public function test_insert_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-
-        $storage->insert(new StateEntity([]));
     }
 
     public function test_insert_throw_exception_if_has_id(): void
@@ -77,15 +51,6 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(1, $item->id);
     }
 
-    /** StorageInterface::get */
-    public function test_get_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->get(new StateEntity([]));
-    }
-
     public function test_get_conditions(): void
     {
         $item = new StateEntity($this->testEpisode);
@@ -100,15 +65,6 @@ class PDOAdapterTest extends TestCase
 
         // -- look up based on id
         $this->assertSame($modified->getAll(), $this->storage->get($modified)->getAll());
-    }
-
-    /** StorageInterface::getAll */
-    public function test_getAll_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->getAll();
     }
 
     public function test_getAll_call_without_initialized_container(): void
@@ -132,15 +88,6 @@ class PDOAdapterTest extends TestCase
         $this->assertCount(0, $this->storage->getAll(date: new DateTimeImmutable('now'), class: $item));
     }
 
-    /** StorageInterface::update */
-    public function test_update_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->update(new StateEntity([]));
-    }
-
     public function test_update_call_without_id_exception(): void
     {
         $this->expectException(StorageException::class);
@@ -159,15 +106,6 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame($item, $updatedItem);
         $this->assertSame($updatedItem->getAll(), $this->storage->get($item)->getAll());
-    }
-
-    /** StorageInterface::update */
-    public function test_matchAnyId_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->matchAnyId([]);
     }
 
     public function test_matchAnyId_call_without_initialized_container(): void
@@ -209,15 +147,6 @@ class PDOAdapterTest extends TestCase
         );
     }
 
-    /** StorageInterface::remove */
-    public function test_remove_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->remove(new StateEntity([]));
-    }
-
     public function test_remove_conditions(): void
     {
         $item1 = new StateEntity($this->testEpisode);
@@ -235,15 +164,6 @@ class PDOAdapterTest extends TestCase
         // -- remove without id pointer.
         $this->assertTrue($this->storage->remove($item2));
         $this->assertFalse($this->storage->remove($item3));
-    }
-
-    /** StorageInterface::commit */
-    public function test_commit_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->commit([]);
     }
 
     public function test_commit_conditions(): void
@@ -269,15 +189,6 @@ class PDOAdapterTest extends TestCase
             ],
             $this->storage->commit([$item1, $item2])
         );
-    }
-
-    /** StorageInterface::migrations */
-    public function test_migrations_call_without_setup_exception(): void
-    {
-        $this->expectException(StorageException::class);
-        $this->expectExceptionCode(StorageException::SETUP_NOT_CALLED);
-        $storage = new PDOAdapter(new CliLogger($this->output));
-        $storage->migrations('f');
     }
 
     public function test_migrations_call_with_wrong_direction_exception(): void

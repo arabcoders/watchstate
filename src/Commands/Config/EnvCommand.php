@@ -29,11 +29,10 @@ final class EnvCommand extends Command
         }
 
         (new Table($output))->setStyle('box')
-            ->setHeaders(['Key', 'Value'])
+            ->setHeaders(['Environment Key', 'Environment Value'])
             ->setRows($keys)
             ->render();
 
         return self::SUCCESS;
     }
-
 }

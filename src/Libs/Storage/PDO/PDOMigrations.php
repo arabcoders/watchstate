@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Libs\Storage\PDO;
 
-use App\Libs\Config;
 use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
@@ -14,15 +13,13 @@ use RuntimeException;
 final class PDOMigrations
 {
     private string $path;
-    private string $versionFile;
     private string $driver;
     private array $files = [];
 
     public function __construct(private PDO $pdo, private LoggerInterface $logger)
     {
-        $this->path = __DIR__ . '/Migrations';
+        $this->path = __DIR__ . '/../../../../migrations';
         $this->driver = $this->getDriver();
-        $this->versionFile = Config::get('path') . sprintf('/db/%s.migration', $this->driver);
     }
 
     public function setLogger(LoggerInterface $logger): self
@@ -142,24 +139,12 @@ final class PDOMigrations
 
     private function getVersion(): int
     {
-        if ('sqlite' === $this->driver) {
-            return (int)$this->pdo->query('PRAGMA user_version')->fetchColumn();
-        }
-
-        if (file_exists($this->versionFile)) {
-            return (int)file_get_contents($this->versionFile);
-        }
-
-        return 0;
+        return (int)$this->pdo->query('PRAGMA user_version')->fetchColumn();
     }
 
     private function setVersion(int $version): void
     {
-        if ('sqlite' === $this->driver) {
-            $this->pdo->exec('PRAGMA user_version = ' . $version);
-        } else {
-            file_put_contents($this->versionFile, $version);
-        }
+        $this->pdo->exec('PRAGMA user_version = ' . $version);
     }
 
     private function getDriver(): string
