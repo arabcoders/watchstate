@@ -453,7 +453,7 @@ class PlexServer implements ServerInterface
         $ignoreIds = null;
 
         if (null !== ($this->options['ignore'] ?? null)) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', $this->options['ignore']));
+            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$this->options['ignore']));
         }
 
         $promises = [];
@@ -650,7 +650,7 @@ class PlexServer implements ServerInterface
         $ignoreIds = null;
 
         if (null !== ($this->options['ignore'] ?? null)) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', $this->options['ignore']));
+            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$this->options['ignore']));
         }
 
         $list = [];
