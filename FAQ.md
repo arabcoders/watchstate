@@ -196,7 +196,7 @@ Flags:
 
 ### Q: Can this tool work with alternative Plex agents?
 
-#### Supported Agents GUIDs:
+These are the agents we support for plex media server.
 
 * plex://(type)/(id) `New Plex Agent`
 * tvdb://(id) `New Plex Agent`
@@ -205,5 +205,4 @@ Flags:
 * com.plexapp.agents.imdb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.tmdb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents)`
-* com.plexapp.agents.hama://(db)-(id) `(anime agent parser)`
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `( xbmc nfo parser agent)`
