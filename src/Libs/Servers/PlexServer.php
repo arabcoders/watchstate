@@ -45,13 +45,11 @@ class PlexServer implements ServerInterface
         'anidb' => Guid::GUID_ANIDB,
     ];
 
-    protected const DISABLED_GUID_AGENTS = [
-        'local',
-        'com.plexapp.agents.none',
-        'com.plexapp.agents.tvdb',
-        'com.plexapp.agents.thetvdb',
-        'com.plexapp.agents.tvmaze',
-        'com.plexapp.agents.xbmcnfotv',
+    protected const SUPPORTED_LEGACY_AGENTS = [
+        'com.plexapp.agents.imdb',
+        'com.plexapp.agents.tmdb',
+        'com.plexapp.agents.themoviedb',
+        'com.plexapp.agents.xbmcnfo',
     ];
 
     protected const WEBHOOK_ALLOWED_TYPES = [
@@ -1502,48 +1500,25 @@ class PlexServer implements ServerInterface
     }
 
     /**
-     * Parse old Plex Content Agents
-     *
+     * Parse old Plex Content Agents, Supported Agents:
      * @param string $agent
      *
+     * @see SUPPORTED_LEGACY_AGENTS
      * @return string
      */
     private function parseLegacyAgents(string $agent): string
     {
-        /**
-         * Example of old plex agents.
-         *
-         * com.plexapp.agents.imdb://(id)?lang=en
-         * com.plexapp.agents.tmdb://(id)?lang=en
-         * com.plexapp.agents.themoviedb://(id)?lang=en
-         * com.plexapp.agents.hama://(db)-(id)
-         * com.plexapp.agents.xbmcnfo://(id)?lang=xn > imdb
-         * @Disabled For:
-         * local://(id)
-         * com.plexapp.agents.none://(gid)?lang=en
-         * com.plexapp.agents.tvdb://(show-id)/(season)/(episode)?lang=en
-         * com.plexapp.agents.thetvdb://(show-id)/(season)/(episode)?lang=en
-         * com.plexapp.agents.tvmaze://(show-id)/(season)/(episode))?lang=en
-         * com.plexapp.agents.xbmcnfotv://(show-id)/(season)/(episode)?lang=xn
-         */
-
-        if (true === in_array(before($agent, '://'), self::DISABLED_GUID_AGENTS)) {
-            return $agent;
-        }
-
         try {
+            if (false === in_array(before($agent, '://'), self::SUPPORTED_LEGACY_AGENTS)) {
+                return $agent;
+            }
+
             $replacer = [
                 'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
                 'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.imdb://',
             ];
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
-
-            if (true === str_contains($agent, 'hama://')) {
-                if (1 === preg_match('/(.+)-(.+)/', afterLast($agent, 'hama://'), $matches)) {
-                    return $matches[1] . '://' . before($matches[2], '?');
-                }
-            }
 
             $id = afterLast($agent, 'agents.');
             $agentGuid = explode('://', $id);

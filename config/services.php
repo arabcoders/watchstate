@@ -53,12 +53,7 @@ return (function (): array {
 
         PDO::class => [
             'class' => function (): PDO {
-                $pdo = new PDO(dsn: Config::get('storage.dsn'), options: [
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_STRINGIFY_FETCHES => false,
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                ]);
+                $pdo = new PDO(dsn: Config::get('storage.dsn'), options: Config::get('storage.options', []));
 
                 foreach (Config::get('storage.exec', []) as $cmd) {
                     $pdo->exec($cmd);
