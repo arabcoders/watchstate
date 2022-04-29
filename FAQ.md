@@ -79,10 +79,11 @@ match.
 ### Q: I enabled strict user match to allow only my user to update the state, webhook requests are failing?
 
 If this relates to jellyfin, then please make sure you have selected "Send All Properties (ignores template)", if it's
-plex and your account is main account then update the user id to 1 by running the following command:
+plex and your account is main account then update the `user` to `1` by running the following command, just change
+the `[SERVER_NAME]` to your server config name.
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --key user --set 1 -- [PLEX_SERVER_NAME]
+$ docker exec -ti watchstate console servers:edit --key user --set 1 -- [SERVER_NAME]
 ```
 
 ---
@@ -90,14 +91,14 @@ $ docker exec -ti watchstate console servers:edit --key user --set 1 -- [PLEX_SE
 ### Q: Does this tool require webhooks to work?
 
 No, You can use the task scheduler or on demand sync if you want. However, we recommend the webhook method as it's the
-most efficient method to gather play state.
+most efficient method to update watch state.
 
 --- 
 
 ### Q: When i use jellyfin, i sometimes see double events?
 
-This likely a bug in resulted from [jf webhook. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
-Just reload the page make sure there is only one watchstate event.
+This likely a bug in the plugin [jf webhook. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
+Just reload the page make sure there is only one watchstate event webhook.
 
 ---
 
@@ -115,7 +116,7 @@ $ docker exec -ti watchstate console db:list
 ```
 
 This command will give you access to see the database entries. by default, it will show the last 20 events, however you
-can run the same command with --help to see more options to extend the list or to filter the results.
+can run the same command with `[-h, --help]` to see more options to extend the list or to filter the results.
 
 ---
 
@@ -205,4 +206,4 @@ These are the agents we support for plex media server.
 * com.plexapp.agents.imdb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.tmdb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents)`
-* com.plexapp.agents.xbmcnfo://(id)?lang=en `( xbmc nfo parser agent)`
+* com.plexapp.agents.xbmcnfo://(id)?lang=en `(xbmc nfo parser agent)`
