@@ -193,10 +193,20 @@ class PlexServer implements ServerInterface
 
         $list = [];
 
-        foreach (ag($json, 'users', []) as $user) {
+        $adminsCount = 0;
+
+        $users = ag($json, 'users', []);
+
+        foreach ($users as $user) {
+            if (true === (bool)ag($user, 'admin')) {
+                $adminsCount++;
+            }
+        }
+
+        foreach ($users as $user) {
             $data = [
-                'user_id' => ag($user, 'id'),
-                'username' => $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? '??',
+                'user_id' => ag($user, 'admin') && $adminsCount <= 1 ? 1 : ag($user, 'id'),
+                'username' => $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? $user['email'] ?? '??',
                 'is_admin' => ag($user, 'admin') ? 'Yes' : 'No',
                 'is_guest' => ag($user, 'guest') ? 'Yes' : 'No',
                 'is_restricted' => ag($user, 'restricted') ? 'Yes' : 'No',
@@ -209,6 +219,8 @@ class PlexServer implements ServerInterface
 
             $list[] = $data;
         }
+
+        unset($json, $users);
 
         return $list;
     }
@@ -1503,8 +1515,8 @@ class PlexServer implements ServerInterface
      * Parse old Plex Content Agents, Supported Agents:
      * @param string $agent
      *
-     * @see SUPPORTED_LEGACY_AGENTS
      * @return string
+     * @see SUPPORTED_LEGACY_AGENTS
      */
     private function parseLegacyAgents(string $agent): string
     {
