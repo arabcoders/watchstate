@@ -15,6 +15,7 @@ use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
+use Exception;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -70,11 +71,13 @@ class JellyfinServer implements ServerInterface
     protected bool $initialized = false;
     protected bool $isEmby = false;
     protected array $persist = [];
-    protected string $cacheKey;
+    protected string $cacheKey = '';
     protected array $cacheData = [];
     protected string|int|null $uuid = null;
 
-    private array $showInfo = [];
+    protected array $showInfo = [];
+    protected array $cacheShow = [];
+    protected string $cacheShowKey = '';
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -112,9 +115,14 @@ class JellyfinServer implements ServerInterface
         $cloned->initialized = true;
 
         $cloned->cacheKey = $options['cache_key'] ?? md5(__CLASS__ . '.' . $name . ($userId ?? $token) . $url);
+        $cloned->cacheShowKey = $cloned->cacheKey . '_show';
 
         if ($cloned->cache->has($cloned->cacheKey)) {
             $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
+        }
+
+        if ($cloned->cache->has($cloned->cacheShowKey)) {
+            $cloned->cacheShow = $cloned->cache->get($cloned->cacheShowKey);
         }
 
         if (null !== ($options['emby'] ?? null)) {
@@ -275,6 +283,8 @@ class JellyfinServer implements ServerInterface
             throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
+        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
+
         $date = time();
 
         $meta = match ($type) {
@@ -315,6 +325,10 @@ class JellyfinServer implements ServerInterface
             );
         }
 
+        if (false === $isTainted && StateInterface::TYPE_EPISODE === $type) {
+            $meta['parent'] = $this->getParentGUIDs(ag($json, 'ItemId'), ag($json, 'SeriesName'));
+        }
+
         $guids = $this->getGuids($guids, $type);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
@@ -335,9 +349,100 @@ class JellyfinServer implements ServerInterface
             saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
         }
 
-        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
-            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
-        );
+        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+    }
+
+    protected function getParentGUIDs(mixed $id, string|null $series): array
+    {
+        if (null !== $series && array_key_exists($series, $this->cacheShow)) {
+            return $this->cacheShow[$series];
+        }
+
+        try {
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath(
+                    sprintf('/Users/%s/items/' . $id, $this->user)
+                ),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            if (null === ($type = ag($json, 'Type'))) {
+                return [];
+            }
+
+            if (StateInterface::TYPE_EPISODE !== strtolower($type)) {
+                return [];
+            }
+
+            if (null === ($seriesId = ag($json, 'SeriesId'))) {
+                return [];
+            }
+
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath(
+                    sprintf('/Users/%s/items/' . $seriesId, $this->user)
+                )->withQuery(http_build_query(['Fields' => 'ProviderIds'])),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            $series = $json['Name'] ?? $json['OriginalTitle'] ?? $json['Id'] ?? random_int(1, PHP_INT_MAX);
+
+            $providersId = (array)ag($json, 'ProviderIds', []);
+
+            if (!$this->hasSupportedIds($providersId)) {
+                $this->cacheShow[$series] = [];
+                return $this->cacheShow[$series];
+            }
+
+            $guids = [];
+
+            foreach (Guid::fromArray($this->getGuids($providersId))->getPointers() as $guid) {
+                [$type, $id] = explode('://', $guid);
+                $guids[$type] = $id;
+            }
+
+            $this->cacheShow[$series] = $guids;
+
+            return $this->cacheShow[$series];
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        } catch (Exception $e) {
+            $this->logger->error(
+                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        }
     }
 
     protected function getHeaders(): array
@@ -1524,6 +1629,10 @@ class JellyfinServer implements ServerInterface
     {
         if (!empty($this->cacheKey)) {
             $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        }
+
+        if (!empty($this->cacheShowKey)) {
+            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('PT5M'));
         }
     }
 
