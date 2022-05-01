@@ -6,6 +6,7 @@ namespace App\Commands\Database;
 
 use App\Command;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Guid;
 use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
@@ -30,10 +31,26 @@ final class ListCommand extends Command
     {
         $this->setName('db:list')
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit results to this number', 20)
-            ->addOption('via', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified server.')
+            ->addOption(
+                'via',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Limit results to this specified server. This filter is not reliable. and changes based on last server query.'
+            )
             ->addOption('series', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified series.')
             ->addOption('movie', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified movie.')
+            ->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent GUIDs instead.')
             ->setDescription('List Database entries.');
+
+        foreach (array_keys(Guid::SUPPORTED) as $guid) {
+            $guid = afterLast($guid, 'guid_');
+            $this->addOption(
+                $guid,
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Search Using ' . ucfirst($guid) . ' id.'
+            );
+        }
     }
 
     /**
@@ -48,9 +65,10 @@ final class ListCommand extends Command
             [
                 'ID',
                 'Type',
-                'Via',
-                'Main Title',
-                'Year | Episode',
+                'Via (Temp)',
+                'Name',
+                'Year',
+                'Episode',
                 'Date',
                 'Watched',
                 'WH Event'
@@ -80,6 +98,26 @@ final class ListCommand extends Command
             $params['movie'] = $input->getOption('movie');
         }
 
+        if ($input->getOption('parent')) {
+            foreach (array_keys(Guid::SUPPORTED) as $guid) {
+                $guid = afterLast($guid, 'guid_');
+                if (!$input->getOption($guid)) {
+                    continue;
+                }
+                $where[] = "json_extract(meta,'$.parent.guid_{$guid}') = :{$guid}";
+                $params[$guid] = $input->getOption($guid);
+            }
+        } else {
+            foreach (array_keys(Guid::SUPPORTED) as $guid) {
+                $guid = afterLast($guid, 'guid_');
+                if (!$input->getOption($guid)) {
+                    continue;
+                }
+                $where[] = "guid_{$guid} LIKE '%' || :{$guid} || '%'";
+                $params[$guid] = $input->getOption($guid);
+            }
+        }
+
         if (count($where) >= 1) {
             $sql .= 'WHERE ' . implode(' AND ', $where);
         }
@@ -93,6 +131,11 @@ final class ListCommand extends Command
 
         $rowCount = count($rows);
 
+        if (0 === $rowCount) {
+            $output->writeln('<error>No Results. Probably invalid filters values were used.</error>');
+            return self::FAILURE;
+        }
+
         $x = 0;
 
         foreach ($rows as $row) {
@@ -101,11 +144,11 @@ final class ListCommand extends Command
             $type = strtolower($row['type'] ?? '??');
 
             $meta = json_decode(ag($row, 'meta', '{}'), true);
-            $number = '( ' . ($meta['year'] ?? 0) . ' )';
+            $episode = null;
 
             if (StateInterface::TYPE_EPISODE === $type) {
-                $number .= sprintf(
-                    ' - S%sE%s',
+                $episode = sprintf(
+                    '%sx%s',
                     str_pad((string)($meta['season'] ?? 0), 2, '0', STR_PAD_LEFT),
                     str_pad((string)($meta['episode'] ?? 0), 2, '0', STR_PAD_LEFT),
                 );
@@ -116,7 +159,8 @@ final class ListCommand extends Command
                 ucfirst($row['type'] ?? '??'),
                 $meta['via'] ?? '??',
                 $meta['series'] ?? $meta['title'] ?? '??',
-                $number,
+                $meta['year'] ?? '0000',
+                $episode ?? '-',
                 makeDate($row['updated']),
                 true === (bool)$row['watched'] ? 'Yes' : 'No',
                 $meta['webhook']['event'] ?? '-',
