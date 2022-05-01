@@ -198,7 +198,11 @@ final class StateEntity implements StateInterface
         }
 
         if (null !== ($entity->{$key} ?? null) && $this->{$key} !== $entity->{$key}) {
-            $this->{$key} = $entity->{$key};
+            if ('meta' === $key) {
+                $this->{$key} = array_replace_recursive($this->{$key} ?? [], $entity->{$key} ?? []);
+            } else {
+                $this->{$key} = $entity->{$key};
+            }
         }
     }
 }

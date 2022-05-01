@@ -74,6 +74,8 @@ class JellyfinServer implements ServerInterface
     protected array $cacheData = [];
     protected string|int|null $uuid = null;
 
+    private array $showInfo = [];
+
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
@@ -313,7 +315,7 @@ class JellyfinServer implements ServerInterface
             );
         }
 
-        $guids = $this->getGuids($type, $guids);
+        $guids = $this->getGuids($guids, $type);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Item.ItemId');
@@ -360,7 +362,7 @@ class JellyfinServer implements ServerInterface
         return array_replace_recursive($opts, $this->options['client'] ?? []);
     }
 
-    protected function getLibraries(Closure $ok, Closure $error): array
+    protected function getLibraries(Closure $ok, Closure $error, bool $includeParent = false): array
     {
         $this->checkConfig(true);
 
@@ -374,8 +376,7 @@ class JellyfinServer implements ServerInterface
                 http_build_query(
                     [
                         'Recursive' => 'false',
-                        'Fields' => 'ProviderIds',
-                        'enableUserData' => 'true',
+                        'enableUserData' => 'false',
                         'enableImages' => 'false',
                     ]
                 )
@@ -431,6 +432,64 @@ class JellyfinServer implements ServerInterface
 
         $promises = [];
         $ignored = $unsupported = 0;
+
+        if (true === $includeParent) {
+            foreach ($listDirs as $section) {
+                $key = (string)ag($section, 'Id');
+                $title = ag($section, 'Name', '???');
+
+                if ('tvshows' !== ag($section, 'CollectionType', 'unknown')) {
+                    continue;
+                }
+
+                $cName = sprintf('(%s) - (%s:%s)', $title, 'show', $key);
+
+                if (null !== $ignoreIds && in_array($key, $ignoreIds, true)) {
+                    continue;
+                }
+
+                $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
+                    http_build_query(
+                        [
+                            'parentId' => $key,
+                            'recursive' => 'false',
+                            'enableUserData' => 'false',
+                            'enableImages' => 'false',
+                            'Fields' => 'ProviderIds,DateCreated,OriginalTitle',
+                        ]
+                    )
+                );
+
+                $this->logger->debug(
+                    sprintf('Requesting %s - %s library parents content.', $this->name, $cName),
+                    ['url' => $url]
+                );
+
+                try {
+                    $promises[] = $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($this->getHeaders(), [
+                            'user_data' => [
+                                'ok' => $ok($cName, 'show', $url),
+                                'error' => $error($cName, 'show', $url),
+                            ]
+                        ])
+                    );
+                } catch (ExceptionInterface $e) {
+                    $this->logger->error(
+                        sprintf(
+                            'Request to %s library - %s parents failed. Reason: %s',
+                            $this->name,
+                            $cName,
+                            $e->getMessage()
+                        ),
+                        ['url' => $url]
+                    );
+                    continue;
+                }
+            }
+        }
 
         foreach ($listDirs as $section) {
             $key = (string)ag($section, 'Id');
@@ -641,7 +700,7 @@ class JellyfinServer implements ServerInterface
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            function (string $cName, string $type) use ($after, $mapper) {
+            ok: function (string $cName, string $type) use ($after, $mapper) {
                 return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
                     try {
                         if (200 !== $response->getStatusCode()) {
@@ -734,7 +793,7 @@ class JellyfinServer implements ServerInterface
                     }
                 };
             },
-            function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     [
@@ -743,7 +802,8 @@ class JellyfinServer implements ServerInterface
                         'url' => $url
                     ]
                 );
-            }
+            },
+            includeParent: true,
         );
     }
 
@@ -920,7 +980,7 @@ class JellyfinServer implements ServerInterface
     public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            function (string $cName, string $type) use ($mapper, $after) {
+            ok: function (string $cName, string $type) use ($mapper, $after) {
                 return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
                     try {
                         if (200 !== $response->getStatusCode()) {
@@ -1016,7 +1076,7 @@ class JellyfinServer implements ServerInterface
                     }
                 };
             },
-            function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     [
@@ -1025,14 +1085,15 @@ class JellyfinServer implements ServerInterface
                         'url' => $url
                     ]
                 );
-            }
+            },
+            includeParent: false,
         );
     }
 
     public function cache(): array
     {
         return $this->getLibraries(
-            function (string $cName, string $type) {
+            ok: function (string $cName, string $type) {
                 return function (ResponseInterface $response) use ($cName, $type) {
                     try {
                         if (200 !== $response->getStatusCode()) {
@@ -1119,7 +1180,7 @@ class JellyfinServer implements ServerInterface
                     }
                 };
             },
-            function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('Request to %s - %s - failed. Reason: \'%s\'.', $this->name, $cName, $e->getMessage()),
                     [
@@ -1128,7 +1189,8 @@ class JellyfinServer implements ServerInterface
                         'url' => $url
                     ]
                 );
-            }
+            },
+            includeParent: false,
         );
     }
 
@@ -1173,7 +1235,7 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            $guids = $this->getGuids($type, (array)($item->ProviderIds ?? []));
+            $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
 
             foreach (Guid::fromArray($guids)->getPointers() as $guid) {
                 $this->cacheData[$guid] = $item->Id;
@@ -1246,6 +1308,39 @@ class JellyfinServer implements ServerInterface
         }
     }
 
+    protected function processShow(StdClass $item, string $library): void
+    {
+        $iName = sprintf(
+            '%s - %s - [%s (%d)]',
+            $this->name,
+            $library,
+            $item->Name ?? $item->OriginalTitle ?? '??',
+            $item->ProductionYear ?? 0000
+        );
+
+        $this->logger->debug(sprintf('Processing %s. For GUIDs.', $iName));
+
+        $providersId = (array)($item->ProviderIds ?? []);
+
+        if (!$this->hasSupportedIds($providersId)) {
+            $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
+            if (empty($providersId)) {
+                $message .= 'Most likely unmatched TV show.';
+            }
+            $this->logger->info($message, ['guids' => empty($providersId) ? 'None' : $providersId]);
+            return;
+        }
+
+        $guids = [];
+
+        foreach (Guid::fromArray($this->getGuids($providersId))->getPointers() as $guid) {
+            [$type, $id] = explode('://', $guid);
+            $guids[$type] = $id;
+        }
+
+        $this->showInfo[$item->Id] = $guids;
+    }
+
     protected function processImport(
         ImportInterface $mapper,
         string $type,
@@ -1254,6 +1349,11 @@ class JellyfinServer implements ServerInterface
         DateTimeInterface|null $after = null
     ): void {
         try {
+            if ('show' === $type) {
+                $this->processShow($item, $library);
+                return;
+            }
+
             Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
 
@@ -1293,22 +1393,20 @@ class JellyfinServer implements ServerInterface
 
                 $guids = (array)($item->ProviderIds ?? []);
 
-                $this->logger->info(
-                    sprintf(
-                        'Ignoring %s. No valid GUIDs. Possibly unmatched item?',
-                        $iName
-                    ),
-                    [
-                        'guids' => empty($guids) ? 'None' : $guids
-                    ]
-                );
+                $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
+
+                if (empty($guids)) {
+                    $message .= 'Most likely unmatched item.';
+                }
+
+                $this->logger->info($message, ['guids' => empty($guids) ? 'None' : $guids]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
 
                 return;
             }
 
-            $guids = $this->getGuids($type, (array)($item->ProviderIds ?? []));
+            $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
 
             foreach (Guid::fromArray($guids)->getPointers() as $guid) {
                 $this->cacheData[$guid] = $item->Id;
@@ -1341,6 +1439,10 @@ class JellyfinServer implements ServerInterface
                     'title' => $item->Name ?? '',
                     'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
                 ];
+
+                if (null !== ($item->SeriesId ?? null)) {
+                    $meta['parent'] = $this->showInfo[$item->SeriesId] ?? [];
+                }
             }
 
             $row = [
@@ -1368,7 +1470,7 @@ class JellyfinServer implements ServerInterface
             if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
                 return;
             }
-            $guids = $this->getGuids($type, (array)($item->ProviderIds ?? []));
+            $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
 
             foreach (Guid::fromArray($guids)->getPointers() as $guid) {
                 $this->cacheData[$guid] = $item->Id;
@@ -1381,7 +1483,7 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    protected function getGuids(string $type, array $ids): array
+    protected function getGuids(array $ids, string|null $type = null): array
     {
         $guid = [];
 
@@ -1392,12 +1494,8 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
-            if ($key !== 'plex') {
+            if (null !== $type) {
                 $value = $type . '/' . $value;
-            }
-
-            if ('string' !== Guid::SUPPORTED[self::GUID_MAPPER[$key]]) {
-                settype($value, Guid::SUPPORTED[self::GUID_MAPPER[$key]]);
             }
 
             $guid[self::GUID_MAPPER[$key]] = $value;
