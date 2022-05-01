@@ -107,7 +107,7 @@ return (function () {
             'type' => 'syslog',
             'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
-            'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', false),
+            'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', !env('IN_DOCKER')),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
             'name' => env('WS_LOGGER_SYSLOG_NAME', ag($config, 'name')),
         ],
