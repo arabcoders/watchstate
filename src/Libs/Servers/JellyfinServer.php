@@ -1632,7 +1632,7 @@ class JellyfinServer implements ServerInterface
         }
 
         if (!empty($this->cacheShowKey)) {
-            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('PT5M'));
+            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('PT30M'));
         }
     }
 

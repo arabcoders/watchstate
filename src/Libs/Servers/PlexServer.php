@@ -15,6 +15,7 @@ use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
+use Exception;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -86,6 +87,8 @@ class PlexServer implements ServerInterface
     protected string|int|null $user = null;
 
     protected array $showInfo = [];
+    protected array $cacheShow = [];
+    protected string $cacheShowKey = '';
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -117,9 +120,14 @@ class PlexServer implements ServerInterface
         $cloned->options = $options;
         $cloned->persist = $persist;
         $cloned->cacheKey = $opts['cache_key'] ?? md5(__CLASS__ . '.' . $name . $url);
+        $cloned->cacheShowKey = $cloned->cacheKey . '_show';
 
         if ($cloned->cache->has($cloned->cacheKey)) {
             $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
+        }
+
+        if ($cloned->cache->has($cloned->cacheShowKey)) {
+            $cloned->cacheShow = $cloned->cache->get($cloned->cacheShowKey);
         }
 
         $cloned->initialized = true;
@@ -302,6 +310,8 @@ class PlexServer implements ServerInterface
             throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
+        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
+
         $ignoreIds = null;
 
         if (null !== ($this->options['ignore'] ?? null)) {
@@ -370,10 +380,16 @@ class PlexServer implements ServerInterface
             );
         }
 
-        $guids = $this->getGuids($type, $json['Metadata']['Guid'] ?? []);
+        $guids = $this->getGuids($json['Metadata']['Guid'] ?? [], $type);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Metadata.guid');
+        }
+
+        if (false === $isTainted && StateInterface::TYPE_EPISODE === $type) {
+            $meta['parent'] = $this->getParentGUIDs(
+                $json['Metadata']['grandparentRatingKey'] ?? $json['Metadata']['parentRatingKey']
+            );
         }
 
         $row = [
@@ -388,9 +404,85 @@ class PlexServer implements ServerInterface
             saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
         }
 
-        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
-            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
-        );
+        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+    }
+
+    protected function getParentGUIDs(mixed $id): array
+    {
+        if (array_key_exists($id, $this->cacheShow)) {
+            return $this->cacheShow[$id];
+        }
+
+        try {
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath('/library/metadata/' . $id),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            $json = ag($json, 'MediaContainer.Metadata')[0] ?? [];
+
+            if (null === ($type = ag($json, 'type'))) {
+                return [];
+            }
+
+            if ('show' !== strtolower($type)) {
+                return [];
+            }
+
+            if (null === ($json['Guid'] ?? null)) {
+                $json['Guid'] = [['id' => $json['guid']]];
+            } else {
+                $json['Guid'][] = ['id' => $json['guid']];
+            }
+
+
+            if (!$this->hasSupportedIds($json['Guid'])) {
+                $this->cacheShow[$id] = [];
+                return $this->cacheShow[$id];
+            }
+
+            $guids = [];
+
+            foreach (Guid::fromArray($this->getGuids($json['Guid']))->getPointers() as $guid) {
+                [$type, $id] = explode('://', $guid);
+                $guids[$type] = $id;
+            }
+
+            $this->cacheShow[$id] = $guids;
+
+            return $this->cacheShow[$id];
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        } catch (Exception $e) {
+            $this->logger->error(
+                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        }
     }
 
     private function getHeaders(): array
@@ -1616,6 +1708,10 @@ class PlexServer implements ServerInterface
     {
         if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
             $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        }
+
+        if (!empty($this->cacheShowKey) && !empty($this->cacheShow) && true === $this->initialized) {
+            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('PT30M'));
         }
     }
 
