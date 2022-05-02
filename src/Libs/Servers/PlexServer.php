@@ -1531,20 +1531,25 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            if (null === ($item->Guid ?? null)) {
-                $item->Guid = [['id' => $item->guid]];
-            } else {
-                $item->Guid[] = ['id' => $item->guid];
+            $entity = $this->createEntity($item, $type);
+
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
+
+            if (0 === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
             }
 
-            if (!$this->hasSupportedIds($item->Guid)) {
+            if (!$entity->hasGuids()) {
+                if (null === ($item->Guid ?? null)) {
+                    $item->Guid = [['id' => $item->guid]];
+                } else {
+                    $item->Guid[] = ['id' => $item->guid];
+                }
+
                 if (true === Config::get('debug.import')) {
-                    $name = Config::get(
-                            'tmpDir'
-                        ) . '/debug/' . $this->name . '.' . ($item->ratingKey ?? 'r' . random_int(
-                                1,
-                                PHP_INT_MAX
-                            )) . '.json';
+                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->ratingKey . '.json';
 
                     if (!file_exists($name)) {
                         file_put_contents($name, json_encode($item, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -1557,60 +1562,16 @@ class PlexServer implements ServerInterface
                     $message .= ' Most likely unmatched item.';
                 }
 
-                $this->logger->info($message, ['guids' => empty($item->Guid) ? 'None' : $item->Guid]);
+                $this->logger->info($message, [
+                    'guids' => empty($item->Guid) ? 'None' : $item->Guid,
+                    'rGuids' => $entity->hasGuids() ? $entity->getRelativeGuids() : 'None',
+                ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
             }
 
-            $guids = $this->getGuids($item->Guid ?? [], $type);
-
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
-            }
-
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
-                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
-                Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                return;
-            }
-
-            if (StateInterface::TYPE_MOVIE === $type) {
-                $meta = [
-                    'via' => $this->name,
-                    'title' => $item->title ?? $item->originalTitle ?? '??',
-                    'year' => $item->year ?? 0000,
-                    'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
-                ];
-            } else {
-                $meta = [
-                    'via' => $this->name,
-                    'series' => $item->grandparentTitle ?? '??',
-                    'year' => $item->year ?? 0000,
-                    'season' => $item->parentIndex ?? 0,
-                    'episode' => $item->index ?? 0,
-                    'title' => $item->title ?? $item->originalTitle ?? '??',
-                    'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
-                ];
-
-                if (null !== ($item->grandparentRatingKey ?? null)) {
-                    $meta['parent'] = $this->showInfo[$item->grandparentRatingKey] ?? [];
-                }
-            }
-
-            $row = [
-                'type' => $type,
-                'updated' => $date,
-                'watched' => (int)(bool)($item->viewCount ?? false),
-                'meta' => $meta,
-                ...$guids
-            ];
-
-            $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
-                'after' => $after,
-            ]);
+            $mapper->add($this->name, $iName, $entity, ['after' => $after]);
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
@@ -1839,5 +1800,55 @@ class PlexServer implements ServerInterface
             ]);
             return null;
         }
+    }
+
+    private function createEntity(StdClass $item, string $type): StateInterface
+    {
+        if (null === ($item->Guid ?? null)) {
+            $item->Guid = [['id' => $item->guid]];
+        } else {
+            $item->Guid[] = ['id' => $item->guid];
+        }
+
+        $guids = $this->getGuids($item->Guid ?? [], $type);
+
+        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+            $this->cacheData[$guid] = $item->guid;
+        }
+
+        $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
+
+        if (StateInterface::TYPE_MOVIE === $type) {
+            $meta = [
+                'via' => $this->name,
+                'title' => $item->title ?? $item->originalTitle ?? '??',
+                'year' => $item->year ?? 0000,
+                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            ];
+        } else {
+            $meta = [
+                'via' => $this->name,
+                'series' => $item->grandparentTitle ?? '??',
+                'year' => $item->year ?? 0000,
+                'season' => $item->parentIndex ?? 0,
+                'episode' => $item->index ?? 0,
+                'title' => $item->title ?? $item->originalTitle ?? '??',
+                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            ];
+
+            if (null !== ($item->grandparentRatingKey ?? null)) {
+                $meta['parent'] = $this->showInfo[$item->grandparentRatingKey] ?? [];
+            }
+        }
+
+        return Container::get(StateInterface::class)::fromArray(
+            [
+                'type' => $type,
+                'updated' => $date,
+                'watched' => (int)(bool)($item->viewCount ?? false),
+                'meta' => $meta,
+                ...$guids
+            ]
+        );
     }
 }
