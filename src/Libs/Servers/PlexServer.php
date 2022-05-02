@@ -7,6 +7,7 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\HttpException;
@@ -1044,12 +1045,11 @@ class PlexServer implements ServerInterface
                 } else {
                     $iName = trim(
                         sprintf(
-                            '%s - [%s - (%dx%d) - %s]',
+                            '%s - [%s - (%dx%d)]',
                             $this->name,
                             $state->meta['series'] ?? '??',
                             $state->meta['season'] ?? 0,
                             $state->meta['episode'] ?? 0,
-                            $state->meta['title'] ?? '??',
                         )
                     );
                 }
@@ -1355,75 +1355,87 @@ class PlexServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - %s - [%s - (%dx%d) - %s]',
+                        '%s - %s - [%s - (%dx%d)]',
                         $this->name,
                         $library,
                         $item->grandparentTitle ?? $item->originalTitle ?? '??',
                         $item->parentIndex ?? 0,
                         $item->index ?? 0,
-                        $item->title ?? $item->originalTitle ?? '',
                     )
                 );
             }
 
-            if (null === ($item->Guid ?? null)) {
-                $item->Guid = [['id' => $item->guid]];
-            } else {
-                $item->Guid[] = ['id' => $item->guid];
-            }
+            $date = $item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? null;
 
-            if (!$this->hasSupportedIds($item->Guid)) {
-                $this->logger->debug(sprintf('Ignoring %s. No supported guid.', $iName), $item->Guid ?? []);
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                return;
-            }
-
-            $guids = $this->getGuids($item->Guid ?? [], $type);
-
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
-            }
-
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
+            if (null === $date) {
                 $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
 
-            if (null !== $after && $date >= $after->getTimestamp()) {
+            $rItem = $this->createEntity($item, $type);
+
+            if (!$rItem->hasGuids()) {
+                $guids = $item->Guid ?? [];
+                $this->logger->debug(
+                    sprintf('Ignoring %s. No valid/supported guids.', $iName),
+                    [
+                        'guids' => !empty($guids) ? $guids : 'None',
+                        'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                    ]
+                );
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
                 $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
                 Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
                 return;
             }
 
-            $isWatched = (int)(bool)($item->viewCount ?? false);
-
-            if (null === ($entity = $mapper->findByIds($guids))) {
+            if (null === ($entity = $mapper->get($rItem))) {
+                $guids = $item->Guid ?? [];
                 $this->logger->debug(
-                    sprintf('Ignoring %s. [State: %s] - Not found in db.', $iName, $isWatched ? 'Played' : 'Unplayed'),
-                    $item->Guid ?? []
+                    sprintf(
+                        'Ignoring %s. [State: %s] - Not found in db.',
+                        $iName,
+                        $rItem->watched ? 'Played' : 'Unplayed'
+                    ),
+                    [
+                        'guids' => !empty($guids) ? $guids : 'None',
+                        'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                    ]
                 );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
                 return;
             }
 
+            if ($rItem->watched === $entity->watched) {
+                $this->logger->debug(sprintf('Ignoring %s. State is equal to db state.', $iName), [
+                    'State' => $entity->watched ? 'Played' : 'Unplayed'
+                ]);
+                Data::increment($this->name, $type . '_ignored_state_unchanged');
+                return;
+            }
+
             if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
-                if ($date >= $entity->updated) {
-                    $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
+                if ($rItem->updated >= $entity->updated) {
+                    $this->logger->debug(sprintf('Ignoring %s. Date is newer or equal to db entry.', $iName), [
+                        'db' => makeDate($rItem->updated),
+                        'server' => makeDate($entity->updated),
+                    ]);
                     Data::increment($this->name, $type . '_ignored_date_is_newer');
                     return;
                 }
             }
 
-            if ($isWatched === $entity->watched) {
-                $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
-                Data::increment($this->name, $type . '_ignored_state_unchanged');
-                return;
-            }
-
-            $this->logger->debug(sprintf('Queuing %s.', $iName), ['url' => $this->url]);
+            $this->logger->info(sprintf('Queuing %s.', $iName), [
+                'State' => [
+                    'db' => $entity->watched ? 'Played' : 'Unplayed',
+                    'server' => $rItem->watched ? 'Played' : 'Unplayed'
+                ],
+            ]);
 
             $mapper->queue(
                 $this->http->request(
@@ -1441,7 +1453,7 @@ class PlexServer implements ServerInterface
                         $this->getHeaders(),
                         [
                             'user_data' => [
-                                'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
+                                'state' => 1 === $entity->watched ? 'Played' : 'Unplayed',
                                 'itemName' => $iName,
                             ],
                         ]
@@ -1479,7 +1491,9 @@ class PlexServer implements ServerInterface
             if (empty($item->Guid)) {
                 $message .= ' Most likely unmatched TV show.';
             }
-            $this->logger->info($message, ['guids' => empty($item->Guid) ? 'None' : $item->Guid]);
+            $this->logger->info($message, [
+                'guids' => empty($item->Guid) ? 'None' : $item->Guid
+            ]);
             return;
         }
 
@@ -1564,7 +1578,7 @@ class PlexServer implements ServerInterface
 
                 $this->logger->info($message, [
                     'guids' => empty($item->Guid) ? 'None' : $item->Guid,
-                    'rGuids' => $entity->hasGuids() ? $entity->getRelativeGuids() : 'None',
+                    'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
                 ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
@@ -1802,7 +1816,7 @@ class PlexServer implements ServerInterface
         }
     }
 
-    private function createEntity(StdClass $item, string $type): StateInterface
+    private function createEntity(StdClass $item, string $type): StateEntity
     {
         if (null === ($item->Guid ?? null)) {
             $item->Guid = [['id' => $item->guid]];
