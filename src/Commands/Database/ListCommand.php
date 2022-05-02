@@ -113,20 +113,20 @@ final class ListCommand extends Command
         if ($input->getOption('parent')) {
             foreach (array_keys(Guid::SUPPORTED) as $guid) {
                 $guid = afterLast($guid, 'guid_');
-                if (!$input->getOption($guid)) {
+                if (null === ($val = $input->getOption($guid))) {
                     continue;
                 }
                 $where[] = "json_extract(meta,'$.parent.guid_{$guid}') = :{$guid}";
-                $params[$guid] = $input->getOption($guid);
+                $params[$guid] = $val;
             }
         } else {
             foreach (array_keys(Guid::SUPPORTED) as $guid) {
                 $guid = afterLast($guid, 'guid_');
-                if (!$input->getOption($guid)) {
+                if (null === ($val = $input->getOption($guid))) {
                     continue;
                 }
                 $where[] = "guid_{$guid} LIKE '%' || :{$guid} || '%'";
-                $params[$guid] = $input->getOption($guid);
+                $params[$guid] = $val;
             }
         }
 
@@ -145,8 +145,21 @@ final class ListCommand extends Command
 
         if (0 === $rowCount) {
             $output->writeln('<error>No Results. Probably invalid filters values were used.</error>');
-            $output->writeln('<info>Filters:</info>');
-            $output->writeln(print_r([$where, $params, $sql, $rows, $stmt->errorInfo()], true));
+            if (count($params) > 1) {
+                array_shift($params);
+                if ('json' === $input->getOption('output')) {
+                    $output->writeln(
+                        json_encode(
+                            [
+                                'Filters' => $params
+                            ],
+                            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                        )
+                    );
+                } else {
+                    $output->writeln(Yaml::dump(['Filters' => $params], 8, 2));
+                }
+            }
             return self::FAILURE;
         }
 
