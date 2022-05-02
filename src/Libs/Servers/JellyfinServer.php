@@ -1430,7 +1430,7 @@ class JellyfinServer implements ServerInterface
         if (!$this->hasSupportedIds($providersId)) {
             $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
             if (empty($providersId)) {
-                $message .= 'Most likely unmatched TV show.';
+                $message .= ' Most likely unmatched TV show.';
             }
             $this->logger->info($message, ['guids' => empty($providersId) ? 'None' : $providersId]);
             return;
@@ -1501,7 +1501,7 @@ class JellyfinServer implements ServerInterface
                 $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
 
                 if (empty($guids)) {
-                    $message .= 'Most likely unmatched item.';
+                    $message .= ' Most likely unmatched item.';
                 }
 
                 $this->logger->info($message, ['guids' => empty($guids) ? 'None' : $guids]);
