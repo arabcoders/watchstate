@@ -7,6 +7,7 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\HttpException;
@@ -955,12 +956,11 @@ class JellyfinServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - [%s - (%dx%d) - %s]',
+                        '%s - [%s - (%dx%d)]',
                         $this->name,
                         $entity->meta['series'] ?? '??',
                         $entity->meta['season'] ?? 0,
                         $entity->meta['episode'] ?? 0,
-                        $entity->meta['title'] ?? '??',
                     )
                 );
             }
@@ -1017,12 +1017,11 @@ class JellyfinServer implements ServerInterface
                 } else {
                     $iName = trim(
                         sprintf(
-                            '%s - [%s - (%dx%d) - %s]',
+                            '%s - [%s - (%dx%d)]',
                             $this->name,
                             $state->meta['series'] ?? '??',
                             $state->meta['season'] ?? 0,
                             $state->meta['episode'] ?? 0,
-                            $state->meta['title'] ?? '??',
                         )
                     );
                 }
@@ -1320,89 +1319,100 @@ class JellyfinServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - %s - [%s - (%dx%d) - %s]',
+                        '%s - %s - [%s - (%dx%d)]',
                         $this->name,
                         $library,
                         $item->SeriesName ?? '??',
                         $item->ParentIndexNumber ?? 0,
                         $item->IndexNumber ?? 0,
-                        $item->Name ?? ''
                     )
                 );
-            }
-
-            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
-                $this->logger->debug(
-                    sprintf('Ignoring %s. No supported guid.', $iName),
-                    (array)($item->ProviderIds ?? [])
-                );
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                return;
-            }
-
-            $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
-
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->Id;
             }
 
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
 
             if (null === $date) {
-                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName), [
+                    'item' => (array)$item,
+                ]);
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
 
-            $date = strtotime($date);
+            $rItem = $this->createEntity($item, $type);
 
-            if (null !== $after && $date >= $after->getTimestamp()) {
-                $this->logger->debug(sprintf('Ignoring %s. Ignored date is equal or newer than lastSync.', $iName));
+            if (!$rItem->hasGuids()) {
+                $guids = (array)($item->ProviderIds ?? []);
+                $this->logger->debug(sprintf('Ignoring %s. No Valid/supported guids.', $iName), [
+                    'guids' => !empty($guids) ? $guids : 'None',
+                    'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                ]);
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
+                $this->logger->debug(sprintf('Ignoring %s. Ignored date is equal or newer than lastSync.', $iName), [
+                    'itemDate' => makeDate($rItem->updated),
+                    'lastSync' => makeDate($after->getTimestamp()),
+                ]);
                 Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
                 return;
             }
 
-            $isWatched = (int)(bool)($item->UserData?->Played ?? false);
-
-            if (null === ($entity = $mapper->findByIds($guids))) {
+            if (null === ($entity = $mapper->get($rItem))) {
+                $guids = (array)($item->ProviderIds ?? []);
                 $this->logger->debug(
-                    sprintf('Ignoring %s. [State: %s] - Not found in db.', $iName, $isWatched ? 'Played' : 'Unplayed'),
-                    (array)($item->ProviderIds ?? [])
+                    sprintf(
+                        'Ignoring %s. [State: %s] - Not found in db.',
+                        $iName,
+                        $rItem->watched ? 'Played' : 'Unplayed'
+                    ),
+                    [
+                        'guids' => !empty($guids) ? $guids : 'None',
+                        'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                    ]
                 );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
                 return;
             }
 
+            if ($rItem->watched === $entity->watched) {
+                $this->logger->debug(sprintf('Ignoring %s. State is equal to db state.', $iName), [
+                    'State' => $entity->watched ? 'Played' : 'Unplayed'
+                ]);
+                Data::increment($this->name, $type . '_ignored_state_unchanged');
+                return;
+            }
+
             if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
-                if ($date >= $entity->updated) {
-                    $this->logger->debug(sprintf('Ignoring %s. Date is newer then what in db.', $iName));
+                if ($rItem->updated >= $entity->updated) {
+                    $this->logger->debug(sprintf('Ignoring %s. Date is newer or equal to db entry.', $iName), [
+                        'db' => makeDate($rItem->updated),
+                        'server' => makeDate($entity->updated),
+                    ]);
                     Data::increment($this->name, $type . '_ignored_date_is_newer');
                     return;
                 }
             }
 
-
-            if ($isWatched === $entity->watched) {
-                $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
-                Data::increment($this->name, $type . '_ignored_state_unchanged');
-                return;
-            }
-
-            $this->logger->debug(sprintf('Queuing %s.', $iName));
+            $this->logger->info(sprintf('Queuing %s.', $iName), [
+                'State' => [
+                    'db' => $entity->watched ? 'Played' : 'Unplayed',
+                    'server' => $rItem->watched ? 'Played' : 'Unplayed'
+                ],
+            ]);
 
             $mapper->queue(
                 $this->http->request(
                     1 === $entity->watched ? 'POST' : 'DELETE',
                     (string)$this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item->Id)),
-                    array_replace_recursive(
-                        $this->getHeaders(),
-                        [
-                            'user_data' => [
-                                'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
-                                'itemName' => $iName,
-                            ],
-                        ]
-                    )
+                    array_replace_recursive($this->getHeaders(), [
+                        'user_data' => [
+                            'state' => 1 === $entity->watched ? 'Watched' : 'Unwatched',
+                            'itemName' => $iName,
+                        ],
+                    ])
                 )
             );
         } catch (Throwable $e) {
@@ -1459,8 +1469,8 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
+            Data::increment($this->name, $library . '_total');
 
             if (StateInterface::TYPE_MOVIE === $type) {
                 $iName = sprintf(
@@ -1473,23 +1483,29 @@ class JellyfinServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - %s - [%s - (%dx%d) - %s]',
+                        '%s - %s - [%s - (%dx%d)]',
                         $this->name,
                         $library,
                         $item->SeriesName ?? '??',
                         $item->ParentIndexNumber ?? 0,
                         $item->IndexNumber ?? 0,
-                        $item->Name ?? ''
                     )
                 );
             }
 
-            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
+            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
+
+            if (null === $date) {
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
+            }
+
+            $entity = $this->createEntity($item, $type);
+
+            if (!$entity->hasGuids()) {
                 if (true === Config::get('debug.import')) {
-                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . ($item->Id ?? 'r' . random_int(
-                                1,
-                                PHP_INT_MAX
-                            )) . '.json';
+                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->Id . '.json';
 
                     if (!file_exists($name)) {
                         file_put_contents($name, json_encode($item, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -1504,63 +1520,17 @@ class JellyfinServer implements ServerInterface
                     $message .= ' Most likely unmatched item.';
                 }
 
-                $this->logger->info($message, ['guids' => empty($guids) ? 'None' : $guids]);
+                $this->logger->info($message, [
+                    'guids' => empty($guids) ? 'None' : $guids,
+                    'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
 
                 return;
             }
 
-            $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
-
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->Id;
-            }
-
-            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
-
-            if (null === $date) {
-                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName));
-                Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                return;
-            }
-
-            $date = strtotime($date);
-
-            if (StateInterface::TYPE_MOVIE === $type) {
-                $meta = [
-                    'via' => $this->name,
-                    'title' => $item->Name ?? $item->OriginalTitle ?? '??',
-                    'year' => $item->ProductionYear ?? 0000,
-                    'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
-                ];
-            } else {
-                $meta = [
-                    'via' => $this->name,
-                    'series' => $item->SeriesName ?? '??',
-                    'year' => $item->ProductionYear ?? 0000,
-                    'season' => $item->ParentIndexNumber ?? 0,
-                    'episode' => $item->IndexNumber ?? 0,
-                    'title' => $item->Name ?? '',
-                    'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
-                ];
-
-                if (null !== ($item->SeriesId ?? null)) {
-                    $meta['parent'] = $this->showInfo[$item->SeriesId] ?? [];
-                }
-            }
-
-            $row = [
-                'type' => $type,
-                'updated' => $date,
-                'watched' => (int)(bool)($item->UserData?->Played ?? false),
-                'meta' => $meta,
-                ...$guids,
-            ];
-
-            $mapper->add($this->name, $iName, Container::get(StateInterface::class)::fromArray($row), [
-                'after' => $after
-            ]);
+            $mapper->add($this->name, $iName, $entity, ['after' => $after]);
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
@@ -1654,5 +1624,49 @@ class JellyfinServer implements ServerInterface
         if (true === $checkUser && null === $this->user) {
             throw new RuntimeException(afterLast(__CLASS__, '\\') . ': No User was set.');
         }
+    }
+
+    private function createEntity(stdClass $item, string $type): StateEntity
+    {
+        $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
+
+        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
+            $this->cacheData[$guid] = $item->Id;
+        }
+
+        $date = strtotime($item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate);
+
+        if (StateInterface::TYPE_MOVIE === $type) {
+            $meta = [
+                'via' => $this->name,
+                'title' => $item->Name ?? $item->OriginalTitle ?? '??',
+                'year' => $item->ProductionYear ?? 0000,
+                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+            ];
+        } else {
+            $meta = [
+                'via' => $this->name,
+                'series' => $item->SeriesName ?? '??',
+                'year' => $item->ProductionYear ?? 0000,
+                'season' => $item->ParentIndexNumber ?? 0,
+                'episode' => $item->IndexNumber ?? 0,
+                'title' => $item->Name ?? '',
+                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+            ];
+
+            if (null !== ($item->SeriesId ?? null)) {
+                $meta['parent'] = $this->showInfo[$item->SeriesId] ?? [];
+            }
+        }
+
+        return Container::get(StateInterface::class)::fromArray(
+            [
+                'type' => $type,
+                'updated' => $date,
+                'watched' => (int)(bool)($item->UserData?->Played ?? false),
+                'meta' => $meta,
+                ...$guids,
+            ]
+        );
     }
 }
