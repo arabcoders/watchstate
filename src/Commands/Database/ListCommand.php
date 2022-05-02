@@ -152,6 +152,8 @@ final class ListCommand extends Command
 
         if ('json' === $input->getOption('output')) {
             foreach ($rows as &$row) {
+                $row['watched'] = (bool)$row['watched'];
+                $row['updated'] = makeDate($row['updated']);
                 $row['meta'] = json_decode($row['meta'], true);
             }
             unset($row);
@@ -164,6 +166,8 @@ final class ListCommand extends Command
             );
         } elseif ('yaml' === $input->getOption('output')) {
             foreach ($rows as &$row) {
+                $row['watched'] = (bool)$row['watched'];
+                $row['updated'] = makeDate($row['updated']);
                 $row['meta'] = json_decode($row['meta'], true);
             }
 
