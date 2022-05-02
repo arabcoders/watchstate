@@ -1477,7 +1477,7 @@ class PlexServer implements ServerInterface
         if (!$this->hasSupportedIds($item->Guid)) {
             $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
             if (empty($item->Guid)) {
-                $message .= 'Possibly unmatched show';
+                $message .= ' Most likely unmatched TV show.';
             }
             $this->logger->info($message, ['guids' => empty($item->Guid) ? 'None' : $item->Guid]);
             return;
@@ -1554,7 +1554,7 @@ class PlexServer implements ServerInterface
                 $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
 
                 if (empty($item->Guid)) {
-                    $message .= 'Most likely unmatched item.';
+                    $message .= ' Most likely unmatched item.';
                 }
 
                 $this->logger->info($message, ['guids' => empty($item->Guid) ? 'None' : $item->Guid]);

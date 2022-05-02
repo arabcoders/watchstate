@@ -121,6 +121,42 @@ final class StateEntity implements StateInterface
         return false;
     }
 
+    public function hasRelativeGuids(): bool
+    {
+        if (StateInterface::TYPE_EPISODE !== $this->type) {
+            return false;
+        }
+
+        $parents = ag($this->meta, 'parent', []);
+        $season = ag($this->meta, 'season', null);
+        $episode = ag($this->meta, 'episode', null);
+
+        return !(null === $season || null === $episode || empty($parents));
+    }
+
+    public function getRelativeGuids(): array
+    {
+        if (StateInterface::TYPE_EPISODE !== $this->type) {
+            return [];
+        }
+
+        $parents = ag($this->meta, 'parent', []);
+        $season = ag($this->meta, 'season', null);
+        $episode = ag($this->meta, 'episode', null);
+
+        if (null === $season || null === $episode) {
+            return [];
+        }
+
+        $list = [];
+
+        foreach ($parents as $key => $val) {
+            $list[afterLast($key, 'guid_')] = $val . '/' . $season . '/' . $episode;
+        }
+
+        return $list;
+    }
+
     public function apply(StateInterface $entity, bool $guidOnly = false): self
     {
         if ($this->isEqual($entity)) {

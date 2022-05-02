@@ -72,6 +72,20 @@ interface StateInterface
     public function hasGuids(): bool;
 
     /**
+     * Does the entity have Relative GUIDs?
+     *
+     * @return bool
+     */
+    public function hasRelativeGuids(): bool;
+
+    /**
+     * Get Relative GUIDs.
+     *
+     * @return array
+     */
+    public function getRelativeGuids(): array;
+
+    /**
      * Get GUID Pointers.
      *
      * @return array

@@ -166,15 +166,13 @@ final class PDOAdapter implements StorageInterface
             if (null === ($ids[$key] ?? null)) {
                 continue;
             }
+
+            $where[] = "{$key} = :{$key}";
             $cond[$key] = $ids[$key];
         }
 
         if (empty($cond)) {
             return null;
-        }
-
-        foreach ($cond as $key => $_) {
-            $where[] = $key . ' = :' . $key;
         }
 
         $sqlWhere = implode(' OR ', $where);
