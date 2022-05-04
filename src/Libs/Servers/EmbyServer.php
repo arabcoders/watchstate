@@ -102,7 +102,7 @@ class EmbyServer extends JellyfinServer
             throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
-        $date = time();
+        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
 
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
@@ -145,16 +145,9 @@ class EmbyServer extends JellyfinServer
             $isWatched = (int)(bool)ag($json, 'Item.Played', ag($json, 'Item.PlayedToCompletion', 0));
         }
 
-        $guids = ag($json, 'Item.ProviderIds', []);
+        $providersId = ag($json, 'Item.ProviderIds', []);
 
-        if (!$this->hasSupportedIds($guids)) {
-            throw new HttpException(
-                sprintf('%s: No supported GUID was given. [%s]', afterLast(__CLASS__, '\\'), arrayToString($guids)),
-                400
-            );
-        }
-
-        $guids = $this->getGuids($type, $guids);
+        $guids = $this->getGuids($providersId, $type);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Item.Id');
@@ -162,19 +155,40 @@ class EmbyServer extends JellyfinServer
 
         $row = [
             'type' => $type,
-            'updated' => $date,
+            'updated' => time(),
             'watched' => $isWatched,
             'meta' => $meta,
             ...$guids
         ];
 
-        if (true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug')) {
-            saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
+        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+
+        if (!$entity->hasGuids()) {
+            throw new HttpException(
+                sprintf(
+                    '%s: No supported GUID was given. [%s]',
+                    afterLast(__CLASS__, '\\'),
+                    arrayToString(
+                        [
+                            'guids' => !empty($providersId) ? $providersId : 'None',
+                            'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                        ]
+                    )
+                ), 400
+            );
         }
 
-        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted(
-            in_array($event, self::WEBHOOK_TAINTED_EVENTS)
-        );
+        if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
+                    $request->getQueryParams(),
+                    'debug'
+                ))) {
+            saveWebhookPayload($this->name . '.' . $event, $request, [
+                'entity' => $entity->getAll(),
+                'payload' => $json,
+            ]);
+        }
+
+        return $entity;
     }
 
     public function push(array $entities, DateTimeInterface|null $after = null): array

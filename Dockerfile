@@ -8,14 +8,15 @@ LABEL maintainer="admin@arabcoders.org"
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/bin/
 
 RUN mv "${PHP_INI_DIR}/php.ini-production" "${PHP_INI_DIR}/php.ini" && chmod +x /usr/bin/install-php-extensions && \
-    sync && install-php-extensions pdo mbstring ctype sqlite3 json opcache xhprof pgsql mysqlnd && \
-    apk add --no-cache nginx nano curl procps net-tools iproute2 shadow runuser sqlite && \
+    sync && install-php-extensions pdo mbstring ctype sqlite3 json opcache xhprof pgsql mysqlnd redis && \
+    apk add --no-cache nginx nano curl procps net-tools iproute2 shadow runuser sqlite redis && \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer && \
     mkdir -p /app /config
 
 COPY . /app
 
-RUN composer --working-dir=/app/ -o --no-progress --no-dev --no-cache install
+RUN composer --working-dir=/app/ -o --no-progress --no-interaction --no-ansi --no-dev --no-cache install && \
+    composer clear-cache
 
 RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     cp /app/docker/files/nginx.conf /etc/nginx/nginx.conf && \

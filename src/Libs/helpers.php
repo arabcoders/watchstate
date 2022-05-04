@@ -226,7 +226,7 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(ServerRequestInterface $request, string $name, array $parsed = []): void
+    function saveWebhookPayload(string $name, ServerRequestInterface $request, array $parsed = []): void
     {
         $content = [
             'query' => $request->getQueryParams(),
