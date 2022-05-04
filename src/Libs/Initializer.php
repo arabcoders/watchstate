@@ -342,7 +342,11 @@ final class Initializer
                 ]);
             }
 
-            return new Response(status: 200, headers: ['X-Status' => 'Entity is unchanged.']);
+            return new Response(status: 200, headers: [
+                'X-Status' => 'Entity is unchanged.',
+                'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
+                'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+            ]);
         } catch (HttpException $e) {
             if (200 === $e->getCode()) {
                 return new Response(status: $e->getCode(), headers: [

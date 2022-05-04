@@ -366,49 +366,56 @@ class PlexServer implements ServerInterface
             ];
         }
 
-        $isWatched = (int)(bool)ag($json, 'Metadata.viewCount', 0);
-
-        $date = time();
-
-        if (!$this->hasSupportedIds($json['Metadata']['Guid'] ?? [])) {
-            throw new HttpException(
-                sprintf(
-                    '%s: No supported GUID was given. [%s]',
-                    afterLast(__CLASS__, '\\'),
-                    arrayToString($json['Metadata']['Guid'] ?? [])
-                ),
-                400
-            );
-        }
-
         $guids = $this->getGuids($json['Metadata']['Guid'] ?? [], $type);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Metadata.guid');
         }
 
-        if (false === $isTainted && StateInterface::TYPE_EPISODE === $type) {
-            $meta['parent'] = $this->getParentGUIDs(
-                $json['Metadata']['grandparentRatingKey'] ?? $json['Metadata']['parentRatingKey']
-            );
+        if (StateInterface::TYPE_EPISODE === $type) {
+            $parentId = ag($json, 'Metadata.grandparentRatingKey', fn() => ag($json, 'Metadata.parentRatingKey'));
+            $meta['parent'] = null !== $parentId ? $this->getEpisodeParent($parentId) : [];
         }
 
         $row = [
             'type' => $type,
-            'updated' => $date,
-            'watched' => $isWatched,
+            'updated' => time(),
+            'watched' => (int)(bool)ag($json, 'Metadata.viewCount', 0),
             'meta' => $meta,
             ...$guids
         ];
 
-        if (true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug')) {
-            saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
+        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+
+        if (!$entity->hasGuids()) {
+            throw new HttpException(
+                sprintf(
+                    '%s: No supported GUID was given. [%s]',
+                    afterLast(__CLASS__, '\\'),
+                    arrayToString(
+                        [
+                            'guids' => !empty($json['Metadata']['Guid']) ? $json['Metadata']['Guid'] : 'None',
+                            'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                        ]
+                    )
+                ), 400
+            );
         }
 
-        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+        if (false !== $isTainted && (true === Config::get('webhook.debug') || null !== ag(
+                    $request->getQueryParams(),
+                    'debug'
+                ))) {
+            saveWebhookPayload($this->name . '.' . $event, $request, [
+                'entity' => $entity->getAll(),
+                'payload' => $json,
+            ]);
+        }
+
+        return $entity;
     }
 
-    protected function getParentGUIDs(mixed $id): array
+    protected function getEpisodeParent(int|string $id): array
     {
         if (array_key_exists($id, $this->cacheShow)) {
             return $this->cacheShow[$id];
@@ -442,7 +449,6 @@ class PlexServer implements ServerInterface
             } else {
                 $json['Guid'][] = ['id' => $json['guid']];
             }
-
 
             if (!$this->hasSupportedIds($json['Guid'])) {
                 $this->cacheShow[$id] = [];
@@ -1850,8 +1856,10 @@ class PlexServer implements ServerInterface
                 'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
             ];
 
-            if (null !== ($item->grandparentRatingKey ?? null)) {
-                $meta['parent'] = $this->showInfo[$item->grandparentRatingKey] ?? [];
+            $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
+
+            if (null !== $parentId) {
+                $meta['parent'] = $this->showInfo[$parentId] ?? [];
             }
         }
 

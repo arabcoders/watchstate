@@ -286,8 +286,6 @@ class JellyfinServer implements ServerInterface
 
         $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
 
-        $date = time();
-
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
                 'via' => $this->name,
@@ -311,49 +309,65 @@ class JellyfinServer implements ServerInterface
             default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
         };
 
-        $guids = [];
+        $providersId = [];
 
         foreach ($json as $key => $val) {
-            if (str_starts_with($key, 'Provider_')) {
-                $guids[self::afterString($key, 'Provider_')] = $val;
+            if (!str_starts_with($key, 'Provider_')) {
+                continue;
             }
+            $providersId[self::afterString($key, 'Provider_')] = $val;
         }
 
-        if (!$this->hasSupportedIds($guids)) {
-            throw new HttpException(
-                sprintf('%s: No supported GUID was given. [%s]', afterLast(__CLASS__, '\\'), arrayToString($guids)),
-                400
-            );
+        // We use SeriesName to overcome jellyfin webhook limitation, it does not send series id.
+        if (StateInterface::TYPE_EPISODE === $type && null !== ag($json, 'SeriesName')) {
+            $meta['parent'] = $this->getEpisodeParent(ag($json, 'ItemId'), ag($json, 'SeriesName'));
         }
 
-        if (false === $isTainted && StateInterface::TYPE_EPISODE === $type) {
-            $meta['parent'] = $this->getParentGUIDs(ag($json, 'ItemId'), ag($json, 'SeriesName'));
-        }
-
-        $guids = $this->getGuids($guids, $type);
+        $guids = $this->getGuids($providersId, $type);
 
         foreach (Guid::fromArray($guids)->getPointers() as $guid) {
             $this->cacheData[$guid] = ag($json, 'Item.ItemId');
         }
 
-        $isWatched = (int)(bool)ag($json, 'Played', ag($json, 'PlayedToCompletion', 0));
-
         $row = [
             'type' => $type,
-            'updated' => $date,
-            'watched' => $isWatched,
+            'updated' => time(),
+            'watched' => (int)(bool)ag($json, 'Played', ag($json, 'PlayedToCompletion', 0)),
             'meta' => $meta,
             ...$guids
         ];
 
-        if (true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug')) {
-            saveWebhookPayload($request, "{$this->name}.{$event}", $json + ['entity' => $row]);
+        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+
+        if (!$entity->hasGuids()) {
+            throw new HttpException(
+                sprintf(
+                    '%s: No supported GUID was given. [%s]',
+                    afterLast(__CLASS__, '\\'),
+                    arrayToString(
+                        [
+                            'guids' => !empty($providersId) ? $providersId : 'None',
+                            'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                        ]
+                    )
+                ), 400
+            );
         }
 
-        return Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+        if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
+                    $request->getQueryParams(),
+                    'debug'
+                ))) {
+            saveWebhookPayload($this->name . '.' . $event, $request, [
+                'entity' => $entity->getAll(),
+                'payload' => $json,
+            ]);
+        }
+
+        return $entity;
     }
 
-    protected function getParentGUIDs(mixed $id, string|null $series): array
+    protected function getEpisodeParent(mixed $id, string|null $series): array
     {
         if (null !== $series && array_key_exists($series, $this->cacheShow)) {
             return $this->cacheShow[$series];
