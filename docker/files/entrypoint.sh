@@ -6,6 +6,7 @@ WS_GID=${WS_GID:-1000}
 WS_NO_CHOWN=${WS_NO_CHOWN:-0}
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
 WS_DISABLE_CRON=${WS_DISABLE_CRON:-0}
+WS_DISABLE_REDIS=${WS_DISABLE_REDIS:-0}
 
 set -u
 
@@ -51,6 +52,11 @@ fi
 if [ 0 == "${WS_DISABLE_CRON}" ]; then
   echo "Starting cron..."
   /usr/sbin/crond -b -l 2
+fi
+
+if [ 0 == "${WS_DISABLE_REDIS}" ]; then
+  echo "Starting Redis Server..."
+  redis-server /etc/redis.conf --daemonize yes
 fi
 
 # first arg is `-f` or `--some-option`
