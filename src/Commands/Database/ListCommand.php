@@ -45,6 +45,7 @@ final class ListCommand extends Command
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number')
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number')
+            ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'sort order by [id, updated]', 'updated')
             ->setDescription('List Database entries.');
 
         foreach (array_keys(Guid::SUPPORTED) as $guid) {
@@ -138,7 +139,8 @@ final class ListCommand extends Command
             $sql .= 'WHERE ' . implode(' AND ', $where);
         }
 
-        $sql .= " ORDER BY updated DESC LIMIT :limit";
+        $sort = $input->getOption('sort') === 'id' ? 'id' : 'updated';
+        $sql .= " ORDER BY {$sort} DESC LIMIT :limit";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
