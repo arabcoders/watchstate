@@ -37,7 +37,7 @@ use Throwable;
 
 class JellyfinServer implements ServerInterface
 {
-    private const GUID_MAPPER = [
+    protected const GUID_MAPPER = [
         'plex' => Guid::GUID_PLEX,
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
@@ -333,7 +333,7 @@ class JellyfinServer implements ServerInterface
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
 
-        if (!$entity->hasGuids()) {
+        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             throw new HttpException(
                 sprintf(
                     '%s: No supported GUID was given. [%s]',
@@ -348,8 +348,16 @@ class JellyfinServer implements ServerInterface
             );
         }
 
-        foreach ($entity->getPointers() as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Item.ItemId');
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $guid) {
+                $this->cacheData[$guid] = ag($json, 'Item.ItemId');
+            }
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+            foreach ($entity->getPointers() as $guid) {
+                $this->cacheData[$guid] = ag($json, 'Item.ItemId');
+            }
         }
 
         if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
@@ -940,45 +948,56 @@ class JellyfinServer implements ServerInterface
             }
 
             $entity->jf_id = null;
-            $entity->plex_guid = null;
 
-            if (!$entity->hasGuids()) {
-                continue;
+            if ($entity->hasGuids()) {
+                foreach ($entity->getPointers() as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->jf_id = $this->cacheData[$guid];
+                    break;
+                }
             }
 
-            foreach ($entity->getPointers() as $guid) {
-                if (null === ($this->cacheData[$guid] ?? null)) {
-                    continue;
+            if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+                foreach ($entity->getRelativePointers() as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->jf_id = $this->cacheData[$guid];
+                    break;
                 }
-                $entity->jf_id = $this->cacheData[$guid];
-                break;
             }
         }
 
         unset($entity);
 
         foreach ($entities as $entity) {
-            if (StateInterface::TYPE_MOVIE === $entity->type) {
+            if (null === $entity) {
+                continue;
+            }
+
+            if ($entity->isMovie()) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $this->name,
-                    $entity->meta['title'] ?? '??',
-                    $entity->meta['year'] ?? 0000,
+                    ag($entity->meta, 'title', '??'),
+                    ag($entity->meta, 'year', 0000),
                 );
             } else {
                 $iName = trim(
                     sprintf(
                         '%s - [%s - (%dx%d)]',
                         $this->name,
-                        $entity->meta['series'] ?? '??',
-                        $entity->meta['season'] ?? 0,
-                        $entity->meta['episode'] ?? 0,
+                        ag($entity->meta, 'series', '??'),
+                        ag($entity->meta, 'season', 0),
+                        ag($entity->meta, 'episode', 0),
                     )
                 );
             }
 
             if (null === ($entity->jf_id ?? null)) {
-                $this->logger->notice(sprintf('Ignoring %s. Not found in cache.', $iName));
+                $this->logger->notice(sprintf('Ignoring %s. Not found in \'%s\' local cache.', $iName, $this->name));
                 continue;
             }
 
@@ -1019,7 +1038,7 @@ class JellyfinServer implements ServerInterface
                 $state = $response->getInfo('user_data')['state'];
                 assert($state instanceof StateInterface);
 
-                if (StateInterface::TYPE_MOVIE === $state->type) {
+                if ($state->isMovie()) {
                     $iName = sprintf(
                         '%s - [%s (%d)]',
                         $this->name,
@@ -1344,16 +1363,14 @@ class JellyfinServer implements ServerInterface
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
 
             if (null === $date) {
-                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName), [
-                    'item' => (array)$item,
-                ]);
+                $this->logger->error(sprintf('Ignoring %s. No date is set.', $iName), ['item' => (array)$item]);
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
 
             $rItem = $this->createEntity($item, $type);
 
-            if (!$rItem->hasGuids()) {
+            if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
                 $guids = (array)($item->ProviderIds ?? []);
                 $this->logger->debug(sprintf('Ignoring %s. No Valid/supported guids.', $iName), [
                     'guids' => !empty($guids) ? $guids : 'None',
@@ -1363,13 +1380,18 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
-                $this->logger->debug(sprintf('Ignoring %s. Ignored date is equal or newer than lastSync.', $iName), [
-                    'itemDate' => makeDate($rItem->updated),
-                    'lastSync' => makeDate($after->getTimestamp()),
-                ]);
-                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
-                return;
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
+                    $this->logger->debug(
+                        sprintf('Ignoring %s. Ignored date is equal or newer than lastSync.', $iName),
+                        [
+                            'itemDate' => makeDate($rItem->updated),
+                            'lastSync' => makeDate($after->getTimestamp()),
+                        ]
+                    );
+                    Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                    return;
+                }
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
@@ -1515,7 +1537,7 @@ class JellyfinServer implements ServerInterface
 
             $entity = $this->createEntity($item, $type);
 
-            if (!$entity->hasGuids()) {
+            if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 if (true === Config::get('debug.import')) {
                     $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->Id . '.json';
 
@@ -1642,14 +1664,8 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    private function createEntity(stdClass $item, string $type): StateEntity
+    protected function createEntity(stdClass $item, string $type): StateEntity
     {
-        $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
-
-        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-            $this->cacheData[$guid] = $item->Id;
-        }
-
         $date = strtotime($item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate);
 
         if (StateInterface::TYPE_MOVIE === $type) {
@@ -1675,14 +1691,28 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        return Container::get(StateInterface::class)::fromArray(
+        $entity = Container::get(StateInterface::class)::fromArray(
             [
                 'type' => $type,
                 'updated' => $date,
                 'watched' => (int)(bool)($item->UserData?->Played ?? false),
                 'meta' => $meta,
-                ...$guids,
+                ...$this->getGuids((array)($item->ProviderIds ?? []), $type),
             ]
         );
+
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->Id;
+            }
+        }
+
+        if ($entity->isEpisode()) {
+            foreach ($entity->getRelativePointers() as $guid) {
+                $this->cacheData[$guid] = $item->Id;
+            }
+        }
+
+        return $entity;
     }
 }

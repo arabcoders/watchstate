@@ -984,16 +984,8 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
-            foreach ($entity->getPointers() as $guid) {
-                if (null === ($this->cacheData[$guid] ?? null)) {
-                    continue;
-                }
-                $entity->plex_id = $this->cacheData[$guid];
-                break;
-            }
-
-            if ($entity->isEpisode()) {
-                foreach ($entity->getRelativePointers() as $guid) {
+            if ($entity->hasGuids()) {
+                foreach ($entity->getPointers() as $guid) {
                     if (null === ($this->cacheData[$guid] ?? null)) {
                         continue;
                     }
@@ -1002,8 +994,14 @@ class PlexServer implements ServerInterface
                 }
             }
 
-            if (null === $entity->plex_id) {
-                $entity = null;
+            if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+                foreach ($entity->getRelativePointers() as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->plex_id = $this->cacheData[$guid];
+                    break;
+                }
             }
         }
 
@@ -1011,6 +1009,30 @@ class PlexServer implements ServerInterface
 
         foreach ($entities as $entity) {
             if (null === $entity) {
+                continue;
+            }
+
+            if ($entity->isMovie()) {
+                $iName = sprintf(
+                    '%s - [%s (%d)]',
+                    $this->name,
+                    ag($entity->meta, 'title', '??'),
+                    ag($entity->meta, 'year', 0000),
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - [%s - (%dx%d)]',
+                        $this->name,
+                        ag($entity->meta, 'series', '??'),
+                        ag($entity->meta, 'season', 0),
+                        ag($entity->meta, 'episode', 0),
+                    )
+                );
+            }
+
+            if (null === ($entity->plex_id ?? null)) {
+                $this->logger->notice(sprintf('Ignoring %s. Not found in \'%s\' local cache.', $iName, $this->name));
                 continue;
             }
 
@@ -1413,10 +1435,12 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
-                $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
-                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
-                return;
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
+                    $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
+                    Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                    return;
+                }
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
@@ -1897,8 +1921,10 @@ class PlexServer implements ServerInterface
             ]
         );
 
-        foreach ($entity->getPointers() as $guid) {
-            $this->cacheData[$guid] = $item->guid;
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
         }
 
         if ($entity->isEpisode()) {
