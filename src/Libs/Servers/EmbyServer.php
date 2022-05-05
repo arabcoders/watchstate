@@ -7,7 +7,6 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Guid;
 use App\Libs\HttpException;
 use DateTimeInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -147,18 +146,12 @@ class EmbyServer extends JellyfinServer
 
         $providersId = ag($json, 'Item.ProviderIds', []);
 
-        $guids = $this->getGuids($providersId, $type);
-
-        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Item.Id');
-        }
-
         $row = [
             'type' => $type,
             'updated' => time(),
             'watched' => $isWatched,
             'meta' => $meta,
-            ...$guids
+            ...$this->getGuids($providersId, $type)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
@@ -176,6 +169,10 @@ class EmbyServer extends JellyfinServer
                     )
                 ), 400
             );
+        }
+
+        foreach ($entity->getPointers() as $guid) {
+            $this->cacheData[$guid] = ag($json, 'item.Id');
         }
 
         if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(

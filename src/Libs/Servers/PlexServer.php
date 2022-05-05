@@ -366,12 +366,6 @@ class PlexServer implements ServerInterface
             ];
         }
 
-        $guids = $this->getGuids($json['Metadata']['Guid'] ?? [], $type);
-
-        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Metadata.guid');
-        }
-
         if (StateInterface::TYPE_EPISODE === $type) {
             $parentId = ag($json, 'Metadata.grandparentRatingKey', fn() => ag($json, 'Metadata.parentRatingKey'));
             $meta['parent'] = null !== $parentId ? $this->getEpisodeParent($parentId) : [];
@@ -382,7 +376,7 @@ class PlexServer implements ServerInterface
             'updated' => time(),
             'watched' => (int)(bool)ag($json, 'Metadata.viewCount', 0),
             'meta' => $meta,
-            ...$guids
+            ...$this->getGuids($json['Metadata']['Guid'] ?? [], $type)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
@@ -400,6 +394,10 @@ class PlexServer implements ServerInterface
                     )
                 ), 400
             );
+        }
+
+        foreach ($entity->getPointers() as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Metadata.guid');
         }
 
         if (false !== $isTainted && (true === Config::get('webhook.debug') || null !== ag(
@@ -1274,7 +1272,8 @@ class PlexServer implements ServerInterface
                                     );
                                     continue;
                                 }
-                                $this->processForCache($type, $entity);
+
+                                $this->processForCache($entity, $type, $cName);
                             }
                         } catch (PathNotFoundException $e) {
                             $this->logger->error(
@@ -1336,7 +1335,7 @@ class PlexServer implements ServerInterface
                     ]
                 );
             },
-            includeParent: false
+            includeParent: true
         );
     }
 
@@ -1551,7 +1550,6 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            $entity = $this->createEntity($item, $type);
 
             $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
@@ -1560,6 +1558,8 @@ class PlexServer implements ServerInterface
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
+
+            $entity = $this->createEntity($item, $type);
 
             if (!$entity->hasGuids()) {
                 if (null === ($item->Guid ?? null)) {
@@ -1600,24 +1600,21 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function processForCache(string $type, StdClass $item): void
+    protected function processForCache(StdClass $item, string $type, string $library): void
     {
         try {
-            if (null === ($item->Guid ?? null)) {
-                $item->Guid = [['id' => $item->guid]];
-            } else {
-                $item->Guid[] = ['id' => $item->guid];
-            }
-
-            if (!$this->hasSupportedIds($item->Guid)) {
+            if ('show' === $type) {
+                $this->processShow($item, $library);
                 return;
             }
 
-            $guids = $this->getGuids($item->Guid ?? [], $type);
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
+            if (0 === $date) {
+                return;
             }
+
+            $this->createEntity($item, $type);
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
