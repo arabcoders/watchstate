@@ -1625,10 +1625,7 @@ class PlexServer implements ServerInterface
                     $message .= ' Most likely unmatched item.';
                 }
 
-                $this->logger->info($message, [
-                    'guids' => empty($item->Guid) ? 'None' : $item->Guid,
-                    'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                ]);
+                $this->logger->info($message, ['guids' => empty($item->Guid) ? 'None' : $item->Guid]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;

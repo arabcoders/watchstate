@@ -147,7 +147,7 @@ final class StateEntity implements StateInterface
         $season = ag($this->meta, 'season', null);
         $episode = ag($this->meta, 'episode', null);
 
-        return !(null === $season || null === $episode || empty($parents));
+        return !(null === $season || null === $episode || 0 === $episode || empty($parents));
     }
 
     public function getRelativeGuids(): array
@@ -156,7 +156,7 @@ final class StateEntity implements StateInterface
         $season = ag($this->meta, 'season', null);
         $episode = ag($this->meta, 'episode', null);
 
-        if (null === $season || null === $episode || count($parents) < 1) {
+        if (null === $season || null === $episode || 0 === $episode || empty($parents)) {
             return [];
         }
 
