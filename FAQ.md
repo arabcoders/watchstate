@@ -207,3 +207,4 @@ These are the agents we support for plex media server.
 * com.plexapp.agents.tmdb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(xbmc nfo parser agent)`
+* com.plexapp.agents.xbmcnfotv://(id)/(season)/(episode)?lang=en `(NFO agent for tv. id refers to tvdb series)`
