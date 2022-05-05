@@ -323,18 +323,12 @@ class JellyfinServer implements ServerInterface
             $meta['parent'] = $this->getEpisodeParent(ag($json, 'ItemId'), ag($json, 'SeriesName'));
         }
 
-        $guids = $this->getGuids($providersId, $type);
-
-        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Item.ItemId');
-        }
-
         $row = [
             'type' => $type,
             'updated' => time(),
             'watched' => (int)(bool)ag($json, 'Played', ag($json, 'PlayedToCompletion', 0)),
             'meta' => $meta,
-            ...$guids
+            ...$this->getGuids($providersId, $type)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
@@ -352,6 +346,10 @@ class JellyfinServer implements ServerInterface
                     )
                 ), 400
             );
+        }
+
+        foreach ($entity->getPointers() as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Item.ItemId');
         }
 
         if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
@@ -1250,7 +1248,7 @@ class JellyfinServer implements ServerInterface
                                     );
                                     continue;
                                 }
-                                $this->processForCache($type, $entity);
+                                $this->processForCache($entity, $type, $cName);
                             }
                         } catch (PathNotFoundException $e) {
                             $this->logger->error(
@@ -1308,7 +1306,7 @@ class JellyfinServer implements ServerInterface
                     ]
                 );
             },
-            includeParent: false,
+            includeParent: true,
         );
     }
 
@@ -1553,17 +1551,21 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    protected function processForCache(string $type, StdClass $item): void
+    protected function processForCache(StdClass $item, string $type, string $library): void
     {
         try {
-            if (!$this->hasSupportedIds((array)($item->ProviderIds ?? []))) {
+            if ('show' === $type) {
+                $this->processShow($item, $library);
                 return;
             }
-            $guids = $this->getGuids((array)($item->ProviderIds ?? []), $type);
 
-            foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->Id;
+            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
+
+            if (null === $date) {
+                return;
             }
+
+            $this->createEntity($item, $type);
         } catch (Throwable $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
