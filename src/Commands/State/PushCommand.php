@@ -150,7 +150,7 @@ class PushCommand extends Command
 
             if (true !== ag($server, 'webhook.push')) {
                 $output->writeln(
-                    sprintf('<error>Ignoring \'%s\' as requested by \'servers.yaml\'.</error>', $serverName),
+                    sprintf('<error>Ignoring \'%s\' as requested by user config option.</error>', $serverName),
                     OutputInterface::VERBOSITY_VERBOSE
                 );
                 continue;

@@ -144,7 +144,7 @@ class ImportCommand extends Command
             }
 
             if (true !== ag($server, 'import.enabled')) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by \'%s\'.', $serverName, $config));
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by user config option.', $serverName));
                 continue;
             }
 
