@@ -164,7 +164,7 @@ class EmbyServer extends JellyfinServer
                     arrayToString(
                         [
                             'guids' => !empty($providersId) ? $providersId : 'None',
-                            'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
                         ]
                     )
                 ), 400

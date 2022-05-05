@@ -317,7 +317,7 @@ if (!function_exists('preServeHttpRequest')) {
 if (!function_exists('queuePush')) {
     function queuePush(StateInterface $entity): void
     {
-        if (!$entity->hasGuids()) {
+        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             return;
         }
 

@@ -6,6 +6,7 @@ namespace App\Libs\Storage\PDO;
 
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Guid;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use Closure;
@@ -76,20 +77,7 @@ final class PDOAdapter implements StorageInterface
 
     public function get(StateInterface $entity): StateInterface|null
     {
-        $arr = array_intersect_key(
-            $entity->getAll(),
-            array_flip(StateInterface::ENTITY_GUIDS)
-        );
-
-        if (null !== $entity->id) {
-            $arr['id'] = $entity->id;
-        }
-
-        if (empty($arr)) {
-            return null;
-        }
-
-        return $this->matchAnyId($arr, $entity);
+        return $this->matchAnyId(array_intersect_key($entity->getAll(), Guid::SUPPORTED), $entity);
     }
 
     public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array
@@ -145,11 +133,63 @@ final class PDOAdapter implements StorageInterface
         return $entity->updateOriginal();
     }
 
+    public function matchRelativeGuid(StateInterface $entity): StateInterface|null
+    {
+        if (!$entity->isEpisode() || !$entity->hasRelativeGuid()) {
+            return null;
+        }
+
+        $cond = $where = [];
+
+        foreach ($entity->getParentGuids() as $key => $val) {
+            if (null === ($val ?? null)) {
+                continue;
+            }
+
+            $where[] = "json_extract(meta,'$.parent.{$key}') = :{$key}";
+            $cond[$key] = $val;
+        }
+
+        $sql = "SELECT
+                    *
+                FROM
+                    state
+                WHERE
+                    json_extract(meta, '$.season') = " . (int)ag($entity->meta, 'season', 0) . "
+                AND
+                    json_extract(meta, '$.episode') = " . (int)ag($entity->meta, 'episode', 0) . "
+                AND
+                (
+                    " . implode(' OR ', $where) . "
+                )
+        ";
+
+        $cachedKey = md5($sql);
+
+        try {
+            if (null === ($this->stmt[$cachedKey] ?? null)) {
+                $this->stmt[$cachedKey] = $this->pdo->prepare($sql);
+            }
+
+            if (false === $this->stmt[$cachedKey]->execute($cond)) {
+                $this->stmt[$cachedKey] = null;
+                throw new StorageException('Failed to execute sql query.', 61);
+            }
+
+            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
+                return null;
+            }
+        } catch (PDOException|StorageException $e) {
+            $this->stmt[$cachedKey] = null;
+            throw $e;
+        }
+
+        return $entity::fromArray($row);
+    }
+
     public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null
     {
-        if (null === $class) {
-            $class = Container::get(StateInterface::class);
-        }
+        $entity = $class ?? Container::get(StateInterface::class);
 
         if (null !== ($ids['id'] ?? null)) {
             $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$ids['id']);
@@ -158,11 +198,12 @@ final class PDOAdapter implements StorageInterface
                 return null;
             }
 
-            return $class::fromArray($row);
+            return $entity::fromArray($row);
         }
 
         $cond = $where = [];
-        foreach (StateInterface::ENTITY_GUIDS as $key) {
+
+        foreach (array_keys(Guid::SUPPORTED) as $key) {
             if (null === ($ids[$key] ?? null)) {
                 continue;
             }
@@ -172,7 +213,7 @@ final class PDOAdapter implements StorageInterface
         }
 
         if (empty($cond)) {
-            return null;
+            return null !== $class ? $this->matchRelativeGuid($class) : null;
         }
 
         $sqlWhere = implode(' OR ', $where);
@@ -193,7 +234,7 @@ final class PDOAdapter implements StorageInterface
                 return null;
             }
 
-            return $class::fromArray($row);
+            return $entity::fromArray($row);
         } catch (PDOException|StorageException $e) {
             $this->stmt[$cachedKey] = null;
             throw $e;
@@ -202,7 +243,7 @@ final class PDOAdapter implements StorageInterface
 
     public function remove(StateInterface $entity): bool
     {
-        if (null === $entity->id && !$entity->hasGuids()) {
+        if (null === $entity->id && !$entity->hasGuids() && $entity->hasRelativeGuid()) {
             return false;
         }
 

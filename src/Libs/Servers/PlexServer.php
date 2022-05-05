@@ -54,6 +54,10 @@ class PlexServer implements ServerInterface
         'com.plexapp.agents.xbmcnfo',
     ];
 
+    protected const PARENT_SUPPORTED_LEGACY_AGENTS = [
+        'com.plexapp.agents.xbmcnfotv',
+    ];
+
     protected const WEBHOOK_ALLOWED_TYPES = [
         'movie',
         'episode',
@@ -300,6 +304,7 @@ class PlexServer implements ServerInterface
             throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 
+        $item = ag($json, 'Metadata', []);
         $type = ag($json, 'Metadata.type');
         $event = ag($json, 'event', null);
 
@@ -319,12 +324,12 @@ class PlexServer implements ServerInterface
             $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$this->options['ignore']));
         }
 
-        if (null !== $ignoreIds && in_array(ag($json, 'Metadata.librarySectionID', '???'), $ignoreIds)) {
+        if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
             throw new HttpException(
                 sprintf(
                     '%s: Library id \'%s\' is ignored.',
                     afterLast(__CLASS__, '\\'),
-                    ag($json, 'Metadata.librarySectionID', '???')
+                    ag($item, 'librarySectionID', '???')
                 ), 200
             );
         }
@@ -332,21 +337,21 @@ class PlexServer implements ServerInterface
         $meta = match ($type) {
             StateInterface::TYPE_MOVIE => [
                 'via' => $this->name,
-                'title' => ag($json, 'Metadata.title', ag($json, 'Metadata.originalTitle', '??')),
-                'year' => ag($json, 'Metadata.year', 0000),
-                'date' => makeDate(ag($json, 'Metadata.originallyAvailableAt', 'now'))->format('Y-m-d'),
+                'title' => ag($item, 'title', ag($item, 'originalTitle', '??')),
+                'year' => ag($item, 'year', 0000),
+                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
                 'webhook' => [
                     'event' => $event,
                 ],
             ],
             StateInterface::TYPE_EPISODE => [
                 'via' => $this->name,
-                'series' => ag($json, 'Metadata.grandparentTitle', '??'),
-                'year' => ag($json, 'Metadata.year', 0000),
-                'season' => ag($json, 'Metadata.parentIndex', 0),
-                'episode' => ag($json, 'Metadata.index', 0),
-                'title' => ag($json, 'Metadata.title', ag($json, 'Metadata.originalTitle', '??')),
-                'date' => makeDate(ag($json, 'Metadata.originallyAvailableAt', 'now'))->format('Y-m-d'),
+                'series' => ag($item, 'grandparentTitle', '??'),
+                'year' => ag($item, 'year', 0000),
+                'season' => ag($item, 'parentIndex', 0),
+                'episode' => ag($item, 'index', 0),
+                'title' => ag($item, 'title', ag($item, 'originalTitle', '??')),
+                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
                 'webhook' => [
                     'event' => $event,
                 ],
@@ -354,50 +359,52 @@ class PlexServer implements ServerInterface
             default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
         };
 
-        if (null === ($json['Metadata']['Guid'] ?? null)) {
-            $json['Metadata']['Guid'] = [
-                [
-                    'id' => ag($json, 'Metadata.guid')
-                ]
-            ];
+        if (null === ag($item, 'Guid', null)) {
+            $item['Guid'] = [['id' => ag($item, 'guid')]];
         } else {
-            $json['Metadata']['Guid'][] = [
-                'id' => ag($json, 'Metadata.guid')
-            ];
+            $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
         if (StateInterface::TYPE_EPISODE === $type) {
-            $parentId = ag($json, 'Metadata.grandparentRatingKey', fn() => ag($json, 'Metadata.parentRatingKey'));
+            $parentId = ag($item, 'grandparentRatingKey', fn() => ag($item, 'parentRatingKey'));
             $meta['parent'] = null !== $parentId ? $this->getEpisodeParent($parentId) : [];
         }
 
         $row = [
             'type' => $type,
             'updated' => time(),
-            'watched' => (int)(bool)ag($json, 'Metadata.viewCount', 0),
+            'watched' => (int)(bool)ag($item, 'viewCount', 0),
             'meta' => $meta,
-            ...$this->getGuids($json['Metadata']['Guid'] ?? [], $type)
+            ...$this->getGuids(ag($item, 'Guid', []), $type, isParent: false)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
 
-        if (!$entity->hasGuids()) {
+        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             throw new HttpException(
                 sprintf(
                     '%s: No supported GUID was given. [%s]',
                     afterLast(__CLASS__, '\\'),
                     arrayToString(
                         [
-                            'guids' => !empty($json['Metadata']['Guid']) ? $json['Metadata']['Guid'] : 'None',
-                            'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                            'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None',
+                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
                         ]
                     )
                 ), 400
             );
         }
 
-        foreach ($entity->getPointers() as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Metadata.guid');
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $guid) {
+                $this->cacheData[$guid] = ag($item, 'guid');
+            }
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+            foreach ($entity->getRelativePointers() as $guid) {
+                $this->cacheData[$guid] = ag($item, 'guid');
+            }
         }
 
         if (false !== $isTainted && (true === Config::get('webhook.debug') || null !== ag(
@@ -448,14 +455,14 @@ class PlexServer implements ServerInterface
                 $json['Guid'][] = ['id' => $json['guid']];
             }
 
-            if (!$this->hasSupportedIds($json['Guid'])) {
+            if (!$this->hasSupportedGuids($json['Guid'], true)) {
                 $this->cacheShow[$id] = [];
                 return $this->cacheShow[$id];
             }
 
             $guids = [];
 
-            foreach (Guid::fromArray($this->getGuids($json['Guid']))->getPointers() as $guid) {
+            foreach (Guid::fromArray($this->getGuids($json['Guid'], isParent: true))->getPointers() as $guid) {
                 [$type, $id] = explode('://', $guid);
                 $guids[$type] = $id;
             }
@@ -970,20 +977,31 @@ class PlexServer implements ServerInterface
                 }
             }
 
+            $entity->plex_id = null;
+
             if (null !== $entity->guid_plex) {
+                $entity->plex_id = 'plex://' . $entity->guid_plex;
                 continue;
             }
 
-            foreach ($entity->getPointers() as $guid) {
-                if (null === ($this->cacheData[$guid] ?? null)) {
-                    continue;
+            if ($entity->hasGuids()) {
+                foreach ($entity->getPointers() as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->plex_id = $this->cacheData[$guid];
+                    break;
                 }
-                $entity->guid_plex = $this->cacheData[$guid];
-                break;
             }
 
-            if (null === $entity->guid_plex) {
-                $entity = null;
+            if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+                foreach ($entity->getRelativePointers() as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->plex_id = $this->cacheData[$guid];
+                    break;
+                }
             }
         }
 
@@ -994,13 +1012,37 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
+            if ($entity->isMovie()) {
+                $iName = sprintf(
+                    '%s - [%s (%d)]',
+                    $this->name,
+                    ag($entity->meta, 'title', '??'),
+                    ag($entity->meta, 'year', 0000),
+                );
+            } else {
+                $iName = trim(
+                    sprintf(
+                        '%s - [%s - (%dx%d)]',
+                        $this->name,
+                        ag($entity->meta, 'series', '??'),
+                        ag($entity->meta, 'season', 0),
+                        ag($entity->meta, 'episode', 0),
+                    )
+                );
+            }
+
+            if (null === ($entity->plex_id ?? null)) {
+                $this->logger->notice(sprintf('Ignoring %s. Not found in \'%s\' local cache.', $iName, $this->name));
+                continue;
+            }
+
             try {
                 $requests[] = $this->http->request(
                     'GET',
                     (string)$this->url->withPath('/library/all')->withQuery(
                         http_build_query(
                             [
-                                'guid' => 'plex://' . $entity->guid_plex,
+                                'guid' => $entity->plex_id,
                                 'includeGuids' => 1,
                             ]
                         )
@@ -1380,23 +1422,25 @@ class PlexServer implements ServerInterface
 
             $rItem = $this->createEntity($item, $type);
 
-            if (!$rItem->hasGuids()) {
+            if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
                 $guids = $item->Guid ?? [];
                 $this->logger->debug(
                     sprintf('Ignoring %s. No valid/supported guids.', $iName),
                     [
                         'guids' => !empty($guids) ? $guids : 'None',
-                        'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                        'rGuids' => $rItem->hasRelativeGuid() ? $rItem->getRelativeGuids() : 'None',
                     ]
                 );
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
             }
 
-            if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
-                $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
-                Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
-                return;
+            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+                if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
+                    $this->logger->debug(sprintf('Ignoring %s. date is equal or newer than lastSync.', $iName));
+                    Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                    return;
+                }
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
@@ -1409,7 +1453,7 @@ class PlexServer implements ServerInterface
                     ),
                     [
                         'guids' => !empty($guids) ? $guids : 'None',
-                        'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                        'rGuids' => $rItem->hasRelativeGuid() ? $rItem->getRelativeGuids() : 'None',
                     ]
                 );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
@@ -1491,7 +1535,7 @@ class PlexServer implements ServerInterface
             $item->Guid[] = ['id' => $item->guid];
         }
 
-        if (!$this->hasSupportedIds($item->Guid)) {
+        if (!$this->hasSupportedGuids($item->Guid, true)) {
             $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
             if (empty($item->Guid)) {
                 $message .= ' Most likely unmatched TV show.';
@@ -1504,7 +1548,7 @@ class PlexServer implements ServerInterface
 
         $guids = [];
 
-        foreach (Guid::fromArray($this->getGuids($item->Guid))->getPointers() as $guid) {
+        foreach (Guid::fromArray($this->getGuids($item->Guid, isParent: true))->getPointers() as $guid) {
             [$type, $id] = explode('://', $guid);
             $guids[$type] = $id;
         }
@@ -1550,7 +1594,6 @@ class PlexServer implements ServerInterface
                 );
             }
 
-
             $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
             if (0 === $date) {
@@ -1561,7 +1604,7 @@ class PlexServer implements ServerInterface
 
             $entity = $this->createEntity($item, $type);
 
-            if (!$entity->hasGuids()) {
+            if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 if (null === ($item->Guid ?? null)) {
                     $item->Guid = [['id' => $item->guid]];
                 } else {
@@ -1584,7 +1627,7 @@ class PlexServer implements ServerInterface
 
                 $this->logger->info($message, [
                     'guids' => empty($item->Guid) ? 'None' : $item->Guid,
-                    'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                    'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
                 ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
@@ -1623,7 +1666,7 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function getGuids(array $guids, string|null $type = null): array
+    protected function getGuids(array $guids, string|null $type = null, bool $isParent = false): array
     {
         $guid = [];
 
@@ -1635,7 +1678,7 @@ class PlexServer implements ServerInterface
             }
 
             if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                $val = $this->parseLegacyAgents($val);
+                $val = $this->parseLegacyAgent($val, $isParent);
             }
 
             [$key, $value] = explode('://', $val);
@@ -1655,7 +1698,7 @@ class PlexServer implements ServerInterface
         return $guid;
     }
 
-    protected function hasSupportedIds(array $guids): bool
+    protected function hasSupportedGuids(array $guids, bool $isParent = false): bool
     {
         foreach ($guids as $_id) {
             $val = is_object($_id) ? $_id->id : $_id['id'];
@@ -1665,7 +1708,7 @@ class PlexServer implements ServerInterface
             }
 
             if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                $val = $this->parseLegacyAgents($val);
+                $val = $this->parseLegacyAgent($val, $isParent);
             }
 
             [$key, $value] = explode('://', $val);
@@ -1694,16 +1737,24 @@ class PlexServer implements ServerInterface
     }
 
     /**
-     * Parse old Plex Content Agents, Supported Agents:
+     * Parse Plex agents identifier.
+     *
      * @param string $agent
+     * @param bool $isParent
      *
      * @return string
      * @see SUPPORTED_LEGACY_AGENTS
      */
-    private function parseLegacyAgents(string $agent): string
+    private function parseLegacyAgent(string $agent, bool $isParent = false): string
     {
         try {
-            if (false === in_array(before($agent, '://'), self::SUPPORTED_LEGACY_AGENTS)) {
+            $supported = self::SUPPORTED_LEGACY_AGENTS;
+
+            if (true === $isParent) {
+                $supported = array_merge_recursive($supported, self::PARENT_SUPPORTED_LEGACY_AGENTS);
+            }
+
+            if (false === in_array(before($agent, '://'), $supported)) {
                 return $agent;
             }
 
@@ -1711,6 +1762,12 @@ class PlexServer implements ServerInterface
                 'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
                 'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.imdb://',
             ];
+
+            if (true === $isParent) {
+                $replacer += [
+                    'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
+                ];
+            }
 
             $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
 
@@ -1827,12 +1884,6 @@ class PlexServer implements ServerInterface
             $item->Guid[] = ['id' => $item->guid];
         }
 
-        $guids = $this->getGuids($item->Guid ?? [], $type);
-
-        foreach (Guid::fromArray($guids)->getPointers() as $guid) {
-            $this->cacheData[$guid] = $item->guid;
-        }
-
         $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
         if (StateInterface::TYPE_MOVIE === $type) {
@@ -1860,14 +1911,28 @@ class PlexServer implements ServerInterface
             }
         }
 
-        return Container::get(StateInterface::class)::fromArray(
+        $entity = Container::get(StateInterface::class)::fromArray(
             [
                 'type' => $type,
                 'updated' => $date,
                 'watched' => (int)(bool)($item->viewCount ?? false),
                 'meta' => $meta,
-                ...$guids
+                ...$this->getGuids($item->Guid ?? [], $type, isParent: false)
             ]
         );
+
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
+        }
+
+        if ($entity->isEpisode()) {
+            foreach ($entity->getRelativePointers() as $guid) {
+                $this->cacheData[$guid] = $item->guid;
+            }
+        }
+
+        return $entity;
     }
 }

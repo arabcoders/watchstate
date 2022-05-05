@@ -10,7 +10,7 @@ return [
     'updated' => 0,
     'watched' => 1,
     'meta' => [
-        'via' => 'EMBY@Home',
+        'via' => 'Plex@Home',
         'series' => 'Series Title',
         'year' => 2020,
         'season' => 1,
@@ -19,6 +19,10 @@ return [
         'date' => '2020-01-03',
         'webhook' => [
             'event' => 'media.scrobble'
+        ],
+        'parent' => [
+            'guid_imdb' => '510',
+            'guid_tvdb' => '520',
         ],
     ],
     'guid_plex' => StateInterface::TYPE_EPISODE . '/6000',

@@ -270,7 +270,7 @@ final class Initializer
 
             $entity = $server['class']->parseWebhook($request);
 
-            if (!$entity->hasGuids()) {
+            if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 return new Response(status: 204, headers: [
                     'X-Status' => 'No GUIDs.',
                     'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),

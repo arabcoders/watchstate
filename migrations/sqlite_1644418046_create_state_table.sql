@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS "state"
 CREATE INDEX IF NOT EXISTS "state_type" ON "state" ("type");
 CREATE INDEX IF NOT EXISTS "state_watched" ON "state" ("watched");
 CREATE INDEX IF NOT EXISTS "state_updated" ON "state" ("updated");
+CREATE INDEX IF NOT EXISTS "state_meta" ON "state" ("meta");
 CREATE INDEX IF NOT EXISTS "state_guid_plex" ON "state" ("guid_plex");
 CREATE INDEX IF NOT EXISTS "state_guid_imdb" ON "state" ("guid_imdb");
 CREATE INDEX IF NOT EXISTS "state_guid_tvdb" ON "state" ("guid_tvdb");

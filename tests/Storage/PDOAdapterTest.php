@@ -7,6 +7,7 @@ namespace Tests\Storage;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
+use App\Libs\Guid;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
@@ -121,10 +122,7 @@ class PDOAdapterTest extends TestCase
         $item2 = new StateEntity($this->testMovie);
 
         $this->assertNull(
-            $this->storage->matchAnyId(
-                array_intersect_key($item1->getAll(), array_flip(StateInterface::ENTITY_GUIDS)),
-                $item1
-            )
+            $this->storage->matchAnyId(array_intersect_key($item1->getAll(), Guid::SUPPORTED), $item1)
         );
 
         $newItem1 = $this->storage->insert($item1);
@@ -132,18 +130,12 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame(
             $newItem1->getAll(),
-            $this->storage->matchAnyId(
-                array_intersect_key($item1->getAll(), array_flip(StateInterface::ENTITY_GUIDS)),
-                $item1
-            )->getAll()
+            $this->storage->matchAnyId(array_intersect_key($item1->getAll(), Guid::SUPPORTED), $item1)->getAll()
         );
 
         $this->assertSame(
             $newItem2->getAll(),
-            $this->storage->matchAnyId(
-                array_intersect_key($item2->getAll(), array_flip(StateInterface::ENTITY_GUIDS)),
-                $item2
-            )->getAll()
+            $this->storage->matchAnyId(array_intersect_key($item2->getAll(), Guid::SUPPORTED), $item2)->getAll()
         );
     }
 

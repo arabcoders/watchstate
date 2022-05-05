@@ -60,7 +60,7 @@ final class MemoryMapper implements ImportInterface
 
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
-        if (!$entity->hasGuids()) {
+        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $this->logger->info(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
@@ -94,7 +94,7 @@ final class MemoryMapper implements ImportInterface
                     return $this;
                 }
 
-                $this->logger->debug(sprintf('Ignoring %s. Not played since last sync.', $name));
+                $this->logger->debug(sprintf('Ignoring %s. No change since last sync.', $name));
                 Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
@@ -122,9 +122,19 @@ final class MemoryMapper implements ImportInterface
             return $this->objects[$entity->id];
         }
 
-        foreach ($entity->getPointers() as $key) {
-            if (null !== ($this->guids[$key] ?? null)) {
-                return $this->objects[$this->guids[$key]];
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    return $this->objects[$this->guids[$key]];
+                }
+            }
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    return $this->objects[$this->guids[$key]];
+                }
             }
         }
 
@@ -150,9 +160,19 @@ final class MemoryMapper implements ImportInterface
 
         $this->storage->remove($this->objects[$pointer]);
 
-        foreach ($entity->getPointers() as $key) {
-            if (null !== ($this->guids[$key] ?? null)) {
-                unset($this->guids[$key]);
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    unset($this->guids[$key]);
+                }
+            }
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    unset($this->guids[$key]);
+                }
             }
         }
 
@@ -232,6 +252,14 @@ final class MemoryMapper implements ImportInterface
             }
         }
 
+        if ($entity->isEpisode()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    return $this->guids[$key];
+                }
+            }
+        }
+
         if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[] = $lazyEntity;
             $id = array_key_last($this->objects);
@@ -244,8 +272,16 @@ final class MemoryMapper implements ImportInterface
 
     private function addGuids(StateInterface $entity, int $pointer): void
     {
-        foreach ($entity->getPointers() as $key) {
-            $this->guids[$key] = $pointer;
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $key) {
+                $this->guids[$key] = $pointer;
+            }
+        }
+
+        if ($entity->isEpisode()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                $this->guids[$key] = $pointer;
+            }
         }
     }
 
