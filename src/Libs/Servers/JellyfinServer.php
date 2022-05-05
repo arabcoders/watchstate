@@ -341,7 +341,7 @@ class JellyfinServer implements ServerInterface
                     arrayToString(
                         [
                             'guids' => !empty($providersId) ? $providersId : 'None',
-                            'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
                         ]
                     )
                 ), 400
@@ -1357,7 +1357,7 @@ class JellyfinServer implements ServerInterface
                 $guids = (array)($item->ProviderIds ?? []);
                 $this->logger->debug(sprintf('Ignoring %s. No Valid/supported guids.', $iName), [
                     'guids' => !empty($guids) ? $guids : 'None',
-                    'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                    'rGuids' => $rItem->hasRelativeGuid() ? $rItem->getRelativeGuids() : 'None',
                 ]);
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
@@ -1382,7 +1382,7 @@ class JellyfinServer implements ServerInterface
                     ),
                     [
                         'guids' => !empty($guids) ? $guids : 'None',
-                        'rGuids' => $rItem->hasRelativeGuids() ? $rItem->getRelativeGuids() : 'None',
+                        'rGuids' => $rItem->hasRelativeGuid() ? $rItem->getRelativeGuids() : 'None',
                     ]
                 );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
@@ -1534,7 +1534,7 @@ class JellyfinServer implements ServerInterface
 
                 $this->logger->info($message, [
                     'guids' => empty($guids) ? 'None' : $guids,
-                    'rGuids' => $entity->hasRelativeGuids() ? $entity->getRelativeGuids() : 'None',
+                    'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
                 ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');

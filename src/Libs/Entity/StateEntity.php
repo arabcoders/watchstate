@@ -112,7 +112,7 @@ final class StateEntity implements StateInterface
 
     public function hasGuids(): bool
     {
-        foreach (StateInterface::ENTITY_GUIDS as $key) {
+        foreach (array_keys(Guid::SUPPORTED) as $key) {
             if (null !== $this->{$key}) {
                 return true;
             }
@@ -121,12 +121,28 @@ final class StateEntity implements StateInterface
         return false;
     }
 
-    public function hasRelativeGuids(): bool
+    public function hasParentGuid(): bool
     {
-        if (StateInterface::TYPE_EPISODE !== $this->type) {
-            return false;
-        }
+        return count($this->getParentGuids()) >= 1;
+    }
 
+    public function getParentGuids(): array
+    {
+        return (array)ag($this->meta, 'parent', []);
+    }
+
+    public function isMovie(): bool
+    {
+        return StateInterface::TYPE_MOVIE === $this->type;
+    }
+
+    public function isEpisode(): bool
+    {
+        return StateInterface::TYPE_EPISODE === $this->type;
+    }
+
+    public function hasRelativeGuid(): bool
+    {
         $parents = ag($this->meta, 'parent', []);
         $season = ag($this->meta, 'season', null);
         $episode = ag($this->meta, 'episode', null);
@@ -136,25 +152,26 @@ final class StateEntity implements StateInterface
 
     public function getRelativeGuids(): array
     {
-        if (StateInterface::TYPE_EPISODE !== $this->type) {
-            return [];
-        }
-
         $parents = ag($this->meta, 'parent', []);
         $season = ag($this->meta, 'season', null);
         $episode = ag($this->meta, 'episode', null);
 
-        if (null === $season || null === $episode) {
+        if (null === $season || null === $episode || count($parents) < 1) {
             return [];
         }
 
         $list = [];
 
         foreach ($parents as $key => $val) {
-            $list[afterLast($key, 'guid_')] = $val . '/' . $season . '/' . $episode;
+            $list[$key] = $val . '/' . $season . '/' . $episode;
         }
 
-        return $list;
+        return array_intersect_key($list, Guid::SUPPORTED);
+    }
+
+    public function getRelativePointers(): array
+    {
+        return Guid::fromArray($this->getRelativeGuids())->getPointers();
     }
 
     public function apply(StateInterface $entity, bool $guidOnly = false): self
@@ -182,9 +199,7 @@ final class StateEntity implements StateInterface
 
     public function getPointers(): array
     {
-        return Guid::fromArray(
-            array_intersect_key((array)$this, array_flip(StateInterface::ENTITY_GUIDS))
-        )->getPointers();
+        return Guid::fromArray(array_intersect_key((array)$this, Guid::SUPPORTED))->getPointers();
     }
 
     public function setIsTainted(bool $isTainted): StateInterface

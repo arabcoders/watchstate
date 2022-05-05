@@ -44,6 +44,7 @@ final class ListCommand extends Command
             ->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent GUIDs instead.')
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number')
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number')
+            ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number')
             ->setDescription('List Database entries.');
 
         foreach (array_keys(Guid::SUPPORTED) as $guid) {
@@ -92,6 +93,11 @@ final class ListCommand extends Command
             $params['via'] = $input->getOption('via');
         }
 
+        if ($input->getOption('id')) {
+            $where[] = "id = :id";
+            $params['id'] = $input->getOption('id');
+        }
+
         if ($input->getOption('series')) {
             $where[] = "json_extract(meta,'$.series') = :series";
             $params['series'] = $input->getOption('series');
@@ -112,20 +118,18 @@ final class ListCommand extends Command
 
         if ($input->getOption('parent')) {
             foreach (array_keys(Guid::SUPPORTED) as $guid) {
-                $guid = afterLast($guid, 'guid_');
-                if (null === ($val = $input->getOption($guid))) {
+                if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
-                $where[] = "json_extract(meta,'$.parent.guid_{$guid}') = :{$guid}";
+                $where[] = "json_extract(meta,'$.parent.{$guid}') = :{$guid}";
                 $params[$guid] = $val;
             }
         } else {
             foreach (array_keys(Guid::SUPPORTED) as $guid) {
-                $guid = afterLast($guid, 'guid_');
-                if (null === ($val = $input->getOption($guid))) {
+                if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
-                $where[] = "guid_{$guid} LIKE '%' || :{$guid} || '%'";
+                $where[] = "{$guid} LIKE '%' || :{$guid} || '%'";
                 $params[$guid] = $val;
             }
         }

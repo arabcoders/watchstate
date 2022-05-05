@@ -24,16 +24,6 @@ interface StateInterface
         'guid_anidb',
     ];
 
-    public const ENTITY_GUIDS = [
-        'guid_plex',
-        'guid_imdb',
-        'guid_tvdb',
-        'guid_tmdb',
-        'guid_tvmaze',
-        'guid_tvrage',
-        'guid_anidb',
-    ];
-
     /**
      * Make new instance.
      *
@@ -76,7 +66,7 @@ interface StateInterface
      *
      * @return bool
      */
-    public function hasRelativeGuids(): bool;
+    public function hasRelativeGuid(): bool;
 
     /**
      * Get Relative GUIDs.
@@ -84,6 +74,41 @@ interface StateInterface
      * @return array
      */
     public function getRelativeGuids(): array;
+
+    /**
+     * Get Relative Pointers.
+     *
+     * @return array
+     */
+    public function getRelativePointers(): array;
+
+    /**
+     * Does the Entity have Parent IDs?
+     *
+     * @return bool
+     */
+    public function hasParentGuid(): bool;
+
+    /**
+     * Get Parent GUIDs.
+     *
+     * @return array
+     */
+    public function getParentGuids(): array;
+
+    /**
+     * Is the entity of movie type?
+     *
+     * @return bool
+     */
+    public function isMovie(): bool;
+
+    /**
+     * Is the entity of episode type?
+     *
+     * @return bool
+     */
+    public function isEpisode(): bool;
 
     /**
      * Get GUID Pointers.
@@ -108,9 +133,9 @@ interface StateInterface
      * The Tainted flag control whether we will change state or not.
      * If the entity is not already stored in the database, then this flag is not used.
      * However, if the entity already exists and the flag is set to **true**, then
-     * we will be checking  **GUIDs** only, and if those differ then meta will be updated as well.
+     * we will be checking **GUIDs** only, and if those differ then meta will be updated as well.
      * otherwise, nothing will be changed, This flag serve to update GUIDs via webhook unhelpful events like
-     * media.play/stop/resume,
+     * play/stop/resume.
      *
      * @param bool $isTainted
      *

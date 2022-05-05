@@ -54,6 +54,14 @@ interface StorageInterface
     public function update(StateInterface $entity): StateInterface;
 
     /**
+     * Match Relative Guid.
+     *
+     * @param StateInterface $entity
+     * @return StateInterface|null
+     */
+    public function matchRelativeGuid(StateInterface $entity): StateInterface|null;
+
+    /**
      * Get Entity Using array of ids.
      *
      * @param array $ids

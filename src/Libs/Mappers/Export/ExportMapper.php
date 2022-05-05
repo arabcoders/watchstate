@@ -72,9 +72,19 @@ final class ExportMapper implements ExportInterface
             return $this->objects[$entity->id];
         }
 
-        foreach ($entity->getPointers() as $key) {
-            if (null !== ($this->guids[$key] ?? null)) {
-                return $this->objects[$this->guids[$key]];
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    return $this->objects[$this->guids[$key]];
+                }
+            }
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                if (null !== ($this->guids[$key] ?? null)) {
+                    return $this->objects[$this->guids[$key]];
+                }
             }
         }
 
@@ -156,8 +166,16 @@ final class ExportMapper implements ExportInterface
 
     private function addGuids(StateInterface $entity, int|string $pointer): void
     {
-        foreach ($entity->getPointers() as $key) {
-            $this->guids[$key] = $pointer;
+        if ($entity->hasGuids()) {
+            foreach ($entity->getPointers() as $key) {
+                $this->guids[$key] = $pointer;
+            }
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                $this->guids[$key] = $pointer;
+            }
         }
     }
 }

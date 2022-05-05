@@ -37,7 +37,7 @@ final class DirectMapper implements ImportInterface
 
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
-        if (!$entity->hasGuids()) {
+        if (!$entity->hasGuids() && $entity->hasRelativeGuid()) {
             $this->logger->info(sprintf('Ignoring %s. No valid GUIDs.', $name));
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
@@ -82,7 +82,7 @@ final class DirectMapper implements ImportInterface
                     }
                 }
 
-                $this->logger->debug(sprintf('Ignoring %s. Not played since last sync.', $name));
+                $this->logger->debug(sprintf('Ignoring %s. No change since last sync.', $name));
                 Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
