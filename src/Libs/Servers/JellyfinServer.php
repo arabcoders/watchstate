@@ -582,6 +582,7 @@ class JellyfinServer implements ServerInterface
                             'enableUserData' => 'false',
                             'enableImages' => 'false',
                             'Fields' => 'ProviderIds,DateCreated,OriginalTitle',
+                            'ExcludeLocationTypes' => 'Virtual',
                         ]
                     )
                 );
@@ -648,7 +649,8 @@ class JellyfinServer implements ServerInterface
                         'enableUserData' => 'true',
                         'enableImages' => 'false',
                         'includeItemTypes' => 'Movie,Episode',
-                        'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
+                        'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved,PremiereDate,ProductionYear',
+                        'ExcludeLocationTypes' => 'Virtual',
                     ]
                 )
             );
@@ -1554,10 +1556,7 @@ class JellyfinServer implements ServerInterface
                     $message .= ' Most likely unmatched item.';
                 }
 
-                $this->logger->info($message, [
-                    'guids' => empty($guids) ? 'None' : $guids,
-                    'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                ]);
+                $this->logger->info($message, ['guids' => empty($guids) ? 'None' : $guids]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
 
