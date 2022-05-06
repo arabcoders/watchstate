@@ -873,8 +873,6 @@ class PlexServer implements ServerInterface
                                 httpClientChunks($this->http->stream($response)),
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
-                                ],
-                                [
                                     'decoder' => new ErrorWrappingDecoder(
                                         new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
                                     )
@@ -1184,8 +1182,6 @@ class PlexServer implements ServerInterface
                                 httpClientChunks($this->http->stream($response)),
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
-                                ],
-                                [
                                     'decoder' => new ErrorWrappingDecoder(
                                         new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
                                     )
@@ -1297,8 +1293,6 @@ class PlexServer implements ServerInterface
                                 httpClientChunks($this->http->stream($response)),
                                 [
                                     'pointer' => '/MediaContainer/Metadata',
-                                ],
-                                [
                                     'decoder' => new ErrorWrappingDecoder(
                                         new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
                                     )

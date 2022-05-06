@@ -849,8 +849,6 @@ class JellyfinServer implements ServerInterface
                                 httpClientChunks($this->http->stream($response)),
                                 [
                                     'pointer' => '/Items',
-                                ],
-                                [
                                     'decoder' => new ErrorWrappingDecoder(
                                         new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
                                     )
@@ -1137,8 +1135,6 @@ class JellyfinServer implements ServerInterface
                                 httpClientChunks($this->http->stream($response)),
                                 [
                                     'pointer' => '/Items',
-                                ],
-                                [
                                     'decoder' => new ErrorWrappingDecoder(
                                         new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
                                     )
@@ -1250,8 +1246,6 @@ class JellyfinServer implements ServerInterface
                                 httpClientChunks($this->http->stream($response)),
                                 [
                                     'pointer' => '/Items',
-                                ],
-                                [
                                     'decoder' => new ErrorWrappingDecoder(
                                         new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
                                     )
