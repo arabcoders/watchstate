@@ -11,7 +11,6 @@ use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use Closure;
 use DateTimeInterface;
-use Exception;
 use PDO;
 use PDOException;
 use PDOStatement;
@@ -77,7 +76,15 @@ final class PDOAdapter implements StorageInterface
 
     public function get(StateInterface $entity): StateInterface|null
     {
-        return $this->matchAnyId(array_intersect_key($entity->getAll(), Guid::SUPPORTED), $entity);
+        if ($entity->hasGuids() && null !== ($item = $this->findByGuid($entity))) {
+            return $item;
+        }
+
+        if ($entity->isEpisode() && $entity->hasRelativeGuid() && null !== ($item = $this->findByRGuid($entity))) {
+            return $item;
+        }
+
+        return null;
     }
 
     public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array
@@ -133,114 +140,6 @@ final class PDOAdapter implements StorageInterface
         return $entity->updateOriginal();
     }
 
-    public function matchRelativeGuid(StateInterface $entity): StateInterface|null
-    {
-        if (!$entity->isEpisode() || !$entity->hasRelativeGuid()) {
-            return null;
-        }
-
-        $cond = $where = [];
-
-        foreach ($entity->getParentGuids() as $key => $val) {
-            if (null === ($val ?? null)) {
-                continue;
-            }
-
-            $where[] = "json_extract(meta,'$.parent.{$key}') = :{$key}";
-            $cond[$key] = $val;
-        }
-
-        $sql = "SELECT
-                    *
-                FROM
-                    state
-                WHERE
-                    json_extract(meta, '$.season') = " . (int)ag($entity->meta, 'season', 0) . "
-                AND
-                    json_extract(meta, '$.episode') = " . (int)ag($entity->meta, 'episode', 0) . "
-                AND
-                (
-                    " . implode(' OR ', $where) . "
-                )
-        ";
-
-        $cachedKey = md5($sql);
-
-        try {
-            if (null === ($this->stmt[$cachedKey] ?? null)) {
-                $this->stmt[$cachedKey] = $this->pdo->prepare($sql);
-            }
-
-            if (false === $this->stmt[$cachedKey]->execute($cond)) {
-                $this->stmt[$cachedKey] = null;
-                throw new StorageException('Failed to execute sql query.', 61);
-            }
-
-            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-        } catch (PDOException|StorageException $e) {
-            $this->stmt[$cachedKey] = null;
-            throw $e;
-        }
-
-        return $entity::fromArray($row);
-    }
-
-    public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null
-    {
-        $entity = $class ?? Container::get(StateInterface::class);
-
-        if (null !== ($ids['id'] ?? null)) {
-            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$ids['id']);
-
-            if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-
-            return $entity::fromArray($row);
-        }
-
-        $cond = $where = [];
-
-        foreach (array_keys(Guid::SUPPORTED) as $key) {
-            if (null === ($ids[$key] ?? null)) {
-                continue;
-            }
-
-            $where[] = "{$key} = :{$key}";
-            $cond[$key] = $ids[$key];
-        }
-
-        if (empty($cond)) {
-            return null !== $class ? $this->matchRelativeGuid($class) : null;
-        }
-
-        $sqlWhere = implode(' OR ', $where);
-
-        $cachedKey = md5($sqlWhere);
-
-        try {
-            if (null === ($this->stmt[$cachedKey] ?? null)) {
-                $this->stmt[$cachedKey] = $this->pdo->prepare("SELECT * FROM state WHERE {$sqlWhere}");
-            }
-
-            if (false === $this->stmt[$cachedKey]->execute($cond)) {
-                $this->stmt[$cachedKey] = null;
-                throw new StorageException('Failed to execute sql query.', 61);
-            }
-
-            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-
-            return $entity::fromArray($row);
-        } catch (PDOException|StorageException $e) {
-            $this->stmt[$cachedKey] = null;
-            throw $e;
-        }
-    }
-
     public function remove(StateInterface $entity): bool
     {
         if (null === $entity->id && !$entity->hasGuids() && $entity->hasRelativeGuid()) {
@@ -276,7 +175,7 @@ final class PDOAdapter implements StorageInterface
 
             $count = count($entities);
 
-            $this->logger->info(
+            $this->logger->notice(
                 0 === $count ? 'No changes detected.' : sprintf('Updating database with \'%d\' changes.', $count)
             );
 
@@ -285,15 +184,18 @@ final class PDOAdapter implements StorageInterface
             foreach ($entities as $entity) {
                 try {
                     if (null === $entity->id) {
-                        $this->logger->debug('Adding ' . $entity->type, $entity->meta ?? []);
+                        $this->logger->info(
+                            'Adding ' . $entity->type . ' - [' . $entity->getName() . '].',
+                            $entity->getAll()
+                        );
 
                         $this->insert($entity);
 
                         $list[$entity->type]['added']++;
                     } else {
-                        $this->logger->debug(
-                            'Updating ' . $entity->type,
-                            ['id' => $entity->id] + ($entity->diff() ?? [])
+                        $this->logger->info(
+                            'Updating ' . $entity->type . ':' . $entity->id . ' - [' . $entity->getName() . '].',
+                            $entity->diff()
                         );
                         $this->update($entity);
                         $list[$entity->type]['updated']++;
@@ -326,9 +228,6 @@ final class PDOAdapter implements StorageInterface
         return (new PDOMigrations($this->pdo, $this->logger))->isMigrated();
     }
 
-    /**
-     * @throws Exception
-     */
     public function makeMigration(string $name, array $opts = []): mixed
     {
         return (new PDOMigrations($this->pdo, $this->logger))->make($name);
@@ -366,6 +265,19 @@ final class PDOAdapter implements StorageInterface
         }
 
         return $this->pdo->inTransaction();
+    }
+
+    /**
+     * If we are using single transaction,
+     * commit all changes on class destruction.
+     */
+    public function __destruct()
+    {
+        if (true === $this->singleTransaction && $this->pdo->inTransaction()) {
+            $this->pdo->commit();
+        }
+
+        $this->stmt = [];
     }
 
     /**
@@ -451,12 +363,134 @@ final class PDOAdapter implements StorageInterface
         return trim(str_replace('%(place) = %(holder)', implode(', ', $placeholders), $queryString));
     }
 
-    public function __destruct()
+    /**
+     * Find db entity using External Relative ID.
+     * External Relative ID is : (db_name)://(showId)/(season)/(episode)
+     *
+     * @param StateInterface $entity
+     * @return StateInterface|null
+     */
+    private function findByRGuid(StateInterface $entity): StateInterface|null
     {
-        if (true === $this->singleTransaction && $this->pdo->inTransaction()) {
-            $this->pdo->commit();
+        $cond = $where = [];
+
+        foreach ($entity->getParentGuids() as $key => $val) {
+            if (null === ($val ?? null)) {
+                continue;
+            }
+
+            $where[] = "json_extract(meta,'$.parent.{$key}') = :{$key}";
+            $cond[$key] = $val;
         }
 
-        $this->stmt = [];
+        $sqlType = '';
+
+        if (null !== ($entity?->type ?? null)) {
+            $sqlType = 'type = :s_type AND ';
+            $cond['s_type'] = $entity->type;
+        }
+
+        $sql = "SELECT
+                    *
+                FROM
+                    state
+                WHERE
+                    {$sqlType}
+                    json_extract(meta, '$.season') = " . (int)ag($entity->meta, 'season', 0) . "
+                AND
+                    json_extract(meta, '$.episode') = " . (int)ag($entity->meta, 'episode', 0) . "
+                AND
+                (
+                    " . implode(' OR ', $where) . "
+                )
+        ";
+
+        $cachedKey = md5($sql);
+
+        try {
+            if (null === ($this->stmt[$cachedKey] ?? null)) {
+                $this->stmt[$cachedKey] = $this->pdo->prepare($sql);
+            }
+
+            if (false === $this->stmt[$cachedKey]->execute($cond)) {
+                $this->stmt[$cachedKey] = null;
+                throw new StorageException('Failed to execute sql query.', 61);
+            }
+
+            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
+                return null;
+            }
+
+            return $entity::fromArray($row);
+        } catch (PDOException|StorageException $e) {
+            $this->stmt[$cachedKey] = null;
+            throw $e;
+        }
+    }
+
+    /**
+     * Find db entity using External ID.
+     * External ID format is: (db_name)://(id)
+     *
+     * @param StateInterface $entity
+     * @return StateInterface|null
+     */
+    private function findByGuid(StateInterface $entity): StateInterface|null
+    {
+        if (null !== $entity->id) {
+            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$entity->id);
+
+            if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
+                return null;
+            }
+
+            return $entity::fromArray($row);
+        }
+
+        $cond = $where = [];
+
+        foreach (array_keys(Guid::SUPPORTED) as $key) {
+            if (null === ($entity->{$key} ?? null)) {
+                continue;
+            }
+
+            $where[] = "{$key} = :{$key}";
+            $cond[$key] = $entity->{$key};
+        }
+
+        if (empty($cond)) {
+            return null;
+        }
+
+        $sqlWhere = implode(' OR ', $where);
+
+        $cachedKey = md5($sqlWhere . ($entity?->type ?? ''));
+
+        try {
+            if (null === ($this->stmt[$cachedKey] ?? null)) {
+                $sqlType = '';
+
+                if (null !== ($entity?->type ?? null)) {
+                    $sqlType = 'type = :s_type AND ';
+                    $cond['s_type'] = $entity->type;
+                }
+
+                $this->stmt[$cachedKey] = $this->pdo->prepare("SELECT * FROM state WHERE {$sqlType} {$sqlWhere}");
+            }
+
+            if (false === $this->stmt[$cachedKey]->execute($cond)) {
+                $this->stmt[$cachedKey] = null;
+                throw new StorageException('Failed to execute sql query.', 61);
+            }
+
+            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
+                return null;
+            }
+
+            return $entity::fromArray($row);
+        } catch (PDOException|StorageException $e) {
+            $this->stmt[$cachedKey] = null;
+            throw $e;
+        }
     }
 }

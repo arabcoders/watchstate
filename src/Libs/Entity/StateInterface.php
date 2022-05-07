@@ -111,6 +111,13 @@ interface StateInterface
     public function isEpisode(): bool;
 
     /**
+     * Get constructed name.
+     *
+     * @return string
+     */
+    public function getName(): string;
+
+    /**
      * Get GUID Pointers.
      *
      * @return array
@@ -127,7 +134,19 @@ interface StateInterface
      */
     public function apply(StateInterface $entity, bool $guidOnly = false): StateInterface;
 
+    /**
+     * Update Original data.
+     *
+     * @return StateInterface
+     */
     public function updateOriginal(): StateInterface;
+
+    /**
+     * Get The Original data.
+     *
+     * @return array
+     */
+    public function getOriginalData(): array;
 
     /**
      * The Tainted flag control whether we will change state or not.

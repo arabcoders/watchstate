@@ -7,7 +7,6 @@ namespace Tests\Storage;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Guid;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
@@ -107,36 +106,6 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame($item, $updatedItem);
         $this->assertSame($updatedItem->getAll(), $this->storage->get($item)->getAll());
-    }
-
-    public function test_matchAnyId_call_without_initialized_container(): void
-    {
-        $this->expectException(Error::class);
-        $this->expectExceptionMessage('Call to a member function');
-        $this->storage->matchAnyId([]);
-    }
-
-    public function test_matchAnyId_conditions(): void
-    {
-        $item1 = new StateEntity($this->testEpisode);
-        $item2 = new StateEntity($this->testMovie);
-
-        $this->assertNull(
-            $this->storage->matchAnyId(array_intersect_key($item1->getAll(), Guid::SUPPORTED), $item1)
-        );
-
-        $newItem1 = $this->storage->insert($item1);
-        $newItem2 = $this->storage->insert($item2);
-
-        $this->assertSame(
-            $newItem1->getAll(),
-            $this->storage->matchAnyId(array_intersect_key($item1->getAll(), Guid::SUPPORTED), $item1)->getAll()
-        );
-
-        $this->assertSame(
-            $newItem2->getAll(),
-            $this->storage->matchAnyId(array_intersect_key($item2->getAll(), Guid::SUPPORTED), $item2)->getAll()
-        );
     }
 
     public function test_remove_conditions(): void

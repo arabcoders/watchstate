@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Libs\Storage\PDO;
 
 use App\Libs\Storage\StorageInterface;
-use Exception;
 use PDO;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -92,9 +91,6 @@ final class PDOMigrations
         return 0;
     }
 
-    /**
-     * @throws Exception
-     */
     public function make(string $name): string
     {
         $name = str_replace(chr(040), '_', $name);
