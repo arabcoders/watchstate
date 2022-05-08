@@ -1434,19 +1434,17 @@ class JellyfinServer implements ServerInterface
 
     protected function processShow(StdClass $item, string $library): void
     {
-        $iName = sprintf(
-            '%s - %s - [%s (%d)]',
-            $this->name,
-            $library,
-            $item->Name ?? $item->OriginalTitle ?? '??',
-            $item->ProductionYear ?? 0000
-        );
-
-        $this->logger->debug(sprintf('Processing %s. For GUIDs.', $iName));
-
         $providersId = (array)($item->ProviderIds ?? []);
 
         if (!$this->hasSupportedIds($providersId)) {
+            $iName = sprintf(
+                '%s - %s - [%s (%d)]',
+                $this->name,
+                $library,
+                $item->Name ?? $item->OriginalTitle ?? '??',
+                $item->ProductionYear ?? 0000
+            );
+
             $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
             if (empty($providersId)) {
                 $message .= ' Most likely unmatched TV show.';
@@ -1492,12 +1490,12 @@ class JellyfinServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - %s - [%s - (%dx%d)]',
+                        '%s - %s - [%s - (%sx%s)]',
                         $this->name,
                         $library,
                         $item->SeriesName ?? '??',
-                        $item->ParentIndexNumber ?? 0,
-                        $item->IndexNumber ?? 0,
+                        str_pad((string)($item->ParentIndexNumber ?? 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)($item->IndexNumber ?? 0), 3, '0', STR_PAD_LEFT),
                     )
                 );
             }

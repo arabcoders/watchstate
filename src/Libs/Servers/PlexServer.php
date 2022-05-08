@@ -1493,16 +1493,6 @@ class PlexServer implements ServerInterface
 
     protected function processShow(StdClass $item, string $library): void
     {
-        $iName = sprintf(
-            '%s - %s - [%s (%d)]',
-            $this->name,
-            $library,
-            $item->title ?? $item->originalTitle ?? '??',
-            $item->year ?? 0000
-        );
-
-        $this->logger->debug(sprintf('Processing %s. For GUIDs.', $iName));
-
         if (null === ($item->Guid ?? null)) {
             $item->Guid = [['id' => $item->guid]];
         } else {
@@ -1510,6 +1500,13 @@ class PlexServer implements ServerInterface
         }
 
         if (!$this->hasSupportedGuids($item->Guid, true)) {
+            $iName = sprintf(
+                '%s - %s - [%s (%d)]',
+                $this->name,
+                $library,
+                $item->title ?? $item->originalTitle ?? '??',
+                $item->year ?? 0000
+            );
             $message = sprintf('Ignoring %s. No valid/supported GUIDs.', $iName);
             if (empty($item->Guid)) {
                 $message .= ' Most likely unmatched TV show.';
