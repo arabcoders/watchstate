@@ -70,12 +70,6 @@ class ImportCommand extends Command
                 'Sync selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
-            ->addOption(
-                'import-unwatched',
-                null,
-                InputOption::VALUE_NONE,
-                '--DEPRECATED-- will be removed in v1.x. We import the item regardless of watched/unwatched state.'
-            )
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
                 'stats-filter',
@@ -83,6 +77,13 @@ class ImportCommand extends Command
                 InputOption::VALUE_OPTIONAL,
                 'Filter final status output e.g. (servername.key)',
                 null
+            )
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption(
+                'deep-debug',
+                null,
+                InputOption::VALUE_NONE,
+                'You should not use this flag unless told by the team.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
@@ -121,6 +122,22 @@ class ImportCommand extends Command
         if (null !== $logger) {
             $this->logger = $logger;
             $this->mapper->setLogger($logger);
+        }
+
+        $mapperOpts = [];
+
+        if ($input->getOption('dry-run')) {
+            $output->writeln('<info>Dry run mode. No changes will be committed to backend.</info>');
+
+            $mapperOpts[ImportInterface::DRY_RUN] = true;
+        }
+
+        if ($input->getOption('deep-debug')) {
+            $mapperOpts[ImportInterface::DEEP_DEBUG] = true;
+        }
+
+        if (!empty($mapperOpts)) {
+            $this->mapper->setUp($mapperOpts);
         }
 
         foreach (Config::get('servers', []) as $serverName => $server) {

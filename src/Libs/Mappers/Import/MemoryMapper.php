@@ -9,6 +9,7 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
+use PDOException;
 use Psr\Log\LoggerInterface;
 
 final class MemoryMapper implements ImportInterface
@@ -74,7 +75,20 @@ final class MemoryMapper implements ImportInterface
 
             Data::increment($bucket, $entity->type . '_added');
             $this->addPointers($this->objects[$pointer], $pointer);
-            $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
+
+            if (true === ($this->options[ImportInterface::DEEP_DEBUG] ?? false)) {
+                $data = $entity->getAll();
+                unset($data['id']);
+                $data['updated'] = makeDate($data['updated']);
+                $data['watched'] = 0 === $data['watched'] ? 'No' : 'Yes';
+                if ($entity->isMovie()) {
+                    unset($data['season'], $data['episode'], $data['parent']);
+                }
+            } else {
+                $data = [];
+            }
+
+            $this->logger->info(sprintf('Adding %s. As new Item.', $name), $data);
 
             return $this;
         }
@@ -82,21 +96,6 @@ final class MemoryMapper implements ImportInterface
         // -- Ignore old item.
         if (null !== ($opts['after'] ?? null) && ($opts['after'] instanceof DateTimeInterface)) {
             if ($opts['after']->getTimestamp() >= $entity->updated) {
-                $cloned = clone $this->objects[$pointer];
-                // -- check for updated GUIDs.
-                if ($this->objects[$pointer]->apply($entity, guidOnly: true)->isChanged()) {
-                    $this->changed[$pointer] = $pointer;
-                    Data::increment($bucket, $entity->type . '_updated');
-                    $this->removePointers($cloned);
-                    $this->addPointers($this->objects[$pointer], $pointer);
-                    $this->logger->debug(sprintf('Updating %s. Parent & Entity GUIDs.', $name), [
-                        'changes' => $this->objects[$pointer]->diff(),
-                    ]);
-
-                    return $this;
-                }
-
-                $this->logger->debug(sprintf('Ignoring %s. No change since last sync.', $name));
                 Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
@@ -110,13 +109,13 @@ final class MemoryMapper implements ImportInterface
             $this->changed[$pointer] = $pointer;
             $this->removePointers($cloned);
             $this->addPointers($this->objects[$pointer], $pointer);
-            $this->logger->debug(sprintf('Updating %s. State changed.', $name), [
-                'changes' => $this->objects[$pointer]->diff(all: true),
-            ]);
+            $this->logger->info(
+                sprintf('Updating %s. State changed.', $name),
+                $this->objects[$pointer]->diff(all: true),
+            );
             return $this;
         }
 
-        $this->logger->debug(sprintf('Ignoring %s. State unchanged.', $name));
         Data::increment($bucket, $entity->type . '_ignored_no_change');
 
         return $this;
@@ -152,9 +151,41 @@ final class MemoryMapper implements ImportInterface
 
     public function commit(): mixed
     {
-        $state = $this->storage->commit(
-            array_intersect_key($this->objects, $this->changed)
-        );
+        $state = $this->storage->transactional(function (StorageInterface $storage) {
+            $list = [
+                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+            ];
+
+            $count = count($this->changed);
+
+            $this->logger->notice(
+                0 === $count ? 'No changes detected.' : sprintf('Updating backend with \'%d\' changes.', $count)
+            );
+
+            foreach ($this->changed as $pointer) {
+                try {
+                    $entity = &$this->objects[$pointer];
+
+                    if (null === $entity->id) {
+                        if (false === (bool)($this->options[ImportInterface::DRY_RUN] ?? false)) {
+                            $storage->insert($entity);
+                        }
+                        $list[$entity->type]['added']++;
+                    } else {
+                        if (false === (bool)($this->options[ImportInterface::DRY_RUN] ?? false)) {
+                            $storage->update($entity);
+                        }
+                        $list[$entity->type]['updated']++;
+                    }
+                } catch (PDOException $e) {
+                    $list[$entity->type]['failed']++;
+                    $this->logger->error($e->getMessage(), $entity->getAll());
+                }
+            }
+
+            return $list;
+        });
 
         $this->reset();
 
@@ -202,6 +233,23 @@ final class MemoryMapper implements ImportInterface
         return $this;
     }
 
+    public function __destruct()
+    {
+        if (false === ($this->options['disable_autocommit'] ?? false) && $this->count() >= 1) {
+            $this->commit();
+        }
+    }
+
+    public function inDryRunMode(): bool
+    {
+        return true === ($this->options[ImportInterface::DRY_RUN] ?? false);
+    }
+
+    public function inDeepDebugMode(): bool
+    {
+        return true === ($this->options[ImportInterface::DEEP_DEBUG] ?? false);
+    }
+
     /**
      * Is the object already mapped?
      *
@@ -243,10 +291,4 @@ final class MemoryMapper implements ImportInterface
         }
     }
 
-    public function __destruct()
-    {
-        if (false === ($this->options['disable_autocommit'] ?? false) && $this->count() >= 1) {
-            $this->commit();
-        }
-    }
 }
