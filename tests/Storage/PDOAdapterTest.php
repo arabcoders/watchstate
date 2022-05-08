@@ -139,10 +139,7 @@ class PDOAdapterTest extends TestCase
         $item2 = new StateEntity($this->testMovie);
 
         $this->assertSame(
-            [
-                StateInterface::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
-                StateInterface::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
-            ],
+            ['added' => 2, 'updated' => 0, 'failed' => 0],
             $this->storage->commit([$item1, $item2])
         );
 
@@ -150,10 +147,7 @@ class PDOAdapterTest extends TestCase
         $item2->guids['guid_anidb'] = StateInterface::TYPE_MOVIE . '/1';
 
         $this->assertSame(
-            [
-                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
-                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
-            ],
+            ['added' => 0, 'updated' => 2, 'failed' => 0],
             $this->storage->commit([$item1, $item2])
         );
     }
