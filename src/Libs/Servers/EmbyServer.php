@@ -151,7 +151,7 @@ class EmbyServer extends JellyfinServer
             'updated' => time(),
             'watched' => $isWatched,
             'meta' => $meta,
-            ...$this->getGuids($providersId, $type)
+            ...$this->getGuids($providersId)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);

@@ -49,15 +49,6 @@ interface ExportInterface
     public function get(StateInterface $entity): null|StateInterface;
 
     /**
-     * Find Entity By Ids.
-     *
-     * @param array $ids
-     *
-     * @return StateInterface|null
-     */
-    public function findByIds(array $ids): null|StateInterface;
-
-    /**
      * Has Entity.
      *
      * @param StateInterface $entity

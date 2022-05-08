@@ -38,7 +38,6 @@ use Throwable;
 class JellyfinServer implements ServerInterface
 {
     protected const GUID_MAPPER = [
-        'plex' => Guid::GUID_PLEX,
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
         'tvdb' => Guid::GUID_TVDB,
@@ -328,7 +327,7 @@ class JellyfinServer implements ServerInterface
             'updated' => time(),
             'watched' => (int)(bool)ag($json, 'Played', ag($json, 'PlayedToCompletion', 0)),
             'meta' => $meta,
-            ...$this->getGuids($providersId, $type)
+            ...$this->getGuids($providersId)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
@@ -348,16 +347,8 @@ class JellyfinServer implements ServerInterface
             );
         }
 
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $guid) {
-                $this->cacheData[$guid] = ag($json, 'Item.ItemId');
-            }
-        }
-
-        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
-            foreach ($entity->getPointers() as $guid) {
-                $this->cacheData[$guid] = ag($json, 'Item.ItemId');
-            }
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Item.ItemId');
         }
 
         if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
@@ -949,24 +940,12 @@ class JellyfinServer implements ServerInterface
 
             $entity->jf_id = null;
 
-            if ($entity->hasGuids()) {
-                foreach ($entity->getPointers() as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->jf_id = $this->cacheData[$guid];
-                    break;
+            foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+                if (null === ($this->cacheData[$guid] ?? null)) {
+                    continue;
                 }
-            }
-
-            if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
-                foreach ($entity->getRelativePointers() as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->jf_id = $this->cacheData[$guid];
-                    break;
-                }
+                $entity->jf_id = $this->cacheData[$guid];
+                break;
             }
         }
 
@@ -1589,7 +1568,7 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    protected function getGuids(array $ids, string|null $type = null): array
+    protected function getGuids(array $ids): array
     {
         $guid = [];
 
@@ -1600,12 +1579,16 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
-            if (null !== $type) {
-                $value = $type . '/' . $value;
+            if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($value)) {
+                if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$value) {
+                    continue;
+                }
             }
 
             $guid[self::GUID_MAPPER[$key]] = $value;
         }
+
+        ksort($guid);
 
         return $guid;
     }
@@ -1661,49 +1644,43 @@ class JellyfinServer implements ServerInterface
     {
         $date = strtotime($item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate);
 
+        /** @noinspection PhpArrayIndexImmediatelyRewrittenInspection */
+        $row = [
+            'type' => $type,
+            'updated' => $date,
+            'watched' => (int)(bool)($item->UserData?->Played ?? false),
+            'via' => $this->name,
+            'title' => '??',
+            'year' => $item->ProductionYear ?? 0000,
+            'season' => null,
+            'episode' => null,
+            'parent' => [],
+            'guids' => $this->getGuids((array)($item->ProviderIds ?? [])),
+            'extra' => [
+                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+            ],
+        ];
+
         if (StateInterface::TYPE_MOVIE === $type) {
-            $meta = [
-                'via' => $this->name,
-                'title' => $item->Name ?? $item->OriginalTitle ?? '??',
-                'year' => $item->ProductionYear ?? 0000,
-                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
-            ];
+            $row['title'] = $item->Name ?? $item->OriginalTitle ?? '??';
         } else {
-            $meta = [
-                'via' => $this->name,
-                'series' => $item->SeriesName ?? '??',
-                'year' => $item->ProductionYear ?? 0000,
-                'season' => $item->ParentIndexNumber ?? 0,
-                'episode' => $item->IndexNumber ?? 0,
-                'title' => $item->Name ?? '',
-                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
-            ];
+            $row['title'] = $item->SeriesName ?? '??';
+            $row['season'] = $item->ParentIndexNumber ?? 0;
+            $row['episode'] = $item->IndexNumber ?? 0;
+
+            if (null !== ($item->Name ?? null)) {
+                $row['extra']['title'] = $item->Name;
+            }
 
             if (null !== ($item->SeriesId ?? null)) {
-                $meta['parent'] = $this->showInfo[$item->SeriesId] ?? [];
+                $row['parent'] = $this->showInfo[$item->SeriesId] ?? [];
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray(
-            [
-                'type' => $type,
-                'updated' => $date,
-                'watched' => (int)(bool)($item->UserData?->Played ?? false),
-                'meta' => $meta,
-                ...$this->getGuids((array)($item->ProviderIds ?? []), $type),
-            ]
-        );
+        $entity = Container::get(StateInterface::class)::fromArray($row);
 
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->Id;
-            }
-        }
-
-        if ($entity->isEpisode()) {
-            foreach ($entity->getRelativePointers() as $guid) {
-                $this->cacheData[$guid] = $item->Id;
-            }
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+            $this->cacheData[$guid] = $item->Id;
         }
 
         return $entity;

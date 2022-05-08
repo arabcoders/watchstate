@@ -419,7 +419,7 @@ if (!function_exists('arrayToString')) {
             }
 
             if (is_array($val)) {
-                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $val = '[ ' . arrayToString($val) . ' ]';
             } else {
                 $val = $val ?? 'None';
             }

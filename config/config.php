@@ -28,10 +28,10 @@ return (function () {
         ],
     ];
 
-    $config['tmpDir'] = fixPath(env('WS_TMP_DIR', fn() => ag($config, 'path')));
+    $config['tmpDir'] = fixPath(env('WS_TMP_DIR', $config['path']));
 
     $config['storage'] = [
-        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate.db',
+        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_v0.db',
         'username' => null,
         'password' => null,
         'options' => [

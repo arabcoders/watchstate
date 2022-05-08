@@ -41,8 +41,11 @@ final class PDOAdapter implements StorageInterface
         try {
             $data = $entity->getAll();
 
-            if (is_array($data['meta'])) {
-                $data['meta'] = json_encode($data['meta']);
+            foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+                if (null !== ($data[$key] ?? null) && is_array($data[$key])) {
+                    ksort($data[$key]);
+                    $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                }
             }
 
             if (null !== $data['id']) {
@@ -65,7 +68,7 @@ final class PDOAdapter implements StorageInterface
         } catch (PDOException $e) {
             $this->stmt['insert'] = null;
             if (false === $this->viaCommit) {
-                $this->logger->error($e->getMessage(), $entity->meta ?? []);
+                $this->logger->error($e->getMessage(), $entity->getAll());
                 return $entity;
             }
             throw $e;
@@ -76,11 +79,11 @@ final class PDOAdapter implements StorageInterface
 
     public function get(StateInterface $entity): StateInterface|null
     {
-        if ($entity->hasGuids() && null !== ($item = $this->findByGuid($entity))) {
+        if ($entity->isEpisode() && $entity->hasRelativeGuid() && null !== ($item = $this->findByRGuid($entity))) {
             return $item;
         }
 
-        if ($entity->isEpisode() && $entity->hasRelativeGuid() && null !== ($item = $this->findByRGuid($entity))) {
+        if ($entity->hasGuids() && null !== ($item = $this->findByGuid($entity))) {
             return $item;
         }
 
@@ -113,8 +116,10 @@ final class PDOAdapter implements StorageInterface
         try {
             $data = $entity->getAll();
 
-            if (is_array($data['meta'])) {
-                $data['meta'] = json_encode($data['meta']);
+            foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+                if (is_array($data[$key] ?? [])) {
+                    $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                }
             }
 
             if (null === $data['id']) {
@@ -131,7 +136,7 @@ final class PDOAdapter implements StorageInterface
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
             if (false === $this->viaCommit) {
-                $this->logger->error($e->getMessage(), $entity->meta ?? []);
+                $this->logger->error($e->getMessage(), $entity->getAll());
                 return $entity;
             }
             throw $e;
@@ -184,19 +189,10 @@ final class PDOAdapter implements StorageInterface
             foreach ($entities as $entity) {
                 try {
                     if (null === $entity->id) {
-                        $this->logger->info(
-                            'Adding ' . $entity->type . ' - [' . $entity->getName() . '].',
-                            $entity->getAll()
-                        );
-
                         $this->insert($entity);
 
                         $list[$entity->type]['added']++;
                     } else {
-                        $this->logger->info(
-                            'Updating ' . $entity->type . ':' . $entity->id . ' - [' . $entity->getName() . '].',
-                            $entity->diff()
-                        );
                         $this->update($entity);
                         $list[$entity->type]['updated']++;
                     }
@@ -374,20 +370,13 @@ final class PDOAdapter implements StorageInterface
     {
         $cond = $where = [];
 
-        foreach ($entity->getParentGuids() as $key => $val) {
+        foreach ($entity->parent as $key => $val) {
             if (null === ($val ?? null)) {
                 continue;
             }
 
-            $where[] = "json_extract(meta,'$.parent.{$key}') = :{$key}";
+            $where[] = "JSON_EXTRACT(parent,'$.{$key}') = :{$key}";
             $cond[$key] = $val;
-        }
-
-        $sqlType = '';
-
-        if (null !== ($entity?->type ?? null)) {
-            $sqlType = 'type = :s_type AND ';
-            $cond['s_type'] = $entity->type;
         }
 
         $sql = "SELECT
@@ -395,37 +384,35 @@ final class PDOAdapter implements StorageInterface
                 FROM
                     state
                 WHERE
-                    {$sqlType}
-                    json_extract(meta, '$.season') = " . (int)ag($entity->meta, 'season', 0) . "
+                (
+                    type    = :type
                 AND
-                    json_extract(meta, '$.episode') = " . (int)ag($entity->meta, 'episode', 0) . "
+                    season  = :season
+                AND
+                    episode = :episode
+                )
                 AND
                 (
                     " . implode(' OR ', $where) . "
                 )
+                LIMIT 1
         ";
 
-        $cachedKey = md5($sql);
+        $cond['season'] = $entity->season;
+        $cond['episode'] = $entity->episode;
+        $cond['type'] = StateInterface::TYPE_EPISODE;
 
-        try {
-            if (null === ($this->stmt[$cachedKey] ?? null)) {
-                $this->stmt[$cachedKey] = $this->pdo->prepare($sql);
-            }
+        $stmt = $this->pdo->prepare($sql);
 
-            if (false === $this->stmt[$cachedKey]->execute($cond)) {
-                $this->stmt[$cachedKey] = null;
-                throw new StorageException('Failed to execute sql query.', 61);
-            }
-
-            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-
-            return $entity::fromArray($row);
-        } catch (PDOException|StorageException $e) {
-            $this->stmt[$cachedKey] = null;
-            throw $e;
+        if (false === $stmt->execute($cond)) {
+            throw new StorageException('Failed to execute sql query.', 61);
         }
+
+        if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
+            return null;
+        }
+
+        return $entity::fromArray($row);
     }
 
     /**
@@ -447,50 +434,46 @@ final class PDOAdapter implements StorageInterface
             return $entity::fromArray($row);
         }
 
-        $cond = $where = [];
+        $guids = [];
+        $cond = [
+            'type' => $entity->type,
+        ];
 
         foreach (array_keys(Guid::SUPPORTED) as $key) {
-            if (null === ($entity->{$key} ?? null)) {
+            if (null === ($entity->guids[$key] ?? null)) {
                 continue;
             }
 
-            $where[] = "{$key} = :{$key}";
-            $cond[$key] = $entity->{$key};
+            $guids[] = "JSON_EXTRACT(guids,'$.{$key}') = :{$key}";
+            $cond[$key] = $entity->guids[$key];
         }
 
         if (empty($cond)) {
             return null;
         }
 
-        $sqlWhere = implode(' OR ', $where);
+        $sqlEpisode = '';
 
-        $cachedKey = md5($sqlWhere . ($entity?->type ?? ''));
-
-        try {
-            if (null === ($this->stmt[$cachedKey] ?? null)) {
-                $sqlType = '';
-
-                if (null !== ($entity?->type ?? null)) {
-                    $sqlType = 'type = :s_type AND ';
-                    $cond['s_type'] = $entity->type;
-                }
-
-                $this->stmt[$cachedKey] = $this->pdo->prepare("SELECT * FROM state WHERE {$sqlType} {$sqlWhere}");
-            }
-
-            if (false === $this->stmt[$cachedKey]->execute($cond)) {
-                $this->stmt[$cachedKey] = null;
-                throw new StorageException('Failed to execute sql query.', 61);
-            }
-
-            if (false === ($row = $this->stmt[$cachedKey]->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-
-            return $entity::fromArray($row);
-        } catch (PDOException|StorageException $e) {
-            $this->stmt[$cachedKey] = null;
-            throw $e;
+        if ($entity->isEpisode()) {
+            $sqlEpisode = ' AND season = :season AND episode = :episode ';
+            $cond['season'] = $entity->season;
+            $cond['episode'] = $entity->episode;
         }
+
+        $sqlGuids = ' AND (' . implode(' OR ', $guids) . ' ) ';
+
+        $sql = "SELECT * FROM state WHERE ( type = :type {$sqlEpisode} ) {$sqlGuids} LIMIT 1";
+
+        $stmt = $this->pdo->prepare($sql);
+
+        if (false === $stmt->execute($cond)) {
+            throw new StorageException('Failed to execute sql query.', 61);
+        }
+
+        if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
+            return null;
+        }
+
+        return $entity::fromArray($row);
     }
 }

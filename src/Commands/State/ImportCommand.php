@@ -6,11 +6,9 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
@@ -86,12 +84,6 @@ class ImportCommand extends Command
                 'Filter final status output e.g. (servername.key)',
                 null
             )
-            ->addOption(
-                'mapper-direct',
-                null,
-                InputOption::VALUE_NONE,
-                'Uses less memory. However, it\'s significantly slower then default mapper.'
-            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -112,10 +104,6 @@ class ImportCommand extends Command
         } else {
             $custom = false;
             $config = Config::get('path') . '/config/servers.yaml';
-        }
-
-        if ($input->getOption('mapper-direct')) {
-            $this->mapper = Container::get(DirectMapper::class);
         }
 
         $list = [];
@@ -183,7 +171,7 @@ class ImportCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        if (count($list) >= 1 && !$input->getOption('mapper-direct')) {
+        if (count($list) >= 1) {
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');

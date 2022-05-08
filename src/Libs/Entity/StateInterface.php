@@ -9,19 +9,32 @@ interface StateInterface
     public const TYPE_MOVIE = 'movie';
     public const TYPE_EPISODE = 'episode';
 
+    public const ENTITY_IGNORE_DIFF_CHANGES = [
+        'via',
+        'extra',
+        'title',
+        'year',
+    ];
+
+    public const ENTITY_ARRAY_KEYS = [
+        'parent',
+        'guids',
+        'extra'
+    ];
+
     public const ENTITY_KEYS = [
         'id',
         'type',
         'updated',
         'watched',
-        'meta',
-        'guid_plex',
-        'guid_imdb',
-        'guid_tvdb',
-        'guid_tmdb',
-        'guid_tvmaze',
-        'guid_tvrage',
-        'guid_anidb',
+        'via',
+        'title',
+        'year',
+        'season',
+        'episode',
+        'parent',
+        'guids',
+        'extra',
     ];
 
     /**
@@ -36,9 +49,11 @@ interface StateInterface
     /**
      * Return An array of changed items.
      *
+     * @param bool $all check all keys. including ignored keys.
+     *
      * @return array
      */
-    public function diff(): array;
+    public function diff(bool $all = false): array;
 
     /**
      * Get All Entity keys.

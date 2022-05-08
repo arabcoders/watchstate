@@ -375,7 +375,7 @@ class PlexServer implements ServerInterface
             'updated' => time(),
             'watched' => (int)(bool)ag($item, 'viewCount', 0),
             'meta' => $meta,
-            ...$this->getGuids(ag($item, 'Guid', []), $type, isParent: false)
+            ...$this->getGuids(ag($item, 'Guid', []), isParent: false)
         ];
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
@@ -395,16 +395,8 @@ class PlexServer implements ServerInterface
             );
         }
 
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $guid) {
-                $this->cacheData[$guid] = ag($item, 'guid');
-            }
-        }
-
-        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
-            foreach ($entity->getRelativePointers() as $guid) {
-                $this->cacheData[$guid] = ag($item, 'guid');
-            }
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+            $this->cacheData[$guid] = ag($item, 'guid');
         }
 
         if (false !== $isTainted && (true === Config::get('webhook.debug') || null !== ag(
@@ -977,29 +969,17 @@ class PlexServer implements ServerInterface
 
             $entity->plex_id = null;
 
-            if (null !== $entity->guid_plex) {
-                $entity->plex_id = 'plex://' . $entity->guid_plex;
+            if (null !== ($entity->guids[Guid::GUID_PLEX] ?? null)) {
+                $entity->plex_id = 'plex://' . $entity->guids[Guid::GUID_PLEX];
                 continue;
             }
 
-            if ($entity->hasGuids()) {
-                foreach ($entity->getPointers() as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->plex_id = $this->cacheData[$guid];
-                    break;
+            foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+                if (null === ($this->cacheData[$guid] ?? null)) {
+                    continue;
                 }
-            }
-
-            if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
-                foreach ($entity->getRelativePointers() as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->plex_id = $this->cacheData[$guid];
-                    break;
-                }
+                $entity->plex_id = $this->cacheData[$guid];
+                break;
             }
         }
 
@@ -1577,13 +1557,12 @@ class PlexServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - %s - [%s - (%dx%d) - %s]',
+                        '%s - %s - [%s - (%dx%d)]',
                         $this->name,
                         $library,
                         $item->grandparentTitle ?? $item->originalTitle ?? '??',
                         $item->parentIndex ?? 0,
                         $item->index ?? 0,
-                        $item->title ?? $item->originalTitle ?? '',
                     )
                 );
             }
@@ -1657,7 +1636,7 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function getGuids(array $guids, string|null $type = null, bool $isParent = false): array
+    protected function getGuids(array $guids, bool $isParent = false): array
     {
         $guid = [];
 
@@ -1679,12 +1658,16 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
-            if ('plex' !== $key && null !== $type) {
-                $value = $type . '/' . $value;
+            if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($val)) {
+                if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$val) {
+                    continue;
+                }
             }
 
             $guid[self::GUID_MAPPER[$key]] = $value;
         }
+
+        ksort($guid);
 
         return $guid;
     }
@@ -1877,51 +1860,42 @@ class PlexServer implements ServerInterface
 
         $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
+        /** @noinspection PhpArrayIndexImmediatelyRewrittenInspection */
+        $row = [
+            'type' => $type,
+            'updated' => $date,
+            'watched' => (int)(bool)($item->viewCount ?? false),
+            'via' => $this->name,
+            'title' => '??',
+            'year' => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
+            'season' => null,
+            'episode' => null,
+            'parent' => [],
+            'guids' => $this->getGuids($item->Guid ?? [], isParent: false),
+            'extra' => [
+                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            ],
+        ];
+
         if (StateInterface::TYPE_MOVIE === $type) {
-            $meta = [
-                'via' => $this->name,
-                'title' => $item->title ?? $item->originalTitle ?? '??',
-                'year' => $item->year ?? 0000,
-                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
-            ];
+            $row['title'] = $item->title ?? $item->originalTitle ?? '??';
         } else {
-            $meta = [
-                'via' => $this->name,
-                'series' => $item->grandparentTitle ?? '??',
-                'year' => $item->year ?? 0000,
-                'season' => $item->parentIndex ?? 0,
-                'episode' => $item->index ?? 0,
-                'title' => $item->title ?? $item->originalTitle ?? '??',
-                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
-            ];
+            $row['title'] = $item->grandparentTitle ?? '??';
+            $row['season'] = $item->parentIndex ?? 0;
+            $row['episode'] = $item->index ?? 0;
+            $row['extra']['title'] = $item->title ?? $item->originalTitle ?? '??';
 
             $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
 
             if (null !== $parentId) {
-                $meta['parent'] = $this->showInfo[$parentId] ?? [];
+                $row['parent'] = $this->showInfo[$parentId] ?? [];
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray(
-            [
-                'type' => $type,
-                'updated' => $date,
-                'watched' => (int)(bool)($item->viewCount ?? false),
-                'meta' => $meta,
-                ...$this->getGuids($item->Guid ?? [], $type, isParent: false)
-            ]
-        );
+        $entity = Container::get(StateInterface::class)::fromArray($row);
 
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
-            }
-        }
-
-        if ($entity->isEpisode()) {
-            foreach ($entity->getRelativePointers() as $guid) {
-                $this->cacheData[$guid] = $item->guid;
-            }
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+            $this->cacheData[$guid] = $item->guid;
         }
 
         return $entity;
