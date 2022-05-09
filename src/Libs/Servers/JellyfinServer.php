@@ -16,7 +16,6 @@ use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
-use Exception;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -233,32 +232,39 @@ class JellyfinServer implements ServerInterface
 
     public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
     {
-        $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+        try {
+            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
-        if (false === Config::get('webhook.debug', false) && !str_starts_with($userAgent, 'Jellyfin-Server/')) {
-            return $request;
-        }
+            if (false === str_starts_with($userAgent, 'Jellyfin-Server/')) {
+                return $request;
+            }
 
-        $body = (string)$request->getBody();
+            $body = (string)$request->getBody();
 
-        if (null === ($json = json_decode($body, true))) {
-            return $request;
-        }
+            if (null === ($json = json_decode($body, true))) {
+                return $request;
+            }
 
-        $request = $request->withParsedBody($json);
+            $request = $request->withParsedBody($json);
 
-        $attributes = [
-            'SERVER_ID' => ag($json, 'ServerId', ''),
-            'SERVER_NAME' => ag($json, 'ServerName', ''),
-            'SERVER_VERSION' => afterLast($userAgent, '/'),
-            'USER_ID' => ag($json, 'UserId', ''),
-            'USER_NAME' => ag($json, 'NotificationUsername', ''),
-            'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
-            'WH_TYPE' => ag($json, 'ItemType', 'not_set'),
-        ];
+            $attributes = [
+                'SERVER_ID' => ag($json, 'ServerId', ''),
+                'SERVER_NAME' => ag($json, 'ServerName', ''),
+                'SERVER_VERSION' => afterLast($userAgent, '/'),
+                'USER_ID' => ag($json, 'UserId', ''),
+                'USER_NAME' => ag($json, 'NotificationUsername', ''),
+                'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
+                'WH_TYPE' => ag($json, 'ItemType', 'not_set'),
+            ];
 
-        foreach ($attributes as $key => $val) {
-            $request = $request->withAttribute($key, $val);
+            foreach ($attributes as $key => $val) {
+                $request = $request->withAttribute($key, $val);
+            }
+        } catch (Throwable $e) {
+            Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
 
         return $request;
@@ -285,29 +291,6 @@ class JellyfinServer implements ServerInterface
 
         $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
 
-        $meta = match ($type) {
-            StateInterface::TYPE_MOVIE => [
-                'via' => $this->name,
-                'title' => ag($json, 'Name', '??'),
-                'year' => ag($json, 'Year', 0000),
-                'webhook' => [
-                    'event' => $event,
-                ],
-            ],
-            StateInterface::TYPE_EPISODE => [
-                'via' => $this->name,
-                'series' => ag($json, 'SeriesName', '??'),
-                'year' => ag($json, 'Year', 0000),
-                'season' => ag($json, 'SeasonNumber', 0),
-                'episode' => ag($json, 'EpisodeNumber', 0),
-                'title' => ag($json, 'Name', '??'),
-                'webhook' => [
-                    'event' => $event,
-                ],
-            ],
-            default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
-        };
-
         $providersId = [];
 
         foreach ($json as $key => $val) {
@@ -317,44 +300,66 @@ class JellyfinServer implements ServerInterface
             $providersId[self::afterString($key, 'Provider_')] = $val;
         }
 
-        // We use SeriesName to overcome jellyfin webhook limitation, it does not send series id.
-        if (StateInterface::TYPE_EPISODE === $type && null !== ag($json, 'SeriesName')) {
-            $meta['parent'] = $this->getEpisodeParent(ag($json, 'ItemId'), ag($json, 'SeriesName'));
-        }
-
         $row = [
             'type' => $type,
             'updated' => time(),
-            'watched' => (int)(bool)ag($json, 'Played', ag($json, 'PlayedToCompletion', 0)),
-            'meta' => $meta,
-            ...$this->getGuids($providersId)
+            'watched' => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
+            'via' => $this->name,
+            'title' => '??',
+            'year' => ag($json, 'Year', 0000),
+            'season' => null,
+            'episode' => null,
+            'parent' => [],
+            'guids' => $this->getGuids($providersId),
+            'extra' => [
+                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+                'webhook' => [
+                    'event' => $event,
+                ],
+            ],
         ];
+
+        if (StateInterface::TYPE_MOVIE === $type) {
+            $row['title'] = ag($json, ['Name', 'OriginalTitle'], '??');
+        } elseif (StateInterface::TYPE_EPISODE === $type) {
+            $row['title'] = ag($json, 'SeriesName', '??');
+            $row['season'] = ag($json, 'ParentIndexNumber', 0);
+            $row['episode'] = ag($json, 'IndexNumber', 0);
+
+            if (null !== ($epTitle = ag($json, ['Name', 'OriginalTitle'], null))) {
+                $row['extra']['title'] = $epTitle;
+            }
+
+            // -- We use SeriesName to overcome jellyfin webhook limitation, it does not send series id.
+            // -- it might lead to incorrect result if there is a show with duplicate name.
+            if (null !== ag($json, 'SeriesName')) {
+                $row['parent'] = $this->getEpisodeParent(ag($json, 'ItemId'), ag($json, 'SeriesName'));
+            }
+        } else {
+            throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400);
+        }
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            throw new HttpException(
-                sprintf(
-                    '%s: No supported GUID was given. [%s]',
-                    afterLast(__CLASS__, '\\'),
-                    arrayToString(
-                        [
-                            'guids' => !empty($providersId) ? $providersId : 'None',
-                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                        ]
-                    )
-                ), 400
-            );
+            $message = sprintf('%s: No valid/supported External ids.', afterLast(__CLASS__, '\\'));
+
+            if (empty($providersId)) {
+                $message .= ' Most likely unmatched movie/episode or show.';
+            }
+
+            $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
+
+            throw new HttpException($message, 400);
         }
 
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
             $this->cacheData[$guid] = ag($json, 'Item.ItemId');
         }
 
-        if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
-                    $request->getQueryParams(),
-                    'debug'
-                ))) {
+        $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
+
+        if (false === $isTainted && $savePayload) {
             saveWebhookPayload($this->name . '.' . $event, $request, [
                 'entity' => $entity->getAll(),
                 'payload' => $json,
@@ -362,99 +367,6 @@ class JellyfinServer implements ServerInterface
         }
 
         return $entity;
-    }
-
-    protected function getEpisodeParent(mixed $id, string|null $series): array
-    {
-        if (null !== $series && array_key_exists($series, $this->cacheShow)) {
-            return $this->cacheShow[$series];
-        }
-
-        try {
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath(
-                    sprintf('/Users/%s/items/' . $id, $this->user)
-                ),
-                $this->getHeaders()
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                return [];
-            }
-
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-
-            if (null === ($type = ag($json, 'Type'))) {
-                return [];
-            }
-
-            if (StateInterface::TYPE_EPISODE !== strtolower($type)) {
-                return [];
-            }
-
-            if (null === ($seriesId = ag($json, 'SeriesId'))) {
-                return [];
-            }
-
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath(
-                    sprintf('/Users/%s/items/' . $seriesId, $this->user)
-                )->withQuery(http_build_query(['Fields' => 'ProviderIds'])),
-                $this->getHeaders()
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                return [];
-            }
-
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-
-            $series = $json['Name'] ?? $json['OriginalTitle'] ?? $json['Id'] ?? random_int(1, PHP_INT_MAX);
-
-            $providersId = (array)ag($json, 'ProviderIds', []);
-
-            if (!$this->hasSupportedIds($providersId)) {
-                $this->cacheShow[$series] = [];
-                return $this->cacheShow[$series];
-            }
-
-            $guids = [];
-
-            foreach (Guid::fromArray($this->getGuids($providersId))->getPointers() as $guid) {
-                [$type, $id] = explode('://', $guid);
-                $guids[$type] = $id;
-            }
-
-            $this->cacheShow[$series] = $guids;
-
-            return $this->cacheShow[$series];
-        } catch (ExceptionInterface $e) {
-            $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error(
-                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            );
-            return [];
-        } catch (Exception $e) {
-            $this->logger->error(
-                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            );
-            return [];
-        }
     }
 
     protected function getHeaders(): array
@@ -1682,5 +1594,98 @@ class JellyfinServer implements ServerInterface
         }
 
         return $entity;
+    }
+
+    private function getEpisodeParent(mixed $id, string|null $series): array
+    {
+        if (null !== $series && array_key_exists($series, $this->cacheShow)) {
+            return $this->cacheShow[$series];
+        }
+
+        try {
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath(
+                    sprintf('/Users/%s/items/' . $id, $this->user)
+                ),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            if (null === ($type = ag($json, 'Type'))) {
+                return [];
+            }
+
+            if (StateInterface::TYPE_EPISODE !== strtolower($type)) {
+                return [];
+            }
+
+            if (null === ($seriesId = ag($json, 'SeriesId'))) {
+                return [];
+            }
+
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath(
+                    sprintf('/Users/%s/items/' . $seriesId, $this->user)
+                )->withQuery(http_build_query(['Fields' => 'ProviderIds'])),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            $series = $json['Name'] ?? $json['OriginalTitle'] ?? $json['Id'] ?? random_int(1, PHP_INT_MAX);
+
+            $providersId = (array)ag($json, 'ProviderIds', []);
+
+            if (!$this->hasSupportedIds($providersId)) {
+                $this->cacheShow[$series] = [];
+                return $this->cacheShow[$series];
+            }
+
+            $guids = [];
+
+            foreach (Guid::fromArray($this->getGuids($providersId))->getPointers() as $guid) {
+                [$type, $id] = explode('://', $guid);
+                $guids[$type] = $id;
+            }
+
+            $this->cacheShow[$series] = $guids;
+
+            return $this->cacheShow[$series];
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        } catch (Throwable $e) {
+            $this->logger->error(
+                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        }
     }
 }

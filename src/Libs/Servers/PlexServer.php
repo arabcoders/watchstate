@@ -16,7 +16,6 @@ use App\Libs\Mappers\ImportInterface;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
-use Exception;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -263,7 +262,7 @@ class PlexServer implements ServerInterface
         try {
             $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
-            if (false === Config::get('webhook.debug', false) && !str_starts_with($userAgent, 'PlexMediaServer/')) {
+            if (false === str_starts_with($userAgent, 'PlexMediaServer/')) {
                 return $request;
             }
 
@@ -272,6 +271,8 @@ class PlexServer implements ServerInterface
             if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
                 return $request;
             }
+
+            $request = $request->withParsedBody($json);
 
             $attributes = [
                 'SERVER_ID' => ag($json, 'Server.uuid', ''),
@@ -298,9 +299,7 @@ class PlexServer implements ServerInterface
 
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
-        $payload = ag($request->getParsedBody() ?? [], 'payload', null);
-
-        if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
+        if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 
@@ -316,48 +315,21 @@ class PlexServer implements ServerInterface
             throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
-        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
-
-        $ignoreIds = null;
-
-        if (null !== ($this->options['ignore'] ?? null)) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$this->options['ignore']));
+        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
         if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
             throw new HttpException(
                 sprintf(
-                    '%s: Library id \'%s\' is ignored.',
+                    '%s: Library id \'%s\' is ignored by user server config.',
                     afterLast(__CLASS__, '\\'),
                     ag($item, 'librarySectionID', '???')
                 ), 200
             );
         }
 
-        $meta = match ($type) {
-            StateInterface::TYPE_MOVIE => [
-                'via' => $this->name,
-                'title' => ag($item, 'title', ag($item, 'originalTitle', '??')),
-                'year' => ag($item, 'year', 0000),
-                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
-                'webhook' => [
-                    'event' => $event,
-                ],
-            ],
-            StateInterface::TYPE_EPISODE => [
-                'via' => $this->name,
-                'series' => ag($item, 'grandparentTitle', '??'),
-                'year' => ag($item, 'year', 0000),
-                'season' => ag($item, 'parentIndex', 0),
-                'episode' => ag($item, 'index', 0),
-                'title' => ag($item, 'title', ag($item, 'originalTitle', '??')),
-                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
-                'webhook' => [
-                    'event' => $event,
-                ],
-            ],
-            default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
-        };
+        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
 
         if (null === ag($item, 'Guid', null)) {
             $item['Guid'] = [['id' => ag($item, 'guid')]];
@@ -365,44 +337,61 @@ class PlexServer implements ServerInterface
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $parentId = ag($item, 'grandparentRatingKey', fn() => ag($item, 'parentRatingKey'));
-            $meta['parent'] = null !== $parentId ? $this->getEpisodeParent($parentId) : [];
-        }
-
         $row = [
             'type' => $type,
             'updated' => time(),
             'watched' => (int)(bool)ag($item, 'viewCount', 0),
-            'meta' => $meta,
-            ...$this->getGuids(ag($item, 'Guid', []), isParent: false)
+            'via' => $this->name,
+            'title' => '??',
+            'year' => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
+            'season' => null,
+            'episode' => null,
+            'parent' => [],
+            'guids' => $this->getGuids(ag($item, 'Guid', []), isParent: false),
+            'extra' => [
+                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
+                'webhook' => [
+                    'event' => $event,
+                ],
+            ],
         ];
+
+        if (StateInterface::TYPE_MOVIE === $type) {
+            $row['title'] = ag($item, ['title', 'originalTitle'], '??');
+        } elseif (StateInterface::TYPE_EPISODE === $type) {
+            $row['title'] = ag($item, 'grandparentTitle', '??');
+            $row['season'] = ag($item, 'parentIndex', 0);
+            $row['episode'] = ag($item, 'index', 0);
+            $row['extra']['title'] = ag($item, ['title', 'originalTitle'], '??');
+
+            if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey'], null))) {
+                $row['parent'] = $this->getEpisodeParent($parentId);
+            }
+        } else {
+            throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400);
+        }
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            throw new HttpException(
-                sprintf(
-                    '%s: No supported GUID was given. [%s]',
-                    afterLast(__CLASS__, '\\'),
-                    arrayToString(
-                        [
-                            'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None',
-                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                        ]
-                    )
-                ), 400
-            );
+            $message = sprintf('%s: No valid/supported External ids.', afterLast(__CLASS__, '\\'));
+
+            if (empty($item['Guid'])) {
+                $message .= ' Most likely unmatched movie/episode or show.';
+            }
+
+            $message .= sprintf(' [%s].', arrayToString(['guids' => ag($item, 'Guid', 'None')]));
+
+            throw new HttpException($message, 400);
         }
 
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
             $this->cacheData[$guid] = ag($item, 'guid');
         }
 
-        if (false !== $isTainted && (true === Config::get('webhook.debug') || null !== ag(
-                    $request->getQueryParams(),
-                    'debug'
-                ))) {
+        $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
+
+        if (false !== $isTainted && $savePayload) {
             saveWebhookPayload($this->name . '.' . $event, $request, [
                 'entity' => $entity->getAll(),
                 'payload' => $json,
@@ -410,83 +399,6 @@ class PlexServer implements ServerInterface
         }
 
         return $entity;
-    }
-
-    protected function getEpisodeParent(int|string $id): array
-    {
-        if (array_key_exists($id, $this->cacheShow)) {
-            return $this->cacheShow[$id];
-        }
-
-        try {
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath('/library/metadata/' . $id),
-                $this->getHeaders()
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                return [];
-            }
-
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-
-            $json = ag($json, 'MediaContainer.Metadata')[0] ?? [];
-
-            if (null === ($type = ag($json, 'type'))) {
-                return [];
-            }
-
-            if ('show' !== strtolower($type)) {
-                return [];
-            }
-
-            if (null === ($json['Guid'] ?? null)) {
-                $json['Guid'] = [['id' => $json['guid']]];
-            } else {
-                $json['Guid'][] = ['id' => $json['guid']];
-            }
-
-            if (!$this->hasSupportedGuids($json['Guid'], true)) {
-                $this->cacheShow[$id] = [];
-                return $this->cacheShow[$id];
-            }
-
-            $guids = [];
-
-            foreach (Guid::fromArray($this->getGuids($json['Guid'], isParent: true))->getPointers() as $guid) {
-                [$type, $id] = explode('://', $guid);
-                $guids[$type] = $id;
-            }
-
-            $this->cacheShow[$id] = $guids;
-
-            return $this->cacheShow[$id];
-        } catch (ExceptionInterface $e) {
-            $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error(
-                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            );
-            return [];
-        } catch (Exception $e) {
-            $this->logger->error(
-                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            );
-            return [];
-        }
     }
 
     private function getHeaders(): array
@@ -1896,5 +1808,78 @@ class PlexServer implements ServerInterface
         }
 
         return $entity;
+    }
+
+    private function getEpisodeParent(int|string $id): array
+    {
+        if (array_key_exists($id, $this->cacheShow)) {
+            return $this->cacheShow[$id];
+        }
+
+        try {
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath('/library/metadata/' . $id),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            $json = ag($json, 'MediaContainer.Metadata')[0] ?? [];
+
+            if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
+                return [];
+            }
+
+            if (null === ($json['Guid'] ?? null)) {
+                $json['Guid'] = [['id' => $json['guid']]];
+            } else {
+                $json['Guid'][] = ['id' => $json['guid']];
+            }
+
+            if (!$this->hasSupportedGuids($json['Guid'], true)) {
+                $this->cacheShow[$id] = [];
+                return $this->cacheShow[$id];
+            }
+
+            $guids = [];
+
+            foreach (Guid::fromArray($this->getGuids($json['Guid'], isParent: true))->getPointers() as $guid) {
+                [$type, $id] = explode('://', $guid);
+                $guids[$type] = $id;
+            }
+
+            $this->cacheShow[$id] = $guids;
+
+            return $this->cacheShow[$id];
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        } catch (Throwable $e) {
+            $this->logger->error(
+                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        }
     }
 }

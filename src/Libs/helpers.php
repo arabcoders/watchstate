@@ -68,10 +68,25 @@ if (!function_exists('makeDate')) {
 }
 
 if (!function_exists('ag')) {
-    function ag(array $array, string|null $path, mixed $default = null, string $separator = '.'): mixed
+    function ag(array|object $array, string|array|null $path, mixed $default = null, string $separator = '.'): mixed
     {
-        if (null === $path) {
+        if (empty($path)) {
             return $array;
+        }
+
+        if (!is_array($array)) {
+            $array = get_object_vars($array);
+        }
+
+        if (is_array($path)) {
+            foreach ($path as $key) {
+                $val = ag($array, $key, '_not_set');
+                if ('_not_set' === $val) {
+                    continue;
+                }
+                return $val;
+            }
+            return getValue($default);
         }
 
         if (array_key_exists($path, $array)) {

@@ -7,10 +7,14 @@ namespace App\Libs\Servers;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Guid;
 use App\Libs\HttpException;
 use DateTimeInterface;
+use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Throwable;
 
 class EmbyServer extends JellyfinServer
@@ -51,30 +55,39 @@ class EmbyServer extends JellyfinServer
 
     public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
     {
-        $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+        try {
+            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
-        if (false === Config::get('webhook.debug', false) && !str_starts_with($userAgent, 'Emby Server/')) {
-            return $request;
-        }
+            if (false === str_starts_with($userAgent, 'Emby Server/')) {
+                return $request;
+            }
 
-        $payload = ag($request->getParsedBody() ?? [], 'data', null);
+            $payload = ag($request->getParsedBody() ?? [], 'data', null);
 
-        if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
-            return $request;
-        }
+            if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
+                return $request;
+            }
 
-        $attributes = [
-            'SERVER_ID' => ag($json, 'Server.Id', ''),
-            'SERVER_NAME' => ag($json, 'Server.Name', ''),
-            'SERVER_VERSION' => afterLast($userAgent, '/'),
-            'USER_ID' => ag($json, 'User.Id', ''),
-            'USER_NAME' => ag($json, 'User.Name', ''),
-            'WH_EVENT' => ag($json, 'Event', 'not_set'),
-            'WH_TYPE' => ag($json, 'Item.Type', 'not_set'),
-        ];
+            $request = $request->withParsedBody($json);
 
-        foreach ($attributes as $key => $val) {
-            $request = $request->withAttribute($key, $val);
+            $attributes = [
+                'SERVER_ID' => ag($json, 'Server.Id', ''),
+                'SERVER_NAME' => ag($json, 'Server.Name', ''),
+                'SERVER_VERSION' => afterLast($userAgent, '/'),
+                'USER_ID' => ag($json, 'User.Id', ''),
+                'USER_NAME' => ag($json, 'User.Name', ''),
+                'WH_EVENT' => ag($json, 'Event', 'not_set'),
+                'WH_TYPE' => ag($json, 'Item.Type', 'not_set'),
+            ];
+
+            foreach ($attributes as $key => $val) {
+                $request = $request->withAttribute($key, $val);
+            }
+        } catch (Throwable $e) {
+            Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
 
         return $request;
@@ -82,9 +95,7 @@ class EmbyServer extends JellyfinServer
 
     public function parseWebhook(ServerRequestInterface $request): StateInterface
     {
-        $payload = ag($request->getParsedBody() ?? [], 'data', null);
-
-        if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
+        if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
         }
 
@@ -101,47 +112,16 @@ class EmbyServer extends JellyfinServer
             throw new HttpException(sprintf('%s: Not allowed event [%s]', afterLast(__CLASS__, '\\'), $event), 200);
         }
 
-        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
+        $event = strtolower($event);
 
-        $meta = match ($type) {
-            StateInterface::TYPE_MOVIE => [
-                'via' => $this->name,
-                'title' => ag($json, 'Item.Name', ag($json, 'Item.OriginalTitle', '??')),
-                'year' => ag($json, 'Item.ProductionYear', 0000),
-                'date' => makeDate(
-                    ag(
-                        $json,
-                        'Item.PremiereDate',
-                        ag($json, 'Item.ProductionYear', ag($json, 'Item.DateCreated', 'now'))
-                    )
-                )->format('Y-m-d'),
-                'webhook' => [
-                    'event' => $event,
-                ],
-            ],
-            StateInterface::TYPE_EPISODE => [
-                'via' => $this->name,
-                'series' => ag($json, 'Item.SeriesName', '??'),
-                'year' => ag($json, 'Item.ProductionYear', 0000),
-                'season' => ag($json, 'Item.ParentIndexNumber', 0),
-                'episode' => ag($json, 'Item.IndexNumber', 0),
-                'title' => ag($json, 'Item.Name', ag($json, 'Item.OriginalTitle', '??')),
-                'date' => makeDate(ag($json, 'Item.PremiereDate', ag($json, 'Item.ProductionYear', 'now')))->format(
-                    'Y-m-d'
-                ),
-                'webhook' => [
-                    'event' => $event,
-                ],
-            ],
-            default => throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400),
-        };
+        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
 
         if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
             $isWatched = 1;
         } elseif ('item.markunplayed' === $event) {
             $isWatched = 0;
         } else {
-            $isWatched = (int)(bool)ag($json, 'Item.Played', ag($json, 'Item.PlayedToCompletion', 0));
+            $isWatched = (int)(bool)ag($json, ['Item.Played', 'Item.PlayedToCompletion'], 0);
         }
 
         $providersId = ag($json, 'Item.ProviderIds', []);
@@ -150,35 +130,59 @@ class EmbyServer extends JellyfinServer
             'type' => $type,
             'updated' => time(),
             'watched' => $isWatched,
-            'meta' => $meta,
-            ...$this->getGuids($providersId)
+            'via' => $this->name,
+            'title' => '??',
+            'year' => ag($json, 'Item.ProductionYear', 0000),
+            'season' => null,
+            'episode' => null,
+            'parent' => [],
+            'guids' => $this->getGuids($providersId),
+            'extra' => [
+                'date' => makeDate(
+                    ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
+                )->format('Y-m-d'),
+                'webhook' => [
+                    'event' => $event,
+                ],
+            ],
         ];
+
+        if (StateInterface::TYPE_MOVIE === $type) {
+            $row['title'] = ag($json, ['Item.Name', 'Item.OriginalTitle'], '??');
+        } elseif (StateInterface::TYPE_EPISODE === $type) {
+            $row['title'] = ag($json, 'Item.SeriesName', '??');
+            $row['season'] = ag($json, 'Item.ParentIndexNumber', 0);
+            $row['episode'] = ag($json, 'Item.IndexNumber', 0);
+            $row['extra']['title'] = ag($json, ['Item.Name', 'Item.OriginalTitle'], '??');
+
+            if (null !== ag($json, 'Item.SeriesId')) {
+                $row['parent'] = $this->getEpisodeParent(ag($json, 'Item.SeriesId'));
+            }
+        } else {
+            throw new HttpException(sprintf('%s: Invalid content type.', afterLast(__CLASS__, '\\')), 400);
+        }
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
 
-        if (!$entity->hasGuids()) {
-            throw new HttpException(
-                sprintf(
-                    '%s: No supported GUID was given. [%s]',
-                    afterLast(__CLASS__, '\\'),
-                    arrayToString(
-                        [
-                            'guids' => !empty($providersId) ? $providersId : 'None',
-                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                        ]
-                    )
-                ), 400
-            );
+        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+            $message = sprintf('%s: No valid/supported External ids.', afterLast(__CLASS__, '\\'));
+
+            if (empty($providersId)) {
+                $message .= ' Most likely unmatched movie/episode or show.';
+            }
+
+            $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
+
+            throw new HttpException($message, 400);
         }
 
-        foreach ($entity->getPointers() as $guid) {
-            $this->cacheData[$guid] = ag($json, 'item.Id');
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+            $this->cacheData[$guid] = ag($json, 'Item.Id');
         }
 
-        if (false === $isTainted && (true === Config::get('webhook.debug') || null !== ag(
-                    $request->getQueryParams(),
-                    'debug'
-                ))) {
+        $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
+
+        if (false === $isTainted && $savePayload) {
             saveWebhookPayload($this->name . '.' . $event, $request, [
                 'entity' => $entity->getAll(),
                 'payload' => $json,
@@ -188,6 +192,12 @@ class EmbyServer extends JellyfinServer
         return $entity;
     }
 
+    /**
+     * @param array $entities
+     * @param DateTimeInterface|null $after
+     * @return array
+     * @TODO need to be updated to support cached items.
+     */
     public function push(array $entities, DateTimeInterface|null $after = null): array
     {
         $requests = [];
@@ -214,14 +224,12 @@ class EmbyServer extends JellyfinServer
             try {
                 $guids = [];
 
-                foreach ($entity->getPointers() as $pointer) {
-                    if (str_starts_with($pointer, 'guid_plex://')) {
+                foreach ($entity->guids ?? [] as $key => $val) {
+                    if ('guid_plex' === $key) {
                         continue;
                     }
-                    if (false === preg_match('#guid_(.+?)://\w+?/(.+)#s', $pointer, $matches)) {
-                        continue;
-                    }
-                    $guids[] = sprintf('%s.%s', $matches[1], $matches[2]);
+
+                    $guids[] = sprintf('%s.%s', afterLast($key, 'guid_'), $val);
                 }
 
                 if (empty($guids)) {
@@ -292,7 +300,6 @@ class EmbyServer extends JellyfinServer
 
                 $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
 
-
                 if ($state->watched === $isWatched) {
                     $this->logger->debug(sprintf('Ignoring %s. State is unchanged.', $iName));
                     continue;
@@ -341,4 +348,72 @@ class EmbyServer extends JellyfinServer
         return $stateRequests;
     }
 
+    private function getEpisodeParent(int|string $id): array
+    {
+        if (array_key_exists($id, $this->cacheShow)) {
+            return $this->cacheShow[$id];
+        }
+
+        try {
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath(
+                    sprintf('/Users/%s/items/' . $id, $this->user)
+                ),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+            if (null === ($itemType = ag($json, 'Type')) || 'Series' !== $itemType) {
+                return [];
+            }
+
+            $providersId = (array)ag($json, 'ProviderIds', []);
+
+            if (!$this->hasSupportedIds($providersId)) {
+                $this->cacheShow[$id] = [];
+                return $this->cacheShow[$id];
+            }
+
+            $guids = [];
+
+            foreach (Guid::fromArray($this->getGuids($providersId))->getPointers() as $guid) {
+                [$type, $guid] = explode('://', $guid);
+                $guids[$type] = $guid;
+            }
+
+            $this->cacheShow[$id] = $guids;
+
+            return $this->cacheShow[$id];
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('Unable to decode %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        } catch (Throwable $e) {
+            $this->logger->error(
+                sprintf('ERROR: %s response. Reason: \'%s\'.', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+            return [];
+        }
+    }
 }
