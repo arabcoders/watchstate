@@ -43,7 +43,7 @@ return (function (): array {
         ],
 
         CacheInterface::class => [
-            'class' => fn() => new Psr16Cache(new FilesystemAdapter(directory: Config::get('cache.config.directory')))
+            'class' => fn() => new Psr16Cache(new FilesystemAdapter(directory: Config::get('tmpDir') . '/cache'))
         ],
 
         UriInterface::class => [
