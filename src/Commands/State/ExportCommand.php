@@ -121,7 +121,7 @@ class ExportCommand extends Command
             }
 
             if (true !== ag($server, 'export.enabled')) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by \'%s\'.', $name, $config));
+                $this->logger->info(sprintf('Ignoring \'%s\' as requested by user config option.', $name));
                 continue;
             }
 

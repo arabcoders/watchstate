@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Export;
 
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\Mappers\ExportInterface;
@@ -115,7 +116,9 @@ final class ExportMapper implements ExportInterface
             return null;
         }
 
-        if (null !== ($lazyEntity = $this->storage->matchAnyId($ids))) {
+        $entity = Container::get(StateInterface::class)::fromArray($ids);
+
+        if (null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[$lazyEntity->id] = $lazyEntity;
             $this->addGuids($this->objects[$lazyEntity->id], $lazyEntity->id);
             return $this->objects[$lazyEntity->id];

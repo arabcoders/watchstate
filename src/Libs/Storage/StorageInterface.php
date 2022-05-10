@@ -54,24 +54,6 @@ interface StorageInterface
     public function update(StateInterface $entity): StateInterface;
 
     /**
-     * Match Relative Guid.
-     *
-     * @param StateInterface $entity
-     * @return StateInterface|null
-     */
-    public function matchRelativeGuid(StateInterface $entity): StateInterface|null;
-
-    /**
-     * Get Entity Using array of ids.
-     *
-     * @param array $ids
-     * @param StateInterface|null $class Create object based on given class, if null use default class.
-     *
-     * @return StateInterface|null
-     */
-    public function matchAnyId(array $ids, StateInterface|null $class = null): StateInterface|null;
-
-    /**
      * Remove Entity.
      *
      * @param StateInterface $entity
@@ -121,6 +103,7 @@ interface StorageInterface
      * @param array $opts
      *
      * @return mixed can return migration file name in supported cases.
+     * @throws
      */
     public function makeMigration(string $name, array $opts = []): mixed;
 

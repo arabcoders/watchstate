@@ -72,7 +72,11 @@ final class StateEntity implements StateInterface
              * We ignore meta on purpose as it changes frequently.
              * from one server to another.
              */
-            if ('meta' === $key) {
+            if ('meta' === $key && !$this->isEpisode()) {
+                continue;
+            }
+
+            if ('meta' === $key && ($value['parent'] ?? []) === ($this->data['parent'] ?? [])) {
                 continue;
             }
 
@@ -80,11 +84,50 @@ final class StateEntity implements StateInterface
                 continue;
             }
 
-            $changed['new'][$key] = $value ?? 'None';
-            $changed['old'][$key] = $this->data[$key] ?? 'None';
+            if ('meta' === $key) {
+                $getChanged = array_diff_assoc_recursive($this->data['meta'] ?? [], $this->meta);
+
+                foreach ($getChanged as $metaKey => $_) {
+                    $changed['new'][$key][$metaKey] = $this->meta[$metaKey] ?? 'None';
+                    $changed['old'][$key][$metaKey] = $this->data[$key][$metaKey] ?? 'None';
+                }
+            } else {
+                $changed['new'][$key] = $value ?? 'None';
+                $changed['old'][$key] = $this->data[$key] ?? 'None';
+            }
+        }
+
+        if (!empty($changed) && !array_key_exists('meta', $changed['new'] ?? $changed['old'] ?? [])) {
+            $getChanged = array_diff_assoc_recursive($this->data['meta'] ?? [], $this->meta);
+
+            foreach ($getChanged as $key => $_) {
+                $changed['new']['meta'][$key] = $this->meta[$key] ?? 'None';
+                $changed['old']['meta'][$key] = $this->data['meta'][$key] ?? 'None';
+            }
         }
 
         return $changed;
+    }
+
+    public function getName(): string
+    {
+        if ($this->isMovie()) {
+            return sprintf(
+                '%s (%d) - @%s',
+                $this->meta['title'] ?? $this->data['meta']['title'] ?? '??',
+                $this->meta['year'] ?? $this->data['meta']['year'] ?? '??',
+                $this->meta['via'] ?? $this->data['meta']['via'] ?? '??',
+            );
+        }
+
+        return sprintf(
+            '%s (%d) - %dx%d - @%s',
+            $this->meta['series'] ?? $this->data['meta']['series'] ?? '??',
+            $this->meta['year'] ?? $this->data['meta']['year'] ?? '??',
+            $this->meta['season'] ?? $this->data['meta']['season'] ?? 00,
+            $this->meta['episode'] ?? $this->data['meta']['episode'] ?? 00,
+            $this->meta['via'] ?? $this->data['meta']['via'] ?? '??',
+        );
     }
 
     public function getAll(): array
@@ -195,6 +238,11 @@ final class StateEntity implements StateInterface
     {
         $this->data = $this->getAll();
         return $this;
+    }
+
+    public function getOriginalData(): array
+    {
+        return $this->data;
     }
 
     public function getPointers(): array
