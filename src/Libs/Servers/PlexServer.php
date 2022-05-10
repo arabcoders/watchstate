@@ -168,7 +168,11 @@ class PlexServer implements ServerInterface
             return null;
         }
 
-        $json = json_decode($response->getContent(false), true, flags: JSON_THROW_ON_ERROR);
+        $json = json_decode(
+            json:        $response->getContent(false),
+            associative: true,
+            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+        );
 
         $this->uuid = ag($json, 'MediaContainer.machineIdentifier', null);
 
@@ -200,7 +204,11 @@ class PlexServer implements ServerInterface
             );
         }
 
-        $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        $json = json_decode(
+            json:        $response->getContent(),
+            associative: true,
+            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+        );
 
         $list = [];
 
@@ -1810,7 +1818,12 @@ class PlexServer implements ServerInterface
                 return null;
             }
 
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+            $json = json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
+
             $tempToken = ag($json, 'authToken', null);
 
             $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
@@ -1839,7 +1852,11 @@ class PlexServer implements ServerInterface
                 ],
             ]);
 
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+            $json = json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
 
             foreach ($json ?? [] as $server) {
                 if (ag($server, 'clientIdentifier') !== $uuid) {

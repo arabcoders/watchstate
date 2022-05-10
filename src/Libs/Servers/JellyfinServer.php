@@ -160,7 +160,11 @@ class JellyfinServer implements ServerInterface
             return null;
         }
 
-        $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        $json = json_decode(
+            json:        $response->getContent(),
+            associative: true,
+            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+        );
 
         $this->uuid = ag($json, 'Id', null);
 
@@ -185,7 +189,11 @@ class JellyfinServer implements ServerInterface
             );
         }
 
-        $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        $json = json_decode(
+            json:        $response->getContent(),
+            associative: true,
+            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+        );
 
         $list = [];
 
@@ -676,7 +684,7 @@ class JellyfinServer implements ServerInterface
                 $json = json_decode(
                     json:        $response->getContent(),
                     associative: true,
-                    flags:       JSON_THROW_ON_ERROR
+                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
 
                 $json = ag($json, 'Items', [])[0] ?? [];
@@ -1617,7 +1625,11 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
 
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+            $json = json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
 
             if (null === ($type = ag($json, 'Type'))) {
                 return [];
