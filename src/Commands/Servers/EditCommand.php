@@ -91,12 +91,19 @@ final class EditCommand extends Command
             }
 
             if (null !== $value) {
-                if ($value === ag($server, $key)) {
+                if (true === ctype_digit($value)) {
+                    $value = (int)$value;
+                } elseif ('true' === strtolower((string)$value) || 'false' === strtolower((string)$value)) {
+                    $value = 'true' === $value;
+                } else {
+                    $value = (string)$value;
+                }
+
+                if ($value === ag($server, $key, null)) {
                     $output->writeln('<comment>Not updating. Value already matches.</comment>');
                     return self::SUCCESS;
                 }
 
-                $value = ctype_digit($value) ? (int)$value : (string)$value;
                 $server = ag_set($server, $key, $value);
 
                 $output->writeln(
@@ -104,7 +111,7 @@ final class EditCommand extends Command
                         '<info>Updated server:\'%s\' key \'%s\' with value of \'%s\'.</info>',
                         $name,
                         $key,
-                        $value
+                        is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
                     )
                 );
             }
