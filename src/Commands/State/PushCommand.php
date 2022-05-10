@@ -16,6 +16,7 @@ use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -99,45 +100,28 @@ class PushCommand extends Command
         }
 
         if ($input->getOption('queue-show')) {
-            $table = new Table($output);
             $rows = [];
-            $table->setHeaders(
-                [
-                    'ID',
-                    'Type',
-                    'Date',
-                    'Via',
-                    'Main Title',
-                    'Year | Episode',
-                    'Watched'
-                ]
-            );
+
+            $x = 0;
+            $count = count($entities);
 
             foreach ($entities as $entity) {
-                $number = '( ' . ag($entity->meta, 'year', 0) . ' )';
-
-                if (StateInterface::TYPE_EPISODE === $entity->type) {
-                    $number .= sprintf(
-                        ' - S%sE%s',
-                        str_pad((string)($entity->meta['season'] ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($entity->meta['episode'] ?? 0), 2, '0', STR_PAD_LEFT),
-                    );
-                }
+                $x++;
 
                 $rows[] = [
-                    $entity->id,
-                    $entity->type,
+                    $entity->getName(),
+                    $entity->isWatched() ? 'Yes' : 'No',
+                    $entity->via ?? '??',
                     makeDate($entity->updated),
-                    ag($entity->meta, 'via', '??'),
-                    ag($entity->meta, 'series', ag($entity->meta, 'title', '??')),
-                    $number,
-                    $entity->watched ? 'Yes' : 'No',
                 ];
+
+                if ($x < $count) {
+                    $rows[] = new TableSeparator();
+                }
             }
 
-            $table->setRows($rows);
-
-            $table->render();
+            (new Table($output))->setHeaders(['Media Title', 'Played', 'Via', 'Record Date']
+            )->setStyle('box')->setRows($rows)->render();
 
             return self::SUCCESS;
         }
@@ -148,7 +132,7 @@ class PushCommand extends Command
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if (true !== ag($server, 'webhook.push')) {
+            if (true !== (bool)ag($server, 'webhook.push')) {
                 $output->writeln(
                     sprintf('<error>Ignoring \'%s\' as requested by user config option.</error>', $serverName),
                     OutputInterface::VERBOSITY_VERBOSE
@@ -231,11 +215,12 @@ class PushCommand extends Command
                     if (200 !== $response->getStatusCode()) {
                         throw new ServerException($response);
                     }
-                    $this->logger->info(
+                    $this->logger->notice(
                         sprintf(
-                            'Processed: State (%s) - %s',
-                            ag($requestData, 'state', '??'),
+                            '%s Processed \'%s\'. Set remote state to \'%s\'.',
+                            ag($requestData, 'server', '??'),
                             ag($requestData, 'itemName', '??'),
+                            ag($requestData, 'state', '??'),
                         )
                     );
                 } catch (ExceptionInterface $e) {
