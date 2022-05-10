@@ -97,7 +97,7 @@ class MemoryMapperTest extends TestCase
         // -- assert 0 as we have committed the changes to the db, and the state should have been reset.
         $this->assertCount(0, $this->mapper);
 
-        $testEpisode->guid_tvrage = StateInterface::TYPE_EPISODE . '/2';
+        $testEpisode->guids['guid_tvrage'] = '2';
 
         $this->mapper->add('test', 'test1', $testEpisode);
 
@@ -116,8 +116,19 @@ class MemoryMapperTest extends TestCase
 
     public function test_get_conditions(): void
     {
-        $testMovie = new StateEntity($this->testMovie);
-        $testEpisode = new StateEntity($this->testEpisode);
+        $movie = $this->testMovie;
+        $episode = $this->testEpisode;
+
+        ksort($movie['parent']);
+        ksort($movie['guids']);
+        ksort($movie['extra']);
+
+        ksort($episode['parent']);
+        ksort($episode['guids']);
+        ksort($episode['extra']);
+
+        $testMovie = new StateEntity($movie);
+        $testEpisode = new StateEntity($episode);
 
         // -- expect null as we haven't added anything to db yet.
         $this->assertNull($this->mapper->get($testEpisode));
@@ -168,8 +179,8 @@ class MemoryMapperTest extends TestCase
             $this->mapper->commit()
         );
 
-        $testMovie->guid_anidb = StateInterface::TYPE_MOVIE . '/1';
-        $testEpisode->guid_anidb = StateInterface::TYPE_EPISODE . '/1';
+        $testMovie->guids['guid_anidb'] = '1';
+        $testEpisode->guids['guid_anidb'] = '1';
 
         $this->assertSame(
             [

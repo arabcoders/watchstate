@@ -6,11 +6,9 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
@@ -72,12 +70,6 @@ class ImportCommand extends Command
                 'Sync selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
-            ->addOption(
-                'import-unwatched',
-                null,
-                InputOption::VALUE_NONE,
-                '--DEPRECATED-- will be removed in v1.x. We import the item regardless of watched/unwatched state.'
-            )
             ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
             ->addOption(
                 'stats-filter',
@@ -86,11 +78,12 @@ class ImportCommand extends Command
                 'Filter final status output e.g. (servername.key)',
                 null
             )
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption(
-                'mapper-direct',
+                'deep-debug',
                 null,
                 InputOption::VALUE_NONE,
-                'Uses less memory. However, it\'s significantly slower then default mapper.'
+                'You should not use this flag unless told by the team.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
@@ -114,10 +107,6 @@ class ImportCommand extends Command
             $config = Config::get('path') . '/config/servers.yaml';
         }
 
-        if ($input->getOption('mapper-direct')) {
-            $this->mapper = Container::get(DirectMapper::class);
-        }
-
         $list = [];
         $serversFilter = (string)$input->getOption('servers-filter');
         $selected = explode(',', $serversFilter);
@@ -133,6 +122,22 @@ class ImportCommand extends Command
         if (null !== $logger) {
             $this->logger = $logger;
             $this->mapper->setLogger($logger);
+        }
+
+        $mapperOpts = [];
+
+        if ($input->getOption('dry-run')) {
+            $output->writeln('<info>Dry run mode. No changes will be committed to backend.</info>');
+
+            $mapperOpts[ImportInterface::DRY_RUN] = true;
+        }
+
+        if ($input->getOption('deep-debug')) {
+            $mapperOpts[ImportInterface::DEEP_DEBUG] = true;
+        }
+
+        if (!empty($mapperOpts)) {
+            $this->mapper->setUp($mapperOpts);
         }
 
         foreach (Config::get('servers', []) as $serverName => $server) {
@@ -183,7 +188,7 @@ class ImportCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        if (count($list) >= 1 && !$input->getOption('mapper-direct')) {
+        if (count($list) >= 1) {
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');

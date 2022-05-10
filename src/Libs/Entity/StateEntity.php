@@ -12,21 +12,21 @@ final class StateEntity implements StateInterface
     private array $data = [];
     private bool $tainted = false;
 
-    /**
-     * User Addressable Variables.
-     */
     public null|string|int $id = null;
     public string $type = '';
     public int $updated = 0;
     public int $watched = 0;
-    public array $meta = [];
-    public string|null $guid_plex = null;
-    public string|null $guid_imdb = null;
-    public string|null $guid_tvdb = null;
-    public string|null $guid_tmdb = null;
-    public string|null $guid_tvmaze = null;
-    public string|null $guid_tvrage = null;
-    public string|null $guid_anidb = null;
+
+    public string $via = '';
+    public string $title = '';
+
+    public int|null $year = null;
+    public int|null $season = null;
+    public int|null $episode = null;
+
+    public array $parent = [];
+    public array $guids = [];
+    public array $extra = [];
 
     public function __construct(array $data)
     {
@@ -46,8 +46,16 @@ final class StateEntity implements StateInterface
                 );
             }
 
-            if ('meta' === $key && is_string($val)) {
-                if (null === ($val = json_decode($val, true))) {
+            foreach (StateInterface::ENTITY_ARRAY_KEYS as $subKey) {
+                if ($subKey !== $key) {
+                    continue;
+                }
+
+                if (true === is_array($val)) {
+                    continue;
+                }
+
+                if (null === ($val = json_decode($val ?? '{}', true))) {
                     $val = [];
                 }
             }
@@ -63,20 +71,12 @@ final class StateEntity implements StateInterface
         return new self($data);
     }
 
-    public function diff(): array
+    public function diff(bool $all = false): array
     {
         $changed = [];
 
         foreach ($this->getAll() as $key => $value) {
-            /**
-             * We ignore meta on purpose as it changes frequently.
-             * from one server to another.
-             */
-            if ('meta' === $key && !$this->isEpisode()) {
-                continue;
-            }
-
-            if ('meta' === $key && ($value['parent'] ?? []) === ($this->data['parent'] ?? [])) {
+            if (false === $all && true === in_array($key, StateInterface::ENTITY_IGNORE_DIFF_CHANGES)) {
                 continue;
             }
 
@@ -84,25 +84,21 @@ final class StateEntity implements StateInterface
                 continue;
             }
 
-            if ('meta' === $key) {
-                $getChanged = array_diff_assoc_recursive($this->data['meta'] ?? [], $this->meta);
-
-                foreach ($getChanged as $metaKey => $_) {
-                    $changed['new'][$key][$metaKey] = $this->meta[$metaKey] ?? 'None';
-                    $changed['old'][$key][$metaKey] = $this->data[$key][$metaKey] ?? 'None';
+            if (true === in_array($key, StateInterface::ENTITY_ARRAY_KEYS)) {
+                $changes = array_diff_assoc_recursive($this->data[$key] ?? [], $value ?? []);
+                if (!empty($changes)) {
+                    foreach (array_keys($changes) as $subKey) {
+                        $changed[$key][$subKey] = [
+                            'old' => $this->data[$key][$subKey] ?? 'None',
+                            'new' => $value[$subKey] ?? 'None'
+                        ];
+                    }
                 }
             } else {
-                $changed['new'][$key] = $value ?? 'None';
-                $changed['old'][$key] = $this->data[$key] ?? 'None';
-            }
-        }
-
-        if (!empty($changed) && !array_key_exists('meta', $changed['new'] ?? $changed['old'] ?? [])) {
-            $getChanged = array_diff_assoc_recursive($this->data['meta'] ?? [], $this->meta);
-
-            foreach ($getChanged as $key => $_) {
-                $changed['new']['meta'][$key] = $this->meta[$key] ?? 'None';
-                $changed['old']['meta'][$key] = $this->data['meta'][$key] ?? 'None';
+                $changed[$key] = [
+                    'old' => $this->data[$key] ?? 'None',
+                    'new' => $value ?? 'None'
+                ];
             }
         }
 
@@ -112,21 +108,15 @@ final class StateEntity implements StateInterface
     public function getName(): string
     {
         if ($this->isMovie()) {
-            return sprintf(
-                '%s (%d) - @%s',
-                $this->meta['title'] ?? $this->data['meta']['title'] ?? '??',
-                $this->meta['year'] ?? $this->data['meta']['year'] ?? '??',
-                $this->meta['via'] ?? $this->data['meta']['via'] ?? '??',
-            );
+            return sprintf('%s (%d)', $this->title ?? '??', $this->year ?? 0000);
         }
 
         return sprintf(
-            '%s (%d) - %dx%d - @%s',
-            $this->meta['series'] ?? $this->data['meta']['series'] ?? '??',
-            $this->meta['year'] ?? $this->data['meta']['year'] ?? '??',
-            $this->meta['season'] ?? $this->data['meta']['season'] ?? 00,
-            $this->meta['episode'] ?? $this->data['meta']['episode'] ?? 00,
-            $this->meta['via'] ?? $this->data['meta']['via'] ?? '??',
+            '%s (%s) - %sx%s',
+            $this->title ?? '??',
+            $this->year ?? 0000,
+            str_pad((string)($this->season ?? 0), 2, '0', STR_PAD_LEFT),
+            str_pad((string)($this->episode ?? 0), 3, '0', STR_PAD_LEFT)
         );
     }
 
@@ -137,41 +127,40 @@ final class StateEntity implements StateInterface
             'type' => $this->type,
             'updated' => $this->updated,
             'watched' => $this->watched,
-            'meta' => $this->meta,
-            'guid_plex' => $this->guid_plex,
-            'guid_imdb' => $this->guid_imdb,
-            'guid_tvdb' => $this->guid_tvdb,
-            'guid_tmdb' => $this->guid_tmdb,
-            'guid_tvmaze' => $this->guid_tvmaze,
-            'guid_tvrage' => $this->guid_tvrage,
-            'guid_anidb' => $this->guid_anidb,
+            'via' => $this->via,
+            'title' => $this->title,
+            'year' => $this->year,
+            'season' => $this->season,
+            'episode' => $this->episode,
+            'parent' => $this->parent,
+            'guids' => $this->guids,
+            'extra' => $this->extra,
         ];
     }
 
     public function isChanged(): bool
     {
-        return count($this->diff()) >= 1;
+        return count($this->diff(all: false)) >= 1;
     }
 
     public function hasGuids(): bool
     {
-        foreach (array_keys(Guid::SUPPORTED) as $key) {
-            if (null !== $this->{$key}) {
-                return true;
-            }
-        }
+        return count($this->guids) >= 1;
+    }
 
-        return false;
+    public function getGuids(): array
+    {
+        return $this->guids;
     }
 
     public function hasParentGuid(): bool
     {
-        return count($this->getParentGuids()) >= 1;
+        return count($this->parent) >= 1;
     }
 
     public function getParentGuids(): array
     {
-        return (array)ag($this->meta, 'parent', []);
+        return $this->parent;
     }
 
     public function isMovie(): bool
@@ -184,29 +173,26 @@ final class StateEntity implements StateInterface
         return StateInterface::TYPE_EPISODE === $this->type;
     }
 
+    public function isWatched(): bool
+    {
+        return 1 === $this->watched;
+    }
+
     public function hasRelativeGuid(): bool
     {
-        $parents = ag($this->meta, 'parent', []);
-        $season = ag($this->meta, 'season', null);
-        $episode = ag($this->meta, 'episode', null);
-
-        return !(null === $season || null === $episode || 0 === $episode || empty($parents));
+        return $this->isEpisode() && !empty($this->parent) && null !== $this->season && null !== $this->episode;
     }
 
     public function getRelativeGuids(): array
     {
-        $parents = ag($this->meta, 'parent', []);
-        $season = ag($this->meta, 'season', null);
-        $episode = ag($this->meta, 'episode', null);
-
-        if (null === $season || null === $episode || 0 === $episode || empty($parents)) {
+        if (!$this->isEpisode()) {
             return [];
         }
 
         $list = [];
 
-        foreach ($parents as $key => $val) {
-            $list[$key] = $val . '/' . $season . '/' . $episode;
+        foreach ($this->parent as $key => $val) {
+            $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
         }
 
         return array_intersect_key($list, Guid::SUPPORTED);
@@ -214,20 +200,40 @@ final class StateEntity implements StateInterface
 
     public function getRelativePointers(): array
     {
-        return Guid::fromArray($this->getRelativeGuids())->getPointers();
+        if (!$this->isEpisode()) {
+            return [];
+        }
+
+        $list = Guid::fromArray($this->getRelativeGuids())->getPointers();
+
+        $rPointers = [];
+
+        foreach ($list as $val) {
+            $rPointers[] = 'r' . $val;
+        }
+
+        return $rPointers;
     }
 
     public function apply(StateInterface $entity, bool $guidOnly = false): self
     {
+        if (true === $guidOnly) {
+            if ($this->guids !== $entity->guids) {
+                $this->updateValue('guids', $entity);
+            }
+
+            if ($this->parent !== $entity->parent) {
+                $this->updateValue('parent', $entity);
+            }
+
+            return $this;
+        }
+
         if ($this->isEqual($entity)) {
             return $this;
         }
 
         foreach ($entity->getAll() as $key => $val) {
-            if (true === $guidOnly && !str_starts_with($key, 'guid_')) {
-                continue;
-            }
-
             $this->updateValue($key, $entity);
         }
 
@@ -245,9 +251,17 @@ final class StateEntity implements StateInterface
         return $this->data;
     }
 
-    public function getPointers(): array
+    public function getPointers(array|null $guids = null): array
     {
-        return Guid::fromArray(array_intersect_key((array)$this, Guid::SUPPORTED))->getPointers();
+        $list = array_intersect_key($this->guids, Guid::SUPPORTED);
+
+        if ($this->isEpisode()) {
+            foreach ($list as $key => $val) {
+                $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
+            }
+        }
+
+        return Guid::fromArray($list)->getPointers();
     }
 
     public function setIsTainted(bool $isTainted): StateInterface
@@ -275,7 +289,7 @@ final class StateEntity implements StateInterface
 
     private function isEqualValue(string $key, StateInterface $entity): bool
     {
-        if ($key === 'updated' || $key === 'watched') {
+        if ('updated' === $key || 'watched' === $key) {
             return !($entity->updated > $this->updated && $entity->watched !== $this->watched);
         }
 
@@ -288,7 +302,7 @@ final class StateEntity implements StateInterface
 
     private function updateValue(string $key, StateInterface $entity): void
     {
-        if ($key === 'updated' || $key === 'watched') {
+        if ('updated' === $key || 'watched' === $key) {
             if ($entity->updated > $this->updated && $entity->watched !== $this->watched) {
                 $this->updated = $entity->updated;
                 $this->watched = $entity->watched;
@@ -296,12 +310,14 @@ final class StateEntity implements StateInterface
             return;
         }
 
-        if (null !== ($entity->{$key} ?? null) && $this->{$key} !== $entity->{$key}) {
-            if ('meta' === $key) {
-                $this->{$key} = array_replace_recursive($this->{$key} ?? [], $entity->{$key} ?? []);
-            } else {
-                $this->{$key} = $entity->{$key};
-            }
+        if ('id' === $key) {
+            return;
+        }
+
+        if (true === in_array($key, StateInterface::ENTITY_ARRAY_KEYS)) {
+            $this->{$key} = array_replace_recursive($this->{$key} ?? [], $entity->{$key} ?? []);
+        } else {
+            $this->{$key} = $entity->{$key};
         }
     }
 }

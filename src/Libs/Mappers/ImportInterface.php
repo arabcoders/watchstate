@@ -12,6 +12,9 @@ use Psr\Log\LoggerInterface;
 
 interface ImportInterface extends Countable
 {
+    public const DEEP_DEBUG = 'deep-debug';
+    public const DRY_RUN = 'dry-run';
+
     /**
      * Initiate Mapper.
      *
@@ -117,4 +120,17 @@ interface ImportInterface extends Countable
      * @return self
      */
     public function SetStorage(StorageInterface $storage): self;
+
+    /**
+     * Are we in dry run mode?
+     *
+     * @return bool
+     */
+    public function inDryRunMode(): bool;
+
+    /**
+     * Are we in deep debug mode?
+     * @return bool
+     */
+    public function inDeepDebugMode(): bool;
 }

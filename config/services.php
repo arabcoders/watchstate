@@ -7,7 +7,6 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\ExportInterface;
-use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Storage\PDO\PDOAdapter;
@@ -82,16 +81,6 @@ return (function (): array {
         MemoryMapper::class => [
             'class' => function (LoggerInterface $logger, StorageInterface $storage): ImportInterface {
                 return (new MemoryMapper($logger, $storage))->setUp(Config::get('mapper.import.opts', []));
-            },
-            'args' => [
-                LoggerInterface::class,
-                StorageInterface::class,
-            ],
-        ],
-
-        DirectMapper::class => [
-            'class' => function (LoggerInterface $logger, StorageInterface $storage): ImportInterface {
-                return (new DirectMapper($logger, $storage))->setUp(Config::get('mapper.import.opts', []));
             },
             'args' => [
                 LoggerInterface::class,

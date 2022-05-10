@@ -39,13 +39,19 @@ final class ListCommand extends Command
                 'Limit results to this specified server. This filter is not reliable. and changes based on last server query.'
             )
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Display output as [json, yaml, table]', 'table')
-            ->addOption('series', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified series.')
-            ->addOption('movie', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified movie.')
-            ->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent GUIDs instead.')
+            ->addOption(
+                'type',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Limit results to this specified type can be [movie or episode].'
+            )
+            ->addOption('title', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified tv show.')
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number')
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number')
             ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'sort order by [id, updated]', 'updated')
+            ->addOption('asc', null, InputOption::VALUE_NONE, 'Sort records in ascending order.')
+            ->addOption('desc', null, InputOption::VALUE_NONE, 'Sort records in descending order. (Default)')
             ->setDescription('List Database entries.');
 
         foreach (array_keys(Guid::SUPPORTED) as $guid) {
@@ -57,6 +63,8 @@ final class ListCommand extends Command
                 'Search Using ' . ucfirst($guid) . ' id.'
             );
         }
+
+        $this->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent GUIDs instead.');
     }
 
     /**
@@ -89,32 +97,37 @@ final class ListCommand extends Command
 
         $sql = "SELECT * FROM state ";
 
-        if ($input->getOption('via')) {
-            $where[] = "json_extract(meta,'$.via') = :via";
-            $params['via'] = $input->getOption('via');
-        }
-
         if ($input->getOption('id')) {
             $where[] = "id = :id";
             $params['id'] = $input->getOption('id');
         }
 
-        if ($input->getOption('series')) {
-            $where[] = "json_extract(meta,'$.series') = :series";
-            $params['series'] = $input->getOption('series');
+        if ($input->getOption('via')) {
+            $where[] = "via = :via";
+            $params['via'] = $input->getOption('via');
         }
 
-        if ($input->getOption('movie')) {
-            $where[] = "json_extract(meta,'$.title') = :movie";
-            $params['movie'] = $input->getOption('movie');
+        if ($input->getOption('type')) {
+            $where[] = "type = :type";
+            $params['type'] = match ($input->getOption('type')) {
+                StateInterface::TYPE_MOVIE => StateInterface::TYPE_MOVIE,
+                default => StateInterface::TYPE_EPISODE,
+            };
+        }
+
+        if ($input->getOption('title')) {
+            $where[] = "title LIKE '%' || :title || '%'";
+            $params['title'] = $input->getOption('title');
         }
 
         if (null !== $input->getOption('season')) {
-            $where[] = "json_extract(meta,'$.season') = " . (int)$input->getOption('season');
+            $where[] = "season = :season";
+            $params['season'] = $input->getOption('season');
         }
 
         if (null !== $input->getOption('episode')) {
-            $where[] = "json_extract(meta,'$.episode') = " . (int)$input->getOption('episode');
+            $where[] = "episode = :episode";
+            $params['episode'] = $input->getOption('episode');
         }
 
         if ($input->getOption('parent')) {
@@ -122,7 +135,7 @@ final class ListCommand extends Command
                 if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
-                $where[] = "json_extract(meta,'$.parent.{$guid}') = :{$guid}";
+                $where[] = "json_extract(parent,'$.{$guid}') = :{$guid}";
                 $params[$guid] = $val;
             }
         } else {
@@ -130,7 +143,7 @@ final class ListCommand extends Command
                 if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
-                $where[] = "{$guid} LIKE '%' || :{$guid} || '%'";
+                $where[] = "json_extract(guids,'$.{$guid}') = :{$guid}";
                 $params[$guid] = $val;
             }
         }
@@ -139,8 +152,17 @@ final class ListCommand extends Command
             $sql .= 'WHERE ' . implode(' AND ', $where);
         }
 
-        $sort = $input->getOption('sort') === 'id' ? 'id' : 'updated';
-        $sql .= " ORDER BY {$sort} DESC LIMIT :limit";
+        $sort = match ($input->getOption('sort')) {
+            'id' => 'id',
+            'season' => 'season',
+            'episode' => 'episode',
+            'type' => 'type',
+            default => 'updated',
+        };
+
+        $sortOrder = ($input->getOption('asc')) ? 'ASC' : 'DESC';
+
+        $sql .= " ORDER BY {$sort} {$sortOrder} LIMIT :limit";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -200,27 +222,27 @@ final class ListCommand extends Command
 
                 $type = strtolower($row['type'] ?? '??');
 
-                $meta = json_decode(ag($row, 'meta', '{}'), true);
+                $extra = json_decode(ag($row, 'extra', '{}'), true);
                 $episode = null;
 
                 if (StateInterface::TYPE_EPISODE === $type) {
                     $episode = sprintf(
                         '%sx%s',
-                        str_pad((string)($meta['season'] ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($meta['episode'] ?? 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)($row['season'] ?? 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)($row['episode'] ?? 0), 3, '0', STR_PAD_LEFT),
                     );
                 }
 
                 $list[] = [
                     $row['id'],
                     ucfirst($row['type'] ?? '??'),
-                    $meta['via'] ?? '??',
-                    $meta['series'] ?? $meta['title'] ?? '??',
-                    $meta['year'] ?? '0000',
+                    $row['via'] ?? '??',
+                    $row['title'] ?? '??',
+                    $row['year'] ?? '0000',
                     $episode ?? '-',
                     makeDate($row['updated']),
                     true === (bool)$row['watched'] ? 'Yes' : 'No',
-                    $meta['webhook']['event'] ?? '-',
+                    $extra['webhook']['event'] ?? '-',
                 ];
 
                 if ($x < $rowCount) {

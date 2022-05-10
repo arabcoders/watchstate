@@ -68,10 +68,25 @@ if (!function_exists('makeDate')) {
 }
 
 if (!function_exists('ag')) {
-    function ag(array $array, string|null $path, mixed $default = null, string $separator = '.'): mixed
+    function ag(array|object $array, string|array|null $path, mixed $default = null, string $separator = '.'): mixed
     {
-        if (null === $path) {
+        if (empty($path)) {
             return $array;
+        }
+
+        if (!is_array($array)) {
+            $array = get_object_vars($array);
+        }
+
+        if (is_array($path)) {
+            foreach ($path as $key) {
+                $val = ag($array, $key, '_not_set');
+                if ('_not_set' === $val) {
+                    continue;
+                }
+                return $val;
+            }
+            return getValue($default);
         }
 
         if (array_key_exists($path, $array)) {
@@ -226,24 +241,27 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(string $name, ServerRequestInterface $request, array $parsed = []): void
+    function saveWebhookPayload(string $name, ServerRequestInterface $request, StateInterface $state): void
     {
         $content = [
-            'query' => $request->getQueryParams(),
+            'request' => [
+                'server' => $request->getServerParams(),
+                'body' => (string)$request->getBody(),
+                'query' => $request->getQueryParams(),
+            ],
             'parsed' => $request->getParsedBody(),
-            'server' => $request->getServerParams(),
-            'body' => (string)$request->getBody(),
             'attributes' => $request->getAttributes(),
-            'cParsed' => $parsed,
+            'entity' => $state->getAll(),
         ];
 
         @file_put_contents(
             Config::get('tmpDir') . '/webhooks/' . sprintf(
-                'webhook.%s.%s.json',
+                'webhook.%s.%s.%s.json',
                 $name,
-                (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
+                ag($state->extra, 'webhook.event', 'unknown'),
+                ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
 }
@@ -359,6 +377,13 @@ if (!function_exists('before')) {
     }
 }
 
+if (!function_exists('after')) {
+    function after(string $subject, string $search): string
+    {
+        return empty($search) ? $subject : array_reverse(explode($search, $subject, 2))[0];
+    }
+}
+
 if (!function_exists('makeServer')) {
     /**
      * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, persist:array, options:array} $server
@@ -419,7 +444,7 @@ if (!function_exists('arrayToString')) {
             }
 
             if (is_array($val)) {
-                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $val = '[ ' . arrayToString($val) . ' ]';
             } else {
                 $val = $val ?? 'None';
             }

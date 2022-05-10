@@ -55,9 +55,11 @@ interface ServerInterface
      * Process The request For attributes extraction.
      *
      * @param ServerRequestInterface $request
+     * @param array $opts
+     *
      * @return ServerRequestInterface
      */
-    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface;
+    public static function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
 
     /**
      * Parse server specific webhook event. for play/un-played event.
