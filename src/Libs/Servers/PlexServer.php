@@ -1652,8 +1652,6 @@ class PlexServer implements ServerInterface
             if (null !== $parentId) {
                 $row['parent'] = $this->getEpisodeParent($parentId);
             }
-        } else {
-            throw new RuntimeException('Invalid content type.');
         }
 
         $entity = Container::get(StateInterface::class)::fromArray($row);

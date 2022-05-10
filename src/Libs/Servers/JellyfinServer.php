@@ -1587,8 +1587,6 @@ class JellyfinServer implements ServerInterface
             if (null !== ($item->SeriesId ?? null)) {
                 $row['parent'] = $this->showInfo[$item->SeriesId] ?? [];
             }
-        } else {
-            throw new RuntimeException('Invalid content type.');
         }
 
         $entity = Container::get(StateInterface::class)::fromArray($row);
