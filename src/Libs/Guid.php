@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use JsonException;
 use RuntimeException;
 
 final class Guid
 {
-    public const LOOKUP_KEY = '%s://%s';
-
     public const GUID_PLEX = 'guid_plex';
     public const GUID_IMDB = 'guid_imdb';
     public const GUID_TVDB = 'guid_tvdb';
@@ -19,37 +18,101 @@ final class Guid
     public const GUID_ANIDB = 'guid_anidb';
 
     public const SUPPORTED = [
-        self::GUID_PLEX => 'string',
-        self::GUID_IMDB => 'string',
-        self::GUID_TVDB => 'string',
-        self::GUID_TMDB => 'string',
-        self::GUID_TVMAZE => 'string',
-        self::GUID_TVRAGE => 'string',
-        self::GUID_ANIDB => 'string',
+        Guid::GUID_PLEX => 'string',
+        Guid::GUID_IMDB => 'string',
+        Guid::GUID_TVDB => 'string',
+        Guid::GUID_TMDB => 'string',
+        Guid::GUID_TVMAZE => 'string',
+        Guid::GUID_TVRAGE => 'string',
+        Guid::GUID_ANIDB => 'string',
     ];
+
+    private const LOOKUP_KEY = '%s://%s';
 
     private array $data = [];
 
+    /**
+     * Create List of db => external id list.
+     *
+     * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     *
+     * @throws RuntimeException if key/value is of unexpected type or unsupported.
+     */
     public function __construct(array $guids)
     {
         foreach ($guids as $key => $value) {
-            if (null === $value || null === (self::SUPPORTED[$key] ?? null)) {
+            if (null === $value || null === (Guid::SUPPORTED[$key] ?? null)) {
                 continue;
             }
-            $this->updateGuid($key, $value);
+
+            if ($value === ($this->data[$key] ?? null)) {
+                continue;
+            }
+
+            if (!is_string($key)) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Unexpected offset type was given. Was expecting \'string\' but got \'%s\' instead.',
+                        get_debug_type($key)
+                    ),
+                );
+            }
+
+            if (null === (Guid::SUPPORTED[$key] ?? null)) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Unexpected key. Was expecting one of \'%s\', but got \'%s\' instead.',
+                        implode(', ', array_keys(Guid::SUPPORTED)),
+                        $key
+                    ),
+                );
+            }
+
+            if (Guid::SUPPORTED[$key] !== ($valueType = get_debug_type($value))) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Unexpected value type for \'%s\'. Was Expecting \'%s\' but got \'%s\' instead.',
+                        $key,
+                        Guid::SUPPORTED[$key],
+                        $valueType
+                    )
+                );
+            }
+
+            $this->data[$key] = $value;
         }
     }
 
-    public static function fromArray(array $guids): self
+    /**
+     * Create new instance from array payload.
+     *
+     * @param array $payload Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     *
+     * @return static
+     */
+    public static function fromArray(array $payload): self
     {
-        return new self($guids);
+        return new self($payload);
     }
 
-    public static function fromJson(string $guids): self
+    /**
+     * Create new instance from json payload.
+     *
+     * @param string $payload Key/value pair of db => external id. For example, { "guid_imdb" : "tt123456789" }
+     *
+     * @return static
+     * @throws JsonException if decoding JSON payload fails.
+     */
+    public static function fromJson(string $payload): self
     {
-        return new self(json_decode($guids, true));
+        return new self(json_decode(json: $payload, associative: true, flags: JSON_THROW_ON_ERROR));
     }
 
+    /**
+     * Return suitable pointers to link entity to external id.
+     *
+     * @return array
+     */
     public function getPointers(): array
     {
         $arr = [];
@@ -61,47 +124,13 @@ final class Guid
         return $arr;
     }
 
-    public function getGuids(): array
+    /**
+     * Return list of External ids.
+     *
+     * @return array
+     */
+    public function getAll(): array
     {
         return $this->data;
-    }
-
-    private function updateGuid(mixed $key, mixed $value): void
-    {
-        if ($value === ($this->data[$key] ?? null)) {
-            return;
-        }
-
-        if (!is_string($key)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Unexpected offset type was given. Was expecting \'string\' but got \'%s\' instead.',
-                    get_debug_type($key)
-                ),
-            );
-        }
-
-        if (null === (self::SUPPORTED[$key] ?? null)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Unexpected offset key. Was expecting one of \'%s\', but got \'%s\' instead.',
-                    implode(', ', array_keys(self::SUPPORTED)),
-                    $key
-                ),
-            );
-        }
-
-        if (self::SUPPORTED[$key] !== ($valueType = get_debug_type($value))) {
-            throw new RuntimeException(
-                sprintf(
-                    'Unexpected value type for \'%s\'. Was Expecting \'%s\' but got \'%s\' instead.',
-                    $key,
-                    self::SUPPORTED[$key],
-                    $valueType
-                )
-            );
-        }
-
-        $this->data[$key] = $value;
     }
 }

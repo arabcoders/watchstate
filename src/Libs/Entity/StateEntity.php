@@ -108,16 +108,15 @@ final class StateEntity implements StateInterface
     public function getName(): string
     {
         if ($this->isMovie()) {
-            return sprintf('%s (%d) - @%s', $this->title ?? '??', $this->year ?? 0000, $this->via ?? '??');
+            return sprintf('%s (%d)', $this->title ?? '??', $this->year ?? 0000);
         }
 
         return sprintf(
-            '%s (%s) - %sx%s - @%s',
+            '%s (%s) - %sx%s',
             $this->title ?? '??',
             $this->year ?? 0000,
             str_pad((string)($this->season ?? 0), 2, '0', STR_PAD_LEFT),
-            str_pad((string)($this->episode ?? 0), 3, '0', STR_PAD_LEFT),
-            $this->via ?? '??',
+            str_pad((string)($this->episode ?? 0), 3, '0', STR_PAD_LEFT)
         );
     }
 
@@ -149,6 +148,11 @@ final class StateEntity implements StateInterface
         return count($this->guids) >= 1;
     }
 
+    public function getGuids(): array
+    {
+        return $this->guids;
+    }
+
     public function hasParentGuid(): bool
     {
         return count($this->parent) >= 1;
@@ -167,6 +171,11 @@ final class StateEntity implements StateInterface
     public function isEpisode(): bool
     {
         return StateInterface::TYPE_EPISODE === $this->type;
+    }
+
+    public function isWatched(): bool
+    {
+        return 1 === $this->watched;
     }
 
     public function hasRelativeGuid(): bool

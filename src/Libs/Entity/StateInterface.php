@@ -70,14 +70,21 @@ interface StateInterface
     public function isChanged(): bool;
 
     /**
-     * Does the entity have GUIDs?
+     * Does the entity have external ids?
      *
      * @return bool
      */
     public function hasGuids(): bool;
 
     /**
-     * Does the entity have Relative GUIDs?
+     * Get List of external ids.
+     *
+     * @return array
+     */
+    public function getGuids(): array;
+
+    /**
+     * Does the entity have relative external ids?
      *
      * @return bool
      */
@@ -98,14 +105,14 @@ interface StateInterface
     public function getRelativePointers(): array;
 
     /**
-     * Does the Entity have Parent IDs?
+     * Does the Entity have Parent external ids?
      *
      * @return bool
      */
     public function hasParentGuid(): bool;
 
     /**
-     * Get Parent GUIDs.
+     * Get Parent external ids.
      *
      * @return array
      */
@@ -126,6 +133,13 @@ interface StateInterface
     public function isEpisode(): bool;
 
     /**
+     * Is entity marked as watched?
+     *
+     * @return bool
+     */
+    public function isWatched(): bool;
+
+    /**
      * Get constructed name.
      *
      * @return string
@@ -133,7 +147,7 @@ interface StateInterface
     public function getName(): string;
 
     /**
-     * Get GUID Pointers.
+     * Get external ids Pointers.
      *
      * @return array
      */
@@ -167,8 +181,8 @@ interface StateInterface
      * The Tainted flag control whether we will change state or not.
      * If the entity is not already stored in the database, then this flag is not used.
      * However, if the entity already exists and the flag is set to **true**, then
-     * we will be checking **GUIDs** only, and if those differ then meta will be updated as well.
-     * otherwise, nothing will be changed, This flag serve to update GUIDs via webhook unhelpful events like
+     * we will be checking **external ids** only, and if those differ {@see ENTITY_IGNORE_DIFF_CHANGES} will be updated
+     * as well, otherwise, nothing will be changed, This flag serve to update GUIDs via webhook unhelpful events like
      * play/stop/resume.
      *
      * @param bool $isTainted
