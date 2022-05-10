@@ -89,12 +89,13 @@ class PlexServer implements ServerInterface
     protected array $persist = [];
     protected string $cacheKey = '';
     protected array $cacheData = [];
+
+    protected string $cacheShowKey = '';
+    protected array $cacheShow = [];
+
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
 
-    protected array $showInfo = [];
-    protected array $cacheShow = [];
-    protected string $cacheShowKey = '';
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -118,6 +119,7 @@ class PlexServer implements ServerInterface
         $cloned = clone $this;
 
         $cloned->cacheData = [];
+        $cloned->cacheShow = [];
         $cloned->name = $name;
         $cloned->url = $url;
         $cloned->token = $token;
@@ -127,6 +129,7 @@ class PlexServer implements ServerInterface
         $cloned->persist = $persist;
         $cloned->cacheKey = $options['cache_key'] ?? md5(__CLASS__ . '.' . $name . $url);
         $cloned->cacheShowKey = $cloned->cacheKey . '_show';
+        $cloned->initialized = true;
 
         if ($cloned->cache->has($cloned->cacheKey)) {
             $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
@@ -135,8 +138,6 @@ class PlexServer implements ServerInterface
         if ($cloned->cache->has($cloned->cacheShowKey)) {
             $cloned->cacheShow = $cloned->cache->get($cloned->cacheShowKey);
         }
-
-        $cloned->initialized = true;
 
         return $cloned;
     }
@@ -192,7 +193,7 @@ class PlexServer implements ServerInterface
         if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
                 sprintf(
-                    'Request to %s responded with unexpected code (%d).',
+                    '%s: Request to get users list responded with unexpected code \'%d\'.',
                     $this->name,
                     $response->getStatusCode()
                 )
@@ -253,9 +254,13 @@ class PlexServer implements ServerInterface
         return $this;
     }
 
-    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface
+    public static function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
+        $logger = null;
+
         try {
+            $logger = $opts[LoggerInterface::class] ?? Container::get(LoggerInterface::class);
+
             $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
             if (false === str_starts_with($userAgent, 'PlexMediaServer/')) {
@@ -264,7 +269,7 @@ class PlexServer implements ServerInterface
 
             $payload = ag($request->getParsedBody() ?? [], 'payload', null);
 
-            if (null === $payload || null === ($json = json_decode((string)$payload, true))) {
+            if (null === ($json = json_decode(json: $payload, associative: true, flags: JSON_INVALID_UTF8_IGNORE))) {
                 return $request;
             }
 
@@ -284,9 +289,10 @@ class PlexServer implements ServerInterface
                 $request = $request->withAttribute($key, $val);
             }
         } catch (Throwable $e) {
-            Container::get(LoggerInterface::class)->error($e->getMessage(), [
+            $logger?->error($e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'kind' => get_class($e),
             ]);
         }
 
@@ -303,11 +309,11 @@ class PlexServer implements ServerInterface
         $type = ag($json, 'Metadata.type');
         $event = ag($json, 'event', null);
 
-        if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
+        if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(sprintf('%s: Not allowed type [%s]', self::NAME, $type), 200);
         }
 
-        if (null === $event || !in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
+        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             throw new HttpException(sprintf('%s: Not allowed event [%s]', self::NAME, $event), 200);
         }
 
@@ -338,7 +344,7 @@ class PlexServer implements ServerInterface
             'updated' => time(),
             'watched' => (int)(bool)ag($item, 'viewCount', false),
             'via' => $this->name,
-            'title' => '??',
+            'title' => ag($item, ['title', 'originalTitle'], '??'),
             'year' => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
             'season' => null,
             'episode' => null,
@@ -361,10 +367,6 @@ class PlexServer implements ServerInterface
             if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey'], null))) {
                 $row['parent'] = $this->getEpisodeParent($parentId);
             }
-        } elseif (StateInterface::TYPE_MOVIE === $type) {
-            $row['title'] = ag($item, ['title', 'originalTitle'], '??');
-        } else {
-            throw new HttpException(sprintf('%s: Invalid content type.', self::NAME), 200);
         }
 
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
@@ -373,7 +375,7 @@ class PlexServer implements ServerInterface
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
 
             if (empty($item['Guid'])) {
-                $message .= ' Most likely unmatched item.';
+                $message .= ' Most likely unmatched movie/episode or show.';
             }
 
             $message .= sprintf(' [%s].', arrayToString(['guids' => ag($item, 'Guid', 'None')]));
@@ -388,13 +390,635 @@ class PlexServer implements ServerInterface
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
 
         if (false !== $isTainted && $savePayload) {
-            saveWebhookPayload($this->name . '.' . $event, $request, $entity->getAll());
+            saveWebhookPayload($this->name, $request, $entity);
         }
 
         return $entity;
     }
 
-    private function getHeaders(): array
+    public function search(string $query, int $limit = 25): array
+    {
+        $this->checkConfig();
+
+        try {
+            $url = $this->url->withPath('/hubs/search')->withQuery(
+                http_build_query(
+                    [
+                        'query' => $query,
+                        'limit' => $limit,
+                        'includeGuids' => 1,
+                        'includeExternalMedia' => 0,
+                        'includeCollections' => 0,
+                    ]
+                )
+            );
+
+            $this->logger->debug(sprintf('%s: Sending search request for \'%s\'.', $this->name, $query), [
+                'url' => $url
+            ]);
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                throw new RuntimeException(
+                    sprintf(
+                        '%s: Search request for \'%s\' responded with unexpected http status code \'%d\'.',
+                        $this->name,
+                        $query,
+                        $response->getStatusCode()
+                    )
+                );
+            }
+
+            $list = [];
+
+            $json = json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
+
+            foreach (ag($json, 'MediaContainer.Hub', []) as $item) {
+                $type = ag($item, 'type');
+
+                if ('show' !== $type && 'movie' !== $type) {
+                    continue;
+                }
+
+                foreach (ag($item, 'Metadata', []) as $subItem) {
+                    $list[] = $subItem;
+                }
+            }
+
+            return $list;
+        } catch (ExceptionInterface|JsonException $e) {
+            throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    public function listLibraries(): array
+    {
+        $this->checkConfig();
+
+        try {
+            $url = $this->url->withPath('/library/sections');
+
+            $this->logger->debug(sprintf('%s: Get list of server libraries.', $this->name), ['url' => $url]);
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        '%s: library list request responded with unexpected code \'%d\'.',
+                        $this->name,
+                        $response->getStatusCode()
+                    )
+                );
+                return [];
+            }
+
+            $json = json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
+
+            $listDirs = ag($json, 'MediaContainer.Directory', []);
+
+            if (empty($listDirs)) {
+                $this->logger->notice(
+                    sprintf(
+                        '%s: Responded with empty list of libraries. Possibly the token has no access to the libraries?',
+                        $this->name
+                    )
+                );
+                return [];
+            }
+        } catch (ExceptionInterface $e) {
+            $this->logger->error(
+                sprintf('%s: list of libraries request failed. %s', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                ],
+            );
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('%s: Failed to decode library list JSON response. %s', $this->name, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            );
+            return [];
+        }
+
+        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
+            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+        }
+
+        $list = [];
+
+        foreach ($listDirs as $section) {
+            $key = (int)ag($section, 'key');
+            $type = ag($section, 'type', 'unknown');
+
+            $list[] = [
+                'ID' => $key,
+                'Title' => ag($section, 'title', '???'),
+                'Type' => $type,
+                'Ignored' => null !== $ignoreIds && in_array($key, $ignoreIds) ? 'Yes' : 'No',
+                'Supported' => 'movie' !== $type && 'show' !== $type ? 'No' : 'Yes',
+            ];
+        }
+
+        return $list;
+    }
+
+    public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
+    {
+        return $this->getLibraries(
+            ok: function (string $cName, string $type) use ($after, $mapper) {
+                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
+                    if (200 !== $response->getStatusCode()) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
+                                $this->name,
+                                $cName,
+                                $response->getStatusCode()
+                            )
+                        );
+                        return;
+                    }
+
+                    try {
+                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
+
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/MediaContainer/Metadata',
+                                'decoder' => new ErrorWrappingDecoder(
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                )
+                            ]
+                        );
+
+                        foreach ($it as $entity) {
+                            if ($entity instanceof DecodingError) {
+                                $this->logger->error(
+                                    sprintf(
+                                        '%s: Failed to decode one of \'%s\' items. %s',
+                                        $this->name,
+                                        $cName,
+                                        $entity->getErrorMessage()
+                                    ),
+                                    [
+                                        'payload' => $entity->getMalformedJson(),
+                                    ]
+                                );
+                                continue;
+                            }
+                            $this->processImport($mapper, $type, $cName, $entity, $after);
+                        }
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Failed to find items in \'%s\' response. %s',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                            ],
+                        );
+                    } catch (Throwable $e) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Failed to handle \'%s\' response. %s',
+                                $this->name,
+                                $cName,
+                                $e->getMessage(),
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                            ],
+                        );
+                    }
+
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                };
+            },
+            error: function (string $cName, string $type, UriInterface|string $url) {
+                return fn(Throwable $e) => $this->logger->error(
+                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
+                    [
+                        'url' => $url,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
+                );
+            },
+            includeParent: true
+        );
+    }
+
+    public function push(array $entities, DateTimeInterface|null $after = null): array
+    {
+        $this->checkConfig();
+
+        $requests = $stateRequests = [];
+
+        foreach ($entities as $key => $entity) {
+            if (null === $entity) {
+                continue;
+            }
+
+            if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
+                if (null !== $after && $after->getTimestamp() > $entity->updated) {
+                    continue;
+                }
+            }
+
+            $entity->plex_id = null;
+
+            foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+                if (null === ($this->cacheData[$guid] ?? null)) {
+                    continue;
+                }
+                $entity->plex_id = $this->cacheData[$guid];
+            }
+
+            $iName = $entity->getName();
+
+            if (null === $entity->plex_id) {
+                $this->logger->notice(
+                    sprintf('%s: Ignoring \'%s\'. Not found in cache.', $this->name, $iName),
+                    [
+                        'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
+                        'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
+                    ]
+                );
+                continue;
+            }
+
+            try {
+                $url = $this->url->withPath('/library/metadata/' . $entity->plex_id)->withQuery(
+                    http_build_query(['includeGuids' => 1])
+                );
+
+                $this->logger->debug(sprintf('%s: Requesting \'%s\' state from remote server.', $this->name, $iName), [
+                    'url' => $url
+                ]);
+
+                $requests[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($this->getHeaders(), [
+                        'user_data' => [
+                            'id' => $key,
+                            'state' => &$entity,
+                        ]
+                    ])
+                );
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage(), [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                ]);
+            }
+        }
+
+        foreach ($requests as $response) {
+            try {
+                $json = json_decode(
+                    json:        $response->getContent(),
+                    associative: true,
+                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                );
+
+                $json = ag($json, 'MediaContainer.Metadata', [])[0] ?? [];
+
+                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
+                    $this->logger->error(
+                        sprintf(
+                            '%s: Request failed with code \'%d\'.',
+                            $this->name,
+                            $response->getStatusCode(),
+                        ),
+                        $response->getHeaders()
+                    );
+                    continue;
+                }
+
+                assert($state instanceof StateInterface);
+
+                $iName = $state->getName();
+
+                if (empty($json)) {
+                    $this->logger->notice(
+                        sprintf('%s: Ignoring \'%s\'. Remote server returned empty result.', $this->name, $iName)
+                    );
+                    continue;
+                }
+
+                $isWatched = (int)(bool)ag($json, 'viewCount', 0);
+
+                if ($state->watched === $isWatched) {
+                    $this->logger->debug(sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $iName));
+                    continue;
+                }
+
+                if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
+                    $date = max(
+                        (int)ag($json, 'updatedAt', 0),
+                        (int)ag($json, 'lastViewedAt', 0),
+                        (int)ag($json, 'addedAt', 0)
+                    );
+
+                    if (0 === $date) {
+                        $this->logger->notice(
+                            sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                            [
+                                'payload' => $json,
+                            ]
+                        );
+                        continue;
+                    }
+
+                    if ($date >= $state->updated) {
+                        $this->logger->debug(
+                            sprintf(
+                                '%s: Ignoring \'%s\'. Remote item date is newer or equal to backend entity.',
+                                $this->name,
+                                $iName
+                            ),
+                            [
+                                'backend' => makeDate($state->updated),
+                                'remote' => makeDate($date),
+                            ]
+                        );
+                        continue;
+                    }
+                }
+
+                $url = $this->url->withPath($state->isWatched() ? '/:/scrobble' : '/:/unscrobble')->withQuery(
+                    http_build_query(
+                        [
+                            'identifier' => 'com.plexapp.plugins.library',
+                            'key' => ag($json, 'ratingKey'),
+                        ]
+                    )
+                );
+
+                $this->logger->debug(
+                    sprintf('%s: Changing \'%s\' remote state.', $this->name, $iName),
+                    [
+                        'backend' => $state->isWatched() ? 'Played' : 'Unplayed',
+                        'remote' => $isWatched ? 'Played' : 'Unplayed',
+                        'url' => (string)$url,
+                    ]
+                );
+
+                $stateRequests[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($this->getHeaders(), [
+                        'user_data' => [
+                            'itemName' => $iName,
+                            'server' => $this->name,
+                            'state' => $state->isWatched() ? 'Watched' : 'Unwatched',
+                        ]
+                    ])
+                );
+            } catch (Throwable $e) {
+                $this->logger->error($e->getMessage(), [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                ]);
+            }
+        }
+
+        unset($requests);
+
+        return $stateRequests;
+    }
+
+    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array
+    {
+        return $this->getLibraries(
+            ok: function (string $cName, string $type) use ($mapper, $after) {
+                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
+                    if (200 !== $response->getStatusCode()) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request for \'%s\' responded with unexpected http status code (%d).',
+                                $this->name,
+                                $cName,
+                                $response->getStatusCode()
+                            )
+                        );
+                        return;
+                    }
+
+                    try {
+                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
+
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/MediaContainer/Metadata',
+                                'decoder' => new ErrorWrappingDecoder(
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                )
+                            ]
+                        );
+
+                        foreach ($it as $entity) {
+                            if ($entity instanceof DecodingError) {
+                                $this->logger->notice(
+                                    sprintf(
+                                        '%s: Failed to decode one of \'%s\' items. %s',
+                                        $this->name,
+                                        $cName,
+                                        $entity->getErrorMessage()
+                                    ),
+                                    [
+                                        'payload' => $entity->getMalformedJson(),
+                                    ]
+                                );
+                                continue;
+                            }
+                            $this->processExport($mapper, $type, $cName, $entity, $after);
+                        }
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Failed to find items in \'%s\' response. %s',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                            ],
+                        );
+                    } catch (Throwable $e) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Failed to handle \'%s\' response. %s',
+                                $this->name,
+                                $cName,
+                                $e->getMessage(),
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                            ],
+                        );
+                    }
+
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                };
+            },
+            error: function (string $cName, string $type, UriInterface|string $url) {
+                return fn(Throwable $e) => $this->logger->error(
+                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
+                    [
+                        'url' => $url,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
+                );
+            },
+            includeParent: false
+        );
+    }
+
+    public function cache(): array
+    {
+        return $this->getLibraries(
+            ok: function (string $cName, string $type) {
+                return function (ResponseInterface $response) use ($cName, $type) {
+                    if (200 !== $response->getStatusCode()) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
+                                $this->name,
+                                $cName,
+                                $response->getStatusCode()
+                            )
+                        );
+                        return;
+                    }
+
+                    try {
+                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
+
+                        $it = Items::fromIterable(
+                            httpClientChunks($this->http->stream($response)),
+                            [
+                                'pointer' => '/MediaContainer/Metadata',
+                                'decoder' => new ErrorWrappingDecoder(
+                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
+                                )
+                            ]
+                        );
+
+                        foreach ($it as $entity) {
+                            if ($entity instanceof DecodingError) {
+                                $this->logger->debug(
+                                    sprintf(
+                                        '%s: Failed to decode one of \'%s\' items. %s',
+                                        $this->name,
+                                        $cName,
+                                        $entity->getErrorMessage()
+                                    ),
+                                    [
+                                        'payload' => $entity->getMalformedJson(),
+                                    ]
+                                );
+                                continue;
+                            }
+
+                            $this->processCache($entity, $type, $cName);
+                        }
+                    }  catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Failed to find items in \'%s\' response. %s',
+                                $this->name,
+                                $cName,
+                                $e->getMessage()
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                            ],
+                        );
+                    } catch (Throwable $e) {
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Failed to handle \'%s\' response. %s',
+                                $this->name,
+                                $cName,
+                                $e->getMessage(),
+                            ),
+                            [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                            ],
+                        );
+                    }
+
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                };
+            },
+            error: function (string $cName, string $type, UriInterface|string $url) {
+                return fn(Throwable $e) => $this->logger->error(
+                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
+                    [
+                        'url' => $url,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
+                );
+            },
+            includeParent: true
+        );
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function __destruct()
+    {
+        if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
+            $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        }
+
+        if (!empty($this->cacheShowKey) && !empty($this->cacheShow) && true === $this->initialized) {
+            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('P7D'));
+        }
+    }
+
+    protected function getHeaders(): array
     {
         $opts = [
             'headers' => [
@@ -403,7 +1027,7 @@ class PlexServer implements ServerInterface
             ],
         ];
 
-        return array_replace_recursive($opts, $this->options['client'] ?? []);
+        return array_replace_recursive($this->options['client'] ?? [], $opts);
     }
 
     protected function getLibraries(Closure $ok, Closure $error, bool $includeParent = false): array
@@ -552,7 +1176,7 @@ class PlexServer implements ServerInterface
 
             $type = $type === 'movie' ? StateInterface::TYPE_MOVIE : StateInterface::TYPE_EPISODE;
 
-            if (null !== $ignoreIds && in_array($key, $ignoreIds)) {
+            if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
                 $ignored++;
                 $this->logger->notice(sprintf('%s: Skipping \'%s\'. Ignored by user.', $this->name, $title), [
                     'id' => $key,
@@ -614,691 +1238,121 @@ class PlexServer implements ServerInterface
         return $promises;
     }
 
-    public function search(string $query, int $limit = 25): array
-    {
-        $this->checkConfig();
-
+    protected function processImport(
+        ImportInterface $mapper,
+        string $type,
+        string $library,
+        StdClass $item,
+        DateTimeInterface|null $after = null
+    ): void {
         try {
-            $url = $this->url->withPath('/hubs/search')->withQuery(
-                http_build_query(
-                    [
-                        'query' => $query,
-                        'limit' => $limit,
-                        'includeGuids' => 1,
-                        'includeExternalMedia' => 0,
-                        'includeCollections' => 0,
-                    ]
-                )
-            );
+            if ('show' === $type) {
+                $this->processShow($item, $library);
+                return;
+            }
 
-            $this->logger->debug(sprintf('%s: Sending search request for \'%s\'.', $this->name, $query), [
-                'url' => $url
-            ]);
+            Data::increment($this->name, $library . '_total');
+            Data::increment($this->name, $type . '_total');
 
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
+            if (StateInterface::TYPE_MOVIE === $type) {
+                $iName = sprintf(
+                    '%s - [%s (%d)]',
+                    $library,
+                    $item->title ?? $item->originalTitle ?? '??',
+                    $item->year ?? 0000
+                );
+            } else {
+                $iName = trim(
                     sprintf(
-                        '%s: Search request for \'%s\' responded with unexpected http status code \'%d\'.',
-                        $this->name,
-                        $query,
-                        $response->getStatusCode()
+                        '%s - [%s - (%sx%s)]',
+                        $library,
+                        $item->grandparentTitle ?? $item->originalTitle ?? '??',
+                        str_pad((string)($item->parentIndex ?? 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)($item->index ?? 0), 3, '0', STR_PAD_LEFT),
                     )
                 );
-                return [];
             }
 
-            $list = [];
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            foreach (ag($json, 'MediaContainer.Hub', []) as $item) {
-                $type = ag($item, 'type');
-
-                if ('show' !== $type && 'movie' !== $type) {
-                    continue;
-                }
-
-                foreach (ag($item, 'Metadata', []) as $subItem) {
-                    $list[] = $subItem;
-                }
-            }
-
-            return $list;
-        } catch (ExceptionInterface|JsonException $e) {
-            throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
-        }
-    }
-
-    public function listLibraries(): array
-    {
-        $this->checkConfig();
-
-        try {
-            $url = $this->url->withPath('/library/sections');
-
-            $this->logger->debug(sprintf('%s: Get list of server libraries.', $this->name), ['url' => $url]);
-
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    sprintf(
-                        '%s: library list request responded with unexpected code \'%d\'.',
-                        $this->name,
-                        $response->getStatusCode()
-                    )
-                );
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $listDirs = ag($json, 'MediaContainer.Directory', []);
-
-            if (empty($listDirs)) {
-                $this->logger->notice(
-                    sprintf(
-                        '%s: Responded with empty list of libraries. Possibly the token has no access to the libraries?',
-                        $this->name
-                    )
-                );
-                return [];
-            }
-        } catch (ExceptionInterface $e) {
-            $this->logger->error(
-                sprintf('%s: list of libraries request failed. %s', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                ],
-            );
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error(
-                sprintf('%s: Failed to decode library list JSON response. %s', $this->name, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ],
-            );
-            return [];
-        }
-
-        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
-        }
-
-        $list = [];
-
-        foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
-            $type = ag($section, 'type', 'unknown');
-
-            $list[] = [
-                'ID' => $key,
-                'Title' => ag($section, 'title', '???'),
-                'Type' => $type,
-                'Ignored' => null !== $ignoreIds && in_array($key, $ignoreIds) ? 'Yes' : 'No',
-                'Supported' => 'movie' !== $type && 'show' !== $type ? 'No' : 'Yes',
-            ];
-        }
-
-        return $list;
-    }
-
-    public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
-    {
-        return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($after, $mapper) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
-                    try {
-                        if (200 !== $response->getStatusCode()) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
-                                    $this->name,
-                                    $cName,
-                                    $response->getStatusCode()
-                                )
-                            );
-                            return;
-                        }
-
-                        try {
-                            $it = Items::fromIterable(
-                                httpClientChunks($this->http->stream($response)),
-                                [
-                                    'pointer' => '/MediaContainer/Metadata',
-                                    'decoder' => new ErrorWrappingDecoder(
-                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                    )
-                                ]
-                            );
-
-                            $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
-
-                            foreach ($it as $entity) {
-                                if ($entity instanceof DecodingError) {
-                                    $this->logger->debug(
-                                        sprintf(
-                                            '%s: Failed to decode one of \'%s\' items. %s',
-                                            $this->name,
-                                            $cName,
-                                            $entity->getErrorMessage()
-                                        ),
-                                        [
-                                            'payload' => $entity->getMalformedJson(),
-                                        ]
-                                    );
-                                    continue;
-                                }
-                                $this->processImport($mapper, $type, $cName, $entity, $after);
-                            }
-                        } catch (PathNotFoundException $e) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Failed to find items in \'%s\' response. %s',
-                                    $this->name,
-                                    $cName,
-                                    $e->getMessage()
-                                ),
-                                [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                ],
-                            );
-                            return;
-                        } catch (Throwable $e) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Failed to handle \'%s\' response. %s',
-                                    $this->name,
-                                    $cName,
-                                    $e->getMessage(),
-                                ),
-                                [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                ],
-                            );
-                            return;
-                        }
-
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
-                    } catch (JsonException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to decode \'%s\' JSON response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
-                        );
-                        return;
-                    }
-                };
-            },
-            error: function (string $cName, string $type, UriInterface|string $url) {
-                return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]
-                );
-            },
-            includeParent: true
-        );
-    }
-
-    public function push(array $entities, DateTimeInterface|null $after = null): array
-    {
-        $this->checkConfig();
-
-        $requests = $stateRequests = [];
-
-        foreach ($entities as $key => $entity) {
-            if (null === $entity) {
-                continue;
-            }
-
-            if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
-                if (null !== $after && $after->getTimestamp() > $entity->updated) {
-                    continue;
-                }
-            }
-
-            $entity->plex_id = null;
-
-            foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-                if (null === ($this->cacheData[$guid] ?? null)) {
-                    continue;
-                }
-                $entity->plex_id = $this->cacheData[$guid];
-            }
-
-            $iName = $entity->getName();
-
-            if (null === $entity->plex_id) {
-                $this->logger->notice(
-                    sprintf('%s: Ignoring \'%s\'. Not found in cache.', $this->name, $iName),
-                    [
-                        'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
-                        'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                    ]
-                );
-                continue;
-            }
-
-            try {
-                $url = $this->url->withPath('/library/metadata/' . $entity->plex_id)->withQuery(
-                    http_build_query(['includeGuids' => 1])
-                );
-
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state from remote server.', $this->name, $iName), [
-                    'url' => $url
-                ]);
-
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'id' => $key,
-                            'state' => &$entity,
-                        ]
-                    ])
-                );
-            } catch (Throwable $e) {
-                $this->logger->error($e->getMessage(), [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                ]);
-            }
-        }
-
-        foreach ($requests as $response) {
-            try {
-                $content = json_decode(
-                    json:        $response->getContent(),
-                    associative: true,
-                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-                );
-
-                $json = ag($content, 'MediaContainer.Metadata', [])[0] ?? [];
-
-                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
-                    $this->logger->error(
-                        sprintf(
-                            '%s: Request failed with code \'%d\'.',
-                            $this->name,
-                            $response->getStatusCode(),
-                        ),
-                        $response->getHeaders()
-                    );
-                    continue;
-                }
-
-                assert($state instanceof StateInterface);
-
-                $iName = $state->getName();
-
-                if (empty($json)) {
-                    $this->logger->notice(
-                        sprintf('%s: Ignoring \'%s\'. Remote server returned empty result.', $this->name, $iName)
-                    );
-                    continue;
-                }
-
-                $isWatched = (int)(bool)ag($json, 'viewCount', 0);
-
-                if ($state->watched === $isWatched) {
-                    $this->logger->debug(sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $iName));
-                    continue;
-                }
-
-                if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
-                    $date = max(
-                        (int)ag($json, 'updatedAt', 0),
-                        (int)ag($json, 'lastViewedAt', 0),
-                        (int)ag($json, 'addedAt', 0)
-                    );
-
-                    if (0 === $date) {
-                        $this->logger->notice(
-                            sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
-                            [
-                                'payload' => $json,
-                            ]
-                        );
-                        continue;
-                    }
-
-                    if ($date >= $state->updated) {
-                        $this->logger->debug(
-                            sprintf(
-                                '%s: Ignoring \'%s\'. Remote item date is newer or equal to backend entity.',
-                                $this->name,
-                                $iName
-                            ),
-                            [
-                                'backend' => makeDate($state->updated),
-                                'remote' => makeDate($date),
-                            ]
-                        );
-                        continue;
-                    }
-                }
-
-                $url = $this->url->withPath($state->isWatched() ? '/:/scrobble' : '/:/unscrobble')->withQuery(
-                    http_build_query(
-                        [
-                            'identifier' => 'com.plexapp.plugins.library',
-                            'key' => ag($json, 'ratingKey'),
-                        ]
-                    )
-                );
-
+            if (0 === $date) {
                 $this->logger->debug(
-                    sprintf('%s: Changing \'%s\' remote state.', $this->name, $iName),
+                    sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
                     [
-                        'backend' => $state->isWatched() ? 'Played' : 'Unplayed',
-                        'remote' => $isWatched ? 'Played' : 'Unplayed',
-                        'url' => (string)$url,
+                        'payload' => $item,
                     ]
                 );
-
-                $stateRequests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'server' => $this->name,
-                            'state' => 1 === $state->watched ? 'Watched' : 'Unwatched',
-                            'itemName' => $iName,
-                        ]
-                    ])
-                );
-            } catch (Throwable $e) {
-                $this->logger->error($e->getMessage(), [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                ]);
+                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                return;
             }
+
+            $entity = $this->createEntity($item, $type);
+
+            if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+                if (null === ($item->Guid ?? null)) {
+                    $item->Guid = [['id' => $item->guid]];
+                } else {
+                    $item->Guid[] = ['id' => $item->guid];
+                }
+
+                if (true === Config::get('debug.import')) {
+                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->ratingKey . '.json';
+
+                    if (!file_exists($name)) {
+                        file_put_contents(
+                            $name,
+                            json_encode(
+                                $item,
+                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE
+                            )
+                        );
+                    }
+                }
+
+                $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
+
+                if (empty($item->Guid)) {
+                    $message .= ' Most likely unmatched item.';
+                }
+
+                $this->logger->info($message, ['guids' => !empty($item->Guid) ? $item->Guid : 'None']);
+
+                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                return;
+            }
+
+            $mapper->add($this->name, $this->name . ' - ' . $iName, $entity, ['after' => $after]);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
         }
-
-        unset($requests);
-
-        return $stateRequests;
     }
 
-    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array
+    protected function processCache(StdClass $item, string $type, string $library): void
     {
-        return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($mapper, $after) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
-                    try {
-                        if (200 !== $response->getStatusCode()) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Request for \'%s\' responded with unexpected http status code (%d).',
-                                    $this->name,
-                                    $cName,
-                                    $response->getStatusCode()
-                                )
-                            );
-                            return;
-                        }
+        try {
+            if ('show' === $type) {
+                $this->processShow($item, $library);
+                return;
+            }
 
-                        try {
-                            $it = Items::fromIterable(
-                                httpClientChunks($this->http->stream($response)),
-                                [
-                                    'pointer' => '/MediaContainer/Metadata',
-                                    'decoder' => new ErrorWrappingDecoder(
-                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                    )
-                                ]
-                            );
+            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
-                            $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
+            if (0 === $date) {
+                return;
+            }
 
-                            foreach ($it as $entity) {
-                                if ($entity instanceof DecodingError) {
-                                    $this->logger->notice(
-                                        sprintf(
-                                            '%s: Failed to decode one of \'%s\' items. %s',
-                                            $this->name,
-                                            $cName,
-                                            $entity->getErrorMessage()
-                                        ),
-                                        [
-                                            'payload' => $entity->getMalformedJson(),
-                                        ]
-                                    );
-                                    continue;
-                                }
-                                $this->processExport($mapper, $type, $cName, $entity, $after);
-                            }
-                        } catch (PathNotFoundException $e) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Failed to find items in \'%s\' response. %s',
-                                    $this->name,
-                                    $cName,
-                                    $e->getMessage()
-                                ),
-                                [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                ],
-                            );
-                        } catch (Throwable $e) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Failed to handle \'%s\' response. %s',
-                                    $this->name,
-                                    $cName,
-                                    $e->getMessage(),
-                                ),
-                                [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                ],
-                            );
-                        }
-
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
-                    } catch (JsonException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to decode \'%s\' JSON response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
-                        );
-                        return;
-                    } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    }
-                };
-            },
-            error: function (string $cName, string $type, UriInterface|string $url) {
-                return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]
-                );
-            },
-            includeParent: false
-        );
-    }
-
-    public function cache(): array
-    {
-        return $this->getLibraries(
-            ok: function (string $cName, string $type) {
-                return function (ResponseInterface $response) use ($cName, $type) {
-                    try {
-                        if (200 !== $response->getStatusCode()) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
-                                    $this->name,
-                                    $cName,
-                                    $response->getStatusCode()
-                                )
-                            );
-                            return;
-                        }
-
-                        try {
-                            $it = Items::fromIterable(
-                                httpClientChunks($this->http->stream($response)),
-                                [
-                                    'pointer' => '/MediaContainer/Metadata',
-                                    'decoder' => new ErrorWrappingDecoder(
-                                        new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                    )
-                                ]
-                            );
-
-                            $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
-
-                            foreach ($it as $entity) {
-                                if ($entity instanceof DecodingError) {
-                                    $this->logger->debug(
-                                        sprintf(
-                                            '%s: Failed to decode one of \'%s\' items. %s',
-                                            $this->name,
-                                            $cName,
-                                            $entity->getErrorMessage()
-                                        ),
-                                        [
-                                            'payload' => $entity->getMalformedJson(),
-                                        ]
-                                    );
-                                    continue;
-                                }
-
-                                $this->processForCache($entity, $type, $cName);
-                            }
-                        } catch (PathNotFoundException $e) {
-                            $this->logger->error(
-                                sprintf(
-                                    '%s: Failed to find items in \'%s\' response. %s',
-                                    $this->name,
-                                    $cName,
-                                    $e->getMessage()
-                                ),
-                                [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                ],
-                            );
-                        } catch (Throwable $e) {
-                            $this->logger->error(
-                                sprintf(
-                                    'Unable to parse %s - %s response.',
-                                    $this->name,
-                                    $cName,
-                                ),
-                                [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'error' => $e->getMessage(),
-                                    'kind' => get_class($e),
-                                ],
-                            );
-                        }
-
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
-                    } catch (JsonException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to decode \'%s\' JSON response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                            ],
-                        );
-                        return;
-                    } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    }
-                };
-            },
-            error: function (string $cName, string $type, UriInterface|string $url) {
-                return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]
-                );
-            },
-            includeParent: true
-        );
+            $this->createEntity($item, $type);
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
+        }
     }
 
     protected function processExport(
@@ -1364,7 +1418,7 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (false === ($this->options[ServerInterface::OPT_EXPORT_IGNORE_DATE] ?? false)) {
+            if (false === ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false)) {
                 if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
                         sprintf(
@@ -1427,7 +1481,7 @@ class PlexServer implements ServerInterface
                 )
             );
 
-            $this->logger->info(sprintf('Queuing %s.', $iName), [
+            $this->logger->info(sprintf('%s: Queuing \'%s\'.', $this->name, $iName), [
                 'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
                 'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
                 'url' => $url,
@@ -1439,8 +1493,8 @@ class PlexServer implements ServerInterface
                     (string)$url,
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
-                            'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                             'itemName' => $iName,
+                            'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                         ]
                     ])
                 )
@@ -1487,118 +1541,7 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->showInfo[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid, isParent: true))->getAll();
-    }
-
-    protected function processImport(
-        ImportInterface $mapper,
-        string $type,
-        string $library,
-        StdClass $item,
-        DateTimeInterface|null $after = null
-    ): void {
-        try {
-            if ('show' === $type) {
-                $this->processShow($item, $library);
-                return;
-            }
-
-            Data::increment($this->name, $library . '_total');
-            Data::increment($this->name, $type . '_total');
-
-            if (StateInterface::TYPE_MOVIE === $type) {
-                $iName = sprintf(
-                    '%s - [%s (%d)]',
-                    $library,
-                    $item->title ?? $item->originalTitle ?? '??',
-                    $item->year ?? 0000
-                );
-            } else {
-                $iName = trim(
-                    sprintf(
-                        '%s - [%s - (%sx%s)]',
-                        $library,
-                        $item->grandparentTitle ?? $item->originalTitle ?? '??',
-                        str_pad((string)($item->parentIndex ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($item->index ?? 0), 3, '0', STR_PAD_LEFT),
-                    )
-                );
-            }
-
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
-                $this->logger->debug(
-                    sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
-                    [
-                        'payload' => $item,
-                    ]
-                );
-                Data::increment($this->name, $type . '_ignored_no_date_is_set');
-                return;
-            }
-
-            $entity = $this->createEntity($item, $type);
-
-            if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                if (null === ($item->Guid ?? null)) {
-                    $item->Guid = [['id' => $item->guid]];
-                } else {
-                    $item->Guid[] = ['id' => $item->guid];
-                }
-
-                if (true === Config::get('debug.import')) {
-                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->ratingKey . '.json';
-
-                    if (!file_exists($name)) {
-                        file_put_contents($name, json_encode($item, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-                    }
-                }
-
-                $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
-
-                if (empty($item->Guid)) {
-                    $message .= ' Most likely unmatched item.';
-                }
-
-                $this->logger->info($message, ['guids' => empty($item->Guid) ? 'None' : $item->Guid]);
-
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
-                return;
-            }
-
-            $mapper->add($this->name, $this->name . ' - ' . $iName, $entity, ['after' => $after]);
-        } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-        }
-    }
-
-    protected function processForCache(StdClass $item, string $type, string $library): void
-    {
-        try {
-            if ('show' === $type) {
-                $this->processShow($item, $library);
-                return;
-            }
-
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
-                return;
-            }
-
-            $this->createEntity($item, $type);
-        } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-        }
+        $this->cacheShow[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid, isParent: true))->getAll();
     }
 
     protected function getGuids(array $guids, bool $isParent = false): array
@@ -1661,31 +1604,140 @@ class PlexServer implements ServerInterface
         return false;
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
-    public function __destruct()
+    protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
     {
-        if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
-            $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
+        if (true === $checkUrl && !($this->url instanceof UriInterface)) {
+            throw new RuntimeException(self::NAME . ': No host was set.');
         }
 
-        if (!empty($this->cacheShowKey) && !empty($this->cacheShow) && true === $this->initialized) {
-            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('P7D'));
+        if (true === $checkToken && null === $this->token) {
+            throw new RuntimeException(self::NAME . ': No token was set.');
         }
     }
 
-    /**
-     * Parse Plex agents identifier.
-     *
-     * @param string $agent
-     * @param bool $isParent
-     *
-     * @return string
-     * @see SUPPORTED_LEGACY_AGENTS
-     * @see PARENT_SUPPORTED_LEGACY_AGENTS
-     */
-    private function parseLegacyAgent(string $agent, bool $isParent = false): string
+    protected function createEntity(StdClass $item, string $type): StateEntity
+    {
+        if (null === ($item->Guid ?? null)) {
+            $item->Guid = [['id' => $item->guid]];
+        } else {
+            $item->Guid[] = ['id' => $item->guid];
+        }
+
+        $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
+
+        $row = [
+            'type' => $type,
+            'updated' => $date,
+            'watched' => (int)(bool)($item->viewCount ?? false),
+            'via' => $this->name,
+            'title' => $item->title ?? $item->originalTitle ?? '??',
+            'year' => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
+            'season' => null,
+            'episode' => null,
+            'parent' => [],
+            'guids' => $this->getGuids($item->Guid ?? [], isParent: false),
+            'extra' => [
+                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            ],
+        ];
+
+        if (StateInterface::TYPE_EPISODE === $type) {
+            $row['title'] = $item->grandparentTitle ?? '??';
+            $row['season'] = $item->parentIndex ?? 0;
+            $row['episode'] = $item->index ?? 0;
+            $row['extra']['title'] = $item->title ?? $item->originalTitle ?? '??';
+
+            $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
+
+            if (null !== $parentId) {
+                $row['parent'] = $this->getEpisodeParent($parentId);
+            }
+        } else {
+            throw new RuntimeException('Invalid content type.');
+        }
+
+        $entity = Container::get(StateInterface::class)::fromArray($row);
+
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+            $this->cacheData[$guid] = $item->ratingKey;
+        }
+
+        return $entity;
+    }
+
+    protected function getEpisodeParent(int|string $id): array
+    {
+        if (array_key_exists($id, $this->cacheShow)) {
+            return $this->cacheShow[$id];
+        }
+
+        try {
+            $response = $this->http->request(
+                'GET',
+                (string)$this->url->withPath('/library/metadata/' . $id),
+                $this->getHeaders()
+            );
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $json = json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
+
+            $json = ag($json, 'MediaContainer.Metadata')[0] ?? [];
+
+            if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
+                return [];
+            }
+
+            if (null === ($json['Guid'] ?? null)) {
+                $json['Guid'] = [['id' => $json['guid']]];
+            } else {
+                $json['Guid'][] = ['id' => $json['guid']];
+            }
+
+            if (!$this->hasSupportedGuids($json['Guid'], true)) {
+                $this->cacheShow[$id] = [];
+                return $this->cacheShow[$id];
+            }
+
+            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($json['Guid'], isParent: true))->getAll();
+
+            return $this->cacheShow[$id];
+        } catch (ExceptionInterface $e) {
+            $this->logger->error($e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
+            return [];
+        } catch (JsonException $e) {
+            $this->logger->error(
+                sprintf('%s: Unable to decode show id \'%s\' JSON response. %s', $this->name, $id, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]
+            );
+            return [];
+        } catch (Throwable $e) {
+            $this->logger->error(
+                sprintf('%s: Failed to handle show id \'%s\' response. %s', $this->name, $id, $e->getMessage()),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                ]
+            );
+            return [];
+        }
+    }
+
+    protected function parseLegacyAgent(string $agent, bool $isParent = false): string
     {
         try {
             $supported = self::SUPPORTED_LEGACY_AGENTS;
@@ -1726,18 +1778,7 @@ class PlexServer implements ServerInterface
         }
     }
 
-    private function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
-    {
-        if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(self::NAME . ': No host was set.');
-        }
-
-        if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(self::NAME . ': No token was set.');
-        }
-    }
-
-    private function getUserToken(int|string $userId): int|string|null
+    protected function getUserToken(int|string $userId): int|string|null
     {
         try {
             $uuid = $this->getServerUUID();
@@ -1817,126 +1858,6 @@ class PlexServer implements ServerInterface
                 'kind' => get_class($e),
             ]);
             return null;
-        }
-    }
-
-    private function createEntity(StdClass $item, string $type): StateEntity
-    {
-        if (null === ($item->Guid ?? null)) {
-            $item->Guid = [['id' => $item->guid]];
-        } else {
-            $item->Guid[] = ['id' => $item->guid];
-        }
-
-        $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-        $row = [
-            'type' => $type,
-            'updated' => $date,
-            'watched' => (int)(bool)($item->viewCount ?? false),
-            'via' => $this->name,
-            'title' => '??',
-            'year' => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids($item->Guid ?? [], isParent: false),
-            'extra' => [
-                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
-            ],
-        ];
-
-        if (StateInterface::TYPE_MOVIE === $type) {
-            $row['title'] = $item->title ?? $item->originalTitle ?? '??';
-        } elseif (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = $item->grandparentTitle ?? '??';
-            $row['season'] = $item->parentIndex ?? 0;
-            $row['episode'] = $item->index ?? 0;
-            $row['extra']['title'] = $item->title ?? $item->originalTitle ?? '??';
-
-            $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
-
-            if (null !== $parentId) {
-                $row['parent'] = $this->getEpisodeParent($parentId);
-            }
-        } else {
-            throw new RuntimeException('Invalid content type.');
-        }
-
-        $entity = Container::get(StateInterface::class)::fromArray($row);
-
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = $item->ratingKey;
-        }
-
-        return $entity;
-    }
-
-    private function getEpisodeParent(int|string $id): array
-    {
-        if (array_key_exists($id, $this->cacheShow)) {
-            return $this->cacheShow[$id];
-        }
-
-        try {
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath('/library/metadata/' . $id),
-                $this->getHeaders()
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                return [];
-            }
-
-            $json = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-
-            $json = ag($json, 'MediaContainer.Metadata')[0] ?? [];
-
-            if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
-                return [];
-            }
-
-            if (null === ($json['Guid'] ?? null)) {
-                $json['Guid'] = [['id' => $json['guid']]];
-            } else {
-                $json['Guid'][] = ['id' => $json['guid']];
-            }
-
-            if (!$this->hasSupportedGuids($json['Guid'], true)) {
-                $this->cacheShow[$id] = [];
-                return $this->cacheShow[$id];
-            }
-
-            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($json['Guid'], isParent: true))->getAll();
-
-            return $this->cacheShow[$id];
-        } catch (ExceptionInterface $e) {
-            $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error(
-                sprintf('%s: Unable to decode show id \'%s\' JSON response. %s', $this->name, $id, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ]
-            );
-            return [];
-        } catch (Throwable $e) {
-            $this->logger->error(
-                sprintf('%s: Failed to handle show id \'%s\' response. %s', $this->name, $id, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                ]
-            );
-            return [];
         }
     }
 }

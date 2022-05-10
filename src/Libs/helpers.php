@@ -241,24 +241,27 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(string $name, ServerRequestInterface $request, array $parsed = []): void
+    function saveWebhookPayload(string $name, ServerRequestInterface $request, StateInterface $state): void
     {
         $content = [
-            'query' => $request->getQueryParams(),
+            'request' => [
+                'server' => $request->getServerParams(),
+                'body' => (string)$request->getBody(),
+                'query' => $request->getQueryParams(),
+            ],
             'parsed' => $request->getParsedBody(),
-            'server' => $request->getServerParams(),
-            'body' => (string)$request->getBody(),
             'attributes' => $request->getAttributes(),
-            'cParsed' => $parsed,
+            'entity' => $state->getAll(),
         ];
 
         @file_put_contents(
             Config::get('tmpDir') . '/webhooks/' . sprintf(
-                'webhook.%s.%s.json',
+                'webhook.%s.%s.%s.json',
                 $name,
-                (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
+                ag($state->extra, 'webhook.event', 'unknown'),
+                ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
 }
@@ -371,6 +374,13 @@ if (!function_exists('before')) {
     function before(string $subject, string $search): string
     {
         return $search === '' ? $subject : explode($search, $subject)[0];
+    }
+}
+
+if (!function_exists('after')) {
+    function after(string $subject, string $search): string
+    {
+        return empty($search) ? $subject : array_reverse(explode($search, $subject, 2))[0];
     }
 }
 
