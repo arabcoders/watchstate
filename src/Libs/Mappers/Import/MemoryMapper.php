@@ -117,6 +117,16 @@ final class MemoryMapper implements ImportInterface
             return $this;
         }
 
+        if ($this->inDeepDebugMode()) {
+            $this->logger->debug(
+                sprintf('%s: \'%s\'. is identical.', $entity->via, $entity->getName()),
+                [
+                    'backend' => $entity->getAll(),
+                    'remote' => $entity->getAll(),
+                ]
+            );
+        }
+
         Data::increment($bucket, $entity->type . '_ignored_no_change');
 
         return $this;

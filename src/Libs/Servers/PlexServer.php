@@ -58,6 +58,7 @@ class PlexServer implements ServerInterface
 
     protected const PARENT_SUPPORTED_LEGACY_AGENTS = [
         'com.plexapp.agents.xbmcnfotv',
+        'com.plexapp.agents.thetvdb',
     ];
 
     protected const WEBHOOK_ALLOWED_TYPES = [
@@ -1599,6 +1600,11 @@ class PlexServer implements ServerInterface
             }
 
             if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                // -- Relative UIDs are only supported on episodes parents.
+                if (false === $isParent && substr_count($val, '/') >= 3) {
+                    continue;
+                }
+
                 $val = $this->parseLegacyAgent($val, $isParent);
             }
 
@@ -1764,6 +1770,7 @@ class PlexServer implements ServerInterface
 
             if (true === $isParent) {
                 $replacer += [
+                    'com.plexapp.agents.thetvdb://' => 'com.plexapp.agents.tvdb://',
                     'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
                 ];
             }
