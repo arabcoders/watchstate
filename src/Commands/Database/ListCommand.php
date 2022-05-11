@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\Database;
 
 use App\Command;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
 use App\Libs\Storage\StorageInterface;
@@ -73,21 +74,6 @@ final class ListCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $list = [];
-
-        $table = new Table($output);
-        $table->setHeaders(
-            [
-                'ID',
-                'Type',
-                'Via (Temp)',
-                'Name',
-                'Year',
-                'Episode',
-                'Date',
-                'Watched',
-                'WH Event'
-            ]
-        );
 
         $params = [
             'limit' => (int)$input->getOption('limit'),
@@ -195,8 +181,11 @@ final class ListCommand extends Command
             foreach ($rows as &$row) {
                 $row['watched'] = (bool)$row['watched'];
                 $row['updated'] = makeDate($row['updated']);
-                $row['meta'] = json_decode($row['meta'], true);
+                $row['guids'] = json_decode($row['guids'], true);
+                $row['parent'] = json_decode($row['parent'], true);
+                $row['extra'] = json_decode($row['extra'], true);
             }
+
             unset($row);
 
             $output->writeln(
@@ -209,7 +198,9 @@ final class ListCommand extends Command
             foreach ($rows as &$row) {
                 $row['watched'] = (bool)$row['watched'];
                 $row['updated'] = makeDate($row['updated']);
-                $row['meta'] = json_decode($row['meta'], true);
+                $row['guids'] = json_decode($row['guids'], true);
+                $row['parent'] = json_decode($row['parent'], true);
+                $row['extra'] = json_decode($row['extra'], true);
             }
 
             unset($row);
@@ -218,31 +209,17 @@ final class ListCommand extends Command
             $x = 0;
 
             foreach ($rows as $row) {
+                $entity = Container::get(StateInterface::class)->fromArray($row);
+
                 $x++;
 
-                $type = strtolower($row['type'] ?? '??');
-
-                $extra = json_decode(ag($row, 'extra', '{}'), true);
-                $episode = null;
-
-                if (StateInterface::TYPE_EPISODE === $type) {
-                    $episode = sprintf(
-                        '%sx%s',
-                        str_pad((string)($row['season'] ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($row['episode'] ?? 0), 3, '0', STR_PAD_LEFT),
-                    );
-                }
-
                 $list[] = [
-                    $row['id'],
-                    ucfirst($row['type'] ?? '??'),
-                    $row['via'] ?? '??',
-                    $row['title'] ?? '??',
-                    $row['year'] ?? '0000',
-                    $episode ?? '-',
-                    makeDate($row['updated']),
-                    true === (bool)$row['watched'] ? 'Yes' : 'No',
-                    $extra['webhook']['event'] ?? '-',
+                    $entity->id,
+                    $entity->getName(),
+                    $entity->via ?? '??',
+                    makeDate($entity->updated)->format('Y-m-d H:i:s T'),
+                    $entity->isWatched() ? 'Yes' : 'No',
+                    ag($entity->extra, 'webhook.event', '-'),
                 ];
 
                 if ($x < $rowCount) {
@@ -252,7 +229,8 @@ final class ListCommand extends Command
 
             $rows = null;
 
-            $table->setStyle('box')->setRows($list)->render();
+            (new Table($output))->setHeaders(['Id', 'Main Title', 'Via (Temp)', 'Date', 'Played', 'WH Event'])
+                ->setStyle('box')->setRows($list)->render();
         }
 
         return self::SUCCESS;
