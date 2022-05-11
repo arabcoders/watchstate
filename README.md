@@ -4,18 +4,6 @@ WatchState is a CLI based tool to sync your watch state between different media 
 services, like trakt.tv, This tool support `Plex Media Server`, `Emby` and `Jellyfin` out of the box currently, with
 plans for future expansion for other media servers.
 
-# Breaking Change
-
-If you are using old version of the tool i.e. before (2022-05-08) you need to run manual import to populate the new
-database. We had massive code/db changes. The new database name should be `watchstate_v0.db`, if you don't have a
-database named `watchstate.db` then there is nothing to do.
-
-to manually import the run this command with --force-full flag to get all previous records.
-
-```bash
-$ docker exec -ti watchstate console state:import --force-full -vvrm
-```
-
 # Install
 
 create your `docker-compose.yaml` file:

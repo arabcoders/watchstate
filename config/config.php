@@ -26,12 +26,15 @@ return (function () {
                 'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
             ],
         ],
+        'storage' => [
+            'version' => 'v0',
+        ],
     ];
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', $config['path']));
 
-    $config['storage'] = [
-        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_v0.db',
+    $config['storage'] += [
+        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_' . $config['storage']['version'] . '.db',
         'username' => null,
         'password' => null,
         'options' => [

@@ -206,6 +206,13 @@ final class PDOAdapter implements StorageInterface
         };
     }
 
+    public function migrateData(string $version, LoggerInterface|null $logger = null): mixed
+    {
+        $fn = require __DIR__ . '/../../../../config/backendDataMigration.php';
+
+        return $fn($version, $this->pdo, $logger);
+    }
+
     public function isMigrated(): bool
     {
         return (new PDOMigrations($this->pdo, $this->logger))->isMigrated();

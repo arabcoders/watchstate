@@ -85,6 +85,16 @@ interface StorageInterface
     public function migrations(string $dir, array $opts = []): mixed;
 
     /**
+     * Migrate Backend storage data from old version.
+     *
+     * @param string $version represent the new version.
+     * @param LoggerInterface|null $logger
+     *
+     * @return mixed
+     */
+    public function migrateData(string $version, LoggerInterface|null $logger = null): mixed;
+
+    /**
      * Does the backend storage need to run migrations?
      *
      * @return bool

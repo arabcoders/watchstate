@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\Export\ExportMapper;
@@ -68,6 +69,10 @@ return (function (): array {
 
                 if (true !== $adapter->isMigrated()) {
                     $adapter->migrations(StorageInterface::MIGRATE_UP);
+                    $adapter->migrateData(
+                        Config::get('storage.version'),
+                        Container::get(LoggerInterface::class)
+                    );
                 }
 
                 return $adapter;
