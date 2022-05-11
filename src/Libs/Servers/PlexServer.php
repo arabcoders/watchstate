@@ -13,6 +13,7 @@ use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Options;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
@@ -383,7 +384,7 @@ class PlexServer implements ServerInterface
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
 
             if (empty($item['Guid'])) {
-                $message .= ' Most likely unmatched movie/episode or show.';
+                $message .= sprintf(' Most likely unmatched %s.', $entity->type);
             }
 
             $message .= sprintf(' [%s].', arrayToString(['guids' => ag($item, 'Guid', 'None')]));
@@ -651,7 +652,7 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
-            if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
+            if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
                 if (null !== $after && $after->getTimestamp() > $entity->updated) {
                     continue;
                 }
@@ -747,7 +748,7 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
+                if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
                     $date = max(
                         (int)ag($json, 'updatedAt', 0),
                         (int)ag($json, 'lastViewedAt', 0),
@@ -965,7 +966,7 @@ class PlexServer implements ServerInterface
 
                             $this->processCache($entity, $type, $cName);
                         }
-                    }  catch (PathNotFoundException $e) {
+                    } catch (PathNotFoundException $e) {
                         $this->logger->error(
                             sprintf(
                                 '%s: Failed to find items in \'%s\' response. %s',
@@ -1297,12 +1298,6 @@ class PlexServer implements ServerInterface
             $entity = $this->createEntity($item, $type);
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                if (null === ($item->Guid ?? null)) {
-                    $item->Guid = [['id' => $item->guid]];
-                } else {
-                    $item->Guid[] = ['id' => $item->guid];
-                }
-
                 if (true === Config::get('debug.import')) {
                     $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->ratingKey . '.json';
 
@@ -1320,7 +1315,13 @@ class PlexServer implements ServerInterface
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
                 if (empty($item->Guid)) {
-                    $message .= ' Most likely unmatched item.';
+                    $message .= sprintf(' Most likely unmatched %s.', $entity->type);
+                }
+
+                if (null === ($item->Guid ?? null)) {
+                    $item->Guid = [['id' => $item->guid]];
+                } else {
+                    $item->Guid[] = ['id' => $item->guid];
                 }
 
                 $this->logger->info($message, ['guids' => !empty($item->Guid) ? $item->Guid : 'None']);
@@ -1408,16 +1409,16 @@ class PlexServer implements ServerInterface
             $rItem = $this->createEntity($item, $type);
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
+                $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
+
+                if (empty($item->Guid)) {
+                    $message .= sprintf(' Most likely unmatched %s.', $rItem->type);
+                }
+
                 if (null === ($item->Guid ?? null)) {
                     $item->Guid = [['id' => $item->guid]];
                 } else {
                     $item->Guid[] = ['id' => $item->guid];
-                }
-
-                $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
-
-                if (empty($item->Guid)) {
-                    $message .= ' Most likely unmatched item.';
                 }
 
                 $this->logger->debug($message, ['guids' => !empty($item->Guid) ? $item->Guid : 'None']);
@@ -1426,7 +1427,7 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false)) {
+            if (false === ag($this->options, Options::IGNORE_DATE, false)) {
                 if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
                         sprintf(
@@ -1466,7 +1467,7 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false)) {
+            if (false === ag($this->options, Options::IGNORE_DATE, false)) {
                 if ($rItem->updated >= $entity->updated) {
                     $this->logger->debug(
                         sprintf('%s: Ignoring \'%s\'. Date is newer or equal to backend entity.', $this->name, $iName),

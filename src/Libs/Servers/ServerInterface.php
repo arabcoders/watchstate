@@ -17,8 +17,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 interface ServerInterface
 {
-    public const OPT_EXPORT_IGNORE_DATE = 'exportIgnoreDate';
-
     /**
      * Initiate server. It should return **NEW OBJECT**
      *

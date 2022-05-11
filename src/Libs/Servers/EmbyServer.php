@@ -168,10 +168,10 @@ class EmbyServer extends JellyfinServer
         $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $message = sprintf('%s: No valid/supported External ids.', self::NAME);
+            $message = sprintf('%s: No valid/supported external ids.', self::NAME);
 
             if (empty($providersId)) {
-                $message .= ' Most likely unmatched movie/episode or show.';
+                $message .= sprintf(' Most likely unmatched %s.', $entity->type);
             }
 
             $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
@@ -212,9 +212,9 @@ class EmbyServer extends JellyfinServer
             }
 
             $json = json_decode(
-                json:        $response->getContent(),
+                json: $response->getContent(),
                 associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
             if (null === ($itemType = ag($json, 'Type')) || 'Series' !== $itemType) {

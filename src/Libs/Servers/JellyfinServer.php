@@ -13,6 +13,7 @@ use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Options;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
@@ -352,7 +353,7 @@ class JellyfinServer implements ServerInterface
             $message = sprintf('%s: No valid/supported External ids.', self::NAME);
 
             if (empty($providersId)) {
-                $message .= ' Most likely unmatched movie/episode or show.';
+                $message .= sprintf(' Most likely unmatched %s.', $entity->type);
             }
 
             $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
@@ -617,7 +618,7 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
-            if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
+            if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
                 if (null !== $after && $after->getTimestamp() > $entity->updated) {
                     continue;
                 }
@@ -719,7 +720,7 @@ class JellyfinServer implements ServerInterface
                     continue;
                 }
 
-                if (false === (ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false))) {
+                if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
                     $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated', 'PremiereDate'], null);
 
                     if (null === $date) {
@@ -1296,10 +1297,23 @@ class JellyfinServer implements ServerInterface
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
                 if (empty($providerIds)) {
-                    $message .= ' Most likely unmatched item.';
+                    $message .= sprintf(' Most likely unmatched %s.', $entity->type);
                 }
 
-                $this->logger->info($message, ['guids' => !empty($providerIds) ? $providerIds : 'None']);
+                $kvStore = [
+                    'guids' => !empty($providerIds) ? $providerIds : 'None'
+                ];
+
+                if (true === (bool)ag($this->options, Options::DEEP_DEBUG, false)) {
+                    $kvStore['entity'] = $entity->getAll();
+                    $kvStore['payload'] = json_decode(
+                        json:        json_encode($item),
+                        associative: true,
+                        flags:       JSON_INVALID_UTF8_IGNORE
+                    );
+                }
+
+                $this->logger->info($message, $kvStore);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
 
@@ -1390,7 +1404,7 @@ class JellyfinServer implements ServerInterface
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
                 if (empty($providerIds)) {
-                    $message .= ' Most likely unmatched item.';
+                    $message .= sprintf(' Most likely unmatched %s.', $rItem->type);
                 }
 
                 $this->logger->debug($message, ['guids' => !empty($providerIds) ? $providerIds : 'None']);
@@ -1398,7 +1412,7 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false)) {
+            if (false === ag($this->options, Options::IGNORE_DATE, false)) {
                 if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
                         sprintf(
@@ -1438,7 +1452,7 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, ServerInterface::OPT_EXPORT_IGNORE_DATE, false)) {
+            if (false === ag($this->options, Options::IGNORE_DATE, false)) {
                 if ($rItem->updated >= $entity->updated) {
                     $this->logger->debug(
                         sprintf('%s: Ignoring \'%s\'. Date is newer or equal to backend entity.', $this->name, $iName),

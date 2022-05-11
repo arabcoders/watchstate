@@ -10,7 +10,7 @@ use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Servers\ServerInterface;
+use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -182,7 +182,7 @@ class PushCommand extends Command
             $opts = ag($server, 'server.options', []);
 
             if ($input->getOption('ignore-date')) {
-                $opts[ServerInterface::OPT_EXPORT_IGNORE_DATE] = true;
+                $opts[Options::IGNORE_DATE] = true;
             }
 
             if ($input->getOption('proxy')) {

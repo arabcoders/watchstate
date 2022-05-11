@@ -7,6 +7,7 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
 use PDOException;
@@ -76,7 +77,7 @@ final class MemoryMapper implements ImportInterface
             Data::increment($bucket, $entity->type . '_added');
             $this->addPointers($this->objects[$pointer], $pointer);
 
-            if (true === ($this->options[ImportInterface::DEEP_DEBUG] ?? false)) {
+            if ($this->inDeepDebugMode()) {
                 $data = $entity->getAll();
                 unset($data['id']);
                 $data['updated'] = makeDate($data['updated']);
@@ -110,7 +111,7 @@ final class MemoryMapper implements ImportInterface
             $this->removePointers($cloned);
             $this->addPointers($this->objects[$pointer], $pointer);
             $this->logger->info(
-                sprintf('Updating %s. State changed.', $name),
+                sprintf('%s: Updating \'%s\'. State changed.', $entity->via, $entity->getName()),
                 $this->objects[$pointer]->diff(all: true),
             );
             return $this;
@@ -163,17 +164,19 @@ final class MemoryMapper implements ImportInterface
                 0 === $count ? 'No changes detected.' : sprintf('Updating backend with \'%d\' changes.', $count)
             );
 
+            $inDryRunMode = $this->inDryRunMode();
+
             foreach ($this->changed as $pointer) {
                 try {
                     $entity = &$this->objects[$pointer];
 
                     if (null === $entity->id) {
-                        if (false === (bool)($this->options[ImportInterface::DRY_RUN] ?? false)) {
+                        if (false === $inDryRunMode) {
                             $storage->insert($entity);
                         }
                         $list[$entity->type]['added']++;
                     } else {
-                        if (false === (bool)($this->options[ImportInterface::DRY_RUN] ?? false)) {
+                        if (false === $inDryRunMode) {
                             $storage->update($entity);
                         }
                         $list[$entity->type]['updated']++;
@@ -242,12 +245,12 @@ final class MemoryMapper implements ImportInterface
 
     public function inDryRunMode(): bool
     {
-        return true === ($this->options[ImportInterface::DRY_RUN] ?? false);
+        return true === (bool)ag($this->options, Options::DRY_RUN, false);
     }
 
     public function inDeepDebugMode(): bool
     {
-        return true === ($this->options[ImportInterface::DEEP_DEBUG] ?? false);
+        return true === (bool)ag($this->options, Options::DEEP_DEBUG, false);
     }
 
     /**

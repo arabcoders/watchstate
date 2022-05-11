@@ -9,7 +9,7 @@ use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ExportInterface;
-use App\Libs\Servers\ServerInterface;
+use App\Libs\Options;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
@@ -20,6 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Throwable;
 
 class ExportCommand extends Command
 {
@@ -174,7 +175,7 @@ class ExportCommand extends Command
             $opts = ag($server, 'options', []);
 
             if ($input->getOption('ignore-date')) {
-                $opts[ServerInterface::OPT_EXPORT_IGNORE_DATE] = true;
+                $opts[Options::IGNORE_DATE] = true;
             }
 
             if ($input->getOption('proxy')) {
@@ -227,12 +228,8 @@ class ExportCommand extends Command
         foreach ($requests as $response) {
             $requestData = $response->getInfo('user_data');
             try {
-                if (200 === $response->getStatusCode()) {
-                    $requestData['ok']($response);
-                } else {
-                    $requestData['error']($response);
-                }
-            } catch (ExceptionInterface $e) {
+                $requestData['ok']($response);
+            } catch (Throwable $e) {
                 $requestData['error']($e);
             }
         }
