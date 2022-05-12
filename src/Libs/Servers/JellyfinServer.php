@@ -1262,6 +1262,12 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
+            if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
+                    'payload' => (array)$item,
+                ]);
+            }
+
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
 
             if (null === $date) {
@@ -1500,14 +1506,20 @@ class JellyfinServer implements ServerInterface
     {
         $providersId = (array)($item->ProviderIds ?? []);
 
-        if (!$this->hasSupportedIds($providersId)) {
-            $iName = sprintf(
-                '%s - [%s (%d)]',
-                $library,
-                $item->Name ?? $item->OriginalTitle ?? '??',
-                $item->ProductionYear ?? 0000
-            );
+        $iName = sprintf(
+            '%s - [%s (%d)]',
+            $library,
+            $item->Name ?? $item->OriginalTitle ?? '??',
+            $item->ProductionYear ?? 0000
+        );
 
+        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+            $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
+                'payload' => (array)$item,
+            ]);
+        }
+
+        if (!$this->hasSupportedIds($providersId)) {
             $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
             if (empty($providersId)) {
@@ -1607,7 +1619,7 @@ class JellyfinServer implements ServerInterface
             }
 
             if (null !== ($item->SeriesId ?? null)) {
-                $row['parent'] = $this->showInfo[$item->SeriesId] ?? [];
+                $row['parent'] = $this->cacheShow[$item->SeriesId] ?? [];
             }
         }
 
