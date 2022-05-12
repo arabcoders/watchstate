@@ -75,8 +75,10 @@ final class ListCommand extends Command
     {
         $list = [];
 
+        $limit = (int)$input->getOption('limit');
+
         $params = [
-            'limit' => (int)$input->getOption('limit'),
+            'limit' => $limit <= 0 ? 20 : $limit,
         ];
 
         $where = [];
@@ -158,22 +160,28 @@ final class ListCommand extends Command
         $rowCount = count($rows);
 
         if (0 === $rowCount) {
-            $output->writeln('<error>No Results. Probably invalid filters values were used.</error>');
-            if (count($params) > 1) {
-                array_shift($params);
+            $arr = [
+                'Error' => 'No Results.',
+                'Filters' => $params
+            ];
+
+            if (true === ($hasFilters = count($arr['Filters']) > 1)) {
+                $arr['Error'] .= ' Probably invalid filters values were used.';
+            }
+
+            if ($hasFilters && 'table' !== $input->getOption('output')) {
+                array_shift($arr['Filters']);
                 if ('json' === $input->getOption('output')) {
                     $output->writeln(
-                        json_encode(
-                            [
-                                'Filters' => $params
-                            ],
-                            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                        )
+                        json_encode($arr, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                     );
-                } else {
-                    $output->writeln(Yaml::dump(['Filters' => $params], 8, 2));
+                } elseif ('yaml' === $input->getOption('output')) {
+                    $output->writeln(Yaml::dump($arr, 8, 2));
                 }
+            } else {
+                $output->writeln('<error>' . $arr['Error'] . '</error>');
             }
+
             return self::FAILURE;
         }
 
