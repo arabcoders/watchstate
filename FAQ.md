@@ -205,6 +205,8 @@ These are the agents we support for plex media server.
 * tmdb://(id) `New Plex Agent`
 * com.plexapp.agents.imdb://(id)?lang=en `(Old plex agents)`
 * com.plexapp.agents.tmdb://(id)?lang=en `(Old plex agents)`
-* com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents)`
+* com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents "id" can be movie id or series id)`
+* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(old plex agents)`
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(xbmc nfo parser agent)`
-* com.plexapp.agents.xbmcnfotv://(id)/(season)/(episode)?lang=en `(NFO agent for tv. id refers to tvdb series)`
+* com.plexapp.agents.xbmcnfotv://(seriesId)?lang=en `(xbmc nfo agent for tv)`
+* com.plexapp.agents.hama://(db)-(seriesId)?lang=en `(hama anime agent support anidb/tvdb subkeys only)`

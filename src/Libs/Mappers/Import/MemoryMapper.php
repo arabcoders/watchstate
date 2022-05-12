@@ -121,7 +121,7 @@ final class MemoryMapper implements ImportInterface
             $this->logger->debug(
                 sprintf('%s: \'%s\'. is identical.', $entity->via, $entity->getName()),
                 [
-                    'backend' => $entity->getAll(),
+                    'backend' => $cloned->getAll(),
                     'remote' => $entity->getAll(),
                 ]
             );

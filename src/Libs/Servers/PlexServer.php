@@ -54,11 +54,16 @@ class PlexServer implements ServerInterface
         'com.plexapp.agents.tmdb',
         'com.plexapp.agents.themoviedb',
         'com.plexapp.agents.xbmcnfo',
-    ];
-
-    protected const PARENT_SUPPORTED_LEGACY_AGENTS = [
         'com.plexapp.agents.xbmcnfotv',
         'com.plexapp.agents.thetvdb',
+        'com.plexapp.agents.hama',
+    ];
+
+    protected const GUID_AGENT_REPLACER = [
+        'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
+        'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.imdb://',
+        'com.plexapp.agents.thetvdb://' => 'com.plexapp.agents.tvdb://',
+        'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
     ];
 
     protected const WEBHOOK_ALLOWED_TYPES = [
@@ -359,7 +364,7 @@ class PlexServer implements ServerInterface
             'season' => null,
             'episode' => null,
             'parent' => [],
-            'guids' => $this->getGuids(ag($item, 'Guid', []), isParent: false),
+            'guids' => $this->getGuids(ag($item, 'Guid', [])),
             'extra' => [
                 'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
                 'webhook' => [
@@ -1283,6 +1288,12 @@ class PlexServer implements ServerInterface
                 );
             }
 
+            if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
+                    'payload' => (array)$item,
+                ]);
+            }
+
             $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
             if (0 === $date) {
@@ -1526,19 +1537,25 @@ class PlexServer implements ServerInterface
             $item->Guid[] = ['id' => $item->guid];
         }
 
-        if (!$this->hasSupportedGuids($item->Guid, true)) {
+        $iName = sprintf(
+            '%s - [%s (%d)]',
+            $library,
+            ag($item, ['title', 'originalTitle'], '??'),
+            ag($item, 'year', '0000')
+        );
+
+        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+            $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
+                'payload' => (array)$item,
+            ]);
+        }
+
+        if (!$this->hasSupportedGuids(guids: $item->Guid)) {
             if (null === ($item->Guid ?? null)) {
                 $item->Guid = [['id' => $item->guid]];
             } else {
                 $item->Guid[] = ['id' => $item->guid];
             }
-
-            $iName = sprintf(
-                '%s - [%s (%d)]',
-                $library,
-                ag($item, ['title', 'originalTitle'], '??'),
-                ag($item, 'year', '0000')
-            );
 
             $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
@@ -1551,10 +1568,10 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cacheShow[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid, isParent: true))->getAll();
+        $this->cacheShow[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
     }
 
-    protected function getGuids(array $guids, bool $isParent = false): array
+    protected function getGuids(array $guids): array
     {
         $guid = [];
 
@@ -1566,7 +1583,14 @@ class PlexServer implements ServerInterface
             }
 
             if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                $val = $this->parseLegacyAgent($val, $isParent);
+                // -- DO NOT accept plex relative unique ids, we generate our own.
+                if (substr_count($val, '/') >= 3) {
+                    if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                        $this->logger->debug(sprintf('%s: Parsing \'%s\' is not supported.', $this->name, $val));
+                    }
+                    continue;
+                }
+                $val = $this->parseLegacyAgent($val);
             }
 
             [$key, $value] = explode('://', $val);
@@ -1590,7 +1614,7 @@ class PlexServer implements ServerInterface
         return $guid;
     }
 
-    protected function hasSupportedGuids(array $guids, bool $isParent = false): bool
+    protected function hasSupportedGuids(array $guids): bool
     {
         foreach ($guids as $_id) {
             $val = is_object($_id) ? $_id->id : $_id['id'];
@@ -1600,12 +1624,14 @@ class PlexServer implements ServerInterface
             }
 
             if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                // -- Relative UIDs are only supported on episodes parents.
-                if (false === $isParent && substr_count($val, '/') >= 3) {
+                // -- DO NOT accept plex relative unique ids, we generate our own.
+                if (substr_count($val, '/') >= 3) {
+                    if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                        $this->logger->debug(sprintf('%s: Parsing \'%s\' is not supported.', $this->name, $val));
+                    }
                     continue;
                 }
-
-                $val = $this->parseLegacyAgent($val, $isParent);
+                $val = $this->parseLegacyAgent($val);
             }
 
             [$key, $value] = explode('://', $val);
@@ -1650,7 +1676,7 @@ class PlexServer implements ServerInterface
             'season' => null,
             'episode' => null,
             'parent' => [],
-            'guids' => $this->getGuids($item->Guid ?? [], isParent: false),
+            'guids' => $this->getGuids($item->Guid ?? []),
             'extra' => [
                 'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
             ],
@@ -1713,12 +1739,12 @@ class PlexServer implements ServerInterface
                 $json['Guid'][] = ['id' => $json['guid']];
             }
 
-            if (!$this->hasSupportedGuids($json['Guid'], true)) {
+            if (!$this->hasSupportedGuids(guids: $json['Guid'])) {
                 $this->cacheShow[$id] = [];
                 return $this->cacheShow[$id];
             }
 
-            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($json['Guid'], isParent: true))->getAll();
+            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
 
             return $this->cacheShow[$id];
         } catch (ExceptionInterface $e) {
@@ -1750,44 +1776,32 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function parseLegacyAgent(string $agent, bool $isParent = false): string
+    protected function parseLegacyAgent(string $agent): string
     {
         try {
-            $supported = self::SUPPORTED_LEGACY_AGENTS;
-
-            if (true === $isParent) {
-                $supported = array_merge_recursive($supported, self::PARENT_SUPPORTED_LEGACY_AGENTS);
-            }
-
-            if (false === in_array(before($agent, '://'), $supported)) {
+            if (false === in_array(before($agent, '://'), self::SUPPORTED_LEGACY_AGENTS)) {
                 return $agent;
             }
 
-            $replacer = [
-                'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
-                'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.imdb://',
-            ];
-
-            if (true === $isParent) {
-                $replacer += [
-                    'com.plexapp.agents.thetvdb://' => 'com.plexapp.agents.tvdb://',
-                    'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
-                ];
+            if (true === str_starts_with($agent, 'com.plexapp.agents.hama')) {
+                $agentGuid = explode('-', after($agent, '://'));
+            } else {
+                $agent = str_replace(
+                    array_keys(self::GUID_AGENT_REPLACER),
+                    array_values(self::GUID_AGENT_REPLACER),
+                    $agent
+                );
+                $agentGuid = explode('://', after($agent, 'agents.'));
             }
 
-            $agent = str_replace(array_keys($replacer), array_values($replacer), $agent);
-
-            $id = afterLast($agent, 'agents.');
-            $agentGuid = explode('://', $id);
-            $agent = $agentGuid[0];
-            $guid = explode('/', $agentGuid[1])[0];
-
-            return $agent . '://' . before($guid, '?');
+            return $agentGuid[0] . '://' . before($agentGuid[1], '?');
         } catch (Throwable $e) {
-            $this->logger->error('%s: Unable to match Plex Legacy agent identifier.', [
-                'guid' => $agent,
-                'error' => $e->getMessage()
-            ]);
+            $this->logger->error(
+                sprintf('%s: Error parsing Plex legacy agent identifier. %s', $this->name, $e->getMessage()),
+                [
+                    'guid' => $agent,
+                ]
+            );
             return $agent;
         }
     }
