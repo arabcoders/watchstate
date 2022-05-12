@@ -436,10 +436,7 @@ if (!function_exists('arrayToString')) {
                 } elseif (($val instanceof Stringable) || method_exists($val, '__toString')) {
                     $val = (string)$val;
                 } else {
-                    $val = [
-                        spl_object_hash($val) => get_class($val),
-                        ...(array)$val
-                    ];
+                    $val = get_object_vars($val);
                 }
             }
 
@@ -467,27 +464,29 @@ if (!function_exists('commandContext')) {
     }
 }
 
-if (!function_exists('array_diff_assoc_recursive')) {
-    function array_diff_assoc_recursive($array1, $array2): array
+if (!function_exists('computeArrayChanges')) {
+    function computeArrayChanges(array $oldArray, array $newArray): array
     {
         $difference = [];
 
-        foreach ($array1 as $key => $value) {
-            if (is_array($value)) {
-                if (!isset($array2[$key]) || !is_array($array2[$key])) {
+        foreach ($newArray as $key => $value) {
+            if (false === is_array($value)) {
+                if (!array_key_exists($key, $oldArray) || $oldArray[$key] !== $value) {
                     $difference[$key] = $value;
-                } else {
-                    $new_diff = array_diff_assoc_recursive($value, $array2[$key]);
-                    if (!empty($new_diff)) {
-                        $difference[$key] = $new_diff;
-                    }
                 }
+                continue;
+            }
+
+            if (!isset($oldArray[$key]) || !is_array($oldArray[$key])) {
+                $difference[$key] = $value;
             } else {
-                if (!array_key_exists($key, $array2) || $array2[$key] !== $value) {
-                    $difference[$key] = $value;
+                $newDiff = computeArrayChanges($oldArray[$key], $value);
+                if (!empty($newDiff)) {
+                    $difference[$key] = $newDiff;
                 }
             }
         }
+
         return $difference;
     }
 }

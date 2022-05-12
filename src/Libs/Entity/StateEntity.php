@@ -85,7 +85,7 @@ final class StateEntity implements StateInterface
             }
 
             if (true === in_array($key, StateInterface::ENTITY_ARRAY_KEYS)) {
-                $changes = array_diff_assoc_recursive($this->data[$key] ?? [], $value ?? []);
+                $changes = computeArrayChanges($this->data[$key] ?? [], $value ?? []);
                 if (!empty($changes)) {
                     foreach (array_keys($changes) as $subKey) {
                         $changed[$key][$subKey] = [
