@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 return [
-    '%(path)/db',
+    '%(path)/db/archive',
     '%(path)/config',
-    '%(tmpDir)/logs',
+    '%(tmpDir)/logs/crons',
     '%(tmpDir)/cache',
     '%(tmpDir)/profiler',
     '%(tmpDir)/webhooks',

@@ -68,10 +68,25 @@ if (!function_exists('makeDate')) {
 }
 
 if (!function_exists('ag')) {
-    function ag(array $array, string|null $path, mixed $default = null, string $separator = '.'): mixed
+    function ag(array|object $array, string|array|null $path, mixed $default = null, string $separator = '.'): mixed
     {
-        if (null === $path) {
+        if (empty($path)) {
             return $array;
+        }
+
+        if (!is_array($array)) {
+            $array = get_object_vars($array);
+        }
+
+        if (is_array($path)) {
+            foreach ($path as $key) {
+                $val = ag($array, $key, '_not_set');
+                if ('_not_set' === $val) {
+                    continue;
+                }
+                return $val;
+            }
+            return getValue($default);
         }
 
         if (array_key_exists($path, $array)) {
@@ -226,24 +241,27 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(string $name, ServerRequestInterface $request, array $parsed = []): void
+    function saveWebhookPayload(string $name, ServerRequestInterface $request, StateInterface $state): void
     {
         $content = [
-            'query' => $request->getQueryParams(),
+            'request' => [
+                'server' => $request->getServerParams(),
+                'body' => (string)$request->getBody(),
+                'query' => $request->getQueryParams(),
+            ],
             'parsed' => $request->getParsedBody(),
-            'server' => $request->getServerParams(),
-            'body' => (string)$request->getBody(),
             'attributes' => $request->getAttributes(),
-            'cParsed' => $parsed,
+            'entity' => $state->getAll(),
         ];
 
         @file_put_contents(
             Config::get('tmpDir') . '/webhooks/' . sprintf(
-                'webhook.%s.%s.json',
+                'webhook.%s.%s.%s.json',
                 $name,
-                (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
+                ag($state->extra, 'webhook.event', 'unknown'),
+                ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
 }
@@ -359,6 +377,13 @@ if (!function_exists('before')) {
     }
 }
 
+if (!function_exists('after')) {
+    function after(string $subject, string $search): string
+    {
+        return empty($search) ? $subject : array_reverse(explode($search, $subject, 2))[0];
+    }
+}
+
 if (!function_exists('makeServer')) {
     /**
      * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, persist:array, options:array} $server
@@ -411,15 +436,12 @@ if (!function_exists('arrayToString')) {
                 } elseif (($val instanceof Stringable) || method_exists($val, '__toString')) {
                     $val = (string)$val;
                 } else {
-                    $val = [
-                        spl_object_hash($val) => get_class($val),
-                        ...(array)$val
-                    ];
+                    $val = get_object_vars($val);
                 }
             }
 
             if (is_array($val)) {
-                $val = json_encode($val, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $val = '[ ' . arrayToString($val) . ' ]';
             } else {
                 $val = $val ?? 'None';
             }
@@ -442,27 +464,29 @@ if (!function_exists('commandContext')) {
     }
 }
 
-if (!function_exists('array_diff_assoc_recursive')) {
-    function array_diff_assoc_recursive($array1, $array2): array
+if (!function_exists('computeArrayChanges')) {
+    function computeArrayChanges(array $oldArray, array $newArray): array
     {
         $difference = [];
 
-        foreach ($array1 as $key => $value) {
-            if (is_array($value)) {
-                if (!isset($array2[$key]) || !is_array($array2[$key])) {
+        foreach ($newArray as $key => $value) {
+            if (false === is_array($value)) {
+                if (!array_key_exists($key, $oldArray) || $oldArray[$key] !== $value) {
                     $difference[$key] = $value;
-                } else {
-                    $new_diff = array_diff_assoc_recursive($value, $array2[$key]);
-                    if (!empty($new_diff)) {
-                        $difference[$key] = $new_diff;
-                    }
                 }
+                continue;
+            }
+
+            if (!isset($oldArray[$key]) || !is_array($oldArray[$key])) {
+                $difference[$key] = $value;
             } else {
-                if (!array_key_exists($key, $array2) || $array2[$key] !== $value) {
-                    $difference[$key] = $value;
+                $newDiff = computeArrayChanges($oldArray[$key], $value);
+                if (!empty($newDiff)) {
+                    $difference[$key] = $newDiff;
                 }
             }
         }
+
         return $difference;
     }
 }

@@ -6,12 +6,11 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Options;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
@@ -22,8 +21,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Throwable;
 
 class ImportCommand extends Command
 {
@@ -72,25 +71,12 @@ class ImportCommand extends Command
                 'Sync selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption(
-                'import-unwatched',
+                'deep-debug',
                 null,
                 InputOption::VALUE_NONE,
-                '--DEPRECATED-- will be removed in v1.x. We import the item regardless of watched/unwatched state.'
-            )
-            ->addOption('stats-show', null, InputOption::VALUE_NONE, 'Show final status.')
-            ->addOption(
-                'stats-filter',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Filter final status output e.g. (servername.key)',
-                null
-            )
-            ->addOption(
-                'mapper-direct',
-                null,
-                InputOption::VALUE_NONE,
-                'Uses less memory. However, it\'s significantly slower then default mapper.'
+                'You should not use this flag unless told by the team it will inflate your log output.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
@@ -114,10 +100,6 @@ class ImportCommand extends Command
             $config = Config::get('path') . '/config/servers.yaml';
         }
 
-        if ($input->getOption('mapper-direct')) {
-            $this->mapper = Container::get(DirectMapper::class);
-        }
-
         $list = [];
         $serversFilter = (string)$input->getOption('servers-filter');
         $selected = explode(',', $serversFilter);
@@ -135,25 +117,41 @@ class ImportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
+        $mapperOpts = [];
+
+        if ($input->getOption('dry-run')) {
+            $output->writeln('<info>Dry run mode. No changes will be committed to local database.</info>');
+
+            $mapperOpts[Options::DRY_RUN] = true;
+        }
+
+        if ($input->getOption('deep-debug')) {
+            $mapperOpts[Options::DEEP_DEBUG] = true;
+        }
+
+        if (!empty($mapperOpts)) {
+            $this->mapper->setUp($mapperOpts);
+        }
+
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($serverName, $selected, true)) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by --servers-filter.', $serverName));
+                $this->logger->info(sprintf('%s: Ignoring as requested by [-s, --servers-filter].', $serverName));
                 continue;
             }
 
             if (true !== ag($server, 'import.enabled')) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by user config option.', $serverName));
+                $this->logger->info(sprintf('%s: Ignoring as requested by user config option.', $serverName));
                 continue;
             }
 
             if (!isset($supported[$type])) {
                 $this->logger->error(
                     sprintf(
-                        'Unexpected type for server \'%s\'. Was Expecting one of [%s], but got \'%s\' instead.',
+                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
                         $serverName,
-                        implode('|', array_keys($supported)),
+                        implode(', ', array_keys($supported)),
                         $type
                     )
                 );
@@ -162,7 +160,7 @@ class ImportCommand extends Command
             }
 
             if (null === ag($server, 'url')) {
-                $this->logger->error(sprintf('Server \'%s\' has no URL.', $serverName));
+                $this->logger->error(sprintf('%s: Backend has no valid URL.', $serverName));
                 return self::FAILURE;
             }
 
@@ -174,7 +172,7 @@ class ImportCommand extends Command
             $output->writeln(
                 sprintf(
                     '<error>%s</error>',
-                    $isCustom ? '--servers-filter/-s did not return any servers.' : 'No servers were found.'
+                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No servers were found.'
                 )
             );
             return self::FAILURE;
@@ -183,7 +181,7 @@ class ImportCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        if (count($list) >= 1 && !$input->getOption('mapper-direct')) {
+        if (count($list) >= 1) {
             $this->logger->info('Preloading all mapper data.');
             $this->mapper->loadData();
             $this->logger->info('Finished preloading mapper data.');
@@ -202,6 +200,10 @@ class ImportCommand extends Command
                 $opts['client']['proxy'] = $input->getOption('proxy');
             }
 
+            if ($input->getOption('deep-debug')) {
+                $opts[Options::DEEP_DEBUG] = true;
+            }
+
             if ($input->getOption('no-proxy')) {
                 $opts['client']['no_proxy'] = $input->getOption('no-proxy');
             }
@@ -217,25 +219,27 @@ class ImportCommand extends Command
                 $server['class'] = $server['class']->setLogger($logger);
             }
 
-            $after = true === $input->getOption('force-full') ? null : ag($server, 'import.lastSync', null);
+            $after = ag($server, 'import.lastSync', null);
+
+            if (true === (bool)ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
+                $after = null;
+            }
 
             if (null === $after) {
                 $this->logger->notice(
-                    sprintf('Importing \'%s\' play state changes since beginning.', $name)
+                    sprintf('%s: Importing play state changes since beginning.', $name)
                 );
             } else {
                 $after = makeDate($after);
                 $this->logger->notice(
-                    sprintf('Importing \'%s\' play state changes since \'%s\'.', $name, $after)
+                    sprintf('%s: Importing play state changes since \'%s\'.', $name, $after)
                 );
             }
 
             array_push($queue, ...$server['class']->pull($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
-                $this->logger->notice(
-                    sprintf('Not updating \'%s\' last sync time as the server reported an error.', $name)
-                );
+                $this->logger->notice(sprintf('%s: Not updating last sync date. Backend reported an error.', $name));
             } else {
                 Config::save(sprintf('servers.%s.import.lastSync', $name), time());
             }
@@ -243,17 +247,14 @@ class ImportCommand extends Command
 
         unset($server);
 
-        $this->logger->notice(sprintf('Waiting on (%d) HTTP Requests.', count($queue)));
+        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' external requests.', count($queue)));
 
         foreach ($queue as $_key => $response) {
             $requestData = $response->getInfo('user_data');
+
             try {
-                if (200 === $response->getStatusCode()) {
-                    $requestData['ok']($response);
-                } else {
-                    $requestData['error']($response);
-                }
-            } catch (ExceptionInterface $e) {
+                $requestData['ok']($response);
+            } catch (Throwable $e) {
                 $requestData['error']($e);
             }
 
@@ -262,51 +263,42 @@ class ImportCommand extends Command
             gc_collect_cycles();
         }
 
-        unset($queue);
-        $this->logger->notice('Finished waiting HTTP Requests.');
+        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' external requests.', count($queue)));
+
+        $queue = $requestData = null;
 
         $total = count($this->mapper);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('Committing (%d) Changes.', $total));
+            $this->logger->notice(sprintf('MAPPER: Updating \'%d\' items.', $total));
         }
 
         $operations = $this->mapper->commit();
 
-        if ($input->getOption('stats-show')) {
-            Data::add('operations', 'stats', $operations);
-            $output->writeln(
-                Yaml::dump(Data::get($input->getOption('stats-filter'), []), 8, 2)
-            );
-        } else {
-            $a = [
-                [
-                    'Type' => ucfirst(StateInterface::TYPE_MOVIE),
-                    'Added' => $operations[StateInterface::TYPE_MOVIE]['added'] ?? 'None',
-                    'Updated' => $operations[StateInterface::TYPE_MOVIE]['updated'] ?? 'None',
-                    'Failed' => $operations[StateInterface::TYPE_MOVIE]['failed'] ?? 'None',
-                ],
-                new TableSeparator(),
-                [
-                    'Type' => ucfirst(StateInterface::TYPE_EPISODE),
-                    'Added' => $operations[StateInterface::TYPE_EPISODE]['added'] ?? 'None',
-                    'Updated' => $operations[StateInterface::TYPE_EPISODE]['updated'] ?? 'None',
-                    'Failed' => $operations[StateInterface::TYPE_EPISODE]['failed'] ?? 'None',
-                ],
-            ];
+        $a = [
+            [
+                'Type' => ucfirst(StateInterface::TYPE_MOVIE),
+                'Added' => $operations[StateInterface::TYPE_MOVIE]['added'] ?? '-',
+                'Updated' => $operations[StateInterface::TYPE_MOVIE]['updated'] ?? '-',
+                'Failed' => $operations[StateInterface::TYPE_MOVIE]['failed'] ?? '-',
+            ],
+            new TableSeparator(),
+            [
+                'Type' => ucfirst(StateInterface::TYPE_EPISODE),
+                'Added' => $operations[StateInterface::TYPE_EPISODE]['added'] ?? '-',
+                'Updated' => $operations[StateInterface::TYPE_EPISODE]['updated'] ?? '-',
+                'Failed' => $operations[StateInterface::TYPE_EPISODE]['failed'] ?? '-',
+            ],
+        ];
 
-            (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
-        }
+        (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
 
         foreach ($list as $server) {
             if (null === ($name = ag($server, 'name'))) {
                 continue;
             }
 
-            Config::save(
-                sprintf('servers.%s.persist', $name),
-                $server['class']->getPersist()
-            );
+            Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
         }
 
         if (false === $custom && is_writable(dirname($config))) {

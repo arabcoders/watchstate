@@ -7,8 +7,10 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
+use PDOException;
 use Psr\Log\LoggerInterface;
 
 final class MemoryMapper implements ImportInterface
@@ -52,7 +54,7 @@ final class MemoryMapper implements ImportInterface
                 continue;
             }
             $this->objects[$entity->id] = $entity;
-            $this->addGuids($this->objects[$entity->id], $entity->id);
+            $this->addPointers($this->objects[$entity->id], $entity->id);
         }
 
         return $this;
@@ -73,8 +75,21 @@ final class MemoryMapper implements ImportInterface
             $this->changed[$pointer] = $pointer;
 
             Data::increment($bucket, $entity->type . '_added');
-            $this->addGuids($this->objects[$pointer], $pointer);
-            $this->logger->debug(sprintf('Adding %s. As new Item.', $name));
+            $this->addPointers($this->objects[$pointer], $pointer);
+
+            if ($this->inDeepDebugMode()) {
+                $data = $entity->getAll();
+                unset($data['id']);
+                $data['updated'] = makeDate($data['updated']);
+                $data['watched'] = 0 === $data['watched'] ? 'No' : 'Yes';
+                if ($entity->isMovie()) {
+                    unset($data['season'], $data['episode'], $data['parent']);
+                }
+            } else {
+                $data = [];
+            }
+
+            $this->logger->info(sprintf('Adding %s. As new Item.', $name), $data);
 
             return $this;
         }
@@ -82,19 +97,6 @@ final class MemoryMapper implements ImportInterface
         // -- Ignore old item.
         if (null !== ($opts['after'] ?? null) && ($opts['after'] instanceof DateTimeInterface)) {
             if ($opts['after']->getTimestamp() >= $entity->updated) {
-                // -- check for updated GUIDs.
-                if ($this->objects[$pointer]->apply($entity, guidOnly: true)->isChanged()) {
-                    $this->changed[$pointer] = $pointer;
-                    if (!empty($entity->meta)) {
-                        $this->objects[$pointer]->meta = $entity->meta;
-                    }
-                    Data::increment($bucket, $entity->type . '_updated');
-                    $this->addGuids($this->objects[$pointer], $pointer);
-                    $this->logger->debug(sprintf('Updating %s. GUIDs.', $name), $this->objects[$pointer]->diff());
-                    return $this;
-                }
-
-                $this->logger->debug(sprintf('Ignoring %s. No change since last sync.', $name));
                 Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
@@ -102,15 +104,29 @@ final class MemoryMapper implements ImportInterface
 
         $this->objects[$pointer] = $this->objects[$pointer]->apply($entity);
 
-        if ($this->objects[$pointer]->isChanged()) {
+        $cloned = clone $this->objects[$pointer];
+        if (true === $this->objects[$pointer]->isChanged()) {
             Data::increment($bucket, $entity->type . '_updated');
             $this->changed[$pointer] = $pointer;
-            $this->addGuids($this->objects[$pointer], $pointer);
-            $this->logger->debug(sprintf('Updating %s. State changed.', $name), $this->objects[$pointer]->diff());
+            $this->removePointers($cloned);
+            $this->addPointers($this->objects[$pointer], $pointer);
+            $this->logger->info(
+                sprintf('%s: Updating \'%s\'. State changed.', $entity->via, $entity->getName()),
+                $this->objects[$pointer]->diff(all: true),
+            );
             return $this;
         }
 
-        $this->logger->debug(sprintf('Ignoring %s. State unchanged.', $name));
+        if ($this->inDeepDebugMode()) {
+            $this->logger->debug(
+                sprintf('%s: \'%s\'. is identical.', $entity->via, $entity->getName()),
+                [
+                    'backend' => $cloned->getAll(),
+                    'remote' => $entity->getAll(),
+                ]
+            );
+        }
+
         Data::increment($bucket, $entity->type . '_ignored_no_change');
 
         return $this;
@@ -122,34 +138,7 @@ final class MemoryMapper implements ImportInterface
             return $this->objects[$entity->id];
         }
 
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $key) {
-                if (null !== ($this->guids[$key] ?? null)) {
-                    return $this->objects[$this->guids[$key]];
-                }
-            }
-        }
-
-        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
-            foreach ($entity->getRelativePointers() as $key) {
-                if (null !== ($this->guids[$key] ?? null)) {
-                    return $this->objects[$this->guids[$key]];
-                }
-            }
-        }
-
-        if (true === $this->fullyLoaded) {
-            return null;
-        }
-
-        if (null !== ($lazyEntity = $this->storage->get($entity))) {
-            $this->objects[] = $lazyEntity;
-            $id = array_key_last($this->objects);
-            $this->addGuids($this->objects[$id], $id);
-            return $this->objects[$id];
-        }
-
-        return null;
+        return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
     }
 
     public function remove(StateInterface $entity): bool
@@ -160,21 +149,7 @@ final class MemoryMapper implements ImportInterface
 
         $this->storage->remove($this->objects[$pointer]);
 
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $key) {
-                if (null !== ($this->guids[$key] ?? null)) {
-                    unset($this->guids[$key]);
-                }
-            }
-        }
-
-        if ($entity->isEpisode() && $entity->hasRelativeGuid()) {
-            foreach ($entity->getRelativePointers() as $key) {
-                if (null !== ($this->guids[$key] ?? null)) {
-                    unset($this->guids[$key]);
-                }
-            }
-        }
+        $this->removePointers($this->objects[$pointer]);
 
         unset($this->objects[$pointer]);
 
@@ -187,9 +162,43 @@ final class MemoryMapper implements ImportInterface
 
     public function commit(): mixed
     {
-        $state = $this->storage->commit(
-            array_intersect_key($this->objects, $this->changed)
-        );
+        $state = $this->storage->transactional(function (StorageInterface $storage) {
+            $list = [
+                StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+            ];
+
+            $count = count($this->changed);
+
+            $this->logger->notice(
+                0 === $count ? 'No changes detected.' : sprintf('Updating backend with \'%d\' changes.', $count)
+            );
+
+            $inDryRunMode = $this->inDryRunMode();
+
+            foreach ($this->changed as $pointer) {
+                try {
+                    $entity = &$this->objects[$pointer];
+
+                    if (null === $entity->id) {
+                        if (false === $inDryRunMode) {
+                            $storage->insert($entity);
+                        }
+                        $list[$entity->type]['added']++;
+                    } else {
+                        if (false === $inDryRunMode) {
+                            $storage->update($entity);
+                        }
+                        $list[$entity->type]['updated']++;
+                    }
+                } catch (PDOException $e) {
+                    $list[$entity->type]['failed']++;
+                    $this->logger->error($e->getMessage(), $entity->getAll());
+                }
+            }
+
+            return $list;
+        });
 
         $this->reset();
 
@@ -237,6 +246,23 @@ final class MemoryMapper implements ImportInterface
         return $this;
     }
 
+    public function __destruct()
+    {
+        if (false === ($this->options['disable_autocommit'] ?? false) && $this->count() >= 1) {
+            $this->commit();
+        }
+    }
+
+    public function inDryRunMode(): bool
+    {
+        return true === (bool)ag($this->options, Options::DRY_RUN, false);
+    }
+
+    public function inDeepDebugMode(): bool
+    {
+        return true === (bool)ag($this->options, Options::DEEP_DEBUG, false);
+    }
+
     /**
      * Is the object already mapped?
      *
@@ -246,49 +272,36 @@ final class MemoryMapper implements ImportInterface
      */
     private function getPointer(StateInterface $entity): int|bool
     {
-        foreach ($entity->getPointers() as $key) {
+        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
             if (null !== ($this->guids[$key] ?? null)) {
                 return $this->guids[$key];
-            }
-        }
-
-        if ($entity->isEpisode()) {
-            foreach ($entity->getRelativePointers() as $key) {
-                if (null !== ($this->guids[$key] ?? null)) {
-                    return $this->guids[$key];
-                }
             }
         }
 
         if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[] = $lazyEntity;
             $id = array_key_last($this->objects);
-            $this->addGuids($this->objects[$id], $id);
+            $this->addPointers($this->objects[$id], $id);
             return $id;
         }
 
         return false;
     }
 
-    private function addGuids(StateInterface $entity, int $pointer): void
+    private function addPointers(StateInterface $entity, int $pointer): void
     {
-        if ($entity->hasGuids()) {
-            foreach ($entity->getPointers() as $key) {
-                $this->guids[$key] = $pointer;
-            }
+        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+            $this->guids[$key] = $pointer;
         }
+    }
 
-        if ($entity->isEpisode()) {
-            foreach ($entity->getRelativePointers() as $key) {
-                $this->guids[$key] = $pointer;
+    private function removePointers(StateInterface $entity): void
+    {
+        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+            if (isset($this->guids[$key])) {
+                unset($this->guids[$key]);
             }
         }
     }
 
-    public function __destruct()
-    {
-        if (false === ($this->options['disable_autocommit'] ?? false) && $this->count() >= 1) {
-            $this->commit();
-        }
-    }
 }

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Libs\Storage;
 
 use App\Libs\Entity\StateInterface;
+use Closure;
 use DateTimeInterface;
 use PDO;
+use PDOException;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
@@ -66,10 +68,11 @@ interface StorageInterface
      * Insert/Update Entities.
      *
      * @param array<StateInterface> $entities
+     * @param array $opts
      *
      * @return array
      */
-    public function commit(array $entities): array;
+    public function commit(array $entities, array $opts = []): array;
 
     /**
      * Migrate Backend Storage Schema.
@@ -80,6 +83,16 @@ interface StorageInterface
      * @return mixed
      */
     public function migrations(string $dir, array $opts = []): mixed;
+
+    /**
+     * Migrate Backend storage data from old version.
+     *
+     * @param string $version represent the new version.
+     * @param LoggerInterface|null $logger
+     *
+     * @return mixed
+     */
+    public function migrateData(string $version, LoggerInterface|null $logger = null): mixed;
 
     /**
      * Does the backend storage need to run migrations?
@@ -122,4 +135,21 @@ interface StorageInterface
      * @throws RuntimeException if PDO is not initialized yet.
      */
     public function getPdo(): PDO;
+
+    /**
+     * Enable Single Transaction mode.
+     *
+     * @return bool
+     */
+    public function singleTransaction(): bool;
+
+    /**
+     * Wrap Queries into single transaction.
+     *
+     * @param Closure(StorageInterface): mixed $callback
+     *
+     * @return mixed
+     * @throws PDOException
+     */
+    public function transactional(Closure $callback): mixed;
 }

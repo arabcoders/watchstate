@@ -17,8 +17,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 interface ServerInterface
 {
-    public const OPT_EXPORT_IGNORE_DATE = 'exportIgnoreDate';
-
     /**
      * Initiate server. It should return **NEW OBJECT**
      *
@@ -55,9 +53,11 @@ interface ServerInterface
      * Process The request For attributes extraction.
      *
      * @param ServerRequestInterface $request
+     * @param array $opts
+     *
      * @return ServerRequestInterface
      */
-    public static function processRequest(ServerRequestInterface $request): ServerRequestInterface;
+    public static function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
 
     /**
      * Parse server specific webhook event. for play/un-played event.

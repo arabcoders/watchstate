@@ -14,8 +14,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Throwable;
 
 class CacheCommand extends Command
 {
@@ -173,12 +173,8 @@ class CacheCommand extends Command
         foreach ($queue as $_key => $response) {
             $requestData = $response->getInfo('user_data');
             try {
-                if (200 === $response->getStatusCode()) {
-                    $requestData['ok']($response);
-                } else {
-                    $requestData['error']($response);
-                }
-            } catch (ExceptionInterface $e) {
+                $requestData['ok']($response);
+            } catch (Throwable $e) {
                 $requestData['error']($e);
             }
 

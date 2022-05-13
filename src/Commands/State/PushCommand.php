@@ -10,12 +10,13 @@ use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
-use App\Libs\Servers\ServerInterface;
+use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -99,45 +100,28 @@ class PushCommand extends Command
         }
 
         if ($input->getOption('queue-show')) {
-            $table = new Table($output);
             $rows = [];
-            $table->setHeaders(
-                [
-                    'ID',
-                    'Type',
-                    'Date',
-                    'Via',
-                    'Main Title',
-                    'Year | Episode',
-                    'Watched'
-                ]
-            );
+
+            $x = 0;
+            $count = count($entities);
 
             foreach ($entities as $entity) {
-                $number = '( ' . ag($entity->meta, 'year', 0) . ' )';
-
-                if (StateInterface::TYPE_EPISODE === $entity->type) {
-                    $number .= sprintf(
-                        ' - S%sE%s',
-                        str_pad((string)($entity->meta['season'] ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($entity->meta['episode'] ?? 0), 2, '0', STR_PAD_LEFT),
-                    );
-                }
+                $x++;
 
                 $rows[] = [
-                    $entity->id,
-                    $entity->type,
+                    $entity->getName(),
+                    $entity->isWatched() ? 'Yes' : 'No',
+                    $entity->via ?? '??',
                     makeDate($entity->updated),
-                    ag($entity->meta, 'via', '??'),
-                    ag($entity->meta, 'series', ag($entity->meta, 'title', '??')),
-                    $number,
-                    $entity->watched ? 'Yes' : 'No',
                 ];
+
+                if ($x < $count) {
+                    $rows[] = new TableSeparator();
+                }
             }
 
-            $table->setRows($rows);
-
-            $table->render();
+            (new Table($output))->setHeaders(['Media Title', 'Played', 'Via', 'Record Date']
+            )->setStyle('box')->setRows($rows)->render();
 
             return self::SUCCESS;
         }
@@ -148,18 +132,18 @@ class PushCommand extends Command
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if (true !== ag($server, 'webhook.push')) {
+            if (true !== (bool)ag($server, 'webhook.push')) {
                 $output->writeln(
-                    sprintf('<error>Ignoring \'%s\' as requested by user config option.</error>', $serverName),
+                    sprintf('<error>%s: Ignoring as requested by user config option.</error>', $serverName),
                     OutputInterface::VERBOSITY_VERBOSE
                 );
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $output->writeln(
+                $this->logger->error(
                     sprintf(
-                        '<error>Server \'%s\' Used Unsupported type. Expecting one of \'%s\' but got \'%s\' instead.</error>',
+                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
                         $serverName,
                         implode(', ', array_keys($supported)),
                         $type
@@ -169,7 +153,7 @@ class PushCommand extends Command
             }
 
             if (null === ag($server, 'url')) {
-                $output->writeln(sprintf('<error>Server \'%s\' has no url.</error>', $serverName));
+                $this->logger->error(sprintf('%s: Backend does not have valid URL.', $serverName));
                 return self::FAILURE;
             }
 
@@ -198,7 +182,7 @@ class PushCommand extends Command
             $opts = ag($server, 'server.options', []);
 
             if ($input->getOption('ignore-date')) {
-                $opts[ServerInterface::OPT_EXPORT_IGNORE_DATE] = true;
+                $opts[Options::IGNORE_DATE] = true;
             }
 
             if ($input->getOption('proxy')) {
@@ -224,27 +208,28 @@ class PushCommand extends Command
         $total = count($requests);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' change play state requests.', $total));
             foreach ($requests as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {
                         throw new ServerException($response);
                     }
-                    $this->logger->info(
+                    $this->logger->notice(
                         sprintf(
-                            'Processed: State (%s) - %s',
-                            ag($requestData, 'state', '??'),
+                            '%s: Marking \'%s\' as \'%s\'.',
+                            ag($requestData, 'server', '??'),
                             ag($requestData, 'itemName', '??'),
+                            ag($requestData, 'state', '??'),
                         )
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error($e->getMessage());
                 }
             }
-            $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Finished processing \'%d\' change play state requests.', $total));
         } else {
-            $this->logger->notice('No state change detected.');
+            $this->logger->notice('No play state change detected.');
         }
 
         foreach ($list as $server) {
