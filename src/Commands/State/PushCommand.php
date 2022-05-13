@@ -134,16 +134,16 @@ class PushCommand extends Command
 
             if (true !== (bool)ag($server, 'webhook.push')) {
                 $output->writeln(
-                    sprintf('<error>Ignoring \'%s\' as requested by user config option.</error>', $serverName),
+                    sprintf('<error>%s: Ignoring as requested by user config option.</error>', $serverName),
                     OutputInterface::VERBOSITY_VERBOSE
                 );
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $output->writeln(
+                $this->logger->error(
                     sprintf(
-                        '<error>Server \'%s\' Used Unsupported type. Expecting one of \'%s\' but got \'%s\' instead.</error>',
+                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
                         $serverName,
                         implode(', ', array_keys($supported)),
                         $type
@@ -153,7 +153,7 @@ class PushCommand extends Command
             }
 
             if (null === ag($server, 'url')) {
-                $output->writeln(sprintf('<error>Server \'%s\' has no url.</error>', $serverName));
+                $this->logger->error(sprintf('%s: Backend does not have valid URL.', $serverName));
                 return self::FAILURE;
             }
 
@@ -208,7 +208,7 @@ class PushCommand extends Command
         $total = count($requests);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' change play state requests.', $total));
             foreach ($requests as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
@@ -227,9 +227,9 @@ class PushCommand extends Command
                     $this->logger->error($e->getMessage());
                 }
             }
-            $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Finished processing \'%d\' change play state requests.', $total));
         } else {
-            $this->logger->notice('No state change detected.');
+            $this->logger->notice('No play state change detected.');
         }
 
         foreach ($list as $server) {

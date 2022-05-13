@@ -117,21 +117,21 @@ class ExportCommand extends Command
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($name, $selected, true)) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by --servers-filter.', $name));
+                $this->logger->info(sprintf('%s: Ignoring this server as requested by --servers-filter.', $name));
                 continue;
             }
 
             if (true !== ag($server, 'export.enabled')) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by user config option.', $name));
+                $this->logger->info(sprintf('%s: Ignoring this as requested by user config.', $name));
                 continue;
             }
 
             if (!isset($supported[$type])) {
                 $this->logger->error(
                     sprintf(
-                        'Unexpected type for server \'%s\'. Was Expecting one of [%s], but got \'%s\' instead.',
+                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
                         $name,
-                        implode('|', array_keys($supported)),
+                        implode(', ', array_keys($supported)),
                         $type
                     )
                 );
@@ -139,7 +139,7 @@ class ExportCommand extends Command
             }
 
             if (null === ag($server, 'url')) {
-                $this->logger->error(sprintf('Server \'%s\' has no URL.', $name));
+                $this->logger->error(sprintf('%s: Backend does not have valid URL.', $name));
                 return self::FAILURE;
             }
 
@@ -151,7 +151,7 @@ class ExportCommand extends Command
             $output->writeln(
                 sprintf(
                     '<error>%s</error>',
-                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No server were found.'
+                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No servers were found.'
                 )
             );
             return self::FAILURE;
@@ -200,21 +200,19 @@ class ExportCommand extends Command
             $after = true === $input->getOption('force-full') ? null : ag($server, 'export.lastSync', null);
 
             if (null === $after) {
-                $this->logger->notice(
-                    sprintf('Exporting \'%s\' play state changes since beginning.', $name)
-                );
+                $this->logger->notice(sprintf('%s: Exporting all local play state to this backend.', $name));
             } else {
                 $after = makeDate($after);
                 $this->logger->notice(
-                    sprintf('Exporting \'%s\' play state changes since \'%s\'.', $name, $after)
+                    sprintf('%s: Exporting play state changes since \'%s\' to this backend.', $name, $after)
                 );
             }
 
             array_push($requests, ...$server['class']->export($this->mapper, $after));
 
-            if (true === Data::get(sprintf('%s.no_export_update', $name))) {
+            if (true === (bool)Data::get(sprintf('%s.no_export_update', $name))) {
                 $this->logger->notice(
-                    sprintf('Not updating \'%s\' export date, as the server reported an error.', $name)
+                    sprintf('%s: Not updating last export date. Backend reported an error.', $name)
                 );
             } else {
                 Config::save(sprintf('servers.%s.export.lastSync', $name), time());
@@ -223,7 +221,7 @@ class ExportCommand extends Command
 
         unset($server);
 
-        $this->logger->notice(sprintf('Waiting on (%d) (Compare State) Requests.', count($requests)));
+        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' state comparison requests.', count($requests)));
 
         foreach ($requests as $response) {
             $requestData = $response->getInfo('user_data');
@@ -234,33 +232,34 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', count($requests)));
+        $this->logger->notice(sprintf('HTTP: Finished processing \'%d\' state comparison requests.', count($requests)));
 
         $changes = $this->mapper->getQueue();
         $total = count($changes);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('Waiting on (%d) (Stats Change) Requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Sending \'%d\' stats change requests.', $total));
             foreach ($changes as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {
                         throw new ServerException($response);
                     }
-                    $this->logger->debug(
+                    $this->logger->notice(
                         sprintf(
-                            'Processed: State (%s) - %s',
-                            ag($requestData, 'state', '??'),
+                            '%s: Marked \'%s\' as \'%s\'.',
+                            ag($requestData, 'server', '??'),
                             ag($requestData, 'itemName', '??'),
+                            ag($requestData, 'state', '??'),
                         )
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error($e->getMessage());
                 }
             }
-            $this->logger->notice(sprintf('Finished waiting on (%d) Requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Finished Processing \'%d\' state change requests.', $total));
         } else {
-            $this->logger->notice('No state change detected.');
+            $this->logger->notice('No state changes detected.');
         }
 
         foreach ($list as $server) {

@@ -120,7 +120,7 @@ class ImportCommand extends Command
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed to backend.</info>');
+            $output->writeln('<info>Dry run mode. No changes will be committed to local database.</info>');
 
             $mapperOpts[Options::DRY_RUN] = true;
         }
@@ -137,21 +137,21 @@ class ImportCommand extends Command
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($serverName, $selected, true)) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by --servers-filter.', $serverName));
+                $this->logger->info(sprintf('%s: Ignoring as requested by [-s, --servers-filter].', $serverName));
                 continue;
             }
 
             if (true !== ag($server, 'import.enabled')) {
-                $this->logger->info(sprintf('Ignoring \'%s\' as requested by user config option.', $serverName));
+                $this->logger->info(sprintf('%s: Ignoring as requested by user config option.', $serverName));
                 continue;
             }
 
             if (!isset($supported[$type])) {
                 $this->logger->error(
                     sprintf(
-                        'Unexpected type for server \'%s\'. Was Expecting one of [%s], but got \'%s\' instead.',
+                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
                         $serverName,
-                        implode('|', array_keys($supported)),
+                        implode(', ', array_keys($supported)),
                         $type
                     )
                 );
@@ -160,7 +160,7 @@ class ImportCommand extends Command
             }
 
             if (null === ag($server, 'url')) {
-                $this->logger->error(sprintf('Server \'%s\' has no URL.', $serverName));
+                $this->logger->error(sprintf('%s: Backend has no valid URL.', $serverName));
                 return self::FAILURE;
             }
 
@@ -172,7 +172,7 @@ class ImportCommand extends Command
             $output->writeln(
                 sprintf(
                     '<error>%s</error>',
-                    $isCustom ? '--servers-filter/-s did not return any servers.' : 'No servers were found.'
+                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No servers were found.'
                 )
             );
             return self::FAILURE;
@@ -239,7 +239,7 @@ class ImportCommand extends Command
             array_push($queue, ...$server['class']->pull($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
-                $this->logger->notice(sprintf('%s: Not updating last sync date backend reported an error.', $name));
+                $this->logger->notice(sprintf('%s: Not updating last sync date. Backend reported an error.', $name));
             } else {
                 Config::save(sprintf('servers.%s.import.lastSync', $name), time());
             }
@@ -263,13 +263,14 @@ class ImportCommand extends Command
             gc_collect_cycles();
         }
 
-        unset($queue);
-        $this->logger->notice('HTTP: Finished waiting external requests.');
+        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' external requests.', count($queue)));
+
+        $queue = $requestData = null;
 
         $total = count($this->mapper);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('MAPPER: Committing \'%d\' recorded changes.', $total));
+            $this->logger->notice(sprintf('MAPPER: Updating \'%d\' items.', $total));
         }
 
         $operations = $this->mapper->commit();

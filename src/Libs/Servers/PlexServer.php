@@ -797,11 +797,15 @@ class PlexServer implements ServerInterface
                 );
 
                 $this->logger->debug(
-                    sprintf('%s: Changing \'%s\' remote state.', $this->name, $iName),
+                    sprintf(
+                        '%s: Changing \'%s\' remote state to \'%s\'.',
+                        $this->name,
+                        $iName,
+                        $state->isWatched() ? 'Played' : 'Unplayed',
+                    ),
                     [
-                        'backend' => $state->isWatched() ? 'Played' : 'Unplayed',
                         'remote' => $isWatched ? 'Played' : 'Unplayed',
-                        'url' => (string)$url,
+                        'url' => $url,
                     ]
                 );
 
@@ -812,7 +816,7 @@ class PlexServer implements ServerInterface
                         'user_data' => [
                             'itemName' => $iName,
                             'server' => $this->name,
-                            'state' => $state->isWatched() ? 'Watched' : 'Unwatched',
+                            'state' => $state->isWatched() ? 'Played' : 'Unplayed',
                         ]
                     ])
                 );
@@ -1502,11 +1506,18 @@ class PlexServer implements ServerInterface
                 )
             );
 
-            $this->logger->info(sprintf('%s: Queuing \'%s\'.', $this->name, $iName), [
-                'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
-                'url' => $url,
-            ]);
+            $this->logger->debug(
+                sprintf(
+                    '%s: Changing \'%s\' remote state to \'%s\'.',
+                    $this->name,
+                    $iName,
+                    $entity->isWatched() ? 'Played' : 'Unplayed',
+                ),
+                [
+                    'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
+                    'url' => $url,
+                ]
+            );
 
             $mapper->queue(
                 $this->http->request(

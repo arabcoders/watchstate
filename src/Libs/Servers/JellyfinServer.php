@@ -754,9 +754,13 @@ class JellyfinServer implements ServerInterface
                 $url = $this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, ag($json, 'Id')));
 
                 $this->logger->debug(
-                    sprintf('%s: Changing \'%s\' remote state.', $this->name, $iName),
+                    sprintf(
+                        '%s: Changing \'%s\' remote state to \'%s\'.',
+                        $this->name,
+                        $iName,
+                        $state->isWatched() ? 'Played' : 'Unplayed',
+                    ),
                     [
-                        'backend' => $state->isWatched() ? 'Played' : 'Unplayed',
                         'remote' => $isWatched ? 'Played' : 'Unplayed',
                         'method' => $state->isWatched() ? 'POST' : 'DELETE',
                         'url' => (string)$url,
@@ -772,7 +776,7 @@ class JellyfinServer implements ServerInterface
                             'user_data' => [
                                 'itemName' => $iName,
                                 'server' => $this->name,
-                                'state' => $state->isWatched() ? 'Watched' : 'Unwatched',
+                                'state' => $state->isWatched() ? 'Played' : 'Unplayed',
                             ],
                         ]
                     )
@@ -1474,12 +1478,19 @@ class JellyfinServer implements ServerInterface
 
             $url = $this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item->Id));
 
-            $this->logger->info(sprintf('%s: Queuing \'%s\'.', $this->name, $iName), [
-                'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
-                'method' => $entity->isWatched() ? 'POST' : 'DELETE',
-                'url' => $url,
-            ]);
+            $this->logger->debug(
+                sprintf(
+                    '%s: Changing \'%s\' remote state to \'%s\'.',
+                    $this->name,
+                    $iName,
+                    $entity->isWatched() ? 'Played' : 'Unplayed',
+                ),
+                [
+                    'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
+                    'method' => $entity->isWatched() ? 'POST' : 'DELETE',
+                    'url' => $url,
+                ]
+            );
 
             $mapper->queue(
                 $this->http->request(
@@ -1488,6 +1499,7 @@ class JellyfinServer implements ServerInterface
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'itemName' => $iName,
+                            'server' => $this->name,
                             'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                         ],
                     ])

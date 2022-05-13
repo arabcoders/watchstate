@@ -93,6 +93,8 @@ final class EditCommand extends Command
             if (null !== $value) {
                 if (true === ctype_digit($value)) {
                     $value = (int)$value;
+                } elseif (true === is_numeric($value) && true === str_contains($value, '.')) {
+                    $value = (float)$value;
                 } elseif ('true' === strtolower((string)$value) || 'false' === strtolower((string)$value)) {
                     $value = 'true' === $value;
                 } else {
@@ -108,7 +110,7 @@ final class EditCommand extends Command
 
                 $output->writeln(
                     sprintf(
-                        '<info>Updated server:\'%s\' key \'%s\' with value of \'%s\'.</info>',
+                        '<info>%s: Set key \'%s\' to value of \'%s\'.</info>',
                         $name,
                         $key,
                         is_bool($value) ? (true === $value ? 'true' : 'false') : $value,

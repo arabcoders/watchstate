@@ -1,22 +1,23 @@
 # FAQ
 
-### Q: How to update watched status for newly added server without overwriting my current watch state?
+### Q: How to update play state for newly added media backend without overwriting my current play state?
 
-First, add the server and when asked, answer `n` for allow import from this server. when you finish, run the following
+First, add the media backend and when asked, answer `n` for allow import from this server. when you finish, run the
+following
 command:
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvrm --ignore-date --force-full --servers-filter [SERVER_NAME]
+$ docker exec -ti watchstate console state:export -vvr --ignore-date --force-full --servers-filter [SERVER_NAME]
 ```
 
-this command will force export your current database state back to the selected server. If the operation is successful
-you can then enable the import feature if you want.
+this command will force export your current local play state to the selected media backend. If the operation is
+successful you can then enable the import feature if you want.
 
 ---
 
 ### Q: Is there support for Multi-user setup?
 
-No, The database design centered on single user. However, It's possible to run container for each user.
+No, The tool is designed as to work for single user. However, It's possible to run container for each user.
 
 Note: for Plex managed users run the following command to extract each managed user token.
 
@@ -28,19 +29,20 @@ For jellyfin/emby, you can use same api-token and just replace the userId.
 
 ---
 
-### Q: Sometimes episodes or movies don't make it to webhook server?
+### Q: Sometimes newly added episodes or movies don't make it to webhook server?
 
-As stated in webhook limitation sometimes servers don't make it easy to receive those events, as such, to complement
-webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to re-sync the
-state of map of server guids, as webhook push support rely entirely on local data of each server.
+As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
+complement webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to
+remap the data.
 
 ----
 
 ### Q: Can this tool run without docker?
 
 Yes, if you have the required PHP version and the needed extensions. to run this tool you need the following `php8.1`,
-and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`, `php8.1-curl`, `php8.1-sqlite3` and
-[composer](https://getcomposer.org/). once you have the required runtime for first time run:
+and `php8.1-fpm` and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`, `php8.1-curl`,
+`php8.1-sqlite3` and[composer](https://getcomposer.org/). once you have the required runtime dependencies, for first
+time run:
 
 ```bash
 cd ~/watchstate
@@ -55,31 +57,41 @@ $ php console
 
 The app should save your data into `./var` directory. If you want to change the directory you can export the environment
 variable `WS_DATA_PATH` for console and browser. you can add a file called `.env` in main tool directory with the
-environment variables. take look at the files inside docker directory to know how to run the scheduled tasks and ofc if
-you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
+environment variables. take look at the files inside `docker/files` directory to know how to run the scheduled tasks and
+ofc if you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
 
 ---
 
 ### Q: Some records keep getting updated even when the state did not change?
 
-This most likely relates to incorrect GUID reported from servers, in our testing we noticed that at least few hundred
-records in thetvdb that get reported by plex have incorrect imdb, which in turns conflicts sometimes with jellyfin/emby
-there is nothing we can do beside have the problematic records reported to thetvdb site mods to fix their db entries.
+This most likely means your media backends have conflicting external ids for the reported items, and thus triggering an
+update as the tool see different external ids on each event from the backends. In our testing we noticed that at least
+few hundred records in thetvdb that get reported by plex have incorrect imdb external id, which in turns conflicts
+sometimes with jellyfin/emby there is nothing we can do beside have the problematic records reported to thetvdb site
+mods to fix their db entries.
 
 ----
 
-### Q: I keep on seeing "No supported GUID was given." in logs?
+### Q: I keep on seeing "Ignoring 'XXX'. No valid/supported external ids." in logs?
 
-This most likely means, the item being reported by the media server is not matched, in jellyfin/emby edit metadata and
-make sure there are External IDs listed in the metadata. like tvdb/imdb etc. For plex click the (...), and click Fix
+This most likely means that the episode/movie is not matched in your backend server, In jellyfin/emby edit metadata and
+make sure there are external ids listed in the metadata. like tvdb/imdb etc. For plex click the (...), and click Fix
 match.
+
+If this relates to plex, and you are using custom agents then please refer
+to [Supported Custom plex agents](#q-can-this-tool-work-with-alternative-plex-agents)
 
 ---
 
-### Q: I enabled strict user match to allow only my user to update the state, webhook requests are failing?
+### Q: I enabled strict user match to allow only my user to update the play state, and now webhook requests are failing to be processed?
 
-If this relates to jellyfin, then please make sure you have selected "Send All Properties (ignores template)", if it's
-plex and your account is main account then update the `user` to `1` by running the following command, just change
+#### For Jellyfin backend
+
+If this relates to jellyfin backend, then please make sure you have selected "Send All Properties (ignores template)".
+
+#### For Plex backend
+
+if your account is the admin account then update the `user` to `1` by running the following command, just change
 the `[SERVER_NAME]` to your server config name.
 
 ```bash
@@ -91,25 +103,25 @@ $ docker exec -ti watchstate console servers:edit --key user --set 1 -- [SERVER_
 ### Q: Does this tool require webhooks to work?
 
 No, You can use the task scheduler or on demand sync if you want. However, we recommend the webhook method as it's the
-most efficient method to update watch state.
+most efficient method to update play state.
 
 --- 
 
 ### Q: When i use jellyfin, i sometimes see double events?
 
-This likely a bug in the plugin [jf webhook. #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
-Just reload the page make sure there is only one watchstate event webhook.
+This most likely a bug in the plugin [jf-webhook #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
+Just reload the page make sure there is only one added watchstate endpoint.
 
 ---
 
 ### Q: I keep on seeing "..., entity state is tainted." what does that means?
 
-Tainted events are events that are not used to update the watch state, but they are interesting enough for us to keep
-around for other benefits like updating the GUID mapping for items. It's normal do not worry about it.
+Tainted events are events that are not used to update the play state, but are interesting enough for us to keep around
+for other benefits like updating the external ids mapping for movies/episodes. It's normal do not worry about it.
 
 ---
 
-### Q: How can I see the database history?
+### Q: How can I see my play state list?
 
 ```bash
 $ docker exec -ti watchstate console db:list
@@ -145,7 +157,7 @@ $ docker exec -ti watchstate console servers:edit --delete --key options.ignore 
 
 ---
 
-### Q: I get tired of writing the whole command everytime is there an easy way to do the commands?
+### Q: I get tired of writing the whole command everytime is there an easy way run the commands?
 
 Since there is no way to access the command interface outside docker, you can create small shell script to at least omit
 part of command that you have to write for example create new file named
@@ -159,9 +171,10 @@ after that you can do `ws command` for example, `ws db:list`
 
 ---
 
-### Q: I am using media servers hosted behind TLS/SSL, and see errors related to http2
+### Q: I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
 
-Sometimes there are problems related to http/2.0, so before reporting bug please try running the following command
+Sometimes there are problems related to HTTP/2 in the underlying library we use, so before reporting bug please try
+running the following command
 
 ```bash
 $ docker exec -ti watchstate console servers:edit --key options.client.http_version --set 1.0 -- [SERVER_NAME] 
@@ -169,12 +182,16 @@ $ docker exec -ti watchstate console servers:edit --key options.client.http_vers
 
 if it does not fix your problem, please open issue about it.
 
+---
+
+### Q: My sync operations are failing due to timeout can I increase that?
+
 We use [symfony/httpClient](https://symfony.com/doc/current/http_client.html) internally, So any options available in [
 configuration](https://symfony.com/doc/current/http_client.html#configuration) section, can be used
 under `options.client.` key for example if you want to increase the timeout you can do
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --key options.client.timeout --set 300 -- [SERVER_NAME] 
+$ docker exec -ti watchstate console servers:edit --key options.client.timeout --set 600 -- [SERVER_NAME] 
 ```
 
 ---
@@ -203,10 +220,10 @@ These are the agents we support for plex media server.
 * tvdb://(id) `New Plex Agent`
 * imdb://(id) `New Plex Agent`
 * tmdb://(id) `New Plex Agent`
-* com.plexapp.agents.imdb://(id)?lang=en `(Old plex agents)`
-* com.plexapp.agents.tmdb://(id)?lang=en `(Old plex agents)`
-* com.plexapp.agents.themoviedb://(id)?lang=en `(Old plex agents "id" can be movie id or series id)`
-* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(old plex agents)`
-* com.plexapp.agents.xbmcnfo://(id)?lang=en `(xbmc nfo parser agent)`
-* com.plexapp.agents.xbmcnfotv://(seriesId)?lang=en `(xbmc nfo agent for tv)`
-* com.plexapp.agents.hama://(db)-(seriesId)?lang=en `(hama anime agent support anidb/tvdb subkeys only)`
+* com.plexapp.agents.imdb://(id)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
+* com.plexapp.agents.tmdb://(id)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
+* com.plexapp.agents.themoviedb://(id)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
+* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
+* com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO parser agent, "id" refers to movie id in imdb)`
+* com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO parser agent for tv. "id" refers to series id)`
+* com.plexapp.agents.hama://(db)-(id)?lang=en `(Anime agent "anidb, tvdb" as db source only. "id" refers to series id)`
