@@ -89,7 +89,7 @@ class EmbyServer extends JellyfinServer
                 $request = $request->withAttribute($key, $val);
             }
         } catch (Throwable $e) {
-            $logger?->error($e->getMessage(), [
+            $logger?->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),

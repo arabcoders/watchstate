@@ -217,7 +217,7 @@ class PushCommand extends Command
                     }
                     $this->logger->notice(
                         sprintf(
-                            '%s Processed \'%s\'. Set remote state to \'%s\'.',
+                            '%s: Marking \'%s\' as \'%s\'.',
                             ag($requestData, 'server', '??'),
                             ag($requestData, 'itemName', '??'),
                             ag($requestData, 'state', '??'),

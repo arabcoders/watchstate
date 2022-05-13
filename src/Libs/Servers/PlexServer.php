@@ -304,7 +304,7 @@ class PlexServer implements ServerInterface
                 $request = $request->withAttribute($key, $val);
             }
         } catch (Throwable $e) {
-            $logger?->error($e->getMessage(), [
+            $logger?->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
@@ -706,7 +706,7 @@ class PlexServer implements ServerInterface
                     ])
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage(), [
+                $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
@@ -817,7 +817,7 @@ class PlexServer implements ServerInterface
                     ])
                 );
             } catch (Throwable $e) {
-                $this->logger->error($e->getMessage(), [
+                $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
@@ -1344,7 +1344,7 @@ class PlexServer implements ServerInterface
 
             $mapper->add($this->name, $this->name . ' - ' . $iName, $entity, ['after' => $after]);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
+            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
@@ -1368,7 +1368,7 @@ class PlexServer implements ServerInterface
 
             $this->createEntity($item, $type);
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
+            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
@@ -1521,7 +1521,7 @@ class PlexServer implements ServerInterface
                 )
             );
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
+            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
@@ -1889,7 +1889,7 @@ class PlexServer implements ServerInterface
 
             return null;
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), [
+            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
