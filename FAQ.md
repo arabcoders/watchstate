@@ -17,7 +17,7 @@ successful you can then enable the import feature if you want.
 
 ### Q: Is there support for Multi-user setup?
 
-No, The tool is designed as to work for single user. However, It's possible to run container for each user.
+No, The tool is designed to work for single user. However, It's possible to run container for each user.
 
 Note: for Plex managed users run the following command to extract each managed user token.
 
@@ -41,7 +41,7 @@ remap the data.
 
 Yes, if you have the required PHP version and the needed extensions. to run this tool you need the following `php8.1`,
 and `php8.1-fpm` and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`, `php8.1-curl`,
-`php8.1-sqlite3` and[composer](https://getcomposer.org/). once you have the required runtime dependencies, for first
+`php8.1-sqlite3` and [composer](https://getcomposer.org/). once you have the required runtime dependencies, for first
 time run:
 
 ```bash
@@ -74,12 +74,16 @@ mods to fix their db entries.
 
 ### Q: I keep on seeing "Ignoring 'XXX'. No valid/supported external ids." in logs?
 
-This most likely means that the episode/movie is not matched in your backend server, In jellyfin/emby edit metadata and
-make sure there are external ids listed in the metadata. like tvdb/imdb etc. For plex click the (...), and click Fix
-match.
+This most likely means that the item is not matched in your media backend
 
-If this relates to plex, and you are using custom agents then please refer
-to [Supported Custom plex agents](#q-can-this-tool-work-with-alternative-plex-agents)
+* jellyfin/emby: Edit metadata and make sure there are external ids listed in the metadata.
+* For plex click the (...), and click Fix match. after that refresh metadata.
+
+For episodes, we support both external ids like movies and relative unique ids, To make episodes sync work at least one
+of the following conditions has to be met:
+
+* The episode should have external ids.
+* The series should have external ids, to make relative unique id works.
 
 ---
 
