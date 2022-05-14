@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
+use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\CliLogger;
@@ -38,6 +39,8 @@ class MemoryMapperTest extends TestCase
 
         $this->mapper = new MemoryMapper($logger, $this->storage);
         $this->mapper->setUp(['class' => new StateEntity([])]);
+
+        Data::reset();
     }
 
     public function test_loadData_null_date_conditions(): void
@@ -169,26 +172,33 @@ class MemoryMapperTest extends TestCase
         $testMovie = new StateEntity($this->testMovie);
         $testEpisode = new StateEntity($this->testEpisode);
 
-        $this->mapper->add('test', 'movie', $testMovie)
-            ->add('test', 'episode', $testEpisode);
+        $insert = $this->mapper
+            ->add('test', 'movie', $testMovie)
+            ->add('test', 'episode', $testEpisode)
+            ->commit();
 
         $this->assertSame(
             [
                 StateInterface::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
                 StateInterface::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
-            $this->mapper->commit()
+            $insert
         );
 
-        $testMovie->guids['guid_anidb'] = '1';
-        $testEpisode->guids['guid_anidb'] = '1';
+        $testMovie->guids['guid_anidb'] = 'movie/211';
+        $testEpisode->guids['guid_anidb'] = 'series/223';
+
+        $updated = $this->mapper
+            ->add('test', 'movie', $testMovie)
+            ->add('test', 'episode', $testEpisode)
+            ->commit();
 
         $this->assertSame(
             [
                 StateInterface::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
                 StateInterface::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
-            $this->mapper->add('test', 'movie', $testMovie)->add('test', 'episode', $testEpisode)->commit()
+            $updated
         );
     }
 
