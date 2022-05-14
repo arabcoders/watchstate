@@ -1530,6 +1530,7 @@ class PlexServer implements ServerInterface
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'itemName' => $iName,
+                            'server' => $this->name,
                             'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                         ]
                     ])
