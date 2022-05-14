@@ -373,7 +373,7 @@ class PlexServer implements ServerInterface
                 ],
             ],
             'suids' => [
-                $this->name => ag($item, 'ratingKey'),
+                $this->name => (string)ag($item, 'ratingKey'),
             ],
         ];
 
@@ -1696,7 +1696,7 @@ class PlexServer implements ServerInterface
                 'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
             ],
             'suids' => [
-                $this->name => $item->ratingKey,
+                $this->name => (string)$item->ratingKey,
             ],
         ];
 

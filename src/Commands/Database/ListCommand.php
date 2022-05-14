@@ -11,6 +11,7 @@ use App\Libs\Guid;
 use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
+use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
@@ -61,11 +62,25 @@ final class ListCommand extends Command
                 $guid,
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Search Using ' . ucfirst($guid) . ' id.'
+                'Search Using ' . ucfirst($guid) . ' external id.'
             );
         }
 
-        $this->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent GUIDs instead.');
+        $this->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent external ids instead.')
+            ->addOption('key', null, InputOption::VALUE_REQUIRED, 'For JSON fields key selection.')
+            ->addOption('value', null, InputOption::VALUE_REQUIRED, 'For JSON fields value selection.')
+            ->addOption(
+                'suids',
+                null,
+                InputOption::VALUE_NONE,
+                'Search in (server side ids) JSON Field using (--key, --value) options.'
+            )
+            ->addOption(
+                'extra',
+                null,
+                InputOption::VALUE_NONE,
+                'Search in (extra information) JSON Field using (--key, --value) options.'
+            );
     }
 
     /**
@@ -136,6 +151,32 @@ final class ListCommand extends Command
             }
         }
 
+        if ($input->getOption('suids')) {
+            $sField = $input->getOption('key');
+            $sValue = $input->getOption('value');
+            if (empty($sField) || empty($sValue)) {
+                throw new RuntimeException(
+                    'When searching using JSON fields the option --key and --value must be set.'
+                );
+            }
+
+            $where[] = "json_extract(suids,'$.{$sField}') = :suids_{$sField}";
+            $params['suids_' . $sField] = $sValue;
+        }
+
+        if ($input->getOption('extra')) {
+            $sField = $input->getOption('key');
+            $sValue = $input->getOption('value');
+            if (empty($sField) || empty($sValue)) {
+                throw new RuntimeException(
+                    'When searching using JSON fields the option --key and --value must be set.'
+                );
+            }
+
+            $where[] = "json_extract(extra,'$.{$sField}') = :extra_{$sField}";
+            $params['extra_' . $sField] = $sValue;
+        }
+
         if (count($where) >= 1) {
             $sql .= 'WHERE ' . implode(' AND ', $where);
         }
@@ -189,9 +230,12 @@ final class ListCommand extends Command
             foreach ($rows as &$row) {
                 $row['watched'] = (bool)$row['watched'];
                 $row['updated'] = makeDate($row['updated']);
-                $row['guids'] = json_decode($row['guids'], true);
-                $row['parent'] = json_decode($row['parent'], true);
-                $row['extra'] = json_decode($row['extra'], true);
+                foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+                    if (null === ($row[$key] ?? null)) {
+                        continue;
+                    }
+                    $row[$key] = json_decode($row[$key], true);
+                }
             }
 
             unset($row);
@@ -206,9 +250,12 @@ final class ListCommand extends Command
             foreach ($rows as &$row) {
                 $row['watched'] = (bool)$row['watched'];
                 $row['updated'] = makeDate($row['updated']);
-                $row['guids'] = json_decode($row['guids'], true);
-                $row['parent'] = json_decode($row['parent'], true);
-                $row['extra'] = json_decode($row['extra'], true);
+                foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+                    if (null === ($row[$key] ?? null)) {
+                        continue;
+                    }
+                    $row[$key] = json_decode($row[$key], true);
+                }
             }
 
             unset($row);
