@@ -49,6 +49,11 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Update Version File
+        uses: ArabCoders/write-version-to-file@master
+        with:
+          filename: '/.version'
+          placeholder: '${VERSION}'
       - name: Docker meta
         id: meta
         uses: crazy-max/ghaction-docker-meta@v2
