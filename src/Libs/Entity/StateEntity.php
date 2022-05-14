@@ -228,6 +228,10 @@ final class StateEntity implements StateInterface
                 $this->updateValue('parent', $entity);
             }
 
+            if ($this->suids !== $entity->suids) {
+                $this->updateValue('suids', $entity);
+            }
+
             return $this;
         }
 
