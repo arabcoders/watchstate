@@ -35,7 +35,7 @@ return [
         ],
     ],
     'suids' => [
-        'plex@home' => 121,
         'jf@home' => '77f92c9c8f14b343bedee95d7fcded3a',
+        'plex@home' => 121,
     ],
 ];
