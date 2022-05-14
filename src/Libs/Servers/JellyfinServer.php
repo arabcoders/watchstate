@@ -334,7 +334,7 @@ class JellyfinServer implements ServerInterface
                 ],
             ],
             'suids' => [
-                $this->name => ag($json, 'Item.ItemId'),
+                $this->name => ag($json, 'ItemId'),
             ],
         ];
 
