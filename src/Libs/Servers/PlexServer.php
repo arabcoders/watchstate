@@ -1696,7 +1696,7 @@ class PlexServer implements ServerInterface
                 'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
             ],
             'suids' => [
-                $this->name => $item->Id,
+                $this->name => $item->ratingKey,
             ],
         ];
 

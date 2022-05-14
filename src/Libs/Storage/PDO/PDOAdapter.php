@@ -114,7 +114,7 @@ final class PDOAdapter implements StorageInterface
             $data = $entity->getAll();
 
             foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
-                if (is_array($data[$key] ?? [])) {
+                if (is_array($data[$key] ?? null)) {
                     $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 }
             }
