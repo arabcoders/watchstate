@@ -18,7 +18,13 @@ use Monolog\Logger;
 return (function () {
     $config = [
         'name' => 'WatchState',
-        'version' => 'v0.0.0',
+        'version' => (function () {
+            $file = __DIR__ . '/../.version';
+
+            $content = file_exists($file) ? trim(file_get_contents($file)) : '${VERSION}';
+
+            return ('${VERSION}' === $content) ? 'dev-master' : $content;
+        })(),
         'tz' => env('WS_TZ', 'UTC'),
         'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
         'logs' => [
