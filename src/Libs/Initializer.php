@@ -292,11 +292,10 @@ final class Initializer
             }
 
             if (true === $entity->isTainted()) {
-                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
-                    if (!empty($entity->meta)) {
-                        $backend->meta = $entity->meta;
-                    }
-                    $backend = $storage->update($backend);
+                $cloned = clone $backend;
+
+                if ($cloned->apply($entity, guidOnly: true)->isChanged()) {
+                    $backend = $storage->update($backend->apply($entity));
                     return jsonResponse(status: 200, body: $backend->getAll(), headers: [
                         'X-Status' => '[T] Updated External/Relative ids.',
                         'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
@@ -312,11 +311,10 @@ final class Initializer
             }
 
             if ($backend->updated > $entity->updated) {
-                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
-                    if (!empty($entity->meta)) {
-                        $backend->meta = $entity->meta;
-                    }
-                    $backend = $storage->update($backend);
+                $cloned = clone $backend;
+
+                if ($cloned->apply($entity, guidOnly: true)->isChanged()) {
+                    $backend = $storage->update($backend->apply($entity));
                     return jsonResponse(status: 200, body: $backend->getAll(), headers: [
                         'X-Status' => 'Updated External/Relative ids.',
                         'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
