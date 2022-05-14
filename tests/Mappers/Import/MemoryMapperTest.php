@@ -119,13 +119,14 @@ class MemoryMapperTest extends TestCase
         $movie = $this->testMovie;
         $episode = $this->testEpisode;
 
-        ksort($movie['parent']);
-        ksort($movie['guids']);
-        ksort($movie['extra']);
-
-        ksort($episode['parent']);
-        ksort($episode['guids']);
-        ksort($episode['extra']);
+        foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+            if (null !== ($movie[$key] ?? null)) {
+                ksort($movie[$key]);
+            }
+            if (null !== ($episode[$key] ?? null)) {
+                ksort($episode[$key]);
+            }
+        }
 
         $testMovie = new StateEntity($movie);
         $testEpisode = new StateEntity($episode);

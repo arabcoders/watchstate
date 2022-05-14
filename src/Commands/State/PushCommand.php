@@ -177,6 +177,8 @@ class PushCommand extends Command
             $this->logger = $logger;
         }
 
+        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
+
         foreach ($list as $name => &$server) {
             Data::addBucket($name);
             $opts = ag($server, 'server.options', []);

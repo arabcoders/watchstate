@@ -29,5 +29,8 @@ return [
             'event' => 'ItemAdded'
         ]
     ],
-
+    'suids' => [
+        'jf@home' => '25a02ffba2ab58d73756dd233bf08930',
+        'plex@home' => 200,
+    ],
 ];

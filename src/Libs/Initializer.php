@@ -173,13 +173,12 @@ final class Initializer
             if (empty($apikey)) {
                 $apikey = ag($request->getQueryParams(), 'apikey', '');
                 if (empty($apikey)) {
-                    $log[] = 'No api key in  headers or query';
-                    throw new HttpException('No API key was given.', 400);
+                    $log[] = 'No webhook token found in headers or query';
+                    throw new HttpException('No Webhook token was found.', 400);
                 }
             }
 
             $server = [];
-            Config::get('servers', []);
 
             $validUser = $validUUid = null;
 
@@ -204,7 +203,7 @@ final class Initializer
                     if ((string)$userId !== (string)$requestUser) {
                         $validUser = false;
                         $log[] = sprintf(
-                            'Request user [%s] does not match config user [%s]',
+                            'Request user [%s] does not match configured value [%s]',
                             $requestUser ?? 'NO USER_ID',
                             $userId
                         );
@@ -218,15 +217,15 @@ final class Initializer
                 if (true === (true === ag($info, 'webhook.match.uuid') && null !== $uuid)) {
                     if (null === ($requestServerId = $request->getAttribute('SERVER_ID', null))) {
                         $validUUid = false;
-                        $log[] = 'Request server unique id is not set';
+                        $log[] = 'Media backend id is not set';
                         continue;
                     }
 
                     if ((string)$uuid !== (string)$requestServerId) {
                         $validUUid = false;
                         $log[] = sprintf(
-                            'Request UUID [%s] does not match config UUID [%s]',
-                            $requestServerId ?? 'NO SERVER_ID',
+                            'Request media backend id [%s] does not match configured value [%s]',
+                            $requestServerId ?? 'not_set',
                             $uuid
                         );
                         continue;
@@ -241,11 +240,11 @@ final class Initializer
 
             if (empty($server)) {
                 if (false === $validUser) {
-                    $message = 'API key is valid, User checks failed.';
+                    $message = 'Webhook token is is valid, User matching failed.';
                 } elseif (false === $validUUid) {
-                    $message = 'API key and user check is valid, Server unique id checks failed.';
+                    $message = 'Webhook token and user match is valid, media backend id matching failed.';
                 } else {
-                    $message = 'Invalid API key was given.';
+                    $message = 'Invalid webhook token was given.';
                 }
                 throw new HttpException($message, 401);
             }
@@ -254,7 +253,7 @@ final class Initializer
                 $log[] = 'Import disabled for this server';
                 throw new HttpException(
                     sprintf(
-                        'Import via webhook for this server \'%s\' is disabled.',
+                        '%s: Import via webhook is disabled for this server via user config.',
                         ag($server, 'name')
                     ),
                     500
@@ -264,7 +263,7 @@ final class Initializer
             try {
                 $server['class'] = makeServer($server, $server['name']);
             } catch (RuntimeException $e) {
-                $log[] = 'Creating Instance of the Backend has failed.';
+                $log[] = sprintf('%s: Creating Instance of the server backend has failed.', ag($server, 'name'));
                 throw new HttpException($e->getMessage(), 500);
             }
 
@@ -272,7 +271,7 @@ final class Initializer
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 return new Response(status: 204, headers: [
-                    'X-Status' => 'No GUIDs.',
+                    'X-Status' => 'Media does not have external/relative ids.',
                     'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                     'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                 ]);
@@ -282,9 +281,11 @@ final class Initializer
 
             if (null === ($backend = $storage->get($entity))) {
                 $entity = $storage->insert($entity);
-                queuePush($entity);
+                if ($entity->isWatched()) {
+                    queuePush($entity);
+                }
                 return jsonResponse(status: 200, body: $entity->getAll(), headers: [
-                    'X-Status' => 'Added new entity.',
+                    'X-Status' => sprintf('Added %s as new item.', $entity->type),
                     'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                     'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                 ]);
@@ -297,14 +298,14 @@ final class Initializer
                     }
                     $backend = $storage->update($backend);
                     return jsonResponse(status: 200, body: $backend->getAll(), headers: [
-                        'X-Status' => 'Event is tainted. Only GUIDs updated.',
+                        'X-Status' => '[T] Updated External/Relative ids.',
                         'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                         'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                     ]);
                 }
 
                 return new Response(status: 200, headers: [
-                    'X-Status' => 'Nothing updated, entity state is tainted.',
+                    'X-Status' => '[T] Nothing Updated. This Webhook event is irrelevant.',
                     'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                     'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                 ]);
@@ -317,14 +318,17 @@ final class Initializer
                     }
                     $backend = $storage->update($backend);
                     return jsonResponse(status: 200, body: $backend->getAll(), headers: [
-                        'X-Status' => 'No watch state updated. Only GUIDs updated.',
+                        'X-Status' => 'Updated External/Relative ids.',
                         'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                         'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                     ]);
                 }
 
                 return new Response(status: 200, headers: [
-                    'X-Status' => 'Entity date is older than what available in storage.',
+                    'X-Status' => sprintf(
+                        '%s date is older than the recorded date in database.',
+                        ucfirst($entity->type)
+                    ),
                     'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                     'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                 ]);
@@ -336,14 +340,18 @@ final class Initializer
                 queuePush($backend);
 
                 return jsonResponse(status: 200, body: $backend->getAll(), headers: [
-                    'X-Status' => 'Item Queued.',
+                    'X-Status' => sprintf(
+                        'Queued %s [State: %s] for push event.',
+                        $entity->type,
+                        $entity->isWatched() ? 'Played' : 'Unplayed',
+                    ),
                     'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                     'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                 ]);
             }
 
             return new Response(status: 200, headers: [
-                'X-Status' => 'Entity is unchanged.',
+                'X-Status' => sprintf('%s State is unchanged.', ucfirst($entity->type)),
                 'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                 'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
             ]);

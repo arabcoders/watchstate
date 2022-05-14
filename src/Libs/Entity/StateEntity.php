@@ -27,6 +27,7 @@ final class StateEntity implements StateInterface
     public array $parent = [];
     public array $guids = [];
     public array $extra = [];
+    public array $suids = [];
 
     public function __construct(array $data)
     {
@@ -135,6 +136,7 @@ final class StateEntity implements StateInterface
             'parent' => $this->parent,
             'guids' => $this->guids,
             'extra' => $this->extra,
+            'suids' => $this->suids,
         ];
     }
 

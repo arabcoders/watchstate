@@ -113,6 +113,8 @@ class ExportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
+        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
+
         foreach (Config::get('servers', []) as $name => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 

@@ -15,7 +15,7 @@ class Cli extends Application
 {
     public function __construct(protected PSRContainer $container)
     {
-        parent::__construct(self::getAppName(), Config::get('version'));
+        parent::__construct(self::getAppName(), getAppVersion());
     }
 
     public static function getAppName(): string

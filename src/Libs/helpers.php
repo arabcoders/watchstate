@@ -280,7 +280,7 @@ if (!function_exists('saveRequestPayload')) {
         @file_put_contents(
             Config::get('tmpDir') . '/debug/' . sprintf(
                 'request.%s.json',
-                (string)ag($request->getServerParams(), 'X_REQUEST_ID', time())
+                ag($request->getServerParams(), 'X_REQUEST_ID', (string)time())
             ),
             json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
@@ -488,5 +488,13 @@ if (!function_exists('computeArrayChanges')) {
         }
 
         return $difference;
+    }
+}
+
+if (!function_exists('getAppVersion')) {
+    function getAppVersion(): string
+    {
+        $version = Config::get('version', 'dev-master');
+        return '$(version_via_ci)' === $version ? 'dev-master' : $version;
     }
 }

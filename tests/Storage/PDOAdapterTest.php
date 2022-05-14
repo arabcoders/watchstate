@@ -55,9 +55,12 @@ class PDOAdapterTest extends TestCase
     {
         $test = $this->testEpisode;
 
-        ksort($test['parent']);
-        ksort($test['guids']);
-        ksort($test['extra']);
+        foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+            if (null === ($test[$key] ?? null)) {
+                continue;
+            }
+            ksort($test[$key]);
+        }
 
         $item = new StateEntity($test);
 
@@ -105,7 +108,16 @@ class PDOAdapterTest extends TestCase
 
     public function test_update_conditions(): void
     {
-        $item = $this->storage->insert(new StateEntity($this->testEpisode));
+        $test = $this->testEpisode;
+
+        foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
+            if (null === ($test[$key] ?? null)) {
+                continue;
+            }
+            ksort($test[$key]);
+        }
+
+        $item = $this->storage->insert(new StateEntity($test));
         $item->guids['guid_plex'] = StateInterface::TYPE_EPISODE . '/1000';
 
         $updatedItem = $this->storage->update($item);

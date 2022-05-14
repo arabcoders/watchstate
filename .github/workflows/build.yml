@@ -8,6 +8,8 @@ on:
     tags-ignore:
       - 'v0*'
   pull_request:
+    branches:
+      - 'master'
 
 jobs:
   unit-tests:
@@ -19,6 +21,11 @@ jobs:
         php: [ 8.1 ]
     steps:
       - uses: actions/checkout@v2
+      - name: Update Version File
+        uses: ArabCoders/write-version-to-file@master
+        with:
+          filename: '/config/config.php'
+          placeholder: '$(version_via_ci)'
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -49,6 +56,11 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Update Version File
+        uses: ArabCoders/write-version-to-file@master
+        with:
+          filename: '/config/config.php'
+          placeholder: '$(version_via_ci)'
       - name: Docker meta
         id: meta
         uses: crazy-max/ghaction-docker-meta@v2
@@ -59,6 +71,7 @@ jobs:
             type=raw,value=dev-latest,enable=${{ endsWith(github.ref, '/dev') }}
             type=ref,event=tag
             type=sha,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
+            type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
           flavor: |
             latest=false
       - name: Login to DockerHub

@@ -117,6 +117,8 @@ class ImportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
+        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
+
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
