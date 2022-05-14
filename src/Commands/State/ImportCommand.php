@@ -117,7 +117,7 @@ class ImportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
-        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', Config::get('version')));
+        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
 
         $mapperOpts = [];
 

@@ -490,3 +490,11 @@ if (!function_exists('computeArrayChanges')) {
         return $difference;
     }
 }
+
+if (!function_exists('getAppVersion')) {
+    function getAppVersion(): string
+    {
+        $version = Config::get('version', 'dev-master');
+        return '$(version_via_ci)' === $version ? 'dev-master' : $version;
+    }
+}

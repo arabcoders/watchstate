@@ -24,8 +24,8 @@ jobs:
       - name: Update Version File
         uses: ArabCoders/write-version-to-file@master
         with:
-          filename: '/.version'
-          placeholder: '${VERSION}'
+          filename: '/config/config.php'
+          placeholder: '$(version_via_ci)'
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -59,8 +59,8 @@ jobs:
       - name: Update Version File
         uses: ArabCoders/write-version-to-file@master
         with:
-          filename: '/.version'
-          placeholder: '${VERSION}'
+          filename: '/config/config.php'
+          placeholder: '$(version_via_ci)'
       - name: Docker meta
         id: meta
         uses: crazy-max/ghaction-docker-meta@v2
