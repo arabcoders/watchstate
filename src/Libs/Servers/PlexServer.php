@@ -291,6 +291,7 @@ class PlexServer implements ServerInterface
             $request = $request->withParsedBody($json);
 
             $attributes = [
+                'ITEM_ID' => ag($json, 'Metadata.ratingKey', ''),
                 'SERVER_ID' => ag($json, 'Server.uuid', ''),
                 'SERVER_NAME' => ag($json, 'Server.title', ''),
                 'SERVER_VERSION' => afterLast($userAgent, '/'),
@@ -370,6 +371,9 @@ class PlexServer implements ServerInterface
                 'webhook' => [
                     'event' => $event,
                 ],
+            ],
+            'suids' => [
+                $this->name => ag($item, 'ratingKey'),
             ],
         ];
 
@@ -1690,6 +1694,9 @@ class PlexServer implements ServerInterface
             'guids' => $this->getGuids($item->Guid ?? []),
             'extra' => [
                 'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            ],
+            'suids' => [
+                $this->name => $item->Id,
             ],
         ];
 

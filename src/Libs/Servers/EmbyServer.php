@@ -76,6 +76,7 @@ class EmbyServer extends JellyfinServer
             $request = $request->withParsedBody($json);
 
             $attributes = [
+                'ITEM_ID' => ag($json, 'Item.Id', ''),
                 'SERVER_ID' => ag($json, 'Server.Id', ''),
                 'SERVER_NAME' => ag($json, 'Server.Name', ''),
                 'SERVER_VERSION' => afterLast($userAgent, '/'),
@@ -145,9 +146,13 @@ class EmbyServer extends JellyfinServer
                 'date' => makeDate(
                     ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
                 )->format('Y-m-d'),
+
                 'webhook' => [
                     'event' => $event,
                 ],
+            ],
+            'suids' => [
+                $this->name => ag($json, 'Item.ItemId'),
             ],
         ];
 
@@ -186,7 +191,7 @@ class EmbyServer extends JellyfinServer
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
 
         if (false === $isTainted && $savePayload) {
-            saveWebhookPayload($this->name . '.' . $event, $request, $entity);
+            saveWebhookPayload($this->name, $request, $entity);
         }
 
         return $entity;

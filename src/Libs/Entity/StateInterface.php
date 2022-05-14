@@ -19,7 +19,8 @@ interface StateInterface
     public const ENTITY_ARRAY_KEYS = [
         'parent',
         'guids',
-        'extra'
+        'extra',
+        'suids'
     ];
 
     public const ENTITY_KEYS = [
@@ -35,6 +36,7 @@ interface StateInterface
         'parent',
         'guids',
         'extra',
+        'suids',
     ];
 
     /**

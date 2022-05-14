@@ -260,6 +260,7 @@ class JellyfinServer implements ServerInterface
             $request = $request->withParsedBody($json);
 
             $attributes = [
+                'ITEM_ID' => ag($json, 'Item.ItemId', ''),
                 'SERVER_ID' => ag($json, 'ServerId', ''),
                 'SERVER_NAME' => ag($json, 'ServerName', ''),
                 'SERVER_VERSION' => afterLast($userAgent, '/'),
@@ -325,10 +326,15 @@ class JellyfinServer implements ServerInterface
             'parent' => [],
             'guids' => $this->getGuids($providersId),
             'extra' => [
-                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+                'date' => makeDate(ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now'))->format(
+                    'Y-m-d'
+                ),
                 'webhook' => [
                     'event' => $event,
                 ],
+            ],
+            'suids' => [
+                $this->name => ag($json, 'Item.ItemId'),
             ],
         ];
 
@@ -368,7 +374,7 @@ class JellyfinServer implements ServerInterface
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
 
         if (false === $isTainted && $savePayload) {
-            saveWebhookPayload($this->name . '.' . $event, $request, $entity);
+            saveWebhookPayload($this->name, $request, $entity);
         }
 
         return $entity;
@@ -1618,6 +1624,9 @@ class JellyfinServer implements ServerInterface
             'guids' => $this->getGuids((array)($item->ProviderIds ?? [])),
             'extra' => [
                 'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+            ],
+            'suids' => [
+                $this->name => $item->Id,
             ],
         ];
 
