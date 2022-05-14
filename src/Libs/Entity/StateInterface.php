@@ -9,34 +9,69 @@ interface StateInterface
     public const TYPE_MOVIE = 'movie';
     public const TYPE_EPISODE = 'episode';
 
-    public const ENTITY_IGNORE_DIFF_CHANGES = [
-        'via',
-        'extra',
-        'title',
-        'year',
-    ];
+    /**
+     * If you must reference field directly, use those constants.
+     */
+    public const COLUMN_ID = 'id';
+    public const COLUMN_TYPE = 'type';
+    public const COLUMN_UPDATED = 'updated';
+    public const COLUMN_WATCHED = 'watched';
+    public const COLUMN_VIA = 'via';
+    public const COLUMN_TITLE = 'title';
+    public const COLUMN_YEAR = 'year';
+    public const COLUMN_SEASON = 'season';
+    public const COLUMN_EPISODE = 'episode';
+    public const COLUMN_PARENT = 'parent';
+    public const COLUMN_GUIDS = 'guids';
+    public const COLUMN_EXTRA = 'extra';
+    public const COLUMN_SUIDS = 'suids';
 
-    public const ENTITY_ARRAY_KEYS = [
-        'parent',
-        'guids',
-        'extra',
-        'suids'
-    ];
-
+    /**
+     * List of table keys.
+     */
     public const ENTITY_KEYS = [
-        'id',
-        'type',
-        'updated',
-        'watched',
-        'via',
-        'title',
-        'year',
-        'season',
-        'episode',
-        'parent',
-        'guids',
-        'extra',
-        'suids',
+        self::COLUMN_ID,
+        self::COLUMN_TYPE,
+        self::COLUMN_UPDATED,
+        self::COLUMN_WATCHED,
+        self::COLUMN_VIA,
+        self::COLUMN_TITLE,
+        self::COLUMN_YEAR,
+        self::COLUMN_SEASON,
+        self::COLUMN_EPISODE,
+        self::COLUMN_PARENT,
+        self::COLUMN_GUIDS,
+        self::COLUMN_EXTRA,
+        self::COLUMN_SUIDS,
+    ];
+
+    /**
+     * Ignore listed fields if the played status did not change.
+     */
+    public const ENTITY_IGNORE_DIFF_CHANGES = [
+        self::COLUMN_VIA,
+        self::COLUMN_EXTRA,
+        self::COLUMN_TITLE,
+        self::COLUMN_YEAR,
+    ];
+
+    /**
+     * Fields that if changed will trigger an update regardless of the watchstate or event.
+     */
+    public const ENTITY_FORCE_UPDATE_FIELDS = [
+        self::COLUMN_PARENT,
+        self::COLUMN_GUIDS,
+        self::COLUMN_SUIDS,
+    ];
+
+    /**
+     * List of JSON/array fields.
+     */
+    public const ENTITY_ARRAY_KEYS = [
+        self::COLUMN_PARENT,
+        self::COLUMN_GUIDS,
+        self::COLUMN_EXTRA,
+        self::COLUMN_SUIDS,
     ];
 
     /**

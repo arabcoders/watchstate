@@ -155,6 +155,11 @@ final class StateEntity implements StateInterface
         return $this->guids;
     }
 
+    public function getPointers(array|null $guids = null): array
+    {
+        return Guid::fromArray(array_intersect_key($this->guids, Guid::SUPPORTED))->getPointers();
+    }
+
     public function hasParentGuid(): bool
     {
         return count($this->parent) >= 1;
@@ -220,18 +225,12 @@ final class StateEntity implements StateInterface
     public function apply(StateInterface $entity, bool $guidOnly = false): self
     {
         if (true === $guidOnly) {
-            if ($this->guids !== $entity->guids) {
-                $this->updateValue('guids', $entity);
+            foreach (StateInterface::ENTITY_FORCE_UPDATE_FIELDS as $key) {
+                if (true === $this->isEqualValue($key, $entity)) {
+                    continue;
+                }
+                $this->updateValue($key, $entity);
             }
-
-            if ($this->parent !== $entity->parent) {
-                $this->updateValue('parent', $entity);
-            }
-
-            if ($this->suids !== $entity->suids) {
-                $this->updateValue('suids', $entity);
-            }
-
             return $this;
         }
 
@@ -257,19 +256,6 @@ final class StateEntity implements StateInterface
         return $this->data;
     }
 
-    public function getPointers(array|null $guids = null): array
-    {
-        $list = array_intersect_key($this->guids, Guid::SUPPORTED);
-
-        if ($this->isEpisode()) {
-            foreach ($list as $key => $val) {
-                $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
-            }
-        }
-
-        return Guid::fromArray($list)->getPointers();
-    }
-
     public function setIsTainted(bool $isTainted): StateInterface
     {
         $this->tainted = $isTainted;
@@ -283,9 +269,8 @@ final class StateEntity implements StateInterface
 
     private function isEqual(StateInterface $entity): bool
     {
-        foreach ($this->getAll() as $key => $val) {
-            $checkedValue = $this->isEqualValue($key, $entity);
-            if (false === $checkedValue) {
+        foreach (StateInterface::ENTITY_KEYS as $key) {
+            if (false === $this->isEqualValue($key, $entity)) {
                 return false;
             }
         }

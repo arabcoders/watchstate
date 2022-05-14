@@ -52,4 +52,9 @@ final class Data
     {
         return ag(self::$data, $filter, $default);
     }
+
+    public static function reset(): void
+    {
+        self::$data = [];
+    }
 }
