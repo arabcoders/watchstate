@@ -52,7 +52,7 @@ jobs:
       - name: Update Version File
         uses: ArabCoders/write-version-to-file@master
         with:
-          filename: '/.version'
+          filename: '/home/runner/work/watchstate/watchstate/.version'
           placeholder: '${VERSION}'
       - name: Docker meta
         id: meta
