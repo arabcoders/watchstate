@@ -260,7 +260,7 @@ class JellyfinServer implements ServerInterface
             $request = $request->withParsedBody($json);
 
             $attributes = [
-                'ITEM_ID' => ag($json, 'Item.ItemId', ''),
+                'ITEM_ID' => ag($json, 'ItemId', ''),
                 'SERVER_ID' => ag($json, 'ServerId', ''),
                 'SERVER_NAME' => ag($json, 'ServerName', ''),
                 'SERVER_VERSION' => afterLast($userAgent, '/'),
