@@ -678,17 +678,15 @@ class PlexServer implements ServerInterface
                     $entity->suids[$this->name] = $this->cacheData[$guid];
                 }
 
-                if (null === $entity->suids[$this->name]) {
-                    if (null === $entity->suids[$this->name]) {
-                        $this->logger->notice(
-                            sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
-                            [
-                                'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
-                                'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                            ]
-                        );
-                        continue;
-                    }
+                if (null === ($entity->suids[$this->name] ?? null)) {
+                    $this->logger->notice(
+                        sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
+                        [
+                            'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
+                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
+                        ]
+                    );
+                    continue;
                 }
             }
 
