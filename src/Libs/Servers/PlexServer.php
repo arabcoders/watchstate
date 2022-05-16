@@ -1596,39 +1596,58 @@ class PlexServer implements ServerInterface
         $guid = [];
 
         foreach ($guids as $_id) {
-            $val = is_object($_id) ? $_id->id : $_id['id'];
+            try {
+                $val = is_object($_id) ? $_id->id : $_id['id'];
 
-            if (empty($val)) {
-                continue;
-            }
+                if (empty($val)) {
+                    continue;
+                }
 
-            if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                // -- DO NOT accept plex relative unique ids, we generate our own.
-                if (substr_count($val, '/') >= 3) {
-                    if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
-                        $this->logger->warning(
-                            sprintf('%s: Parsing \'%s\' custom agent identifier is not supported.', $this->name, $val)
-                        );
+                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                    // -- DO NOT accept plex relative unique ids, we generate our own.
+                    if (substr_count($val, '/') >= 3) {
+                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                            $this->logger->warning(
+                                sprintf(
+                                    '%s: Parsing \'%s\' custom agent identifier is not supported.',
+                                    $this->name,
+                                    $val
+                                )
+                            );
+                        }
+                        continue;
                     }
+                    $val = $this->parseLegacyAgent($val);
+                }
+
+                [$key, $value] = explode('://', $val);
+                $key = strtolower($key);
+
+                if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
                     continue;
                 }
-                $val = $this->parseLegacyAgent($val);
-            }
 
-            [$key, $value] = explode('://', $val);
-            $key = strtolower($key);
+                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($val)) {
+                    if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$val) {
+                        continue;
+                    }
+                }
 
-            if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
+                $guid[self::GUID_MAPPER[$key]] = $value;
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    sprintf(
+                        '%s: An error occurred while parsing external id. %s',
+                        $this->name,
+                        $e->getMessage()
+                    ),
+                    [
+                        'id' => $val ?? null,
+                        'list' => $guids,
+                    ]
+                );
                 continue;
             }
-
-            if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($val)) {
-                if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$val) {
-                    continue;
-                }
-            }
-
-            $guid[self::GUID_MAPPER[$key]] = $value;
         }
 
         ksort($guid);
@@ -1639,30 +1658,49 @@ class PlexServer implements ServerInterface
     protected function hasSupportedGuids(array $guids): bool
     {
         foreach ($guids as $_id) {
-            $val = is_object($_id) ? $_id->id : $_id['id'];
+            try {
+                $val = is_object($_id) ? $_id->id : $_id['id'];
 
-            if (empty($val)) {
-                continue;
-            }
-
-            if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                // -- DO NOT accept plex relative unique ids, we generate our own.
-                if (substr_count($val, '/') >= 3) {
-                    if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
-                        $this->logger->warning(
-                            sprintf('%s: Parsing \'%s\' custom agent identifier is not supported.', $this->name, $val)
-                        );
-                    }
+                if (empty($val)) {
                     continue;
                 }
-                $val = $this->parseLegacyAgent($val);
-            }
 
-            [$key, $value] = explode('://', $val);
-            $key = strtolower($key);
+                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                    // -- DO NOT accept plex relative unique ids, we generate our own.
+                    if (substr_count($val, '/') >= 3) {
+                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                            $this->logger->warning(
+                                sprintf(
+                                    '%s: Parsing this \'%s\' custom agent identifier is not supported.',
+                                    $this->name,
+                                    $val
+                                )
+                            );
+                        }
+                        continue;
+                    }
+                    $val = $this->parseLegacyAgent($val);
+                }
 
-            if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
-                return true;
+                [$key, $value] = explode('://', $val);
+                $key = strtolower($key);
+
+                if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
+                    return true;
+                }
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    sprintf(
+                        '%s: An error occurred while parsing external id. %s',
+                        $this->name,
+                        $e->getMessage()
+                    ),
+                    [
+                        'id' => $val ?? null,
+                        'list' => $guids,
+                    ]
+                );
+                continue;
             }
         }
 
