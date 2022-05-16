@@ -6,7 +6,6 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Extends\CliLogger;
 use App\Libs\Servers\ServerInterface;
 use JsonException;
 use RuntimeException;
@@ -25,7 +24,6 @@ final class RemoteCommand extends Command
     {
         $this->setName('servers:remote')
             ->setDescription('Get info from the remote server.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
             ->addOption('list-libraries', null, InputOption::VALUE_NONE, 'List Server Libraries.')
             ->addOption('list-users', null, InputOption::VALUE_NONE, 'List Server users.')
             ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
@@ -34,6 +32,7 @@ final class RemoteCommand extends Command
             ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit', 25)
             ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml]', 'json')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
@@ -72,10 +71,6 @@ final class RemoteCommand extends Command
         $config['name'] = $name;
 
         $server = makeServer($config, $name);
-
-        if ($input->getOption('redirect-logger')) {
-            $server->setLogger(new CliLogger($output));
-        }
 
         if ($input->getOption('list-users') || $input->getOption('list-users-with-tokens')) {
             $this->listUsers($input, $output, $server);

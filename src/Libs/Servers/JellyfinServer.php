@@ -146,7 +146,7 @@ class JellyfinServer implements ServerInterface
 
         $url = $this->url->withPath('/system/Info');
 
-        $this->logger->debug(sprintf('%s: Requesting server Unique id.', $this->name), ['url' => $url]);
+        $this->logger->debug(sprintf('%s: Requesting server unique id.', $this->name), ['url' => $url]);
 
         $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
@@ -468,7 +468,7 @@ class JellyfinServer implements ServerInterface
             $listDirs = ag($json, 'Items', []);
 
             if (empty($listDirs)) {
-                $this->logger->notice(
+                $this->logger->warning(
                     sprintf(
                         '%s: Responded with empty list of libraries. Possibly the token has no access to the libraries?',
                         $this->name
@@ -551,7 +551,7 @@ class JellyfinServer implements ServerInterface
 
                         foreach ($it as $entity) {
                             if ($entity instanceof DecodingError) {
-                                $this->logger->error(
+                                $this->logger->warning(
                                     sprintf(
                                         '%s: Failed to decode one of \'%s\' items. %s',
                                         $this->name,
@@ -630,33 +630,28 @@ class JellyfinServer implements ServerInterface
                 }
             }
 
-            $entity->jf_id = null;
-
-            foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-                if (null === ($this->cacheData[$guid] ?? null)) {
-                    continue;
-                }
-                $entity->jf_id = $this->cacheData[$guid];
-            }
-
             $iName = $entity->getName();
 
-            if (null === $entity->jf_id) {
-                $this->logger->notice(
-                    sprintf('%s: Ignoring \'%s\'. Not found in cache.', $this->name, $iName),
-                    [
-                        'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
-                        'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                    ]
-                );
-                continue;
+            if (null === ($entity->suids[$this->name] ?? null)) {
+                // -- search cache for given external id.
+                foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->suids[$this->name] = $this->cacheData[$guid];
+                }
+
+                if (null === ($entity->suids[$this->name] ?? null)) {
+                    $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+                    continue;
+                }
             }
 
             try {
                 $url = $this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
                     http_build_query(
                         [
-                            'ids' => $entity->jf_id,
+                            'ids' => $entity->suids[$this->name],
                             'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
                             'enableUserData' => 'true',
                             'enableImages' => 'false',
@@ -664,9 +659,7 @@ class JellyfinServer implements ServerInterface
                     )
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state from remote server.', $this->name, $iName), [
-                    'url' => $url
-                ]);
+                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), ['url' => $url]);
 
                 $requests[] = $this->http->request(
                     'GET',
@@ -713,8 +706,8 @@ class JellyfinServer implements ServerInterface
                 $iName = $state->getName();
 
                 if (empty($json)) {
-                    $this->logger->notice(
-                        sprintf('%s: Ignoring \'%s\'. Remote server returned empty result.', $this->name, $iName)
+                    $this->logger->error(
+                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $iName)
                     );
                     continue;
                 }
@@ -730,8 +723,8 @@ class JellyfinServer implements ServerInterface
                     $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated', 'PremiereDate'], null);
 
                     if (null === $date) {
-                        $this->logger->notice(
-                            sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                        $this->logger->warning(
+                            sprintf('%s: Ignoring \'%s\'. No date is set on backend object.', $this->name, $iName),
                             [
                                 'payload' => $json,
                             ]
@@ -744,13 +737,13 @@ class JellyfinServer implements ServerInterface
                     if ($date >= $state->updated) {
                         $this->logger->debug(
                             sprintf(
-                                '%s: Ignoring \'%s\'. Remote item date is newer or equal to backend entity.',
+                                '%s: Ignoring \'%s\'. Record date is older than backend reported date.',
                                 $this->name,
                                 $iName
                             ),
                             [
-                                'backend' => makeDate($state->updated),
-                                'remote' => makeDate($date),
+                                'record' => makeDate($state->updated),
+                                'backend' => makeDate($date),
                             ]
                         );
                         continue;
@@ -761,7 +754,7 @@ class JellyfinServer implements ServerInterface
 
                 $this->logger->debug(
                     sprintf(
-                        '%s: Changing \'%s\' remote state to \'%s\'.',
+                        '%s: Changing \'%s\' play state to \'%s\'.',
                         $this->name,
                         $iName,
                         $state->isWatched() ? 'Played' : 'Unplayed',
@@ -833,7 +826,7 @@ class JellyfinServer implements ServerInterface
 
                         foreach ($it as $entity) {
                             if ($entity instanceof DecodingError) {
-                                $this->logger->notice(
+                                $this->logger->warning(
                                     sprintf(
                                         '%s: Failed to decode one of \'%s\' items. %s',
                                         $this->name,
@@ -878,7 +871,7 @@ class JellyfinServer implements ServerInterface
                         );
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
             error: function (string $cName, string $type, UriInterface|string $url) {
@@ -927,7 +920,7 @@ class JellyfinServer implements ServerInterface
 
                         foreach ($it as $entity) {
                             if ($entity instanceof DecodingError) {
-                                $this->logger->debug(
+                                $this->logger->warning(
                                     sprintf(
                                         '%s: Failed to decode one of \'%s\' items. %s',
                                         $this->name,
@@ -972,7 +965,7 @@ class JellyfinServer implements ServerInterface
                         );
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
             error: function (string $cName, string $type, UriInterface|string $url) {
@@ -1031,7 +1024,7 @@ class JellyfinServer implements ServerInterface
             );
 
             $this->logger->debug(sprintf('%s: Requesting list of server libraries.', $this->name), [
-                'url' => (string)$url
+                'url' => $url
             ]);
 
             $response = $this->http->request('GET', (string)$url, $this->getHeaders());
@@ -1057,7 +1050,7 @@ class JellyfinServer implements ServerInterface
             $listDirs = ag($json, 'Items', []);
 
             if (empty($listDirs)) {
-                $this->logger->notice(
+                $this->logger->warning(
                     sprintf('%s: Request to get list of server libraries responded with empty list.', $this->name)
                 );
                 Data::add($this->name, 'no_import_update', true);
@@ -1121,7 +1114,7 @@ class JellyfinServer implements ServerInterface
                     )
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' series external ids.', $this->name, $cName), [
+                $this->logger->debug(sprintf('%s: Requesting \'%s\' tv shows external ids.', $this->name, $cName), [
                     'url' => $url
                 ]);
 
@@ -1139,7 +1132,7 @@ class JellyfinServer implements ServerInterface
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
                         sprintf(
-                            '%s: Request for \'%s\' series external ids has failed. %s',
+                            '%s: Request for \'%s\' tv shows external ids has failed. %s',
                             $this->name,
                             $cName,
                             $e->getMessage()
@@ -1163,7 +1156,7 @@ class JellyfinServer implements ServerInterface
 
             if ('movies' !== $type && 'tvshows' !== $type) {
                 $unsupported++;
-                $this->logger->debug(sprintf('%s: Skipping \'%s\' library. Unsupported type.', $this->name, $title), [
+                $this->logger->info(sprintf('%s: Skipping \'%s\'. Unsupported type.', $this->name, $title), [
                     'id' => $key,
                     'type' => $type,
                 ]);
@@ -1175,7 +1168,7 @@ class JellyfinServer implements ServerInterface
 
             if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
                 $ignored++;
-                $this->logger->notice(sprintf('%s: Skipping \'%s\'. Ignored by user.', $this->name, $title), [
+                $this->logger->info(sprintf('%s: Skipping \'%s\'. Ignored by user config.', $this->name, $title), [
                     'id' => $key,
                     'type' => $type,
                 ]);
@@ -1196,7 +1189,7 @@ class JellyfinServer implements ServerInterface
                 )
             );
 
-            $this->logger->debug(sprintf('%s: Requesting \'%s\' content.', $this->name, $cName), [
+            $this->logger->debug(sprintf('%s: Requesting \'%s\' media items.', $this->name, $cName), [
                 'url' => $url
             ]);
 
@@ -1213,7 +1206,7 @@ class JellyfinServer implements ServerInterface
                 );
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
-                    sprintf('%s: Request for \'%s\' content has failed. %s', $this->name, $cName, $e->getMessage()),
+                    sprintf('%s: Request for \'%s\' media items has failed. %s', $this->name, $cName, $e->getMessage()),
                     [
                         'url' => $url,
                         'file' => $e->getFile(),
@@ -1225,7 +1218,7 @@ class JellyfinServer implements ServerInterface
         }
 
         if (0 === count($promises)) {
-            $this->logger->notice(sprintf('%s: No library requests were made.', $this->name), [
+            $this->logger->warning(sprintf('%s: No library requests were made.', $this->name), [
                 'total' => count($listDirs),
                 'ignored' => $ignored,
                 'unsupported' => $unsupported,
@@ -1281,8 +1274,8 @@ class JellyfinServer implements ServerInterface
             $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
 
             if (null === $date) {
-                $this->logger->debug(
-                    sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                $this->logger->warning(
+                    sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
                         'payload' => $item,
                     ]
@@ -1403,7 +1396,7 @@ class JellyfinServer implements ServerInterface
 
             if (null === $date) {
                 $this->logger->notice(
-                    sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                    sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
                         'payload' => get_object_vars($item),
                     ]
@@ -1423,7 +1416,7 @@ class JellyfinServer implements ServerInterface
                     $message .= sprintf(' Most likely unmatched %s.', $rItem->type);
                 }
 
-                $this->logger->debug($message, ['guids' => !empty($providerIds) ? $providerIds : 'None']);
+                $this->logger->info($message, ['guids' => !empty($providerIds) ? $providerIds : 'None']);
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
             }
@@ -1432,7 +1425,7 @@ class JellyfinServer implements ServerInterface
                 if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
                         sprintf(
-                            '%s: Ignoring \'%s\'. Remote item date is equal or newer than last sync date.',
+                            '%s: Ignoring \'%s\'. Backend reported date is equal or newer than last sync date.',
                             $this->name,
                             $iName
                         )
@@ -1443,9 +1436,9 @@ class JellyfinServer implements ServerInterface
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
-                $this->logger->debug(
+                $this->logger->info(
                     sprintf(
-                        '%s: Ignoring \'%s\' Not found in backend store. Run state:import to import the item.',
+                        '%s: Ignoring \'%s\'. Media item is not imported.',
                         $this->name,
                         $iName,
                     ),
@@ -1471,7 +1464,11 @@ class JellyfinServer implements ServerInterface
             if (false === ag($this->options, Options::IGNORE_DATE, false)) {
                 if ($rItem->updated >= $entity->updated) {
                     $this->logger->debug(
-                        sprintf('%s: Ignoring \'%s\'. Date is newer or equal to backend entity.', $this->name, $iName),
+                        sprintf(
+                            '%s: Ignoring \'%s\'. Record date is newer or equal to backend item.',
+                            $this->name,
+                            $iName
+                        ),
                         [
                             'backend' => makeDate($entity->updated),
                             'remote' => makeDate($rItem->updated),
@@ -1486,7 +1483,7 @@ class JellyfinServer implements ServerInterface
 
             $this->logger->debug(
                 sprintf(
-                    '%s: Changing \'%s\' remote state to \'%s\'.',
+                    '%s: Changing \'%s\' play state to \'%s\'.',
                     $this->name,
                     $iName,
                     $entity->isWatched() ? 'Played' : 'Unplayed',

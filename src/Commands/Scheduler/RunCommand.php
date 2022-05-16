@@ -77,7 +77,7 @@ final class RunCommand extends Command
 
         if (0 === $count) {
             $this->write(
-                '!{date} <info>No Tasks Scheduled to run at this time.</info>',
+                sprintf('[%s] <info>No Tasks Scheduled to run at this time.</info>', makeDate()),
                 $input,
                 $output,
                 OutputInterface::VERBOSITY_VERY_VERBOSE
@@ -111,8 +111,11 @@ final class RunCommand extends Command
         }
 
         if ($input->getOption('save-log')) {
-            $logfile = Config::get('tmpDir') . '/logs/crons/' . gmdate('Y_m_d') . '.log';
-            file_put_contents($logfile, implode(PHP_EOL, $this->logs) . PHP_EOL, FILE_APPEND);
+            file_put_contents(
+                Config::get('tmpDir') . '/logs/crons/' . gmdate('Y_m_d') . '.log',
+                preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)),
+                FILE_APPEND
+            );
         }
 
         return self::SUCCESS;

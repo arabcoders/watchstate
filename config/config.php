@@ -102,9 +102,15 @@ return (function () {
         ],
         'stderr' => [
             'type' => 'stream',
-            'enabled' => env('WS_LOGGER_STDERR_ENABLED', true),
-            'level' => env('WS_LOGGER_STDERR_LEVEL', Logger::NOTICE),
+            'enabled' => 'cli' !== PHP_SAPI,
+            'level' => Logger::WARNING,
             'filename' => 'php://stderr',
+        ],
+        'console' => [
+            'type' => 'console',
+            'enabled' => 'cli' === PHP_SAPI,
+            // -- controllable by -vvv flag -v for NOTICE -vv for INFO -vvv for DEBUG.
+            'level' => Logger::WARNING,
         ],
         'syslog' => [
             'type' => 'syslog',

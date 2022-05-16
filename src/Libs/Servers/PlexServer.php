@@ -88,6 +88,11 @@ class PlexServer implements ServerInterface
         'media.pause',
     ];
 
+    /**
+     * Parse hama agent guid.
+     */
+    private const HAMA_REGEX = '/(?P<source>(anidb|tvdb|tmdb|tsdb|imdb))\d?-(?P<id>[^\[\]]*)/';
+
     protected bool $initialized = false;
     protected UriInterface|null $url = null;
     protected string|null $token = null;
@@ -159,7 +164,7 @@ class PlexServer implements ServerInterface
 
         $url = $this->url->withPath('/');
 
-        $this->logger->debug(sprintf('%s: Requesting server Unique id.', $this->name), ['url' => $url]);
+        $this->logger->debug(sprintf('%s: Requesting server unique id.', $this->name), ['url' => $url]);
 
         $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
@@ -589,7 +594,7 @@ class PlexServer implements ServerInterface
 
                         foreach ($it as $entity) {
                             if ($entity instanceof DecodingError) {
-                                $this->logger->error(
+                                $this->logger->warning(
                                     sprintf(
                                         '%s: Failed to decode one of \'%s\' items. %s',
                                         $this->name,
@@ -634,7 +639,7 @@ class PlexServer implements ServerInterface
                         );
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
             error: function (string $cName, string $type, UriInterface|string $url) {
@@ -668,34 +673,28 @@ class PlexServer implements ServerInterface
                 }
             }
 
-            $entity->plex_id = null;
-
-            foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-                if (null === ($this->cacheData[$guid] ?? null)) {
-                    continue;
-                }
-                $entity->plex_id = $this->cacheData[$guid];
-            }
-
             $iName = $entity->getName();
 
-            if (null === $entity->plex_id) {
-                $this->logger->notice(
-                    sprintf('%s: Ignoring \'%s\'. Not found in cache.', $this->name, $iName),
-                    [
-                        'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
-                        'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                    ]
-                );
-                continue;
+            if (null === ($entity->suids[$this->name] ?? null)) {
+                foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
+                    if (null === ($this->cacheData[$guid] ?? null)) {
+                        continue;
+                    }
+                    $entity->suids[$this->name] = $this->cacheData[$guid];
+                }
+
+                if (null === ($entity->suids[$this->name] ?? null)) {
+                    $this->logger->notice(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+                    continue;
+                }
             }
 
             try {
-                $url = $this->url->withPath('/library/metadata/' . $entity->plex_id)->withQuery(
+                $url = $this->url->withPath('/library/metadata/' . $entity->suids[$this->name])->withQuery(
                     http_build_query(['includeGuids' => 1])
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state from remote server.', $this->name, $iName), [
+                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
                     'url' => $url
                 ]);
 
@@ -745,8 +744,8 @@ class PlexServer implements ServerInterface
                 $iName = $state->getName();
 
                 if (empty($json)) {
-                    $this->logger->notice(
-                        sprintf('%s: Ignoring \'%s\'. Remote server returned empty result.', $this->name, $iName)
+                    $this->logger->error(
+                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $iName)
                     );
                     continue;
                 }
@@ -767,7 +766,7 @@ class PlexServer implements ServerInterface
 
                     if (0 === $date) {
                         $this->logger->notice(
-                            sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                            sprintf('%s: Ignoring \'%s\'. No date is set on backend object.', $this->name, $iName),
                             [
                                 'payload' => $json,
                             ]
@@ -778,13 +777,13 @@ class PlexServer implements ServerInterface
                     if ($date >= $state->updated) {
                         $this->logger->debug(
                             sprintf(
-                                '%s: Ignoring \'%s\'. Remote item date is newer or equal to backend entity.',
+                                '%s: Ignoring \'%s\'. Record date is older than backend reported date.',
                                 $this->name,
                                 $iName
                             ),
                             [
-                                'backend' => makeDate($state->updated),
-                                'remote' => makeDate($date),
+                                'record' => makeDate($state->updated),
+                                'backend' => makeDate($date),
                             ]
                         );
                         continue;
@@ -802,7 +801,7 @@ class PlexServer implements ServerInterface
 
                 $this->logger->debug(
                     sprintf(
-                        '%s: Changing \'%s\' remote state to \'%s\'.',
+                        '%s: Changing \'%s\' play state to \'%s\'.',
                         $this->name,
                         $iName,
                         $state->isWatched() ? 'Played' : 'Unplayed',
@@ -915,7 +914,7 @@ class PlexServer implements ServerInterface
                         );
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
             error: function (string $cName, string $type, UriInterface|string $url) {
@@ -1010,7 +1009,7 @@ class PlexServer implements ServerInterface
                         );
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
+                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
             error: function (string $cName, string $type, UriInterface|string $url) {
@@ -1087,7 +1086,7 @@ class PlexServer implements ServerInterface
             $listDirs = ag($json, 'MediaContainer.Directory', []);
 
             if (empty($listDirs)) {
-                $this->logger->notice(
+                $this->logger->warning(
                     sprintf('%s: Request to get list of server libraries responded with empty list.', $this->name)
                 );
                 Data::add($this->name, 'no_import_update', true);
@@ -1148,7 +1147,7 @@ class PlexServer implements ServerInterface
                     )
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' series external ids.', $this->name, $cName), [
+                $this->logger->debug(sprintf('%s: Requesting \'%s\' tv shows external ids.', $this->name, $cName), [
                     'url' => $url
                 ]);
 
@@ -1166,7 +1165,7 @@ class PlexServer implements ServerInterface
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
                         sprintf(
-                            '%s: Request for \'%s\' series external ids has failed. %s',
+                            '%s: Request for \'%s\' tv shows external ids has failed. %s',
                             $this->name,
                             $cName,
                             $e->getMessage()
@@ -1190,7 +1189,7 @@ class PlexServer implements ServerInterface
 
             if ('movie' !== $type && 'show' !== $type) {
                 $unsupported++;
-                $this->logger->debug(sprintf('%s: Skipping \'%s\' library. Unsupported type.', $this->name, $title), [
+                $this->logger->info(sprintf('%s: Skipping \'%s\'. Unsupported type.', $this->name, $title), [
                     'id' => $key,
                     'type' => $type,
                 ]);
@@ -1201,7 +1200,7 @@ class PlexServer implements ServerInterface
 
             if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
                 $ignored++;
-                $this->logger->notice(sprintf('%s: Skipping \'%s\'. Ignored by user.', $this->name, $title), [
+                $this->logger->info(sprintf('%s: Skipping \'%s\'. Ignored by user.', $this->name, $title), [
                     'id' => $key,
                     'type' => $type,
                 ]);
@@ -1220,7 +1219,7 @@ class PlexServer implements ServerInterface
                 )
             );
 
-            $this->logger->debug(sprintf('%s: Requesting \'%s\' content.', $this->name, $cName), [
+            $this->logger->debug(sprintf('%s: Requesting \'%s\' media items.', $this->name, $cName), [
                 'url' => $url
             ]);
 
@@ -1237,7 +1236,7 @@ class PlexServer implements ServerInterface
                 );
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
-                    sprintf('%s: Request for \'%s\' content has failed. %s', $this->name, $cName, $e->getMessage()),
+                    sprintf('%s: Request for \'%s\' media items has failed. %s', $this->name, $cName, $e->getMessage()),
                     [
                         'url' => $url,
                         'file' => $e->getFile(),
@@ -1249,7 +1248,7 @@ class PlexServer implements ServerInterface
         }
 
         if (0 === count($promises)) {
-            $this->logger->notice(sprintf('%s: No library requests were made.', $this->name), [
+            $this->logger->warning(sprintf('%s: No library requests were made.', $this->name), [
                 'total' => count($listDirs),
                 'ignored' => $ignored,
                 'unsupported' => $unsupported,
@@ -1306,7 +1305,7 @@ class PlexServer implements ServerInterface
 
             if (0 === $date) {
                 $this->logger->debug(
-                    sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                    sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
                         'payload' => $item,
                     ]
@@ -1417,7 +1416,7 @@ class PlexServer implements ServerInterface
 
             if (null === $date) {
                 $this->logger->notice(
-                    sprintf('%s: Ignoring \'%s\'. Date is not set on remote item.', $this->name, $iName),
+                    sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
                         'payload' => get_object_vars($item),
                     ]
@@ -1451,7 +1450,7 @@ class PlexServer implements ServerInterface
                 if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
                         sprintf(
-                            '%s: Ignoring \'%s\'. Remote item date is equal or newer than last sync date.',
+                            '%s: Ignoring \'%s\'. Backend reported date is equal or newer than last sync date.',
                             $this->name,
                             $iName
                         )
@@ -1464,7 +1463,7 @@ class PlexServer implements ServerInterface
             if (null === ($entity = $mapper->get($rItem))) {
                 $this->logger->debug(
                     sprintf(
-                        '%s: Ignoring \'%s\' Not found in backend store. Run state:import to import the item.',
+                        '%s: Ignoring \'%s\'. Media item is not imported.',
                         $this->name,
                         $iName,
                     ),
@@ -1490,7 +1489,11 @@ class PlexServer implements ServerInterface
             if (false === ag($this->options, Options::IGNORE_DATE, false)) {
                 if ($rItem->updated >= $entity->updated) {
                     $this->logger->debug(
-                        sprintf('%s: Ignoring \'%s\'. Date is newer or equal to backend entity.', $this->name, $iName),
+                        sprintf(
+                            '%s: Ignoring \'%s\'. Record date is newer or equal to backend item.',
+                            $this->name,
+                            $iName
+                        ),
                         [
                             'backend' => makeDate($entity->updated),
                             'remote' => makeDate($rItem->updated),
@@ -1512,7 +1515,7 @@ class PlexServer implements ServerInterface
 
             $this->logger->debug(
                 sprintf(
-                    '%s: Changing \'%s\' remote state to \'%s\'.',
+                    '%s: Changing \'%s\' play state to \'%s\'.',
                     $this->name,
                     $iName,
                     $entity->isWatched() ? 'Played' : 'Unplayed',
@@ -1592,37 +1595,70 @@ class PlexServer implements ServerInterface
         $guid = [];
 
         foreach ($guids as $_id) {
-            $val = is_object($_id) ? $_id->id : $_id['id'];
+            try {
+                $val = is_object($_id) ? $_id->id : $_id['id'];
 
-            if (empty($val)) {
-                continue;
-            }
+                if (empty($val)) {
+                    continue;
+                }
 
-            if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                // -- DO NOT accept plex relative unique ids, we generate our own.
-                if (substr_count($val, '/') >= 3) {
-                    if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
-                        $this->logger->debug(sprintf('%s: Parsing \'%s\' is not supported.', $this->name, $val));
+                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                    // -- DO NOT accept plex relative unique ids, we generate our own.
+                    if (substr_count($val, '/') >= 3) {
+                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                            $this->logger->warning(
+                                sprintf(
+                                    '%s: Parsing \'%s\' custom agent identifier is not supported.',
+                                    $this->name,
+                                    $val
+                                )
+                            );
+                        }
+                        continue;
                     }
+                    $val = $this->parseLegacyAgent($val);
+                }
+
+                if (false === str_contains($val, '://')) {
+                    $this->logger->info(
+                        sprintf(
+                            '%s: Encountered unsupported external id format. Possibly duplicate movie?',
+                            $this->name
+                        ),
+                        [
+                            'guid' => $val
+                        ]
+                    );
                     continue;
                 }
-                $val = $this->parseLegacyAgent($val);
-            }
 
-            [$key, $value] = explode('://', $val);
-            $key = strtolower($key);
+                [$key, $value] = explode('://', $val);
+                $key = strtolower($key);
 
-            if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
+                if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
+                    continue;
+                }
+
+                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($val)) {
+                    if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$val) {
+                        continue;
+                    }
+                }
+
+                $guid[self::GUID_MAPPER[$key]] = $value;
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    sprintf(
+                        '%s: Error occurred while parsing external id. %s',
+                        $this->name,
+                        $e->getMessage()
+                    ),
+                    [
+                        'guid' => $val ?? null,
+                    ]
+                );
                 continue;
             }
-
-            if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($val)) {
-                if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$val) {
-                    continue;
-                }
-            }
-
-            $guid[self::GUID_MAPPER[$key]] = $value;
         }
 
         ksort($guid);
@@ -1633,28 +1669,53 @@ class PlexServer implements ServerInterface
     protected function hasSupportedGuids(array $guids): bool
     {
         foreach ($guids as $_id) {
-            $val = is_object($_id) ? $_id->id : $_id['id'];
+            try {
+                $val = is_object($_id) ? $_id->id : $_id['id'];
 
-            if (empty($val)) {
-                continue;
-            }
-
-            if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                // -- DO NOT accept plex relative unique ids, we generate our own.
-                if (substr_count($val, '/') >= 3) {
-                    if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
-                        $this->logger->debug(sprintf('%s: Parsing \'%s\' is not supported.', $this->name, $val));
-                    }
+                if (empty($val)) {
                     continue;
                 }
-                $val = $this->parseLegacyAgent($val);
-            }
 
-            [$key, $value] = explode('://', $val);
-            $key = strtolower($key);
+                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                    // -- DO NOT accept plex relative unique ids, we generate our own.
+                    if (substr_count($val, '/') >= 3) {
+                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                            $this->logger->warning(
+                                sprintf(
+                                    '%s: Parsing this \'%s\' custom agent identifier is not supported.',
+                                    $this->name,
+                                    $val
+                                )
+                            );
+                        }
+                        continue;
+                    }
+                    $val = $this->parseLegacyAgent($val);
+                }
 
-            if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
-                return true;
+                if (false === str_contains($val, '://')) {
+                    continue;
+                }
+
+                [$key, $value] = explode('://', $val);
+                $key = strtolower($key);
+
+                if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
+                    return true;
+                }
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    sprintf(
+                        '%s: An error occurred while parsing external id. %s',
+                        $this->name,
+                        $e->getMessage()
+                    ),
+                    [
+                        'id' => $val ?? null,
+                        'list' => $guids,
+                    ]
+                );
+                continue;
             }
         }
 
@@ -1795,6 +1856,14 @@ class PlexServer implements ServerInterface
         }
     }
 
+    /**
+     * Parse legacy plex agents.
+     *
+     * @param string $agent
+     *
+     * @return string
+     * @see https://github.com/ZeroQI/Hama.bundle/issues/510
+     */
     protected function parseLegacyAgent(string $agent): string
     {
         try {
@@ -1802,21 +1871,33 @@ class PlexServer implements ServerInterface
                 return $agent;
             }
 
+            // -- Handle hama plex agent. This is multi source agent.
             if (true === str_starts_with($agent, 'com.plexapp.agents.hama')) {
-                $agentGuid = explode('-', after($agent, '://'));
-            } else {
-                $agent = str_replace(
-                    array_keys(self::GUID_AGENT_REPLACER),
-                    array_values(self::GUID_AGENT_REPLACER),
-                    $agent
-                );
-                $agentGuid = explode('://', after($agent, 'agents.'));
+                $guid = after($agent, '://');
+
+                if (1 !== preg_match(self::HAMA_REGEX, $guid, $matches)) {
+                    return $agent;
+                }
+
+                if (null === ($source = ag($matches, 'source')) || null === ($sourceId = ag($matches, 'id'))) {
+                    return $agent;
+                }
+
+                return str_replace('tsdb', 'tmdb', $source) . '://' . before($sourceId, '?');
             }
+
+            $agent = str_replace(
+                array_keys(self::GUID_AGENT_REPLACER),
+                array_values(self::GUID_AGENT_REPLACER),
+                $agent
+            );
+
+            $agentGuid = explode('://', after($agent, 'agents.'));
 
             return $agentGuid[0] . '://' . before($agentGuid[1], '?');
         } catch (Throwable $e) {
             $this->logger->error(
-                sprintf('%s: Error parsing Plex legacy agent identifier. %s', $this->name, $e->getMessage()),
+                sprintf('%s: Error parsing plex legacy agent identifier. %s', $this->name, $e->getMessage()),
                 [
                     'guid' => $agent,
                 ]
@@ -1849,7 +1930,7 @@ class PlexServer implements ServerInterface
             if (201 !== $response->getStatusCode()) {
                 $this->logger->error(
                     sprintf(
-                        '%s: Request to get temp token for userid \'%s\' responded with unexpected http status code \'%d\'.',
+                        '%s: Request to get temp token for user id \'%s\' responded with unexpected http status code \'%d\'.',
                         $this->name,
                         $userId,
                         $response->getStatusCode()

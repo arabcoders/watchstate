@@ -7,7 +7,6 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Data;
-use App\Libs\Extends\CliLogger;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -33,8 +32,6 @@ class CacheCommand extends Command
     {
         $this->setName('state:cache')
             ->setDescription('Cache the GUIDs > Server Internal ID relations.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption(
                 'proxy',
                 null,
@@ -60,7 +57,9 @@ class CacheCommand extends Command
                 'Sync selected servers, comma seperated. \'s1,s2\'.',
                 ''
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -83,16 +82,6 @@ class CacheCommand extends Command
         $selected = explode(',', $serversFilter);
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
-
-        $logger = null;
-
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
-        }
-
-        if (null !== $logger) {
-            $this->logger = $logger;
-        }
 
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
@@ -156,10 +145,6 @@ class CacheCommand extends Command
 
             $server['options'] = $opts;
             $server['class'] = makeServer($server, $name);
-
-            if (null !== $logger) {
-                $server['class'] = $server['class']->setLogger($logger);
-            }
 
             $this->logger->notice(sprintf('Caching \'%s\' server guids relation map.', $name));
 

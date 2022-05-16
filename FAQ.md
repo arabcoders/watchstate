@@ -7,7 +7,7 @@ following
 command:
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvr --ignore-date --force-full --servers-filter [SERVER_NAME]
+$ docker exec -ti watchstate console state:export -vv --ignore-date --force-full --servers-filter [SERVER_NAME]
 ```
 
 this command will force export your current local play state to the selected media backend. If the operation is
@@ -224,10 +224,10 @@ These are the agents we support for plex media server.
 * tvdb://(id) `New Plex Agent`
 * imdb://(id) `New Plex Agent`
 * tmdb://(id) `New Plex Agent`
-* com.plexapp.agents.imdb://(id)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
-* com.plexapp.agents.tmdb://(id)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
-* com.plexapp.agents.themoviedb://(id)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
-* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(Lagecy plex agent "id" can be movie or series id)`
-* com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO parser agent, "id" refers to movie id in imdb)`
-* com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO parser agent for tv. "id" refers to series id)`
-* com.plexapp.agents.hama://(db)-(id)?lang=en `(Anime agent "anidb, tvdb" as db source only. "id" refers to series id)`
+* com.plexapp.agents.imdb://(id)?lang=en `(Lagecy plex agent)`
+* com.plexapp.agents.tmdb://(id)?lang=en `(Lagecy plex agent)`
+* com.plexapp.agents.themoviedb://(id)?lang=en `(Lagecy plex agent)`
+* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(Lagecy plex agent)`
+* com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO parser agent)`
+* com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO parser agent for tv)`
+* com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(hama agent is multi db source agent)`

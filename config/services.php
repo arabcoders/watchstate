@@ -6,6 +6,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\Import\MemoryMapper;
@@ -21,6 +22,7 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 return (function (): array {
     return [
@@ -49,6 +51,10 @@ return (function (): array {
         UriInterface::class => [
             'class' => fn() => new Uri(''),
             'shared' => false,
+        ],
+
+        OutputInterface::class => [
+            'class' => fn(): OutputInterface => new ConsoleOutput()
         ],
 
         PDO::class => [

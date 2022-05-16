@@ -12,8 +12,6 @@ final class ConsoleOutput extends baseConsoleOutput
 
     protected function doWrite(string $message, bool $newline): void
     {
-        $message = str_replace('!{date}', '[' . makeDate('now') . ']', $message);
-
         $this->message = $message;
 
         parent::doWrite($message, $newline);
