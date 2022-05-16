@@ -88,6 +88,11 @@ class PlexServer implements ServerInterface
         'media.pause',
     ];
 
+    /**
+     * Parse hama agent guid.
+     */
+    private const HAMA_REGEX = '/(?P<source>(anidb|tvdb|tmdb|tsdb|imdb))\d?-(?P<id>[^\[\]]*)/';
+
     protected bool $initialized = false;
     protected UriInterface|null $url = null;
     protected string|null $token = null;
@@ -679,13 +684,7 @@ class PlexServer implements ServerInterface
                 }
 
                 if (null === ($entity->suids[$this->name] ?? null)) {
-                    $this->logger->notice(
-                        sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
-                        [
-                            'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
-                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                        ]
-                    );
+                    $this->logger->notice(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
                     continue;
                 }
             }
@@ -1857,6 +1856,14 @@ class PlexServer implements ServerInterface
         }
     }
 
+    /**
+     * Parse legacy plex agents.
+     *
+     * @param string $agent
+     *
+     * @return string
+     * @see https://github.com/ZeroQI/Hama.bundle/issues/510
+     */
     protected function parseLegacyAgent(string $agent): string
     {
         try {
@@ -1864,16 +1871,28 @@ class PlexServer implements ServerInterface
                 return $agent;
             }
 
+            // -- Handle hama plex agent. This is multi source agent.
             if (true === str_starts_with($agent, 'com.plexapp.agents.hama')) {
-                $agentGuid = explode('-', after($agent, '://'));
-            } else {
-                $agent = str_replace(
-                    array_keys(self::GUID_AGENT_REPLACER),
-                    array_values(self::GUID_AGENT_REPLACER),
-                    $agent
-                );
-                $agentGuid = explode('://', after($agent, 'agents.'));
+                $guid = after($agent, '://');
+
+                if (1 !== preg_match(self::HAMA_REGEX, $guid, $matches)) {
+                    return $agent;
+                }
+
+                if (null === ($source = ag($matches, 'source')) || null === ($sourceId = ag($matches, 'id'))) {
+                    return $agent;
+                }
+
+                return str_replace('tsdb', 'tmdb', $source) . '://' . before($sourceId, '?');
             }
+
+            $agent = str_replace(
+                array_keys(self::GUID_AGENT_REPLACER),
+                array_values(self::GUID_AGENT_REPLACER),
+                $agent
+            );
+
+            $agentGuid = explode('://', after($agent, 'agents.'));
 
             return $agentGuid[0] . '://' . before($agentGuid[1], '?');
         } catch (Throwable $e) {
