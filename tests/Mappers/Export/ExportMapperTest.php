@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Tests\Mappers\Export;
 
 use App\Libs\Entity\StateEntity;
-use App\Libs\Extends\CliLogger;
+use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
+use Monolog\Logger;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -30,7 +31,8 @@ class ExportMapperTest extends TestCase
         $this->testMovie = require __DIR__ . '/../../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../../Fixtures/EpisodeEntity.php';
 
-        $logger = new CliLogger($this->output);
+        $logger = new Logger('logger');
+        $logger->pushHandler(new ConsoleHandler($this->output));
 
         $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
         $this->storage->migrations('up');

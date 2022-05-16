@@ -63,7 +63,13 @@ final class MemoryMapper implements ImportInterface
     public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->info(sprintf('Ignoring %s. No valid GUIDs.', $name));
+            $this->logger->warning(
+                sprintf(
+                    '%s: Ignoring \'%s\'. No valid/supported external ids.',
+                    $bucket,
+                    $entity->getName()
+                )
+            );
             Data::increment($bucket, $entity->type . '_failed_no_guid');
             return $this;
         }
@@ -89,7 +95,14 @@ final class MemoryMapper implements ImportInterface
                 $data = [];
             }
 
-            $this->logger->info(sprintf('Adding %s. As new Item.', $name), $data);
+            $this->logger->notice(
+                sprintf(
+                    '%s: Adding \'%s\'. As new Item.',
+                    $bucket,
+                    $entity->getName()
+                ),
+                $data
+            );
 
             return $this;
         }
@@ -110,8 +123,8 @@ final class MemoryMapper implements ImportInterface
             $this->changed[$pointer] = $pointer;
             $this->removePointers($cloned);
             $this->addPointers($this->objects[$pointer], $pointer);
-            $this->logger->info(
-                sprintf('%s: Updating \'%s\'. State changed.', $entity->via, $entity->getName()),
+            $this->logger->notice(
+                sprintf('%s: Updating \'%s\'. State changed.', $bucket, $entity->getName()),
                 $this->objects[$pointer]->diff(all: true),
             );
             return $this;
@@ -119,7 +132,7 @@ final class MemoryMapper implements ImportInterface
 
         if ($this->inDeepDebugMode()) {
             $this->logger->debug(
-                sprintf('%s: \'%s\'. is identical.', $entity->via, $entity->getName()),
+                sprintf('%s: \'%s\'. is identical.', $bucket, $entity->getName()),
                 [
                     'backend' => $cloned->getAll(),
                     'remote' => $entity->getAll(),
@@ -171,7 +184,7 @@ final class MemoryMapper implements ImportInterface
             $count = count($this->changed);
 
             $this->logger->notice(
-                0 === $count ? 'No changes detected.' : sprintf('Updating backend with \'%d\' changes.', $count)
+                0 === $count ? 'No changes detected.' : sprintf('Updating backend storage with \'%d\' changes.', $count)
             );
 
             $inDryRunMode = $this->inDryRunMode();

@@ -7,7 +7,7 @@ following
 command:
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvr --ignore-date --force-full --servers-filter [SERVER_NAME]
+$ docker exec -ti watchstate console state:export -vv --ignore-date --force-full --servers-filter [SERVER_NAME]
 ```
 
 this command will force export your current local play state to the selected media backend. If the operation is

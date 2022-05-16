@@ -8,7 +8,6 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\Storage\PDO\PDOAdapter;
@@ -43,8 +42,6 @@ class ImportCommand extends Command
     {
         $this->setName('state:import')
             ->setDescription('Import watch state from servers.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. (ignore lastSync date)')
             ->addOption(
                 'proxy',
@@ -78,7 +75,9 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'You should not use this flag unless told by the team it will inflate your log output.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -105,17 +104,6 @@ class ImportCommand extends Command
         $selected = explode(',', $serversFilter);
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
-
-        $logger = null;
-
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
-        }
-
-        if (null !== $logger) {
-            $this->logger = $logger;
-            $this->mapper->setLogger($logger);
-        }
 
         $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
 
@@ -217,10 +205,6 @@ class ImportCommand extends Command
             $server['options'] = $opts;
             $server['class'] = makeServer($server, $name);
 
-            if (null !== $logger) {
-                $server['class'] = $server['class']->setLogger($logger);
-            }
-
             $after = ag($server, 'import.lastSync', null);
 
             if (true === (bool)ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
@@ -265,7 +249,7 @@ class ImportCommand extends Command
             gc_collect_cycles();
         }
 
-        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' external requests.', count($queue)));
+        $this->logger->notice('HTTP: Finished waiting on external requests.');
 
         $queue = $requestData = null;
 

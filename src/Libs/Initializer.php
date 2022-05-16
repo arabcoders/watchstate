@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use App\Cli;
+use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Storage\StorageInterface;
 use Closure;
@@ -476,6 +477,9 @@ final class Initializer
                             (bool)ag($context, 'bubble', true),
                         )
                     );
+                    break;
+                case 'console':
+                    $logger->pushHandler(new ConsoleHandler($this->cliOutput));
                     break;
                 case 'syslog':
                     $logger->pushHandler(

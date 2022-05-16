@@ -6,12 +6,13 @@ namespace Tests\Storage;
 
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Extends\CliLogger;
+use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
 use Error;
+use Monolog\Logger;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -32,7 +33,10 @@ class PDOAdapterTest extends TestCase
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
 
-        $this->storage = new PDOAdapter(new CliLogger($this->output), new PDO('sqlite::memory:'));
+        $logger = new Logger('logger');
+        $logger->pushHandler(new ConsoleHandler($this->output));
+
+        $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
         $this->storage->migrations('up');
     }
 

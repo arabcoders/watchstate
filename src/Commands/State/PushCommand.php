@@ -9,7 +9,6 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Extends\CliLogger;
 use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -42,8 +41,6 @@ class PushCommand extends Command
     {
         $this->setName('state:push')
             ->setDescription('Push queued state change events.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is successful.')
             ->addOption(
                 'proxy',
@@ -63,7 +60,9 @@ class PushCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison. Push db state to the server regardless of date.'
             )
-            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.');
+            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.')
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
     }
 
     /**
@@ -165,17 +164,7 @@ class PushCommand extends Command
             throw new RuntimeException('No servers were found.');
         }
 
-        $logger = null;
-
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
-        }
-
         $requests = [];
-
-        if (null !== $logger) {
-            $this->logger = $logger;
-        }
 
         $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
 
@@ -197,10 +186,6 @@ class PushCommand extends Command
 
             $server['options'] = $opts;
             $server['class'] = makeServer($server, $name);
-
-            if (null !== $logger) {
-                $server['class'] = $server['class']->setLogger($logger);
-            }
 
             array_push($requests, ...$server['class']->push($entities));
         }

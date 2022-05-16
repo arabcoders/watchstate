@@ -77,7 +77,7 @@ final class RunCommand extends Command
 
         if (0 === $count) {
             $this->write(
-                '!{date} <info>No Tasks Scheduled to run at this time.</info>',
+                sprintf('[%s] <info>No Tasks Scheduled to run at this time.</info>', makeDate()),
                 $input,
                 $output,
                 OutputInterface::VERBOSITY_VERY_VERBOSE

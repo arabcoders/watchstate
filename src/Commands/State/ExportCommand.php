@@ -7,7 +7,6 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Data;
-use App\Libs\Extends\CliLogger;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Options;
 use App\Libs\Storage\PDO\PDOAdapter;
@@ -41,8 +40,6 @@ class ExportCommand extends Command
     {
         $this->setName('state:export')
             ->setDescription('Export watch state to servers.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Redirect logger to stdout.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Show memory usage.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. (will ignore lastSync date)')
             ->addOption(
                 'proxy',
@@ -75,7 +72,9 @@ class ExportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison, and update server watched state to match database.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
+            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -104,9 +103,6 @@ class ExportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
-        if ($input->getOption('redirect-logger') || $input->getOption('memory-usage')) {
-            $logger = new CliLogger($output, (bool)$input->getOption('memory-usage'));
-        }
 
         if (null !== $logger) {
             $this->logger = $logger;
@@ -204,7 +200,7 @@ class ExportCommand extends Command
             if (null === $after) {
                 $this->logger->notice(sprintf('%s: Exporting all local play state to this backend.', $name));
             } else {
-                $after = makeDate($after);
+                $after = makeDate($after)->format('Y-m-d H:i:s T');
                 $this->logger->notice(
                     sprintf('%s: Exporting play state changes since \'%s\' to this backend.', $name, $after)
                 );
@@ -223,7 +219,7 @@ class ExportCommand extends Command
 
         unset($server);
 
-        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' state comparison requests.', count($requests)));
+        $this->logger->notice(sprintf('HTTP: Sending \'%d\' state comparison requests.', count($requests)));
 
         foreach ($requests as $response) {
             $requestData = $response->getInfo('user_data');
@@ -234,7 +230,7 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice(sprintf('HTTP: Finished processing \'%d\' state comparison requests.', count($requests)));
+        $this->logger->notice(sprintf('HTTP: Finished sending \'%d\' state comparison requests.', count($requests)));
 
         $changes = $this->mapper->getQueue();
         $total = count($changes);
@@ -259,7 +255,7 @@ class ExportCommand extends Command
                     $this->logger->error($e->getMessage());
                 }
             }
-            $this->logger->notice(sprintf('HTTP: Finished Processing \'%d\' state change requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Finished sending \'%d\' state change requests.', $total));
         } else {
             $this->logger->notice('No state changes detected.');
         }

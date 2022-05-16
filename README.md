@@ -58,7 +58,7 @@ you want to edit the config again or if you made mistake just run the same comma
 After adding your backends, You should import your current watch state by running the following command.
 
 ```bash
-$ docker exec -ti watchstate console state:import -vvr
+$ docker exec -ti watchstate console state:import -vv
 ```
 
 ---
@@ -125,13 +125,13 @@ way that is not compatible with the way we handle webhooks events.
 To manually export your watch state back to servers you can run the following command
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvr
+$ docker exec -ti watchstate console state:export -vv
 ```
 
 to sync specific server/s, use the `[-s, --servers-filter]` which accept comma seperated list of server names.
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvr --servers-filter 'server1,server2' 
+$ docker exec -ti watchstate console state:export -vv --servers-filter 'server1,server2' 
 ```
 
 To enable the export scheduled task set the value of `WS_CRON_EXPORT` to `1`. By default, we run export every 90
@@ -291,11 +291,9 @@ the check if you happen to enable `strict user match` for jellyfin.
 - (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
 - (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.
 - (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
-- (bool) `WS_LOGGER_STDERR_ENABLED` enable stderr output logging.
-- (string) `WS_LOGGER_STDERR_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
 - (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
-- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
 - (string) `WS_LOGGER_FILE` full path for log file. By default, it's stored at `$(WS_TMP_DIR)/logs/app.log`
+- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
 - (bool) `WS_LOGGER_SYSLOG_ENABLED` enable syslog logger.
 - (int) `WS_LOGGER_SYSLOG_FACILITY` syslog logging facility
 - (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
