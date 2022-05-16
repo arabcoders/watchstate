@@ -7,7 +7,17 @@ on:
       - 'dev'
     tags-ignore:
       - 'v0*'
+    paths-ignore:
+      - '**.md'
   pull_request:
+    branches:
+      - 'master'
+    paths-ignore:
+      - '**.md'
+
+env:
+  DOCKERHUB_SLUG: arabcoders/watchstate
+  GHCR_SLUG: ghcr.io/arabcoders/watchstate
 
 jobs:
   unit-tests:
@@ -72,7 +82,9 @@ jobs:
         id: meta
         uses: crazy-max/ghaction-docker-meta@v2
         with:
-          images: arabcoders/watchstate,ghcr.io/arabcoders/watchstate
+          images: |
+            ${{ env.DOCKERHUB_SLUG }}
+            ${{ env.GHCR_SLUG }}
           tags: |
             type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
             type=raw,value=dev-latest,enable=${{ endsWith(github.ref, '/dev') }}
