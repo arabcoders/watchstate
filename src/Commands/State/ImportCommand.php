@@ -218,7 +218,11 @@ class ImportCommand extends Command
             } else {
                 $after = makeDate($after);
                 $this->logger->notice(
-                    sprintf('%s: Importing play state changes since \'%s\'.', $name, $after)
+                    sprintf(
+                        '%s: Importing play state changes since \'%s\'.',
+                        $name,
+                        $after->format('Y-m-d H:i:s T')
+                    )
                 );
             }
 
