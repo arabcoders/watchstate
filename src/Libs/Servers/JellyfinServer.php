@@ -642,13 +642,7 @@ class JellyfinServer implements ServerInterface
                 }
 
                 if (null === ($entity->suids[$this->name] ?? null)) {
-                    $this->logger->warning(
-                        sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
-                        [
-                            'guids' => $entity->hasGuids() ? $entity->getGuids() : 'None',
-                            'rGuids' => $entity->hasRelativeGuid() ? $entity->getRelativeGuids() : 'None',
-                        ]
-                    );
+                    $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
                     continue;
                 }
             }
