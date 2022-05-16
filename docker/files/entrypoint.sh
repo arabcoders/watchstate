@@ -59,6 +59,9 @@ if [ 0 == "${WS_DISABLE_REDIS}" ]; then
   redis-server /etc/redis.conf --daemonize yes
 fi
 
+APP_VERSION=$(/usr/bin/console --version)
+echo "Running ${APP_VERSION}"
+
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
   set -- php-fpm "$@"
