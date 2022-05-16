@@ -200,9 +200,13 @@ class ExportCommand extends Command
             if (null === $after) {
                 $this->logger->notice(sprintf('%s: Exporting all local play state to this backend.', $name));
             } else {
-                $after = makeDate($after)->format('Y-m-d H:i:s T');
+                $after = makeDate($after);
                 $this->logger->notice(
-                    sprintf('%s: Exporting play state changes since \'%s\' to this backend.', $name, $after)
+                    sprintf(
+                        '%s: Exporting play state changes since \'%s\' to this backend.',
+                        $name,
+                        $after->format('Y-m-d H:i:s T')
+                    )
                 );
             }
 
