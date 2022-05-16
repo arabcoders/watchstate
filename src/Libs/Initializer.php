@@ -81,16 +81,12 @@ final class Initializer
 
         $this->setupLoggers($logger, Config::get('logger'));
 
-        set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
+        set_error_handler(function (int $number, mixed $error) {
             $errno = $number & error_reporting();
             if (0 === $errno) {
                 return;
             }
-
-            Container::get(LoggerInterface::class)->error(
-                trim(sprintf('%d: %s (%s:%d).' . PHP_EOL, $number, $error, $file, $line))
-            );
-            exit(1);
+            throw new \ErrorException($error, $number);
         });
 
         set_exception_handler(function (Throwable $e) {

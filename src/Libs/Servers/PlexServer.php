@@ -1620,6 +1620,19 @@ class PlexServer implements ServerInterface
                     $val = $this->parseLegacyAgent($val);
                 }
 
+                if (false === str_contains($val, '://')) {
+                    $this->logger->info(
+                        sprintf(
+                            '%s: Encountered unsupported external id format. Possibly duplicate movie?',
+                            $this->name
+                        ),
+                        [
+                            'guid' => $val
+                        ]
+                    );
+                    continue;
+                }
+
                 [$key, $value] = explode('://', $val);
                 $key = strtolower($key);
 
@@ -1637,13 +1650,12 @@ class PlexServer implements ServerInterface
             } catch (Throwable $e) {
                 $this->logger->error(
                     sprintf(
-                        '%s: An error occurred while parsing external id. %s',
+                        '%s: Error occurred while parsing external id. %s',
                         $this->name,
                         $e->getMessage()
                     ),
                     [
-                        'id' => $val ?? null,
-                        'list' => $guids,
+                        'guid' => $val ?? null,
                     ]
                 );
                 continue;
@@ -1680,6 +1692,10 @@ class PlexServer implements ServerInterface
                         continue;
                     }
                     $val = $this->parseLegacyAgent($val);
+                }
+
+                if (false === str_contains($val, '://')) {
+                    continue;
                 }
 
                 [$key, $value] = explode('://', $val);
