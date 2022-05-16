@@ -9,6 +9,7 @@ use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Storage\StorageInterface;
 use Closure;
+use ErrorException;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Monolog\Handler\StreamHandler;
@@ -81,12 +82,11 @@ final class Initializer
 
         $this->setupLoggers($logger, Config::get('logger'));
 
-        set_error_handler(function (int $number, mixed $error) {
-            $errno = $number & error_reporting();
-            if (0 === $errno) {
+        set_error_handler(function ($severity, $message, $file, $line) {
+            if (!(error_reporting() & $severity)) {
                 return;
             }
-            throw new \ErrorException($error, $number);
+            throw new ErrorException($message, 0, $severity, $file, $line);
         });
 
         set_exception_handler(function (Throwable $e) {
