@@ -344,7 +344,7 @@ if (!function_exists('queuePush')) {
 
             $list = $cache->get('queue', []);
 
-            $list[$entity->id] = $entity->getAll();
+            $list[$entity->id] = ['id' => $entity->id];
 
             $cache->set('queue', $list);
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
@@ -496,5 +496,30 @@ if (!function_exists('getAppVersion')) {
     {
         $version = Config::get('version', 'dev-master');
         return '$(version_via_ci)' === $version ? 'dev-master' : $version;
+    }
+}
+
+if (!function_exists('t')) {
+    function t($phrase, string|int ...$args): string
+    {
+        static $lang;
+
+        if (null === $lang) {
+            $lang = require __DIR__ . '/../../config/lang.php';
+        }
+
+        if (isset($lang[$phrase])) {
+            throw new InvalidArgumentException(
+                sprintf('Invalid language definition \'%s\' key was given.', $phrase)
+            );
+        }
+
+        $text = $lang[$phrase];
+
+        if (!empty($args)) {
+            $text = sprintf($text, ...$args);
+        }
+
+        return $text;
     }
 }

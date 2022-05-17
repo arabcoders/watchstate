@@ -109,36 +109,36 @@ class ExportCommand extends Command
             $this->mapper->setLogger($logger);
         }
 
-        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
+        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
         foreach (Config::get('servers', []) as $name => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($name, $selected, true)) {
-                $this->logger->info(sprintf('%s: Ignoring this server as requested by --servers-filter.', $name));
+                $this->logger->info(sprintf('%s: Ignoring this backend as requested by --servers-filter.', $name));
                 continue;
             }
 
             if (true !== ag($server, 'export.enabled')) {
-                $this->logger->info(sprintf('%s: Ignoring this as requested by user config.', $name));
+                $this->logger->info(sprintf('%s: Ignoring this backend as requested by user config.', $name));
                 continue;
             }
 
             if (!isset($supported[$type])) {
                 $this->logger->error(
                     sprintf(
-                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
+                        '%s: Unexpected type. Expecting \'%s\' but got \'%s\'.',
                         $name,
                         implode(', ', array_keys($supported)),
                         $type
                     )
                 );
-                return self::FAILURE;
+                continue;
             }
 
-            if (null === ag($server, 'url')) {
-                $this->logger->error(sprintf('%s: Backend does not have valid URL.', $name));
-                return self::FAILURE;
+            if (null === ag($server, 'url') || false === filter_var(ag($server, 'url'), FILTER_VALIDATE_URL)) {
+                $this->logger->error(sprintf('%s: Backend URL is empty or invalid.', $name));
+                continue;
             }
 
             $server['name'] = $name;
@@ -155,11 +155,7 @@ class ExportCommand extends Command
             return self::FAILURE;
         }
 
-        if (count($list) >= 1) {
-            $this->logger->info('Preloading all mapper data.');
-            $this->mapper->loadData();
-            $this->logger->info('Finished preloading mapper data.');
-        }
+        $this->mapper->loadData();
 
         if ($this->storage instanceof PDOAdapter) {
             $this->storage->singleTransaction();
@@ -168,6 +164,7 @@ class ExportCommand extends Command
         $requests = [];
 
         foreach ($list as $name => &$server) {
+
             Data::addBucket($name);
 
             $opts = ag($server, 'options', []);

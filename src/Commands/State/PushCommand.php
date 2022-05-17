@@ -10,16 +10,15 @@ use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Options;
+use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
-use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
@@ -29,7 +28,8 @@ class PushCommand extends Command
 
     public function __construct(
         private LoggerInterface $logger,
-        private CacheInterface $cache
+        private CacheInterface $cache,
+        private StorageInterface $storage,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -42,6 +42,7 @@ class PushCommand extends Command
         $this->setName('state:push')
             ->setDescription('Push queued state change events.')
             ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is successful.')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to remote.')
             ->addOption(
                 'proxy',
                 null,
@@ -86,11 +87,19 @@ class PushCommand extends Command
             return self::SUCCESS;
         }
 
-        $entities = [];
+        $entities = $items = [];
 
-        foreach ($this->cache->get('queue') as $entityId => $entityData) {
-            $entities[$entityId] = Container::get(StateInterface::class)::fromArray($entityData);
+        foreach ($this->cache->get('queue', []) as $item) {
+            $items[] = Container::get(StateInterface::class)::fromArray($item);
         }
+
+        if (!empty($items)) {
+            foreach ($this->storage->find(...$items) as $item) {
+                $entities[$item->id] = $item;
+            }
+        }
+
+        $items = null;
 
         if (empty($entities)) {
             $this->cache->delete('queue');
@@ -111,7 +120,7 @@ class PushCommand extends Command
                     $entity->getName(),
                     $entity->isWatched() ? 'Yes' : 'No',
                     $entity->via ?? '??',
-                    makeDate($entity->updated),
+                    makeDate($entity->updated)->format('Y-m-d H:i:s T'),
                 ];
 
                 if ($x < $count) {
@@ -119,11 +128,13 @@ class PushCommand extends Command
                 }
             }
 
-            (new Table($output))->setHeaders(['Media Title', 'Played', 'Via', 'Record Date']
-            )->setStyle('box')->setRows($rows)->render();
+            (new Table($output))->setHeaders(['Title', 'Played', 'Via', 'Date'])
+                ->setStyle('box')->setRows($rows)->render();
 
             return self::SUCCESS;
         }
+
+        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
         $list = [];
         $supported = Config::get('supported', []);
@@ -132,26 +143,23 @@ class PushCommand extends Command
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if (true !== (bool)ag($server, 'webhook.push')) {
-                $output->writeln(
-                    sprintf('<error>%s: Ignoring as requested by user config option.</error>', $serverName),
-                    OutputInterface::VERBOSITY_VERBOSE
-                );
+                $this->logger->info(sprintf('%s: Ignoring this backend as requested by user config.', $serverName));
                 continue;
             }
 
             if (!isset($supported[$type])) {
                 $this->logger->error(
                     sprintf(
-                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
+                        '%s: Unexpected type. Expecting \'%s\', but got \'%s\'.',
                         $serverName,
                         implode(', ', array_keys($supported)),
                         $type
                     )
                 );
-                return self::FAILURE;
+                continue;
             }
 
-            if (null === ag($server, 'url')) {
+            if (null === ag($server, 'url') || false === filter_var(ag($server, 'url'), FILTER_VALIDATE_URL)) {
                 $this->logger->error(sprintf('%s: Backend does not have valid URL.', $serverName));
                 return self::FAILURE;
             }
@@ -161,19 +169,22 @@ class PushCommand extends Command
         }
 
         if (empty($list)) {
-            throw new RuntimeException('No servers were found.');
+            $output->writeln('No servers were found with \'webhook.push\' enabled.');
+            return self::FAILURE;
         }
 
         $requests = [];
 
-        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
-
         foreach ($list as $name => &$server) {
-            Data::addBucket($name);
-            $opts = ag($server, 'server.options', []);
+            Data::addBucket((string)$name);
+            $opts = ag($server, 'options', []);
 
             if ($input->getOption('ignore-date')) {
                 $opts[Options::IGNORE_DATE] = true;
+            }
+
+            if ($input->getOption('dry-run')) {
+                $opts[Options::DRY_RUN] = true;
             }
 
             if ($input->getOption('proxy')) {
@@ -200,8 +211,17 @@ class PushCommand extends Command
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {
-                        throw new ServerException($response);
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to change \'%s\' state responded with unexpected http status code \'%d\'.',
+                                ag($requestData, 'server', '??'),
+                                ag($requestData, 'itemName', '??'),
+                                $response->getStatusCode()
+                            )
+                        );
+                        continue;
                     }
+
                     $this->logger->notice(
                         sprintf(
                             '%s: Marking \'%s\' as \'%s\'.',

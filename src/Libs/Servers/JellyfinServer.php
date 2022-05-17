@@ -619,7 +619,7 @@ class JellyfinServer implements ServerInterface
 
         $requests = $stateRequests = [];
 
-        foreach ($entities as $entity) {
+        foreach ($entities as $key => $entity) {
             if (null === $entity) {
                 continue;
             }
@@ -633,7 +633,6 @@ class JellyfinServer implements ServerInterface
             $iName = $entity->getName();
 
             if (null === ($entity->suids[$this->name] ?? null)) {
-                // -- search cache for given external id.
                 foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
                     if (null === ($this->cacheData[$guid] ?? null)) {
                         continue;
@@ -659,14 +658,18 @@ class JellyfinServer implements ServerInterface
                     )
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), ['url' => $url]);
+                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
+                    'url' => $url
+                ]);
 
                 $requests[] = $this->http->request(
                     'GET',
                     (string)$url,
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
+                            'id' => $key,
                             'state' => &$entity,
+                            'suid' => $entity->suids[$this->name],
                         ]
                     ])
                 );
@@ -681,33 +684,51 @@ class JellyfinServer implements ServerInterface
 
         foreach ($requests as $response) {
             try {
+                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
+                    $this->logger->error(sprintf('%s: Unable to get item entity state.', $this->name));
+                    continue;
+                }
+
+                assert($state instanceof StateInterface);
+
+                switch ($response->getStatusCode()) {
+                    case 200:
+                        break;
+                    case 404:
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to get \'%s\' metadata returned \'404 Not Found\' error.',
+                                $this->name,
+                                $state->getName(),
+
+                            ), [
+                                'id' => ag($response->getInfo('user_data'), 'suid', '??'),
+                            ]
+                        );
+                        continue 2;
+                    default:
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to get \'%s\' metadata responded with unexpected http status code \'%d\'.',
+                                $this->name,
+                                $state->getName(),
+                                $response->getStatusCode()
+                            )
+                        );
+                        continue 2;
+                }
+
                 $json = json_decode(
-                    json:        $response->getContent(),
+                    json:        $response->getContent(false),
                     associative: true,
                     flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
 
                 $json = ag($json, 'Items', [])[0] ?? [];
 
-                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
-                    $this->logger->error(
-                        sprintf(
-                            '%s: Request failed with code \'%d\'.',
-                            $this->name,
-                            $response->getStatusCode(),
-                        ),
-                        $response->getHeaders()
-                    );
-                    continue;
-                }
-
-                assert($state instanceof StateInterface);
-
-                $iName = $state->getName();
-
                 if (empty($json)) {
                     $this->logger->error(
-                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $iName)
+                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $state->getName())
                     );
                     continue;
                 }
@@ -715,35 +736,45 @@ class JellyfinServer implements ServerInterface
                 $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
 
                 if ($state->watched === $isWatched) {
-                    $this->logger->debug(sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $iName));
+                    $this->logger->notice(
+                        sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $state->getName())
+                    );
                     continue;
                 }
 
-                if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
+                if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
                     $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated', 'PremiereDate'], null);
 
                     if (null === $date) {
-                        $this->logger->warning(
-                            sprintf('%s: Ignoring \'%s\'. No date is set on backend object.', $this->name, $iName),
-                            [
-                                'payload' => $json,
-                            ]
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Ignoring \'%s\'. No date is set on backend object.',
+                                $this->name,
+                                $state->getName()
+                            ),
+                            $json
                         );
                         continue;
                     }
 
-                    $date = strtotime($date);
+                    $date = makeDate($date);
 
-                    if ($date >= $state->updated) {
-                        $this->logger->debug(
+                    $timeExtra = (int)(ag($this->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
+
+                    if ($date->getTimestamp() >= ($timeExtra + $state->updated)) {
+                        $this->logger->notice(
                             sprintf(
-                                '%s: Ignoring \'%s\'. Record date is older than backend reported date.',
+                                '%s: Ignoring \'%s\'. Record time is older than backend time.',
                                 $this->name,
-                                $iName
+                                $state->getName()
                             ),
                             [
                                 'record' => makeDate($state->updated),
-                                'backend' => makeDate($date),
+                                'backend' => $date,
+                                'time_difference' => $date->getTimestamp() - $state->updated,
+                                'extra_margin' => [
+                                    Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra,
+                                ],
                             ]
                         );
                         continue;
@@ -756,30 +787,31 @@ class JellyfinServer implements ServerInterface
                     sprintf(
                         '%s: Changing \'%s\' play state to \'%s\'.',
                         $this->name,
-                        $iName,
+                        $state->getName(),
                         $state->isWatched() ? 'Played' : 'Unplayed',
                     ),
                     [
-                        'remote' => $isWatched ? 'Played' : 'Unplayed',
-                        'method' => $state->isWatched() ? 'POST' : 'DELETE',
-                        'url' => (string)$url,
+                        'backend' => $isWatched ? 'Played' : 'Unplayed',
+                        'url' => $url,
                     ]
                 );
 
-                $stateRequests[] = $this->http->request(
-                    $state->isWatched() ? 'POST' : 'DELETE',
-                    (string)$url,
-                    array_replace_recursive(
-                        $this->getHeaders(),
-                        [
-                            'user_data' => [
-                                'itemName' => $iName,
-                                'server' => $this->name,
-                                'state' => $state->isWatched() ? 'Played' : 'Unplayed',
-                            ],
-                        ]
-                    )
-                );
+                if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
+                    $stateRequests[] = $this->http->request(
+                        $state->isWatched() ? 'POST' : 'DELETE',
+                        (string)$url,
+                        array_replace_recursive(
+                            $this->getHeaders(),
+                            [
+                                'user_data' => [
+                                    'itemName' => $state->getName(),
+                                    'server' => $this->name,
+                                    'state' => $state->isWatched() ? 'Played' : 'Unplayed',
+                                ],
+                            ]
+                        )
+                    );
+                }
             } catch (Throwable $e) {
                 $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                     'file' => $e->getFile(),
