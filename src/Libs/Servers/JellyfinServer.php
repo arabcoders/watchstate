@@ -238,7 +238,12 @@ class JellyfinServer implements ServerInterface
         return $this;
     }
 
-    public static function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
+    public function getName(): string
+    {
+        return $this->name ?? self::NAME;
+    }
+
+    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
         $logger = null;
 

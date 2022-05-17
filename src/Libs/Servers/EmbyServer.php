@@ -54,7 +54,7 @@ class EmbyServer extends JellyfinServer
         return parent::setUp($name, $url, $token, $userId, $uuid, $persist, $options);
     }
 
-    public static function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
+    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
         $logger = null;
 

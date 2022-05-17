@@ -320,18 +320,6 @@ if (!function_exists('httpClientChunks')) {
     }
 }
 
-if (!function_exists('preServeHttpRequest')) {
-    function preServeHttpRequest(ServerRequestInterface $request): ServerRequestInterface
-    {
-        foreach (Config::get('supported', []) as $server) {
-            assert($server instanceof ServerInterface);
-            $request = $server::processRequest($request);
-        }
-
-        return $request;
-    }
-}
-
 if (!function_exists('queuePush')) {
     function queuePush(StateInterface $entity): void
     {
