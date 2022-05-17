@@ -47,6 +47,15 @@ interface StorageInterface
     public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array;
 
     /**
+     * Return database records for given items.
+     *
+     * @param array<StateInterface> $items
+     *
+     * @return array<StateInterface>
+     */
+    public function find(StateInterface ...$items): array;
+
+    /**
      * Update Entity immediately.
      *
      * @param StateInterface $entity

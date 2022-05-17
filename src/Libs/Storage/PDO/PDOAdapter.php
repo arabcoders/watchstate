@@ -76,6 +76,16 @@ final class PDOAdapter implements StorageInterface
 
     public function get(StateInterface $entity): StateInterface|null
     {
+        if (null !== $entity->id) {
+            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$entity->id);
+
+            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (true === is_array($item)) {
+                return $entity::fromArray($item);
+            }
+        }
+
         if ($entity->isEpisode() && $entity->hasRelativeGuid() && null !== ($item = $this->findByRGuid($entity))) {
             return $item;
         }
@@ -106,6 +116,21 @@ final class PDOAdapter implements StorageInterface
         }
 
         return $arr;
+    }
+
+    public function find(StateInterface ...$items): array
+    {
+        $list = [];
+
+        foreach ($items as $item) {
+            if (null === ($entity = $this->get($item))) {
+                continue;
+            }
+
+            $list[$entity->id] = $entity;
+        }
+
+        return $list;
     }
 
     public function update(StateInterface $entity): StateInterface
@@ -410,16 +435,6 @@ final class PDOAdapter implements StorageInterface
      */
     private function findByGuid(StateInterface $entity): StateInterface|null
     {
-        if (null !== $entity->id) {
-            $stmt = $this->pdo->query("SELECT * FROM state WHERE id = " . (int)$entity->id);
-
-            if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
-                return null;
-            }
-
-            return $entity::fromArray($row);
-        }
-
         $guids = [];
         $cond = [
             'type' => $entity->type,

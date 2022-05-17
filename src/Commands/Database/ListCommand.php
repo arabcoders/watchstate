@@ -284,7 +284,7 @@ final class ListCommand extends Command
 
             $rows = null;
 
-            (new Table($output))->setHeaders(['Id', 'Main Title', 'Via (Temp)', 'Date', 'Played', 'WH Event'])
+            (new Table($output))->setHeaders(['Id', 'Title', 'Via (Temp)', 'Date', 'Played', 'WH Event'])
                 ->setStyle('box')->setRows($list)->render();
         }
 

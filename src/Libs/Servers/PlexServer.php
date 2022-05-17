@@ -35,6 +35,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
+use function Symfony\Component\String\b;
+
 class PlexServer implements ServerInterface
 {
     public const NAME = 'PlexBackend';
@@ -684,14 +686,18 @@ class PlexServer implements ServerInterface
                 }
 
                 if (null === ($entity->suids[$this->name] ?? null)) {
-                    $this->logger->notice(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+                    $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
                     continue;
                 }
             }
 
             try {
                 $url = $this->url->withPath('/library/metadata/' . $entity->suids[$this->name])->withQuery(
-                    http_build_query(['includeGuids' => 1])
+                    http_build_query(
+                        [
+                            'includeGuids' => 1
+                        ]
+                    )
                 );
 
                 $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
@@ -705,6 +711,7 @@ class PlexServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
+                            'suid' => $entity->suids[$this->name],
                         ]
                     ])
                 );
@@ -719,45 +726,58 @@ class PlexServer implements ServerInterface
 
         foreach ($requests as $response) {
             try {
+                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
+                    $this->logger->error(sprintf('%s: Unable to get item entity state.', $this->name));
+                    continue;
+                }
+
+                assert($state instanceof StateInterface);
+
+                switch ($response->getStatusCode()) {
+                    case 200:
+                        break;
+                    case 404:
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to get \'%s\' metadata returned \'404 Not Found\' error.',
+                                $this->name,
+                                $state->getName(),
+
+                            ), [
+                                'id' => ag($response->getInfo('user_data'), 'suid', '??'),
+                            ]
+                        );
+                        continue 2;
+                    default:
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Request to get \'%s\' metadata responded with unexpected http status code \'%d\'.',
+                                $this->name,
+                                $state->getName(),
+                                $response->getStatusCode()
+                            )
+                        );
+                        continue 2;
+                }
+
                 $json = json_decode(
-                    json:        $response->getContent(),
+                    json:        $response->getContent(false),
                     associative: true,
                     flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
 
                 $json = ag($json, 'MediaContainer.Metadata', [])[0] ?? [];
 
-                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
-                    $this->logger->error(
-                        sprintf(
-                            '%s: Request failed with code \'%d\'.',
-                            $this->name,
-                            $response->getStatusCode(),
-                        ),
-                        $response->getHeaders()
-                    );
-                    continue;
-                }
-
-                assert($state instanceof StateInterface);
-
-                $iName = $state->getName();
-
                 if (empty($json)) {
                     $this->logger->error(
-                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $iName)
+                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $state->getName())
                     );
                     continue;
                 }
 
                 $isWatched = (int)(bool)ag($json, 'viewCount', 0);
 
-                if ($state->watched === $isWatched) {
-                    $this->logger->debug(sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $iName));
-                    continue;
-                }
-
-                if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
+                if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
                     $date = max(
                         (int)ag($json, 'updatedAt', 0),
                         (int)ag($json, 'lastViewedAt', 0),
@@ -765,29 +785,46 @@ class PlexServer implements ServerInterface
                     );
 
                     if (0 === $date) {
-                        $this->logger->notice(
-                            sprintf('%s: Ignoring \'%s\'. No date is set on backend object.', $this->name, $iName),
-                            [
-                                'payload' => $json,
-                            ]
+                        $this->logger->error(
+                            sprintf(
+                                '%s: Ignoring \'%s\'. No date is set on backend object.',
+                                $this->name,
+                                $state->getName()
+                            ),
+                            $json
                         );
                         continue;
                     }
 
-                    if ($date >= $state->updated) {
-                        $this->logger->debug(
+                    $date = makeDate($date);
+
+                    $timeExtra = (int)(ag($this->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
+
+                    if ($date->getTimestamp() >= ($timeExtra + $state->updated)) {
+                        $this->logger->notice(
                             sprintf(
-                                '%s: Ignoring \'%s\'. Record date is older than backend reported date.',
+                                '%s: Ignoring \'%s\'. Record time is older than backend time.',
                                 $this->name,
-                                $iName
+                                $state->getName()
                             ),
                             [
                                 'record' => makeDate($state->updated),
-                                'backend' => makeDate($date),
+                                'backend' => $date,
+                                'time_difference' => $date->getTimestamp() - $state->updated,
+                                'extra_margin' => [
+                                    Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra,
+                                ],
                             ]
                         );
                         continue;
                     }
+                }
+
+                if ($state->watched === $isWatched) {
+                    $this->logger->notice(
+                        sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $state->getName())
+                    );
+                    continue;
                 }
 
                 $url = $this->url->withPath($state->isWatched() ? '/:/scrobble' : '/:/unscrobble')->withQuery(
@@ -803,26 +840,28 @@ class PlexServer implements ServerInterface
                     sprintf(
                         '%s: Changing \'%s\' play state to \'%s\'.',
                         $this->name,
-                        $iName,
+                        $state->getName(),
                         $state->isWatched() ? 'Played' : 'Unplayed',
                     ),
                     [
-                        'remote' => $isWatched ? 'Played' : 'Unplayed',
+                        'backend' => $isWatched ? 'Played' : 'Unplayed',
                         'url' => $url,
                     ]
                 );
 
-                $stateRequests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'itemName' => $iName,
-                            'server' => $this->name,
-                            'state' => $state->isWatched() ? 'Played' : 'Unplayed',
-                        ]
-                    ])
-                );
+                if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
+                    $stateRequests[] = $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($this->getHeaders(), [
+                            'user_data' => [
+                                'itemName' => $state->getName(),
+                                'server' => $this->name,
+                                'state' => $state->isWatched() ? 'Played' : 'Unplayed',
+                            ]
+                        ])
+                    );
+                }
             } catch (Throwable $e) {
                 $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                     'file' => $e->getFile(),
