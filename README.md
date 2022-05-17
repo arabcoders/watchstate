@@ -12,7 +12,7 @@ create your `docker-compose.yaml` file:
 version: '3.3'
 services:
     watchstate:
-        image: arabcoders/watchstate:latest
+        image: ghcr.io/arabcoders/watchstate:latest
         container_name: watchstate
         restart: unless-stopped
         # For more environment variables please read at the bottom of this page.
@@ -80,7 +80,7 @@ $ docker exec -ti watchstate console servers:view --servers-filter [SERVER_NAME]
 If you see 'Not configured, or invalid key.' or empty value. run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --regenerate-api-key -- [SERVER_NAME] 
+$ docker exec -ti watchstate console servers:edit --regenerate-webhook-token -- [SERVER_NAME] 
 ```
 
 ---

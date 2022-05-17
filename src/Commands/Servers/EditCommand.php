@@ -23,7 +23,13 @@ final class EditCommand extends Command
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
-            ->addOption('regenerate-api-key', 'g', InputOption::VALUE_NONE, 'Re-generate webhook api key.')
+            ->addOption(
+                'regenerate-api-key',
+                null,
+                InputOption::VALUE_NONE,
+                'Re-generate backend webhook token. *Not used. will be removed*'
+            )
+            ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 
@@ -56,7 +62,7 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if ($input->getOption('regenerate-api-key')) {
+        if ($input->getOption('regenerate-api-key') || $input->getOption('regenerate-webhook-token')) {
             try {
                 $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 
@@ -110,7 +116,7 @@ final class EditCommand extends Command
 
                 $output->writeln(
                     sprintf(
-                        '<info>%s: Set key \'%s\' to value of \'%s\'.</info>',
+                        '<info>%s: Updated \'%s\' key value to \'%s\'.</info>',
                         $name,
                         $key,
                         is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
@@ -120,12 +126,12 @@ final class EditCommand extends Command
 
             if ($input->getOption('delete')) {
                 if (false === ag_exists($server, $key)) {
-                    $output->writeln(sprintf('<error>Server:\'%s\' key \'%s\' does not exists.</error>', $name, $key));
+                    $output->writeln(sprintf('<error>%s: \'%s\' key does not exists.</error>', $name, $key));
                     return self::FAILURE;
                 }
 
                 $server = ag_delete($server, $key);
-                $output->writeln(sprintf('<info>Deleted server:\'%s\' key \'%s\'.</info>', $name, $key));
+                $output->writeln(sprintf('<info>%s: Removed \'%s\' key.</info>', $name, $key));
             }
         }
 
