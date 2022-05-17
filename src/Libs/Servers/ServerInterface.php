@@ -41,6 +41,13 @@ interface ServerInterface
     ): self;
 
     /**
+     * Get Backend name.
+     *
+     * @return string
+     */
+    public function getName(): string;
+
+    /**
      * Inject logger.
      *
      * @param LoggerInterface $logger
@@ -57,7 +64,7 @@ interface ServerInterface
      *
      * @return ServerRequestInterface
      */
-    public static function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
+    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
 
     /**
      * Parse server specific webhook event. for play/un-played event.
