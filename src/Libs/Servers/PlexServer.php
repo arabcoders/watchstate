@@ -8,7 +8,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
@@ -34,8 +34,6 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
-
-use function Symfony\Component\String\b;
 
 class PlexServer implements ServerInterface
 {
@@ -327,7 +325,7 @@ class PlexServer implements ServerInterface
         return $request;
     }
 
-    public function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
@@ -368,39 +366,59 @@ class PlexServer implements ServerInterface
         }
 
         $row = [
-            'type' => $type,
-            'updated' => time(),
-            'watched' => (int)(bool)ag($item, 'viewCount', false),
-            'via' => $this->name,
-            'title' => ag($item, ['title', 'originalTitle'], '??'),
-            'year' => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids(ag($item, 'Guid', [])),
-            'extra' => [
-                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
-                'webhook' => [
-                    'event' => $event,
+            iFace::COLUMN_TYPE => $type,
+            iFace::COLUMN_UPDATED => time(),
+            iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+            iFace::COLUMN_YEAR => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids(ag($item, 'Guid', [])),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_UPDATED => time(),
+                    iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+                    iFace::COLUMN_YEAR => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
+                    iFace::COLUMN_SEASON => null,
+                    iFace::COLUMN_EPISODE => null,
+                    iFace::COLUMN_META_DATA_EXTRA => [
+                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
+                            ag($item, 'originallyAvailableAt', 'now')
+                        )->format(
+                            'Y-m-d'
+                        ),
+                        iFace::COLUMN_META_DATA_EXTRA_EVENT => $event,
+                    ],
+                    iFace::COLUMN_META_DATA_PAYLOAD => $json,
                 ],
             ],
-            'suids' => [
-                $this->name => (string)ag($item, 'ratingKey'),
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = ag($item, 'grandparentTitle', '??');
-            $row['season'] = ag($item, 'parentIndex', 0);
-            $row['episode'] = ag($item, 'index', 0);
-            $row['extra']['title'] = ag($item, ['title', 'originalTitle'], '??');
+        if (iFace::TYPE_EPISODE === $type) {
+            $row[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
+            $row[iFace::COLUMN_SEASON] = ag($item, 'parentIndex', 0);
+            $row[iFace::COLUMN_EPISODE] = ag($item, 'index', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->index ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
+                $item,
+                ['title', 'originalTitle'],
+                '??'
+            );
 
             if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey'], null))) {
-                $row['parent'] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+        $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
@@ -682,28 +700,29 @@ class PlexServer implements ServerInterface
 
             $iName = $entity->getName();
 
-            if (null === ($entity->suids[$this->name] ?? null)) {
+            if (null === ($entity->metdata[$this->name][iFace::COLUMN_ID] ?? null)) {
                 foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
                     if (null === ($this->cacheData[$guid] ?? null)) {
                         continue;
                     }
-                    $entity->suids[$this->name] = $this->cacheData[$guid];
+                    $entity->metdata[$this->name][iFace::COLUMN_ID] = $this->cacheData[$guid];
                 }
 
-                if (null === ($entity->suids[$this->name] ?? null)) {
+                if (null === ($entity->metdata[$this->name][iFace::COLUMN_ID] ?? null)) {
                     $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
                     continue;
                 }
             }
 
             try {
-                $url = $this->url->withPath('/library/metadata/' . $entity->suids[$this->name])->withQuery(
-                    http_build_query(
-                        [
-                            'includeGuids' => 1
-                        ]
-                    )
-                );
+                $url = $this->url->withPath('/library/metadata/' . $entity->metdata[$this->name][iFace::COLUMN_ID])
+                    ->withQuery(
+                        http_build_query(
+                            [
+                                'includeGuids' => 1
+                            ]
+                        )
+                    );
 
                 $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
                     'url' => $url
@@ -716,7 +735,7 @@ class PlexServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
-                            'suid' => $entity->suids[$this->name],
+                            'suid' => $$entity->metdata[$this->name][iFace::COLUMN_ID],
                         ]
                     ])
                 );
@@ -736,7 +755,7 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                assert($state instanceof StateInterface);
+                assert($state instanceof iFace);
 
                 switch ($response->getStatusCode()) {
                     case 200:
@@ -1240,7 +1259,7 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
-            $type = $type === 'movie' ? StateInterface::TYPE_MOVIE : StateInterface::TYPE_EPISODE;
+            $type = $type === 'movie' ? iFace::TYPE_MOVIE : iFace::TYPE_EPISODE;
 
             if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
                 $ignored++;
@@ -1320,7 +1339,7 @@ class PlexServer implements ServerInterface
             Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
 
-            if (StateInterface::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
@@ -1437,7 +1456,7 @@ class PlexServer implements ServerInterface
         try {
             Data::increment($this->name, $type . '_total');
 
-            if (StateInterface::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
@@ -1788,38 +1807,54 @@ class PlexServer implements ServerInterface
         $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
         $row = [
-            'type' => $type,
-            'updated' => $date,
-            'watched' => (int)(bool)($item->viewCount ?? false),
-            'via' => $this->name,
-            'title' => $item->title ?? $item->originalTitle ?? '??',
-            'year' => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids($item->Guid ?? []),
-            'extra' => [
-                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            iFace::COLUMN_TYPE => $type,
+            iFace::COLUMN_UPDATED => $date,
+            iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
+            iFace::COLUMN_YEAR => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids($item->Guid ?? []),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)$item->ratingKey,
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_UPDATED => $date,
+                    iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
+                    iFace::COLUMN_YEAR => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
+                    iFace::COLUMN_SEASON => null,
+                    iFace::COLUMN_EPISODE => null,
+                    iFace::COLUMN_META_DATA_EXTRA => [
+                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate($item->originallyAvailableAt ?? 'now')->format(
+                            'Y-m-d'
+                        ),
+                    ],
+                    iFace::COLUMN_META_DATA_PAYLOAD => get_object_vars($item),
+                ],
             ],
-            'suids' => [
-                $this->name => (string)$item->ratingKey,
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = $item->grandparentTitle ?? '??';
-            $row['season'] = $item->parentIndex ?? 0;
-            $row['episode'] = $item->index ?? 0;
-            $row['extra']['title'] = $item->title ?? $item->originalTitle ?? '??';
+        if (iFace::TYPE_EPISODE === $type) {
+            $row[iFace::COLUMN_TITLE] = $item->grandparentTitle ?? '??';
+            $row[iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
+            $row[iFace::COLUMN_EPISODE] = $item->index ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->index ?? 0;
 
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->title ?? $item->originalTitle ?? '??';
             $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
 
             if (null !== $parentId) {
-                $row['parent'] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row);
+        $entity = Container::get(iFace::class)::fromArray($row);
 
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
             $this->cacheData[$guid] = $item->ratingKey;

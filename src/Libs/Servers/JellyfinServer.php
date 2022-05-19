@@ -8,7 +8,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
@@ -289,7 +289,7 @@ class JellyfinServer implements ServerInterface
         return $request;
     }
 
-    public function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
@@ -320,45 +320,60 @@ class JellyfinServer implements ServerInterface
         }
 
         $row = [
-            'type' => $type,
-            'updated' => strtotime(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
-            'watched' => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
-            'via' => $this->name,
-            'title' => ag($json, ['Name', 'OriginalTitle'], '??'),
-            'year' => ag($json, 'Year', 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids($providersId),
-            'extra' => [
-                'date' => makeDate(ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now'))->format(
-                    'Y-m-d'
-                ),
-                'webhook' => [
-                    'event' => $event,
-                ],
+            iFace::COLUMN_ID => $type,
+            iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
+            iFace::COLUMN_WATCHED => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
+            iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids($providersId),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)ag($json, 'ItemId'),
+                    iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
+                    iFace::COLUMN_WATCHED => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
+                    iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
+                    iFace::COLUMN_SEASON => null,
+                    iFace::COLUMN_EPISODE => null,
+                    iFace::COLUMN_META_DATA_EXTRA => [
+                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
+                            ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now')
+                        )->format('Y-m-d'),
+                        iFace::COLUMN_META_DATA_EXTRA_EVENT => $event,
+                    ],
+                    iFace::COLUMN_META_DATA_PAYLOAD => $json,
+                ]
             ],
-            'suids' => [
-                $this->name => ag($json, 'ItemId'),
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
+        if (iFace::TYPE_EPISODE === $type) {
             $seriesName = ag($json, 'SeriesName');
-            $row['title'] = $seriesName ?? '??';
-            $row['season'] = ag($json, 'SeasonNumber', 0);
-            $row['episode'] = ag($json, 'EpisodeNumber', 0);
+
+            $row[iFace::COLUMN_TITLE] = $seriesName ?? '??';
+            $row[iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
+            $row[iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
 
             if (null !== ($epTitle = ag($json, ['Name', 'OriginalTitle'], null))) {
-                $row['extra']['title'] = $epTitle;
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $epTitle;
             }
 
             if (null !== $seriesName) {
-                $row['parent'] = $this->getEpisodeParent(ag($json, 'ItemId'), $seriesName . ':' . $row['year']);
+                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent(
+                    ag($json, 'ItemId'),
+                    $seriesName . ':' . $row['year']
+                );
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+        $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $message = sprintf('%s: No valid/supported External ids.', self::NAME);
@@ -637,15 +652,15 @@ class JellyfinServer implements ServerInterface
 
             $iName = $entity->getName();
 
-            if (null === ($entity->suids[$this->name] ?? null)) {
+            if (null === ($entity->metadata[$this->name][iFace::COLUMN_ID] ?? null)) {
                 foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
                     if (null === ($this->cacheData[$guid] ?? null)) {
                         continue;
                     }
-                    $entity->suids[$this->name] = $this->cacheData[$guid];
+                    $entity->metadata[$this->name][iFace::COLUMN_ID] = $this->cacheData[$guid];
                 }
 
-                if (null === ($entity->suids[$this->name] ?? null)) {
+                if (null === ($entity->metadata[$this->name][iFace::COLUMN_ID] ?? null)) {
                     $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
                     continue;
                 }
@@ -655,7 +670,7 @@ class JellyfinServer implements ServerInterface
                 $url = $this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
                     http_build_query(
                         [
-                            'ids' => $entity->suids[$this->name],
+                            'ids' => $entity->metadata[$this->name][iFace::COLUMN_ID],
                             'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
                             'enableUserData' => 'true',
                             'enableImages' => 'false',
@@ -674,7 +689,7 @@ class JellyfinServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
-                            'suid' => $entity->suids[$this->name],
+                            'suid' => $entity->metadata[$this->name][iFace::COLUMN_ID],
                         ]
                     ])
                 );
@@ -694,7 +709,7 @@ class JellyfinServer implements ServerInterface
                     continue;
                 }
 
-                assert($state instanceof StateInterface);
+                assert($state instanceof iFace);
 
                 switch ($response->getStatusCode()) {
                     case 200:
@@ -1200,7 +1215,7 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
-            $type = $type === 'movies' ? StateInterface::TYPE_MOVIE : StateInterface::TYPE_EPISODE;
+            $type = $type === 'movies' ? iFace::TYPE_MOVIE : iFace::TYPE_EPISODE;
             $cName = sprintf('(%s) - (%s:%s)', $title, $type, $key);
 
             if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
@@ -1283,7 +1298,7 @@ class JellyfinServer implements ServerInterface
             Data::increment($this->name, $type . '_total');
             Data::increment($this->name, $library . '_total');
 
-            if (StateInterface::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
@@ -1410,7 +1425,7 @@ class JellyfinServer implements ServerInterface
         Data::increment($this->name, $type . '_total');
 
         try {
-            if (StateInterface::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
@@ -1646,39 +1661,55 @@ class JellyfinServer implements ServerInterface
         $date = strtotime($item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate);
 
         $row = [
-            'type' => $type,
-            'updated' => $date,
-            'watched' => (int)(bool)($item->UserData?->Played ?? false),
-            'via' => $this->name,
-            'title' => $item->Name ?? $item->OriginalTitle ?? '??',
-            'year' => $item->ProductionYear ?? 0000,
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids((array)($item->ProviderIds ?? [])),
-            'extra' => [
-                'date' => makeDate($item->PremiereDate ?? $item->ProductionYear ?? 'now')->format('Y-m-d'),
+            iFace::COLUMN_TYPE => $type,
+            iFace::COLUMN_UPDATED => $date,
+            iFace::COLUMN_WATCHED => (int)(bool)($item->UserData?->Played ?? false),
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
+            iFace::COLUMN_YEAR => $item->ProductionYear ?? 0000,
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids((array)($item->ProviderIds ?? [])),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)$item->Id,
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_UPDATED => $date,
+                    iFace::COLUMN_WATCHED => (int)(bool)($item->UserData?->Played ?? false),
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
+                    iFace::COLUMN_YEAR => $item->ProductionYear ?? 0000,
+                    iFace::COLUMN_SEASON => null,
+                    iFace::COLUMN_EPISODE => null,
+                    iFace::COLUMN_META_DATA_EXTRA => [
+                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
+                            $item->PremiereDate ?? $item->ProductionYear ?? 'now'
+                        )->format('Y-m-d'),
+                    ],
+                    iFace::COLUMN_META_DATA_PAYLOAD => get_object_vars($item),
+                ],
             ],
-            'suids' => [
-                $this->name => $item->Id,
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = $item->SeriesName ?? '??';
-            $row['season'] = $item->ParentIndexNumber ?? 0;
-            $row['episode'] = $item->IndexNumber ?? 0;
+        if (iFace::TYPE_EPISODE === $type) {
+            $row[iFace::COLUMN_TITLE] = $item->SeriesName ?? '??';
+            $row[iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
+            $row[iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
 
             if (null !== ($item->Name ?? null)) {
-                $row['extra']['title'] = $item->Name;
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name;
             }
 
             if (null !== ($item->SeriesId ?? null)) {
-                $row['parent'] = $this->cacheShow[$item->SeriesId] ?? [];
+                $row[iFace::COLUMN_PARENT] = $this->cacheShow[$item->SeriesId] ?? [];
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row);
+        $entity = Container::get(iFace::class)::fromArray($row);
 
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
             $this->cacheData[$guid] = $item->Id;
@@ -1716,7 +1747,7 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
 
-            if (StateInterface::TYPE_EPISODE !== strtolower($type)) {
+            if (iFace::TYPE_EPISODE !== strtolower($type)) {
                 return [];
             }
 

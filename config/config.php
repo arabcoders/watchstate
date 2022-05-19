@@ -27,7 +27,7 @@ return (function () {
             ],
         ],
         'storage' => [
-            'version' => 'v0',
+            'version' => 'v01',
         ],
     ];
 

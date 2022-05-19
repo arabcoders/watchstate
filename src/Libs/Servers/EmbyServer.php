@@ -6,7 +6,7 @@ namespace App\Libs\Servers;
 
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use JsonException;
@@ -100,7 +100,7 @@ class EmbyServer extends JellyfinServer
         return $request;
     }
 
-    public function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
@@ -132,45 +132,56 @@ class EmbyServer extends JellyfinServer
         $providersId = ag($json, 'Item.ProviderIds', []);
 
         $row = [
-            'type' => $type,
-            'updated' => time(),
-            'watched' => $isWatched,
-            'via' => $this->name,
-            'title' => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
-            'year' => ag($json, 'Item.ProductionYear', 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids($providersId),
-            'extra' => [
-                'date' => makeDate(
-                    ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
-                )->format('Y-m-d'),
-
-                'webhook' => [
-                    'event' => $event,
+            iFace::COLUMN_TYPE => $type,
+            iFace::COLUMN_UPDATED => time(),
+            iFace::COLUMN_WATCHED => $isWatched,
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
+            iFace::COLUMN_YEAR => ag($json, 'Item.ProductionYear', 0000),
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids($providersId),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)ag($json, 'Item.ItemId'),
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_UPDATED => time(),
+                    iFace::COLUMN_WATCHED => $isWatched,
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
+                    iFace::COLUMN_YEAR => ag($json, 'Item.ProductionYear', 0000),
+                    iFace::COLUMN_SEASON => null,
+                    iFace::COLUMN_EPISODE => null,
+                    iFace::COLUMN_META_DATA_EXTRA => [
+                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
+                            ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
+                        )->format('Y-m-d'),
+                        iFace::COLUMN_META_DATA_EXTRA_EVENT => $event,
+                    ],
+                    iFace::COLUMN_META_DATA_PAYLOAD => $json,
                 ],
             ],
-            'suids' => [
-                $this->name => ag($json, 'Item.ItemId'),
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = ag($json, 'Item.SeriesName', '??');
-            $row['season'] = ag($json, 'Item.ParentIndexNumber', 0);
-            $row['episode'] = ag($json, 'Item.IndexNumber', 0);
+        if (iFace::TYPE_EPISODE === $type) {
+            $row[iFace::COLUMN_TITLE] = ag($json, 'Item.SeriesName', '??');
+            $row[iFace::COLUMN_SEASON] = ag($json, 'Item.ParentIndexNumber', 0);
+            $row[iFace::COLUMN_EPISODE] = ag($json, 'Item.IndexNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = ag($json, 'Item.ParentIndexNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = ag($json, 'Item.IndexNumber', 0);
 
-            if (null !== ($epTitle = ag($json, ['Name', 'OriginalTitle'], null))) {
-                $row['extra']['title'] = $epTitle;
+            if (null !== ($epTitle = ag($json, ['Item.Name', 'Item.OriginalTitle'], null))) {
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $epTitle;
             }
 
             if (null !== ag($json, 'Item.SeriesId')) {
-                $row['parent'] = $this->getEpisodeParent(ag($json, 'Item.SeriesId'), '');
+                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent(ag($json, 'Item.SeriesId'), '');
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+        $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
