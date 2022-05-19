@@ -338,15 +338,7 @@ class JellyfinServer implements ServerInterface
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
                     iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
-                    iFace::COLUMN_SEASON => null,
-                    iFace::COLUMN_EPISODE => null,
-                    iFace::COLUMN_META_DATA_EXTRA => [
-                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
-                            ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now')
-                        )->format('Y-m-d'),
-                        iFace::COLUMN_META_DATA_EXTRA_EVENT => $event,
-                    ],
-                    iFace::COLUMN_META_DATA_PAYLOAD => $json,
+                    iFace::COLUMN_GUIDS => array_change_key_case($providersId, CASE_LOWER)
                 ]
             ],
             iFace::COLUMN_EXTRA => [],
@@ -360,10 +352,11 @@ class JellyfinServer implements ServerInterface
             $row[iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
-
-            if (null !== ($epTitle = ag($json, ['Name', 'OriginalTitle'], null))) {
-                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $epTitle;
-            }
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
+                $json,
+                ['Name', 'OriginalTitle'],
+                '??'
+            );
 
             if (null !== $seriesName) {
                 $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent(
@@ -372,6 +365,11 @@ class JellyfinServer implements ServerInterface
                 );
             }
         }
+
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+            ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now')
+        )->format('Y-m-d');
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $event;
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
@@ -1680,14 +1678,7 @@ class JellyfinServer implements ServerInterface
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
                     iFace::COLUMN_YEAR => $item->ProductionYear ?? 0000,
-                    iFace::COLUMN_SEASON => null,
-                    iFace::COLUMN_EPISODE => null,
-                    iFace::COLUMN_META_DATA_EXTRA => [
-                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
-                            $item->PremiereDate ?? $item->ProductionYear ?? 'now'
-                        )->format('Y-m-d'),
-                    ],
-                    iFace::COLUMN_META_DATA_PAYLOAD => get_object_vars($item),
+                    iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
@@ -1699,15 +1690,17 @@ class JellyfinServer implements ServerInterface
             $row[iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
-
-            if (null !== ($item->Name ?? null)) {
-                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name;
-            }
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name ?? $item->OriginalTitle ?? '??';
 
             if (null !== ($item->SeriesId ?? null)) {
                 $row[iFace::COLUMN_PARENT] = $this->cacheShow[$item->SeriesId] ?? [];
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
         }
+
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+            $item->PremiereDate ?? $item->ProductionYear ?? 'now'
+        )->format('Y-m-d');
 
         $entity = Container::get(iFace::class)::fromArray($row);
 

@@ -10,7 +10,6 @@ use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
-use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -105,8 +104,6 @@ class ImportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
-        $this->logger->info(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
-
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
@@ -171,15 +168,13 @@ class ImportCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        if (count($list) >= 1) {
-            $this->logger->info('Preloading all mapper data.');
-            $this->mapper->loadData();
-            $this->logger->info('Finished preloading mapper data.');
-        }
+        $this->logger->notice(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
 
-        if ($this->storage instanceof PDOAdapter) {
-            $this->storage->singleTransaction();
-        }
+        $this->logger->notice('MAPPER: Preloading database into memory.');
+        $this->mapper->loadData();
+        $this->logger->notice('MAPPER: Finished Preloading database.');
+
+        $this->storage->singleTransaction();
 
         foreach ($list as $name => &$server) {
             Data::addBucket($name);

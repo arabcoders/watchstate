@@ -184,7 +184,7 @@ final class MemoryMapper implements ImportInterface
             $count = count($this->changed);
 
             $this->logger->notice(
-                0 === $count ? 'No changes detected.' : sprintf('Updating backend storage with \'%d\' changes.', $count)
+                0 === $count ? 'MAPPER: No changes detected.' : sprintf('MAPPER: Updating \'%d\' db records.', $count)
             );
 
             $inDryRunMode = $this->inDryRunMode();

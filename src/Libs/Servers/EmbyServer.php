@@ -151,15 +151,6 @@ class EmbyServer extends JellyfinServer
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
                     iFace::COLUMN_YEAR => ag($json, 'Item.ProductionYear', 0000),
-                    iFace::COLUMN_SEASON => null,
-                    iFace::COLUMN_EPISODE => null,
-                    iFace::COLUMN_META_DATA_EXTRA => [
-                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
-                            ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
-                        )->format('Y-m-d'),
-                        iFace::COLUMN_META_DATA_EXTRA_EVENT => $event,
-                    ],
-                    iFace::COLUMN_META_DATA_PAYLOAD => $json,
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
@@ -171,15 +162,21 @@ class EmbyServer extends JellyfinServer
             $row[iFace::COLUMN_EPISODE] = ag($json, 'Item.IndexNumber', 0);
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = ag($json, 'Item.ParentIndexNumber', 0);
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = ag($json, 'Item.IndexNumber', 0);
-
-            if (null !== ($epTitle = ag($json, ['Item.Name', 'Item.OriginalTitle'], null))) {
-                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $epTitle;
-            }
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
+                $json,
+                ['Item.Name', 'Item.OriginalTitle'],
+                '??'
+            );
 
             if (null !== ag($json, 'Item.SeriesId')) {
                 $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent(ag($json, 'Item.SeriesId'), '');
             }
         }
+
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+            ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
+        )->format('Y-m-d');
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $event;
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 

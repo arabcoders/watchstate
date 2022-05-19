@@ -385,17 +385,7 @@ class PlexServer implements ServerInterface
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
                     iFace::COLUMN_YEAR => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
-                    iFace::COLUMN_SEASON => null,
-                    iFace::COLUMN_EPISODE => null,
-                    iFace::COLUMN_META_DATA_EXTRA => [
-                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate(
-                            ag($item, 'originallyAvailableAt', 'now')
-                        )->format(
-                            'Y-m-d'
-                        ),
-                        iFace::COLUMN_META_DATA_EXTRA_EVENT => $event,
-                    ],
-                    iFace::COLUMN_META_DATA_PAYLOAD => $json,
+                    iFace::COLUMN_GUIDS => ag($item, 'Guid', []),
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
@@ -415,8 +405,16 @@ class PlexServer implements ServerInterface
 
             if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey'], null))) {
                 $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
         }
+
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+            ag($item, 'originallyAvailableAt', 'now')
+        )->format(
+            'Y-m-d'
+        );
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $event;
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
@@ -1653,6 +1651,44 @@ class PlexServer implements ServerInterface
         $this->cacheShow[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
     }
 
+    protected function parseGuids(array $guids): array
+    {
+        $guid = [];
+
+        foreach ($guids as $_id) {
+            try {
+                $val = is_object($_id) ? $_id->id : $_id['id'];
+
+                if (empty($val)) {
+                    continue;
+                }
+
+                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                    // -- DO NOT accept plex relative unique ids, we generate our own.
+                    if (substr_count($val, '/') >= 3) {
+                        continue;
+                    }
+                    $val = $this->parseLegacyAgent($val);
+                }
+
+                if (false === str_contains($val, '://')) {
+                    continue;
+                }
+
+                [$key, $value] = explode('://', $val);
+                $key = strtolower($key);
+
+                $guid[$key] = $value;
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        ksort($guid);
+
+        return $guid;
+    }
+
     protected function getGuids(array $guids): array
     {
         $guid = [];
@@ -1826,14 +1862,7 @@ class PlexServer implements ServerInterface
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
                     iFace::COLUMN_YEAR => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
-                    iFace::COLUMN_SEASON => null,
-                    iFace::COLUMN_EPISODE => null,
-                    iFace::COLUMN_META_DATA_EXTRA => [
-                        iFace::COLUMN_META_DATA_EXTRA_DATE => makeDate($item->originallyAvailableAt ?? 'now')->format(
-                            'Y-m-d'
-                        ),
-                    ],
-                    iFace::COLUMN_META_DATA_PAYLOAD => get_object_vars($item),
+                    iFace::COLUMN_GUIDS => $this->parseGuids($item->Guid ?? []),
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
@@ -1845,14 +1874,21 @@ class PlexServer implements ServerInterface
             $row[iFace::COLUMN_EPISODE] = $item->index ?? 0;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->index ?? 0;
-
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->title ?? $item->originalTitle ?? '??';
+
             $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
 
             if (null !== $parentId) {
                 $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
         }
+
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+            $item->originallyAvailableAt ?? 'now'
+        )->format(
+            'Y-m-d'
+        );
 
         $entity = Container::get(iFace::class)::fromArray($row);
 

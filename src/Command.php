@@ -45,7 +45,7 @@ class Command extends BaseCommand
         $data['meta']['url'] = $data['meta']['simple_url'] = $url;
         $data['meta']['get'] = $data['meta']['env'] = [];
         $data['meta']['SERVER'] = array_replace_recursive($data['meta']['SERVER'], [
-            'APP_VERSION' => Config::get('version'),
+            'APP_VERSION' => getAppVersion(),
             'PHP_VERSION' => PHP_VERSION,
             'PHP_VERSION_ID' => PHP_VERSION_ID,
             'PHP_OS' => PHP_OS,
