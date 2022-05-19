@@ -320,12 +320,12 @@ class JellyfinServer implements ServerInterface
         }
 
         $row = [
-            iFace::COLUMN_ID => $type,
+            iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
             iFace::COLUMN_WATCHED => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-            iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
+            iFace::COLUMN_YEAR => (int)ag($json, 'Year', 0000),
             iFace::COLUMN_SEASON => null,
             iFace::COLUMN_EPISODE => null,
             iFace::COLUMN_PARENT => [],
@@ -333,7 +333,6 @@ class JellyfinServer implements ServerInterface
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($json, 'ItemId'),
-                    iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
                     iFace::COLUMN_WATCHED => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
@@ -341,7 +340,12 @@ class JellyfinServer implements ServerInterface
                     iFace::COLUMN_GUIDS => array_change_key_case($providersId, CASE_LOWER)
                 ]
             ],
-            iFace::COLUMN_EXTRA => [],
+            iFace::COLUMN_EXTRA => [
+                $this->name => [
+                    iFace::COLUMN_EXTRA_EVENT => $event,
+                    iFace::COLUMN_EXTRA_DATE => makeDate(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
+                ],
+            ],
         ];
 
         if (iFace::TYPE_EPISODE === $type) {
@@ -350,8 +354,8 @@ class JellyfinServer implements ServerInterface
             $row[iFace::COLUMN_TITLE] = $seriesName ?? '??';
             $row[iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
             $row[iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
                 $json,
                 ['Name', 'OriginalTitle'],
@@ -369,7 +373,6 @@ class JellyfinServer implements ServerInterface
         $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
             ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now')
         )->format('Y-m-d');
-        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $event;
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
@@ -1664,7 +1667,7 @@ class JellyfinServer implements ServerInterface
             iFace::COLUMN_WATCHED => (int)(bool)($item->UserData?->Played ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-            iFace::COLUMN_YEAR => $item->ProductionYear ?? 0000,
+            iFace::COLUMN_YEAR => (int)($item->ProductionYear ?? 0000),
             iFace::COLUMN_SEASON => null,
             iFace::COLUMN_EPISODE => null,
             iFace::COLUMN_PARENT => [],
@@ -1673,23 +1676,26 @@ class JellyfinServer implements ServerInterface
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->Id,
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_UPDATED => $date,
                     iFace::COLUMN_WATCHED => (int)(bool)($item->UserData?->Played ?? false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-                    iFace::COLUMN_YEAR => $item->ProductionYear ?? 0000,
+                    iFace::COLUMN_YEAR => (int)($item->ProductionYear ?? 0000),
                     iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
                 ],
             ],
-            iFace::COLUMN_EXTRA => [],
+            iFace::COLUMN_EXTRA => [
+                $this->name => [
+                    iFace::COLUMN_EXTRA_DATE => makeDate($date),
+                ],
+            ],
         ];
 
         if (iFace::TYPE_EPISODE === $type) {
             $row[iFace::COLUMN_TITLE] = $item->SeriesName ?? '??';
             $row[iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
             $row[iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name ?? $item->OriginalTitle ?? '??';
 
             if (null !== ($item->SeriesId ?? null)) {

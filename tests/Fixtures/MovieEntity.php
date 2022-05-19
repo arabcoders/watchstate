@@ -29,14 +29,15 @@ return [
         'home_plex' => [
             iFace::COLUMN_ID => 121,
             iFace::COLUMN_TYPE => iFace::TYPE_MOVIE,
-            iFace::COLUMN_UPDATED => 1,
             iFace::COLUMN_WATCHED => 1,
             iFace::COLUMN_YEAR => '2020',
             iFace::COLUMN_META_DATA_EXTRA => [
                 iFace::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
-                iFace::COLUMN_META_DATA_EXTRA_EVENT => 'media.scrobble'
             ],
         ],
     ],
-    iFace::COLUMN_EXTRA => [],
+    iFace::COLUMN_EXTRA => [
+        iFace::COLUMN_EXTRA_EVENT => 'media.scrobble',
+        iFace::COLUMN_EXTRA_DATE => 1,
+    ],
 ];

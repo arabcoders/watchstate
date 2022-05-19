@@ -380,23 +380,27 @@ class PlexServer implements ServerInterface
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_UPDATED => time(),
                     iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
                     iFace::COLUMN_YEAR => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
-                    iFace::COLUMN_GUIDS => ag($item, 'Guid', []),
+                    iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
                 ],
             ],
-            iFace::COLUMN_EXTRA => [],
+            iFace::COLUMN_EXTRA => [
+                $this->name => [
+                    iFace::COLUMN_EXTRA_EVENT => $event,
+                    iFace::COLUMN_EXTRA_DATE => makeDate(time()),
+                ],
+            ],
         ];
 
         if (iFace::TYPE_EPISODE === $type) {
             $row[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
             $row[iFace::COLUMN_SEASON] = ag($item, 'parentIndex', 0);
             $row[iFace::COLUMN_EPISODE] = ag($item, 'index', 0);
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->index ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
                 $item,
                 ['title', 'originalTitle'],
@@ -414,7 +418,6 @@ class PlexServer implements ServerInterface
         )->format(
             'Y-m-d'
         );
-        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $event;
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
@@ -1857,7 +1860,6 @@ class PlexServer implements ServerInterface
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->ratingKey,
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_UPDATED => $date,
                     iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
@@ -1865,15 +1867,19 @@ class PlexServer implements ServerInterface
                     iFace::COLUMN_GUIDS => $this->parseGuids($item->Guid ?? []),
                 ],
             ],
-            iFace::COLUMN_EXTRA => [],
+            iFace::COLUMN_EXTRA => [
+                $this->name => [
+                    iFace::COLUMN_EXTRA_DATE => makeDate($date),
+                ],
+            ],
         ];
 
         if (iFace::TYPE_EPISODE === $type) {
             $row[iFace::COLUMN_TITLE] = $item->grandparentTitle ?? '??';
             $row[iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
             $row[iFace::COLUMN_EPISODE] = $item->index ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = $item->index ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->title ?? $item->originalTitle ?? '??';
 
             $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;

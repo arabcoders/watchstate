@@ -278,6 +278,7 @@ final class Initializer
             $responseHeaders = [
                 'X-WH-Backend' => $class->getName(),
                 'X-WH-Item' => $entity->getName(),
+                'X-WH-Id' => '?',
                 'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                 'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
             ];
@@ -285,7 +286,12 @@ final class Initializer
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 return new Response(
                     status:  204,
-                    headers: $responseHeaders + ['X-Status' => 'Media does not have external/relative ids.']
+                    headers: $responseHeaders + [
+                                 'X-Status' => sprintf(
+                                     '%s does not have external and parents ids.',
+                                     ucfirst($entity->type)
+                                 )
+                             ]
                 );
             }
 
@@ -293,15 +299,21 @@ final class Initializer
 
             if (null === ($backend = $storage->get($entity))) {
                 $entity = $storage->insert($entity);
-                if ($entity->isWatched()) {
+
+                if (true === $entity->isWatched()) {
                     queuePush($entity);
                 }
+
+                $responseHeaders['X-WH-Id'] = $entity->id;
+
                 return jsonResponse(
                     status:  200,
                     body:    $entity->getAll(),
                     headers: $responseHeaders + ['X-Status' => sprintf('Added %s as new item.', $entity->type)]
                 );
             }
+
+            $responseHeaders['X-WH-Id'] = $backend->id;
 
             if (true === $entity->isTainted()) {
                 $cloned = clone $backend;
@@ -311,25 +323,23 @@ final class Initializer
                     return jsonResponse(
                         status:  200,
                         body:    $backend->getAll(),
-                        headers: $responseHeaders + ['X-Status' => '[T] Updated External/Relative ids.']
+                        headers: $responseHeaders + ['X-Status' => '[T] Updated metadata.']
                     );
                 }
 
                 return new Response(
                     status:  200,
-                    headers: $responseHeaders + ['X-Status' => '[T] Nothing Updated. This event is irrelevant.']
+                    headers: $responseHeaders + ['X-Status' => '[T] This event is irrelevant.']
                 );
             }
 
-            if ($backend->updated > $entity->updated) {
-                $cloned = clone $backend;
-
-                if ($cloned->apply($entity, guidOnly: true)->isChanged()) {
+            if ($backend->updated >= $entity->updated) {
+                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
                     $backend = $storage->update($backend->apply($entity));
                     return jsonResponse(
                         status:  200,
                         body:    $backend->getAll(),
-                        headers: $responseHeaders + ['X-Status' => 'Updated External/Relative ids.']
+                        headers: $responseHeaders + ['X-Status' => sprintf('Updated %s metadata.', $entity->type)]
                     );
                 }
 
@@ -344,19 +354,26 @@ final class Initializer
                 );
             }
 
-            if ($backend->apply($entity)->isChanged()) {
-                $backend = $storage->update($backend);
+            $cloned = clone $backend;
 
-                queuePush($backend);
+            if ($backend->apply($entity, guidOnly: true)->isChanged()) {
+                $backend = $storage->update($backend->apply($entity));
+
+                $message = 'Updated %s metadata.';
+
+                if ($cloned->watched !== $backend->watched) {
+                    queuePush($backend);
+                    $message = 'Queued %s For push event. [Played: %s]';
+                }
 
                 return jsonResponse(
                     status:  200,
                     body:    $backend->getAll(),
                     headers: $responseHeaders + [
                                  'X-Status' => sprintf(
-                                     'Queued %s [State: %s] for push event.',
+                                     $message,
                                      $entity->type,
-                                     $entity->isWatched() ? 'Played' : 'Unplayed',
+                                     $entity->isWatched() ? 'Yes' : 'No',
                                  ),
                              ]
                 );
@@ -364,7 +381,7 @@ final class Initializer
 
             return new Response(
                 status:  200,
-                headers: $responseHeaders + ['X-Status' => sprintf('%s State is unchanged.', ucfirst($entity->type))]
+                headers: $responseHeaders + ['X-Status' => 'No difference detected.']
             );
         } catch (HttpException $e) {
             if (200 === $e->getCode()) {

@@ -26,10 +26,10 @@ interface StateInterface
     public const COLUMN_META_DATA = 'metadata';
     public const COLUMN_META_DATA_EXTRA = 'extra';
     public const COLUMN_META_DATA_EXTRA_TITLE = 'title';
-    public const COLUMN_META_DATA_EXTRA_DATE = 'date';
-    public const COLUMN_META_DATA_EXTRA_EVENT = 'event';
-    public const COLUMN_META_DATA_PAYLOAD = 'payload';
     public const COLUMN_EXTRA = 'extra';
+    public const COLUMN_EXTRA_EVENT = 'event';
+    public const COLUMN_EXTRA_DATE = 'received_at';
+    public const COLUMN_META_DATA_EXTRA_DATE = 'date';
 
     /**
      * List of table keys.
@@ -57,7 +57,6 @@ interface StateInterface
         self::COLUMN_VIA,
         self::COLUMN_TITLE,
         self::COLUMN_YEAR,
-        self::COLUMN_META_DATA,
         self::COLUMN_EXTRA,
     ];
 

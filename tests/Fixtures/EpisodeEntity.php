@@ -32,7 +32,6 @@ return [
         'home_plex' => [
             iFace::COLUMN_ID => 121,
             iFace::COLUMN_TYPE => iFace::TYPE_EPISODE,
-            iFace::COLUMN_UPDATED => 1,
             iFace::COLUMN_WATCHED => 1,
             iFace::COLUMN_TITLE => 'Series Title',
             iFace::COLUMN_YEAR => '2020',
@@ -41,9 +40,11 @@ return [
             iFace::COLUMN_META_DATA_EXTRA => [
                 iFace::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
                 iFace::COLUMN_META_DATA_EXTRA_TITLE => 'Episode Title',
-                iFace::COLUMN_META_DATA_EXTRA_EVENT => 'media.scrobble'
             ],
         ],
     ],
-    iFace::COLUMN_EXTRA => [],
+    iFace::COLUMN_EXTRA => [
+        iFace::COLUMN_EXTRA_DATE => 1,
+        iFace::COLUMN_EXTRA_EVENT => 'media.scrobble'
+    ],
 ];

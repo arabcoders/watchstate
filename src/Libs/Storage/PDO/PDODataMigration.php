@@ -41,6 +41,30 @@ final class PDODataMigration
         return '';
     }
 
+    /**
+     * pre-alpha table design.
+     *
+     * --------------------------
+     * CREATE TABLE IF NOT EXISTS "state"
+     * (
+     *  "id"          integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+     *  "type"        text    NOT NULL,
+     *  "updated"     integer NOT NULL,
+     *  "watched"     integer NOT NULL DEFAULT 0,
+     *  "meta"        text    NULL,
+     *  "guid_plex"   text    NULL,
+     *  "guid_imdb"   text    NULL,
+     *  "guid_tvdb"   text    NULL,
+     *  "guid_tmdb"   text    NULL,
+     *  "guid_tvmaze" text    NULL,
+     *  "guid_tvrage" text    NULL,
+     *  "guid_anidb"  text    NULL
+     * );
+     * --------------------------
+     *
+     * @param string|null $oldDBFile
+     * @return mixed
+     */
     public function v0(string|null $oldDBFile = null): mixed
     {
         $automatic = $oldDBFile ?? $this->dbPath . DIRECTORY_SEPARATOR . 'watchstate.db';
@@ -49,7 +73,7 @@ final class PDODataMigration
             return false;
         }
 
-        $this->logger->notice('Migrating database data from pre-release version to v0');
+        $this->logger->notice('Migrating database data from pre-alpha version to v0');
 
         $oldDB = new PDO(dsn: sprintf('sqlite:%s', $automatic), options: [
             PDO::ATTR_EMULATE_PREPARES => false,
@@ -78,9 +102,12 @@ final class PDODataMigration
                 flags:       JSON_INVALID_UTF8_IGNORE
             );
 
+            $extra = [
+                iFace::COLUMN_EXTRA_DATE => $row[iFace::COLUMN_UPDATED],
+            ];
+
             $metadata = [
                 iFace::COLUMN_TYPE => $row[iFace::COLUMN_TYPE],
-                iFace::COLUMN_UPDATED => $row[iFace::COLUMN_UPDATED],
                 iFace::COLUMN_WATCHED => $row[iFace::COLUMN_WATCHED],
                 iFace::COLUMN_TITLE => ag($row['meta'], ['series', 'title'], '??'),
                 iFace::COLUMN_SEASON => ag($row['meta'], iFace::COLUMN_SEASON, null),
@@ -97,7 +124,7 @@ final class PDODataMigration
             }
 
             if (null !== ($whEvent = ag($row['meta'], 'webhook.event'))) {
-                $metadata[iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $whEvent;
+                $extra[iFace::COLUMN_EXTRA_EVENT] = $whEvent;
             }
 
             $metadata[iFace::COLUMN_YEAR] = ag($row['meta'], iFace::COLUMN_YEAR, null);
@@ -140,7 +167,21 @@ final class PDODataMigration
                              })(),
                         flags: $this->jFlags
                     ),
-                    iFace::COLUMN_EXTRA => json_encode([]),
+                    iFace::COLUMN_EXTRA => json_encode(
+                        value: (function () use ($extra): array {
+                                 $list = [];
+
+                                 foreach (Config::get('servers', []) as $name => $info) {
+                                     if (true !== (bool)ag($info, 'import.enabled', false)) {
+                                         continue;
+                                     }
+                                     $list[$name] = $extra;
+                                 }
+
+                                 return $list;
+                             })(),
+                        flags: $this->jFlags
+                    ),
                 ]
             );
         }
@@ -161,6 +202,28 @@ final class PDODataMigration
         return true;
     }
 
+    /**
+     * v0 table design
+     * --------------------------------------------------
+     * CREATE TABLE "state"
+     * (
+     *  "id"      integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+     *  "type"    text    NOT NULL,
+     *  "updated" integer NOT NULL,
+     *  "watched" integer NOT NULL DEFAULT '0',
+     *  "via"     text    NOT NULL,
+     *  "title"   text    NOT NULL,
+     *  "year"    integer NULL,
+     *  "season"  integer NULL,
+     *  "episode" integer NULL,
+     *  "parent"  text    NULL,
+     *  "guids"   text    NULL,
+     *  "extra"   text    NULL
+     * );
+     * -----------------------
+     * @param string|null $oldDBFile
+     * @return mixed
+     */
     public function v01(string|null $oldDBFile = null): mixed
     {
         $automatic = $oldDBFile ?? $this->dbPath . DIRECTORY_SEPARATOR . 'watchstate_v0.db';
@@ -193,9 +256,7 @@ final class PDODataMigration
         /** @noinspection SqlInsertValues */
         $insert = $this->pdo->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
 
-        $stmt = $oldDB->query("SELECT * FROM state");
-
-        foreach ($stmt as $row) {
+        foreach ($oldDB->query("SELECT * FROM state") as $row) {
             $row[iFace::COLUMN_EXTRA] = json_decode(
                 json:        $row[iFace::COLUMN_EXTRA] ?? '[]',
                 associative: true,
@@ -219,6 +280,10 @@ final class PDODataMigration
                 associative: true,
                 flags:       JSON_INVALID_UTF8_IGNORE
             );
+
+            $extra = [
+                iFace::COLUMN_EXTRA_DATE => (string)$row[iFace::COLUMN_UPDATED],
+            ];
 
             $metadata = [
                 iFace::COLUMN_TYPE => $row[iFace::COLUMN_TYPE],
@@ -246,7 +311,7 @@ final class PDODataMigration
             }
 
             if (null !== ($whEvent = ag($row[iFace::COLUMN_EXTRA], 'webhook.event'))) {
-                $metadata[iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_EVENT] = $whEvent;
+                $extra[iFace::COLUMN_EXTRA_EVENT] = $whEvent;
             }
 
             $arr = [
@@ -273,7 +338,6 @@ final class PDODataMigration
 
                              foreach (Config::get('servers', []) as $name => $info) {
                                  $list[$name] = [];
-
                                  if (null !== ($row['suids'][$name] ?? null)) {
                                      $list[$name][iFace::COLUMN_ID] = $row['suids'][$name];
                                  }
@@ -285,7 +349,24 @@ final class PDODataMigration
                          })(),
                     flags: $this->jFlags
                 ),
-                iFace::COLUMN_EXTRA => json_encode([]),
+                iFace::COLUMN_EXTRA => json_encode(
+                    value: (function () use ($row, $extra): array {
+                             $list = [];
+
+                             foreach (Config::get('servers', []) as $name => $info) {
+                                 $list[$name] = [];
+
+                                 if (null !== ($row['suids'][$name] ?? null)) {
+                                     continue;
+                                 }
+
+                                 $list[$name] += $extra;
+                             }
+
+                             return $list;
+                         })(),
+                    flags: $this->jFlags
+                ),
             ];
 
             $insert->execute($arr);
@@ -295,7 +376,6 @@ final class PDODataMigration
             $this->pdo->commit();
         }
 
-        $stmt = null;
         $oldDB = null;
 
         if (null === $oldDBFile) {
