@@ -276,6 +276,13 @@ final class MemoryMapper implements ImportInterface
         return true === (bool)ag($this->options, Options::DEEP_DEBUG, false);
     }
 
+    private function addPointers(StateInterface $entity, int $pointer): void
+    {
+        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+            $this->guids[ $key .'/'. $entity->type] = $pointer;
+        }
+    }
+
     /**
      * Is the object already mapped?
      *
@@ -286,8 +293,9 @@ final class MemoryMapper implements ImportInterface
     private function getPointer(StateInterface $entity): int|bool
     {
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
-            if (null !== ($this->guids[$key] ?? null)) {
-                return $this->guids[$key];
+            $lookup = $key .'/'. $entity->type;
+            if (null !== ($this->guids[$lookup] ?? null)) {
+                return $this->guids[$lookup];
             }
         }
 
@@ -301,18 +309,12 @@ final class MemoryMapper implements ImportInterface
         return false;
     }
 
-    private function addPointers(StateInterface $entity, int $pointer): void
-    {
-        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
-            $this->guids[$key] = $pointer;
-        }
-    }
-
     private function removePointers(StateInterface $entity): void
     {
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
-            if (isset($this->guids[$key])) {
-                unset($this->guids[$key]);
+            $lookup = $key .'/'. $entity->type;
+            if (isset($this->guids[$lookup])) {
+                unset($this->guids[$lookup]);
             }
         }
     }
