@@ -1684,11 +1684,7 @@ class JellyfinServer implements ServerInterface
                     iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
                 ],
             ],
-            iFace::COLUMN_EXTRA => [
-                $this->name => [
-                    iFace::COLUMN_EXTRA_DATE => makeDate($date),
-                ],
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
         if (iFace::TYPE_EPISODE === $type) {

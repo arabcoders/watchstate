@@ -1867,11 +1867,7 @@ class PlexServer implements ServerInterface
                     iFace::COLUMN_GUIDS => $this->parseGuids($item->Guid ?? []),
                 ],
             ],
-            iFace::COLUMN_EXTRA => [
-                $this->name => [
-                    iFace::COLUMN_EXTRA_DATE => makeDate($date),
-                ],
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
         if (iFace::TYPE_EPISODE === $type) {
