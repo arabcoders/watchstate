@@ -114,6 +114,14 @@ interface ServerInterface
     public function search(string $query, int $limit = 25): array;
 
     /**
+     * Server Backend id.
+     *
+     * @param string|int $id
+     * @return array
+     */
+    public function searchId(string|int $id): array;
+
+    /**
      * Get all persistent data.
      *
      * @return array

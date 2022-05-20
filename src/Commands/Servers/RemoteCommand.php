@@ -29,6 +29,7 @@ final class RemoteCommand extends Command
             ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
             ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
             ->addOption('search', null, InputOption::VALUE_REQUIRED, 'Search query')
+            ->addOption('search-id', null, InputOption::VALUE_REQUIRED, 'Get metadata related to given id')
             ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit', 25)
             ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml]', 'json')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
@@ -82,6 +83,14 @@ final class RemoteCommand extends Command
 
         if ($input->getOption('search') && $input->getOption('search-limit')) {
             $this->search($server, $output, $input);
+        }
+
+        if ($input->getOption('search') && $input->getOption('search-limit')) {
+            $this->search($server, $output, $input);
+        }
+
+        if ($input->getOption('search-id')) {
+            $this->searchId($server, $output, $input);
         }
 
         return self::SUCCESS;
@@ -163,6 +172,29 @@ final class RemoteCommand extends Command
 
         if ('json' === $input->getOption('search-output')) {
             $output->writeln(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        } else {
+            $output->writeln(Yaml::dump($result, 8, 2));
+        }
+    }
+
+    private function searchId(ServerInterface $server, OutputInterface $output, InputInterface $input): void
+    {
+        $result = $server->searchId($input->getOption('search-id'));
+
+        if (empty($result)) {
+            $output->writeln(
+                sprintf('<error>No meta data found for id \'%s\'.</error>', $input->getOption('search-id'))
+            );
+            exit(1);
+        }
+
+        if ('json' === $input->getOption('search-output')) {
+            $output->writeln(
+                json_encode(
+                    value: $result,
+                    flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
         } else {
             $output->writeln(Yaml::dump($result, 8, 2));
         }
