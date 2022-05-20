@@ -493,6 +493,42 @@ class PlexServer implements ServerInterface
         }
     }
 
+    public function searchId(string|int $id): array
+    {
+        $this->checkConfig();
+
+        try {
+            $url = $this->url->withPath('/library/metadata/' . $id)->withQuery(
+                http_build_query(['includeGuids' => 1])
+            );
+
+            $this->logger->debug(sprintf('%s: Sending get meta data for id \'%s\'.', $this->name, $id), [
+                'url' => $url
+            ]);
+
+            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+            if (200 !== $response->getStatusCode()) {
+                throw new RuntimeException(
+                    sprintf(
+                        '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                        $this->name,
+                        $id,
+                        $response->getStatusCode()
+                    )
+                );
+            }
+
+            return json_decode(
+                json:        $response->getContent(),
+                associative: true,
+                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            );
+        } catch (ExceptionInterface|JsonException $e) {
+            throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
     public function listLibraries(): array
     {
         $this->checkConfig();
