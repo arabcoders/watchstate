@@ -57,6 +57,16 @@ final class EditCommand extends Command
 
         $name = $input->getArgument('name');
 
+        if (!isValidName($name)) {
+            $output->writeln(
+                sprintf(
+                    '<error>ERROR: Invalid \'%s\' name was given. Only \'A-Z, a-z, 0-9, _\' are allowed.</error>',
+                    $name,
+                )
+            );
+            return self::FAILURE;
+        }
+
         if (null === ($server = ag($servers, $name, null))) {
             $output->writeln(sprintf('<error>ERROR: Server \'%s\' not found.</error>', $name));
             return self::FAILURE;

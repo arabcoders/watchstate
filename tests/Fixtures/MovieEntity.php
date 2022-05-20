@@ -2,35 +2,42 @@
 
 declare(strict_types=1);
 
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Guid;
 
 return [
-    'id' => null,
-    'type' => StateInterface::TYPE_MOVIE,
-    'updated' => 1,
-    'watched' => 1,
-    'via' => 'JF@Home',
-    'title' => 'Movie Title',
-    'year' => 2020,
-    'season' => null,
-    'episode' => null,
-    'parent' => [],
-    'guids' => [
-        'guid_plex' => '1000',
-        'guid_imdb' => '1100',
-        'guid_tvdb' => '1200',
-        'guid_tmdb' => '1300',
-        'guid_tvmaze' => '1400',
-        'guid_tvrage' => '1500',
-        'guid_anidb' => '1600',
+    iFace::COLUMN_ID => null,
+    iFace::COLUMN_TYPE => iFace::TYPE_MOVIE,
+    iFace::COLUMN_UPDATED => 1,
+    iFace::COLUMN_WATCHED => 1,
+    iFace::COLUMN_VIA => 'home_plex',
+    iFace::COLUMN_TITLE => 'Movie Title',
+    iFace::COLUMN_YEAR => 2020,
+    iFace::COLUMN_SEASON => null,
+    iFace::COLUMN_EPISODE => null,
+    iFace::COLUMN_PARENT => [],
+    iFace::COLUMN_GUIDS => [
+        Guid::GUID_PLEX => '1000',
+        Guid::GUID_IMDB => '1100',
+        Guid::GUID_TVDB => '1200',
+        Guid::GUID_TMDB => '1300',
+        Guid::GUID_TVMAZE => '1400',
+        Guid::GUID_TVRAGE => '1500',
+        Guid::GUID_ANIDB => '1600',
     ],
-    'extra' => [
-        'webhook' => [
-            'event' => 'ItemAdded'
-        ]
+    iFace::COLUMN_META_DATA => [
+        'home_plex' => [
+            iFace::COLUMN_ID => 121,
+            iFace::COLUMN_TYPE => iFace::TYPE_MOVIE,
+            iFace::COLUMN_WATCHED => 1,
+            iFace::COLUMN_YEAR => '2020',
+            iFace::COLUMN_META_DATA_EXTRA => [
+                iFace::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
+            ],
+        ],
     ],
-    'suids' => [
-        'jf@home' => '25a02ffba2ab58d73756dd233bf08930',
-        'plex@home' => 200,
+    iFace::COLUMN_EXTRA => [
+        iFace::COLUMN_EXTRA_EVENT => 'media.scrobble',
+        iFace::COLUMN_EXTRA_DATE => 1,
     ],
 ];

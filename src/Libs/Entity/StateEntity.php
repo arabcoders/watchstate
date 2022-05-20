@@ -6,8 +6,9 @@ namespace App\Libs\Entity;
 
 use App\Libs\Guid;
 use RuntimeException;
+use App\Libs\Entity\StateInterface as iFace;
 
-final class StateEntity implements StateInterface
+final class StateEntity implements iFace
 {
     private array $data = [];
     private bool $tainted = false;
@@ -26,17 +27,17 @@ final class StateEntity implements StateInterface
 
     public array $parent = [];
     public array $guids = [];
+    public array $metadata = [];
     public array $extra = [];
-    public array $suids = [];
 
     public function __construct(array $data)
     {
         foreach ($data as $key => $val) {
-            if (!in_array($key, StateInterface::ENTITY_KEYS)) {
+            if (!in_array($key, iFace::ENTITY_KEYS)) {
                 continue;
             }
 
-            if ('type' === $key && self::TYPE_MOVIE !== $val && self::TYPE_EPISODE !== $val) {
+            if (iFace::COLUMN_TYPE === $key && self::TYPE_MOVIE !== $val && self::TYPE_EPISODE !== $val) {
                 throw new RuntimeException(
                     sprintf(
                         'Unexpected type value was given. Was expecting \'%1$s or %2$s\' but got \'%3$s\' instead.',
@@ -47,7 +48,7 @@ final class StateEntity implements StateInterface
                 );
             }
 
-            foreach (StateInterface::ENTITY_ARRAY_KEYS as $subKey) {
+            foreach (iFace::ENTITY_ARRAY_KEYS as $subKey) {
                 if ($subKey !== $key) {
                     continue;
                 }
@@ -77,7 +78,7 @@ final class StateEntity implements StateInterface
         $changed = [];
 
         foreach ($this->getAll() as $key => $value) {
-            if (false === $all && true === in_array($key, StateInterface::ENTITY_IGNORE_DIFF_CHANGES)) {
+            if (false === $all && true === in_array($key, iFace::ENTITY_IGNORE_DIFF_CHANGES)) {
                 continue;
             }
 
@@ -85,15 +86,10 @@ final class StateEntity implements StateInterface
                 continue;
             }
 
-            if (true === in_array($key, StateInterface::ENTITY_ARRAY_KEYS)) {
-                $changes = computeArrayChanges($this->data[$key] ?? [], $value ?? []);
+            if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
+                $changes = $this->arrayDiff($this->data[$key] ?? [], $value ?? []);
                 if (!empty($changes)) {
-                    foreach (array_keys($changes) as $subKey) {
-                        $changed[$key][$subKey] = [
-                            'old' => $this->data[$key][$subKey] ?? 'None',
-                            'new' => $value[$subKey] ?? 'None'
-                        ];
-                    }
+                    $changed[$key] = $changes;
                 }
             } else {
                 $changed[$key] = [
@@ -124,19 +120,19 @@ final class StateEntity implements StateInterface
     public function getAll(): array
     {
         return [
-            'id' => $this->id,
-            'type' => $this->type,
-            'updated' => $this->updated,
-            'watched' => $this->watched,
-            'via' => $this->via,
-            'title' => $this->title,
-            'year' => $this->year,
-            'season' => $this->season,
-            'episode' => $this->episode,
-            'parent' => $this->parent,
-            'guids' => $this->guids,
-            'extra' => $this->extra,
-            'suids' => $this->suids,
+            iFace::COLUMN_ID => $this->id,
+            iFace::COLUMN_TYPE => $this->type,
+            iFace::COLUMN_UPDATED => $this->updated,
+            iFace::COLUMN_WATCHED => $this->watched,
+            iFace::COLUMN_VIA => $this->via,
+            iFace::COLUMN_TITLE => $this->title,
+            iFace::COLUMN_YEAR => $this->year,
+            iFace::COLUMN_SEASON => $this->season,
+            iFace::COLUMN_EPISODE => $this->episode,
+            iFace::COLUMN_PARENT => $this->parent,
+            iFace::COLUMN_GUIDS => $this->guids,
+            iFace::COLUMN_META_DATA => $this->metadata,
+            iFace::COLUMN_EXTRA => $this->extra,
         ];
     }
 
@@ -172,12 +168,12 @@ final class StateEntity implements StateInterface
 
     public function isMovie(): bool
     {
-        return StateInterface::TYPE_MOVIE === $this->type;
+        return iFace::TYPE_MOVIE === $this->type;
     }
 
     public function isEpisode(): bool
     {
-        return StateInterface::TYPE_EPISODE === $this->type;
+        return iFace::TYPE_EPISODE === $this->type;
     }
 
     public function isWatched(): bool
@@ -222,10 +218,10 @@ final class StateEntity implements StateInterface
         return $rPointers;
     }
 
-    public function apply(StateInterface $entity, bool $guidOnly = false): self
+    public function apply(iFace $entity, bool $guidOnly = false): self
     {
         if (true === $guidOnly) {
-            foreach (StateInterface::ENTITY_FORCE_UPDATE_FIELDS as $key) {
+            foreach (iFace::ENTITY_FORCE_UPDATE_FIELDS as $key) {
                 if (true === $this->isEqualValue($key, $entity)) {
                     continue;
                 }
@@ -245,7 +241,7 @@ final class StateEntity implements StateInterface
         return $this;
     }
 
-    public function updateOriginal(): StateInterface
+    public function updateOriginal(): iFace
     {
         $this->data = $this->getAll();
         return $this;
@@ -256,7 +252,7 @@ final class StateEntity implements StateInterface
         return $this->data;
     }
 
-    public function setIsTainted(bool $isTainted): StateInterface
+    public function setIsTainted(bool $isTainted): iFace
     {
         $this->tainted = $isTainted;
         return $this;
@@ -267,9 +263,9 @@ final class StateEntity implements StateInterface
         return $this->tainted;
     }
 
-    private function isEqual(StateInterface $entity): bool
+    private function isEqual(iFace $entity): bool
     {
-        foreach (StateInterface::ENTITY_KEYS as $key) {
+        foreach (iFace::ENTITY_KEYS as $key) {
             if (false === $this->isEqualValue($key, $entity)) {
                 return false;
             }
@@ -278,9 +274,9 @@ final class StateEntity implements StateInterface
         return true;
     }
 
-    private function isEqualValue(string $key, StateInterface $entity): bool
+    private function isEqualValue(string $key, iFace $entity): bool
     {
-        if ('updated' === $key || 'watched' === $key) {
+        if (iFace::COLUMN_UPDATED === $key || iFace::COLUMN_WATCHED === $key) {
             return !($entity->updated > $this->updated && $entity->watched !== $this->watched);
         }
 
@@ -291,9 +287,9 @@ final class StateEntity implements StateInterface
         return true;
     }
 
-    private function updateValue(string $key, StateInterface $entity): void
+    private function updateValue(string $key, iFace $entity): void
     {
-        if ('updated' === $key || 'watched' === $key) {
+        if (iFace::COLUMN_UPDATED === $key || iFace::COLUMN_WATCHED === $key) {
             if ($entity->updated > $this->updated && $entity->watched !== $this->watched) {
                 $this->updated = $entity->updated;
                 $this->watched = $entity->watched;
@@ -301,14 +297,46 @@ final class StateEntity implements StateInterface
             return;
         }
 
-        if ('id' === $key) {
+        if (iFace::COLUMN_ID === $key) {
             return;
         }
 
-        if (true === in_array($key, StateInterface::ENTITY_ARRAY_KEYS)) {
+        if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
             $this->{$key} = array_replace_recursive($this->{$key} ?? [], $entity->{$key} ?? []);
         } else {
             $this->{$key} = $entity->{$key};
         }
     }
+
+    private function arrayDiff(array $oldArray, array $newArray): array
+    {
+        $difference = [];
+
+        foreach ($newArray as $key => $value) {
+            if (false === is_array($value)) {
+                if (!array_key_exists($key, $oldArray) || $oldArray[$key] !== $value) {
+                    $difference[$key] = [
+                        'old' => $oldArray[$key] ?? 'None',
+                        'new' => $value ?? 'None',
+                    ];
+                }
+                continue;
+            }
+
+            if (!isset($oldArray[$key]) || !is_array($oldArray[$key])) {
+                $difference[$key] = [
+                    'old' => $oldArray[$key] ?? 'None',
+                    'new' => $value ?? 'None',
+                ];
+            } else {
+                $newDiff = $this->arrayDiff($oldArray[$key], $value);
+                if (!empty($newDiff)) {
+                    $difference[$key] = $newDiff;
+                }
+            }
+        }
+
+        return $difference;
+    }
+
 }

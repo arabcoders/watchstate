@@ -452,38 +452,27 @@ if (!function_exists('commandContext')) {
     }
 }
 
-if (!function_exists('computeArrayChanges')) {
-    function computeArrayChanges(array $oldArray, array $newArray): array
-    {
-        $difference = [];
-
-        foreach ($newArray as $key => $value) {
-            if (false === is_array($value)) {
-                if (!array_key_exists($key, $oldArray) || $oldArray[$key] !== $value) {
-                    $difference[$key] = $value;
-                }
-                continue;
-            }
-
-            if (!isset($oldArray[$key]) || !is_array($oldArray[$key])) {
-                $difference[$key] = $value;
-            } else {
-                $newDiff = computeArrayChanges($oldArray[$key], $value);
-                if (!empty($newDiff)) {
-                    $difference[$key] = $newDiff;
-                }
-            }
-        }
-
-        return $difference;
-    }
-}
-
 if (!function_exists('getAppVersion')) {
     function getAppVersion(): string
     {
         $version = Config::get('version', 'dev-master');
-        return '$(version_via_ci)' === $version ? 'dev-master' : $version;
+
+        if ('$(version_via_ci)' === $version) {
+            $gitDir = ROOT_PATH . '/.git/';
+
+            if (is_dir($gitDir)) {
+                $cmd = 'git --git-dir=%1$s describe --exact-match --tags 2> /dev/null || git --git-dir=%1$s rev-parse --short HEAD';
+                exec(sprintf($cmd, escapeshellarg($gitDir)), $output, $status);
+
+                if (0 === $status) {
+                    return $output[0] ?? 'dev-master';
+                }
+            }
+
+            return 'dev-master';
+        }
+
+        return $version;
     }
 }
 
@@ -509,5 +498,20 @@ if (!function_exists('t')) {
         }
 
         return $text;
+    }
+}
+
+
+if (!function_exists('isValidName')) {
+    /**
+     * Allow only [Aa-Zz][0-9][_] in server names.
+     *
+     * @param string $name
+     *
+     * @return bool
+     */
+    function isValidName(string $name): bool
+    {
+        return 1 === preg_match('/^\w+$/', $name);
     }
 }

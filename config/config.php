@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Commands\Config\PruneCommand;
-use App\Commands\State\CacheCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
@@ -27,7 +26,7 @@ return (function () {
             ],
         ],
         'storage' => [
-            'version' => 'v0',
+            'version' => 'v01',
         ],
     ];
 
@@ -91,6 +90,11 @@ return (function () {
                 ],
             ],
         ],
+    ];
+
+    $config['cache'] = [
+        'url' => env('WS_CACHE_URL', 'redis://127.0.0.1:6379'),
+        'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
     ];
 
     $config['logger'] = [
@@ -191,15 +195,6 @@ return (function () {
             Task::COMMAND => '@state:push',
             Task::ARGS => [
                 env('WS_CRON_PUSH_DEBUG_LEVEL', '-v') => null,
-            ]
-        ],
-        CacheCommand::TASK_NAME => [
-            Task::NAME => CacheCommand::TASK_NAME,
-            Task::ENABLED => (bool)env('WS_CRON_CACHE', true),
-            Task::RUN_AT => (string)env('WS_CRON_CACHE_AT', '0 */6 * * *'),
-            Task::COMMAND => '@state:cache',
-            Task::ARGS => [
-                env('WS_CRON_CACHE_DEBUG_LEVEL', '-v') => null,
             ]
         ],
         PruneCommand::TASK_NAME => [

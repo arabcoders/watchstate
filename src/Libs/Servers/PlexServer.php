@@ -8,7 +8,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use App\Libs\Mappers\ExportInterface;
@@ -34,8 +34,6 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
-
-use function Symfony\Component\String\b;
 
 class PlexServer implements ServerInterface
 {
@@ -102,19 +100,15 @@ class PlexServer implements ServerInterface
     protected string $name = '';
     protected array $persist = [];
     protected string $cacheKey = '';
-    protected array $cacheData = [];
-
-    protected string $cacheShowKey = '';
-    protected array $cacheShow = [];
+    protected array $cache = [];
 
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
 
-
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cache
+        protected CacheInterface $cacheIO
     ) {
     }
 
@@ -132,8 +126,6 @@ class PlexServer implements ServerInterface
     ): ServerInterface {
         $cloned = clone $this;
 
-        $cloned->cacheData = [];
-        $cloned->cacheShow = [];
         $cloned->name = $name;
         $cloned->url = $url;
         $cloned->token = $token;
@@ -141,16 +133,13 @@ class PlexServer implements ServerInterface
         $cloned->uuid = $uuid;
         $cloned->options = $options;
         $cloned->persist = $persist;
-        $cloned->cacheKey = $options['cache_key'] ?? md5(__CLASS__ . '.' . $name . $url);
-        $cloned->cacheShowKey = $cloned->cacheKey . '_show';
         $cloned->initialized = true;
 
-        if ($cloned->cache->has($cloned->cacheKey)) {
-            $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
-        }
+        $cloned->cache = [];
+        $cloned->cacheKey = $cloned::NAME . '_' . $name;
 
-        if ($cloned->cache->has($cloned->cacheShowKey)) {
-            $cloned->cacheShow = $cloned->cache->get($cloned->cacheShowKey);
+        if ($cloned->cacheIO->has($cloned->cacheKey)) {
+            $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
         }
 
         return $cloned;
@@ -327,7 +316,7 @@ class PlexServer implements ServerInterface
         return $request;
     }
 
-    public function parseWebhook(ServerRequestInterface $request): StateInterface
+    public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
             throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
@@ -368,39 +357,60 @@ class PlexServer implements ServerInterface
         }
 
         $row = [
-            'type' => $type,
-            'updated' => time(),
-            'watched' => (int)(bool)ag($item, 'viewCount', false),
-            'via' => $this->name,
-            'title' => ag($item, ['title', 'originalTitle'], '??'),
-            'year' => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids(ag($item, 'Guid', [])),
-            'extra' => [
-                'date' => makeDate(ag($item, 'originallyAvailableAt', 'now'))->format('Y-m-d'),
-                'webhook' => [
-                    'event' => $event,
+            iFace::COLUMN_TYPE => $type,
+            iFace::COLUMN_UPDATED => time(),
+            iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+            iFace::COLUMN_YEAR => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids(ag($item, 'Guid', [])),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($item, 'viewCount', false),
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+                    iFace::COLUMN_YEAR => (string)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
+                    iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
                 ],
             ],
-            'suids' => [
-                $this->name => (string)ag($item, 'ratingKey'),
+            iFace::COLUMN_EXTRA => [
+                $this->name => [
+                    iFace::COLUMN_EXTRA_EVENT => $event,
+                    iFace::COLUMN_EXTRA_DATE => makeDate(time()),
+                ],
             ],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = ag($item, 'grandparentTitle', '??');
-            $row['season'] = ag($item, 'parentIndex', 0);
-            $row['episode'] = ag($item, 'index', 0);
-            $row['extra']['title'] = ag($item, ['title', 'originalTitle'], '??');
+        if (iFace::TYPE_EPISODE === $type) {
+            $row[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
+            $row[iFace::COLUMN_SEASON] = ag($item, 'parentIndex', 0);
+            $row[iFace::COLUMN_EPISODE] = ag($item, 'index', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
+                $item,
+                ['title', 'originalTitle'],
+                '??'
+            );
 
             if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey'], null))) {
-                $row['parent'] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row)->setIsTainted($isTainted);
+        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+            ag($item, 'originallyAvailableAt', 'now')
+        )->format(
+            'Y-m-d'
+        );
+
+        $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
@@ -412,10 +422,6 @@ class PlexServer implements ServerInterface
             $message .= sprintf(' [%s].', arrayToString(['guids' => ag($item, 'Guid', 'None')]));
 
             throw new HttpException($message, 400);
-        }
-
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = ag($item, 'ratingKey');
         }
 
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
@@ -682,28 +688,20 @@ class PlexServer implements ServerInterface
 
             $iName = $entity->getName();
 
-            if (null === ($entity->suids[$this->name] ?? null)) {
-                foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->suids[$this->name] = $this->cacheData[$guid];
-                }
-
-                if (null === ($entity->suids[$this->name] ?? null)) {
-                    $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
-                    continue;
-                }
+            if (null === ($entity->metdata[$this->name][iFace::COLUMN_ID] ?? null)) {
+                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+                continue;
             }
 
             try {
-                $url = $this->url->withPath('/library/metadata/' . $entity->suids[$this->name])->withQuery(
-                    http_build_query(
-                        [
-                            'includeGuids' => 1
-                        ]
-                    )
-                );
+                $url = $this->url->withPath('/library/metadata/' . $entity->metdata[$this->name][iFace::COLUMN_ID])
+                    ->withQuery(
+                        http_build_query(
+                            [
+                                'includeGuids' => 1
+                            ]
+                        )
+                    );
 
                 $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
                     'url' => $url
@@ -716,7 +714,7 @@ class PlexServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
-                            'suid' => $entity->suids[$this->name],
+                            'suid' => $entity->metdata[$this->name][iFace::COLUMN_ID],
                         ]
                     ])
                 );
@@ -736,7 +734,7 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                assert($state instanceof StateInterface);
+                assert($state instanceof iFace);
 
                 switch ($response->getStatusCode()) {
                     case 200:
@@ -975,112 +973,13 @@ class PlexServer implements ServerInterface
         );
     }
 
-    public function cache(): array
-    {
-        return $this->getLibraries(
-            ok: function (string $cName, string $type) {
-                return function (ResponseInterface $response) use ($cName, $type) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            )
-                        );
-                        return;
-                    }
-
-                    try {
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
-
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/MediaContainer/Metadata',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
-                        );
-
-                        foreach ($it as $entity) {
-                            if ($entity instanceof DecodingError) {
-                                $this->logger->debug(
-                                    sprintf(
-                                        '%s: Failed to decode one of \'%s\' items. %s',
-                                        $this->name,
-                                        $cName,
-                                        $entity->getErrorMessage()
-                                    ),
-                                    [
-                                        'payload' => $entity->getMalformedJson(),
-                                    ]
-                                );
-                                continue;
-                            }
-
-                            $this->processCache($entity, $type, $cName);
-                        }
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to find items in \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    }
-
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
-                };
-            },
-            error: function (string $cName, string $type, UriInterface|string $url) {
-                return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]
-                );
-            },
-            includeParent: true
-        );
-    }
-
     /**
      * @throws InvalidArgumentException
      */
     public function __destruct()
     {
-        if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
-            $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
-        }
-
-        if (!empty($this->cacheShowKey) && !empty($this->cacheShow) && true === $this->initialized) {
-            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('P7D'));
+        if (!empty($this->cacheKey) && !empty($this->cache) && true === $this->initialized) {
+            $this->cacheIO->set($this->cacheKey, $this->cache, new DateInterval('P3D'));
         }
     }
 
@@ -1240,7 +1139,7 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
-            $type = $type === 'movie' ? StateInterface::TYPE_MOVIE : StateInterface::TYPE_EPISODE;
+            $type = $type === 'movie' ? iFace::TYPE_MOVIE : iFace::TYPE_EPISODE;
 
             if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
                 $ignored++;
@@ -1320,7 +1219,7 @@ class PlexServer implements ServerInterface
             Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
 
-            if (StateInterface::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
@@ -1403,30 +1302,6 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function processCache(StdClass $item, string $type, string $library): void
-    {
-        try {
-            if ('show' === $type) {
-                $this->processShow($item, $library);
-                return;
-            }
-
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
-                return;
-            }
-
-            $this->createEntity($item, $type);
-        } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-        }
-    }
-
     protected function processExport(
         ExportInterface $mapper,
         string $type,
@@ -1437,7 +1312,7 @@ class PlexServer implements ServerInterface
         try {
             Data::increment($this->name, $type . '_total');
 
-            if (StateInterface::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
@@ -1631,7 +1506,45 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cacheShow[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
+        $this->cache['shows'][$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
+    }
+
+    protected function parseGuids(array $guids): array
+    {
+        $guid = [];
+
+        foreach ($guids as $_id) {
+            try {
+                $val = is_object($_id) ? $_id->id : $_id['id'];
+
+                if (empty($val)) {
+                    continue;
+                }
+
+                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
+                    // -- DO NOT accept plex relative unique ids, we generate our own.
+                    if (substr_count($val, '/') >= 3) {
+                        continue;
+                    }
+                    $val = $this->parseLegacyAgent($val);
+                }
+
+                if (false === str_contains($val, '://')) {
+                    continue;
+                }
+
+                [$key, $value] = explode('://', $val);
+                $key = strtolower($key);
+
+                $guid[$key] = $value;
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        ksort($guid);
+
+        return $guid;
     }
 
     protected function getGuids(array $guids): array
@@ -1788,58 +1701,65 @@ class PlexServer implements ServerInterface
         $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
 
         $row = [
-            'type' => $type,
-            'updated' => $date,
-            'watched' => (int)(bool)($item->viewCount ?? false),
-            'via' => $this->name,
-            'title' => $item->title ?? $item->originalTitle ?? '??',
-            'year' => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
-            'season' => null,
-            'episode' => null,
-            'parent' => [],
-            'guids' => $this->getGuids($item->Guid ?? []),
-            'extra' => [
-                'date' => makeDate($item->originallyAvailableAt ?? 'now')->format('Y-m-d'),
+            iFace::COLUMN_TYPE => $type,
+            iFace::COLUMN_UPDATED => $date,
+            iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
+            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
+            iFace::COLUMN_YEAR => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
+            iFace::COLUMN_SEASON => null,
+            iFace::COLUMN_EPISODE => null,
+            iFace::COLUMN_PARENT => [],
+            iFace::COLUMN_GUIDS => $this->getGuids($item->Guid ?? []),
+            iFace::COLUMN_META_DATA => [
+                $this->name => [
+                    iFace::COLUMN_ID => (string)$item->ratingKey,
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)($item->viewCount ?? false),
+                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
+                    iFace::COLUMN_YEAR => (string)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
+                    iFace::COLUMN_GUIDS => $this->parseGuids($item->Guid ?? []),
+                ],
             ],
-            'suids' => [
-                $this->name => (string)$item->ratingKey,
-            ],
+            iFace::COLUMN_EXTRA => [],
         ];
 
-        if (StateInterface::TYPE_EPISODE === $type) {
-            $row['title'] = $item->grandparentTitle ?? '??';
-            $row['season'] = $item->parentIndex ?? 0;
-            $row['episode'] = $item->index ?? 0;
-            $row['extra']['title'] = $item->title ?? $item->originalTitle ?? '??';
+        if (iFace::TYPE_EPISODE === $type) {
+            $row[iFace::COLUMN_TITLE] = $item->grandparentTitle ?? '??';
+            $row[iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
+            $row[iFace::COLUMN_EPISODE] = $item->index ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->title ?? $item->originalTitle ?? '??';
 
             $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
 
             if (null !== $parentId) {
-                $row['parent'] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
+                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
         }
 
-        $entity = Container::get(StateInterface::class)::fromArray($row);
-
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = $item->ratingKey;
+        if (null !== ($item->originallyAvailableAt ?? null)) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+                $item->originallyAvailableAt ?? 'now'
+            )->format('Y-m-d');
         }
 
-        return $entity;
+        return Container::get(iFace::class)::fromArray($row);
     }
 
     protected function getEpisodeParent(int|string $id): array
     {
-        if (array_key_exists($id, $this->cacheShow)) {
-            return $this->cacheShow[$id];
+        if (array_key_exists($id, $this->cache['shows'] ?? [])) {
+            return $this->cache['shows'][$id];
         }
 
+        $url = (string)$this->url->withPath('/library/metadata/' . $id);
+
         try {
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath('/library/metadata/' . $id),
-                $this->getHeaders()
-            );
+            $response = $this->http->request('GET', $url, $this->getHeaders());
 
             if (200 !== $response->getStatusCode()) {
                 return [];
@@ -1864,18 +1784,19 @@ class PlexServer implements ServerInterface
             }
 
             if (!$this->hasSupportedGuids(guids: $json['Guid'])) {
-                $this->cacheShow[$id] = [];
-                return $this->cacheShow[$id];
+                $this->cache['shows'][$id] = [];
+                return [];
             }
 
-            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
 
-            return $this->cacheShow[$id];
+            return $this->cache['shows'][$id];
         } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
+                'url' => $url,
             ]);
             return [];
         } catch (JsonException $e) {
@@ -1884,6 +1805,7 @@ class PlexServer implements ServerInterface
                 [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
+                    'url' => $url,
                 ]
             );
             return [];
@@ -1894,6 +1816,7 @@ class PlexServer implements ServerInterface
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'url' => $url,
                 ]
             );
             return [];

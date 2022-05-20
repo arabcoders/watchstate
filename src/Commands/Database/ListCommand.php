@@ -6,7 +6,7 @@ namespace App\Commands\Database;
 
 use App\Command;
 use App\Libs\Container;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\Storage\StorageInterface;
 use Exception;
@@ -21,6 +21,16 @@ use Symfony\Component\Yaml\Yaml;
 
 final class ListCommand extends Command
 {
+    public const CHANGEABLE_COLUMNS = [
+        iFace::COLUMN_WATCHED,
+        iFace::COLUMN_VIA,
+        iFace::COLUMN_TITLE,
+        iFace::COLUMN_YEAR,
+        iFace::COLUMN_SEASON,
+        iFace::COLUMN_EPISODE,
+        iFace::COLUMN_UPDATED,
+    ];
+
     private PDO $pdo;
 
     public function __construct(private StorageInterface $storage)
@@ -54,6 +64,12 @@ final class ListCommand extends Command
             ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'sort order by [id, updated]', 'updated')
             ->addOption('asc', null, InputOption::VALUE_NONE, 'Sort records in ascending order.')
             ->addOption('desc', null, InputOption::VALUE_NONE, 'Sort records in descending order. (Default)')
+            ->addOption(
+                'metadata-as',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Display metadata from this server instead of latest.'
+            )
             ->setDescription('List Database entries.');
 
         foreach (array_keys(Guid::SUPPORTED) as $guid) {
@@ -67,13 +83,13 @@ final class ListCommand extends Command
         }
 
         $this->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent external ids instead.')
-            ->addOption('key', null, InputOption::VALUE_REQUIRED, 'For JSON fields key selection.')
-            ->addOption('value', null, InputOption::VALUE_REQUIRED, 'For JSON fields value selection.')
+            ->addOption('key', null, InputOption::VALUE_REQUIRED, 'For JSON Fields key selection.')
+            ->addOption('value', null, InputOption::VALUE_REQUIRED, 'For JSON Fields value selection.')
             ->addOption(
-                'suids',
+                'metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'Search in (server side ids) JSON Field using (--key, --value) options.'
+                'Search in (metadata) provided by servers JSON Field using (--key, --value) options.'
             )
             ->addOption(
                 'extra',
@@ -101,35 +117,35 @@ final class ListCommand extends Command
         $sql = "SELECT * FROM state ";
 
         if ($input->getOption('id')) {
-            $where[] = "id = :id";
+            $where[] = iFace::COLUMN_ID . ' = :id';
             $params['id'] = $input->getOption('id');
         }
 
         if ($input->getOption('via')) {
-            $where[] = "via = :via";
+            $where[] = iFace::COLUMN_VIA . ' = :via';
             $params['via'] = $input->getOption('via');
         }
 
         if ($input->getOption('type')) {
-            $where[] = "type = :type";
+            $where[] = iFace::COLUMN_TYPE . ' = :type';
             $params['type'] = match ($input->getOption('type')) {
-                StateInterface::TYPE_MOVIE => StateInterface::TYPE_MOVIE,
-                default => StateInterface::TYPE_EPISODE,
+                iFace::TYPE_MOVIE => iFace::TYPE_MOVIE,
+                default => iFace::TYPE_EPISODE,
             };
         }
 
         if ($input->getOption('title')) {
-            $where[] = "title LIKE '%' || :title || '%'";
+            $where[] = iFace::COLUMN_TITLE . " LIKE '%' || :title || '%'";
             $params['title'] = $input->getOption('title');
         }
 
         if (null !== $input->getOption('season')) {
-            $where[] = "season = :season";
+            $where[] = iFace::COLUMN_SEASON . ' = :season';
             $params['season'] = $input->getOption('season');
         }
 
         if (null !== $input->getOption('episode')) {
-            $where[] = "episode = :episode";
+            $where[] = iFace::COLUMN_EPISODE . ' = :episode';
             $params['episode'] = $input->getOption('episode');
         }
 
@@ -138,7 +154,7 @@ final class ListCommand extends Command
                 if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
-                $where[] = "json_extract(parent,'$.{$guid}') = :{$guid}";
+                $where[] = "json_extract(" . iFace::COLUMN_PARENT . ",'$.{$guid}') = :{$guid}";
                 $params[$guid] = $val;
             }
         } else {
@@ -146,35 +162,35 @@ final class ListCommand extends Command
                 if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
-                $where[] = "json_extract(guids,'$.{$guid}') = :{$guid}";
+                $where[] = "json_extract(" . iFace::COLUMN_GUIDS . ",'$.{$guid}') = :{$guid}";
                 $params[$guid] = $val;
             }
         }
 
-        if ($input->getOption('suids')) {
+        if ($input->getOption('metadata')) {
             $sField = $input->getOption('key');
             $sValue = $input->getOption('value');
-            if (empty($sField) || empty($sValue)) {
+            if (null === $sField || null === $sValue) {
                 throw new RuntimeException(
                     'When searching using JSON fields the option --key and --value must be set.'
                 );
             }
 
-            $where[] = "json_extract(suids,'$.{$sField}') = :suids_{$sField}";
-            $params['suids_' . $sField] = $sValue;
+            $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value";
+            $params['jf_metadata_value'] = $sValue;
         }
 
         if ($input->getOption('extra')) {
             $sField = $input->getOption('key');
             $sValue = $input->getOption('value');
-            if (empty($sField) || empty($sValue)) {
+            if (null === $sField || null === $sValue) {
                 throw new RuntimeException(
                     'When searching using JSON fields the option --key and --value must be set.'
                 );
             }
 
-            $where[] = "json_extract(extra,'$.{$sField}') = :extra_{$sField}";
-            $params['extra_' . $sField] = $sValue;
+            $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
+            $params['jf_extra_value'] = $sValue;
         }
 
         if (count($where) >= 1) {
@@ -182,11 +198,11 @@ final class ListCommand extends Command
         }
 
         $sort = match ($input->getOption('sort')) {
-            'id' => 'id',
-            'season' => 'season',
-            'episode' => 'episode',
-            'type' => 'type',
-            default => 'updated',
+            'id' => iFace::COLUMN_ID,
+            'season' => iFace::COLUMN_SEASON,
+            'episode' => iFace::COLUMN_EPISODE,
+            'type' => iFace::COLUMN_TYPE,
+            default => iFace::COLUMN_UPDATED,
         };
 
         $sortOrder = ($input->getOption('asc')) ? 'ASC' : 'DESC';
@@ -226,20 +242,36 @@ final class ListCommand extends Command
             return self::FAILURE;
         }
 
-        if ('json' === $input->getOption('output')) {
-            foreach ($rows as &$row) {
-                $row['watched'] = (bool)$row['watched'];
-                $row['updated'] = makeDate($row['updated']);
-                foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
-                    if (null === ($row[$key] ?? null)) {
+        foreach ($rows as &$row) {
+            foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
+                if (null === ($row[$key] ?? null)) {
+                    continue;
+                }
+                $row[$key] = json_decode($row[$key], true);
+            }
+
+            if (null !== ($via = $input->getOption('metadata-as'))) {
+                $path = $row[iFace::COLUMN_META_DATA][$via] ?? [];
+
+                foreach (self::CHANGEABLE_COLUMNS as $column) {
+                    if (null === ($path[$column] ?? null)) {
                         continue;
                     }
-                    $row[$key] = json_decode($row[$key], true);
+
+                    $row[$column] = 'int' === get_debug_type($row[$column]) ? (int)$path[$column] : $path[$column];
+                }
+                if (null !== ($row[iFace::COLUMN_EXTRA][$via][iFace::COLUMN_EXTRA_DATE] ?? null)) {
+                    $row[iFace::COLUMN_UPDATED] = $row[iFace::COLUMN_EXTRA][$via][iFace::COLUMN_EXTRA_DATE];
                 }
             }
 
-            unset($row);
+            $row[iFace::COLUMN_WATCHED] = (bool)$row[iFace::COLUMN_WATCHED];
+            $row[iFace::COLUMN_UPDATED] = makeDate($row[iFace::COLUMN_UPDATED]);
+        }
 
+        unset($row);
+
+        if ('json' === $input->getOption('output')) {
             $output->writeln(
                 json_encode(
                     1 === count($rows) ? $rows[0] : $rows,
@@ -247,34 +279,25 @@ final class ListCommand extends Command
                 )
             );
         } elseif ('yaml' === $input->getOption('output')) {
-            foreach ($rows as &$row) {
-                $row['watched'] = (bool)$row['watched'];
-                $row['updated'] = makeDate($row['updated']);
-                foreach (StateInterface::ENTITY_ARRAY_KEYS as $key) {
-                    if (null === ($row[$key] ?? null)) {
-                        continue;
-                    }
-                    $row[$key] = json_decode($row[$key], true);
-                }
-            }
-
-            unset($row);
             $output->writeln(Yaml::dump(1 === count($rows) ? $rows[0] : $rows, 8, 2));
         } else {
             $x = 0;
 
             foreach ($rows as $row) {
-                $entity = Container::get(StateInterface::class)->fromArray($row);
+                $row[iFace::COLUMN_UPDATED] = $row[iFace::COLUMN_UPDATED]->getTimestamp();
+                $row[iFace::COLUMN_WATCHED] = (int)$row[iFace::COLUMN_WATCHED];
+                $entity = Container::get(iFace::class)->fromArray($row);
 
                 $x++;
 
                 $list[] = [
                     $entity->id,
+                    ucfirst($entity->type),
                     $entity->getName(),
                     $entity->via ?? '??',
                     makeDate($entity->updated)->format('Y-m-d H:i:s T'),
                     $entity->isWatched() ? 'Yes' : 'No',
-                    ag($entity->extra, 'webhook.event', '-'),
+                    ag($entity->extra[$entity->via] ?? [], iFace::COLUMN_EXTRA_EVENT, '-'),
                 ];
 
                 if ($x < $rowCount) {
@@ -284,7 +307,7 @@ final class ListCommand extends Command
 
             $rows = null;
 
-            (new Table($output))->setHeaders(['Id', 'Title', 'Via (Temp)', 'Date', 'Played', 'WH Event'])
+            (new Table($output))->setHeaders(['Id', 'Type', 'Title', 'Via (Last)', 'Date', 'Played', 'Webhook Event'])
                 ->setStyle('box')->setRows($list)->render();
         }
 

@@ -7,6 +7,7 @@ WS_NO_CHOWN=${WS_NO_CHOWN:-0}
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
 WS_DISABLE_CRON=${WS_DISABLE_CRON:-0}
 WS_DISABLE_REDIS=${WS_DISABLE_REDIS:-0}
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 
 set -u
 
@@ -36,7 +37,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
 fi
 
 if [ 0 == "${WS_NO_CHOWN}" ]; then
-  chown -R www-data:www-data /config /var/lib/nginx/
+  chown -R www-data:www-data /config /var/lib/nginx/ /etc/redis.conf
 fi
 
 /usr/bin/console config:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
@@ -45,22 +46,21 @@ fi
 /usr/bin/console storage:maintenance
 
 if [ 0 == "${WS_DISABLE_HTTP}" ]; then
-  echo "Starting Nginx server.."
+  echo "[${TIME_DATE}] Starting HTTP Server.."
   nginx
 fi
 
 if [ 0 == "${WS_DISABLE_CRON}" ]; then
-  echo "Starting cron..."
+  echo "[${TIME_DATE}] Starting Task Scheduler..."
   /usr/sbin/crond -b -l 2
 fi
 
 if [ 0 == "${WS_DISABLE_REDIS}" ]; then
-  echo "Starting Redis Server..."
-  redis-server /etc/redis.conf --daemonize yes
+  echo "[${TIME_DATE}] Starting Redis Server..."
+  runuser -u www-data -- redis-server "/etc/redis.conf"
 fi
 
-APP_VERSION=$(/usr/bin/console --version)
-echo "Running ${APP_VERSION}"
+echo "[${TIME_DATE}] Running $(/usr/bin/console --version)"
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then

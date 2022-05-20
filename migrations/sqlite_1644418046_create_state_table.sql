@@ -2,18 +2,19 @@
 
 CREATE TABLE "state"
 (
-    "id"      integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "type"    text    NOT NULL,
-    "updated" integer NOT NULL,
-    "watched" integer NOT NULL DEFAULT '0',
-    "via"     text    NOT NULL,
-    "title"   text    NOT NULL,
-    "year"    integer NULL,
-    "season"  integer NULL,
-    "episode" integer NULL,
-    "parent"  text    NULL,
-    "guids"   text    NULL,
-    "extra"   text    NULL
+    "id"       integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "type"     text    NOT NULL,
+    "updated"  integer NOT NULL,
+    "watched"  integer NOT NULL DEFAULT '0',
+    "via"      text    NOT NULL,
+    "title"    text    NOT NULL,
+    "year"     integer NULL,
+    "season"   integer NULL,
+    "episode"  integer NULL,
+    "parent"   text    NULL,
+    "guids"    text    NULL,
+    "metadata" text    NULL,
+    "extra"    text    NULL
 );
 
 CREATE INDEX "state_type" ON "state" ("type");
@@ -26,6 +27,7 @@ CREATE INDEX "state_season" ON "state" ("season");
 CREATE INDEX "state_episode" ON "state" ("episode");
 CREATE INDEX "state_parent" ON "state" ("parent");
 CREATE INDEX "state_guids" ON "state" ("guids");
+CREATE INDEX "state_metadata" ON "state" ("metadata");
 CREATE INDEX "state_extra" ON "state" ("extra");
 
 -- # migrate_down

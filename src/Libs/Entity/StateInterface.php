@@ -23,8 +23,13 @@ interface StateInterface
     public const COLUMN_EPISODE = 'episode';
     public const COLUMN_PARENT = 'parent';
     public const COLUMN_GUIDS = 'guids';
+    public const COLUMN_META_DATA = 'metadata';
+    public const COLUMN_META_DATA_EXTRA = 'extra';
+    public const COLUMN_META_DATA_EXTRA_TITLE = 'title';
     public const COLUMN_EXTRA = 'extra';
-    public const COLUMN_SUIDS = 'suids';
+    public const COLUMN_EXTRA_EVENT = 'event';
+    public const COLUMN_EXTRA_DATE = 'received_at';
+    public const COLUMN_META_DATA_EXTRA_DATE = 'date';
 
     /**
      * List of table keys.
@@ -41,8 +46,8 @@ interface StateInterface
         self::COLUMN_EPISODE,
         self::COLUMN_PARENT,
         self::COLUMN_GUIDS,
+        self::COLUMN_META_DATA,
         self::COLUMN_EXTRA,
-        self::COLUMN_SUIDS,
     ];
 
     /**
@@ -50,18 +55,18 @@ interface StateInterface
      */
     public const ENTITY_IGNORE_DIFF_CHANGES = [
         self::COLUMN_VIA,
-        self::COLUMN_EXTRA,
         self::COLUMN_TITLE,
         self::COLUMN_YEAR,
+        self::COLUMN_EXTRA,
     ];
 
     /**
-     * Fields that if changed will trigger an update regardless of the watchstate or event.
+     * Fields that if changed will trigger an update regardless of the watch state or event.
      */
     public const ENTITY_FORCE_UPDATE_FIELDS = [
         self::COLUMN_PARENT,
         self::COLUMN_GUIDS,
-        self::COLUMN_SUIDS,
+        self::COLUMN_META_DATA,
     ];
 
     /**
@@ -70,8 +75,8 @@ interface StateInterface
     public const ENTITY_ARRAY_KEYS = [
         self::COLUMN_PARENT,
         self::COLUMN_GUIDS,
+        self::COLUMN_META_DATA,
         self::COLUMN_EXTRA,
-        self::COLUMN_SUIDS,
     ];
 
     /**
