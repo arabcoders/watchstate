@@ -307,9 +307,6 @@ the check if you happen to enable `strict user match` for jellyfin.
 - (int) `WS_CRON_PUSH` enable push scheduled task.
 - (string) `WS_CRON_PUSH_AT` cron expression timer.
 - (string) `WS_CRON_PUSH_DEBUG_LEVEL` set debug level. Defaults to `-v`
-- (int) `WS_CRON_CACHE` enable caching of GUIDs relations.
-- (string) `WS_CRON_CACHE_AT` cron expression timer.
-- (string) `WS_CRON_CACHE_DEBUG_LEVEL` set debug level. Defaults to `-v`
 - (string) `WS_LOGS_PRUNE_AFTER` Delete logs older than specified time, set to `disable` to disable logs pruning. it
   follows php [strtotime](https://www.php.net/strtotime) function rules.
 - (bool) `WS_DEBUG_IMPORT` Whether to log invalid GUID items from server in `${WS_TMP_DIR}/debug`.
