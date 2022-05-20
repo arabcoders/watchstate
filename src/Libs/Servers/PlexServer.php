@@ -736,7 +736,7 @@ class PlexServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
-                            'suid' => $$entity->metdata[$this->name][iFace::COLUMN_ID],
+                            'suid' => $entity->metdata[$this->name][iFace::COLUMN_ID],
                         ]
                     ])
                 );
