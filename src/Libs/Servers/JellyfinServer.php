@@ -73,17 +73,16 @@ class JellyfinServer implements ServerInterface
     protected bool $initialized = false;
     protected bool $isEmby = false;
     protected array $persist = [];
-    protected string $cacheKey = '';
-    protected array $cacheData = [];
-    protected string|int|null $uuid = null;
 
-    protected array $cacheShow = [];
-    protected string $cacheShowKey = '';
+    protected string $cacheKey = '';
+    protected array $cache = [];
+
+    protected string|int|null $uuid = null;
 
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cache
+        protected CacheInterface $cacheIO
     ) {
     }
 
@@ -105,8 +104,6 @@ class JellyfinServer implements ServerInterface
 
         $cloned = clone $this;
 
-        $cloned->cacheData = [];
-        $cloned->cacheShow = [];
         $cloned->name = $name;
         $cloned->url = $url;
         $cloned->token = $token;
@@ -116,15 +113,11 @@ class JellyfinServer implements ServerInterface
         $cloned->isEmby = (bool)($options['emby'] ?? false);
         $cloned->initialized = true;
 
-        $cloned->cacheKey = $options['cache_key'] ?? md5(__CLASS__ . '.' . $name . ($userId ?? $token) . $url);
-        $cloned->cacheShowKey = $cloned->cacheKey . '_show';
+        $cloned->cache = [];
+        $cloned->cacheKey = $cloned::NAME . '_' . $name;
 
-        if ($cloned->cache->has($cloned->cacheKey)) {
-            $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
-        }
-
-        if ($cloned->cache->has($cloned->cacheShowKey)) {
-            $cloned->cacheShow = $cloned->cache->get($cloned->cacheShowKey);
+        if ($cloned->cacheIO->has($cloned->cacheKey)) {
+            $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
         }
 
         if (null !== ($options['emby'] ?? null)) {
@@ -389,10 +382,6 @@ class JellyfinServer implements ServerInterface
             throw new HttpException($message, 400);
         }
 
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Item.ItemId');
-        }
-
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
 
         if (false === $isTainted && $savePayload) {
@@ -655,17 +644,8 @@ class JellyfinServer implements ServerInterface
             $iName = $entity->getName();
 
             if (null === ($entity->metadata[$this->name][iFace::COLUMN_ID] ?? null)) {
-                foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->metadata[$this->name][iFace::COLUMN_ID] = $this->cacheData[$guid];
-                }
-
-                if (null === ($entity->metadata[$this->name][iFace::COLUMN_ID] ?? null)) {
-                    $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
-                    continue;
-                }
+                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+                continue;
             }
 
             try {
@@ -1041,12 +1021,8 @@ class JellyfinServer implements ServerInterface
      */
     public function __destruct()
     {
-        if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
-            $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
-        }
-
-        if (!empty($this->cacheShowKey) && !empty($this->cacheShow) && true === $this->initialized) {
-            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('P7D'));
+        if (!empty($this->cacheKey) && !empty($this->cache) && true === $this->initialized) {
+            $this->cacheIO->set($this->cacheKey, $this->cache, new DateInterval('P3D'));
         }
     }
 
@@ -1601,8 +1577,8 @@ class JellyfinServer implements ServerInterface
         }
 
         $cacheName = ag($item, ['Name', 'OriginalTitle'], '??') . ':' . ag($item, 'ProductionYear', 0000);
-        $this->cacheShow[$item->Id] = Guid::fromArray($this->getGuids($providersId))->getAll();
-        $this->cacheShow[$cacheName] = &$this->cacheShow[$item->Id];
+        $this->cache['shows'][$item->Id] = Guid::fromArray($this->getGuids($providersId))->getAll();
+        $this->cache['shows'][$cacheName] = &$this->cache['shows'][$item->Id];
     }
 
     protected function getGuids(array $ids): array
@@ -1696,7 +1672,7 @@ class JellyfinServer implements ServerInterface
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name ?? $item->OriginalTitle ?? '??';
 
             if (null !== ($item->SeriesId ?? null)) {
-                $row[iFace::COLUMN_PARENT] = $this->cacheShow[$item->SeriesId] ?? [];
+                $row[iFace::COLUMN_PARENT] = $this->cache['shows'][$item->SeriesId] ?? [];
                 $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
         }
@@ -1705,19 +1681,13 @@ class JellyfinServer implements ServerInterface
             $item->PremiereDate ?? $item->ProductionYear ?? 'now'
         )->format('Y-m-d');
 
-        $entity = Container::get(iFace::class)::fromArray($row);
-
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = $item->Id;
-        }
-
-        return $entity;
+        return Container::get(iFace::class)::fromArray($row);
     }
 
     protected function getEpisodeParent(mixed $id, string $cacheName): array
     {
-        if (array_key_exists($cacheName, $this->cacheShow)) {
-            return $this->cacheShow[$cacheName];
+        if (array_key_exists($cacheName, $this->cache['shows'] ?? [])) {
+            return $this->cache['shows'][$cacheName];
         }
 
         try {
@@ -1751,13 +1721,15 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
 
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath(
-                    sprintf('/Users/%s/items/' . $seriesId, $this->user)
-                )->withQuery(http_build_query(['Fields' => 'ProviderIds'])),
-                $this->getHeaders()
+            $url = (string)$this->url->withPath(sprintf('/Users/%s/items/' . $seriesId, $this->user))->withQuery(
+                http_build_query(
+                    [
+                        'Fields' => 'ProviderIds'
+                    ]
+                )
             );
+
+            $response = $this->http->request('GET', $url, $this->getHeaders());
 
             if (200 !== $response->getStatusCode()) {
                 return [];
@@ -1772,19 +1744,20 @@ class JellyfinServer implements ServerInterface
             $providersId = (array)ag($json, 'ProviderIds', []);
 
             if (!$this->hasSupportedIds($providersId)) {
-                $this->cacheShow[$cacheName] = $this->cacheShow[$seriesId] = [];
-                return $this->cacheShow[$cacheName];
+                $this->cache['shows'][$seriesId] = $this->cache['shows'][$cacheName] = [];
+                return [];
             }
 
-            $this->cacheShow[$seriesId] = Guid::fromArray($this->getGuids($providersId))->getAll();
-            $this->cacheShow[$cacheName] = &$this->cacheShow[$seriesId];
+            $this->cache['shows'][$seriesId] = Guid::fromArray($this->getGuids($providersId))->getAll();
+            $this->cache['shows'][$cacheName] = &$this->cache['shows'][$seriesId];
 
-            return $this->cacheShow[$seriesId];
+            return $this->cache['shows'][$seriesId];
         } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
+                'url' => $url ?? null,
             ]);
             return [];
         } catch (JsonException $e) {
@@ -1793,6 +1766,7 @@ class JellyfinServer implements ServerInterface
                 [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
+                    'url' => $url ?? null,
                 ]
             );
             return [];
@@ -1803,6 +1777,7 @@ class JellyfinServer implements ServerInterface
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'url' => $url ?? null,
                 ]
             );
             return [];

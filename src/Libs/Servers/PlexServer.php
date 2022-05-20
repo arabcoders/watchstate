@@ -100,19 +100,15 @@ class PlexServer implements ServerInterface
     protected string $name = '';
     protected array $persist = [];
     protected string $cacheKey = '';
-    protected array $cacheData = [];
-
-    protected string $cacheShowKey = '';
-    protected array $cacheShow = [];
+    protected array $cache = [];
 
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
 
-
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cache
+        protected CacheInterface $cacheIO
     ) {
     }
 
@@ -130,8 +126,6 @@ class PlexServer implements ServerInterface
     ): ServerInterface {
         $cloned = clone $this;
 
-        $cloned->cacheData = [];
-        $cloned->cacheShow = [];
         $cloned->name = $name;
         $cloned->url = $url;
         $cloned->token = $token;
@@ -139,16 +133,13 @@ class PlexServer implements ServerInterface
         $cloned->uuid = $uuid;
         $cloned->options = $options;
         $cloned->persist = $persist;
-        $cloned->cacheKey = $options['cache_key'] ?? md5(__CLASS__ . '.' . $name . $url);
-        $cloned->cacheShowKey = $cloned->cacheKey . '_show';
         $cloned->initialized = true;
 
-        if ($cloned->cache->has($cloned->cacheKey)) {
-            $cloned->cacheData = $cloned->cache->get($cloned->cacheKey);
-        }
+        $cloned->cache = [];
+        $cloned->cacheKey = $cloned::NAME . '_' . $name;
 
-        if ($cloned->cache->has($cloned->cacheShowKey)) {
-            $cloned->cacheShow = $cloned->cache->get($cloned->cacheShowKey);
+        if ($cloned->cacheIO->has($cloned->cacheKey)) {
+            $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
         }
 
         return $cloned;
@@ -433,10 +424,6 @@ class PlexServer implements ServerInterface
             throw new HttpException($message, 400);
         }
 
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = ag($item, 'ratingKey');
-        }
-
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
 
         if (false !== $isTainted && $savePayload) {
@@ -702,17 +689,8 @@ class PlexServer implements ServerInterface
             $iName = $entity->getName();
 
             if (null === ($entity->metdata[$this->name][iFace::COLUMN_ID] ?? null)) {
-                foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-                    if (null === ($this->cacheData[$guid] ?? null)) {
-                        continue;
-                    }
-                    $entity->metdata[$this->name][iFace::COLUMN_ID] = $this->cacheData[$guid];
-                }
-
-                if (null === ($entity->metdata[$this->name][iFace::COLUMN_ID] ?? null)) {
-                    $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
-                    continue;
-                }
+                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+                continue;
             }
 
             try {
@@ -995,112 +973,13 @@ class PlexServer implements ServerInterface
         );
     }
 
-    public function cache(): array
-    {
-        return $this->getLibraries(
-            ok: function (string $cName, string $type) {
-                return function (ResponseInterface $response) use ($cName, $type) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            )
-                        );
-                        return;
-                    }
-
-                    try {
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
-
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/MediaContainer/Metadata',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
-                        );
-
-                        foreach ($it as $entity) {
-                            if ($entity instanceof DecodingError) {
-                                $this->logger->debug(
-                                    sprintf(
-                                        '%s: Failed to decode one of \'%s\' items. %s',
-                                        $this->name,
-                                        $cName,
-                                        $entity->getErrorMessage()
-                                    ),
-                                    [
-                                        'payload' => $entity->getMalformedJson(),
-                                    ]
-                                );
-                                continue;
-                            }
-
-                            $this->processCache($entity, $type, $cName);
-                        }
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to find items in \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    }
-
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
-                };
-            },
-            error: function (string $cName, string $type, UriInterface|string $url) {
-                return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]
-                );
-            },
-            includeParent: true
-        );
-    }
-
     /**
      * @throws InvalidArgumentException
      */
     public function __destruct()
     {
-        if (!empty($this->cacheKey) && !empty($this->cacheData) && true === $this->initialized) {
-            $this->cache->set($this->cacheKey, $this->cacheData, new DateInterval('P1Y'));
-        }
-
-        if (!empty($this->cacheShowKey) && !empty($this->cacheShow) && true === $this->initialized) {
-            $this->cache->set($this->cacheShowKey, $this->cacheShow, new DateInterval('P7D'));
+        if (!empty($this->cacheKey) && !empty($this->cache) && true === $this->initialized) {
+            $this->cacheIO->set($this->cacheKey, $this->cache, new DateInterval('P3D'));
         }
     }
 
@@ -1423,30 +1302,6 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function processCache(StdClass $item, string $type, string $library): void
-    {
-        try {
-            if ('show' === $type) {
-                $this->processShow($item, $library);
-                return;
-            }
-
-            $date = (int)($item->lastViewedAt ?? $item->updatedAt ?? $item->addedAt ?? 0);
-
-            if (0 === $date) {
-                return;
-            }
-
-            $this->createEntity($item, $type);
-        } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-        }
-    }
-
     protected function processExport(
         ExportInterface $mapper,
         string $type,
@@ -1651,7 +1506,7 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cacheShow[$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
+        $this->cache['shows'][$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
     }
 
     protected function parseGuids(array $guids): array
@@ -1886,33 +1741,25 @@ class PlexServer implements ServerInterface
             }
         }
 
-        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-            $item->originallyAvailableAt ?? 'now'
-        )->format(
-            'Y-m-d'
-        );
-
-        $entity = Container::get(iFace::class)::fromArray($row);
-
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = $item->ratingKey;
+        if (null !== ($item->originallyAvailableAt ?? null)) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+                $item->originallyAvailableAt ?? 'now'
+            )->format('Y-m-d');
         }
 
-        return $entity;
+        return Container::get(iFace::class)::fromArray($row);
     }
 
     protected function getEpisodeParent(int|string $id): array
     {
-        if (array_key_exists($id, $this->cacheShow)) {
-            return $this->cacheShow[$id];
+        if (array_key_exists($id, $this->cache['shows'] ?? [])) {
+            return $this->cache['shows'][$id];
         }
 
+        $url = (string)$this->url->withPath('/library/metadata/' . $id);
+
         try {
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath('/library/metadata/' . $id),
-                $this->getHeaders()
-            );
+            $response = $this->http->request('GET', $url, $this->getHeaders());
 
             if (200 !== $response->getStatusCode()) {
                 return [];
@@ -1937,18 +1784,19 @@ class PlexServer implements ServerInterface
             }
 
             if (!$this->hasSupportedGuids(guids: $json['Guid'])) {
-                $this->cacheShow[$id] = [];
-                return $this->cacheShow[$id];
+                $this->cache['shows'][$id] = [];
+                return [];
             }
 
-            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
 
-            return $this->cacheShow[$id];
+            return $this->cache['shows'][$id];
         } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'kind' => get_class($e),
+                'url' => $url,
             ]);
             return [];
         } catch (JsonException $e) {
@@ -1957,6 +1805,7 @@ class PlexServer implements ServerInterface
                 [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
+                    'url' => $url,
                 ]
             );
             return [];
@@ -1967,6 +1816,7 @@ class PlexServer implements ServerInterface
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'url' => $url,
                 ]
             );
             return [];

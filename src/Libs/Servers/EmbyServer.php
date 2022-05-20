@@ -196,10 +196,6 @@ class EmbyServer extends JellyfinServer
             throw new HttpException($message, 400);
         }
 
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $guid) {
-            $this->cacheData[$guid] = ag($json, 'Item.Id');
-        }
-
         $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
 
         if (false === $isTainted && $savePayload) {
@@ -211,8 +207,8 @@ class EmbyServer extends JellyfinServer
 
     protected function getEpisodeParent(mixed $id, string $cacheName): array
     {
-        if (array_key_exists($id, $this->cacheShow)) {
-            return $this->cacheShow[$id];
+        if (array_key_exists($id, $this->cache['shows'] ?? [])) {
+            return $this->cache['shows'][$id];
         }
 
         try {
@@ -241,13 +237,13 @@ class EmbyServer extends JellyfinServer
             $providersId = (array)ag($json, 'ProviderIds', []);
 
             if (!$this->hasSupportedIds($providersId)) {
-                $this->cacheShow[$id] = [];
-                return $this->cacheShow[$id];
+                $this->cache['shows'][$id] = [];
+                return [];
             }
 
-            $this->cacheShow[$id] = Guid::fromArray($this->getGuids($providersId))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId))->getAll();
 
-            return $this->cacheShow[$id];
+            return $this->cache['shows'][$id];
         } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
