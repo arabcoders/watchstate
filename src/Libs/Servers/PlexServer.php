@@ -1358,7 +1358,7 @@ class PlexServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - [%s - (%dx%d)]',
+                        '%s - [%s - (%sx%s)]',
                         $library,
                         $item->grandparentTitle ?? $item->originalTitle ?? '??',
                         str_pad((string)($item->parentIndex ?? 0), 2, '0', STR_PAD_LEFT),

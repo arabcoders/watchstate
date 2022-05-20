@@ -1457,7 +1457,7 @@ class JellyfinServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - [%s - (%dx%d)]',
+                        '%s - [%s - (%sx%s)]',
                         $library,
                         $item->SeriesName ?? '??',
                         str_pad((string)($item->ParentIndexNumber ?? 0), 2, '0', STR_PAD_LEFT),
