@@ -92,6 +92,11 @@ return (function () {
         ],
     ];
 
+    $config['cache'] = [
+        'url' => env('WS_CACHE_URL', 'redis://127.0.0.1:6379'),
+        'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
+    ];
+
     $config['logger'] = [
         'file' => [
             'type' => 'stream',

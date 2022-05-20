@@ -19,6 +19,7 @@ use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -45,7 +46,49 @@ return (function (): array {
         ],
 
         CacheInterface::class => [
-            'class' => fn() => new Psr16Cache(new FilesystemAdapter(directory: Config::get('tmpDir') . '/cache'))
+            'class' => function () {
+                if (!extension_loaded('redis')) {
+                    return new Psr16Cache(
+                        new FilesystemAdapter(
+                            namespace: getAppVersion(),
+                            directory: Config::get('cache.path')
+                        )
+                    );
+                }
+
+                try {
+                    $uri = new Uri(Config::get('cache.url'));
+                    $params = [];
+
+                    if (!empty($uri->getQuery())) {
+                        parse_str($uri->getQuery(), $params);
+                    }
+
+                    $redis = new Redis();
+
+                    $redis->connect($uri->getHost(), $uri->getPort() ?? 6379);
+
+                    if (null !== ag($params, 'password')) {
+                        $redis->auth(ag($params, 'password'));
+                    }
+
+                    if (null !== ag($params, 'db')) {
+                        $redis->select((int)ag($params, 'db'));
+                    }
+
+                    $backend = new RedisAdapter(
+                        redis:     $redis,
+                        namespace: getAppVersion()
+                    );
+                } catch (Throwable) {
+                    $backend = new FilesystemAdapter(
+                        namespace: getAppVersion(),
+                        directory: Config::get('cache.path')
+                    );
+                }
+
+                return new Psr16Cache($backend);
+            }
         ],
 
         UriInterface::class => [
