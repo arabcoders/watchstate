@@ -24,6 +24,7 @@ RUN echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     cp /app/docker/files/entrypoint.sh /usr/bin/entrypoint-docker && \
     cp /app/docker/files/app_console.sh /usr/bin/console && \
     cp /app/docker/files/cron.sh /usr/bin/run-app-cron && \
+    cp /app/docker/files/redis.conf /etc/redis.conf && \
     rm -rf /app/docker/ /app/var/ /app/.github/ && \
     chmod +x /usr/bin/run-app-cron /usr/bin/console /usr/bin/entrypoint-docker && \
     chown -R www-data:www-data /app /config /var/lib/nginx/
