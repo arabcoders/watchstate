@@ -87,14 +87,9 @@ final class StateEntity implements iFace
             }
 
             if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
-                $changes = computeArrayChanges($this->data[$key] ?? [], $value ?? []);
+                $changes = $this->arrayDiff($this->data[$key] ?? [], $value ?? []);
                 if (!empty($changes)) {
-                    foreach (array_keys($changes) as $subKey) {
-                        $changed[$key][$subKey] = [
-                            'old' => $this->data[$key][$subKey] ?? 'None',
-                            'new' => $value[$subKey] ?? 'None'
-                        ];
-                    }
+                    $changed[$key] = $changes;
                 }
             } else {
                 $changed[$key] = [
@@ -312,4 +307,36 @@ final class StateEntity implements iFace
             $this->{$key} = $entity->{$key};
         }
     }
+
+    private function arrayDiff(array $oldArray, array $newArray): array
+    {
+        $difference = [];
+
+        foreach ($newArray as $key => $value) {
+            if (false === is_array($value)) {
+                if (!array_key_exists($key, $oldArray) || $oldArray[$key] !== $value) {
+                    $difference[$key] = [
+                        'old' => $oldArray[$key] ?? 'None',
+                        'new' => $value ?? 'None',
+                    ];
+                }
+                continue;
+            }
+
+            if (!isset($oldArray[$key]) || !is_array($oldArray[$key])) {
+                $difference[$key] = [
+                    'old' => $oldArray[$key] ?? 'None',
+                    'new' => $value ?? 'None',
+                ];
+            } else {
+                $newDiff = $this->arrayDiff($oldArray[$key], $value);
+                if (!empty($newDiff)) {
+                    $difference[$key] = $newDiff;
+                }
+            }
+        }
+
+        return $difference;
+    }
+
 }

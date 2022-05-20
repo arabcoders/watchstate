@@ -452,33 +452,6 @@ if (!function_exists('commandContext')) {
     }
 }
 
-if (!function_exists('computeArrayChanges')) {
-    function computeArrayChanges(array $oldArray, array $newArray): array
-    {
-        $difference = [];
-
-        foreach ($newArray as $key => $value) {
-            if (false === is_array($value)) {
-                if (!array_key_exists($key, $oldArray) || $oldArray[$key] !== $value) {
-                    $difference[$key] = $value;
-                }
-                continue;
-            }
-
-            if (!isset($oldArray[$key]) || !is_array($oldArray[$key])) {
-                $difference[$key] = $value;
-            } else {
-                $newDiff = computeArrayChanges($oldArray[$key], $value);
-                if (!empty($newDiff)) {
-                    $difference[$key] = $newDiff;
-                }
-            }
-        }
-
-        return $difference;
-    }
-}
-
 if (!function_exists('getAppVersion')) {
     function getAppVersion(): string
     {
