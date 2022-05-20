@@ -73,6 +73,16 @@ final class ManageCommand extends Command
         $add = $input->getOption('add');
         $name = $input->getArgument('name');
 
+        if (!isValidName($name)) {
+            $output->writeln(
+                sprintf(
+                    '<error>ERROR: Invalid \'%s\' name was given. Only \'A-Z, a-z, 0-9, _\' are allowed.</error>',
+                    $name,
+                )
+            );
+            return self::FAILURE;
+        }
+
         if (false === $add && null === ag($servers, "{$name}.type", null)) {
             $output->writeln(
                 sprintf(

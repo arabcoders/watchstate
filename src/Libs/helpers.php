@@ -500,3 +500,18 @@ if (!function_exists('t')) {
         return $text;
     }
 }
+
+
+if (!function_exists('isValidName')) {
+    /**
+     * Allow only [Aa-Zz][0-9][_] in server names.
+     *
+     * @param string $name
+     *
+     * @return bool
+     */
+    function isValidName(string $name): bool
+    {
+        return 1 === preg_match('/^\w+$/', $name);
+    }
+}
