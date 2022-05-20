@@ -483,7 +483,23 @@ if (!function_exists('getAppVersion')) {
     function getAppVersion(): string
     {
         $version = Config::get('version', 'dev-master');
-        return '$(version_via_ci)' === $version ? 'dev-master' : $version;
+
+        if ('$(version_via_ci)' === $version) {
+            $gitDir = ROOT_PATH . '/.git/';
+
+            if (is_dir($gitDir)) {
+                $cmd = 'git --git-dir=%1$s describe --exact-match --tags 2> /dev/null || git --git-dir=%1$s rev-parse --short HEAD';
+                exec(sprintf($cmd, escapeshellarg($gitDir)), $output, $status);
+
+                if (0 === $status) {
+                    return $output[0] ?? 'dev-master';
+                }
+            }
+
+            return 'dev-master';
+        }
+
+        return $version;
     }
 }
 
