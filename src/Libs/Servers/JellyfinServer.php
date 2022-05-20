@@ -333,7 +333,8 @@ class JellyfinServer implements ServerInterface
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($json, 'ItemId'),
-                    iFace::COLUMN_WATCHED => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
+                    iFace::COLUMN_TYPE => $type,
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
                     iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
@@ -1676,10 +1677,10 @@ class JellyfinServer implements ServerInterface
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->Id,
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (int)(bool)($item->UserData?->Played ?? false),
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)($item->UserData?->Played ?? false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-                    iFace::COLUMN_YEAR => (int)($item->ProductionYear ?? 0000),
+                    iFace::COLUMN_YEAR => (string)($item->ProductionYear ?? 0000),
                     iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
                 ],
             ],

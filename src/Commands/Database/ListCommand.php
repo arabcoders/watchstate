@@ -170,7 +170,7 @@ final class ListCommand extends Command
         if ($input->getOption('metadata')) {
             $sField = $input->getOption('key');
             $sValue = $input->getOption('value');
-            if (empty($sField) || empty($sValue)) {
+            if (null === $sField || null === $sValue) {
                 throw new RuntimeException(
                     'When searching using JSON fields the option --key and --value must be set.'
                 );
@@ -183,7 +183,7 @@ final class ListCommand extends Command
         if ($input->getOption('extra')) {
             $sField = $input->getOption('key');
             $sValue = $input->getOption('value');
-            if (empty($sField) || empty($sValue)) {
+            if (null === $sField || null === $sValue) {
                 throw new RuntimeException(
                     'When searching using JSON fields the option --key and --value must be set.'
                 );

@@ -146,10 +146,11 @@ class EmbyServer extends JellyfinServer
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($json, 'Item.ItemId'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => $isWatched,
+                    iFace::COLUMN_WATCHED => (string)$isWatched,
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
-                    iFace::COLUMN_YEAR => (int)ag($json, 'Item.ProductionYear', 0000),
+                    iFace::COLUMN_YEAR => (string)ag($json, 'Item.ProductionYear', 0000),
+                    iFace::COLUMN_GUIDS => array_change_key_case($providersId, CASE_LOWER)
                 ],
             ],
             iFace::COLUMN_EXTRA => [
