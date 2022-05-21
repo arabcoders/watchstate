@@ -729,6 +729,7 @@ class PlexServer implements ServerInterface
                 $this->logger->warning(
                     sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName),
                     [
+                        'id' => $entity->id,
                         'metadata' => empty($metadata) ? 'None' : $metadata,
                     ]
                 );
