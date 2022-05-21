@@ -723,16 +723,20 @@ class PlexServer implements ServerInterface
             }
 
             $iName = $entity->getName();
+            $metadata = ag($entity->metadata, $this->name, []);
 
-            if (null === $entity->metadata[$this->name][iFace::COLUMN_ID] ?? null) {
+            if (null === ag($metadata, iFace::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
-                    [$this->name => ag($entity->metadata, $this->name, 'no metadata found')]
+                    sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName),
+                    [
+                        'metadata' => empty($metadata) ? 'None' : $metadata,
+                    ]
                 );
                 continue;
             }
+
             try {
-                $url = $this->url->withPath('/library/metadata/' . $entity->metadata[$this->name][iFace::COLUMN_ID])
+                $url = $this->url->withPath('/library/metadata/' . ag($metadata, iFace::COLUMN_ID))
                     ->withQuery(
                         http_build_query(
                             [
@@ -752,7 +756,7 @@ class PlexServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
-                            'suid' => $entity->metadata[$this->name][iFace::COLUMN_ID],
+                            'suid' => ag($metadata, iFace::COLUMN_ID),
                         ]
                     ])
                 );
