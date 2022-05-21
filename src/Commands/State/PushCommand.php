@@ -83,7 +83,7 @@ class PushCommand extends Command
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->cache->has('queue')) {
-            $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_DEBUG);
+            $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_VERY_VERBOSE);
             return self::SUCCESS;
         }
 
@@ -103,7 +103,7 @@ class PushCommand extends Command
 
         if (empty($entities)) {
             $this->cache->delete('queue');
-            $output->writeln('<info>No items in the queued.</info>', OutputInterface::VERBOSITY_DEBUG);
+            $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_VERY_VERBOSE);
             return self::SUCCESS;
         }
 
@@ -143,7 +143,7 @@ class PushCommand extends Command
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if (true !== (bool)ag($server, 'webhook.push')) {
-                $this->logger->info(sprintf('%s: Ignoring this backend as requested by user config.', $serverName));
+                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $serverName));
                 continue;
             }
 
@@ -159,8 +159,13 @@ class PushCommand extends Command
                 continue;
             }
 
-            if (null === ag($server, 'url') || false === filter_var(ag($server, 'url'), FILTER_VALIDATE_URL)) {
-                $this->logger->error(sprintf('%s: Backend does not have valid URL.', $serverName));
+            if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
+                $this->logger->error(
+                    sprintf('%s: Backend does not have valid url.', $serverName),
+                    [
+                        'url' => $url ?? 'None'
+                    ]
+                );
                 return self::FAILURE;
             }
 
@@ -169,7 +174,7 @@ class PushCommand extends Command
         }
 
         if (empty($list)) {
-            $output->writeln('No servers were found with \'webhook.push\' enabled.');
+            $output->writeln('No Backends have push via webhook enabled.');
             return self::FAILURE;
         }
 
