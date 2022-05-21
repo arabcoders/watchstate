@@ -117,6 +117,7 @@ class PushCommand extends Command
                 $x++;
 
                 $rows[] = [
+                    $entity->id,
                     $entity->getName(),
                     $entity->isWatched() ? 'Yes' : 'No',
                     $entity->via ?? '??',
@@ -128,7 +129,7 @@ class PushCommand extends Command
                 }
             }
 
-            (new Table($output))->setHeaders(['Title', 'Played', 'Via', 'Date'])
+            (new Table($output))->setHeaders(['Id', 'Title', 'Played', 'Via', 'Date'])
                 ->setStyle('box')->setRows($rows)->render();
 
             return self::SUCCESS;
