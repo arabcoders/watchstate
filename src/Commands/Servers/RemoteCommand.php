@@ -9,6 +9,8 @@ use App\Libs\Config;
 use App\Libs\Servers\ServerInterface;
 use JsonException;
 use RuntimeException;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputArgument;
@@ -197,6 +199,37 @@ final class RemoteCommand extends Command
             );
         } else {
             $output->writeln(Yaml::dump($result, 8, 2));
+        }
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        if ($input->mustSuggestOptionValuesFor('search-output')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (['yaml', 'json'] as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestArgumentValuesFor('name')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (array_keys(Config::get('servers', [])) as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
         }
     }
 }

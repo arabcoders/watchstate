@@ -675,11 +675,11 @@ class JellyfinServer implements ServerInterface
         $requests = $stateRequests = [];
 
         foreach ($entities as $key => $entity) {
-            if (null === $entity) {
+            if (true !== ($entity instanceof StateEntity)) {
                 continue;
             }
 
-            if (false === (ag($this->options, Options::IGNORE_DATE, false))) {
+            if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
                 if (null !== $after && $after->getTimestamp() > $entity->updated) {
                     continue;
                 }
@@ -687,8 +687,11 @@ class JellyfinServer implements ServerInterface
 
             $iName = $entity->getName();
 
-            if (null === ($entity->metadata[$this->name][iFace::COLUMN_ID] ?? null)) {
-                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName));
+            if (null === $entity->metadata[$this->name][iFace::COLUMN_ID] ?? null) {
+                $this->logger->warning(
+                    sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
+                    [$this->name => ag($entity->metadata, $this->name, 'no metadata found')]
+                );
                 continue;
             }
 
@@ -1457,7 +1460,7 @@ class JellyfinServer implements ServerInterface
             } else {
                 $iName = trim(
                     sprintf(
-                        '%s - [%s - (%dx%d)]',
+                        '%s - [%s - (%sx%s)]',
                         $library,
                         $item->SeriesName ?? '??',
                         str_pad((string)($item->ParentIndexNumber ?? 0), 2, '0', STR_PAD_LEFT),
