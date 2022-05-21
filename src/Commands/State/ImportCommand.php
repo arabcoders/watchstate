@@ -40,8 +40,8 @@ class ImportCommand extends Command
     protected function configure(): void
     {
         $this->setName('state:import')
-            ->setDescription('Import watch state from servers.')
-            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. (ignore lastSync date)')
+            ->setDescription('Import play state from backends.')
+            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. (ignore lastSync)')
             ->addOption(
                 'proxy',
                 null,
@@ -64,7 +64,7 @@ class ImportCommand extends Command
                 'servers-filter',
                 's',
                 InputOption::VALUE_OPTIONAL,
-                'Sync selected servers, comma seperated. \'s1,s2\'.',
+                'Sync selected backends, comma seperated. \'s1,s2\'.',
                 ''
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
@@ -74,9 +74,7 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'You should not use this flag unless told by the team it will inflate your log output.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -124,31 +122,37 @@ class ImportCommand extends Command
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($serverName, $selected, true)) {
-                $this->logger->info(sprintf('%s: Ignoring as requested by [-s, --servers-filter].', $serverName));
+                $this->logger->info(
+                    sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $serverName)
+                );
                 continue;
             }
 
             if (true !== ag($server, 'import.enabled')) {
-                $this->logger->info(sprintf('%s: Ignoring as requested by user config option.', $serverName));
+                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $serverName));
                 continue;
             }
 
             if (!isset($supported[$type])) {
                 $this->logger->error(
                     sprintf(
-                        '%s: Unexpected backend type. Was expecting \'%s\', but got \'%s\' instead.',
+                        '%s: Unexpected type. Expecting \'%s\' but got \'%s\'.',
                         $serverName,
                         implode(', ', array_keys($supported)),
                         $type
                     )
                 );
-
-                return self::FAILURE;
+                continue;
             }
 
-            if (null === ag($server, 'url')) {
-                $this->logger->error(sprintf('%s: Backend has no valid URL.', $serverName));
-                return self::FAILURE;
+            if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
+                $this->logger->error(
+                    sprintf('%s: Backend does not have valid url.', $serverName),
+                    [
+                        'url' => $url ?? 'None'
+                    ]
+                );
+                continue;
             }
 
             $server['name'] = $serverName;
@@ -226,7 +230,9 @@ class ImportCommand extends Command
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
                 $this->logger->notice(sprintf('%s: Not updating last sync date. Backend reported an error.', $name));
             } else {
-                Config::save(sprintf('servers.%s.import.lastSync', $name), time());
+                if (false === $this->mapper->inDryRunMode()) {
+                    Config::save(sprintf('servers.%s.import.lastSync', $name), time());
+                }
             }
         }
 
@@ -278,19 +284,21 @@ class ImportCommand extends Command
 
         (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
 
-        foreach ($list as $server) {
-            if (null === ($name = ag($server, 'name'))) {
-                continue;
+        if (false === $input->getOption('dry-run')) {
+            foreach ($list as $server) {
+                if (null === ($name = ag($server, 'name'))) {
+                    continue;
+                }
+
+                Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
             }
 
-            Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
-        }
+            if (false === $custom && is_writable(dirname($config))) {
+                copy($config, $config . '.bak');
+            }
 
-        if (false === $custom && is_writable(dirname($config))) {
-            copy($config, $config . '.bak');
+            file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
-
-        file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
         return self::SUCCESS;
     }

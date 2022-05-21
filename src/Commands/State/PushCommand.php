@@ -14,8 +14,6 @@ use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -40,9 +38,9 @@ class PushCommand extends Command
     protected function configure(): void
     {
         $this->setName('state:push')
-            ->setDescription('Push queued state change events.')
+            ->setDescription('Push queued webhook queued events.')
             ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is successful.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to remote.')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption(
                 'proxy',
                 null,
@@ -60,10 +58,7 @@ class PushCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Ignore date comparison. Push db state to the server regardless of date.'
-            )
-            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
+            );
     }
 
     /**
@@ -107,33 +102,6 @@ class PushCommand extends Command
             return self::SUCCESS;
         }
 
-        if ($input->getOption('queue-show')) {
-            $rows = [];
-
-            $x = 0;
-            $count = count($entities);
-
-            foreach ($entities as $entity) {
-                $x++;
-
-                $rows[] = [
-                    $entity->getName(),
-                    $entity->isWatched() ? 'Yes' : 'No',
-                    $entity->via ?? '??',
-                    makeDate($entity->updated)->format('Y-m-d H:i:s T'),
-                ];
-
-                if ($x < $count) {
-                    $rows[] = new TableSeparator();
-                }
-            }
-
-            (new Table($output))->setHeaders(['Title', 'Played', 'Via', 'Date'])
-                ->setStyle('box')->setRows($rows)->render();
-
-            return self::SUCCESS;
-        }
-
         $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
         $list = [];
@@ -166,7 +134,7 @@ class PushCommand extends Command
                         'url' => $url ?? 'None'
                     ]
                 );
-                return self::FAILURE;
+                continue;
             }
 
             $server['name'] = $serverName;
@@ -211,14 +179,14 @@ class PushCommand extends Command
         $total = count($requests);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' change play state requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Sending \'%d\' change play state requests.', $total));
             foreach ($requests as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
-                                '%s: Request to change \'%s\' state responded with unexpected http status code \'%d\'.',
+                                '%s: Request to change \'%s\' play state responded with unexpected status code \'%d\'.',
                                 ag($requestData, 'server', '??'),
                                 ag($requestData, 'itemName', '??'),
                                 $response->getStatusCode()
@@ -229,7 +197,7 @@ class PushCommand extends Command
 
                     $this->logger->notice(
                         sprintf(
-                            '%s: Marking \'%s\' as \'%s\'.',
+                            '%s: Marked \'%s\' as \'%s\'.',
                             ag($requestData, 'server', '??'),
                             ag($requestData, 'itemName', '??'),
                             ag($requestData, 'state', '??'),
@@ -239,28 +207,30 @@ class PushCommand extends Command
                     $this->logger->error($e->getMessage());
                 }
             }
-            $this->logger->notice(sprintf('HTTP: Finished processing \'%d\' change play state requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Processed \'%d\' change play state requests.', $total));
         } else {
-            $this->logger->notice('No play state change detected.');
+            $this->logger->notice('No play state changes detected.');
         }
 
-        foreach ($list as $server) {
-            if (null === ($name = ag($server, 'name'))) {
-                continue;
+        if (false === $input->getOption('dry-run')) {
+            foreach ($list as $server) {
+                if (null === ($name = ag($server, 'name'))) {
+                    continue;
+                }
+
+                Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
             }
 
-            Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
+            $config = Config::get('path') . '/config/servers.yaml';
+
+            if (is_writable(dirname($config))) {
+                copy($config, $config . '.bak');
+            }
+
+            file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
-        $config = Config::get('path') . '/config/servers.yaml';
-
-        if (is_writable(dirname($config))) {
-            copy($config, $config . '.bak');
-        }
-
-        file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
-
-        if (!$input->getOption('keep-queue')) {
+        if (false === $input->getOption('keep-queue') && false === $input->getOption('dry-run')) {
             $this->cache->delete('queue');
         }
 

@@ -686,11 +686,15 @@ class JellyfinServer implements ServerInterface
             }
 
             $iName = $entity->getName();
+            $metadata = ag($entity->metadata, $this->name, []);
 
-            if (null === $entity->metadata[$this->name][iFace::COLUMN_ID] ?? null) {
+            if (null === ag($metadata, iFace::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    sprintf('%s: Ignoring \'%s\'. No relation map.', $this->name, $iName),
-                    [$this->name => ag($entity->metadata, $this->name, 'no metadata found')]
+                    sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName),
+                    [
+                        'id' => $entity->id,
+                        'metadata' => empty($metadata) ? 'None' : $metadata,
+                    ]
                 );
                 continue;
             }
@@ -699,7 +703,7 @@ class JellyfinServer implements ServerInterface
                 $url = $this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
                     http_build_query(
                         [
-                            'ids' => $entity->metadata[$this->name][iFace::COLUMN_ID],
+                            'ids' => ag($metadata, iFace::COLUMN_ID),
                             'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
                             'enableUserData' => 'true',
                             'enableImages' => 'false',
@@ -718,7 +722,7 @@ class JellyfinServer implements ServerInterface
                         'user_data' => [
                             'id' => $key,
                             'state' => &$entity,
-                            'suid' => $entity->metadata[$this->name][iFace::COLUMN_ID],
+                            'suid' => ag($metadata, iFace::COLUMN_ID),
                         ]
                     ])
                 );
