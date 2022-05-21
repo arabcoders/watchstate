@@ -35,7 +35,6 @@ final class RemoteCommand extends Command
             ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit', 25)
             ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml]', 'json')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
             ->addArgument('name', InputArgument::REQUIRED, 'Server name');
     }
 

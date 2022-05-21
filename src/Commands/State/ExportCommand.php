@@ -72,9 +72,7 @@ class ExportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Ignore date comparison, and update server watched state to match database.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

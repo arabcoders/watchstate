@@ -28,4 +28,5 @@ return [
     'servers:edit' => App\Commands\Servers\EditCommand::class,
     // -- db:
     'db:list' => App\Commands\Database\ListCommand::class,
+    'db:queue' => App\Commands\Database\QueueCommand::class,
 ];
