@@ -14,8 +14,6 @@ use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -40,9 +38,9 @@ class PushCommand extends Command
     protected function configure(): void
     {
         $this->setName('state:push')
-            ->setDescription('Push queued state change events.')
+            ->setDescription('Push queued webhook queued events.')
             ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is successful.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to remote.')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption(
                 'proxy',
                 null,
@@ -60,10 +58,7 @@ class PushCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Ignore date comparison. Push db state to the server regardless of date.'
-            )
-            ->addOption('queue-show', null, InputOption::VALUE_NONE, 'Show queued items.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
+            );
     }
 
     /**
@@ -104,34 +99,6 @@ class PushCommand extends Command
         if (empty($entities)) {
             $this->cache->delete('queue');
             $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_VERY_VERBOSE);
-            return self::SUCCESS;
-        }
-
-        if ($input->getOption('queue-show')) {
-            $rows = [];
-
-            $x = 0;
-            $count = count($entities);
-
-            foreach ($entities as $entity) {
-                $x++;
-
-                $rows[] = [
-                    $entity->id,
-                    $entity->getName(),
-                    $entity->isWatched() ? 'Yes' : 'No',
-                    $entity->via ?? '??',
-                    makeDate($entity->updated)->format('Y-m-d H:i:s T'),
-                ];
-
-                if ($x < $count) {
-                    $rows[] = new TableSeparator();
-                }
-            }
-
-            (new Table($output))->setHeaders(['Id', 'Title', 'Played', 'Via', 'Date'])
-                ->setStyle('box')->setRows($rows)->render();
-
             return self::SUCCESS;
         }
 
@@ -261,7 +228,7 @@ class PushCommand extends Command
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
-        if (!$input->getOption('keep-queue')) {
+        if (!$input->getOption('keep-queue') && !$input->getOption('dry-run')) {
             $this->cache->delete('queue');
         }
 
