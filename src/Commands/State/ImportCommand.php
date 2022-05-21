@@ -74,9 +74,7 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'You should not use this flag unless told by the team it will inflate your log output.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('redirect-logger', 'r', InputOption::VALUE_NONE, 'Not used. will be removed in the future.')
-            ->addOption('memory-usage', 'm', InputOption::VALUE_NONE, 'Not used. will be removed in the future.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -226,7 +224,9 @@ class ImportCommand extends Command
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
                 $this->logger->notice(sprintf('%s: Not updating last sync date. Backend reported an error.', $name));
             } else {
-                Config::save(sprintf('servers.%s.import.lastSync', $name), time());
+                if (false === $this->mapper->inDryRunMode()) {
+                    Config::save(sprintf('servers.%s.import.lastSync', $name), time());
+                }
             }
         }
 
