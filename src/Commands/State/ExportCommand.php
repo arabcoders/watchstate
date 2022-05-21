@@ -9,7 +9,6 @@ use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Mappers\ExportInterface;
 use App\Libs\Options;
-use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -39,7 +38,7 @@ class ExportCommand extends Command
     protected function configure(): void
     {
         $this->setName('state:export')
-            ->setDescription('Export watch state to servers.')
+            ->setDescription('Export current local play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. (will ignore lastSync date)')
             ->addOption(
                 'proxy',
@@ -57,20 +56,20 @@ class ExportCommand extends Command
                 'timeout',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Set request timeout in seconds'
+                'Set request timeout in seconds.'
             )
             ->addOption(
                 'servers-filter',
                 's',
                 InputOption::VALUE_OPTIONAL,
-                'Sync selected servers, comma seperated. \'s1,s2\'.',
+                'Sync selected backends, comma seperated. \'s1,s2\'.',
                 ''
             )
             ->addOption(
                 'ignore-date',
                 null,
                 InputOption::VALUE_NONE,
-                'Ignore date comparison, and update server watched state to match database.'
+                'Ignore date comparison, and update backend play state to match local play state.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
@@ -85,7 +84,7 @@ class ExportCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                throw new RuntimeException('Unable to read data given config.');
+                throw new RuntimeException('Unable to read given config file.');
             }
             $custom = true;
             Config::save('servers', Yaml::parseFile($config));
@@ -101,7 +100,6 @@ class ExportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
-
         if (null !== $logger) {
             $this->logger = $logger;
             $this->mapper->setLogger($logger);
@@ -113,12 +111,14 @@ class ExportCommand extends Command
             $type = strtolower(ag($server, 'type', 'unknown'));
 
             if ($isCustom && !in_array($name, $selected, true)) {
-                $this->logger->info(sprintf('%s: Ignoring this backend as requested by --servers-filter.', $name));
+                $this->logger->info(
+                    sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $name)
+                );
                 continue;
             }
 
             if (true !== ag($server, 'export.enabled')) {
-                $this->logger->info(sprintf('%s: Ignoring this backend as requested by user config.', $name));
+                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $name));
                 continue;
             }
 
@@ -134,8 +134,13 @@ class ExportCommand extends Command
                 continue;
             }
 
-            if (null === ag($server, 'url') || false === filter_var(ag($server, 'url'), FILTER_VALIDATE_URL)) {
-                $this->logger->error(sprintf('%s: Backend URL is empty or invalid.', $name));
+            if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
+                $this->logger->error(
+                    sprintf('%s: Backend does not have valid url.', $name),
+                    [
+                        'url' => $url ?? 'None'
+                    ]
+                );
                 continue;
             }
 
@@ -153,16 +158,15 @@ class ExportCommand extends Command
             return self::FAILURE;
         }
 
+        $this->logger->notice('MAPPER: Preloading database into memory.');
         $this->mapper->loadData();
+        $this->logger->notice('MAPPER: Finished Preloading database.');
 
-        if ($this->storage instanceof PDOAdapter) {
-            $this->storage->singleTransaction();
-        }
+        $this->storage->singleTransaction();
 
         $requests = [];
 
         foreach ($list as $name => &$server) {
-
             Data::addBucket($name);
 
             $opts = ag($server, 'options', []);

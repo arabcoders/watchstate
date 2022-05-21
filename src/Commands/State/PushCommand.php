@@ -134,7 +134,7 @@ class PushCommand extends Command
                         'url' => $url ?? 'None'
                     ]
                 );
-                return self::FAILURE;
+                continue;
             }
 
             $server['name'] = $serverName;
@@ -179,14 +179,14 @@ class PushCommand extends Command
         $total = count($requests);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' change play state requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Sending \'%d\' change play state requests.', $total));
             foreach ($requests as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
-                                '%s: Request to change \'%s\' state responded with unexpected http status code \'%d\'.',
+                                '%s: Request to change \'%s\' play state responded with unexpected status code \'%d\'.',
                                 ag($requestData, 'server', '??'),
                                 ag($requestData, 'itemName', '??'),
                                 $response->getStatusCode()
@@ -197,7 +197,7 @@ class PushCommand extends Command
 
                     $this->logger->notice(
                         sprintf(
-                            '%s: Marking \'%s\' as \'%s\'.',
+                            '%s: Marked \'%s\' as \'%s\'.',
                             ag($requestData, 'server', '??'),
                             ag($requestData, 'itemName', '??'),
                             ag($requestData, 'state', '??'),
@@ -207,28 +207,30 @@ class PushCommand extends Command
                     $this->logger->error($e->getMessage());
                 }
             }
-            $this->logger->notice(sprintf('HTTP: Finished processing \'%d\' change play state requests.', $total));
+            $this->logger->notice(sprintf('HTTP: Processed \'%d\' change play state requests.', $total));
         } else {
-            $this->logger->notice('No play state change detected.');
+            $this->logger->notice('No play state changes detected.');
         }
 
-        foreach ($list as $server) {
-            if (null === ($name = ag($server, 'name'))) {
-                continue;
+        if (false === $input->getOption('dry-run')) {
+            foreach ($list as $server) {
+                if (null === ($name = ag($server, 'name'))) {
+                    continue;
+                }
+
+                Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
             }
 
-            Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
+            $config = Config::get('path') . '/config/servers.yaml';
+
+            if (is_writable(dirname($config))) {
+                copy($config, $config . '.bak');
+            }
+
+            file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
-        $config = Config::get('path') . '/config/servers.yaml';
-
-        if (is_writable(dirname($config))) {
-            copy($config, $config . '.bak');
-        }
-
-        file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
-
-        if (!$input->getOption('keep-queue') && !$input->getOption('dry-run')) {
+        if (false === $input->getOption('keep-queue') && false === $input->getOption('dry-run')) {
             $this->cache->delete('queue');
         }
 
