@@ -515,3 +515,54 @@ if (!function_exists('isValidName')) {
         return 1 === preg_match('/^\w+$/', $name);
     }
 }
+
+if (false === function_exists('filterResponse')) {
+    function filterResponse(object|array $item, array $cast = []): array
+    {
+        if (false === is_array($item)) {
+            $item = (array)$item;
+        }
+
+        if (empty($cast)) {
+            return $item;
+        }
+
+        $modified = [];
+
+        foreach ($item as $key => $value) {
+            if (true === is_array($value) || true === is_object($value)) {
+                $modified[$key] = filterResponse($value, $cast);
+                continue;
+            }
+
+            if (null === ($cast[$key] ?? null)) {
+                $modified[$key] = $value;
+                continue;
+            }
+
+            $modified[$key] = match ($cast[$key] ?? null) {
+                'datetime' => makeDate($value),
+                'size' => strlen((string)$value) >= 4 ? fsize($value) : $value,
+                'duration_sec' => formatDuration($value),
+                'duration_mil' => formatDuration($value / 10000),
+                'bool' => (bool)$value,
+                default => is_callable($cast[$key] ?? null) ? $cast[$key]($value) : $value,
+            };
+        }
+
+        return $modified;
+    }
+}
+
+if (false === function_exists('formatDuration')) {
+    function formatDuration(int|float $milliseconds): string
+    {
+        $seconds = floor($milliseconds / 1000);
+        $minutes = floor($seconds / 60);
+        $hours = floor($minutes / 60);
+        $seconds %= 60;
+        $minutes %= 60;
+
+        return sprintf('%02u:%02u:%02u', $hours, $minutes, $seconds);
+    }
+}

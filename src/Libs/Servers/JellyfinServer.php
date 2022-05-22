@@ -65,6 +65,14 @@ class JellyfinServer implements ServerInterface
         'PlaybackStop',
     ];
 
+    protected const BACKEND_CAST_KEYS = [
+        'StartPositionTicks' => 'duration_mil',
+        'RunTimeTicks' => 'duration_mil',
+        'PremiereDate' => 'datetime',
+        'DateCreated' => 'datetime',
+        'Size' => 'size',
+    ];
+
     protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected string|null $user = null;
@@ -391,7 +399,7 @@ class JellyfinServer implements ServerInterface
         return $entity;
     }
 
-    public function search(string $query, int $limit = 25): array
+    public function search(string $query, int $limit = 25, array $opts = []): array
     {
         $this->checkConfig(true);
 
@@ -433,13 +441,15 @@ class JellyfinServer implements ServerInterface
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
-            return ag($json, 'Items', []);
+            $list = ag($json, 'Items', []);
+
+            return true === ag($opts, Options::RAW_RESPONSE) ? $list : filterResponse($list, self::BACKEND_CAST_KEYS);
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 
-    public function searchId(string|int $id): array
+    public function searchId(string|int $id, array $opts = []): array
     {
         $this->checkConfig();
 
@@ -473,11 +483,13 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
-            return json_decode(
+            $json = json_decode(
                 json:        $response->getContent(),
                 associative: true,
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
+
+            return true === ag($opts, Options::RAW_RESPONSE) ? $json : filterResponse($json, self::BACKEND_CAST_KEYS);
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
