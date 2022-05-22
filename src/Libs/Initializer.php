@@ -318,7 +318,7 @@ final class Initializer
             if (true === $entity->isTainted()) {
                 $cloned = clone $backend;
 
-                if ($cloned->apply($entity, guidOnly: true)->isChanged()) {
+                if ($cloned->apply($entity, metadataOnly: true)->isChanged()) {
                     $backend = $storage->update($backend->apply($entity));
                     return jsonResponse(
                         status:  200,
@@ -334,7 +334,7 @@ final class Initializer
             }
 
             if ($backend->updated >= $entity->updated) {
-                if ($backend->apply($entity, guidOnly: true)->isChanged()) {
+                if ($backend->apply($entity, metadataOnly: true)->isChanged()) {
                     $backend = $storage->update($backend->apply($entity));
                     return jsonResponse(
                         status:  200,
@@ -356,7 +356,7 @@ final class Initializer
 
             $cloned = clone $backend;
 
-            if ($backend->apply($entity, guidOnly: true)->isChanged()) {
+            if ($backend->apply($entity, metadataOnly: true)->isChanged()) {
                 $backend = $storage->update($backend->apply($entity));
 
                 $message = 'Updated %s metadata.';
