@@ -70,6 +70,7 @@ class JellyfinServer implements ServerInterface
         'RunTimeTicks' => 'duration_mil',
         'PremiereDate' => 'datetime',
         'DateCreated' => 'datetime',
+        'LastPlayedDate' => 'datetime',
         'Size' => 'size',
     ];
 

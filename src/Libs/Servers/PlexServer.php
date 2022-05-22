@@ -836,8 +836,8 @@ class PlexServer implements ServerInterface
 
                 if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
                     $date = max(
-                        (int)ag($json, 'updatedAt', 0),
                         (int)ag($json, 'lastViewedAt', 0),
+                        (int)ag($json, 'updatedAt', 0),
                         (int)ag($json, 'addedAt', 0)
                     );
 
