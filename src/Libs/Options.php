@@ -11,6 +11,7 @@ final class Options
     public const DEEP_DEBUG = 'DEEP_DEBUG';
     public const IGNORE_DATE = 'IGNORE_DATE';
     public const EXPORT_ALLOWED_TIME_DIFF = 'EXPORT_TIME_DIFF';
+    public const RAW_RESPONSE = 'SHOW_RAW_RESPONSE';
 
     private function __construct()
     {

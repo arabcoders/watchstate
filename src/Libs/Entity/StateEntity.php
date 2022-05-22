@@ -218,9 +218,9 @@ final class StateEntity implements iFace
         return $rPointers;
     }
 
-    public function apply(iFace $entity, bool $guidOnly = false): self
+    public function apply(iFace $entity, bool $metadataOnly = false): self
     {
-        if (true === $guidOnly) {
+        if (true === $metadataOnly) {
             foreach (iFace::ENTITY_FORCE_UPDATE_FIELDS as $key) {
                 if (true === $this->isEqualValue($key, $entity)) {
                     continue;

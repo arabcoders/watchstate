@@ -6,6 +6,7 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Options;
 use App\Libs\Servers\ServerInterface;
 use JsonException;
 use RuntimeException;
@@ -32,6 +33,7 @@ final class RemoteCommand extends Command
             ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
             ->addOption('search', null, InputOption::VALUE_REQUIRED, 'Search query')
             ->addOption('search-id', null, InputOption::VALUE_REQUIRED, 'Get metadata related to given id')
+            ->addOption('search-raw', null, InputOption::VALUE_NONE, 'Return Unfiltered results.')
             ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit', 25)
             ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml]', 'json')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
@@ -164,7 +166,13 @@ final class RemoteCommand extends Command
 
     private function search(ServerInterface $server, OutputInterface $output, InputInterface $input): void
     {
-        $result = $server->search($input->getOption('search'), (int)$input->getOption('search-limit'));
+        $result = $server->search(
+            query: $input->getOption('search'),
+            limit: (int)$input->getOption('search-limit'),
+            opts:  [
+                       Options::RAW_RESPONSE => (bool)$input->getOption('search-raw')
+                   ]
+        );
 
         if (empty($result)) {
             $output->writeln(sprintf('<error>No results found for \'%s\'.</error>', $input->getOption('search')));
@@ -180,7 +188,9 @@ final class RemoteCommand extends Command
 
     private function searchId(ServerInterface $server, OutputInterface $output, InputInterface $input): void
     {
-        $result = $server->searchId($input->getOption('search-id'));
+        $result = $server->searchId(id: $input->getOption('search-id'), opts: [
+            Options::RAW_RESPONSE => (bool)$input->getOption('search-raw'),
+        ]);
 
         if (empty($result)) {
             $output->writeln(

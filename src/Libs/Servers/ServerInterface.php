@@ -109,17 +109,21 @@ interface ServerInterface
      *
      * @param string $query
      * @param int $limit
+     * @param array $opts
+     *
      * @return array
      */
-    public function search(string $query, int $limit = 25): array;
+    public function search(string $query, int $limit = 25, array $opts = []): array;
 
     /**
      * Server Backend id.
      *
      * @param string|int $id
+     * @param array $opts
+     *
      * @return array
      */
-    public function searchId(string|int $id): array;
+    public function searchId(string|int $id, array $opts = []): array;
 
     /**
      * Get all persistent data.

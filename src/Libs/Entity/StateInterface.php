@@ -199,11 +199,11 @@ interface StateInterface
      * Apply changes to entity.
      *
      * @param StateInterface $entity
-     * @param bool $guidOnly
+     * @param bool $metadataOnly
      *
      * @return StateInterface
      */
-    public function apply(StateInterface $entity, bool $guidOnly = false): StateInterface;
+    public function apply(StateInterface $entity, bool $metadataOnly = false): StateInterface;
 
     /**
      * Update Original data.

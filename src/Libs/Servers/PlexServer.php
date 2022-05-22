@@ -88,6 +88,15 @@ class PlexServer implements ServerInterface
         'media.pause',
     ];
 
+    protected const BACKEND_CAST_KEYS = [
+        'lastViewedAt' => 'datetime',
+        'updatedAt' => 'datetime',
+        'addedAt' => 'datetime',
+        'mediaTagVersion' => 'datetime',
+        'duration' => 'duration_sec',
+        'size' => 'size',
+    ];
+
     /**
      * Parse hama agent guid.
      */
@@ -433,7 +442,7 @@ class PlexServer implements ServerInterface
         return $entity;
     }
 
-    public function search(string $query, int $limit = 25): array
+    public function search(string $query, int $limit = 25, array $opts = []): array
     {
         $this->checkConfig();
 
@@ -487,13 +496,13 @@ class PlexServer implements ServerInterface
                 }
             }
 
-            return $list;
+            return true === ag($opts, Options::RAW_RESPONSE) ? $list : filterResponse($list, self::BACKEND_CAST_KEYS);
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 
-    public function searchId(string|int $id): array
+    public function searchId(string|int $id, array $opts = []): array
     {
         $this->checkConfig();
 
@@ -519,11 +528,13 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            return json_decode(
+            $json = json_decode(
                 json:        $response->getContent(),
                 associative: true,
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
+
+            return true === ag($opts, Options::RAW_RESPONSE) ? $json : filterResponse($json, self::BACKEND_CAST_KEYS);
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
@@ -825,8 +836,8 @@ class PlexServer implements ServerInterface
 
                 if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
                     $date = max(
-                        (int)ag($json, 'updatedAt', 0),
                         (int)ag($json, 'lastViewedAt', 0),
+                        (int)ag($json, 'updatedAt', 0),
                         (int)ag($json, 'addedAt', 0)
                     );
 
