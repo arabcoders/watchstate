@@ -386,7 +386,7 @@ class JellyfinServer implements ServerInterface
             )->getTimestamp();
         }
 
-        if (null !== ($lastPlayedAt = ag($json, 'LastPlayedDate'))) {
+        if (null !== ($lastPlayedAt = ag($json, 'LastPlayedDate')) && true === (bool)ag($json, 'Played')) {
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = makeDate(
                 $lastPlayedAt
             )->getTimestamp();

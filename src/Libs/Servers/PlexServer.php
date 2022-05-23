@@ -421,7 +421,7 @@ class PlexServer implements ServerInterface
             )->format('Y-m-d');
         }
 
-        if (null !== ($lastPlayedAt = ag($item, 'lastViewedAt'))) {
+        if (null !== ($lastPlayedAt = ag($item, 'lastViewedAt')) & 1 === (int)(bool)ag($item, 'viewCount', false)) {
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$lastPlayedAt;
         }
 

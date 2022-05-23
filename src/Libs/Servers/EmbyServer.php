@@ -193,7 +193,7 @@ class EmbyServer extends JellyfinServer
             )->getTimestamp();
         }
 
-        if (null !== $playedAt) {
+        if (null !== $playedAt && 1 === $isPlayed) {
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = $playedAt;
         }
 
