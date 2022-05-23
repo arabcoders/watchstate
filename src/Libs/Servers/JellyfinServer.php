@@ -327,10 +327,6 @@ class JellyfinServer implements ServerInterface
             iFace::COLUMN_WATCHED => (int)(bool)ag($json, 'Played', 0),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-            iFace::COLUMN_YEAR => (int)ag($json, 'Year', 0000),
-            iFace::COLUMN_SEASON => null,
-            iFace::COLUMN_EPISODE => null,
-            iFace::COLUMN_PARENT => [],
             iFace::COLUMN_GUIDS => $this->getGuids($providersId),
             iFace::COLUMN_META_DATA => [
                 $this->name => [
@@ -339,7 +335,6 @@ class JellyfinServer implements ServerInterface
                     iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, 'Played', 0),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-                    iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
                     iFace::COLUMN_GUIDS => array_change_key_case($providersId, CASE_LOWER)
                 ]
             ],
@@ -372,6 +367,11 @@ class JellyfinServer implements ServerInterface
                     $seriesName . ':' . $row['year']
                 );
             }
+        }
+
+        if (null === ($mediaYear = ag($json, 'Year'))) {
+            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
 
         if (null !== ($premiereDate = ag($json, 'PremiereDate'))) {
@@ -1603,10 +1603,6 @@ class JellyfinServer implements ServerInterface
             iFace::COLUMN_WATCHED => (int)(bool)($item->UserData->Played ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-            iFace::COLUMN_YEAR => (int)($item->ProductionYear ?? 0000),
-            iFace::COLUMN_SEASON => null,
-            iFace::COLUMN_EPISODE => null,
-            iFace::COLUMN_PARENT => [],
             iFace::COLUMN_GUIDS => $this->getGuids((array)($item->ProviderIds ?? [])),
             iFace::COLUMN_META_DATA => [
                 $this->name => [
@@ -1615,7 +1611,6 @@ class JellyfinServer implements ServerInterface
                     iFace::COLUMN_WATCHED => (string)(int)(bool)($item->UserData->Played ?? false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-                    iFace::COLUMN_YEAR => (string)($item->ProductionYear ?? 0000),
                     iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
                     iFace::COLUMN_META_DATA_ADDED_AT => (string)makeDate($item->DateCreated)->getTimestamp(),
                 ],
@@ -1636,6 +1631,11 @@ class JellyfinServer implements ServerInterface
                 $row[iFace::COLUMN_PARENT] = $this->cache['shows'][$item->SeriesId] ?? [];
                 $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
+        }
+
+        if (null === ($item->ProductionYear ?? null)) {
+            $row[iFace::COLUMN_YEAR] = (int)$item->ProductionYear;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$item->ProductionYear;
         }
 
         if (null !== ($item->PremiereDate ?? null)) {

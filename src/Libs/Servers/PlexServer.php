@@ -371,10 +371,6 @@ class PlexServer implements ServerInterface
             iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iFace::COLUMN_YEAR => (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
-            iFace::COLUMN_SEASON => null,
-            iFace::COLUMN_EPISODE => null,
-            iFace::COLUMN_PARENT => [],
             iFace::COLUMN_GUIDS => $this->getGuids(ag($item, 'Guid', [])),
             iFace::COLUMN_META_DATA => [
                 $this->name => [
@@ -383,7 +379,6 @@ class PlexServer implements ServerInterface
                     iFace::COLUMN_WATCHED => (string)(int)(bool)ag($item, 'viewCount', false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-                    iFace::COLUMN_YEAR => (string)ag($item, ['grandParentYear', 'parentYear', 'year'], 0000),
                     iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
                     iFace::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
                 ],
@@ -413,6 +408,11 @@ class PlexServer implements ServerInterface
                 $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
                 $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
+        }
+
+        if (null === ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year']))) {
+            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
 
         if (null !== ($premiereDate = ag($item, 'originallyAvailableAt'))) {
@@ -1756,10 +1756,6 @@ class PlexServer implements ServerInterface
             iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
-            iFace::COLUMN_YEAR => (int)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
-            iFace::COLUMN_SEASON => null,
-            iFace::COLUMN_EPISODE => null,
-            iFace::COLUMN_PARENT => [],
             iFace::COLUMN_GUIDS => $this->getGuids($item->Guid ?? []),
             iFace::COLUMN_META_DATA => [
                 $this->name => [
@@ -1768,7 +1764,6 @@ class PlexServer implements ServerInterface
                     iFace::COLUMN_WATCHED => (string)(int)(bool)($item->viewCount ?? false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
-                    iFace::COLUMN_YEAR => (string)($item->grandParentYear ?? $item->parentYear ?? $item->year ?? 0000),
                     iFace::COLUMN_GUIDS => $this->parseGuids($item->Guid ?? []),
                     iFace::COLUMN_META_DATA_ADDED_AT => (string)$item->addedAt,
                 ],
@@ -1791,6 +1786,11 @@ class PlexServer implements ServerInterface
                 $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
                 $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
             }
+        }
+
+        if (null === ($mediaYear = $item->grandParentYear ?? $item->parentYear ?? $item->year ?? null)) {
+            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
 
         if (null !== ($item->originallyAvailableAt ?? null)) {
