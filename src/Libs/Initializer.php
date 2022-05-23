@@ -287,6 +287,7 @@ final class Initializer
                 'X-WH-Id' => '?',
                 'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                 'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
+                'X-WH-Version' => getAppVersion(),
             ];
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
