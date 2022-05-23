@@ -369,7 +369,7 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        if (null === ($mediaYear = ag($json, 'Year'))) {
+        if (null !== ($mediaYear = ag($json, 'Year'))) {
             $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
@@ -1633,7 +1633,7 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        if (null === ($item->ProductionYear ?? null)) {
+        if (null !== ($item->ProductionYear ?? null)) {
             $row[iFace::COLUMN_YEAR] = (int)$item->ProductionYear;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$item->ProductionYear;
         }

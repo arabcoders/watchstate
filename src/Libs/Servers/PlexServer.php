@@ -410,7 +410,7 @@ class PlexServer implements ServerInterface
             }
         }
 
-        if (null === ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year']))) {
+        if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year']))) {
             $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
@@ -1788,7 +1788,7 @@ class PlexServer implements ServerInterface
             }
         }
 
-        if (null === ($mediaYear = $item->grandParentYear ?? $item->parentYear ?? $item->year ?? null)) {
+        if (null !== ($mediaYear = $item->grandParentYear ?? $item->parentYear ?? $item->year ?? null)) {
             $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }

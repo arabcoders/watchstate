@@ -175,7 +175,7 @@ class EmbyServer extends JellyfinServer
             }
         }
 
-        if (null === ($mediaYear = ag($json, 'Item.ProductionYear'))) {
+        if (null !== ($mediaYear = ag($json, 'Item.ProductionYear'))) {
             $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
