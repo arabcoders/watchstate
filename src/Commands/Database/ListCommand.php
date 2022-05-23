@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\Database;
 
 use App\Command;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
@@ -12,6 +13,8 @@ use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
 use RuntimeException;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
@@ -312,5 +315,52 @@ final class ListCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+
+        if ($input->mustSuggestOptionValuesFor('via') || $input->mustSuggestOptionValuesFor('metadata-as')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (array_keys(Config::get('servers', [])) as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('type')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach ([iFace::TYPE_MOVIE, iFace::TYPE_EPISODE] as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('output')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (['json', 'yaml', 'table'] as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
     }
 }

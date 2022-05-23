@@ -6,6 +6,8 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -23,14 +25,8 @@ final class EditCommand extends Command
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
-            ->addOption(
-                'regenerate-api-key',
-                null,
-                InputOption::VALUE_NONE,
-                'Re-generate backend webhook token. *Not used. will be removed*'
-            )
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
-            ->addArgument('name', InputArgument::REQUIRED, 'Server name');
+            ->addArgument('server', InputArgument::REQUIRED, 'Backend name');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
@@ -55,7 +51,7 @@ final class EditCommand extends Command
             $servers = (array)Config::get('servers', []);
         }
 
-        $name = $input->getArgument('name');
+        $name = $input->getArgument('server');
 
         if (!isValidName($name)) {
             $output->writeln(
@@ -72,7 +68,7 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if ($input->getOption('regenerate-api-key') || $input->getOption('regenerate-webhook-token')) {
+        if ($input->getOption('regenerate-webhook-token')) {
             try {
                 $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 
@@ -156,4 +152,22 @@ final class EditCommand extends Command
         return self::SUCCESS;
     }
 
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+
+        if ($input->mustSuggestOptionValuesFor('key')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (require __DIR__ . '/../../../config/servers.spec.php' as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+    }
 }

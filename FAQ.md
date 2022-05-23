@@ -202,17 +202,26 @@ $ docker exec -ti watchstate console servers:edit --key options.client.timeout -
 
 ### Q: Can I search my server remote libraries?
 
-Yes, Run the following command
+Yes, you can search your backend media servers. You can use `--search '[searchTerm]'`
+or `--search-id [backend_media_id]`. For example, to search for specific title keyword run the following command:
 
 ```bash
-$ docker exec -ti console server servers:remote --search '[searchTerm]' -- [SERVER_NAME]
+$ docker exec -ti console server servers:remote --search 'Gundam' -- [SERVER_NAME]
 ```
 
-Flags:
+or if you want to get a specific item metadata run the following command:
 
-* (required) `--search` Search query. For example, `GUNDAM`.
-* (optional) `--search-limit` To limit returned results. Defaults to `25`.
-* (optional) `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
+```bash
+$ docker exec -ti console server servers:remote --search-id 2514 -- [SERVER_NAME]
+```
+
+### Optional flags related to `--search` and `--search-id` 
+
+Those flags can be combined with the search parameter 
+
+* `--search-raw` Return unfiltered response.
+* `--search-limit` To limit returned results. Defaults to `25`.
+* `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
 
 ---
 

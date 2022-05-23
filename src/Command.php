@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App;
 
 use App\Libs\Config;
+use DirectoryIterator;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Xhgui\Profiler\Profiler;
@@ -129,5 +132,40 @@ class Command extends BaseCommand
         }
 
         return $config;
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        if ($input->mustSuggestOptionValuesFor('config')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (new DirectoryIterator(getcwd()) as $name) {
+                if (!$name->isFile()) {
+                    continue;
+                }
+
+                if (empty($currentValue) || str_starts_with($name->getFilename(), $currentValue)) {
+                    $suggest[] = $name->getFilename();
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('servers-filter') || $input->mustSuggestArgumentValuesFor('server')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (array_keys(Config::get('servers', [])) as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
     }
 }

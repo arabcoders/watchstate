@@ -21,12 +21,12 @@ final class MakeCommand extends Command
     {
         $this->setName('storage:make')
             ->setDescription('Create storage backend migration.')
-            ->addArgument('name', InputArgument::REQUIRED, 'Migration name.');
+            ->addArgument('filename', InputArgument::REQUIRED, 'Migration name.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $file = $this->storage->makeMigration($input->getArgument('name'));
+        $file = $this->storage->makeMigration($input->getArgument('filename'));
 
         $output->writeln(sprintf('<info>Created new migration at \'%s\'.</info>', $file));
 

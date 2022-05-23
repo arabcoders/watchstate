@@ -283,7 +283,7 @@ final class StateEntity implements iFace
 
     public function shouldMarkAsUnplayed(iFace $remote): bool
     {
-        if (false !== $remote->isWatched()) {
+        if (false !== $remote->isWatched() && true === $this->isWatched()) {
             return false;
         }
 
