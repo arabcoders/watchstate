@@ -147,7 +147,8 @@ final class Initializer
                 $e->getMessage(),
                 [
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
                 ]
             );
             $response = new Response(500);
@@ -170,24 +171,21 @@ final class Initializer
             }
 
             // -- get apikey from header or query.
-            $apikey = $realRequest->getHeaderLine('x-apikey');
+            $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
             if (empty($apikey)) {
-                $apikey = ag($realRequest->getQueryParams(), 'apikey', '');
-                if (empty($apikey)) {
-                    $log[] = 'No webhook token found in headers or query';
-                    throw new HttpException('No Webhook token was found.', 400);
-                }
+                $log[] = 'No webhook token found in headers or query';
+                throw new HttpException('No Webhook token was found.', 400);
             }
 
             $validUser = $validUUid = null;
 
-            // -- Find Server
+            // -- Find Relevant backend
             foreach (Config::get('servers', []) as $name => $info) {
                 if (null === ag($info, 'webhook.token')) {
                     continue;
                 }
 
-                if (true !== hash_equals(ag($info, 'webhook.token'), (string)$apikey)) {
+                if (true !== hash_equals((string)ag($info, 'webhook.token'), (string)$apikey)) {
                     continue;
                 }
 
@@ -220,6 +218,7 @@ final class Initializer
                         );
                         continue;
                     }
+
                     $validUser = true;
                 }
 
@@ -282,23 +281,19 @@ final class Initializer
             }
 
             $responseHeaders = [
+                'X-WH-Id' => '?',
                 'X-WH-Backend' => $class->getName(),
                 'X-WH-Item' => $entity->getName(),
-                'X-WH-Id' => '?',
                 'X-WH-Type' => $request->getAttribute('WH_TYPE', 'not_set'),
                 'X-WH-Event' => $request->getAttribute('WH_EVENT', 'not_set'),
                 'X-WH-Version' => getAppVersion(),
             ];
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+                $message = sprintf('%s does not have external ids.', ucfirst($entity->type));
                 return new Response(
                     status:  204,
-                    headers: $responseHeaders + [
-                                 'X-Status' => sprintf(
-                                     '%s does not have external and parents ids.',
-                                     ucfirst($entity->type)
-                                 )
-                             ]
+                    headers: $responseHeaders + ['X-Status' => $message]
                 );
             }
 
@@ -322,11 +317,11 @@ final class Initializer
 
             $responseHeaders['X-WH-Id'] = $backend->id;
 
-            if (true === $entity->isTainted()) {
-                $cloned = clone $backend;
+            $cloned = clone $backend;
 
-                if ($cloned->apply($entity, metadataOnly: true)->isChanged()) {
-                    $backend = $storage->update($backend->apply($entity));
+            if (true === $entity->isTainted()) {
+                if ($cloned->apply(entity: $entity, metadataOnly: true)->isChanged()) {
+                    $backend = $storage->update($backend->apply(entity: $entity, metadataOnly: true));
                     return jsonResponse(
                         status:  200,
                         body:    $backend->getAll(),
@@ -341,8 +336,8 @@ final class Initializer
             }
 
             if ($backend->updated >= $entity->updated) {
-                if ($backend->apply($entity, metadataOnly: true)->isChanged()) {
-                    $backend = $storage->update($backend->apply($entity));
+                if ($cloned->apply(entity: $entity, metadataOnly: true)->isChanged()) {
+                    $backend = $storage->update($backend->apply(entity: $entity, metadataOnly: true));
                     return jsonResponse(
                         status:  200,
                         body:    $backend->getAll(),
@@ -350,27 +345,26 @@ final class Initializer
                     );
                 }
 
+                if ($backend->updated > $entity->updated) {
+                    $message = sprintf('%s time is older than the recorded time in database.', ucfirst($entity->type));
+                } else {
+                    $message = '[D] No difference detected.';
+                }
+
                 return new Response(
                     status:  200,
-                    headers: $responseHeaders + [
-                                 'X-Status' => sprintf(
-                                     '%s time is older than the recorded time in database.',
-                                     ucfirst($entity->type)
-                                 ),
-                             ]
+                    headers: $responseHeaders + ['X-Status' => $message]
                 );
             }
 
-            $cloned = clone $backend;
-
-            if ($backend->apply($entity, metadataOnly: true)->isChanged()) {
+            if ($backend->apply($entity)->isChanged()) {
                 $backend = $storage->update($backend->apply($entity));
 
                 $message = 'Updated %s metadata.';
 
-                if ($cloned->watched !== $backend->watched) {
-                    queuePush($backend);
+                if ($cloned->isWatched() !== $backend->isWatched()) {
                     $message = 'Queued %s For push event. [Played: %s]';
+                    queuePush($backend);
                 }
 
                 return jsonResponse(
