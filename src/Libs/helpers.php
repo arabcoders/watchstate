@@ -334,7 +334,7 @@ if (!function_exists('queuePush')) {
 
             $list[$entity->id] = ['id' => $entity->id];
 
-            $cache->set('queue', $list);
+            $cache->set('queue', $list, new DateInterval('P7D'));
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
             Container::get(LoggerInterface::class)->error($e->getMessage(), $e->getTrace());
         }

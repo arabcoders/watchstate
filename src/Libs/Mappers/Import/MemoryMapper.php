@@ -107,17 +107,35 @@ final class MemoryMapper implements ImportInterface
             return $this;
         }
 
-        // -- Ignore old item.
+        // -- Item date is older than recorded last sync date,
         if (null !== ($opts['after'] ?? null) && ($opts['after'] instanceof DateTimeInterface)) {
             if ($opts['after']->getTimestamp() >= $entity->updated) {
+                // -- Handle mark as unwatched logic
+                if (false === $entity->isWatched()) {
+                    $cloned = clone $this->objects[$pointer];
+                    if (true === $cloned->shouldMarkAsUnplayed($entity)) {
+                        $this->objects[$pointer] = $this->objects[$pointer]->markAsUnplayed($entity);
+                        $this->changed[$pointer] = $pointer;
+                        Data::increment($bucket, $entity->type . '_updated');
+
+                        $this->logger->notice(
+                            sprintf('%s: Updating \'%s\'. Item marked as unplayed.', $bucket, $entity->getName()),
+                            $this->objects[$pointer]->diff(all: true),
+                        );
+
+                        return $this;
+                    }
+                }
+
                 Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
         }
 
+        $cloned = clone $this->objects[$pointer];
+
         $this->objects[$pointer] = $this->objects[$pointer]->apply($entity);
 
-        $cloned = clone $this->objects[$pointer];
         if (true === $this->objects[$pointer]->isChanged()) {
             Data::increment($bucket, $entity->type . '_updated');
             $this->changed[$pointer] = $pointer;
@@ -279,7 +297,7 @@ final class MemoryMapper implements ImportInterface
     private function addPointers(StateInterface $entity, int $pointer): void
     {
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
-            $this->guids[ $key .'/'. $entity->type] = $pointer;
+            $this->guids[$key . '/' . $entity->type] = $pointer;
         }
     }
 
@@ -293,7 +311,7 @@ final class MemoryMapper implements ImportInterface
     private function getPointer(StateInterface $entity): int|bool
     {
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
-            $lookup = $key .'/'. $entity->type;
+            $lookup = $key . '/' . $entity->type;
             if (null !== ($this->guids[$lookup] ?? null)) {
                 return $this->guids[$lookup];
             }
@@ -312,7 +330,7 @@ final class MemoryMapper implements ImportInterface
     private function removePointers(StateInterface $entity): void
     {
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
-            $lookup = $key .'/'. $entity->type;
+            $lookup = $key . '/' . $entity->type;
             if (isset($this->guids[$lookup])) {
                 unset($this->guids[$lookup]);
             }

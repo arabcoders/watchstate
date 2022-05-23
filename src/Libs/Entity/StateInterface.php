@@ -259,4 +259,40 @@ interface StateInterface
      * @return array
      */
     public function getExtra(string|null $via = null): array;
+
+    /**
+     * Should we mark the media as unplayed?<br><br>
+     * The Logic flows as the following:<br>
+     *
+     * Is the remote item marked as unplayed? if so get the recorded metadata that relates to the backend.
+     * Does that metadata contains {@see iFace::COLUMN_META_DATA_ADDED_AT} and {@see iFace::COLUMN_META_DATA_PLAYED_AT} ?
+     * since media backends when marking media items as unplayed they remove {@see iFace::COLUMN_META_DATA_PLAYED_AT}
+     * field from response, so our logic handler for {@see iFace::COLUMN_UPDATED} fall back to
+     * {@see iFace::COLUMN_META_DATA_ADDED_AT}.<br><br>
+     *
+     * so to mark items as unplayed the following conditions **MUST** be met<br><br>
+     *
+     * 1- Backend item **MUST** be marked as unplayed.<br>
+     * 2- Database metadata **MUST** contain {@see iFace::COLUMN_META_DATA_PLAYED_AT} and {@see iFace::COLUMN_META_DATA_ADDED_AT} columns.<br>
+     * 3- backend {@see iFace::COLUMN_UPDATED} **MUST** be equal to database metadata {@see iFace::COLUMN_META_DATA_ADDED_AT}<br><br>
+     *
+     * @param StateInterface $remote
+     *
+     * @return bool
+     */
+    public function shouldMarkAsUnplayed(StateInterface $remote): bool;
+
+    /**
+     * Mark item as unplayed.<br><br>
+     * If all conditions described at {@see StateInterface::shouldMarkAsUnplayed()} are met, then these actions **MUST** be taken:<br><br>
+     *
+     * 1- Manually set the watch property to false.<br>
+     * 2- Remove {@see iFace::COLUMN_META_DATA_PLAYED_AT}.<br>
+     * 3- Manually set {@see iFace::COLUMN_UPDATED} to current time.<br>
+     *
+     * @param StateInterface $remote the backend object.
+     *
+     * @return StateInterface
+     */
+    public function markAsUnplayed(StateInterface $remote): StateInterface;
 }
