@@ -241,7 +241,7 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(string $name, ServerRequestInterface $request, StateInterface $state): void
+    function saveWebhookPayload(StateInterface $entity, ServerRequestInterface $request): void
     {
         $content = [
             'request' => [
@@ -251,17 +251,17 @@ if (!function_exists('saveWebhookPayload')) {
             ],
             'parsed' => $request->getParsedBody(),
             'attributes' => $request->getAttributes(),
-            'entity' => $state->getAll(),
+            'entity' => $entity->getAll(),
         ];
 
         @file_put_contents(
             Config::get('tmpDir') . '/webhooks/' . sprintf(
                 'webhook.%s.%s.%s.json',
-                $name,
-                ag($state->extra, 'webhook.event', 'unknown'),
+                $entity->via,
+                ag($entity->getExtra($entity->via), 'event', 'unknown'),
                 ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),
-            json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE)
         );
     }
 }
@@ -334,7 +334,7 @@ if (!function_exists('queuePush')) {
 
             $list[$entity->id] = ['id' => $entity->id];
 
-            $cache->set('queue', $list);
+            $cache->set('queue', $list, new DateInterval('P7D'));
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
             Container::get(LoggerInterface::class)->error($e->getMessage(), $e->getTrace());
         }

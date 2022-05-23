@@ -263,6 +263,57 @@ final class StateEntity implements iFace
         return $this->tainted;
     }
 
+    public function getMetadata(string|null $via = null): array
+    {
+        if (null === $via) {
+            return $this->metadata;
+        }
+
+        return $this->metadata[$via] ?? [];
+    }
+
+    public function getExtra(string|null $via = null): array
+    {
+        if (null === $via) {
+            return $this->extra;
+        }
+
+        return $this->extra[$via] ?? [];
+    }
+
+    public function shouldMarkAsUnplayed(iFace $remote): bool
+    {
+        if (false !== $remote->isWatched()) {
+            return false;
+        }
+
+        $addedAt = ag($this->metadata[$remote->via] ?? [], iFace::COLUMN_META_DATA_ADDED_AT);
+        $playedAt = ag($this->metadata[$remote->via] ?? [], iFace::COLUMN_META_DATA_PLAYED_AT);
+
+        // -- Required columns are not recorded at the backend database. so discontinue.
+        if (null === $playedAt || null === $addedAt) {
+            return false;
+        }
+
+        // -- Recorded added_at at database is not equal to remote updated.
+        if ((int)$addedAt !== $remote->updated) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function markAsUnplayed(iFace $remote): StateInterface
+    {
+        $this->watched = 0;
+        $this->updated = time();
+
+        // -- no isset check is intentional, this should throw error as condition are not met.
+        unset($this->metadata[$remote->via][iFace::COLUMN_META_DATA_PLAYED_AT]);
+
+        return $this;
+    }
+
     private function isEqual(iFace $entity): bool
     {
         foreach (iFace::ENTITY_KEYS as $key) {
@@ -287,12 +338,13 @@ final class StateEntity implements iFace
         return true;
     }
 
-    private function updateValue(string $key, iFace $entity): void
+    private function updateValue(string $key, iFace $remote): void
     {
         if (iFace::COLUMN_UPDATED === $key || iFace::COLUMN_WATCHED === $key) {
-            if ($entity->updated > $this->updated && $entity->watched !== $this->watched) {
-                $this->updated = $entity->updated;
-                $this->watched = $entity->watched;
+            // -- Normal logic flow usually this indicates that backend has played_at date column.
+            if ($remote->updated > $this->updated && $remote->isWatched() !== $this->isWatched()) {
+                $this->updated = $remote->updated;
+                $this->watched = $remote->watched;
             }
             return;
         }
@@ -302,9 +354,9 @@ final class StateEntity implements iFace
         }
 
         if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
-            $this->{$key} = array_replace_recursive($this->{$key} ?? [], $entity->{$key} ?? []);
+            $this->{$key} = array_replace_recursive($this->{$key} ?? [], $remote->{$key} ?? []);
         } else {
-            $this->{$key} = $entity->{$key};
+            $this->{$key} = $remote->{$key};
         }
     }
 

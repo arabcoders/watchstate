@@ -34,6 +34,8 @@ return [
             iFace::COLUMN_META_DATA_EXTRA => [
                 iFace::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
             ],
+            iFace::COLUMN_META_DATA_ADDED_AT => 1,
+            iFace::COLUMN_META_DATA_PLAYED_AT => 2,
         ],
     ],
     iFace::COLUMN_EXTRA => [

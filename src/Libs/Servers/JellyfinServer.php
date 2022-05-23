@@ -270,7 +270,7 @@ class JellyfinServer implements ServerInterface
                 'ITEM_ID' => ag($json, 'ItemId', ''),
                 'SERVER_ID' => ag($json, 'ServerId', ''),
                 'SERVER_NAME' => ag($json, 'ServerName', ''),
-                'SERVER_VERSION' => afterLast($userAgent, '/'),
+                'SERVER_VERSION' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
                 'USER_ID' => ag($json, 'UserId', ''),
                 'USER_NAME' => ag($json, 'NotificationUsername', ''),
                 'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
@@ -323,23 +323,18 @@ class JellyfinServer implements ServerInterface
 
         $row = [
             iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
-            iFace::COLUMN_WATCHED => (int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
+            iFace::COLUMN_UPDATED => strtotime(ag($json, ['LastPlayedDate', 'UtcTimestamp', 'Timestamp'], 'now')),
+            iFace::COLUMN_WATCHED => (int)(bool)ag($json, 'Played', 0),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-            iFace::COLUMN_YEAR => (int)ag($json, 'Year', 0000),
-            iFace::COLUMN_SEASON => null,
-            iFace::COLUMN_EPISODE => null,
-            iFace::COLUMN_PARENT => [],
             iFace::COLUMN_GUIDS => $this->getGuids($providersId),
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($json, 'ItemId'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, ['Played', 'PlayedToCompletion'], 0),
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, 'Played', 0),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-                    iFace::COLUMN_YEAR => (string)ag($json, 'Year', 0000),
                     iFace::COLUMN_GUIDS => array_change_key_case($providersId, CASE_LOWER)
                 ]
             ],
@@ -357,6 +352,7 @@ class JellyfinServer implements ServerInterface
             $row[iFace::COLUMN_TITLE] = $seriesName ?? '??';
             $row[iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
             $row[iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = $seriesName ?? '??';
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
@@ -373,9 +369,28 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-            ag($json, ['PremiereDate', 'ProductionYear', 'DateCreated'], 'now')
-        )->format('Y-m-d');
+        if (null !== ($mediaYear = ag($json, 'Year'))) {
+            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
+        }
+
+        if (null !== ($premiereDate = ag($json, 'PremiereDate'))) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+                $premiereDate
+            )->format('Y-m-d');
+        }
+
+        if (null !== ($addedAt = ag($json, 'DateCreated'))) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_ADDED_AT] = makeDate(
+                $addedAt
+            )->getTimestamp();
+        }
+
+        if (null !== ($lastPlayedAt = ag($json, 'LastPlayedDate')) && true === (bool)ag($json, 'Played')) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = makeDate(
+                $lastPlayedAt
+            )->getTimestamp();
+        }
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
@@ -389,12 +404,6 @@ class JellyfinServer implements ServerInterface
             $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
 
             throw new HttpException($message, 400);
-        }
-
-        $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
-
-        if (false === $isTainted && $savePayload) {
-            saveWebhookPayload($this->name, $request, $entity);
         }
 
         return $entity;
@@ -809,7 +818,7 @@ class JellyfinServer implements ServerInterface
                 }
 
                 if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                    $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated', 'PremiereDate'], null);
+                    $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated'], null);
 
                     if (null === $date) {
                         $this->logger->error(
@@ -983,100 +992,6 @@ class JellyfinServer implements ServerInterface
                 );
             },
             includeParent: false,
-        );
-    }
-
-    public function cache(): array
-    {
-        return $this->getLibraries(
-            ok: function (string $cName, string $type) {
-                return function (ResponseInterface $response) use ($cName, $type) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            )
-                        );
-                        return;
-                    }
-
-                    try {
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
-
-                        $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/Items',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
-                        );
-
-                        foreach ($it as $entity) {
-                            if ($entity instanceof DecodingError) {
-                                $this->logger->warning(
-                                    sprintf(
-                                        '%s: Failed to decode one of \'%s\' items. %s',
-                                        $this->name,
-                                        $cName,
-                                        $entity->getErrorMessage()
-                                    ),
-                                    [
-                                        'payload' => $entity->getMalformedJson()
-                                    ]
-                                );
-                                continue;
-                            }
-                            $this->processCache($entity, $type, $cName);
-                        }
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to find items in \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
-                        );
-                    }
-
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
-                };
-            },
-            error: function (string $cName, string $type, UriInterface|string $url) {
-                return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]
-                );
-            },
-            includeParent: true
         );
     }
 
@@ -1365,7 +1280,7 @@ class JellyfinServer implements ServerInterface
                 ]);
             }
 
-            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
+            $date = $item->UserData->LastPlayedDate ?? $item->DateCreated ?? null;
 
             if (null === $date) {
                 $this->logger->warning(
@@ -1433,30 +1348,6 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    protected function processCache(StdClass $item, string $type, string $library): void
-    {
-        try {
-            if ('show' === $type) {
-                $this->processShow($item, $library);
-                return;
-            }
-
-            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
-
-            if (null === $date) {
-                return;
-            }
-
-            $this->createEntity($item, $type);
-        } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-        }
-    }
-
     protected function processExport(
         ExportInterface $mapper,
         string $type,
@@ -1486,7 +1377,7 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
-            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate ?? null;
+            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? null;
 
             if (null === $date) {
                 $this->logger->notice(
@@ -1700,28 +1591,28 @@ class JellyfinServer implements ServerInterface
 
     protected function createEntity(stdClass $item, string $type): StateEntity
     {
-        $date = strtotime($item->UserData?->LastPlayedDate ?? $item->DateCreated ?? $item->PremiereDate);
+        $date = $item->UserData->LastPlayedDate ?? $item->DateCreated ?? null;
+
+        if (null === $date) {
+            throw new RuntimeException('No date was set on object.');
+        }
 
         $row = [
             iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => $date,
-            iFace::COLUMN_WATCHED => (int)(bool)($item->UserData?->Played ?? false),
+            iFace::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
+            iFace::COLUMN_WATCHED => (int)(bool)($item->UserData->Played ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-            iFace::COLUMN_YEAR => (int)($item->ProductionYear ?? 0000),
-            iFace::COLUMN_SEASON => null,
-            iFace::COLUMN_EPISODE => null,
-            iFace::COLUMN_PARENT => [],
             iFace::COLUMN_GUIDS => $this->getGuids((array)($item->ProviderIds ?? [])),
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->Id,
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)($item->UserData?->Played ?? false),
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)($item->UserData->Played ?? false),
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-                    iFace::COLUMN_YEAR => (string)($item->ProductionYear ?? 0000),
                     iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
+                    iFace::COLUMN_META_DATA_ADDED_AT => (string)makeDate($item->DateCreated)->getTimestamp(),
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
@@ -1731,6 +1622,7 @@ class JellyfinServer implements ServerInterface
             $row[iFace::COLUMN_TITLE] = $item->SeriesName ?? '??';
             $row[iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
             $row[iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = $item->SeriesName ?? '??';
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name ?? $item->OriginalTitle ?? '??';
@@ -1741,9 +1633,22 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-            $item->PremiereDate ?? $item->ProductionYear ?? 'now'
-        )->format('Y-m-d');
+        if (null !== ($item->ProductionYear ?? null)) {
+            $row[iFace::COLUMN_YEAR] = (int)$item->ProductionYear;
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$item->ProductionYear;
+        }
+
+        if (null !== ($item->PremiereDate ?? null)) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+                $item->PremiereDate
+            )->format('Y-m-d');
+        }
+
+        if (null !== ($item->UserData->LastPlayedDate ?? null)) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate(
+                $item->UserData->LastPlayedDate
+            )->getTimestamp();
+        }
 
         return Container::get(iFace::class)::fromArray($row);
     }
