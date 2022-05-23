@@ -263,6 +263,24 @@ final class StateEntity implements iFace
         return $this->tainted;
     }
 
+    public function getMetadata(string|null $via = null): array
+    {
+        if (null === $via) {
+            return $this->metadata;
+        }
+
+        return $this->metadata[$via] ?? [];
+    }
+
+    public function getExtra(string|null $via = null): array
+    {
+        if (null === $via) {
+            return $this->extra;
+        }
+
+        return $this->extra[$via] ?? [];
+    }
+
     private function isEqual(iFace $entity): bool
     {
         foreach (iFace::ENTITY_KEYS as $key) {

@@ -258,7 +258,7 @@ if (!function_exists('saveWebhookPayload')) {
             Config::get('tmpDir') . '/webhooks/' . sprintf(
                 'webhook.%s.%s.%s.json',
                 $name,
-                ag($state->extra, 'webhook.event', 'unknown'),
+                ag($state->getExtra(), 'event', 'unknown'),
                 ag($request->getServerParams(), 'X_REQUEST_ID', time())
             ),
             json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)

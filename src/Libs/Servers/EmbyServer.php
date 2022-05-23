@@ -120,13 +120,15 @@ class EmbyServer extends JellyfinServer
         }
 
         $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
+        $playedAt = null;
 
         if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
-            $isWatched = 1;
+            $playedAt = time();
+            $isPlayed = 1;
         } elseif ('item.markunplayed' === $event) {
-            $isWatched = 0;
+            $isPlayed = 0;
         } else {
-            $isWatched = (int)(bool)ag($json, ['Item.Played', 'Item.PlayedToCompletion'], false);
+            $isPlayed = (int)(bool)ag($json, ['Item.Played', 'Item.PlayedToCompletion'], false);
         }
 
         $providersId = ag($json, 'Item.ProviderIds', []);
@@ -134,7 +136,7 @@ class EmbyServer extends JellyfinServer
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => time(),
-            iFace::COLUMN_WATCHED => $isWatched,
+            iFace::COLUMN_WATCHED => $isPlayed,
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
             iFace::COLUMN_YEAR => (int)ag($json, 'Item.ProductionYear', 0000),
@@ -146,7 +148,7 @@ class EmbyServer extends JellyfinServer
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($json, 'Item.ItemId'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)$isWatched,
+                    iFace::COLUMN_WATCHED => (string)$isPlayed,
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($json, ['Item.Name', 'Item.OriginalTitle'], '??'),
                     iFace::COLUMN_YEAR => (string)ag($json, 'Item.ProductionYear', 0000),
@@ -165,6 +167,7 @@ class EmbyServer extends JellyfinServer
             $row[iFace::COLUMN_TITLE] = ag($json, 'Item.SeriesName', '??');
             $row[iFace::COLUMN_SEASON] = ag($json, 'Item.ParentIndexNumber', 0);
             $row[iFace::COLUMN_EPISODE] = ag($json, 'Item.IndexNumber', 0);
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = ag($json, 'Item.SeriesName', '??');
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
             $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
@@ -178,9 +181,21 @@ class EmbyServer extends JellyfinServer
             }
         }
 
-        $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-            ag($json, ['Item.PremiereDate', 'Item.ProductionYear', 'Item.DateCreated'], 'now')
-        )->format('Y-m-d');
+        if (null !== ($premiereDate = ag($json, 'Item.PremiereDate'))) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
+                $premiereDate
+            )->format('Y-m-d');
+        }
+
+        if (null !== ($addedAt = ag($json, 'Item.DateCreated'))) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_ADDED_AT] = makeDate(
+                $addedAt
+            )->getTimestamp();
+        }
+
+        if (null !== $playedAt) {
+            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = $playedAt;
+        }
 
         $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 

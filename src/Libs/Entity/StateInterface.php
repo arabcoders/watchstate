@@ -24,12 +24,14 @@ interface StateInterface
     public const COLUMN_PARENT = 'parent';
     public const COLUMN_GUIDS = 'guids';
     public const COLUMN_META_DATA = 'metadata';
+    public const COLUMN_META_DATA_ADDED_AT = 'added_at';
+    public const COLUMN_META_DATA_PLAYED_AT = 'played_at';
     public const COLUMN_META_DATA_EXTRA = 'extra';
     public const COLUMN_META_DATA_EXTRA_TITLE = 'title';
+    public const COLUMN_META_DATA_EXTRA_DATE = 'date';
     public const COLUMN_EXTRA = 'extra';
     public const COLUMN_EXTRA_EVENT = 'event';
     public const COLUMN_EXTRA_DATE = 'received_at';
-    public const COLUMN_META_DATA_EXTRA_DATE = 'date';
 
     /**
      * List of table keys.
@@ -239,4 +241,22 @@ interface StateInterface
      * @return bool
      */
     public function isTainted(): bool;
+
+    /**
+     * Get Metadata
+     *
+     * @param string|null $via if via is omitted, the entire "metadata" will be returned.
+     *
+     * @return array
+     */
+    public function getMetadata(string|null $via = null): array;
+
+    /**
+     * Get extra.
+     *
+     * @param string|null $via if via is omitted, the entire "extra" will be returned.
+     *
+     * @return array
+     */
+    public function getExtra(string|null $via = null): array;
 }
