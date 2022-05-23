@@ -231,19 +231,3 @@ These are the agents we support for plex media server.
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO parser agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO parser agent for tv)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(hama agent is multi db source agent)`
-
----
-
-### Q: Marking items as unplayed and then importing does not change the status?
-
-That's happens because the media servers API reset the last played date on the items, and there is no indicator that the
-status has changed, usually there are field called `updated_at` that would reflect any changes to the object. but that's
-not the case here. to import `mark as unplayed` items, You have to use the webhook frontend as those events indicate
-the date at which the event triggered. Unfortunately this will not work for `Plex` backend as they do not send events
-for `mark as played/unplayed`.
-
-For backends that does not support those events, you can force sync by running the import command with `--ignore-date`
-and `--force-full`flags, this will allow you to reimport the items.
-
-We are exploring different implementation to hopefully support syncing unplayed events via normal state:import
-operations.
