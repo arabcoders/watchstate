@@ -8,6 +8,8 @@ use App\Command;
 use App\Libs\Config;
 use Exception;
 use RuntimeException;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputArgument;
@@ -33,7 +35,7 @@ final class ViewCommand extends Command
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,
-                'Can be any key from config, use dot notion to access sub keys, for example "webhook.token"'
+                'Can be any key from servers.yaml, use dot notion to access sub keys, for example "webhook.token"'
             );
     }
 
@@ -101,5 +103,24 @@ final class ViewCommand extends Command
             ->render();
 
         return self::SUCCESS;
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+
+        if ($input->mustSuggestArgumentValuesFor('filter')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (require __DIR__ . '/../../../config/servers.spec.php' as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
     }
 }

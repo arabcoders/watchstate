@@ -6,6 +6,8 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -175,5 +177,24 @@ final class UnifyCommand extends Command
         $output->writeln(sprintf('<comment>Unified the API key of %d %s servers.</comment>', count($list), $type));
         $output->writeln(sprintf('<info>%s global webhook API key is: %s</info>', ucfirst($type), $apiToken));
         return self::SUCCESS;
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+
+        if ($input->mustSuggestArgumentValuesFor('type')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (array_keys(Config::get('supported', [])) as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
     }
 }

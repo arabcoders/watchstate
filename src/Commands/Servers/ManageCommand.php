@@ -25,7 +25,7 @@ final class ManageCommand extends Command
             ->setDescription('Manage Server settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Server')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('name', InputArgument::REQUIRED, 'Server name');
+            ->addArgument('server', InputArgument::REQUIRED, 'Server name');
     }
 
     /**
@@ -71,7 +71,7 @@ final class ManageCommand extends Command
         }
 
         $add = $input->getOption('add');
-        $name = $input->getArgument('name');
+        $name = $input->getArgument('server');
 
         if (!isValidName($name)) {
             $output->writeln(
@@ -549,5 +549,4 @@ final class ManageCommand extends Command
 
         return self::SUCCESS;
     }
-
 }

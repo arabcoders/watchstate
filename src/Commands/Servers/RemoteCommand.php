@@ -31,13 +31,13 @@ final class RemoteCommand extends Command
             ->addOption('list-users', null, InputOption::VALUE_NONE, 'List Server users.')
             ->addOption('list-users-with-tokens', null, InputOption::VALUE_NONE, 'Show users list with tokens.')
             ->addOption('use-token', null, InputOption::VALUE_REQUIRED, 'Override server config token.')
-            ->addOption('search', null, InputOption::VALUE_REQUIRED, 'Search query')
-            ->addOption('search-id', null, InputOption::VALUE_REQUIRED, 'Get metadata related to given id')
+            ->addOption('search', null, InputOption::VALUE_REQUIRED, 'Search query.')
+            ->addOption('search-id', null, InputOption::VALUE_REQUIRED, 'Get metadata related to given id.')
             ->addOption('search-raw', null, InputOption::VALUE_NONE, 'Return Unfiltered results.')
-            ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit', 25)
-            ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml]', 'json')
+            ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit.', 25)
+            ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml].', 'json')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('name', InputArgument::REQUIRED, 'Server name');
+            ->addArgument('server', InputArgument::REQUIRED, 'Server name');
     }
 
     /**
@@ -56,7 +56,7 @@ final class RemoteCommand extends Command
             }
         }
 
-        $name = $input->getArgument('name');
+        $name = $input->getArgument('server');
         $ref = "servers.{$name}";
 
         if (null === Config::get("{$ref}.type", null)) {
@@ -213,26 +213,14 @@ final class RemoteCommand extends Command
 
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
+        parent::complete($input, $suggestions);
+
         if ($input->mustSuggestOptionValuesFor('search-output')) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];
 
             foreach (['yaml', 'json'] as $name) {
-                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                    $suggest[] = $name;
-                }
-            }
-
-            $suggestions->suggestValues($suggest);
-        }
-
-        if ($input->mustSuggestArgumentValuesFor('name')) {
-            $currentValue = $input->getCompletionValue();
-
-            $suggest = [];
-
-            foreach (array_keys(Config::get('servers', [])) as $name) {
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }
