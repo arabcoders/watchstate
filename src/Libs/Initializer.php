@@ -275,6 +275,12 @@ final class Initializer
 
             $entity = $class->parseWebhook($request);
 
+            $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
+
+            if (true === $savePayload && false === $entity->isTainted()) {
+                saveWebhookPayload($entity, $request);
+            }
+
             $responseHeaders = [
                 'X-WH-Backend' => $class->getName(),
                 'X-WH-Item' => $entity->getName(),

@@ -439,12 +439,6 @@ class PlexServer implements ServerInterface
             throw new HttpException($message, 400);
         }
 
-        $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
-
-        if (false !== $isTainted && $savePayload) {
-            saveWebhookPayload($this->name, $request, $entity);
-        }
-
         return $entity;
     }
 

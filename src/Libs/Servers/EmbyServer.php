@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
-use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
@@ -209,12 +208,6 @@ class EmbyServer extends JellyfinServer
             $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
 
             throw new HttpException($message, 400);
-        }
-
-        $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
-
-        if (false === $isTainted && $savePayload) {
-            saveWebhookPayload($this->name, $request, $entity);
         }
 
         return $entity;
