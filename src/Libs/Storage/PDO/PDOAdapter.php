@@ -122,6 +122,17 @@ final class PDOAdapter implements StorageInterface
         return $arr;
     }
 
+    public function getCount(DateTimeInterface|null $date = null): int
+    {
+        $sql = 'SELECT COUNT(id) AS total FROM state';
+
+        if (null !== $date) {
+            $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
+        }
+
+        return $this->pdo->query($sql)->fetchColumn();
+    }
+
     public function find(iFace ...$items): array
     {
         $list = [];
