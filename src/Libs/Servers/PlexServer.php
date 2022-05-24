@@ -722,6 +722,8 @@ class PlexServer implements ServerInterface
 
         $requests = $stateRequests = [];
 
+        $count = count($entities);
+
         foreach ($entities as $key => $entity) {
             if (true !== ($entity instanceof StateEntity)) {
                 continue;
@@ -757,9 +759,11 @@ class PlexServer implements ServerInterface
                         )
                     );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
-                    'url' => $url
-                ]);
+                if ($count < 20) {
+                    $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
+                        'url' => $url
+                    ]);
+                }
 
                 $requests[] = $this->http->request(
                     'GET',
@@ -767,7 +771,6 @@ class PlexServer implements ServerInterface
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'id' => $key,
-                            'state' => &$entity,
                             'suid' => ag($metadata, iFace::COLUMN_ID),
                         ]
                     ])
@@ -783,10 +786,12 @@ class PlexServer implements ServerInterface
 
         foreach ($requests as $response) {
             try {
-                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
+                if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error(sprintf('%s: Unable to get item entity state.', $this->name));
                     continue;
                 }
+
+                $state = $entities[$id];
 
                 assert($state instanceof iFace);
 
@@ -1495,19 +1500,21 @@ class PlexServer implements ServerInterface
                 ]
             );
 
-            $mapper->queue(
-                $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'itemName' => $iName,
-                            'server' => $this->name,
-                            'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                        ]
-                    ])
-                )
-            );
+            if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
+                $mapper->queue(
+                    $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($this->getHeaders(), [
+                            'user_data' => [
+                                'itemName' => $iName,
+                                'server' => $this->name,
+                                'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                            ]
+                        ])
+                    )
+                );
+            }
         } catch (Throwable $e) {
             $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
