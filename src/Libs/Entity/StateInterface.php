@@ -59,6 +59,8 @@ interface StateInterface
         self::COLUMN_VIA,
         self::COLUMN_TITLE,
         self::COLUMN_YEAR,
+        self::COLUMN_SEASON,
+        self::COLUMN_EPISODE,
         self::COLUMN_EXTRA,
     ];
 
@@ -201,11 +203,11 @@ interface StateInterface
      * Apply changes to entity.
      *
      * @param StateInterface $entity
-     * @param bool $metadataOnly
+     * @param bool $essentialOnly Only Update {@see StateInterface::ENTITY_FORCE_UPDATE_FIELDS}
      *
      * @return StateInterface
      */
-    public function apply(StateInterface $entity, bool $metadataOnly = false): StateInterface;
+    public function apply(StateInterface $entity, bool $essentialOnly = false): StateInterface;
 
     /**
      * Update Original data.

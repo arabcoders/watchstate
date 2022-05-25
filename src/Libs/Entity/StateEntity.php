@@ -218,9 +218,9 @@ final class StateEntity implements iFace
         return $rPointers;
     }
 
-    public function apply(iFace $entity, bool $metadataOnly = false): self
+    public function apply(iFace $entity, bool $essentialOnly = false): self
     {
-        if (true === $metadataOnly) {
+        if (true === $essentialOnly) {
             foreach (iFace::ENTITY_FORCE_UPDATE_FIELDS as $key) {
                 if (true === $this->isEqualValue($key, $entity)) {
                     continue;
@@ -307,9 +307,6 @@ final class StateEntity implements iFace
     {
         $this->watched = 0;
         $this->updated = time();
-
-        // -- no isset check is intentional, this should throw error as condition are not met.
-        unset($this->metadata[$remote->via][iFace::COLUMN_META_DATA_PLAYED_AT]);
 
         return $this;
     }
