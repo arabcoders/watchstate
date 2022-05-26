@@ -179,36 +179,28 @@ return (function () {
             Task::ENABLED => (bool)env('WS_CRON_IMPORT', false),
             Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
             Task::COMMAND => '@state:import',
-            Task::ARGS => [
-                env('WS_CRON_IMPORT_DEBUG_LEVEL', '-v') => null,
-            ]
+            Task::ARGS => env('WS_CRON_IMPORT_ARGS', '-v'),
         ],
         ExportCommand::TASK_NAME => [
             Task::NAME => ExportCommand::TASK_NAME,
             Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
             Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
-            Task::ARGS => [
-                env('WS_CRON_EXPORT_DEBUG_LEVEL', '-v') => null,
-            ]
+            Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v --dry-run'),
         ],
         PushCommand::TASK_NAME => [
             Task::NAME => PushCommand::TASK_NAME,
             Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
             Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
             Task::COMMAND => '@state:push',
-            Task::ARGS => [
-                env('WS_CRON_PUSH_DEBUG_LEVEL', '-v') => null,
-            ]
+            Task::ARGS => env('WS_CRON_PUSH_ARGS', '-v'),
         ],
         PruneCommand::TASK_NAME => [
             Task::NAME => PruneCommand::TASK_NAME,
             Task::ENABLED => true,
             Task::RUN_AT => '0 */12 * * *',
             Task::COMMAND => '@config:prune',
-            Task::ARGS => [
-                '-v' => null,
-            ]
+            Task::ARGS => '-v',
         ],
     ];
 

@@ -14,6 +14,8 @@ use Closure;
 use Cron\CronExpression;
 use DateTimeImmutable;
 use RuntimeException;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -37,13 +39,13 @@ final class RunCommand extends Command
         $this->setName('scheduler:run')
             ->addOption('no-headers', 'g', InputOption::VALUE_NONE, 'Do not prefix output with headers.')
             ->addOption('save-log', null, InputOption::VALUE_NONE, 'Save Tasks Output to file.')
-            ->addArgument('task', InputArgument::OPTIONAL, 'Run specific task.', null)
+            ->addArgument('task_name', InputArgument::OPTIONAL, 'Run specific task.', null)
             ->setDescription('Run Scheduled Tasks.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $runSpecificTask = $input->getArgument('task');
+        $runSpecificTask = $input->getArgument('task_name');
 
         $tasks = self::getTasks();
 
@@ -97,6 +99,7 @@ final class RunCommand extends Command
             if (false === $noHeaders) {
                 $this->write('--------------------------', $input, $output);
                 $this->write('Command: ' . $task->getCommand() . ' ' . $task->getArgs(), $input, $output);
+                $this->write('Date: ' . makeDate(), $input, $output);
                 $this->write('--------------------------', $input, $output);
                 $this->write(sprintf('Task %s Output.', $task->getName()), $input, $output);
                 $this->write('--------------------------', $input, $output);
@@ -165,7 +168,7 @@ final class RunCommand extends Command
 
             if (!is_string($task[Task::COMMAND])) {
                 throw new RuntimeException(
-                    sprintf('Task \'%s\' Command did not evaluated to a string.', $task[Task::NAME])
+                    sprintf('Task \'%s\' Command did not evaluate to a string.', $task[Task::NAME])
                 );
             }
 
@@ -177,7 +180,7 @@ final class RunCommand extends Command
 
         if (in_array($task[Task::NAME], $this->registered)) {
             throw new RuntimeException(
-                sprintf('There another task registered already with name \'%s\'.', $task[Task::NAME])
+                sprintf('There are already task registered with the same name \'%s\'.', $task[Task::NAME])
             );
         }
 
@@ -186,6 +189,7 @@ final class RunCommand extends Command
         $obj = Task::newTask($task[Task::NAME], $task[Task::COMMAND], $task[Task::ARGS], $task[Task::CONFIG]);
 
         $timer = $task[Task::RUN_AT] ?? TaskTimer::everyMinute(5);
+
         if ((!$timer instanceof CronExpression)) {
             $timer = TaskTimer::at($timer);
         }
@@ -223,5 +227,24 @@ final class RunCommand extends Command
             Task::CONFIG => $task[Task::CONFIG],
             Task::ENABLED => $task[Task::ENABLED],
         ];
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+
+        if ($input->mustSuggestArgumentValuesFor('task_name')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (array_keys(self::getTasks()) as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
     }
 }
