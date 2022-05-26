@@ -167,7 +167,7 @@ final class MemoryMapper implements ImportInterface
 
                         $this->addPointers($this->objects[$pointer], $pointer);
 
-                        $this->logger->info(
+                        $this->logger->notice(
                             sprintf(
                                 '%s: Updating \'%s\'. Metadata field.',
                                 $bucket,

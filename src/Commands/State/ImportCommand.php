@@ -46,6 +46,12 @@ class ImportCommand extends Command
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
             ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
+            ->addOption(
+                'always-update-metadata',
+                null,
+                InputOption::VALUE_NONE,
+                'Always update the locally stored metadata from backend.'
+            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -84,6 +90,10 @@ class ImportCommand extends Command
 
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
+        }
+
+        if ($input->getOption('always-update-metadata')) {
+            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
         if (!empty($mapperOpts)) {
