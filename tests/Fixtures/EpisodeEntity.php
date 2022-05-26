@@ -30,7 +30,7 @@ return [
     ],
     iFace::COLUMN_META_DATA => [
         'home_plex' => [
-            iFace::COLUMN_ID => 121,
+            iFace::COLUMN_ID => 122,
             iFace::COLUMN_TYPE => iFace::TYPE_EPISODE,
             iFace::COLUMN_WATCHED => 1,
             iFace::COLUMN_TITLE => 'Series Title',
