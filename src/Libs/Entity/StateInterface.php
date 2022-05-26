@@ -59,6 +59,8 @@ interface StateInterface
         self::COLUMN_VIA,
         self::COLUMN_TITLE,
         self::COLUMN_YEAR,
+        self::COLUMN_SEASON,
+        self::COLUMN_EPISODE,
         self::COLUMN_EXTRA,
     ];
 
@@ -93,11 +95,11 @@ interface StateInterface
     /**
      * Return An array of changed items.
      *
-     * @param bool $all check all keys. including ignored keys.
+     * @param array $fields if omitted, will check all fields.
      *
      * @return array
      */
-    public function diff(bool $all = false): array;
+    public function diff(array $fields = []): array;
 
     /**
      * Get All Entity keys.
@@ -109,9 +111,10 @@ interface StateInterface
     /**
      * Has the entity changed?
      *
+     * @param array $fields
      * @return bool
      */
-    public function isChanged(): bool;
+    public function isChanged(array $fields = []): bool;
 
     /**
      * Does the entity have external ids?
@@ -201,16 +204,17 @@ interface StateInterface
      * Apply changes to entity.
      *
      * @param StateInterface $entity
-     * @param bool $metadataOnly
+     * @param array $fields if omitted, it will apply all {@see StateInterface::ENTITY_KEYS} fields.
      *
      * @return StateInterface
      */
-    public function apply(StateInterface $entity, bool $metadataOnly = false): StateInterface;
+    public function apply(StateInterface $entity, array $fields = []): StateInterface;
 
     /**
-     * Update Original data.
+     * Update Original data. Please do not use this unless you know what you are doing
      *
      * @return StateInterface
+     * @internal
      */
     public function updateOriginal(): StateInterface;
 

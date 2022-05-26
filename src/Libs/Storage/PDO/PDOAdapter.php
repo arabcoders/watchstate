@@ -38,7 +38,24 @@ final class PDOAdapter implements StorageInterface
     public function insert(iFace $entity): iFace
     {
         try {
+            if (null !== ($entity->id ?? null)) {
+                throw new StorageException(
+                    sprintf('Unable to insert item that has primary key. \'%s\'.', $entity->id), 21
+                );
+            }
+
             $data = $entity->getAll();
+            unset($data[iFace::COLUMN_ID]);
+
+            if (false === $entity->isWatched()) {
+                foreach ($data[iFace::COLUMN_META_DATA] ?? [] as $via => $metadata) {
+                    $data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_WATCHED] = '0';
+                    if (null === ($metadata[iFace::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
+                        continue;
+                    }
+                    unset($data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_META_DATA_PLAYED_AT]);
+                }
+            }
 
             foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
                 if (null !== ($data[$key] ?? null) && is_array($data[$key])) {
@@ -46,12 +63,6 @@ final class PDOAdapter implements StorageInterface
                     $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 }
             }
-
-            if (null !== $data[iFace::COLUMN_ID]) {
-                throw new StorageException(sprintf('Trying to insert already saved entity #%s', $data['id']), 21);
-            }
-
-            unset($data[iFace::COLUMN_ID]);
 
             if (null === ($this->stmt['insert'] ?? null)) {
                 $this->stmt['insert'] = $this->pdo->prepare(
@@ -122,6 +133,17 @@ final class PDOAdapter implements StorageInterface
         return $arr;
     }
 
+    public function getCount(DateTimeInterface|null $date = null): int
+    {
+        $sql = 'SELECT COUNT(id) AS total FROM state';
+
+        if (null !== $date) {
+            $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
+        }
+
+        return $this->pdo->query($sql)->fetchColumn();
+    }
+
     public function find(iFace ...$items): array
     {
         $list = [];
@@ -140,17 +162,27 @@ final class PDOAdapter implements StorageInterface
     public function update(iFace $entity): iFace
     {
         try {
+            if (null === ($entity->id ?? null)) {
+                throw new StorageException('Unable to update item without primary key.', 51);
+            }
+
             $data = $entity->getAll();
+
+            if (false === $entity->isWatched()) {
+                foreach ($data[iFace::COLUMN_META_DATA] ?? [] as $via => $metadata) {
+                    $data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_WATCHED] = '0';
+                    if (null === ($metadata[iFace::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
+                        continue;
+                    }
+                    unset($data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_META_DATA_PLAYED_AT]);
+                }
+            }
 
             foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
                 if (null !== ($data[$key] ?? null) && is_array($data[$key])) {
                     ksort($data[$key]);
                     $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 }
-            }
-
-            if (null === ($data[iFace::COLUMN_ID] ?? null)) {
-                throw new StorageException('Trying to update unsaved item.', 51);
             }
 
             if (null === ($this->stmt['update'] ?? null)) {
@@ -382,7 +414,12 @@ final class PDOAdapter implements StorageInterface
      */
     private function findByRGuid(iFace $entity): iFace|null
     {
-        $cond = $where = [];
+        $where = [];
+        $cond = [
+            'type' => iFace::TYPE_EPISODE,
+            'season' => $entity->season,
+            'episode' => $entity->episode,
+        ];
 
         foreach ($entity->parent as $key => $val) {
             if (null === ($val ?? null)) {
@@ -411,10 +448,6 @@ final class PDOAdapter implements StorageInterface
                 )
                 LIMIT 1
         ";
-
-        $cond['season'] = $entity->season;
-        $cond['episode'] = $entity->episode;
-        $cond['type'] = iFace::TYPE_EPISODE;
 
         $stmt = $this->pdo->prepare($sql);
 
@@ -457,7 +490,7 @@ final class PDOAdapter implements StorageInterface
                 FROM
                     state
                 WHERE
-                    type = :type
+                    " . iFace::COLUMN_TYPE . " = :type
                 AND
                     JSON_EXTRACT(" . iFace::COLUMN_META_DATA . ", '{$key}') = :id
                 LIMIT 1

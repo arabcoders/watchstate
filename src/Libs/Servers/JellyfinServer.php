@@ -323,7 +323,7 @@ class JellyfinServer implements ServerInterface
 
         $row = [
             iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => strtotime(ag($json, ['LastPlayedDate', 'UtcTimestamp', 'Timestamp'], 'now')),
+            iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp', 'LastPlayedDate'], 'now')),
             iFace::COLUMN_WATCHED => (int)(bool)ag($json, 'Played', 0),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
@@ -695,6 +695,7 @@ class JellyfinServer implements ServerInterface
         $this->checkConfig(true);
 
         $requests = $stateRequests = [];
+        $count = count($entities);
 
         foreach ($entities as $key => $entity) {
             if (true !== ($entity instanceof StateEntity)) {
@@ -711,13 +712,9 @@ class JellyfinServer implements ServerInterface
             $metadata = ag($entity->metadata, $this->name, []);
 
             if (null === ag($metadata, iFace::COLUMN_ID, null)) {
-                $this->logger->warning(
-                    sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName),
-                    [
-                        'id' => $entity->id,
-                        'metadata' => empty($metadata) ? 'None' : $metadata,
-                    ]
-                );
+                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName), [
+                    'id' => $entity->id
+                ]);
                 continue;
             }
 
@@ -733,9 +730,11 @@ class JellyfinServer implements ServerInterface
                     )
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
-                    'url' => $url
-                ]);
+                if ($count < 20) {
+                    $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
+                        'url' => $url
+                    ]);
+                }
 
                 $requests[] = $this->http->request(
                     'GET',
@@ -743,7 +742,6 @@ class JellyfinServer implements ServerInterface
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'id' => $key,
-                            'state' => &$entity,
                             'suid' => ag($metadata, iFace::COLUMN_ID),
                         ]
                     ])
@@ -759,10 +757,12 @@ class JellyfinServer implements ServerInterface
 
         foreach ($requests as $response) {
             try {
-                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
+                if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error(sprintf('%s: Unable to get item entity state.', $this->name));
                     continue;
                 }
+
+                $state = $entities[$id];
 
                 assert($state instanceof iFace);
 
@@ -811,7 +811,7 @@ class JellyfinServer implements ServerInterface
                 $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
 
                 if ($state->watched === $isWatched) {
-                    $this->logger->notice(
+                    $this->logger->info(
                         sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $state->getName())
                     );
                     continue;
@@ -1274,7 +1274,7 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
-            if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+            if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
                     'payload' => (array)$item,
                 ]);
@@ -1322,7 +1322,7 @@ class JellyfinServer implements ServerInterface
                     'guids' => !empty($providerIds) ? $providerIds : 'None'
                 ];
 
-                if (true === (bool)ag($this->options, Options::DEEP_DEBUG, false)) {
+                if (true === (bool)ag($this->options, Options::DEBUG_TRACE, false)) {
                     $kvStore['entity'] = $entity->getAll();
                     $kvStore['payload'] = json_decode(
                         json:        json_encode($item),
@@ -1480,19 +1480,21 @@ class JellyfinServer implements ServerInterface
                 ]
             );
 
-            $mapper->queue(
-                $this->http->request(
-                    $entity->isWatched() ? 'POST' : 'DELETE',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'itemName' => $iName,
-                            'server' => $this->name,
-                            'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                        ],
-                    ])
-                )
-            );
+            if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
+                $mapper->queue(
+                    $this->http->request(
+                        $entity->isWatched() ? 'POST' : 'DELETE',
+                        (string)$url,
+                        array_replace_recursive($this->getHeaders(), [
+                            'user_data' => [
+                                'itemName' => $iName,
+                                'server' => $this->name,
+                                'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                            ],
+                        ])
+                    )
+                );
+            }
         } catch (Throwable $e) {
             $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
@@ -1513,7 +1515,7 @@ class JellyfinServer implements ServerInterface
             $item->ProductionYear ?? 0000
         );
 
-        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
             $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
                 'payload' => (array)$item,
             ]);

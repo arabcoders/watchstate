@@ -73,28 +73,26 @@ final class StateEntity implements iFace
         return new self($data);
     }
 
-    public function diff(bool $all = false): array
+    public function diff(array $fields = []): array
     {
         $changed = [];
 
-        foreach ($this->getAll() as $key => $value) {
-            if (false === $all && true === in_array($key, iFace::ENTITY_IGNORE_DIFF_CHANGES)) {
-                continue;
-            }
+        $keys = !empty($fields) ? $fields : iFace::ENTITY_KEYS;
 
-            if ($value === ($this->data[$key] ?? null)) {
+        foreach ($keys as $key) {
+            if ($this->{$key} === ($this->data[$key] ?? null)) {
                 continue;
             }
 
             if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
-                $changes = $this->arrayDiff($this->data[$key] ?? [], $value ?? []);
+                $changes = $this->arrayDiff($this->data[$key] ?? [], $this->{$key} ?? []);
                 if (!empty($changes)) {
                     $changed[$key] = $changes;
                 }
             } else {
                 $changed[$key] = [
                     'old' => $this->data[$key] ?? 'None',
-                    'new' => $value ?? 'None'
+                    'new' => $this->{$key} ?? 'None'
                 ];
             }
         }
@@ -104,16 +102,19 @@ final class StateEntity implements iFace
 
     public function getName(): string
     {
+        $title = ag($this->data, iFace::COLUMN_TITLE, $this->title);
+        $year = ag($this->data, iFace::COLUMN_YEAR, $this->year);
+
         if ($this->isMovie()) {
-            return sprintf('%s (%d)', $this->title ?? '??', $this->year ?? 0000);
+            return sprintf('%s (%d)', $title, $year ?? 0000);
         }
 
         return sprintf(
             '%s (%s) - %sx%s',
-            $this->title ?? '??',
-            $this->year ?? 0000,
-            str_pad((string)($this->season ?? 0), 2, '0', STR_PAD_LEFT),
-            str_pad((string)($this->episode ?? 0), 3, '0', STR_PAD_LEFT)
+            $title ?? '??',
+            $year ?? 0000,
+            str_pad((string)ag($this->data, iFace::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT),
+            str_pad((string)ag($this->data, iFace::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT)
         );
     }
 
@@ -136,9 +137,9 @@ final class StateEntity implements iFace
         ];
     }
 
-    public function isChanged(): bool
+    public function isChanged(array $fields = []): bool
     {
-        return count($this->diff(all: false)) >= 1;
+        return count($this->diff($fields)) >= 1;
     }
 
     public function hasGuids(): bool
@@ -218,23 +219,23 @@ final class StateEntity implements iFace
         return $rPointers;
     }
 
-    public function apply(iFace $entity, bool $metadataOnly = false): self
+    public function apply(iFace $entity, array $fields = []): self
     {
-        if (true === $metadataOnly) {
-            foreach (iFace::ENTITY_FORCE_UPDATE_FIELDS as $key) {
-                if (true === $this->isEqualValue($key, $entity)) {
+        if (!empty($fields)) {
+            foreach ($fields as $key) {
+                if (false === in_array($key, iFace::ENTITY_KEYS) || true === $this->isEqualValue($key, $entity)) {
                     continue;
                 }
                 $this->updateValue($key, $entity);
             }
+
             return $this;
         }
 
-        if ($this->isEqual($entity)) {
-            return $this;
-        }
-
-        foreach ($entity->getAll() as $key => $val) {
+        foreach (iFace::ENTITY_KEYS as $key) {
+            if (true === $this->isEqualValue($key, $entity)) {
+                continue;
+            }
             $this->updateValue($key, $entity);
         }
 
@@ -308,21 +309,7 @@ final class StateEntity implements iFace
         $this->watched = 0;
         $this->updated = time();
 
-        // -- no isset check is intentional, this should throw error as condition are not met.
-        unset($this->metadata[$remote->via][iFace::COLUMN_META_DATA_PLAYED_AT]);
-
         return $this;
-    }
-
-    private function isEqual(iFace $entity): bool
-    {
-        foreach (iFace::ENTITY_KEYS as $key) {
-            if (false === $this->isEqualValue($key, $entity)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private function isEqualValue(string $key, iFace $entity): bool

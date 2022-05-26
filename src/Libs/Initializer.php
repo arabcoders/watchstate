@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use App\Cli;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Storage\StorageInterface;
@@ -320,8 +321,12 @@ final class Initializer
             $cloned = clone $backend;
 
             if (true === $entity->isTainted()) {
-                if ($cloned->apply(entity: $entity, metadataOnly: true)->isChanged()) {
-                    $backend = $storage->update($backend->apply(entity: $entity, metadataOnly: true));
+                if ($cloned->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)->isChanged(
+                    fields: iFace::ENTITY_FORCE_UPDATE_FIELDS
+                )) {
+                    $backend = $storage->update(
+                        $backend->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
+                    );
                     return jsonResponse(
                         status:  200,
                         body:    $backend->getAll(),
@@ -336,12 +341,16 @@ final class Initializer
             }
 
             if ($backend->updated >= $entity->updated) {
-                if ($cloned->apply(entity: $entity, metadataOnly: true)->isChanged()) {
-                    $backend = $storage->update($backend->apply(entity: $entity, metadataOnly: true));
+                if ($cloned->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)->isChanged(
+                    fields: iFace::ENTITY_FORCE_UPDATE_FIELDS
+                )) {
+                    $backend = $storage->update(
+                        $backend->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
+                    );
                     return jsonResponse(
                         status:  200,
                         body:    $backend->getAll(),
-                        headers: $responseHeaders + ['X-Status' => sprintf('Updated %s metadata.', $entity->type)]
+                        headers: $responseHeaders + ['X-Status' => sprintf('Updated %s.', $entity->type)]
                     );
                 }
 
@@ -360,7 +369,7 @@ final class Initializer
             if ($backend->apply($entity)->isChanged()) {
                 $backend = $storage->update($backend->apply($entity));
 
-                $message = 'Updated %s metadata.';
+                $message = 'Updated %s.';
 
                 if ($cloned->isWatched() !== $backend->isWatched()) {
                     $message = 'Queued %s For push event. [Played: %s]';

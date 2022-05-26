@@ -722,6 +722,8 @@ class PlexServer implements ServerInterface
 
         $requests = $stateRequests = [];
 
+        $count = count($entities);
+
         foreach ($entities as $key => $entity) {
             if (true !== ($entity instanceof StateEntity)) {
                 continue;
@@ -737,13 +739,9 @@ class PlexServer implements ServerInterface
             $metadata = ag($entity->metadata, $this->name, []);
 
             if (null === ag($metadata, iFace::COLUMN_ID, null)) {
-                $this->logger->warning(
-                    sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName),
-                    [
-                        'id' => $entity->id,
-                        'metadata' => empty($metadata) ? 'None' : $metadata,
-                    ]
-                );
+                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName), [
+                    'id' => $entity->id,
+                ]);
                 continue;
             }
 
@@ -757,9 +755,11 @@ class PlexServer implements ServerInterface
                         )
                     );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
-                    'url' => $url
-                ]);
+                if ($count < 20) {
+                    $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
+                        'url' => $url
+                    ]);
+                }
 
                 $requests[] = $this->http->request(
                     'GET',
@@ -767,7 +767,6 @@ class PlexServer implements ServerInterface
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'id' => $key,
-                            'state' => &$entity,
                             'suid' => ag($metadata, iFace::COLUMN_ID),
                         ]
                     ])
@@ -783,10 +782,12 @@ class PlexServer implements ServerInterface
 
         foreach ($requests as $response) {
             try {
-                if (null === ($state = ag($response->getInfo('user_data'), 'state'))) {
+                if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error(sprintf('%s: Unable to get item entity state.', $this->name));
                     continue;
                 }
+
+                $state = $entities[$id];
 
                 assert($state instanceof iFace);
 
@@ -874,7 +875,7 @@ class PlexServer implements ServerInterface
                 }
 
                 if ($state->watched === $isWatched) {
-                    $this->logger->notice(
+                    $this->logger->info(
                         sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $state->getName())
                     );
                     continue;
@@ -1288,7 +1289,7 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+            if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
                     'payload' => (array)$item,
                 ]);
@@ -1495,19 +1496,21 @@ class PlexServer implements ServerInterface
                 ]
             );
 
-            $mapper->queue(
-                $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'itemName' => $iName,
-                            'server' => $this->name,
-                            'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                        ]
-                    ])
-                )
-            );
+            if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
+                $mapper->queue(
+                    $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($this->getHeaders(), [
+                            'user_data' => [
+                                'itemName' => $iName,
+                                'server' => $this->name,
+                                'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                            ]
+                        ])
+                    )
+                );
+            }
         } catch (Throwable $e) {
             $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
@@ -1532,7 +1535,7 @@ class PlexServer implements ServerInterface
             ag($item, 'year', '0000')
         );
 
-        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
             $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
                 'payload' => (array)$item,
             ]);
@@ -1612,7 +1615,7 @@ class PlexServer implements ServerInterface
                 if (true === str_starts_with($val, 'com.plexapp.agents.')) {
                     // -- DO NOT accept plex relative unique ids, we generate our own.
                     if (substr_count($val, '/') >= 3) {
-                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                             $this->logger->warning(
                                 sprintf(
                                     '%s: Parsing \'%s\' custom agent identifier is not supported.',
@@ -1686,7 +1689,7 @@ class PlexServer implements ServerInterface
                 if (true === str_starts_with($val, 'com.plexapp.agents.')) {
                     // -- DO NOT accept plex relative unique ids, we generate our own.
                     if (substr_count($val, '/') >= 3) {
-                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                             $this->logger->warning(
                                 sprintf(
                                     '%s: Parsing this \'%s\' custom agent identifier is not supported.',

@@ -28,6 +28,10 @@ return (function () {
         'storage' => [
             'version' => 'v01',
         ],
+        'export' => [
+            // -- Trigger full export mode if changes exceed X number.
+            'threshold' => env('WS_EXPORT_THRESHOLD', 1000),
+        ],
     ];
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', $config['path']));

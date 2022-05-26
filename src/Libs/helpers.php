@@ -566,3 +566,18 @@ if (false === function_exists('formatDuration')) {
         return sprintf('%02u:%02u:%02u', $hours, $minutes, $seconds);
     }
 }
+
+if (false === function_exists('array_keys_diff')) {
+    /**
+     * Return keys that match or does not match keys in list.
+     *
+     * @param array $base array containing all keys.
+     * @param array $list list of keys that you want to filter based on.
+     * @param bool $has Whether to get keys that exist in $list or exclude them.
+     * @return array
+     */
+    function array_keys_diff(array $base, array $list, bool $has = true): array
+    {
+        return array_filter($base, fn($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
+    }
+}
