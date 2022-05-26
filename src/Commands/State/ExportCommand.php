@@ -43,6 +43,8 @@ class ExportCommand extends Command
         $this->setName('state:export')
             ->setDescription('Export local play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last sync date.')
+            ->addOption('force-export-mode', null, InputOption::VALUE_NONE, 'Force export mode.')
+            ->addOption('force-push-mode', null, InputOption::VALUE_NONE, 'Force Push mode.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
@@ -414,6 +416,16 @@ class ExportCommand extends Command
     {
         if (true === $input->getOption('force-full')) {
             $this->logger->info('Not possible to use push mode when [-f, --force-full] flag is used.');
+            return false;
+        }
+
+        if (true === $input->getOption('force-push-mode')) {
+            $this->logger->info('Force Push mode flag is used.');
+            return true;
+        }
+
+        if (true === $input->getOption('force-export-mode')) {
+            $this->logger->info('Force Export mode flag is used.');
             return false;
         }
 
