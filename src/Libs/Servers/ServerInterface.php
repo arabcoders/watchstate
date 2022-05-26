@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Libs\Entity\StateInterface;
-use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\QueueRequests;
 use DateTimeInterface;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
@@ -87,22 +87,24 @@ interface ServerInterface
     /**
      * Export watch state to server.
      *
-     * @param ExportInterface $mapper
+     * @param ImportInterface $mapper
+     * @param QueueRequests $queue
      * @param DateTimeInterface|null $after
      *
      * @return array<array-key,ResponseInterface>
      */
-    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array;
+    public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array;
 
     /**
      * Push webhook queued states.
      *
      * @param array<StateInterface> $entities
+     * @param QueueRequests $queue
      * @param DateTimeInterface|null $after
      *
      * @return array
      */
-    public function push(array $entities, DateTimeInterface|null $after = null): array;
+    public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array;
 
     /**
      * Search server libraries.

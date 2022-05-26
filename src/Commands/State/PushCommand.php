@@ -10,6 +10,7 @@ use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Options;
+use App\Libs\QueueRequests;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -28,6 +29,7 @@ class PushCommand extends Command
         private LoggerInterface $logger,
         private CacheInterface $cache,
         private StorageInterface $storage,
+        private QueueRequests $queue,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -146,8 +148,6 @@ class PushCommand extends Command
             return self::FAILURE;
         }
 
-        $requests = [];
-
         foreach ($list as $name => &$server) {
             Data::addBucket((string)$name);
             $opts = ag($server, 'options', []);
@@ -169,18 +169,18 @@ class PushCommand extends Command
             }
 
             $server['options'] = $opts;
-            $server['class'] = makeServer($server, $name);
+            $server['class'] = makeServer(server: $server, name: $name);
 
-            array_push($requests, ...$server['class']->push($entities));
+            $server['class']->push(entities: $entities, queue: $this->queue);
         }
 
         unset($server);
 
-        $total = count($requests);
+        $total = count($this->queue);
 
         if ($total >= 1) {
             $this->logger->notice(sprintf('HTTP: Sending \'%d\' change play state requests.', $total));
-            foreach ($requests as $response) {
+            foreach ($this->queue->getQueue() as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {

@@ -11,9 +11,9 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
-use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
+use App\Libs\QueueRequests;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
@@ -690,11 +690,11 @@ class JellyfinServer implements ServerInterface
         );
     }
 
-    public function push(array $entities, DateTimeInterface|null $after = null): array
+    public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         $this->checkConfig(true);
 
-        $requests = $stateRequests = [];
+        $requests = [];
         $count = count($entities);
 
         foreach ($entities as $key => $entity) {
@@ -872,18 +872,20 @@ class JellyfinServer implements ServerInterface
                 );
 
                 if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
-                    $stateRequests[] = $this->http->request(
-                        $state->isWatched() ? 'POST' : 'DELETE',
-                        (string)$url,
-                        array_replace_recursive(
-                            $this->getHeaders(),
-                            [
-                                'user_data' => [
-                                    'itemName' => $state->getName(),
-                                    'server' => $this->name,
-                                    'state' => $state->isWatched() ? 'Played' : 'Unplayed',
-                                ],
-                            ]
+                    $queue->add(
+                        $this->http->request(
+                            $state->isWatched() ? 'POST' : 'DELETE',
+                            (string)$url,
+                            array_replace_recursive(
+                                $this->getHeaders(),
+                                [
+                                    'user_data' => [
+                                        'itemName' => $state->getName(),
+                                        'server' => $this->name,
+                                        'state' => $state->isWatched() ? 'Played' : 'Unplayed',
+                                    ],
+                                ]
+                            )
                         )
                     );
                 }
@@ -898,14 +900,14 @@ class JellyfinServer implements ServerInterface
 
         unset($requests);
 
-        return $stateRequests;
+        return [];
     }
 
-    public function export(ExportInterface $mapper, DateTimeInterface|null $after = null): array
+    public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($mapper, $after) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
+            ok: function (string $cName, string $type) use ($mapper, $queue, $after) {
+                return function (ResponseInterface $response) use ($mapper, $queue, $cName, $type, $after) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
@@ -946,7 +948,7 @@ class JellyfinServer implements ServerInterface
                                 );
                                 continue;
                             }
-                            $this->processExport($mapper, $type, $cName, $entity, $after);
+                            $this->processExport($mapper, $queue, $type, $cName, $entity, $after);
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
@@ -1349,7 +1351,8 @@ class JellyfinServer implements ServerInterface
     }
 
     protected function processExport(
-        ExportInterface $mapper,
+        ImportInterface $mapper,
+        QueueRequests $queue,
         string $type,
         string $library,
         StdClass $item,
@@ -1481,7 +1484,7 @@ class JellyfinServer implements ServerInterface
             );
 
             if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
-                $mapper->queue(
+                $queue->add(
                     $this->http->request(
                         $entity->isWatched() ? 'POST' : 'DELETE',
                         (string)$url,

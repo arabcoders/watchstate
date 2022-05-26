@@ -6,7 +6,6 @@ use App\Commands\Config\PruneCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
-use App\Libs\Mappers\Export\ExportMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Scheduler\Task;
 use App\Libs\Servers\EmbyServer;
@@ -60,10 +59,6 @@ return (function () {
     $config['mapper'] = [
         'import' => [
             'type' => MemoryMapper::class,
-            'opts' => [],
-        ],
-        'export' => [
-            'type' => ExportMapper::class,
             'opts' => [],
         ],
     ];
