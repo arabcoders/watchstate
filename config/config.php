@@ -186,7 +186,7 @@ return (function () {
             Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
             Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
             Task::COMMAND => '@state:export',
-            Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v --dry-run'),
+            Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
         ],
         PushCommand::TASK_NAME => [
             Task::NAME => PushCommand::TASK_NAME,
