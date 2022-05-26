@@ -363,6 +363,16 @@ final class MemoryMapper implements ImportInterface
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
             $this->guids[$key . '/' . $entity->type] = $pointer;
         }
+
+        foreach ($entity->metadata ?? [] as $backend => $meta) {
+            if (null === ($meta[iFace::COLUMN_ID] ?? null)) {
+                continue;
+            }
+
+            $key = self::GUID . $backend . '-' . $entity->metadata[$backend][iFace::COLUMN_ID];
+
+            $this->guids[$key] = $pointer;
+        }
     }
 
     /**
@@ -376,6 +386,14 @@ final class MemoryMapper implements ImportInterface
     {
         if (null !== $entity->id && null !== ($this->guids[self::GUID . $entity->id] ?? null)) {
             return self::GUID . $entity->id;
+        }
+
+        if (!empty($entity->via) && null !== ($entity->metadata[$entity->via][iFace::COLUMN_ID] ?? null)) {
+            $key = self::GUID . $entity->via . '-' . $entity->metadata[$entity->via][iFace::COLUMN_ID];
+
+            if (null !== ($this->guids[$key] ?? null)) {
+                return $this->guids[$key];
+            }
         }
 
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
@@ -403,6 +421,14 @@ final class MemoryMapper implements ImportInterface
             if (null !== ($this->guids[$lookup] ?? null)) {
                 unset($this->guids[$lookup]);
             }
+        }
+
+        foreach ($entity->metadata ?? [] as $backend => $meta) {
+            if (null === ($meta[iFace::COLUMN_ID] ?? null)) {
+                continue;
+            }
+
+            unset($this->guids[self::GUID . $backend . '-' . $meta[iFace::COLUMN_ID]]);
         }
     }
 
