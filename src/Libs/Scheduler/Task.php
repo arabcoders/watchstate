@@ -84,7 +84,7 @@ final class Task
     /**
      * Command Arguments.
      */
-    private array $args = [];
+    private array|string $args = [];
 
     /**
      * A function to ignore an overlapping task.
@@ -96,7 +96,7 @@ final class Task
     private ?int $exitCode = null;
     private ?string $exitCodeText = null;
 
-    public function __construct(string $name, string $command, array $args = [], array $config = [])
+    public function __construct(string $name, string $command, array|string $args = [], array $config = [])
     {
         $this->command = $command;
         $this->name = $name;
@@ -116,7 +116,7 @@ final class Task
         $this->lockFile = rtrim($tempDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "{$name}.lock";
     }
 
-    public static function newTask(string $name, string $command, array $args = [], array $config = []): self
+    public static function newTask(string $name, string $command, array|string $args = [], array $config = []): self
     {
         return new self($name, $command, $args, $config);
     }
@@ -178,6 +178,10 @@ final class Task
 
     public function getArgs(): string
     {
+        if (false === is_array($this->args)) {
+            return trim($this->args);
+        }
+
         $args = '';
 
         foreach ($this->args as $key => $value) {
@@ -241,7 +245,7 @@ final class Task
             return true;
         } catch (Throwable $e) {
             $this->output .= sprintf(
-                'Task (%s) has thrown unhandled exception. (%s). (%s:%d)',
+                'Task \'%s\' has thrown unhandled exception. (%s). (%s:%d)',
                 'Task-' . $this->getName(),
                 $e->getMessage(),
                 $e->getFile(),

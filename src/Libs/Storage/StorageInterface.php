@@ -47,6 +47,15 @@ interface StorageInterface
     public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array;
 
     /**
+     * Return Number of Items.
+     *
+     * @param DateTimeInterface|null $date if provided, it will return items changes since this date.
+     *
+     * @return int
+     */
+    public function getCount(DateTimeInterface|null $date = null): int;
+
+    /**
      * Return database records for given items.
      *
      * @param array<StateInterface> $items

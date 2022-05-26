@@ -300,13 +300,13 @@ the check if you happen to enable `strict user match` for jellyfin.
 - (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
 - (int) `WS_CRON_IMPORT` enable import scheduled task.
 - (string) `WS_CRON_IMPORT_AT` cron expression timer.
-- (string) `WS_CRON_IMPORT_DEBUG_LEVEL` set debug level, to see unmatched items set to `-vv`. Defaults to `-v`
+- (string) `WS_CRON_IMPORT_ARGS` set import command flags. Defaults to `-v`
 - (int) `WS_CRON_EXPORT` enable export scheduled task.
 - (string) `WS_CRON_EXPORT_AT` cron expression timer.
-- (string) `WS_CRON_EXPORT_DEBUG_LEVEL` set debug level. Defaults to `-v`
+- (string) `WS_CRON_EXPORT_ARGS` set export command flags. Defaults to `-v`
 - (int) `WS_CRON_PUSH` enable push scheduled task.
 - (string) `WS_CRON_PUSH_AT` cron expression timer.
-- (string) `WS_CRON_PUSH_DEBUG_LEVEL` set debug level. Defaults to `-v`
+- (string) `WS_CRON_PUSH_ARGS` set push command flags. Defaults to `-v`
 - (string) `WS_LOGS_PRUNE_AFTER` Delete logs older than specified time, set to `disable` to disable logs pruning. it
   follows php [strtotime](https://www.php.net/strtotime) function rules.
 - (bool) `WS_DEBUG_IMPORT` Whether to log invalid GUID items from server in `${WS_TMP_DIR}/debug`.

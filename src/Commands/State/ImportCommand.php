@@ -41,38 +41,16 @@ class ImportCommand extends Command
     {
         $this->setName('state:import')
             ->setDescription('Import play state from backends.')
-            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. (ignore lastSync)')
-            ->addOption(
-                'proxy',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'By default the HTTP client uses your ENV: HTTP_PROXY.'
-            )
-            ->addOption(
-                'no-proxy',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
-            )
-            ->addOption(
-                'timeout',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Set request timeout in seconds for each request.'
-            )
-            ->addOption(
-                'servers-filter',
-                's',
-                InputOption::VALUE_OPTIONAL,
-                'Sync selected backends, comma seperated. \'s1,s2\'.',
-                ''
-            )
+            ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
+            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
+            ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
             ->addOption(
-                'deep-debug',
+                'always-update-metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'You should not use this flag unless told by the team it will inflate your log output.'
+                'Always update the locally stored metadata from backend.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
@@ -105,13 +83,17 @@ class ImportCommand extends Command
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed to local database.</info>');
+            $output->writeln('<info>Dry run mode. No changes will be committed.</info>');
 
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
-        if ($input->getOption('deep-debug')) {
-            $mapperOpts[Options::DEEP_DEBUG] = true;
+        if ($input->getOption('trace')) {
+            $mapperOpts[Options::DEBUG_TRACE] = true;
+        }
+
+        if ($input->getOption('always-update-metadata')) {
+            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
         if (!empty($mapperOpts)) {
@@ -185,16 +167,8 @@ class ImportCommand extends Command
 
             $opts = ag($server, 'options', []);
 
-            if ($input->getOption('proxy')) {
-                $opts['client']['proxy'] = $input->getOption('proxy');
-            }
-
-            if ($input->getOption('deep-debug')) {
-                $opts[Options::DEEP_DEBUG] = true;
-            }
-
-            if ($input->getOption('no-proxy')) {
-                $opts['client']['no_proxy'] = $input->getOption('no-proxy');
+            if ($input->getOption('trace')) {
+                $opts[Options::DEBUG_TRACE] = true;
             }
 
             if ($input->getOption('timeout')) {
