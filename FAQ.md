@@ -164,14 +164,14 @@ $ docker exec -ti watchstate console servers:edit --delete --key options.ignore 
 ### Q: I get tired of writing the whole command everytime is there an easy way run the commands?
 
 Since there is no way to access the command interface outside docker, you can create small shell script to at least omit
-part of command that you have to write for example create new file named
+part of command that you have to write for example, to create shortcut for docker command do the following:
 
 ```bash
 $ echo 'docker exec -ti watchstate console "$@"' > ws
 $ chmod +x ws
 ```
 
-after that you can do `ws command` for example, `ws db:list`
+after that you can do `./ws command` for example, `./ws db:list`
 
 ---
 
@@ -225,9 +225,7 @@ Those flags can be combined with the search parameter
 
 ---
 
-### Q: Can this tool work with alternative Plex agents?
-
-These are the agents we support for plex media server.
+### Q: Which external(db) ids supported for Plex?
 
 * plex://(type)/(id) `New Plex Agent`
 * tvdb://(id) `New Plex Agent`
@@ -240,3 +238,14 @@ These are the agents we support for plex media server.
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO parser agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO parser agent for tv)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(hama agent is multi db source agent)`
+
+---
+
+### Q: Which external(db) ids supported for Jellyfin/Emby?
+
+* imdb://(id)
+* tvdb://(id)
+* tmdb://(id)
+* tvmaze://(id)
+* tvrage://(id)
+* anidb://(id)
