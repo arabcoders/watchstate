@@ -49,6 +49,7 @@ final class PDOAdapter implements StorageInterface
 
             if (false === $entity->isWatched()) {
                 foreach ($data[iFace::COLUMN_META_DATA] ?? [] as $via => $metadata) {
+                    $data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_WATCHED] = '0';
                     if (null === ($metadata[iFace::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
                         continue;
                     }
@@ -169,6 +170,7 @@ final class PDOAdapter implements StorageInterface
 
             if (false === $entity->isWatched()) {
                 foreach ($data[iFace::COLUMN_META_DATA] ?? [] as $via => $metadata) {
+                    $data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_WATCHED] = '0';
                     if (null === ($metadata[iFace::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
                         continue;
                     }

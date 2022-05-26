@@ -739,13 +739,9 @@ class PlexServer implements ServerInterface
             $metadata = ag($entity->metadata, $this->name, []);
 
             if (null === ag($metadata, iFace::COLUMN_ID, null)) {
-                $this->logger->warning(
-                    sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName),
-                    [
-                        'id' => $entity->id,
-                        'metadata' => empty($metadata) ? 'None' : $metadata,
-                    ]
-                );
+                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName), [
+                    'id' => $entity->id,
+                ]);
                 continue;
             }
 
@@ -879,7 +875,7 @@ class PlexServer implements ServerInterface
                 }
 
                 if ($state->watched === $isWatched) {
-                    $this->logger->notice(
+                    $this->logger->info(
                         sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $state->getName())
                     );
                     continue;
@@ -1293,7 +1289,7 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+            if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
                     'payload' => (array)$item,
                 ]);
@@ -1539,7 +1535,7 @@ class PlexServer implements ServerInterface
             ag($item, 'year', '0000')
         );
 
-        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
             $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
                 'payload' => (array)$item,
             ]);
@@ -1619,7 +1615,7 @@ class PlexServer implements ServerInterface
                 if (true === str_starts_with($val, 'com.plexapp.agents.')) {
                     // -- DO NOT accept plex relative unique ids, we generate our own.
                     if (substr_count($val, '/') >= 3) {
-                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                             $this->logger->warning(
                                 sprintf(
                                     '%s: Parsing \'%s\' custom agent identifier is not supported.',
@@ -1693,7 +1689,7 @@ class PlexServer implements ServerInterface
                 if (true === str_starts_with($val, 'com.plexapp.agents.')) {
                     // -- DO NOT accept plex relative unique ids, we generate our own.
                     if (substr_count($val, '/') >= 3) {
-                        if (true === (bool)ag($this->options, Options::DEEP_DEBUG)) {
+                        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                             $this->logger->warning(
                                 sprintf(
                                     '%s: Parsing this \'%s\' custom agent identifier is not supported.',

@@ -41,38 +41,11 @@ class ExportCommand extends Command
         $this->setName('state:export')
             ->setDescription('Export local play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last sync date.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
-            ->addOption(
-                'proxy',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'By default the HTTP client uses your ENV: HTTP_PROXY.'
-            )
-            ->addOption(
-                'no-proxy',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
-            )
-            ->addOption(
-                'timeout',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Set request timeout in seconds.'
-            )
-            ->addOption(
-                'servers-filter',
-                's',
-                InputOption::VALUE_OPTIONAL,
-                'Sync selected backends, comma seperated. \'s1,s2\'.',
-                ''
-            )
-            ->addOption(
-                'ignore-date',
-                'i',
-                InputOption::VALUE_NONE,
-                'Ignore date comparison, And synchronous backend play state to match local play state.'
-            )
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
+            ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
+            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
+            ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
+            ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -100,6 +73,10 @@ class ExportCommand extends Command
         $selected = explode(',', $backendsFilter);
         $isCustom = !empty($backendsFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
+
+        if ($input->getOption('dry-run')) {
+            $output->writeln('<info>Dry run mode. No changes will be committed.</info>');
+        }
 
         $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
@@ -131,12 +108,7 @@ class ExportCommand extends Command
             }
 
             if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error(
-                    sprintf('%s: Backend does not have valid url.', $name),
-                    [
-                        'url' => $url ?? 'None'
-                    ]
-                );
+                $this->logger->error(sprintf('%s: Backend does not have valid url.', $name), ['url' => $url ?? 'None']);
                 continue;
             }
 
@@ -148,7 +120,7 @@ class ExportCommand extends Command
             $output->writeln(
                 sprintf(
                     '<error>%s</error>',
-                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No servers were found.'
+                    $isCustom ? '[-s, --servers-filter] Filter did not match any backend.' : 'No backends were found.'
                 )
             );
             return self::FAILURE;
@@ -171,14 +143,6 @@ class ExportCommand extends Command
                 $opts[Options::DRY_RUN] = true;
             }
 
-            if ($input->getOption('proxy')) {
-                $opts['client']['proxy'] = $input->getOption('proxy');
-            }
-
-            if ($input->getOption('no-proxy')) {
-                $opts['client']['no_proxy'] = $input->getOption('no-proxy');
-            }
-
             if ($input->getOption('timeout')) {
                 $opts['client']['timeout'] = $input->getOption('timeout');
             }
@@ -189,12 +153,12 @@ class ExportCommand extends Command
 
         unset($backend);
 
-        if (false === $this->isPushable($backends, $input)) {
-            $this->logger->info('Using export mode.');
-            $this->export($backends, $input);
-        } else {
+        if (true === $this->isPushable($backends, $input)) {
             $this->logger->info('Using push mode.');
             $this->push($backends, $input);
+        } else {
+            $this->logger->info('Using export mode.');
+            $this->export($backends, $input);
         }
 
         if (false === $input->getOption('dry-run')) {
@@ -203,7 +167,14 @@ class ExportCommand extends Command
                     continue;
                 }
 
-                Config::save(sprintf('servers.%s.persist', $name), $backend['class']->getPersist());
+                if (true === (bool)Data::get(sprintf('%s.no_export_update', $name))) {
+                    $this->logger->notice(
+                        sprintf('%s: Not updating last export date. Backend reported an error.', $name)
+                    );
+                } else {
+                    Config::save(sprintf('servers.%s.export.lastSync', $name), time());
+                    Config::save(sprintf('servers.%s.persist', $name), $backend['class']->getPersist());
+                }
             }
 
             if (false === $custom && is_writable(dirname($config))) {
@@ -216,7 +187,7 @@ class ExportCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function push(array $backends, InputInterface $input): int
+    protected function push(array $backends): int
     {
         $minDate = time();
 
@@ -227,46 +198,38 @@ class ExportCommand extends Command
                 );
             }
 
-            if ($lastSync < $minDate) {
+            if ($minDate > $lastSync) {
                 $minDate = $lastSync;
             }
         }
 
         $lastSync = makeDate($minDate);
 
-        $this->logger->debug(sprintf('Preloading changed items since \'%s\'.', $lastSync->format('Y-m-d H:i:s T')));
+        $this->logger->notice(
+            sprintf('STORAGE: Preloading changed items since \'%s\'.', $lastSync->format('Y-m-d H:i:s T'))
+        );
 
         $entities = $this->storage->getAll($lastSync);
 
         if (empty($entities)) {
-            $this->logger->notice('No items changed since export last sync.', [
-                'lastSync' => $lastSync,
+            $this->logger->notice('STORAGE: No items changed since last export date.', [
+                'date' => $lastSync,
             ]);
             return self::SUCCESS;
         }
 
-        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+        $this->logger->notice(sprintf('STORAGE: Found \'%d\' changed items.', count($entities)));
 
         $requests = [];
 
         foreach ($backends as $backend) {
-            if (null === ($name = ag($backend, 'name'))) {
+            if (null === ag($backend, 'name')) {
                 continue;
             }
 
             assert($backend['class'] instanceof ServerInterface);
 
             array_push($requests, ...$backend['class']->push($entities, makeDate(ag($backend, 'export.lastSync'))));
-
-            if (false === $input->getOption('dry-run')) {
-                if (true === (bool)Data::get(sprintf('%s.no_export_update', $name))) {
-                    $this->logger->notice(
-                        sprintf('%s: Not updating last export date. Backend reported an error.', $name)
-                    );
-                } else {
-                    Config::save(sprintf('servers.%s.export.lastSync', $name), time());
-                }
-            }
         }
 
         $total = count($requests);
@@ -422,11 +385,11 @@ class ExportCommand extends Command
     protected function isPushable(array $backends, InputInterface $input): bool
     {
         if (true === $input->getOption('force-full')) {
-            $this->logger->debug('Not possible to use push when --force-full flag is used.');
+            $this->logger->info('Not possible to use push mode when [-f, --force-full] flag is used.');
             return false;
         }
 
-        $threshold = Config::get('export.threshold', 1000);
+        $threshold = Config::get('export.threshold', 300);
 
         foreach ($backends as $backend) {
             if (null === ($name = ag($backend, 'name'))) {
@@ -434,22 +397,24 @@ class ExportCommand extends Command
             }
 
             if (false === (bool)ag($backend, 'import.enabled')) {
-                $this->logger->debug(
-                    sprintf('%s: Import are disabled from this backend, not possible to use push.', $name)
+                $this->logger->info(
+                    sprintf('%s: Import are disabled from this backend. Falling back to export mode.', $name)
                 );
                 return false;
             }
 
             if (null === ($after = ag($backend, 'export.lastSync', null))) {
-                $this->logger->debug(sprintf('%s: No recorded export last sync date.', $name));
+                $this->logger->info(
+                    sprintf('%s: This backend has not been synced before. falling back to export mode.', $name)
+                );
                 return false;
             }
 
             $count = $this->storage->getCount(makeDate($after));
 
             if ($count > $threshold) {
-                $this->logger->debug(
-                    sprintf('%s: Changes since last export sync date are greater than the threshold.', $name),
+                $this->logger->info(
+                    sprintf('%s: Media changes exceed push threshold. falling back to export mode.', $name),
                     [
                         'threshold' => $threshold,
                         'changes' => $count,
