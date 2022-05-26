@@ -48,6 +48,7 @@ class ExportCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
             ->addOption(
@@ -93,7 +94,7 @@ class ExportCommand extends Command
         foreach (Config::get('servers', []) as $name => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if ($isCustom && false === in_array($name, $selected)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($name, $selected)) {
                 $this->logger->info(
                     sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $name)
                 );

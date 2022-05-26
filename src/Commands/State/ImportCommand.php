@@ -45,6 +45,7 @@ class ImportCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
             ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
             ->addOption(
                 'always-update-metadata',
@@ -103,7 +104,7 @@ class ImportCommand extends Command
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if ($isCustom && !in_array($serverName, $selected, true)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
                 $this->logger->info(
                     sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $serverName)
                 );

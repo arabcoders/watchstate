@@ -24,13 +24,8 @@ final class ViewCommand extends Command
     {
         $this->setName('servers:view')
             ->setDescription('View Servers settings.')
-            ->addOption(
-                'servers-filter',
-                's',
-                InputOption::VALUE_OPTIONAL,
-                'View selected servers, comma seperated. \'s1,s2\'.',
-                ''
-            )
+            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument(
                 'filter',
@@ -61,13 +56,11 @@ final class ViewCommand extends Command
         $filter = $input->getArgument('filter');
 
         foreach (Config::get('servers', []) as $serverName => $server) {
-            if ($isCustom && !in_array($serverName, $selected, true)) {
+
+            if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
                 $output->writeln(
-                    sprintf(
-                        '<comment>Ignoring \'%s\' as requested by [-s, --servers-filter] flag.</comment>',
-                        $serverName
-                    ),
-                    OutputInterface::VERBOSITY_DEBUG
+                    sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $serverName),
+                    OutputInterface::VERBOSITY_VERY_VERBOSE
                 );
                 continue;
             }
