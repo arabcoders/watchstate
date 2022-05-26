@@ -1031,6 +1031,10 @@ class PlexServer implements ServerInterface
      */
     public function __destruct()
     {
+        if (true === (bool)ag($this->options, Options::DRY_RUN)) {
+            return;
+        }
+
         if (!empty($this->cacheKey) && !empty($this->cache) && true === $this->initialized) {
             $this->cacheIO->set($this->cacheKey, $this->cache, new DateInterval('P3D'));
         }
