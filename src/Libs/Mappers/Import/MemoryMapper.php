@@ -229,10 +229,6 @@ final class MemoryMapper implements ImportInterface
 
     public function get(iFace $entity): null|iFace
     {
-        if (null !== $entity->id && null !== ($this->objects[$entity->id] ?? null)) {
-            return $this->objects[self::GUID . $entity->id];
-        }
-
         return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
     }
 
@@ -384,7 +380,7 @@ final class MemoryMapper implements ImportInterface
      */
     private function getPointer(iFace $entity): int|string|bool
     {
-        if (null !== $entity->id && null !== ($this->guids[self::GUID . $entity->id] ?? null)) {
+        if (null !== $entity->id && null !== ($this->objects[self::GUID . $entity->id] ?? null)) {
             return self::GUID . $entity->id;
         }
 
