@@ -581,3 +581,17 @@ if (false === function_exists('array_keys_diff')) {
         return array_filter($base, fn($key) => $has === in_array($key, $list), ARRAY_FILTER_USE_KEY);
     }
 }
+
+if (false === function_exists('getMemoryUsage')) {
+    function getMemoryUsage(): string
+    {
+        return fsize(memory_get_usage() - BASE_MEMORY);
+    }
+}
+
+if (false === function_exists('getPeakMemoryUsage')) {
+    function getPeakMemoryUsage(): string
+    {
+        return fsize(memory_get_peak_usage() - BASE_PEAK_MEMORY);
+    }
+}

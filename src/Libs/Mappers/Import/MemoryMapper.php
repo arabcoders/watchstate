@@ -40,9 +40,9 @@ final class MemoryMapper implements ImportInterface
     {
     }
 
-    public function setUp(array $opts): ImportInterface
+    public function setOptions(array $options = []): ImportInterface
     {
-        $this->options = $opts;
+        $this->options = $options;
 
         return $this;
     }

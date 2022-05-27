@@ -19,6 +19,14 @@ interface StorageInterface
     public const MIGRATE_DOWN = 'down';
 
     /**
+     * Set storage driver options.
+     *
+     * @param array $options
+     * @return StorageInterface
+     */
+    public function setOptions(array $options): StorageInterface;
+
+    /**
      * Insert Entity immediately.
      *
      * @param StateInterface $entity
