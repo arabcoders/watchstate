@@ -7,8 +7,9 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Data;
-use App\Libs\Mappers\ExportInterface;
+use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
+use App\Libs\QueueRequests;
 use App\Libs\Servers\ServerInterface;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
@@ -27,7 +28,8 @@ class ExportCommand extends Command
 
     public function __construct(
         private StorageInterface $storage,
-        private ExportInterface $mapper,
+        private ImportInterface $mapper,
+        private QueueRequests $queue,
         private LoggerInterface $logger
     ) {
         set_time_limit(0);
@@ -41,11 +43,20 @@ class ExportCommand extends Command
         $this->setName('state:export')
             ->setDescription('Export local play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last sync date.')
+            ->addOption('force-export-mode', null, InputOption::VALUE_NONE, 'Force export mode.')
+            ->addOption('force-push-mode', null, InputOption::VALUE_NONE, 'Force Push mode.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
+            ->addOption(
+                'always-update-metadata',
+                null,
+                InputOption::VALUE_NONE,
+                'Always update the locally stored metadata from backend.'
+            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -83,7 +94,7 @@ class ExportCommand extends Command
         foreach (Config::get('servers', []) as $name => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if ($isCustom && false === in_array($name, $selected)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($name, $selected)) {
                 $this->logger->info(
                     sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $name)
                 );
@@ -220,7 +231,6 @@ class ExportCommand extends Command
 
         $this->logger->notice(sprintf('STORAGE: Found \'%d\' changed items.', count($entities)));
 
-        $requests = [];
 
         foreach ($backends as $backend) {
             if (null === ag($backend, 'name')) {
@@ -229,10 +239,14 @@ class ExportCommand extends Command
 
             assert($backend['class'] instanceof ServerInterface);
 
-            array_push($requests, ...$backend['class']->push($entities, makeDate(ag($backend, 'export.lastSync'))));
+            $backend['class']->push(
+                entities: $entities,
+                queue:    $this->queue,
+                after:    makeDate(ag($backend, 'export.lastSync'))
+            );
         }
 
-        $total = count($requests);
+        $total = count($this->queue);
 
         if ($total < 1) {
             $this->logger->notice('No play state changes detected.');
@@ -241,7 +255,7 @@ class ExportCommand extends Command
 
         $this->logger->notice(sprintf('HTTP: Sending \'%d\' change play state requests.', $total));
 
-        foreach ($requests as $response) {
+        foreach ($this->queue->getQueue() as $response) {
             $requestData = $response->getInfo('user_data');
 
             try {
@@ -285,6 +299,24 @@ class ExportCommand extends Command
      */
     protected function export(array $backends, InputInterface $input): mixed
     {
+        $mapperOpts = [];
+
+        if ($input->getOption('dry-run')) {
+            $mapperOpts[Options::DRY_RUN] = true;
+        }
+
+        if ($input->getOption('trace')) {
+            $mapperOpts[Options::DEBUG_TRACE] = true;
+        }
+
+        if ($input->getOption('always-update-metadata')) {
+            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
+        }
+
+        if (!empty($mapperOpts)) {
+            $this->mapper->setUp($mapperOpts);
+        }
+
         $this->logger->notice('MAPPER: Preloading database into memory.');
         $this->mapper->loadData();
         $this->logger->notice('MAPPER: Finished Preloading database.');
@@ -315,7 +347,7 @@ class ExportCommand extends Command
 
             assert($backend['class'] instanceof ServerInterface);
 
-            array_push($requests, ...$backend['class']->export($this->mapper, $after));
+            array_push($requests, ...$backend['class']->export($this->mapper, $this->queue, $after));
 
             if (false === $input->getOption('dry-run')) {
                 if (true === (bool)Data::get(sprintf('%s.no_export_update', $name))) {
@@ -343,12 +375,11 @@ class ExportCommand extends Command
 
         $this->logger->notice(sprintf('HTTP: Finished sending \'%d\' state comparison requests.', count($requests)));
 
-        $changes = $this->mapper->getQueue();
-        $total = count($changes);
+        $total = count($this->queue);
 
         if ($total >= 1) {
             $this->logger->notice(sprintf('HTTP: Sending \'%d\' stats change requests.', $total));
-            foreach ($changes as $response) {
+            foreach ($this->queue->getQueue() as $response) {
                 $requestData = $response->getInfo('user_data');
                 try {
                     if (200 !== $response->getStatusCode()) {
@@ -386,6 +417,16 @@ class ExportCommand extends Command
     {
         if (true === $input->getOption('force-full')) {
             $this->logger->info('Not possible to use push mode when [-f, --force-full] flag is used.');
+            return false;
+        }
+
+        if (true === $input->getOption('force-push-mode')) {
+            $this->logger->info('Force Push mode flag is used.');
+            return true;
+        }
+
+        if (true === $input->getOption('force-export-mode')) {
+            $this->logger->info('Force Export mode flag is used.');
             return false;
         }
 

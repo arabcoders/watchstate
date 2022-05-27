@@ -7,10 +7,9 @@ use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\ConsoleOutput;
-use App\Libs\Mappers\Export\ExportMapper;
-use App\Libs\Mappers\ExportInterface;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\QueueRequests;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Monolog\Logger;
@@ -43,6 +42,10 @@ return (function (): array {
 
         StateInterface::class => [
             'class' => fn() => new StateEntity([])
+        ],
+
+        QueueRequests::class => [
+            'class' => fn() => new QueueRequests()
         ],
 
         CacheInterface::class => [
@@ -148,24 +151,6 @@ return (function (): array {
             },
             'args' => [
                 MemoryMapper::class
-            ],
-        ],
-
-        ExportMapper::class => [
-            'class' => function (StorageInterface $storage): ExportInterface {
-                return (new ExportMapper($storage))->setUp(Config::get('mapper.export.opts', []));
-            },
-            'args' => [
-                StorageInterface::class,
-            ],
-        ],
-
-        ExportInterface::class => [
-            'class' => function (ExportInterface $mapper): ExportInterface {
-                return $mapper;
-            },
-            'args' => [
-                ExportMapper::class
             ],
         ],
     ];
