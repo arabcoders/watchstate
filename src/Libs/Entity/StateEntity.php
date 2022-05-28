@@ -154,7 +154,12 @@ final class StateEntity implements iFace
 
     public function getPointers(array|null $guids = null): array
     {
-        return Guid::fromArray(array_intersect_key($this->guids, Guid::SUPPORTED))->getPointers();
+        return Guid::fromArray(
+            array_intersect_key(
+                $this->guids,
+                Guid::getSupported(includeVirtual: true)
+            )
+        )->getPointers();
     }
 
     public function hasParentGuid(): bool
@@ -199,7 +204,7 @@ final class StateEntity implements iFace
             $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
         }
 
-        return array_intersect_key($list, Guid::SUPPORTED);
+        return array_intersect_key($list, Guid::getSupported(includeVirtual: true));
     }
 
     public function getRelativePointers(): array

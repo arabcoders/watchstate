@@ -580,7 +580,7 @@ final class PDOAdapter implements StorageInterface
             'type' => $entity->type,
         ];
 
-        foreach (array_keys(Guid::SUPPORTED) as $key) {
+        foreach (array_keys(Guid::getSupported(includeVirtual: true)) as $key) {
             if (null === ($entity->guids[$key] ?? null)) {
                 continue;
             }

@@ -17,7 +17,7 @@ final class Guid
     public const GUID_TVRAGE = 'guid_tvrage';
     public const GUID_ANIDB = 'guid_anidb';
 
-    public const SUPPORTED = [
+    private const SUPPORTED = [
         Guid::GUID_PLEX => 'string',
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
@@ -27,6 +27,8 @@ final class Guid
         Guid::GUID_ANIDB => 'string',
     ];
 
+    private const BACKEND_GUID = 'guidv_';
+
     private const LOOKUP_KEY = '%s://%s';
 
     private array $data = [];
@@ -35,13 +37,16 @@ final class Guid
      * Create List of db => external id list.
      *
      * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     * @param bool $includeVirtual Whether to consider virtual Guids.
      *
      * @throws RuntimeException if key/value is of unexpected type or unsupported.
      */
-    public function __construct(array $guids)
+    public function __construct(array $guids, bool $includeVirtual = true)
     {
+        $supported = self::getSupported(includeVirtual: $includeVirtual);
+
         foreach ($guids as $key => $value) {
-            if (null === $value || null === (Guid::SUPPORTED[$key] ?? null)) {
+            if (null === $value || null === ($supported[$key] ?? null)) {
                 continue;
             }
 
@@ -52,28 +57,28 @@ final class Guid
             if (!is_string($key)) {
                 throw new RuntimeException(
                     sprintf(
-                        'Unexpected offset type was given. Was expecting \'string\' but got \'%s\' instead.',
+                        'Unexpected key type was given. Was expecting \'string\' but got \'%s\' instead.',
                         get_debug_type($key)
                     ),
                 );
             }
 
-            if (null === (Guid::SUPPORTED[$key] ?? null)) {
+            if (null === ($supported[$key] ?? null)) {
                 throw new RuntimeException(
                     sprintf(
-                        'Unexpected key. Was expecting one of \'%s\', but got \'%s\' instead.',
-                        implode(', ', array_keys(Guid::SUPPORTED)),
-                        $key
+                        'Unexpected key \'%s\'. Expecting \'%s\'.',
+                        $key,
+                        implode(', ', array_keys($supported))
                     ),
                 );
             }
 
-            if (Guid::SUPPORTED[$key] !== ($valueType = get_debug_type($value))) {
+            if ($supported[$key] !== ($valueType = get_debug_type($value))) {
                 throw new RuntimeException(
                     sprintf(
-                        'Unexpected value type for \'%s\'. Was Expecting \'%s\' but got \'%s\' instead.',
+                        'Unexpected value type for \'%s\'. Expecting \'%s\' but got \'%s\' instead.',
                         $key,
-                        Guid::SUPPORTED[$key],
+                        $supported[$key],
                         $valueType
                     )
                 );
@@ -81,6 +86,32 @@ final class Guid
 
             $this->data[$key] = $value;
         }
+    }
+
+    public static function makeVirtualGuid(string $backend, string $value): string
+    {
+        return self::BACKEND_GUID . $backend . '://' . $value;
+    }
+
+    public static function getSupported(bool $includeVirtual = false): array
+    {
+        static $list = null;
+
+        if (false === $includeVirtual) {
+            return self::SUPPORTED;
+        }
+
+        if (null !== $list) {
+            return $list;
+        }
+
+        $list = self::SUPPORTED;
+
+        foreach (array_keys((array)Config::get('servers', [])) as $name) {
+            $list[self::BACKEND_GUID . $name] = 'string';
+        }
+
+        return $list;
     }
 
     /**
@@ -125,7 +156,7 @@ final class Guid
     }
 
     /**
-     * Return list of External ids.
+     * Return list of external ids.
      *
      * @return array
      */

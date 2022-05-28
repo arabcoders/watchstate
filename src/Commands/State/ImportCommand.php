@@ -326,9 +326,11 @@ class ImportCommand extends Command
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
-        $this->logger->notice(
-            sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-        );
+        if ($inTradeMode) {
+            $this->logger->notice(
+                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+            );
+        }
 
         return self::SUCCESS;
     }
