@@ -121,9 +121,9 @@ final class Guid
      *
      * @return static
      */
-    public static function fromArray(array $payload): self
+    public static function fromArray(array $payload, bool $includeVirtual = true): self
     {
-        return new self($payload);
+        return new self(guids: $payload, includeVirtual: $includeVirtual);
     }
 
     /**
@@ -134,9 +134,12 @@ final class Guid
      * @return static
      * @throws JsonException if decoding JSON payload fails.
      */
-    public static function fromJson(string $payload): self
+    public static function fromJson(string $payload, bool $includeVirtual = true): self
     {
-        return new self(json_decode(json: $payload, associative: true, flags: JSON_THROW_ON_ERROR));
+        return new self(
+            guids:          json_decode(json: $payload, associative: true, flags: JSON_THROW_ON_ERROR),
+            includeVirtual: $includeVirtual
+        );
     }
 
     /**
