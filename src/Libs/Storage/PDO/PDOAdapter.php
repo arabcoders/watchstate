@@ -157,18 +157,30 @@ final class PDOAdapter implements StorageInterface
         return null;
     }
 
-    public function getAll(DateTimeInterface|null $date = null, iFace|null $class = null): array
+    public function getAll(DateTimeInterface|null $date = null, array $opts = []): array
     {
         $arr = [];
 
-        $sql = 'SELECT * FROM state';
+        if (true === array_key_exists('fields', $opts)) {
+            $fields = implode(', ', $opts['fields']);
+        } else {
+            $fields = '*';
+        }
+
+        if (true === (bool)($this->options[Options::DEBUG_TRACE] ?? false)) {
+            $this->logger->info('STORAGE: Selecting fields', $opts['fields'] ?? ['all']);
+        }
+
+        $sql = "SELECT {$fields} FROM state";
 
         if (null !== $date) {
             $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
         }
 
-        if (null === $class) {
+        if (null === ($opts['class'] ?? null) || false === ($opts['class'] instanceof iFace)) {
             $class = Container::get(iFace::class);
+        } else {
+            $class = $opts['class'];
         }
 
         foreach ($this->pdo->query($sql) as $row) {
