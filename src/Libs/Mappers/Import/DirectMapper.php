@@ -17,8 +17,6 @@ use Psr\Log\LoggerInterface;
 
 final class DirectMapper implements ImportInterface
 {
-    private const GUID = 'local_db://';
-
     /**
      * @var array<int,int> List used objects.
      */
@@ -44,6 +42,8 @@ final class DirectMapper implements ImportInterface
 
     private array $options = [];
 
+    private bool $fullyLoaded = false;
+
     public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
     {
     }
@@ -57,6 +57,8 @@ final class DirectMapper implements ImportInterface
 
     public function loadData(DateTimeInterface|null $date = null): self
     {
+        $this->fullyLoaded = null === $date;
+
         $opts = [
             'class' => $this->options['class'] ?? null,
             'fields' => [
@@ -144,10 +146,13 @@ final class DirectMapper implements ImportInterface
 
                 $this->addPointers($entity, $entity->id);
 
+                if (null === ($this->changed[$entity->id] ?? null)) {
+                    $this->actions[$entity->type]['added']++;
+                    Data::increment($bucket, $entity->type . '_added');
+                }
+
                 $this->changed[$entity->id] = $entity->id;
-                $this->actions[$entity->type]['added']++;
                 $this->objects[$entity->id] = $entity->id;
-                Data::increment($bucket, $entity->type . '_added');
             } catch (PDOException|Exception $e) {
                 $this->actions[$entity->type]['failed']++;
                 Data::increment($bucket, $entity->type . '_failed');
@@ -176,9 +181,13 @@ final class DirectMapper implements ImportInterface
                                 ),
                             );
 
+                            if (null === ($this->changed[$local->id] ?? null)) {
+                                $this->actions[$local->type]['updated']++;
+                                Data::increment($bucket, $local->type . '_updated');
+                            }
+
                             $this->changed[$local->id] = $local->id;
-                            $this->actions[$local->type]['updated']++;
-                            Data::increment($bucket, $local->type . '_updated');
+                            $this->objects[$local->id] = $local->id;
                         } catch (PDOException $e) {
                             $this->actions[$local->type]['failed']++;
                             Data::increment($bucket, $local->type . '_failed');
@@ -208,9 +217,13 @@ final class DirectMapper implements ImportInterface
                                 $this->storage->update($local);
                             }
 
-                            Data::increment($bucket, $entity->type . '_updated');
+                            if (null === ($this->changed[$local->id] ?? null)) {
+                                $this->actions[$local->type]['updated']++;
+                                Data::increment($bucket, $local->type . '_updated');
+                            }
+
                             $this->changed[$local->id] = $local->id;
-                            $this->actions[$local->type]['updated']++;
+                            $this->objects[$local->id] = $local->id;
                         } catch (PDOException $e) {
                             $this->actions[$local->type]['failed']++;
                             Data::increment($bucket, $local->type . '_failed');
@@ -245,9 +258,13 @@ final class DirectMapper implements ImportInterface
                     $this->storage->update($local);
                 }
 
-                Data::increment($bucket, $entity->type . '_updated');
+                if (null === ($this->changed[$local->id] ?? null)) {
+                    $this->actions[$local->type]['updated']++;
+                    Data::increment($bucket, $entity->type . '_updated');
+                }
+
                 $this->changed[$local->id] = $local->id;
-                $this->actions[$local->type]['updated']++;
+                $this->objects[$local->id] = $local->id;
             } catch (PDOException $e) {
                 $this->actions[$local->type]['failed']++;
                 Data::increment($bucket, $local->type . '_failed');
@@ -313,7 +330,8 @@ final class DirectMapper implements ImportInterface
             iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
         ];
 
-        $this->changed = $this->objects = [];
+        $this->fullyLoaded = false;
+        $this->changed = $this->objects = $this->pointers = [];
 
         return $this;
     }
@@ -373,16 +391,6 @@ final class DirectMapper implements ImportInterface
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
             $this->pointers[$key . '/' . $entity->type] = $pointer;
         }
-
-        foreach ($entity->metadata ?? [] as $backend => $meta) {
-            if (null === ($meta[iFace::COLUMN_ID] ?? null)) {
-                continue;
-            }
-
-            $key = self::GUID . $backend . '-' . $entity->metadata[$backend][iFace::COLUMN_ID];
-
-            $this->pointers[$key] = $pointer;
-        }
     }
 
     /**
@@ -398,14 +406,6 @@ final class DirectMapper implements ImportInterface
             return $entity->id;
         }
 
-        if (!empty($entity->via) && null !== ($entity->metadata[$entity->via][iFace::COLUMN_ID] ?? null)) {
-            $key = self::GUID . $entity->via . '-' . $entity->metadata[$entity->via][iFace::COLUMN_ID];
-
-            if (null !== ($this->pointers[$key] ?? null)) {
-                return $this->pointers[$key];
-            }
-        }
-
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
@@ -413,7 +413,7 @@ final class DirectMapper implements ImportInterface
             }
         }
 
-        if (null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
             $this->objects[$lazyEntity->id] = $lazyEntity->id;
 
             $this->addPointers($lazyEntity, $lazyEntity->id);
