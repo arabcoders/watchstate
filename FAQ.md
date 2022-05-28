@@ -278,4 +278,3 @@ importing your database it's fine to use this mapper.
 | Memory Usage   | (✗) Higher    | (✓) Lower       |
 | Matching Speed | (✓) Faster    | (✗) Slower      |
 | DB Operations  | (✓) Faster    | (✗) Slower      |
-| Initial Import | (✓) Faster    | (✗) MUCH Slower |
