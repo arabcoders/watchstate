@@ -204,7 +204,7 @@ final class StateEntity implements iFace
             $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
         }
 
-        return array_intersect_key($list, Guid::getSupported(includeVirtual: true));
+        return array_intersect_key($list, Guid::getSupported(includeVirtual: false));
     }
 
     public function getRelativePointers(): array
