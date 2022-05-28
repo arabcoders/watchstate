@@ -64,7 +64,6 @@ final class DirectMapper implements ImportInterface
                 iFace::COLUMN_TYPE,
                 iFace::COLUMN_PARENT,
                 iFace::COLUMN_GUIDS,
-                iFace::COLUMN_META_DATA,
             ],
         ];
 

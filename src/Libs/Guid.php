@@ -88,9 +88,9 @@ final class Guid
         }
     }
 
-    public static function makeVirtualGuid(string $backend, string $value): string
+    public static function makeVirtualGuid(string $backend, string $value): array
     {
-        return self::BACKEND_GUID . $backend . '://' . $value;
+        return [self::BACKEND_GUID . $backend => $value];
     }
 
     public static function getSupported(bool $includeVirtual = false): array

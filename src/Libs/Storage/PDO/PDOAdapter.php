@@ -580,14 +580,18 @@ final class PDOAdapter implements StorageInterface
             'type' => $entity->type,
         ];
 
+        $list = $entity->getGuids();
+
         foreach (array_keys(Guid::getSupported(includeVirtual: true)) as $key) {
-            if (null === ($entity->guids[$key] ?? null)) {
+            if (null === ($list[$key] ?? null)) {
                 continue;
             }
 
             $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_GUIDS . ",'$.{$key}') = :{$key}";
-            $cond[$key] = $entity->guids[$key];
+            $cond[$key] = $list[$key];
         }
+
+        $list = null;
 
         if (empty($cond)) {
             return null;

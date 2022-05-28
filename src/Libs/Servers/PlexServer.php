@@ -365,13 +365,16 @@ class PlexServer implements ServerInterface
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
+        $guids = $this->getGuids(ag($item, 'Guid', []));
+        $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'ratingKey'));
+
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => time(),
             iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $this->getGuids(ag($item, 'Guid', [])),
+            iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
@@ -1760,13 +1763,16 @@ class PlexServer implements ServerInterface
 
         $date = max((int)($item->lastViewedAt ?? 0), (int)($item->addedAt ?? 0));
 
+        $guids = $this->getGuids($item->Guid ?? []);
+        $guids += Guid::makeVirtualGuid($this->name, (string)$item->ratingKey);
+
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => $date,
             iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
-            iFace::COLUMN_GUIDS => $this->getGuids($item->Guid ?? []),
+            iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->ratingKey,

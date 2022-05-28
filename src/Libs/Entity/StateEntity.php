@@ -144,7 +144,9 @@ final class StateEntity implements iFace
 
     public function hasGuids(): bool
     {
-        return count($this->guids) >= 1;
+        $list = array_intersect_key($this->guids, Guid::getSupported(includeVirtual: false));
+
+        return count($list) >= 1;
     }
 
     public function getGuids(): array
