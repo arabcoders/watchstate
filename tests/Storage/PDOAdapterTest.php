@@ -91,14 +91,14 @@ class PDOAdapterTest extends TestCase
     {
         $item = new StateEntity($this->testEpisode);
 
-        $this->assertSame([], $this->storage->getAll(class: $item));
+        $this->assertSame([], $this->storage->getAll(opts: ['class' => $item]));
 
         $this->storage->insert($item);
 
-        $this->assertCount(1, $this->storage->getAll(class: $item));
+        $this->assertCount(1, $this->storage->getAll(opts: ['class' => $item]));
 
         // -- future date should be 0.
-        $this->assertCount(0, $this->storage->getAll(date: new DateTimeImmutable('now'), class: $item));
+        $this->assertCount(0, $this->storage->getAll(date: new DateTimeImmutable('now'), opts: ['class' => $item]));
     }
 
     public function test_update_call_without_id_exception(): void

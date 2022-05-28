@@ -40,9 +40,9 @@ final class MemoryMapper implements ImportInterface
     {
     }
 
-    public function setUp(array $opts): ImportInterface
+    public function setOptions(array $options = []): ImportInterface
     {
-        $this->options = $opts;
+        $this->options = $options;
 
         return $this;
     }
@@ -51,7 +51,7 @@ final class MemoryMapper implements ImportInterface
     {
         $this->fullyLoaded = null === $date;
 
-        foreach ($this->storage->getAll($date, $this->options['class'] ?? null) as $entity) {
+        foreach ($this->storage->getAll($date, opts: ['class' => $this->options['class'] ?? null]) as $entity) {
             $pointer = self::GUID . $entity->id;
 
             if (null !== ($this->objects[$pointer] ?? null)) {

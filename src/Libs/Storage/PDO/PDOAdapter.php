@@ -7,6 +7,7 @@ namespace App\Libs\Storage\PDO;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
+use App\Libs\Options;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
 use Closure;
@@ -21,6 +22,8 @@ final class PDOAdapter implements StorageInterface
     private bool $viaTransaction = false;
     private bool $singleTransaction = false;
 
+    private array $options = [];
+
     /**
      * Cache Prepared Statements.
      *
@@ -33,6 +36,13 @@ final class PDOAdapter implements StorageInterface
 
     public function __construct(private LoggerInterface $logger, private PDO $pdo)
     {
+    }
+
+    public function setOptions(array $options): self
+    {
+        $this->options = $options;
+
+        return $this;
     }
 
     public function insert(iFace $entity): iFace
@@ -75,7 +85,7 @@ final class PDOAdapter implements StorageInterface
             $entity->id = (int)$this->pdo->lastInsertId();
         } catch (PDOException $e) {
             $this->stmt['insert'] = null;
-            if (false === $this->viaTransaction) {
+            if (false === $this->viaTransaction && false === $this->singleTransaction) {
                 $this->logger->error($e->getMessage(), $entity->getAll());
                 return $entity;
             }
@@ -87,43 +97,90 @@ final class PDOAdapter implements StorageInterface
 
     public function get(iFace $entity): iFace|null
     {
+        $inTraceMode = true === (bool)($this->options[Options::DEBUG_TRACE] ?? false);
+
+        if ($inTraceMode) {
+            $this->logger->debug(sprintf('STORAGE: Looking for \'%s\'.', $entity->getName()));
+        }
+
         if (null !== $entity->id) {
             $stmt = $this->pdo->query(sprintf('SELECT * FROM state WHERE %s = %d', iFace::COLUMN_ID, (int)$entity->id));
 
             if (false !== ($item = $stmt->fetch(PDO::FETCH_ASSOC))) {
-                return $entity::fromArray($item);
+                $item = $entity::fromArray($item);
+
+                if ($inTraceMode) {
+                    $this->logger->debug(sprintf('STORAGE: Found \'%s\' using direct id match.', $item->getName()), [
+                        iFace::COLUMN_ID => $entity->id
+                    ]);
+                }
+                return $item;
             }
         }
 
         if (!empty($entity->via) && null !== ($entity->metadata[$entity->via][iFace::COLUMN_ID] ?? null)) {
             if (null !== ($item = $this->findByMetaDataId($entity))) {
+                if ($inTraceMode) {
+                    $this->logger->debug(sprintf('STORAGE: Found \'%s\' using metadata field.', $item->getName()), [
+                        $entity->via => [
+                            iFace::COLUMN_ID => $entity->metadata[$entity->via][iFace::COLUMN_ID],
+                        ]
+                    ]);
+                }
                 return $item;
             }
         }
 
         if ($entity->isEpisode() && $entity->hasRelativeGuid() && null !== ($item = $this->findByRGuid($entity))) {
+            if ($inTraceMode) {
+                $this->logger->debug(
+                    sprintf('STORAGE: Found \'%s\' using relative external id match.', $item->getName()),
+                    [
+                        iFace::COLUMN_SEASON => $entity->season,
+                        iFace::COLUMN_EPISODE => $entity->episode,
+                        iFace::COLUMN_PARENT => $entity->getParentGuids(),
+                    ]
+                );
+            }
             return $item;
         }
 
         if ($entity->hasGuids() && null !== ($item = $this->findByGuid($entity))) {
+            if ($inTraceMode) {
+                $this->logger->debug(sprintf('STORAGE: Found \'%s\' using external id match.', $item->getName()), [
+                    iFace::COLUMN_GUIDS => $entity->getGuids(),
+                ]);
+            }
             return $item;
         }
 
         return null;
     }
 
-    public function getAll(DateTimeInterface|null $date = null, iFace|null $class = null): array
+    public function getAll(DateTimeInterface|null $date = null, array $opts = []): array
     {
         $arr = [];
 
-        $sql = 'SELECT * FROM state';
+        if (true === array_key_exists('fields', $opts)) {
+            $fields = implode(', ', $opts['fields']);
+        } else {
+            $fields = '*';
+        }
+
+        if (true === (bool)($this->options[Options::DEBUG_TRACE] ?? false)) {
+            $this->logger->info('STORAGE: Selecting fields', $opts['fields'] ?? ['all']);
+        }
+
+        $sql = "SELECT {$fields} FROM state";
 
         if (null !== $date) {
             $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
         }
 
-        if (null === $class) {
+        if (null === ($opts['class'] ?? null) || false === ($opts['class'] instanceof iFace)) {
             $class = Container::get(iFace::class);
+        } else {
+            $class = $opts['class'];
         }
 
         foreach ($this->pdo->query($sql) as $row) {
@@ -194,7 +251,7 @@ final class PDOAdapter implements StorageInterface
             $this->stmt['update']->execute($data);
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
-            if (false === $this->viaTransaction) {
+            if (false === $this->viaTransaction && false === $this->singleTransaction) {
                 $this->logger->error($e->getMessage(), $entity->getAll());
                 return $entity;
             }
@@ -523,14 +580,18 @@ final class PDOAdapter implements StorageInterface
             'type' => $entity->type,
         ];
 
-        foreach (array_keys(Guid::SUPPORTED) as $key) {
-            if (null === ($entity->guids[$key] ?? null)) {
+        $list = $entity->getGuids();
+
+        foreach (array_keys(Guid::getSupported(includeVirtual: true)) as $key) {
+            if (null === ($list[$key] ?? null)) {
                 continue;
             }
 
             $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_GUIDS . ",'$.{$key}') = :{$key}";
-            $cond[$key] = $entity->guids[$key];
+            $cond[$key] = $list[$key];
         }
+
+        $list = null;
 
         if (empty($cond)) {
             return null;

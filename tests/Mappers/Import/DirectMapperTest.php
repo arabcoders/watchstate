@@ -9,7 +9,7 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Guid;
-use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Monolog\Logger;
@@ -18,12 +18,12 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
-class MemoryMapperTest extends TestCase
+class DirectMapperTest extends TestCase
 {
     private array $testMovie = [];
     private array $testEpisode = [];
 
-    private MemoryMapper|null $mapper = null;
+    private DirectMapper|null $mapper = null;
     private StorageInterface|null $storage = null;
 
     public function setUp(): void
@@ -40,44 +40,10 @@ class MemoryMapperTest extends TestCase
         $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
         $this->storage->migrations('up');
 
-        $this->mapper = new MemoryMapper($logger, $this->storage);
+        $this->mapper = new DirectMapper($logger, $this->storage);
         $this->mapper->setOptions(options: ['class' => new StateEntity([])]);
 
         Data::reset();
-    }
-
-    public function test_loadData_null_date_conditions(): void
-    {
-        $testEpisode = new StateEntity($this->testEpisode);
-        $testMovie = new StateEntity($this->testMovie);
-
-        // -- expect 0 as we have not modified or added new item yet.
-        $this->assertSame(0, $this->mapper->getObjectsCount());
-
-        $this->storage->commit([$testEpisode, $testMovie]);
-
-        $this->mapper->loadData();
-
-        $this->assertSame(2, $this->mapper->getObjectsCount());
-    }
-
-    public function test_loadData_date_conditions(): void
-    {
-        $time = time();
-
-        $this->testEpisode[iFace::COLUMN_UPDATED] = $time;
-
-        $testMovie = new StateEntity($this->testMovie);
-        $testEpisode = new StateEntity($this->testEpisode);
-
-        // -- expect 0 as we have not modified or added new item yet.
-        $this->assertSame(0, $this->mapper->getObjectsCount());
-
-        $this->storage->commit([$testEpisode, $testMovie]);
-
-        $this->mapper->loadData(makeDate($time - 1));
-
-        $this->assertSame(1, $this->mapper->getObjectsCount());
     }
 
     public function test_add_conditions(): void
@@ -151,25 +117,6 @@ class MemoryMapperTest extends TestCase
         $this->assertSame($testMovie2->getAll(), $this->mapper->get($testMovie)->getAll());
     }
 
-    public function test_get_fully_loaded_conditions(): void
-    {
-        $time = time();
-
-        $testMovie = new StateEntity($this->testMovie);
-        $testEpisode = new StateEntity($this->testEpisode);
-        $testEpisode->updated = $time;
-
-        $this->mapper->loadData();
-
-        $this->storage->commit([$testEpisode, $testMovie]);
-
-        $this->assertNull($this->mapper->get($testMovie));
-        $this->assertNull($this->mapper->get($testEpisode));
-
-        $this->mapper->loadData(makeDate($time - 1));
-        $this->assertInstanceOf(iFace::class, $this->mapper->get($testEpisode));
-    }
-
     public function test_commit_conditions(): void
     {
         $testMovie = new StateEntity($this->testMovie);
@@ -224,21 +171,6 @@ class MemoryMapperTest extends TestCase
         $this->assertTrue($this->mapper->has($testEpisode));
     }
 
-    public function test_has_fully_loaded_conditions(): void
-    {
-        $time = time();
-
-        $testMovie = new StateEntity($this->testMovie);
-        $testEpisode = new StateEntity($this->testEpisode);
-        $testEpisode->updated = $time;
-
-        $this->mapper->loadData();
-        $this->storage->commit([$testEpisode, $testMovie]);
-        $this->assertFalse($this->mapper->has($testEpisode));
-        $this->mapper->loadData(makeDate($time - 1));
-        $this->assertTrue($this->mapper->has($testEpisode));
-    }
-
     public function test_reset_conditions(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
@@ -258,9 +190,8 @@ class MemoryMapperTest extends TestCase
 
         $this->assertCount(0, $this->mapper->getObjects());
 
-        $this->storage->commit([$testMovie, $testEpisode]);
-
-        $this->mapper->loadData();
+        $this->mapper->add('test', 'test_movie', $testMovie)
+            ->add('test', 'test_episode', $testEpisode);
 
         $this->assertCount(2, $this->mapper->getObjects());
         $this->assertCount(0, $this->mapper->reset()->getObjects());

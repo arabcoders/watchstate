@@ -137,7 +137,8 @@ return (function (): array {
 
         MemoryMapper::class => [
             'class' => function (LoggerInterface $logger, StorageInterface $storage): ImportInterface {
-                return (new MemoryMapper($logger, $storage))->setUp(Config::get('mapper.import.opts', []));
+                return (new MemoryMapper(logger: $logger, storage: $storage))
+                    ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
                 LoggerInterface::class,

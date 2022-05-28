@@ -145,11 +145,15 @@ final class PDODataMigration
                     iFace::COLUMN_SEASON => ag($row['meta'], iFace::COLUMN_SEASON, null),
                     iFace::COLUMN_EPISODE => ag($row['meta'], iFace::COLUMN_EPISODE, null),
                     iFace::COLUMN_PARENT => json_encode(
-                        value: array_intersect_key($row, ag($row['meta'], iFace::COLUMN_PARENT, []), Guid::SUPPORTED),
+                        value: array_intersect_key(
+                                   $row,
+                                   ag($row['meta'], iFace::COLUMN_PARENT, []),
+                                   Guid::getSupported(includeVirtual: false)
+                               ),
                         flags: $this->jFlags
                     ),
                     iFace::COLUMN_GUIDS => json_encode(
-                        value: array_intersect_key($row, Guid::SUPPORTED),
+                        value: array_intersect_key($row, Guid::getSupported(includeVirtual: false)),
                         flags: $this->jFlags
                     ),
                     iFace::COLUMN_META_DATA => json_encode(
@@ -325,11 +329,14 @@ final class PDODataMigration
                 iFace::COLUMN_SEASON => $row[iFace::COLUMN_SEASON] ?? null,
                 iFace::COLUMN_EPISODE => $row[iFace::COLUMN_EPISODE] ?? null,
                 iFace::COLUMN_PARENT => json_encode(
-                    value: array_intersect_key($row[iFace::COLUMN_PARENT] ?? [], Guid::SUPPORTED),
+                    value: array_intersect_key(
+                               $row[iFace::COLUMN_PARENT] ?? [],
+                               Guid::getSupported(includeVirtual: false)
+                           ),
                     flags: $this->jFlags
                 ),
                 iFace::COLUMN_GUIDS => json_encode(
-                    value: array_intersect_key($row[iFace::COLUMN_GUIDS], Guid::SUPPORTED),
+                    value: array_intersect_key($row[iFace::COLUMN_GUIDS], Guid::getSupported(includeVirtual: false)),
                     flags: $this->jFlags
                 ),
                 iFace::COLUMN_META_DATA => json_encode(

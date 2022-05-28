@@ -15,11 +15,11 @@ interface ImportInterface extends Countable
     /**
      * Initiate Mapper.
      *
-     * @param array $opts
+     * @param array $options
      *
      * @return self
      */
-    public function setUp(array $opts): self;
+    public function setOptions(array $options = []): self;
 
     /**
      * Preload data from storage as usable entity.

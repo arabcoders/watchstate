@@ -365,13 +365,16 @@ class PlexServer implements ServerInterface
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
+        $guids = $this->getGuids(ag($item, 'Guid', []));
+        $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'ratingKey'));
+
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => time(),
             iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $this->getGuids(ag($item, 'Guid', [])),
+            iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
@@ -1125,13 +1128,13 @@ class PlexServer implements ServerInterface
         if (true === $includeParent) {
             foreach ($listDirs as $section) {
                 $key = (int)ag($section, 'key');
-                $title = ag($section, 'title', '???');
+                $title = trim((string)ag($section, 'title', '???'));
 
                 if ('show' !== ag($section, 'type', 'unknown')) {
                     continue;
                 }
 
-                $cName = sprintf('(%s) - (%s:%s)', $title, 'show', $key);
+                $cName = sprintf('(%s) - (%s:%s)', trim($title), 'show', $key);
 
                 if (null !== $ignoreIds && in_array($key, $ignoreIds)) {
                     continue;
@@ -1185,7 +1188,7 @@ class PlexServer implements ServerInterface
         foreach ($listDirs as $section) {
             $key = (int)ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
-            $title = ag($section, 'title', '???');
+            $title = trim((string)ag($section, 'title', '???'));
 
             if ('movie' !== $type && 'show' !== $type) {
                 $unsupported++;
@@ -1760,13 +1763,16 @@ class PlexServer implements ServerInterface
 
         $date = max((int)($item->lastViewedAt ?? 0), (int)($item->addedAt ?? 0));
 
+        $guids = $this->getGuids($item->Guid ?? []);
+        $guids += Guid::makeVirtualGuid($this->name, (string)$item->ratingKey);
+
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => $date,
             iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
-            iFace::COLUMN_GUIDS => $this->getGuids($item->Guid ?? []),
+            iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->ratingKey,

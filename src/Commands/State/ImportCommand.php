@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
@@ -53,6 +54,12 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'Always update the locally stored metadata from backend.'
             )
+            ->addOption(
+                'direct-mapper',
+                null,
+                InputOption::VALUE_NONE,
+                'Direct mapper is memory efficient, However its slower than the default mapper.'
+            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
 
@@ -81,6 +88,8 @@ class ImportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
+        $inTradeMode = true === $input->getOption('trace');
+
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
@@ -91,14 +100,20 @@ class ImportCommand extends Command
 
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
+            $this->storage->setOptions(options: [Options::DEBUG_TRACE => true]);
         }
 
         if ($input->getOption('always-update-metadata')) {
             $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
+        if ($input->getOption('direct-mapper')) {
+            $this->logger->info('Using Direct mapper');
+            $this->mapper = new DirectMapper(logger: $this->logger, storage: $this->storage);
+        }
+
         if (!empty($mapperOpts)) {
-            $this->mapper->setUp($mapperOpts);
+            $this->mapper->setOptions(options: $mapperOpts);
         }
 
         foreach (Config::get('servers', []) as $serverName => $server) {
@@ -158,7 +173,20 @@ class ImportCommand extends Command
         $this->logger->notice(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
 
         $this->logger->notice('MAPPER: Preloading database into memory.');
+        if ($inTradeMode) {
+            $this->logger->notice(
+                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+            );
+        }
+
         $this->mapper->loadData();
+
+        if ($inTradeMode) {
+            $this->logger->notice(
+                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+            );
+        }
+
         $this->logger->notice('MAPPER: Finished Preloading database.');
 
         $this->storage->singleTransaction();
@@ -215,7 +243,19 @@ class ImportCommand extends Command
 
         $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' external requests.', count($queue)));
 
+        if ($inTradeMode) {
+            $this->logger->notice(
+                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+            );
+        }
+
         foreach ($queue as $_key => $response) {
+            if ($inTradeMode) {
+                $this->logger->notice(
+                    sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+                );
+            }
+
             $requestData = $response->getInfo('user_data');
 
             try {
@@ -231,12 +271,23 @@ class ImportCommand extends Command
 
         $this->logger->notice('HTTP: Finished waiting on external requests.');
 
+        if ($inTradeMode) {
+            $this->logger->notice(
+                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+            );
+        }
+
         $queue = $requestData = null;
 
         $total = count($this->mapper);
 
         if ($total >= 1) {
             $this->logger->notice(sprintf('MAPPER: Updating \'%d\' items.', $total));
+            if ($inTradeMode) {
+                $this->logger->notice(
+                    sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+                );
+            }
         }
 
         $operations = $this->mapper->commit();
@@ -273,6 +324,12 @@ class ImportCommand extends Command
             }
 
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
+        }
+
+        if ($inTradeMode) {
+            $this->logger->notice(
+                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
+            );
         }
 
         return self::SUCCESS;

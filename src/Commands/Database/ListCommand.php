@@ -75,7 +75,7 @@ final class ListCommand extends Command
             )
             ->setDescription('List Database entries.');
 
-        foreach (array_keys(Guid::SUPPORTED) as $guid) {
+        foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
             $guid = afterLast($guid, 'guid_');
             $this->addOption(
                 $guid,
@@ -153,7 +153,7 @@ final class ListCommand extends Command
         }
 
         if ($input->getOption('parent')) {
-            foreach (array_keys(Guid::SUPPORTED) as $guid) {
+            foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
                 if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }
@@ -161,7 +161,7 @@ final class ListCommand extends Command
                 $params[$guid] = $val;
             }
         } else {
-            foreach (array_keys(Guid::SUPPORTED) as $guid) {
+            foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
                 if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
                     continue;
                 }

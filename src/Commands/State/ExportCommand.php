@@ -314,7 +314,7 @@ class ExportCommand extends Command
         }
 
         if (!empty($mapperOpts)) {
-            $this->mapper->setUp($mapperOpts);
+            $this->mapper->setOptions(options: $mapperOpts);
         }
 
         $this->logger->notice('MAPPER: Preloading database into memory.');

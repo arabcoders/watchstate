@@ -321,13 +321,16 @@ class JellyfinServer implements ServerInterface
             $providersId[after($key, 'Provider_')] = $val;
         }
 
+        $guids = $this->getGuids($providersId);
+        $guids += Guid::makeVirtualGuid($this->name, (string)ag($json, 'ItemId'));
+
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp', 'LastPlayedDate'], 'now')),
             iFace::COLUMN_WATCHED => (int)(bool)ag($json, 'Played', 0),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $this->getGuids($providersId),
+            iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($json, 'ItemId'),
@@ -1104,7 +1107,7 @@ class JellyfinServer implements ServerInterface
         if (true === $includeParent) {
             foreach ($listDirs as $section) {
                 $key = (string)ag($section, 'Id');
-                $title = ag($section, 'Name', '???');
+                $title = trim((string)ag($section, 'Name', '???'));
 
                 if ('tvshows' !== ag($section, 'CollectionType', 'unknown')) {
                     continue;
@@ -1166,7 +1169,7 @@ class JellyfinServer implements ServerInterface
 
         foreach ($listDirs as $section) {
             $key = (string)ag($section, 'Id');
-            $title = ag($section, 'Name', '???');
+            $title = trim((string)ag($section, 'Name', '???'));
             $type = ag($section, 'CollectionType', 'unknown');
 
             if ('movies' !== $type && 'tvshows' !== $type) {
@@ -1606,13 +1609,16 @@ class JellyfinServer implements ServerInterface
             throw new RuntimeException('No date was set on object.');
         }
 
+        $guids = $this->getGuids((array)($item->ProviderIds ?? []));
+        $guids += Guid::makeVirtualGuid($this->name, (string)$item->Id);
+
         $row = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
             iFace::COLUMN_WATCHED => (int)(bool)($item->UserData->Played ?? false),
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-            iFace::COLUMN_GUIDS => $this->getGuids((array)($item->ProviderIds ?? [])),
+            iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
                     iFace::COLUMN_ID => (string)$item->Id,

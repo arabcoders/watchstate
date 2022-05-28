@@ -215,9 +215,9 @@ or if you want to get a specific item metadata run the following command:
 $ docker exec -ti console server servers:remote --search-id 2514 -- [SERVER_NAME]
 ```
 
-### Optional flags related to `--search` and `--search-id` 
+### Optional flags related to `--search` and `--search-id`
 
-Those flags can be combined with the search parameter 
+Those flags can be combined with the search parameter
 
 * `--search-raw` Return unfiltered response.
 * `--search-limit` To limit returned results. Defaults to `25`.
@@ -249,3 +249,33 @@ Those flags can be combined with the search parameter
 * tvmaze://(id)
 * tvrage://(id)
 * anidb://(id)
+
+---
+
+### Q: What is Mappers?
+
+A Mapper is class that have list of all external ids that point to record in database. think of them as dictionary that
+point to specific item.
+
+#### MemoryMapper (Default)
+
+Memory Mapper is the Default mapper, it uses memory to load the entire state table into memory, which in turn leads
+to better performance. you shouldn't use the other mapper unless you are running into memory problems.
+
+#### DirectMapper
+
+Direct mapper is suitable for more memory constraint systems, it just loads the external ids mapping into memory,
+however it does not keep the state into memory, thus uses less memory compared to `MemoryMapper`, But the trade-off is
+it's slower than `MemoryMapper`.
+
+For Initial or force-full imports you shouldn't use `DirectMapper` as it's so much slower than `MemoryMapper`. after
+importing your database it's fine to use this mapper.
+
+#### Comparison between mappers
+
+| Operation      | Memory Mapper | Direct Mapper   |
+|----------------|---------------|-----------------|
+| Memory Usage   | (✗) Higher    | (✓) Lower       |
+| Matching Speed | (✓) Faster    | (✗) Slower      |
+| DB Operations  | (✓) Faster    | (✗) Slower      |
+| Initial Import | (✓) Faster    | (✗) MUCH Slower |

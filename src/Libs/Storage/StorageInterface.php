@@ -19,6 +19,14 @@ interface StorageInterface
     public const MIGRATE_DOWN = 'down';
 
     /**
+     * Set storage driver options.
+     *
+     * @param array $options
+     * @return StorageInterface
+     */
+    public function setOptions(array $options): StorageInterface;
+
+    /**
      * Insert Entity immediately.
      *
      * @param StateInterface $entity
@@ -40,11 +48,11 @@ interface StorageInterface
      * Load entities from backend.
      *
      * @param DateTimeInterface|null $date Get Entities That has changed since given time, if null get all.
-     * @param StateInterface|null $class Create objects based on given class, if null use default class.
+     * @param array $opts
      *
      * @return array<StateInterface>
      */
-    public function getAll(DateTimeInterface|null $date = null, StateInterface|null $class = null): array;
+    public function getAll(DateTimeInterface|null $date = null, array $opts = []): array;
 
     /**
      * Return Number of Items.
