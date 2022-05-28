@@ -51,7 +51,7 @@ final class MemoryMapper implements ImportInterface
     {
         $this->fullyLoaded = null === $date;
 
-        foreach ($this->storage->getAll($date, $this->options['class'] ?? null) as $entity) {
+        foreach ($this->storage->getAll($date, opts: ['class' => $this->options['class'] ?? null]) as $entity) {
             $pointer = self::GUID . $entity->id;
 
             if (null !== ($this->objects[$pointer] ?? null)) {

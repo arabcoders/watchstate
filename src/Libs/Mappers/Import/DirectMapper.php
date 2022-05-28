@@ -11,6 +11,7 @@ use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
+use Exception;
 use PDOException;
 use Psr\Log\LoggerInterface;
 
@@ -56,7 +57,18 @@ final class DirectMapper implements ImportInterface
 
     public function loadData(DateTimeInterface|null $date = null): self
     {
-        foreach ($this->storage->getAll($date, $this->options['class'] ?? null) as $entity) {
+        $opts = [
+            'class' => $this->options['class'] ?? null,
+            'fields' => [
+                iFace::COLUMN_ID,
+                iFace::COLUMN_TYPE,
+                iFace::COLUMN_PARENT,
+                iFace::COLUMN_GUIDS,
+                iFace::COLUMN_META_DATA,
+            ],
+        ];
+
+        foreach ($this->storage->getAll($date, opts: $opts) as $entity) {
             $pointer = $entity->id;
 
             if (null !== ($this->objects[$pointer] ?? null)) {
@@ -91,29 +103,31 @@ final class DirectMapper implements ImportInterface
             return $this;
         }
 
-        if (null === ($local = $this->get($entity))) {
-            if ($this->inTraceMode()) {
-                $data = $entity->getAll();
-                unset($data['id']);
-                $data[iFace::COLUMN_UPDATED] = makeDate($data[iFace::COLUMN_UPDATED]);
-                $data[iFace::COLUMN_WATCHED] = 0 === $data[iFace::COLUMN_WATCHED] ? 'No' : 'Yes';
-                if ($entity->isMovie()) {
-                    unset($data[iFace::COLUMN_SEASON], $data[iFace::COLUMN_EPISODE], $data[iFace::COLUMN_PARENT]);
-                }
-            } else {
-                $data = [
-                    iFace::COLUMN_META_DATA => [
-                        $entity->via => [
-                            iFace::COLUMN_ID => ag($entity->getMetadata($entity->via), iFace::COLUMN_ID),
-                            iFace::COLUMN_UPDATED => makeDate($entity->updated),
-                            iFace::COLUMN_GUIDS => $entity->getGuids(),
-                            iFace::COLUMN_PARENT => $entity->getParentGuids(),
-                        ]
-                    ],
-                ];
-            }
+        $inDryRunMode = $this->inDryRunMode();
 
+        if (null === ($local = $this->get($entity))) {
             try {
+                if ($this->inTraceMode()) {
+                    $data = $entity->getAll();
+                    unset($data['id']);
+                    $data[iFace::COLUMN_UPDATED] = makeDate($data[iFace::COLUMN_UPDATED]);
+                    $data[iFace::COLUMN_WATCHED] = 0 === $data[iFace::COLUMN_WATCHED] ? 'No' : 'Yes';
+                    if ($entity->isMovie()) {
+                        unset($data[iFace::COLUMN_SEASON], $data[iFace::COLUMN_EPISODE], $data[iFace::COLUMN_PARENT]);
+                    }
+                } else {
+                    $data = [
+                        iFace::COLUMN_META_DATA => [
+                            $entity->via => [
+                                iFace::COLUMN_ID => ag($entity->getMetadata($entity->via), iFace::COLUMN_ID),
+                                iFace::COLUMN_UPDATED => makeDate($entity->updated),
+                                iFace::COLUMN_GUIDS => $entity->getGuids(),
+                                iFace::COLUMN_PARENT => $entity->getParentGuids(),
+                            ]
+                        ],
+                    ];
+                }
+
                 $this->logger->notice(
                     sprintf(
                         '%s: Adding \'%s\'. As new Item.',
@@ -123,7 +137,11 @@ final class DirectMapper implements ImportInterface
                     $data
                 );
 
-                $entity = $this->storage->insert($entity);
+                if (false === $inDryRunMode) {
+                    $entity = $this->storage->insert($entity);
+                } else {
+                    $entity->id = random_int((int)(PHP_INT_MAX / 2), PHP_INT_MAX);
+                }
 
                 $this->addPointers($entity, $entity->id);
 
@@ -131,7 +149,7 @@ final class DirectMapper implements ImportInterface
                 $this->actions[$entity->type]['added']++;
                 $this->objects[$entity->id] = $entity->id;
                 Data::increment($bucket, $entity->type . '_added');
-            } catch (PDOException $e) {
+            } catch (PDOException|Exception $e) {
                 $this->actions[$entity->type]['failed']++;
                 Data::increment($bucket, $entity->type . '_failed');
                 $this->logger->error($e->getMessage(), $entity->getAll());
@@ -149,8 +167,9 @@ final class DirectMapper implements ImportInterface
                 if (false === $entity->isWatched()) {
                     if (true === $local->shouldMarkAsUnplayed($entity)) {
                         try {
-                            $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed($entity);
-
+                            if (false === $inDryRunMode) {
+                                $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed($entity);
+                            }
                             $this->logger->notice(
                                 sprintf('%s: Updating \'%s\'. Item marked as unplayed.', $bucket, $local->getName()),
                                 $local->diff(
@@ -186,7 +205,9 @@ final class DirectMapper implements ImportInterface
                                 $local->diff(fields: $keys),
                             );
 
-                            $this->storage->update($local);
+                            if (false === $inDryRunMode) {
+                                $this->storage->update($local);
+                            }
 
                             Data::increment($bucket, $entity->type . '_updated');
                             $this->changed[$local->id] = $local->id;
@@ -221,7 +242,9 @@ final class DirectMapper implements ImportInterface
                     $local->diff(fields: $keys),
                 );
 
-                $this->storage->update($local);
+                if (false === $inDryRunMode) {
+                    $this->storage->update($local);
+                }
 
                 Data::increment($bucket, $entity->type . '_updated');
                 $this->changed[$local->id] = $local->id;

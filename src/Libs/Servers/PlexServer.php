@@ -1125,13 +1125,13 @@ class PlexServer implements ServerInterface
         if (true === $includeParent) {
             foreach ($listDirs as $section) {
                 $key = (int)ag($section, 'key');
-                $title = ag($section, 'title', '???');
+                $title = trim((string)ag($section, 'title', '???'));
 
                 if ('show' !== ag($section, 'type', 'unknown')) {
                     continue;
                 }
 
-                $cName = sprintf('(%s) - (%s:%s)', $title, 'show', $key);
+                $cName = sprintf('(%s) - (%s:%s)', trim($title), 'show', $key);
 
                 if (null !== $ignoreIds && in_array($key, $ignoreIds)) {
                     continue;
@@ -1185,7 +1185,7 @@ class PlexServer implements ServerInterface
         foreach ($listDirs as $section) {
             $key = (int)ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
-            $title = ag($section, 'title', '???');
+            $title = trim((string)ag($section, 'title', '???'));
 
             if ('movie' !== $type && 'show' !== $type) {
                 $unsupported++;

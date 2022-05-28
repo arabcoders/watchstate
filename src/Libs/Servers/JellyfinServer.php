@@ -1104,7 +1104,7 @@ class JellyfinServer implements ServerInterface
         if (true === $includeParent) {
             foreach ($listDirs as $section) {
                 $key = (string)ag($section, 'Id');
-                $title = ag($section, 'Name', '???');
+                $title = trim((string)ag($section, 'Name', '???'));
 
                 if ('tvshows' !== ag($section, 'CollectionType', 'unknown')) {
                     continue;
@@ -1166,7 +1166,7 @@ class JellyfinServer implements ServerInterface
 
         foreach ($listDirs as $section) {
             $key = (string)ag($section, 'Id');
-            $title = ag($section, 'Name', '???');
+            $title = trim((string)ag($section, 'Name', '???'));
             $type = ag($section, 'CollectionType', 'unknown');
 
             if ('movies' !== $type && 'tvshows' !== $type) {
