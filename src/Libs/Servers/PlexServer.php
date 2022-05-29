@@ -695,8 +695,9 @@ class PlexServer implements ServerInterface
                     'type' => ucfirst($type),
                     'url' => [(string)$url],
                     'title' => ag($item, $possibleTitlesList, '??'),
+                    'year' => ag($item, 'year', 0000),
                     'guids' => $guids,
-                    'paths' => $locations,
+                    'path' => $locations,
                     'matching' => $matches,
                     'comments' => (empty($paths)) ? 'No path found.' : 'Title does not match path.',
                 ];
@@ -706,7 +707,7 @@ class PlexServer implements ServerInterface
                 }
 
                 if (count($locations) <= 1) {
-                    $metadata['paths'] = $locations[0];
+                    $metadata['path'] = $locations[0];
                 }
 
                 $list[] = $metadata;
