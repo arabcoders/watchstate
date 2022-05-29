@@ -215,9 +215,7 @@ or if you want to get a specific item metadata run the following command:
 $ docker exec -ti console server servers:remote --search-id 2514 -- [SERVER_NAME]
 ```
 
-### Optional flags related to `--search` and `--search-id`
-
-Those flags can be combined with the search parameter
+### Optional flags that can be used with `--search` or `--search-id`
 
 * `--search-raw` Return unfiltered response.
 * `--search-limit` To limit returned results. Defaults to `25`.
@@ -225,7 +223,36 @@ Those flags can be combined with the search parameter
 
 ---
 
-### Q: Which external(db) ids supported for Plex?
+### Q: Is it possible to look for possible unmatched items?
+
+Yes, You can use the flag `--search-mismatch '[library_id]'` in `servers:remote`, For example
+
+first get your library id by running the following command
+
+```bash
+$ docker exec -ti watchstate console servers:remote --list-libraries -- [SERVER_NAME] 
+```
+
+it should display something like
+
+| ID  | Title       | Type   | Ignored | Supported |
+|-----|-------------|--------|---------|-----------|
+| 2   | Movies      | movie  | No      | Yes       | 
+| 1   | shows       | show   | No      | Yes       | 
+| 17  | Audio Books | artist | Yes     | No        |
+
+Then choose the library id that you want to scan, after that run the following command:
+
+```bash
+$ docker exec -ti console server servers:remote --search-mismatch [ID e.g. 2] --search-coef 60 -- [SERVER_NAME]
+```
+
+### Optional flags that can be used with `--search-mismach`
+
+* `--search-coef` How much in percentage the title has to be in path to be marked as matched item. Defaults to `%50.0`.
+* `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
+
+### Q: Which external ids supported for Plex?
 
 * plex://(type)/(id) `New Plex Agent`
 * tvdb://(id) `New Plex Agent`
@@ -241,7 +268,7 @@ Those flags can be combined with the search parameter
 
 ---
 
-### Q: Which external(db) ids supported for Jellyfin/Emby?
+### Q: Which external ids supported for Jellyfin/Emby?
 
 * imdb://(id)
 * tvdb://(id)
@@ -252,24 +279,21 @@ Those flags can be combined with the search parameter
 
 ---
 
-### Q: What is Mappers?
+### Q: What does mapper mean?
 
-A Mapper is class that have list of all external ids that point to record in database. think of them as dictionary that
-point to specific item.
+A Mapper is class that have list of all external ids that point to record in storage. think of it as dictionary that
+reference to specific item.
 
-#### MemoryMapper (Default)
+#### Memory Mapper (Default)
 
-Memory Mapper is the Default mapper, it uses memory to load the entire state table into memory, which in turn leads
+Memory mapper is the Default mapper, it uses memory to load the entire state table into memory, which in turn leads
 to better performance. you shouldn't use the other mapper unless you are running into memory problems.
 
-#### DirectMapper
+#### Direct Mapper
 
 Direct mapper is suitable for more memory constraint systems, it just loads the external ids mapping into memory,
 however it does not keep the state into memory, thus uses less memory compared to `MemoryMapper`, But the trade-off is
 it's slower than `MemoryMapper`.
-
-For Initial or force-full imports you shouldn't use `DirectMapper` as it's so much slower than `MemoryMapper`. after
-importing your database it's fine to use this mapper.
 
 #### Comparison between mappers
 
