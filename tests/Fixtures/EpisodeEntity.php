@@ -20,7 +20,6 @@ return [
         Guid::GUID_TVDB => '520',
     ],
     iFace::COLUMN_GUIDS => [
-        Guid::GUID_PLEX => '6000',
         Guid::GUID_IMDB => '6100',
         Guid::GUID_TVDB => '6200',
         Guid::GUID_TMDB => '6300',

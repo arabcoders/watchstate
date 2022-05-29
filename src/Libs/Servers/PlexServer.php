@@ -40,7 +40,6 @@ class PlexServer implements ServerInterface
     public const NAME = 'PlexBackend';
 
     protected const GUID_MAPPER = [
-        'plex' => Guid::GUID_PLEX,
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
         'tvdb' => Guid::GUID_TVDB,

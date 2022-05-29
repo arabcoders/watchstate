@@ -7,6 +7,7 @@ namespace Tests\Storage;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\ConsoleHandler;
+use App\Libs\Guid;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
@@ -122,7 +123,7 @@ class PDOAdapterTest extends TestCase
         }
 
         $item = $this->storage->insert(new StateEntity($test));
-        $item->guids['guid_plex'] = StateInterface::TYPE_EPISODE . '/1000';
+        $item->guids[Guid::GUID_IMDB] = '6101';
 
         $updatedItem = $this->storage->update($item);
 

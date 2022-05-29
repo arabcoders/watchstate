@@ -254,7 +254,6 @@ $ docker exec -ti console server servers:remote --search-mismatch [ID e.g. 2] --
 
 ### Q: Which external ids supported for Plex?
 
-* plex://(type)/(id) `New Plex Agent`
 * tvdb://(id) `New Plex Agent`
 * imdb://(id) `New Plex Agent`
 * tmdb://(id) `New Plex Agent`
