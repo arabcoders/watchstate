@@ -76,7 +76,7 @@ class Command extends BaseCommand
     protected function single(\Closure $closure, OutputInterface $output): int
     {
         try {
-            if (!$this->lock($this->getName())) {
+            if (!$this->lock(getAppVersion() . ':' . $this->getName())) {
                 $output->writeln(
                     sprintf(
                         '<error>The command \'%s\' is already running in another process.</error>',
