@@ -666,23 +666,21 @@ class JellyfinServer implements ServerInterface
 
                 $metadata = [
                     'id' => ag($item, 'Id'),
-                    'url' => (string)$url,
                     'type' => ucfirst($type),
+                    'url' => [(string)$url],
                     'title' => ag($item, $possibleTitlesList, '??'),
                     'guids' => $guids,
                     'paths' => $locations,
                     'matching' => $matches,
-                    'comments' => [],
+                    'comments' => (empty($paths)) ? 'No path found.' : 'Title does not match path.',
                 ];
 
-                if (empty($paths)) {
-                    $metadata['comments'][] = sprintf('No Path found for %s.', $type);
-                } else {
-                    $metadata['comments'][] = 'No title match path, Possible mismatch or outdated metadata.';
+                if (empty($guids)) {
+                    $metadata['guids'] = 'None.';
                 }
 
-                if (empty($guids)) {
-                    $metadata['comment'] = 'No external ids were found. Indicate the possibility of unmatched item.';
+                if (count($locations) <= 1) {
+                    $metadata['paths'] = $locations[0];
                 }
 
                 $list[] = $metadata;

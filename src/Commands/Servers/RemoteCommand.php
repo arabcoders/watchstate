@@ -20,6 +20,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Throwable;
 
 final class RemoteCommand extends Command
 {
@@ -117,7 +118,7 @@ final class RemoteCommand extends Command
         }
 
         if ($input->getOption('search-mismatch')) {
-            $this->searchMismatch($server, $output, $input);
+            return $this->searchMismatch($server, $output, $input);
         }
 
         return self::SUCCESS;
@@ -235,33 +236,82 @@ final class RemoteCommand extends Command
         }
     }
 
-    private function searchMismatch(ServerInterface $server, OutputInterface $output, InputInterface $input): void
+    private function searchMismatch(ServerInterface $server, OutputInterface $output, InputInterface $input): int
     {
         $id = $input->getOption('search-mismatch');
         $percentage = (float)$input->getOption('search-coef');
+        $mode = $input->getOption('search-output');
 
-        $result = $server->searchMismatch(id: $id, opts: ['coef' => $percentage]);
-
-        if (empty($result)) {
-            $output->writeln(
-                sprintf(
-                    '<info>No mismatched items were identified in library id \'%s\' with less than \'%d\' percentage.</info>',
-                    $id,
-                    $percentage
-                )
-            );
-            exit(1);
+        try {
+            $result = $server->searchMismatch(id: $id, opts: ['coef' => $percentage]);
+        } catch (Throwable $e) {
+            $this->setOutputContent(['error' => $e->getMessage()], $output, $mode);
+            return self::FAILURE;
         }
 
-        if ('json' === $input->getOption('search-output')) {
+        if (empty($result)) {
+            $this->setOutputContent(
+                [
+                    'info' => sprintf(
+                        'We are %1$02.2f%3$s sure there are no mis-identified items in library \'%2$s\'.',
+                        $percentage,
+                        $id,
+                        '%',
+                    )
+                ],
+                $output,
+                $mode
+            );
+            return self::SUCCESS;
+        }
+
+        $this->setOutputContent($result, $output, $mode);
+
+        return self::SUCCESS;
+    }
+
+    private function setOutputContent(array $content, OutputInterface $output, string $mode = 'json'): void
+    {
+        if ('json' === $mode) {
             $output->writeln(
                 json_encode(
-                    value: $result,
+                    value: $content,
                     flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
                 )
             );
+        } elseif ('table' === $mode) {
+            $list = [];
+            $x = 0;
+            $count = count($content);
+
+            foreach ($content as $_ => $item) {
+                if (false === is_array($item)) {
+                    $item = [$_ => $item];
+                }
+
+                $subItem = [];
+
+                foreach ($item as $key => $leaf) {
+                    if (true === is_array($leaf)) {
+                        continue;
+                    }
+                    $subItem[$key] = $leaf;
+                }
+
+                $x++;
+                $list[] = $subItem;
+                if ($x < $count) {
+                    $list[] = new TableSeparator();
+                }
+            }
+
+            if (!empty($list)) {
+                (new Table($output))->setStyle('box')->setHeaders(
+                    array_map(fn($title) => is_string($title) ? ucfirst($title) : $title, array_keys($list[0]))
+                )->setRows($list)->render();
+            }
         } else {
-            $output->writeln(Yaml::dump($result, 8, 2));
+            $output->writeln(Yaml::dump($content, 8, 2));
         }
     }
 
