@@ -624,7 +624,8 @@ if (false === function_exists('formatName')) {
                         ';',
                         '&',
                         '_',
-                        '!'
+                        '!',
+                        '*',
                     ],
                     ' ',
                     strtolower($name)
