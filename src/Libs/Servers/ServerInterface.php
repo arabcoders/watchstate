@@ -128,6 +128,16 @@ interface ServerInterface
     public function searchId(string|int $id, array $opts = []): array;
 
     /**
+     * Search Backend library id for possible mismatches.
+     *
+     * @param string|int $id
+     * @param array $opts
+     *
+     * @return array
+     */
+    public function searchMismatch(string|int $id, array $opts = []): array;
+
+    /**
      * Get all persistent data.
      *
      * @return array
