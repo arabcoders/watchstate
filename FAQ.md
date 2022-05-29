@@ -249,8 +249,10 @@ $ docker exec -ti console server servers:remote --search-mismatch [ID e.g. 2] --
 
 ### Optional flags that can be used with `--search-mismach`
 
-* `--search-coef` How much in percentage the title has to be in path to be marked as matched item. Defaults to `%50.0`.
+* `--search-coef` How much in percentage the title has to be in path to be marked as matched item. Defaults to `50.0`.
 * `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
+
+---
 
 ### Q: Which external ids supported for Plex?
 
