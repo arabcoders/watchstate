@@ -9,7 +9,6 @@ use RuntimeException;
 
 final class Guid
 {
-    public const GUID_PLEX = 'guid_plex';
     public const GUID_IMDB = 'guid_imdb';
     public const GUID_TVDB = 'guid_tvdb';
     public const GUID_TMDB = 'guid_tmdb';
@@ -18,7 +17,6 @@ final class Guid
     public const GUID_ANIDB = 'guid_anidb';
 
     private const SUPPORTED = [
-        Guid::GUID_PLEX => 'string',
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
         Guid::GUID_TMDB => 'string',

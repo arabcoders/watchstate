@@ -36,6 +36,8 @@ final class RemoteCommand extends Command
             ->addOption('search-raw', null, InputOption::VALUE_NONE, 'Return Unfiltered results.')
             ->addOption('search-limit', null, InputOption::VALUE_REQUIRED, 'Search limit.', 25)
             ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml].', 'json')
+            ->addOption('search-mismatch', null, InputOption::VALUE_REQUIRED, 'Search library for possible mismatch.')
+            ->addOption('search-coef', null, InputOption::VALUE_OPTIONAL, 'Mismatch similar text percentage.', 50.0)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('server', InputArgument::REQUIRED, 'Server name');
     }
@@ -94,6 +96,10 @@ final class RemoteCommand extends Command
 
         if ($input->getOption('search-id')) {
             $this->searchId($server, $output, $input);
+        }
+
+        if ($input->getOption('search-mismatch')) {
+            $this->searchMismatch($server, $output, $input);
         }
 
         return self::SUCCESS;
@@ -195,6 +201,36 @@ final class RemoteCommand extends Command
         if (empty($result)) {
             $output->writeln(
                 sprintf('<error>No meta data found for id \'%s\'.</error>', $input->getOption('search-id'))
+            );
+            exit(1);
+        }
+
+        if ('json' === $input->getOption('search-output')) {
+            $output->writeln(
+                json_encode(
+                    value: $result,
+                    flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+        } else {
+            $output->writeln(Yaml::dump($result, 8, 2));
+        }
+    }
+
+    private function searchMismatch(ServerInterface $server, OutputInterface $output, InputInterface $input): void
+    {
+        $id = $input->getOption('search-mismatch');
+        $percentage = (float)$input->getOption('search-coef');
+
+        $result = $server->searchMismatch(id: $id, opts: ['coef' => $percentage]);
+
+        if (empty($result)) {
+            $output->writeln(
+                sprintf(
+                    '<info>No mismatched items were identified in library id \'%s\' with less than \'%d\' percentage.</info>',
+                    $id,
+                    $percentage
+                )
             );
             exit(1);
         }
