@@ -201,7 +201,7 @@ class ImportCommand extends Command
             }
 
             if ($input->getOption('timeout')) {
-                $opts['client']['timeout'] = $input->getOption('timeout');
+                $opts['client']['timeout'] = (float)$input->getOption('timeout');
             }
 
             $server['options'] = $opts;

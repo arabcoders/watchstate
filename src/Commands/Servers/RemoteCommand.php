@@ -38,6 +38,13 @@ final class RemoteCommand extends Command
             ->addOption('search-output', null, InputOption::VALUE_REQUIRED, 'Search output style [json,yaml].', 'json')
             ->addOption('search-mismatch', null, InputOption::VALUE_REQUIRED, 'Search library for possible mismatch.')
             ->addOption('search-coef', null, InputOption::VALUE_OPTIONAL, 'Mismatch similar text percentage.', 50.0)
+            ->addOption(
+                'timeout',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Request timeout in seconds.',
+                Config::get('http.default.options.timeout')
+            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('server', InputArgument::REQUIRED, 'Server name');
     }
@@ -70,10 +77,21 @@ final class RemoteCommand extends Command
 
         $config = Config::get($ref);
 
+        $opts = ag($config, 'options', []);
+
         if ($input->getOption('use-token')) {
             $config['token'] = $input->getOption('use-token');
         }
 
+        if ($input->getOption('timeout')) {
+            $opts['client']['timeout'] = (float)$input->getOption('timeout');
+        }
+
+        if ($input->getOption('use-token')) {
+            $config['token'] = $input->getOption('use-token');
+        }
+
+        $config['options'] = $opts ?? [];
         $config['name'] = $name;
 
         $server = makeServer($config, $name);

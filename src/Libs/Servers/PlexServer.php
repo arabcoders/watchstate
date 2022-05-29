@@ -623,38 +623,10 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            $handler = function (string $type, array $item) use (&$list, $opts) {
+            $handleRequest = function (string $type, array $item) use (&$list, $opts) {
+                $this->logger->debug(sprintf('%s: Processing %s \'%s\'.', $this->name, $type, ag($item, 'title')));
+
                 $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
-
-                if (iFace::TYPE_MOVIE !== $type) {
-                    $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-                    $this->logger->debug(
-                        sprintf('%s: get %s \'%s\' metadata.', $this->name, $type, ag($item, 'title')),
-                        [
-                            'url' => $url
-                        ]
-                    );
-
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->warning(
-                            sprintf(
-                                '%s: Request to get \'%s\' metadata responded with unexpected http status code \'%d\'.',
-                                $this->name,
-                                ag($item, 'title'),
-                                $response->getStatusCode()
-                            )
-                        );
-                    }
-
-                    $item = json_decode(
-                        json:        $response->getContent(),
-                        associative: true,
-                        flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-                    );
-
-                    $item = ag($item, 'MediaContainer.Metadata.0', []);
-                }
 
                 $possibleTitles = $paths = $locations = $guids = $matches = [];
                 $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
@@ -683,6 +655,8 @@ class PlexServer implements ServerInterface
                         $locations[] = dirname(ag($path, 'file'));
                     }
                 }
+
+                $guids[] = ag($item, 'guid', []);
 
                 foreach (ag($item, 'Guid', []) as $guid) {
                     $guids[] = ag($guid, 'id');
@@ -750,6 +724,8 @@ class PlexServer implements ServerInterface
                 ]
             );
 
+            $requests = [];
+
             foreach ($it as $entity) {
                 if ($entity instanceof DecodingError) {
                     $this->logger->warning(
@@ -766,10 +742,58 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                $handler($type, $entity);
+                if (iFace::TYPE_MOVIE === $type) {
+                    $handleRequest($type, $entity);
+                } else {
+                    $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($entity, 'ratingKey')));
+
+                    $this->logger->debug(
+                        sprintf('%s: get %s \'%s\' metadata.', $this->name, $type, ag($entity, 'title')),
+                        [
+                            'url' => $url
+                        ]
+                    );
+
+                    $requests[] = $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($this->getHeaders(), [
+                            'user_data' => [
+                                'id' => ag($entity, 'ratingKey'),
+                                'title' => ag($entity, 'title'),
+                                'type' => $type,
+                            ]
+                        ])
+                    );
+                }
+            }
+
+            foreach ($requests as $response) {
+                if (200 !== $response->getStatusCode()) {
+                    $this->logger->error(
+                        sprintf(
+                            '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                            $this->name,
+                            $id,
+                            $response->getStatusCode()
+                        )
+                    );
+                    continue;
+                }
+
+                $json = json_decode(
+                    json:        $response->getContent(),
+                    associative: true,
+                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                );
+
+                $handleRequest(
+                    $response->getInfo('user_data')['type'],
+                    ag($json, 'MediaContainer.Metadata.0', [])
+                );
             }
         } catch (ExceptionInterface|JsonException|\JsonMachine\Exception\InvalidArgumentException $e) {
-            throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
+            $this->logger->error($this->name . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
 
         return $list;
