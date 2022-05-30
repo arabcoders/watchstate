@@ -701,3 +701,95 @@ if (false === function_exists('mb_similar_text')) {
         return $similarity;
     }
 }
+
+if (false === function_exists('mb_levenshtein')) {
+    function mb_levenshtein(string $str1, string $str2)
+    {
+        $length1 = mb_strlen($str1, 'UTF-8');
+        $length2 = mb_strlen($str2, 'UTF-8');
+
+        if ($length1 < $length2) {
+            return mb_levenshtein($str2, $str1);
+        }
+
+        if (0 === $length1) {
+            return $length2;
+        }
+
+        if ($str1 === $str2) {
+            return 0;
+        }
+
+        $prevRow = range(0, $length2);
+
+        for ($i = 0; $i < $length1; $i++) {
+            $currentRow = [];
+            $currentRow[0] = $i + 1;
+            $c1 = mb_substr($str1, $i, 1, 'UTF-8');
+
+            for ($j = 0; $j < $length2; $j++) {
+                $c2 = mb_substr($str2, $j, 1, 'UTF-8');
+                $insertions = $prevRow[$j + 1] + 1;
+                $deletions = $currentRow[$j] + 1;
+                $substitutions = $prevRow[$j] + (($c1 !== $c2) ? 1 : 0);
+                $currentRow[] = min($insertions, $deletions, $substitutions);
+            }
+
+            $prevRow = $currentRow;
+        }
+        return $prevRow[$length2];
+    }
+}
+
+if (false === function_exists('compareStrings')) {
+    function compareStrings(string $str1, string $str2): float
+    {
+        if (empty($str1) || empty($str2)) {
+            return 0.000;
+        }
+
+        $length1 = mb_strlen($str1, 'UTF-8');
+        $length2 = mb_strlen($str2, 'UTF-8');
+
+        if ($length1 < $length2) {
+            return compareStrings($str2, $str1);
+        }
+
+        $ar1 = preg_split('/[^\w\-]+/u', strtolower($str1), flags: PREG_SPLIT_NO_EMPTY);
+        $ar2 = preg_split('/[^\w\-]+/u', strtolower($str2), flags: PREG_SPLIT_NO_EMPTY);
+
+        $ar2Copy = array_values($ar2);
+
+        $matchedIndices = [];
+        $wordMap = [];
+
+        foreach ($ar1 as $k => $w1) {
+            if (isset($wordMap[$w1])) {
+                if ($wordMap[$w1][0] >= $k) {
+                    $matchedIndices[$k] = $wordMap[$w1][0];
+                }
+                array_splice($wordMap[$w1], 0, 1);
+            } else {
+                $indices = array_keys($ar2Copy, $w1);
+                $indexCount = count($indices);
+                if ($indexCount) {
+                    $matchedIndices[$k] = $indices[0];
+
+                    if (1 === $indexCount) {
+                        // remove the word at given index from second array so that it won't repeat
+                        unset($ar2Copy[$indices[0]]);
+                    } else {
+                        // remove the word at given indices from second array so that it won't repeat
+                        foreach ($indices as $index) {
+                            unset($ar2Copy[$index]);
+                        }
+                        array_splice($indices, 0, 1);
+                        $wordMap[$w1] = $indices;
+                    }
+                }
+            }
+        }
+
+        return round(count($matchedIndices) * 100 / count($ar1), 3);
+    }
+}

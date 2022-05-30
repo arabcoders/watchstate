@@ -245,19 +245,31 @@ final class RemoteCommand extends Command
         try {
             $result = $server->searchMismatch(id: $id, opts: ['coef' => $percentage]);
         } catch (Throwable $e) {
-            $this->setOutputContent(['error' => $e->getMessage()], $output, $mode);
+            $this->setOutputContent(
+                [
+                    [
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ],
+                ],
+                $output,
+                $mode
+            );
             return self::FAILURE;
         }
 
         if (empty($result)) {
             $this->setOutputContent(
                 [
-                    'info' => sprintf(
-                        'We are %1$02.2f%3$s sure there are no mis-identified items in library \'%2$s\'.',
-                        $percentage,
-                        $id,
-                        '%',
-                    )
+                    [
+                        'info' => sprintf(
+                            'We are %1$02.2f%3$s sure there are no mis-identified items in library \'%2$s\'.',
+                            $percentage,
+                            $id,
+                            '%',
+                        )
+                    ]
                 ],
                 $output,
                 $mode

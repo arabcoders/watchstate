@@ -508,256 +508,290 @@ class JellyfinServer implements ServerInterface
         }
     }
 
+    /**
+     * @throws Throwable
+     */
     public function searchMismatch(string|int $id, array $opts = []): array
     {
         $list = [];
 
         $this->checkConfig();
 
-        try {
-            // -- Get Content type.
-            $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
-                http_build_query(
-                    [
-                        'Recursive' => 'false',
-                        'enableUserData' => 'false',
-                        'enableImages' => 'false',
-                    ]
-                )
-            );
-
-            $this->logger->debug(sprintf('%s: Requesting list of backend libraries.', $this->name), [
-                'url' => $url
-            ]);
-
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
-                        $this->name,
-                        $id,
-                        $response->getStatusCode()
-                    )
-                );
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $type = null;
-            $found = false;
-
-            foreach (ag($json, 'Items', []) as $section) {
-                if ((string)ag($section, 'Id') !== (string)$id) {
-                    continue;
-                }
-                $found = true;
-                $type = ag($section, 'CollectionType', 'unknown');
-                break;
-            }
-
-            if (false === $found) {
-                throw new RuntimeException(sprintf('%s: library id \'%s\' not found.', $this->name, $id));
-            }
-
-            if ('movies' !== $type && 'tvshows' !== $type) {
-                throw new RuntimeException(sprintf('%s: Library id \'%s\' is of unsupported type.', $this->name, $id));
-            }
-
-            $type = $type === 'movies' ? iFace::TYPE_MOVIE : 'Show';
-
-            $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
-                http_build_query(
-                    [
-                        'parentId' => $id,
-                        'enableUserData' => 'false',
-                        'enableImages' => 'false',
-                        'ExcludeLocationTypes' => 'Virtual',
-                        'include' => 'Series,Movie',
-                    ]
-                )
-            );
-
-            $this->logger->debug(sprintf('%s: Sending get library content for id \'%s\'.', $this->name, $id), [
-                'url' => $url
-            ]);
-
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
-                        $this->name,
-                        $id,
-                        $response->getStatusCode()
-                    )
-                );
-            }
-
-            $handleRequest = function (string $type, array $item) use (&$list, $opts) {
-                $this->logger->debug(sprintf('%s: Processing %s \'%s\'.', $this->name, $type, ag($item, 'Name')));
-
-                $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($item, 'Id')));
-
-                $possibleTitles = $paths = $locations = $guids = $matches = [];
-
-                $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
-
-                foreach ($possibleTitlesList as $title) {
-                    if (null === ($title = ag($item, $title))) {
-                        continue;
-                    }
-
-                    $title = formatName($title);
-
-                    if (true === in_array($type, $possibleTitles)) {
-                        continue;
-                    }
-
-                    $possibleTitles[] = formatName($title);
-                }
-
-                if (null !== ($path = ag($item, 'Path'))) {
-                    if (ag($item, 'Type') === 'Movie') {
-                        $paths[] = formatName(basename(dirname($path)));
-                        $locations[] = dirname($path);
-                    } else {
-                        $paths[] = formatName(basename($path));
-                        $locations[] = $path;
-                    }
-                }
-
-                if (null !== ($providerIds = ag($item, 'ProviderIds'))) {
-                    $guids = $providerIds;
-                }
-
-                foreach ($paths ?? [] as $location) {
-                    foreach ($possibleTitles as $title) {
-                        if (true === str_contains($location, $title)) {
-                            return;
-                        }
-
-                        $locationIsAscii = mb_detect_encoding($location, 'ASCII', true);
-                        $titleIsAscii = mb_detect_encoding($location, 'ASCII', true);
-
-                        if (true === $locationIsAscii && $titleIsAscii) {
-                            similar_text($location, $title, $percent);
-                        } else {
-                            mb_similar_text($location, $title, $percent);
-                        }
-
-                        if ($percent >= $opts['coef']) {
-                            return;
-                        }
-
-                        $matches[] = [
-                            'path' => $location,
-                            'title' => $title,
-                            'similarity' => $percent,
-                        ];
-                    }
-                }
-
-                $metadata = [
-                    'id' => ag($item, 'Id'),
-                    'type' => ucfirst($type),
-                    'url' => [(string)$url],
-                    'title' => ag($item, $possibleTitlesList, '??'),
-                    'year' => ag($item, 'ProductionYear', 0000),
-                    'guids' => $guids,
-                    'path' => $locations,
-                    'matching' => $matches,
-                    'comments' => (empty($paths)) ? 'No path found.' : 'Title does not match path.',
-                ];
-
-                if (empty($guids)) {
-                    $metadata['guids'] = 'None.';
-                }
-
-                if (count($locations) <= 1) {
-                    $metadata['path'] = $locations[0];
-                }
-
-                $list[] = $metadata;
-            };
-
-            $it = Items::fromIterable(
-                httpClientChunks($this->http->stream($response)),
+        // -- Get Content type.
+        $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
+            http_build_query(
                 [
-                    'pointer' => '/Items',
-                    'decoder' => new ErrorWrappingDecoder(
-                        new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                    )
+                    'Recursive' => 'false',
+                    'enableUserData' => 'false',
+                    'enableImages' => 'false',
                 ]
+            )
+        );
+
+        $this->logger->debug(sprintf('%s: Requesting list of backend libraries.', $this->name), [
+            'url' => $url
+        ]);
+
+        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException(
+                sprintf(
+                    '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                    $this->name,
+                    $id,
+                    $response->getStatusCode()
+                )
             );
+        }
 
-            $requests = [];
+        $json = json_decode(
+            json:        $response->getContent(),
+            associative: true,
+            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+        );
 
-            foreach ($it as $entity) {
-                if ($entity instanceof DecodingError) {
-                    $this->logger->warning(
-                        sprintf(
-                            '%s: Failed to decode one of library id \'%s\' items. %s',
-                            $this->name,
-                            $id,
-                            $entity->getErrorMessage()
-                        ),
-                        [
-                            'payload' => $entity->getMalformedJson(),
-                        ]
-                    );
+        $type = null;
+        $found = false;
+
+        foreach (ag($json, 'Items', []) as $section) {
+            if ((string)ag($section, 'Id') !== (string)$id) {
+                continue;
+            }
+            $found = true;
+            $type = ag($section, 'CollectionType', 'unknown');
+            break;
+        }
+
+        if (false === $found) {
+            throw new RuntimeException(sprintf('%s: library id \'%s\' not found.', $this->name, $id));
+        }
+
+        if ('movies' !== $type && 'tvshows' !== $type) {
+            throw new RuntimeException(sprintf('%s: Library id \'%s\' is of unsupported type.', $this->name, $id));
+        }
+
+        $type = $type === 'movies' ? iFace::TYPE_MOVIE : 'Show';
+
+        $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
+            http_build_query(
+                [
+                    'parentId' => $id,
+                    'enableUserData' => 'false',
+                    'enableImages' => 'false',
+                    'ExcludeLocationTypes' => 'Virtual',
+                    'include' => 'Series,Movie',
+                ]
+            )
+        );
+
+        $this->logger->debug(sprintf('%s: Sending get library content for id \'%s\'.', $this->name, $id), [
+            'url' => $url
+        ]);
+
+        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException(
+                sprintf(
+                    '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                    $this->name,
+                    $id,
+                    $response->getStatusCode()
+                )
+            );
+        }
+
+        $handleRequest = function (string $type, array $item) use (&$list, $opts) {
+            $this->logger->debug(sprintf('%s: Processing %s \'%s\'.', $this->name, $type, ag($item, 'Name')));
+
+            $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($item, 'Id')));
+
+            $year = ag($item, 'ProductionYear', null);
+
+            $parseYear = '/\((\d{4})\)/';
+
+            $possibleTitles = $locations = $guids = $matches = [];
+
+            $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
+
+            foreach ($possibleTitlesList as $title) {
+                if (null === ($title = ag($item, $title))) {
                     continue;
                 }
 
-                $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($entity, 'Id')));
+                $title = formatName($title);
 
-                $this->logger->debug(sprintf('%s: get %s \'%s\' metadata.', $this->name, $type, ag($entity, 'Name')), [
-                    'url' => $url
-                ]);
+                if (true === in_array($type, $possibleTitles)) {
+                    continue;
+                }
 
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'id' => ag($entity, 'Id'),
-                            'title' => ag($entity, 'Name'),
-                            'type' => $type,
-                        ]
-                    ])
-                );
+                $possibleTitles[] = formatName($title);
             }
 
-            foreach ($requests as $response) {
-                if (200 !== $response->getStatusCode()) {
-                    $this->logger->error(
-                        sprintf(
-                            '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
-                            $this->name,
-                            $id,
-                            $response->getStatusCode()
-                        )
-                    );
-                    continue;
+            if (null !== ($path = ag($item, 'Path'))) {
+                if (ag($item, 'Type') === 'Movie') {
+                    $locations[] = [
+                        'l' => dirname($path),
+                        'n' => formatName(basename(dirname($path))),
+                    ];
                 }
 
-                $handleRequest(
-                    $response->getInfo('user_data')['type'],
-                    json_decode(
-                        json:        $response->getContent(),
-                        associative: true,
-                        flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                $locations[] = [
+                    'l' => $path,
+                    'n' => formatName(basename($path)),
+                ];
+            }
+
+            if (null !== ($providerIds = ag($item, 'ProviderIds'))) {
+                $guids = $providerIds;
+            }
+
+            foreach ($locations ?? [] as $location) {
+                foreach ($possibleTitles as $title) {
+                    if (true === str_contains($location['n'], $title)) {
+                        return;
+                    }
+
+                    $isASCII = mb_detect_encoding($location['n'], 'ASCII', true) && mb_detect_encoding(
+                            $title,
+                            'ASCII',
+                            true
+                        );
+
+                    if (1 === preg_match($parseYear, basename($location['l']), $match)) {
+                        $withYear = true;
+                        $title = !empty($year) && !str_contains($title, (string)$year) ? $title . ' ' . $year : $title;
+                    } else {
+                        $withYear = false;
+                    }
+
+                    if (true === $isASCII) {
+                        similar_text($location['n'], $title, $percent);
+                    } else {
+                        mb_similar_text($location['n'], $title, $percent);
+                    }
+
+                    if ($percent >= $opts['coef']) {
+                        return;
+                    }
+
+                    $matches[] = [
+                        'path' => $location['n'],
+                        'title' => $title,
+                        'type' => $isASCII ? 'ascii' : 'unicode',
+                        'methods' => [
+                            'similarity' => round($percent, 3),
+                            'levenshtein' => round(
+                                $isASCII ? levenshtein($location['n'], $title) : mb_levenshtein($location['n'], $title),
+                                3
+                            ),
+                            'compareStrings' => compareStrings($location['n'], $title),
+                        ],
+                        'year' => [
+                            'inPath' => $withYear,
+                            'parsed' => isset($match[1]) ? (int)$match[1] : 'No',
+                            'source' => $year ?? 'No',
+                        ],
+                    ];
+                }
+            }
+
+            $metadata = [
+                'id' => ag($item, 'Id'),
+                'type' => ucfirst($type),
+                'url' => [(string)$url],
+                'title' => ag($item, $possibleTitlesList, '??'),
+                'year' => $year ?? 0000,
+                'guids' => $guids,
+                'path' => array_column($locations, 'l') ?? [],
+                'matching' => $matches,
+                'comments' => (empty($locations)) ? 'No path found.' : 'Title does not match path.',
+            ];
+
+            if (empty($guids)) {
+                $metadata['guids'] = 'None.';
+            }
+
+            if (!empty($metadata['path']) && count($metadata['path']) <= 1) {
+                $metadata['path'] = $metadata['path'][0];
+            }
+
+            if ('movie' === $type && 2 === count($metadata['path'])) {
+                $metadata['path'] = $metadata['path'][1];
+            }
+
+            $list[] = $metadata;
+        };
+
+        $it = Items::fromIterable(
+            httpClientChunks($this->http->stream($response)),
+            [
+                'pointer' => '/Items',
+                'decoder' => new ErrorWrappingDecoder(
+                    new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
+                )
+            ]
+        );
+
+        $requests = [];
+
+        foreach ($it as $entity) {
+            if ($entity instanceof DecodingError) {
+                $this->logger->warning(
+                    sprintf(
+                        '%s: Failed to decode one of library id \'%s\' items. %s',
+                        $this->name,
+                        $id,
+                        $entity->getErrorMessage()
+                    ),
+                    [
+                        'payload' => $entity->getMalformedJson(),
+                    ]
+                );
+                continue;
+            }
+
+            $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($entity, 'Id')));
+
+            $this->logger->debug(sprintf('%s: get %s \'%s\' metadata.', $this->name, $type, ag($entity, 'Name')), [
+                'url' => $url
+            ]);
+
+            $requests[] = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive($this->getHeaders(), [
+                    'user_data' => [
+                        'id' => ag($entity, 'Id'),
+                        'title' => ag($entity, 'Name'),
+                        'type' => $type,
+                    ]
+                ])
+            );
+        }
+
+        foreach ($requests as $response) {
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error(
+                    sprintf(
+                        '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                        $this->name,
+                        $id,
+                        $response->getStatusCode()
                     )
                 );
+                continue;
             }
-        } catch (ExceptionInterface|JsonException|\JsonMachine\Exception\InvalidArgumentException $e) {
-            throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
+
+            $handleRequest(
+                $response->getInfo('user_data')['type'],
+                json_decode(
+                    json:        $response->getContent(),
+                    associative: true,
+                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                )
+            );
         }
 
         return $list;
