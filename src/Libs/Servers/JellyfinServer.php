@@ -17,6 +17,7 @@ use App\Libs\QueueRequests;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
+use Generator;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -511,13 +512,10 @@ class JellyfinServer implements ServerInterface
     /**
      * @throws Throwable
      */
-    public function searchMismatch(string|int $id, array $opts = []): array
+    public function searchMismatch(string|int $id, array $opts = []): Generator
     {
-        $list = [];
-
         $this->checkConfig();
 
-        // -- Get Content type.
         $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
             http_build_query(
                 [
@@ -537,9 +535,8 @@ class JellyfinServer implements ServerInterface
         if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
                 sprintf(
-                    '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                    '%s: Get libraries list request responded with unexpected http status code \'%d\'.',
                     $this->name,
-                    $id,
                     $response->getStatusCode()
                 )
             );
@@ -594,7 +591,7 @@ class JellyfinServer implements ServerInterface
         if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
                 sprintf(
-                    '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                    '%s: Request to get library content for id \'%s\' responded with unexpected http status code \'%d\'.',
                     $this->name,
                     $id,
                     $response->getStatusCode()
@@ -602,126 +599,69 @@ class JellyfinServer implements ServerInterface
             );
         }
 
-        $handleRequest = function (string $type, array $item) use (&$list, $opts) {
-            $this->logger->debug(sprintf('%s: Processing %s \'%s\'.', $this->name, $type, ag($item, 'Name')));
-
+        $handleRequest = function (string $type, array $item): array {
             $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($item, 'Id')));
 
-            $year = ag($item, 'ProductionYear', null);
-
-            $parseYear = '/\((\d{4})\)/';
-
-            $possibleTitles = $locations = $guids = $matches = [];
+            $this->logger->debug(
+                sprintf('%s: Processing %s \'%s\'.', $this->name, $type, ag($item, 'Name')),
+                [
+                    'url' => (string)$url,
+                ]
+            );
 
             $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
 
-            foreach ($possibleTitlesList as $title) {
-                if (null === ($title = ag($item, $title))) {
-                    continue;
-                }
-
-                $title = formatName($title);
-
-                if (true === in_array($type, $possibleTitles)) {
-                    continue;
-                }
-
-                $possibleTitles[] = formatName($title);
-            }
-
-            if (null !== ($path = ag($item, 'Path'))) {
-                if (ag($item, 'Type') === 'Movie') {
-                    $locations[] = [
-                        'l' => dirname($path),
-                        'n' => formatName(basename(dirname($path))),
-                    ];
-                }
-
-                $locations[] = [
-                    'l' => $path,
-                    'n' => formatName(basename($path)),
-                ];
-            }
-
-            if (null !== ($providerIds = ag($item, 'ProviderIds'))) {
-                $guids = $providerIds;
-            }
-
-            foreach ($locations ?? [] as $location) {
-                foreach ($possibleTitles as $title) {
-                    if (true === str_contains($location['n'], $title)) {
-                        return;
-                    }
-
-                    $isASCII = mb_detect_encoding($location['n'], 'ASCII', true) && mb_detect_encoding(
-                            $title,
-                            'ASCII',
-                            true
-                        );
-
-                    if (1 === preg_match($parseYear, basename($location['l']), $match)) {
-                        $withYear = true;
-                        $title = !empty($year) && !str_contains($title, (string)$year) ? $title . ' ' . $year : $title;
-                    } else {
-                        $withYear = false;
-                    }
-
-                    if (true === $isASCII) {
-                        similar_text($location['n'], $title, $percent);
-                    } else {
-                        mb_similar_text($location['n'], $title, $percent);
-                    }
-
-                    if ($percent >= $opts['coef']) {
-                        return;
-                    }
-
-                    $matches[] = [
-                        'path' => $location['n'],
-                        'title' => $title,
-                        'type' => $isASCII ? 'ascii' : 'unicode',
-                        'methods' => [
-                            'similarity' => round($percent, 3),
-                            'levenshtein' => round(
-                                $isASCII ? levenshtein($location['n'], $title) : mb_levenshtein($location['n'], $title),
-                                3
-                            ),
-                            'compareStrings' => compareStrings($location['n'], $title),
-                        ],
-                        'year' => [
-                            'inPath' => $withYear,
-                            'parsed' => isset($match[1]) ? (int)$match[1] : 'No',
-                            'source' => $year ?? 'No',
-                        ],
-                    ];
-                }
-            }
+            $year = ag($item, 'ProductionYear', null);
 
             $metadata = [
                 'id' => ag($item, 'Id'),
                 'type' => ucfirst($type),
                 'url' => [(string)$url],
                 'title' => ag($item, $possibleTitlesList, '??'),
-                'year' => $year ?? 0000,
-                'guids' => $guids,
-                'path' => array_column($locations, 'l') ?? [],
-                'matching' => $matches,
-                'comments' => (empty($locations)) ? 'No path found.' : 'Title does not match path.',
+                'year' => $year,
+                'guids' => [],
+                'match' => [
+                    'titles' => [],
+                    'paths' => [],
+                ],
             ];
 
-            if (empty($guids)) {
-                $metadata['guids'] = 'None.';
+            foreach ($possibleTitlesList as $title) {
+                if (null === ($title = ag($item, $title))) {
+                    continue;
+                }
+
+                $isASCII = mb_detect_encoding($title, 'ASCII', true);
+                $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
+
+                if (true === in_array($title, $metadata['match']['titles'])) {
+                    continue;
+                }
+
+                $metadata['match']['titles'][] = $title;
             }
 
-            if (!empty($metadata['path']) && count($metadata['path']) <= 1) {
-                $metadata['path'] = $metadata['path'][0];
+            if (null !== ($path = ag($item, 'Path'))) {
+                $metadata['match']['paths'][] = [
+                    'full' => $path,
+                    'short' => basename($path),
+                ];
+
+                if (ag($item, 'Type') === 'Movie') {
+                    if (false === str_starts_with(basename($path), basename(dirname($path)))) {
+                        $metadata['match']['paths'][] = [
+                            'full' => $path,
+                            'short' => basename($path),
+                        ];
+                    }
+                }
             }
 
-            if ('movie' === $type && 2 === count($metadata['path'])) {
-                $metadata['path'] = $metadata['path'][1];
+            if (null !== ($providerIds = ag($item, 'ProviderIds'))) {
+                $metadata['guids'] = $providerIds;
             }
 
-            $list[] = $metadata;
+            return $metadata;
         };
 
         $it = Items::fromIterable(
@@ -771,6 +711,10 @@ class JellyfinServer implements ServerInterface
             );
         }
 
+        if (empty($requests)) {
+            throw new RuntimeException('No requests were made as the library is empty.');
+        }
+
         foreach ($requests as $response) {
             if (200 !== $response->getStatusCode()) {
                 $this->logger->error(
@@ -784,7 +728,7 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
-            $handleRequest(
+            yield $handleRequest(
                 $response->getInfo('user_data')['type'],
                 json_decode(
                     json:        $response->getContent(),
@@ -793,8 +737,6 @@ class JellyfinServer implements ServerInterface
                 )
             );
         }
-
-        return $list;
     }
 
     public function listLibraries(): array
@@ -877,11 +819,11 @@ class JellyfinServer implements ServerInterface
             $type = ag($section, 'CollectionType', 'unknown');
 
             $list[] = [
-                'ID' => $key,
-                'Title' => ag($section, 'Name', '???'),
-                'Type' => $type,
-                'Ignored' => null !== $ignoreIds && in_array($key, $ignoreIds) ? 'Yes' : 'No',
-                'Supported' => 'movies' !== $type && 'tvshows' !== $type ? 'No' : 'Yes',
+                'id' => $key,
+                'title' => ag($section, 'Name', '???'),
+                'type' => $type,
+                'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
+                'supported' => 'movies' === $type || 'tvshows' === $type,
             ];
         }
 
