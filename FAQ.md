@@ -223,7 +223,7 @@ $ docker exec -ti console server servers:remote --search-id 2514 -- [SERVER_NAME
 
 ---
 
-### Q: Is there anyway to look for possible unmatched items?
+### Q: Is it possible to look for mis-identified items?
 
 Yes, You can use the command `backend:library:mismatch`, For example
 
@@ -257,6 +257,45 @@ $ docker exec -ti console server backend:library:mismatch --id [LIBRARY_ID] -- [
   to `50.0%`.
 * `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Defaults to `table`.
 * `[-m, --method]` Which algorithm to use, it can be `similarity`, or `levenshtein`. Defaults to `similarity`.
+* `[--timeout]` Set request timeout in seconds.
+* `[--include-raw-response]` will include backend response in main response body with `raw` key.
+
+---
+
+### Q: Is it possible to look for unmatched items?
+
+Yes, You can use the command `backend:library:unmatched`, For example
+
+first get your library id by running the following command
+
+```bash
+$ docker exec -ti watchstate console backend:library:list -- [SERVER_NAME] 
+```
+
+it should display something like
+
+| Id  | Title       | Type   | Ignored | Supported |
+|-----|-------------|--------|---------|-----------|
+| 2   | Movies      | movie  | No      | Yes       | 
+| 1   | shows       | show   | No      | Yes       | 
+| 17  | Audio Books | artist | Yes     | No        |
+
+Note the library id that you want to scan for unmatched items, then run the following command:
+
+```bash
+$ docker exec -ti console server backend:library:unmatched --id [LIBRARY_ID] -- [BACKEND_NAME]
+```
+
+### Required flags
+
+* `[-i, --id]` Library id.
+
+### Optional flags
+
+* `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Defaults to `table`.
+* `[--timeout]` Set request timeout in seconds.
+* `[--show-all]` will display all library items regardless if match or unmatched.
+* `[--include-raw-response]` will include backend response in main response body with `raw` key.
 
 ---
 
