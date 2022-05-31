@@ -33,10 +33,10 @@ return (function () {
         ],
     ];
 
-    $config['tmpDir'] = fixPath(env('WS_TMP_DIR', $config['path']));
+    $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
 
     $config['storage'] += [
-        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_' . $config['storage']['version'] . '.db',
+        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_' . ag($config, 'storage.version') . '.db',
         'username' => null,
         'password' => null,
         'options' => [
@@ -67,7 +67,7 @@ return (function () {
         'default' => [
             'options' => [
                 'headers' => [
-                    'User-Agent' => 'WatchState/' . ag($config, 'version'),
+                    'User-Agent' => ag($config, 'name') . '/' . ag($config, 'version'),
                 ],
                 'timeout' => 300.0,
                 'extra' => [

@@ -5,19 +5,29 @@ declare(strict_types=1);
 namespace App;
 
 use App\Libs\Config;
+use App\Libs\Servers\ServerInterface;
 use DirectoryIterator;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Yaml\Yaml;
 use Xhgui\Profiler\Profiler;
 
 class Command extends BaseCommand
 {
     use LockableTrait;
+
+    protected array $outputs = [
+        'table',
+        'json',
+        'yaml',
+    ];
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -76,7 +86,7 @@ class Command extends BaseCommand
     protected function single(\Closure $closure, OutputInterface $output): int
     {
         try {
-            if (!$this->lock($this->getName())) {
+            if (!$this->lock(getAppVersion() . ':' . $this->getName())) {
                 $output->writeln(
                     sprintf(
                         '<error>The command \'%s\' is already running in another process.</error>',
@@ -134,6 +144,63 @@ class Command extends BaseCommand
         return $config;
     }
 
+    protected function getBackend(string $name, array $config = []): ServerInterface
+    {
+        if (null === Config::get("servers.{$name}.type", null)) {
+            throw new RuntimeException(sprintf('No backend named \'%s\' was found.', $name));
+        }
+
+        $default = Config::get("servers.{$name}");
+        $default['name'] = $name;
+
+        return makeServer(array_merge_recursive($default, $config), $name);
+    }
+
+    protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void
+    {
+        if ('json' === $mode) {
+            $output->writeln(
+                json_encode(
+                    value: $content,
+                    flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+        } elseif ('table' === $mode) {
+            $list = [];
+            $x = 0;
+            $count = count($content);
+
+            foreach ($content as $_ => $item) {
+                if (false === is_array($item)) {
+                    $item = [$_ => $item];
+                }
+
+                $subItem = [];
+
+                foreach ($item as $key => $leaf) {
+                    if (true === is_array($leaf)) {
+                        continue;
+                    }
+                    $subItem[$key] = $leaf;
+                }
+
+                $x++;
+                $list[] = $subItem;
+                if ($x < $count) {
+                    $list[] = new TableSeparator();
+                }
+            }
+
+            if (!empty($list)) {
+                (new Table($output))->setStyle('box')->setHeaders(
+                    array_map(fn($title) => is_string($title) ? ucfirst($title) : $title, array_keys($list[0]))
+                )->setRows($list)->render();
+            }
+        } else {
+            $output->writeln(Yaml::dump($content, 8, 2));
+        }
+    }
+
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         if ($input->mustSuggestOptionValuesFor('config')) {
@@ -154,7 +221,9 @@ class Command extends BaseCommand
             $suggestions->suggestValues($suggest);
         }
 
-        if ($input->mustSuggestOptionValuesFor('servers-filter') || $input->mustSuggestArgumentValuesFor('server')) {
+        if ($input->mustSuggestOptionValuesFor('servers-filter') ||
+            $input->mustSuggestArgumentValuesFor('server') ||
+            $input->mustSuggestArgumentValuesFor('backend')) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];

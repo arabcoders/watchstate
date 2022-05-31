@@ -8,6 +8,7 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
+use Generator;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -133,9 +134,9 @@ interface ServerInterface
      * @param string|int $id
      * @param array $opts
      *
-     * @return array
+     * @return Generator
      */
-    public function searchMismatch(string|int $id, array $opts = []): array;
+    public function searchMismatch(string|int $id, array $opts = []): Generator;
 
     /**
      * Get all persistent data.

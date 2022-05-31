@@ -29,4 +29,8 @@ return [
     // -- db:
     'db:list' => App\Commands\Database\ListCommand::class,
     'db:queue' => App\Commands\Database\QueueCommand::class,
+
+    // -- backend:library
+    'backend:library:list' => App\Commands\Backend\Library\ListCommand::class,
+    'backend:library:mismatch' => App\Commands\Backend\Library\MismatchCommand::class,
 ];

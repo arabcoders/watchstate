@@ -141,7 +141,7 @@ can run the same command with `[-h, --help]` to see more options to extend the l
 Yes, First run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:remote --list-libraries -- [SERVER_NAME] 
+$ docker exec -ti watchstate console backend:library:list -- [SERVER_NAME] 
 ```
 
 it should show you list of given server libraries, you are mainly interested in the ID column. take note of the library
@@ -223,34 +223,40 @@ $ docker exec -ti console server servers:remote --search-id 2514 -- [SERVER_NAME
 
 ---
 
-### Q: Is it possible to look for possible unmatched items?
+### Q: Is there anyway to look for possible unmatched items?
 
-Yes, You can use the flag `--search-mismatch '[library_id]'` in `servers:remote`, For example
+Yes, You can use the command `backend:library:mismatch`, For example
 
 first get your library id by running the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:remote --list-libraries -- [SERVER_NAME] 
+$ docker exec -ti watchstate console backend:library:list -- [SERVER_NAME] 
 ```
 
 it should display something like
 
-| ID  | Title       | Type   | Ignored | Supported |
+| Id  | Title       | Type   | Ignored | Supported |
 |-----|-------------|--------|---------|-----------|
 | 2   | Movies      | movie  | No      | Yes       | 
 | 1   | shows       | show   | No      | Yes       | 
 | 17  | Audio Books | artist | Yes     | No        |
 
-Then choose the library id that you want to scan, after that run the following command:
+Note the library id that you want to scan for possible mis-identified items, then run the following command:
 
 ```bash
-$ docker exec -ti console server servers:remote --search-mismatch [ID e.g. 2] --search-coef 60 -- [SERVER_NAME]
+$ docker exec -ti console server backend:library:mismatch --id [LIBRARY_ID] -- [BACKEND_NAME]
 ```
 
-### Optional flags that can be used with `--search-mismach`
+### Required flags
 
-* `--search-coef` How much in percentage the title has to be in path to be marked as matched item. Defaults to `50.0`.
-* `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
+* `[-i, --id]` Library id.
+
+### Optional flags
+
+* `[-p, --percentage]` How much in percentage the title has to be in path to be marked as matched item. Defaults
+  to `50.0%`.
+* `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Defaults to `table`.
+* `[-m, --method]` Which algorithm to use, it can be `similarity`, or `levenshtein`. Defaults to `similarity`.
 
 ---
 
