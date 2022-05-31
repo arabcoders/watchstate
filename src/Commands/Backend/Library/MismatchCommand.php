@@ -6,6 +6,7 @@ namespace App\Commands\Backend\Library;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Options;
 use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -26,7 +27,7 @@ final class MismatchCommand extends Command
     protected function configure(): void
     {
         $this->setName('backend:library:mismatch')
-            ->setDescription('Find possible mis-matched movies or shows in a specific library.')
+            ->setDescription('Find possible mis-identified movies or shows in a specific library.')
             ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Library id.')
             ->addOption(
                 'output',
@@ -53,6 +54,7 @@ final class MismatchCommand extends Command
                 'Request timeout in seconds.',
                 Config::get('http.default.options.timeout')
             )
+            ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name');
     }
@@ -85,32 +87,20 @@ final class MismatchCommand extends Command
         }
 
         try {
-            $opts = [];
+            $serverOpts = $opts = $list = [];
 
             if ($input->getOption('timeout')) {
-                $opts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
+                $serverOpts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
             }
 
-            $server = $this->getBackend($input->getArgument('backend'), $opts);
-        } catch (RuntimeException $e) {
-            $arr = [
-                'error' => $e->getMessage(),
-            ];
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-            return self::FAILURE;
-        }
+            if ($input->getOption('include-raw-response')) {
+                $opts[Options::RAW_RESPONSE] = true;
+            }
 
-        try {
-            $list = [];
-
-            foreach ($server->searchMismatch(id: $id) as $item) {
+            foreach ($this->getBackend($input->getArgument('backend'), $serverOpts)->getLibrary($id, $opts) as $item) {
                 $processed = $this->compare(item: $item, method: $input->getOption('method'));
 
-                if (empty($processed)) {
-                    continue;
-                }
-
-                if ($processed['percent'] >= (float)$percentage) {
+                if (empty($processed) || $processed['percent'] >= (float)$percentage) {
                     continue;
                 }
 
@@ -120,6 +110,7 @@ final class MismatchCommand extends Command
             $arr = [
                 'error' => $e->getMessage(),
             ];
+
             if ('table' !== $mode) {
                 $arr += [
                     'file' => $e->getFile(),

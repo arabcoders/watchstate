@@ -33,4 +33,5 @@ return [
     // -- backend:library
     'backend:library:list' => App\Commands\Backend\Library\ListCommand::class,
     'backend:library:mismatch' => App\Commands\Backend\Library\MismatchCommand::class,
+    'backend:library:unmatched' => App\Commands\Backend\Library\UnmatchedCommand::class,
 ];
