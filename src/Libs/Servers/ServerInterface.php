@@ -129,14 +129,14 @@ interface ServerInterface
     public function searchId(string|int $id, array $opts = []): array;
 
     /**
-     * Search Backend library id for possible mismatches.
+     * Get Library content.
      *
      * @param string|int $id
      * @param array $opts
      *
      * @return Generator
      */
-    public function searchMismatch(string|int $id, array $opts = []): Generator;
+    public function getLibrary(string|int $id, array $opts = []): Generator;
 
     /**
      * Get all persistent data.

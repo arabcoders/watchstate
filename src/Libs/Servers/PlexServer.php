@@ -546,7 +546,7 @@ class PlexServer implements ServerInterface
     /**
      * @throws Throwable
      */
-    public function searchMismatch(string|int $id, array $opts = []): Generator
+    public function getLibrary(string|int $id, array $opts = []): Generator
     {
         $this->checkConfig();
 
@@ -620,7 +620,7 @@ class PlexServer implements ServerInterface
             );
         }
 
-        $handleRequest = function (string $type, array $item): array {
+        $handleRequest = function (string $type, array $item) use ($opts): array {
             $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
 
             $this->logger->debug(
@@ -695,10 +695,18 @@ class PlexServer implements ServerInterface
                     throw new RuntimeException(sprintf('Invalid library item type \'%s\' was given.', $type));
             }
 
-            $metadata['guids'][] = ag($item, 'guid', []);
+            $itemGuid = ag($item, 'guid', []);
+
+            if (false === str_starts_with($itemGuid, 'plex://') && false === str_starts_with($itemGuid, 'local://')) {
+                $metadata['guids'][] = ag($item, 'guid', []);
+            }
 
             foreach (ag($item, 'Guid', []) as $guid) {
                 $metadata['guids'][] = ag($guid, 'id');
+            }
+
+            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                $metadata['raw'] = $item;
             }
 
             return $metadata;
