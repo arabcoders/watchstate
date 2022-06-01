@@ -367,7 +367,7 @@ final class Initializer
                     return jsonResponse(
                         status:  200,
                         body:    $local->getAll(),
-                        headers: $responseHeaders + ['X-Status' => sprintf('Updated %s.', $entity->type)]
+                        headers: $responseHeaders + ['X-Status' => sprintf('[D] Updated %s.', $entity->type)]
                     );
                 }
 
@@ -383,7 +383,7 @@ final class Initializer
                 $message = 'Updated %1$s.';
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = 'Queued %1$s For push event. [Played: %1$s]';
+                    $message = '%1$s Marked as %2$s';
                     queuePush($local);
                 }
 
@@ -394,7 +394,7 @@ final class Initializer
                                  'X-Status' => sprintf(
                                      $message,
                                      $entity->type,
-                                     $entity->isWatched() ? 'Yes' : 'No',
+                                     $entity->isWatched() ? 'Played' : 'Unplayed',
                                  ),
                              ]
                 );

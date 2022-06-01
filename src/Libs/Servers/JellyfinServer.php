@@ -319,6 +319,12 @@ class JellyfinServer implements ServerInterface
             $lastPlayedAt = true === $isPlayed ? ag($json, 'LastPlayedDate') : null;
 
             $fields = [
+                iFace::COLUMN_WATCHED => (int)$isPlayed,
+                iFace::COLUMN_META_DATA => [
+                    $this->name => [
+                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
+                    ]
+                ],
                 iFace::COLUMN_EXTRA => [
                     $this->name => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
@@ -329,17 +335,14 @@ class JellyfinServer implements ServerInterface
 
             if (true === $isPlayed && null !== $lastPlayedAt) {
                 $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
-
-                $fields += [
+                $fields = array_replace_recursive($fields, [
                     iFace::COLUMN_UPDATED => $lastPlayedAt,
-                    iFace::COLUMN_WATCHED => 1,
                     iFace::COLUMN_META_DATA => [
                         $this->name => [
-                            iFace::COLUMN_WATCHED => '1',
                             iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
                         ]
                     ],
-                ];
+                ]);
             }
 
             $providersId = [];
@@ -1984,9 +1987,14 @@ class JellyfinServer implements ServerInterface
 
     protected function createEntity(array $item, string $type, array $opts = []): StateEntity
     {
-        $isPlayed = (bool)ag($item, 'UserData.Played', false);
-
-        $date = ag($item, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated');
+        // -- Handle watched/updated column in a special way to support mark as unplayed.
+        if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
+            $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
+            $date = $opts['override'][iFace::COLUMN_WATCHED] ?? ag($item, 'DateCreated');
+        } else {
+            $isPlayed = (bool)ag($item, 'UserData.Played', false);
+            $date = ag($item, true === $isPlayed ? ['UserData.LastPlayedDate', 'DateCreated'] : 'DateCreated');
+        }
 
         if (null === $date) {
             throw new RuntimeException('No date was set on object.');

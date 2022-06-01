@@ -30,7 +30,6 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
-use stdClass;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -366,6 +365,12 @@ class PlexServer implements ServerInterface
             $lastPlayedAt = true === $isPlayed ? ag($item, 'lastViewedAt') : null;
 
             $fields = [
+                iFace::COLUMN_WATCHED => (int)$isPlayed,
+                iFace::COLUMN_META_DATA => [
+                    $this->name => [
+                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
+                    ]
+                ],
                 iFace::COLUMN_EXTRA => [
                     $this->name => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
@@ -375,16 +380,14 @@ class PlexServer implements ServerInterface
             ];
 
             if (true === $isPlayed && null !== $lastPlayedAt) {
-                $fields += [
+                $fields = array_replace_recursive($fields, [
                     iFace::COLUMN_UPDATED => (int)$lastPlayedAt,
-                    iFace::COLUMN_WATCHED => 1,
                     iFace::COLUMN_META_DATA => [
                         $this->name => [
-                            iFace::COLUMN_WATCHED => '1',
                             iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
                         ]
                     ],
-                ];
+                ]);
             }
 
             if (null !== ($guids = $this->getGuids(ag($item, 'Guid', []))) && false === empty($guids)) {
@@ -2129,15 +2132,16 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function createEntity(StdClass|array $item, string $type, array $opts = []): StateEntity
+    protected function createEntity(array $item, string $type, array $opts = []): StateEntity
     {
-        if (false === is_array($item)) {
-            $item = (array)$item;
+        // -- Handle watched/updated column in a special way to support mark as unplayed.
+        if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
+            $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
+            $date = $opts['override'][iFace::COLUMN_WATCHED] ?? ag($item, 'addedAt');
+        } else {
+            $isPlayed = (bool)ag($item, 'viewCount', false);
+            $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
         }
-
-        // -- Plex does not send played flag, so we have to rely on viewCount.
-        $isPlayed = (bool)ag($item, 'viewCount', false);
-        $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
 
         if (null === $date) {
             throw new RuntimeException('No date was set on object.');
