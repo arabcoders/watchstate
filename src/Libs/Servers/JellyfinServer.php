@@ -315,28 +315,31 @@ class JellyfinServer implements ServerInterface
         $type = strtolower($type);
 
         try {
+            $isPlayed = (bool)ag($json, 'Played');
+            $lastPlayedAt = ag($json, 'LastPlayedDate');
+
             $fields = [
-                iFace::COLUMN_UPDATED => strtotime(
-                    ag($json, ['UtcTimestamp', 'Timestamp', 'LastPlayedDate'], 'now')
-                ),
-                iFace::COLUMN_WATCHED => (int)(bool)ag($json, 'Played', false),
-                iFace::COLUMN_META_DATA => [
-                    $this->name => [
-                        iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, 'Played', false),
-                    ]
-                ],
                 iFace::COLUMN_EXTRA => [
                     $this->name => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
+                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
                     ],
                 ],
             ];
 
-            if (null !== ($lastPlayedAt = ag($json, 'LastPlayedDate')) && true === (bool)ag($json, 'Played')) {
-                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = makeDate(
-                    $lastPlayedAt
-                )->getTimestamp();
+            if (true === $isPlayed && null !== $lastPlayedAt) {
+                $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
+
+                $fields += [
+                    iFace::COLUMN_UPDATED => $lastPlayedAt,
+                    iFace::COLUMN_WATCHED => 1,
+                    iFace::COLUMN_META_DATA => [
+                        $this->name => [
+                            iFace::COLUMN_WATCHED => '1',
+                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ];
             }
 
             $providersId = [];
@@ -348,7 +351,7 @@ class JellyfinServer implements ServerInterface
                 $providersId[after($key, 'Provider_')] = $val;
             }
 
-            if (null !== ($guids = $this->getGuids($providersId)) && !empty($guids)) {
+            if (null !== ($guids = $this->getGuids($providersId)) && false === empty($guids)) {
                 $guids += Guid::makeVirtualGuid($this->name, (string)$id);
                 $fields[iFace::COLUMN_GUIDS] = $guids;
                 $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
@@ -360,13 +363,17 @@ class JellyfinServer implements ServerInterface
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
+            $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
             throw new HttpException(
                 sprintf(
-                    '%s: Request to get item id \'%s\' metadata failed. %s',
-                    self::NAME,
+                    '%s: Unable to process item id \'%s\'.',
+                    $this->getName(),
                     $id,
-                    $e->getMessage()
-                ), 500
+                ), 200
             );
         }
 
@@ -592,7 +599,7 @@ class JellyfinServer implements ServerInterface
             );
 
             if (null !== $cacheKey) {
-                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT10M'));
+                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
             }
 
             return $item;

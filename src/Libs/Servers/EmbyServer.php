@@ -97,6 +97,12 @@ class EmbyServer extends JellyfinServer
         return $request;
     }
 
+    /**
+     * @param ServerRequestInterface $request
+     * @return iFace
+     *
+     * @link https://emby.media/community/index.php?/topic/96170-webhook-information/&do=findComment&comment=1121860
+     */
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
@@ -123,11 +129,11 @@ class EmbyServer extends JellyfinServer
             throw new HttpException(sprintf('%s: Webhook payload has no id.', $this->getName()), 400);
         }
 
-        $playedAt = null;
+        $lastPlayedAt = null;
         $type = strtolower($type);
 
         if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
-            $playedAt = time();
+            $lastPlayedAt = time();
             $isPlayed = 1;
         } elseif ('item.markunplayed' === $event) {
             $isPlayed = 0;
@@ -137,23 +143,25 @@ class EmbyServer extends JellyfinServer
 
         try {
             $fields = [
-                iFace::COLUMN_UPDATED => time(),
-                iFace::COLUMN_WATCHED => $isPlayed,
-                iFace::COLUMN_META_DATA => [
-                    $this->name => [
-                        iFace::COLUMN_WATCHED => (string)(int)(bool)$isPlayed,
-                    ]
-                ],
                 iFace::COLUMN_EXTRA => [
                     $this->name => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate(time()),
+                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
                     ],
                 ],
             ];
 
-            if (null !== $playedAt && 1 === $isPlayed) {
-                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = $playedAt;
+            if (null !== $lastPlayedAt && 1 === $isPlayed) {
+                $fields += [
+                    iFace::COLUMN_UPDATED => $lastPlayedAt,
+                    iFace::COLUMN_WATCHED => $isPlayed,
+                    iFace::COLUMN_META_DATA => [
+                        $this->name => [
+                            iFace::COLUMN_WATCHED => (string)(int)(bool)$isPlayed,
+                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ];
             }
 
             $providersId = ag($json, 'Item.ProviderIds', []);
@@ -170,15 +178,20 @@ class EmbyServer extends JellyfinServer
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
+            $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
             throw new HttpException(
                 sprintf(
-                    '%s: Request to get item id \'%s\' metadata failed. %s',
-                    self::NAME,
+                    '%s: Unable to process item id \'%s\'.',
+                    $this->getName(),
                     $id,
-                    $e->getMessage()
-                ), 500
+                ), 200
             );
         }
+
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
 

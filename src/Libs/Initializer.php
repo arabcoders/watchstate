@@ -291,7 +291,7 @@ final class Initializer
             ];
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                $message = sprintf('%s does not have external ids.', ucfirst($entity->type));
+                $message = sprintf('%s does not have valid/supported external ids.', ucfirst($entity->type));
                 return new Response(
                     status:  204,
                     headers: $responseHeaders + ['X-Status' => $message]
@@ -300,7 +300,7 @@ final class Initializer
 
             $storage = Container::get(StorageInterface::class);
 
-            if (null === ($backend = $storage->get($entity))) {
+            if (null === ($local = $storage->get($entity))) {
                 $entity = $storage->insert($entity);
 
                 if (true === $entity->isWatched()) {
@@ -316,20 +316,20 @@ final class Initializer
                 );
             }
 
-            $responseHeaders['X-WH-Id'] = $backend->id;
+            $responseHeaders['X-WH-Id'] = $local->id;
 
-            $cloned = clone $backend;
+            $cloned = clone $local;
 
             if (true === $entity->isTainted()) {
                 if ($cloned->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)->isChanged(
                     fields: iFace::ENTITY_FORCE_UPDATE_FIELDS
                 )) {
-                    $backend = $storage->update(
-                        $backend->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
+                    $local = $storage->update(
+                        $local->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
                     );
                     return jsonResponse(
                         status:  200,
-                        body:    $backend->getAll(),
+                        body:    $local->getAll(),
                         headers: $responseHeaders + ['X-Status' => '[T] Updated metadata.']
                     );
                 }
@@ -340,22 +340,39 @@ final class Initializer
                 );
             }
 
-            if ($backend->updated >= $entity->updated) {
+            if ($local->updated >= $entity->updated) {
+                // -- Handle mark as unplayed logic.
+                if (false === $entity->isWatched() && true === $local->shouldMarkAsUnplayed($entity)) {
+                    $local = $storage->update(
+                        $local->apply(entity: $entity, fields: [iFace::COLUMN_META_DATA])->markAsUnplayed($entity)
+                    );
+
+                    queuePush($local);
+
+                    return jsonResponse(
+                        status:  200,
+                        body:    $local->getAll(),
+                        headers: $responseHeaders + [
+                                     'X-Status' => sprintf('%s Marked as unplayed.', ucfirst($entity->type))
+                                 ]
+                    );
+                }
+
                 if ($cloned->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)->isChanged(
                     fields: iFace::ENTITY_FORCE_UPDATE_FIELDS
                 )) {
-                    $backend = $storage->update(
-                        $backend->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
+                    $local = $storage->update(
+                        $local->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
                     );
                     return jsonResponse(
                         status:  200,
-                        body:    $backend->getAll(),
+                        body:    $local->getAll(),
                         headers: $responseHeaders + ['X-Status' => sprintf('Updated %s.', $entity->type)]
                     );
                 }
 
-                if ($backend->updated > $entity->updated) {
-                    $message = sprintf('%s time is older than the recorded time in database.', ucfirst($entity->type));
+                if ($local->updated > $entity->updated) {
+                    $message = sprintf('%s date is older than the recorded date in storage.', ucfirst($entity->type));
                 } else {
                     $message = '[D] No difference detected.';
                 }
@@ -366,19 +383,19 @@ final class Initializer
                 );
             }
 
-            if ($backend->apply($entity)->isChanged()) {
-                $backend = $storage->update($backend->apply($entity));
+            if ($local->apply($entity)->isChanged()) {
+                $local = $storage->update($local->apply($entity));
 
-                $message = 'Updated %s.';
+                $message = 'Updated %1$s.';
 
-                if ($cloned->isWatched() !== $backend->isWatched()) {
-                    $message = 'Queued %s For push event. [Played: %s]';
-                    queuePush($backend);
+                if ($cloned->isWatched() !== $local->isWatched()) {
+                    $message = 'Queued %1$s For push event. [Played: %1$s]';
+                    queuePush($local);
                 }
 
                 return jsonResponse(
                     status:  200,
-                    body:    $backend->getAll(),
+                    body:    $local->getAll(),
                     headers: $responseHeaders + [
                                  'X-Status' => sprintf(
                                      $message,
@@ -391,7 +408,7 @@ final class Initializer
 
             return new Response(
                 status:  200,
-                headers: $responseHeaders + ['X-Status' => 'No difference detected.']
+                headers: $responseHeaders + ['X-Status' => 'No changes detected.']
             );
         } catch (HttpException $e) {
             if (200 === $e->getCode()) {

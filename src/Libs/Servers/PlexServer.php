@@ -362,27 +362,32 @@ class PlexServer implements ServerInterface
         }
 
         try {
+            $isPlayed = (bool)ag($item, 'viewCount', false);
+            $lastPlayedAt = ag($item, 'lastViewedAt');
+
             $fields = [
-                iFace::COLUMN_UPDATED => time(),
-                iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
-                iFace::COLUMN_META_DATA => [
-                    $this->name => [
-                        iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, 'viewCount', false),
-                    ]
-                ],
                 iFace::COLUMN_EXTRA => [
                     $this->name => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate(time()),
+                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
                     ],
                 ],
             ];
 
-            if (null !== ($lastPlayedAt = ag($item, 'lastViewedAt')) & 1 === (int)(bool)ag($item, 'viewCount', false)) {
-                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$lastPlayedAt;
+            if (true === $isPlayed && null !== $lastPlayedAt) {
+                $fields += [
+                    iFace::COLUMN_UPDATED => (int)$lastPlayedAt,
+                    iFace::COLUMN_WATCHED => 1,
+                    iFace::COLUMN_META_DATA => [
+                        $this->name => [
+                            iFace::COLUMN_WATCHED => '1',
+                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ];
             }
 
-            if (null !== ($guids = $this->getGuids(ag($item, 'Guid', []))) && !empty($guids)) {
+            if (null !== ($guids = $this->getGuids(ag($item, 'Guid', []))) && false === empty($guids)) {
                 $guids += Guid::makeVirtualGuid($this->name, (string)$id);
                 $fields[iFace::COLUMN_GUIDS] = $guids;
                 $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
@@ -394,13 +399,17 @@ class PlexServer implements ServerInterface
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
+            $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
             throw new HttpException(
                 sprintf(
-                    '%s: Request to get item id \'%s\' metadata failed. %s',
-                    self::NAME,
+                    '%s: Unable to process item id \'%s\'.',
+                    $this->getName(),
                     $id,
-                    $e->getMessage()
-                ), 500
+                ), 200
             );
         }
 
@@ -609,7 +618,7 @@ class PlexServer implements ServerInterface
             );
 
             if (null !== $cacheKey) {
-                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT10M'));
+                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
             }
 
             return $item;
