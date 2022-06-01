@@ -1990,7 +1990,7 @@ class JellyfinServer implements ServerInterface
         // -- Handle watched/updated column in a special way to support mark as unplayed.
         if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
             $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
-            $date = $opts['override'][iFace::COLUMN_WATCHED] ?? ag($item, 'DateCreated');
+            $date = $opts['override'][iFace::COLUMN_UPDATED] ?? ag($item, 'DateCreated');
         } else {
             $isPlayed = (bool)ag($item, 'UserData.Played', false);
             $date = ag($item, true === $isPlayed ? ['UserData.LastPlayedDate', 'DateCreated'] : 'DateCreated');
