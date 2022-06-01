@@ -1,8 +1,7 @@
 # WatchState
 
 WatchState is a CLI based tool to sync your watch state between different media backends, without relying on 3rd parties
-services, like trakt.tv, This tool support `Plex Media Server`, `Emby` and `Jellyfin` out of the box currently, with
-plans for future expansion for other media backends.
+services, like trakt.tv, This tool support `Plex Media Server`, `Emby` and `Jellyfin` out of the box.
 
 # Install
 
@@ -52,20 +51,19 @@ After starting the container, you have to add your media backends, to do so run 
 $ docker exec -ti watchstate console servers:manage --add -- [SERVER_NAME]
 ```
 
-This command will ask you for some questions to add your backend, you can run the command as many times as you want, if
-you want to edit the config again or if you made mistake just run the same command without `--add` flag.
-
-After adding your backends, You should import your current watch state by running the following command.
+This command is interactive and will ask you for some questions to add your backend, you can run the command as many
+times as you want, if you want to edit the config again or if you made mistake just run the same command without `--add`
+flag. After adding your backends, You should import your current watch state by running the following command.
 
 ```bash
-$ docker exec -ti watchstate console state:import -vv
+$ docker exec -ti watchstate console state:import -vvf
 ```
 
 ---
 
 # Pulling watch state.
 
-now that you have imported your current play state, you can stop manually running the command, and rely on the tasks
+Now that you have imported your current play state, you can stop manually running the command, and rely on the tasks
 scheduler and webhooks to keep update your play state. To start receiving webhook events from backends you need to do
 few more steps.
 
@@ -85,7 +83,7 @@ $ docker exec -ti watchstate console servers:edit --regenerate-webhook-token -- 
 
 ---
 
-#### TIP:
+#### Notice:
 
 If you have multiple plex servers and use the same PlexPass account for all of them, you have to unify the API key, by
 running the following command:
@@ -105,18 +103,18 @@ $ docker exec -ti watchstate console help servers:unify
 
 ---
 
-If you don't want to/can't use webhooks and want to rely solely on task scheduler importing, then set the value
+If you don't want to/can't use webhooks and want to rely on task scheduler importing, then set the value
 of `WS_CRON_IMPORT` to `1`. By default, we run the import command every hour. However, you can change the scheduled task
 timer by adding another variable `WS_CRON_IMPORT_AT` and set its value to valid cron expression. for
 example, `0 */2 * * *` it will run every two hours instead of 1 hour. If your backends and this tool are not on same
-server it might consume a lot of bandwidth as it's pulls the entire server library listing.
+server it might consume a lot of bandwidth depending on how big is your library as it's pulls the entire server library
+listing.
 
 ---
 
-#### TIP
+#### Notice
 
-You should still have `WS_CRON_IMPORT` enabled as sometimes plex does not really report new items, or report them in a
-way that is not compatible with the way we handle webhooks events.
+You should still have `WS_CRON_IMPORT` enabled to keep healthy relation between storage and backend changes.
 
 ---
 
@@ -134,16 +132,15 @@ to sync specific server/s, use the `[-s, --servers-filter]` which accept comma s
 $ docker exec -ti watchstate console state:export -vv --servers-filter 'server1,server2' 
 ```
 
-To enable the export scheduled task set the value of `WS_CRON_EXPORT` to `1`. By default, we run export every 90
-minutes. However, you can change the schedule by adding another variable called `WS_CRON_EXPORT_AT` and set its value to
-valid cron expression. for example, `0 */3 * * *` it will run every three hours instead of 90 minutes.
+To enable export scheduled task set the value of `WS_CRON_EXPORT` to `1`. By default, we run export every 90 minutes.
+However, you can change the timer by adding another variable called `WS_CRON_EXPORT_AT` and set its value to valid cron
+expression. for example, `0 */3 * * *` it will run every three hours instead of 90 minutes.
 
 # Start receiving webhook events.
 
-By default, the official container includes a small http server exposed at port `80`, we officially don't support HTTPS
+By default, the official container includes http server exposed at port `80`, we officially don't support HTTPS
 inside the container for the HTTP server. However, for the adventurous people we expose port 443 as well, as such you
-can customize the `docker/files/nginx.conf` to support SSL. and do the necessary adjustments. However, do not expect us
-to help with it.
+can customize the `docker/files/nginx.conf` to support SSL. and do the necessary adjustments.
 
 #### Example nginx reverse proxy.
 
@@ -166,8 +163,8 @@ server {
 
 ### Adding webhook
 
-To add webhook for your server the URL will be dependent on how you expose the tool http frontend, but typically it will
-be like this:
+To add webhook for your server the URL will be dependent on how you exposed webhook frontend, but typically it will be
+like this:
 
 #### Webhook URL
 
@@ -175,18 +172,13 @@ Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
 
 Directly to container: `https://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
 
-If your media backend support sending headers then omit the query parameter '?apikey=[WEBHOOK_TOKEN]', and add new this
-header
+If your media backend support sending headers then remove query parameter `?apikey=[WEBHOOK_TOKEN]`, and add this header
 
 ```http request
 X-apikey: [WEBHOOK_TOKEN]
 ```
 
-it's more secure that way.
-
-#### [WEBHOOK_TOKEN]
-
-Should match the backend specific ``webhook.token`` value. Refer to the steps described
+where `[WEBHOOK_TOKEN]` Should match the backend specific `webhook.token` value. Refer to the steps described
 at **[Steps to enable webhook servers](#enable-webhooks-events-for-specific-backend)**.
 
 # Configuring media backends to send webhook events.
@@ -228,7 +220,7 @@ Toggle this checkbox.
 
 ### Add Request Header
 
-Key: `X-apikey`
+Key: `x-apikey`
 
 Value: `[WEBHOOK_TOKEN]`
 
@@ -251,7 +243,7 @@ Select the following events
 
 Click `Add Webhook`
 
-#### Plex (you need "Plex Pass" to use webhooks)
+#### Plex (you need "PlexPass" to use webhooks)
 
 Go to your plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
 
@@ -270,16 +262,17 @@ Click `Save Changes`
 * Plex does not send webhooks events for "marked as Played/Unplayed".
 * Sometimes does not send events if you add more than one item at time.
 * If you have multi-user setup, Plex will still report the admin account user id as `1`.
-* When you mark items as unwatched, Plex reset the date on the object, which renders the comparison as invalid.
+* When you mark items as unwatched, Plex reset the date on the object.
 
 # Emby
 
-* Emby does not send webhooks events for newly added items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)
+* Emby does not send webhooks events for newly added
+  items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)
 
 # Jellyfin
 
-* If you don't select a user id there, sometimes the webhook plugin will send `itemAdd` event without user info, and thus will fail
-the check if you happen to enable `strict user match` for jellyfin.
+* If you don't select a user id, the Plugin will sometimes send `itemAdd` event without user info, and thus will fail
+  the check if you happen to enable `strict user match` for jellyfin.
 
 ----
 

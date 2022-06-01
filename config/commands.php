@@ -24,14 +24,17 @@ return [
     'servers:manage' => App\Commands\Servers\ManageCommand::class,
     'servers:unify' => App\Commands\Servers\UnifyCommand::class,
     'servers:view' => App\Commands\Servers\ViewCommand::class,
-    'servers:remote' => App\Commands\Servers\RemoteCommand::class,
     'servers:edit' => App\Commands\Servers\EditCommand::class,
     // -- db:
     'db:list' => App\Commands\Database\ListCommand::class,
     'db:queue' => App\Commands\Database\QueueCommand::class,
-
-    // -- backend:library
+    // -- backend:library:
     'backend:library:list' => App\Commands\Backend\Library\ListCommand::class,
     'backend:library:mismatch' => App\Commands\Backend\Library\MismatchCommand::class,
     'backend:library:unmatched' => App\Commands\Backend\Library\UnmatchedCommand::class,
+    // -- backend:search:
+    'backend:search:query' => App\Commands\Backend\Search\QueryCommand::class,
+    'backend:search:id' => App\Commands\Backend\Search\IdCommand::class,
+    // -- backend:users:
+    'backend:users:list' => App\Commands\Backend\Users\ListCommand::class,
 ];

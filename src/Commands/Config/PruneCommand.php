@@ -54,9 +54,6 @@ final class PruneCommand extends Command
             ],
         ];
 
-        /** @var array<SplFileInfo> $files */
-        $files = [];
-
         foreach ($paths as $item) {
             if (!is_dir(ag($item, 'path'))) {
                 $output->writeln(sprintf('Path \'%s\' does not exists.', ag($item, 'path')));
@@ -64,23 +61,21 @@ final class PruneCommand extends Command
             }
 
             foreach (glob(ag($item, 'path') . '/' . ag($item, 'filter')) as $file) {
-                $files[] = new SplFileInfo($file);
+                $file = new SplFileInfo($file);
+
+                $fileName = $file->getBasename();
+
+                if ('.' === $fileName || '..' === $fileName || $file->isDir() || !$file->isFile()) {
+                    continue;
+                }
+
+                if ($file->getMTime() > $expiresAt) {
+                    continue;
+                }
+
+                $output->writeln(sprintf('Deleting %s', $file->getRealPath()));
+                unlink($file->getRealPath());
             }
-        }
-
-        foreach ($files as $file) {
-            $fileName = $file->getBasename();
-
-            if ('.' === $fileName || '..' === $fileName || $file->isDir()) {
-                continue;
-            }
-
-            if ($file->getMTime() > $expiresAt) {
-                continue;
-            }
-
-            $output->writeln(sprintf('Deleting %s', $file->getRealPath()));
-            unlink($file->getRealPath());
         }
 
         return self::SUCCESS;

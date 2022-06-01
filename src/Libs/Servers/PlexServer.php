@@ -88,15 +88,6 @@ class PlexServer implements ServerInterface
         'media.pause',
     ];
 
-    protected const BACKEND_CAST_KEYS = [
-        'lastViewedAt' => 'datetime',
-        'updatedAt' => 'datetime',
-        'addedAt' => 'datetime',
-        'mediaTagVersion' => 'datetime',
-        'duration' => 'duration_sec',
-        'size' => 'size',
-    ];
-
     /**
      * Parse hama agent guid.
      */
@@ -236,16 +227,20 @@ class PlexServer implements ServerInterface
 
         foreach ($users as $user) {
             $data = [
-                'user_id' => ag($user, 'admin') && $adminsCount <= 1 ? 1 : ag($user, 'id'),
-                'username' => $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? $user['email'] ?? '??',
-                'is_admin' => ag($user, 'admin') ? 'Yes' : 'No',
-                'is_guest' => ag($user, 'guest') ? 'Yes' : 'No',
-                'is_restricted' => ag($user, 'restricted') ? 'Yes' : 'No',
-                'updated_at' => isset($user['updatedAt']) ? makeDate($user['updatedAt']) : 'Never',
+                'id' => ag($user, 'admin') && $adminsCount <= 1 ? 1 : ag($user, 'id'),
+                'name' => $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? $user['email'] ?? '??',
+                'admin' => (bool)ag($user, 'admin'),
+                'guest' => (bool)ag($user, 'guest'),
+                'restricted' => (bool)ag($user, 'restricted'),
+                'updatedAt' => isset($user['updatedAt']) ? makeDate($user['updatedAt']) : 'Never',
             ];
 
             if (true === ($opts['tokens'] ?? false)) {
                 $data['token'] = $this->getUserToken($user['uuid']);
+            }
+
+            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                $data['raw'] = $user;
             }
 
             $list[] = $data;
@@ -334,13 +329,22 @@ class PlexServer implements ServerInterface
         $item = ag($json, 'Metadata', []);
         $type = ag($json, 'Metadata.type');
         $event = ag($json, 'event', null);
+        $id = ag($item, 'ratingKey');
 
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(sprintf('%s: Not allowed type [%s]', self::NAME, $type), 200);
+            throw new HttpException(
+                sprintf('%s: Webhook content type is not supported. [%s]', $this->getName(), $type), 200
+            );
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('%s: Not allowed event [%s]', self::NAME, $event), 200);
+            throw new HttpException(
+                sprintf('%s: Webhook event type is not supported. [%s]', $this->getName(), $event), 200
+            );
+        }
+
+        if (null === $id) {
+            throw new HttpException(sprintf('%s: Webhook payload has no id.', $this->getName()), 400);
         }
 
         if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
@@ -350,90 +354,60 @@ class PlexServer implements ServerInterface
         if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
             throw new HttpException(
                 sprintf(
-                    '%s: Library id \'%s\' is ignored by user server config.',
-                    self::NAME,
+                    '%s: Library id \'%s\' is ignored by user config.',
+                    $this->name,
                     ag($item, 'librarySectionID', '???')
                 ), 200
             );
         }
 
-        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
-
-        if (null === ag($item, 'Guid', null)) {
-            $item['Guid'] = [['id' => ag($item, 'guid')]];
-        } else {
-            $item['Guid'][] = ['id' => ag($item, 'guid')];
-        }
-
-        $guids = $this->getGuids(ag($item, 'Guid', []));
-        $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'ratingKey'));
-
-        $row = [
-            iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => time(),
-            iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
-            iFace::COLUMN_VIA => $this->name,
-            iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $guids,
-            iFace::COLUMN_META_DATA => [
-                $this->name => [
-                    iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
-                    iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($item, 'viewCount', false),
-                    iFace::COLUMN_VIA => $this->name,
-                    iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-                    iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
-                    iFace::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
+        try {
+            $fields = [
+                iFace::COLUMN_UPDATED => time(),
+                iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
+                iFace::COLUMN_META_DATA => [
+                    $this->name => [
+                        iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, 'viewCount', false),
+                    ]
                 ],
-            ],
-            iFace::COLUMN_EXTRA => [
-                $this->name => [
-                    iFace::COLUMN_EXTRA_EVENT => $event,
-                    iFace::COLUMN_EXTRA_DATE => makeDate(time()),
+                iFace::COLUMN_EXTRA => [
+                    $this->name => [
+                        iFace::COLUMN_EXTRA_EVENT => $event,
+                        iFace::COLUMN_EXTRA_DATE => makeDate(time()),
+                    ],
                 ],
-            ],
-        ];
+            ];
 
-        if (iFace::TYPE_EPISODE === $type) {
-            $row[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
-            $row[iFace::COLUMN_SEASON] = ag($item, 'parentIndex', 0);
-            $row[iFace::COLUMN_EPISODE] = ag($item, 'index', 0);
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
-                $item,
-                ['title', 'originalTitle'],
-                '??'
-            );
-
-            if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey'], null))) {
-                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
-                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
+            if (null !== ($lastPlayedAt = ag($item, 'lastViewedAt')) & 1 === (int)(bool)ag($item, 'viewCount', false)) {
+                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$lastPlayedAt;
             }
-        }
 
-        if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year']))) {
-            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
-        }
+            if (null !== ($guids = $this->getGuids(ag($item, 'Guid', []))) && !empty($guids)) {
+                $guids += Guid::makeVirtualGuid($this->name, (string)$id);
+                $fields[iFace::COLUMN_GUIDS] = $guids;
+                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+            }
 
-        if (null !== ($premiereDate = ag($item, 'originallyAvailableAt'))) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-                $premiereDate
-            )->format('Y-m-d');
+            $entity = $this->createEntity(
+                item: ag($this->getMetadata(id: $id), 'MediaContainer.Metadata.0', []),
+                type: $type,
+                opts: ['override' => $fields],
+            )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
+        } catch (Throwable $e) {
+            throw new HttpException(
+                sprintf(
+                    '%s: Request to get item id \'%s\' metadata failed. %s',
+                    self::NAME,
+                    $id,
+                    $e->getMessage()
+                ), 500
+            );
         }
-
-        if (null !== ($lastPlayedAt = ag($item, 'lastViewedAt')) & 1 === (int)(bool)ag($item, 'viewCount', false)) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$lastPlayedAt;
-        }
-
-        $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $message = sprintf('%s: No valid/supported external ids.', self::NAME);
 
-            if (empty($item['Guid'])) {
+            if (empty($guids)) {
                 $message .= sprintf(' Most likely unmatched %s.', $entity->type);
             }
 
@@ -452,13 +426,16 @@ class PlexServer implements ServerInterface
         try {
             $url = $this->url->withPath('/hubs/search')->withQuery(
                 http_build_query(
-                    [
-                        'query' => $query,
-                        'limit' => $limit,
-                        'includeGuids' => 1,
-                        'includeExternalMedia' => 0,
-                        'includeCollections' => 0,
-                    ]
+                    array_replace_recursive(
+                        [
+                            'query' => $query,
+                            'limit' => $limit,
+                            'includeGuids' => 1,
+                            'includeExternalMedia' => 0,
+                            'includeCollections' => 0,
+                        ],
+                        $opts['query'] ?? []
+                    )
                 )
             );
 
@@ -466,7 +443,11 @@ class PlexServer implements ServerInterface
                 'url' => $url
             ]);
 
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+            $response = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive($this->getHeaders(), $opts['headers'] ?? [])
+            );
 
             if (200 !== $response->getStatusCode()) {
                 throw new RuntimeException(
@@ -487,43 +468,133 @@ class PlexServer implements ServerInterface
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
-            foreach (ag($json, 'MediaContainer.Hub', []) as $item) {
-                $type = ag($item, 'type');
+            foreach (ag($json, 'MediaContainer.Hub', []) as $leaf) {
+                $type = ag($leaf, 'type');
 
-                if ('show' !== $type && 'movie' !== $type) {
+                if ('show' !== $type && 'movie' !== $type && 'episode' !== $type) {
                     continue;
                 }
 
-                foreach (ag($item, 'Metadata', []) as $subItem) {
-                    $list[] = $subItem;
+                foreach (ag($leaf, 'Metadata', []) as $item) {
+                    $watchedAt = ag($item, 'lastViewedAt');
+                    $year = (int)ag($item, 'year', 0);
+
+                    if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
+                        $year = (int)makeDate($airDate)->format('Y');
+                    }
+
+                    $episodeNumber = ('episode' === $type) ? sprintf(
+                        '%sx%s - ',
+                        str_pad((string)(ag($item, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)(ag($item, 'index', 0)), 3, '0', STR_PAD_LEFT),
+                    ) : null;
+
+                    $builder = [
+                        'id' => (int)ag($item, 'ratingKey'),
+                        'type' => ucfirst(ag($item, 'type', '??')),
+                        'library' => ag($item, 'librarySectionTitle', '??'),
+                        'title' => $episodeNumber . mb_substr(ag($item, ['title', 'originalTitle'], '??'), 0, 50),
+                        'year' => $year,
+                        'addedAt' => makeDate(ag($item, 'addedAt'))->format('Y-m-d H:i:s T'),
+                        'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'None',
+                    ];
+
+                    if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                        $builder['raw'] = $item;
+                    }
+
+                    $list[] = $builder;
                 }
             }
 
-            return true === ag($opts, Options::RAW_RESPONSE) ? $list : filterResponse($list, self::BACKEND_CAST_KEYS);
+            return $list;
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function searchId(string|int $id, array $opts = []): array
+    {
+        $item = $this->getMetadata($id, $opts);
+
+        $metadata = ag($item, 'MediaContainer.Metadata.0', []);
+
+        $type = ag($metadata, 'type');
+
+        $watchedAt = ag($metadata, 'lastViewedAt');
+        $year = (int)ag($metadata, ['year', 'parentYear', 'grandparentYear'], 0);
+
+        if (0 === $year && null !== ($airDate = ag($metadata, 'originallyAvailableAt'))) {
+            $year = (int)makeDate($airDate)->format('Y');
+        }
+
+        $episodeNumber = ('episode' === $type) ? sprintf(
+            '%sx%s - ',
+            str_pad((string)(ag($metadata, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
+            str_pad((string)(ag($metadata, 'index', 0)), 3, '0', STR_PAD_LEFT),
+        ) : null;
+
+        $builder = [
+            'id' => (int)ag($metadata, 'ratingKey'),
+            'type' => ucfirst(ag($metadata, 'type', '??')),
+            'library' => ag($metadata, 'librarySectionTitle', '??'),
+            'title' => $episodeNumber . mb_substr(ag($metadata, ['title', 'originalTitle'], '??'), 0, 50),
+            'year' => $year,
+            'addedAt' => makeDate(ag($metadata, 'addedAt'))->format('Y-m-d H:i:s T'),
+            'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'None',
+            'duration' => ag($metadata, 'duration') ? formatDuration(ag($metadata, 'duration')) : 'None',
+        ];
+
+        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+            $builder['raw'] = $item;
+        }
+
+        return $builder;
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function getMetadata(string|int $id, array $opts = []): array
     {
         $this->checkConfig();
 
+        $cacheKey = false === ((bool)($opts['nocache'] ?? false)) ? $this->getName() . '_' . $id . '_metadata' : null;
+
+        if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
+            return $this->cacheIO->get(key: $cacheKey);
+        }
+
         try {
             $url = $this->url->withPath('/library/metadata/' . $id)->withQuery(
-                http_build_query(['includeGuids' => 1])
+                http_build_query(
+                    array_merge_recursive(
+                        [
+                            'includeGuids' => 1
+                        ],
+                        $opts['query'] ?? []
+                    )
+                )
             );
 
-            $this->logger->debug(sprintf('%s: Sending get meta data for id \'%s\'.', $this->name, $id), [
-                'url' => $url
-            ]);
+            $this->logger->debug(sprintf('%s: Requesting metadata for #\'%s\'.', $this->name, $id), ['url' => $url]);
 
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+            $response = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive(
+                    $this->getHeaders(),
+                    $opts['headers'] ?? []
+                )
+            );
 
             if (200 !== $response->getStatusCode()) {
                 throw new RuntimeException(
                     sprintf(
-                        '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                        '%s: Request for #\'%s\' metadata responded with unexpected http status code \'%d\'.',
                         $this->name,
                         $id,
                         $response->getStatusCode()
@@ -531,13 +602,17 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            $json = json_decode(
+            $item = json_decode(
                 json:        $response->getContent(),
                 associative: true,
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
-            return true === ag($opts, Options::RAW_RESPONSE) ? $json : filterResponse($json, self::BACKEND_CAST_KEYS);
+            if (null !== $cacheKey) {
+                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT10M'));
+            }
+
+            return $item;
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
@@ -713,13 +788,13 @@ class PlexServer implements ServerInterface
         };
 
         $it = Items::fromIterable(
-            httpClientChunks($this->http->stream($response)),
-            [
-                'pointer' => '/MediaContainer/Metadata',
-                'decoder' => new ErrorWrappingDecoder(
-                    new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                )
-            ]
+            iterable: httpClientChunks(stream: $this->http->stream($response)),
+            options:  [
+                          'pointer' => '/MediaContainer/Metadata',
+                          'decoder' => new ErrorWrappingDecoder(
+                              innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
+                          )
+                      ]
         );
 
         $requests = [];
@@ -772,7 +847,7 @@ class PlexServer implements ServerInterface
 
         foreach ($requests as $response) {
             if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
+                $this->logger->warning(
                     sprintf(
                         '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
                         $this->name,
@@ -796,7 +871,7 @@ class PlexServer implements ServerInterface
         }
     }
 
-    public function listLibraries(): array
+    public function listLibraries(array $opts = []): array
     {
         $this->checkConfig();
 
@@ -866,7 +941,7 @@ class PlexServer implements ServerInterface
             $key = (int)ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
 
-            $list[] = [
+            $builder = [
                 'id' => $key,
                 'title' => ag($section, 'title', '???'),
                 'type' => $type,
@@ -875,6 +950,12 @@ class PlexServer implements ServerInterface
                 'agent' => ag($section, 'agent'),
                 'scanner' => ag($section, 'scanner'),
             ];
+
+            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                $builder['raw'] = $section;
+            }
+
+            $list[] = $builder;
         }
 
         return $list;
@@ -883,8 +964,8 @@ class PlexServer implements ServerInterface
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($after, $mapper) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
+            ok: function (string $cName, string $type, string|int $id, UriInterface|string $url) use ($after, $mapper) {
+                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after, $id, $url) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
@@ -892,7 +973,10 @@ class PlexServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $response->getStatusCode()
-                            )
+                            ),
+                            [
+                                'url' => (string)$url,
+                            ]
                         );
                         return;
                     }
@@ -901,13 +985,16 @@ class PlexServer implements ServerInterface
                         $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
 
                         $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/MediaContainer/Metadata',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
+                            iterable: httpClientChunks($this->http->stream($response)),
+                            options:  [
+                                          'pointer' => '/MediaContainer/Metadata',
+                                          'decoder' => new ErrorWrappingDecoder(
+                                              innerDecoder: new ExtJsonDecoder(
+                                                                assoc:   true,
+                                                                options: JSON_INVALID_UTF8_IGNORE
+                                                            )
+                                          )
+                                      ]
                         );
 
                         foreach ($it as $entity) {
@@ -925,7 +1012,15 @@ class PlexServer implements ServerInterface
                                 );
                                 continue;
                             }
-                            $this->processImport($mapper, $type, $cName, $entity, $after);
+
+                            $this->processImport(
+                                mapper:  $mapper,
+                                type:    $type,
+                                library: $cName,
+                                item:    $entity,
+                                after:   $after,
+                                opts:    ['library' => $id]
+                            );
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
@@ -960,11 +1055,11 @@ class PlexServer implements ServerInterface
                     $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
-            error: function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, string|int $id, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
                     [
-                        'url' => $url,
+                        'url' => (string)$url,
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
                     ]
@@ -1193,8 +1288,12 @@ class PlexServer implements ServerInterface
     public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($mapper, $queue, $after) {
-                return function (ResponseInterface $response) use ($mapper, $queue, $cName, $type, $after) {
+            ok: function (string $cName, string $type, string|int $id, UriInterface|string $url) use (
+                $mapper,
+                $queue,
+                $after
+            ) {
+                return function (ResponseInterface $response) use ($mapper, $queue, $cName, $type, $after, $id, $url) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
@@ -1202,7 +1301,10 @@ class PlexServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $response->getStatusCode()
-                            )
+                            ),
+                            [
+                                'url' => (string)$url,
+                            ]
                         );
                         return;
                     }
@@ -1211,13 +1313,16 @@ class PlexServer implements ServerInterface
                         $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
 
                         $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/MediaContainer/Metadata',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
+                            iterable: httpClientChunks(stream: $this->http->stream($response)),
+                            options:  [
+                                          'pointer' => '/MediaContainer/Metadata',
+                                          'decoder' => new ErrorWrappingDecoder(
+                                              innerDecoder: new ExtJsonDecoder(
+                                                                assoc:   true,
+                                                                options: JSON_INVALID_UTF8_IGNORE
+                                                            )
+                                          )
+                                      ]
                         );
 
                         foreach ($it as $entity) {
@@ -1235,7 +1340,16 @@ class PlexServer implements ServerInterface
                                 );
                                 continue;
                             }
-                            $this->processExport($mapper, $queue, $type, $cName, $entity, $after);
+
+                            $this->processExport(
+                                mapper:  $mapper,
+                                queue:   $queue,
+                                type:    $type,
+                                library: $cName,
+                                item:    $entity,
+                                after:   $after,
+                                opts:    ['library' => $id]
+                            );
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
@@ -1270,7 +1384,7 @@ class PlexServer implements ServerInterface
                     $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
-            error: function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, string|int $id, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
                     [
@@ -1415,8 +1529,8 @@ class PlexServer implements ServerInterface
                         (string)$url,
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
-                                'ok' => $ok($cName, 'show', $url),
-                                'error' => $error($cName, 'show', $url),
+                                'ok' => $ok(cName: $cName, type: 'show', id: $key, url: $url),
+                                'error' => $error(cName: $cName, type: 'show', id: $key, url: $url),
                             ]
                         ])
                     );
@@ -1487,8 +1601,8 @@ class PlexServer implements ServerInterface
                     (string)$url,
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
-                            'ok' => $ok($cName, $type, $url),
-                            'error' => $error($cName, $type, $url),
+                            'ok' => $ok(cName: $cName, type: $type, id: $key, url: $url),
+                            'error' => $error(cName: $cName, type: $type, id: $key, url: $url),
                         ]
                     ])
                 );
@@ -1522,8 +1636,9 @@ class PlexServer implements ServerInterface
         ImportInterface $mapper,
         string $type,
         string $library,
-        StdClass $item,
-        DateTimeInterface|null $after = null
+        array $item,
+        DateTimeInterface|null $after = null,
+        array $opts = []
     ): void {
         try {
             if ('show' === $type) {
@@ -1538,28 +1653,28 @@ class PlexServer implements ServerInterface
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
-                    $item->title ?? $item->originalTitle ?? '??',
-                    $item->year ?? 0000
+                    ag($item, ['title', 'originalTitle'], '??'),
+                    ag($item, 'year', 0000)
                 );
             } else {
                 $iName = trim(
                     sprintf(
                         '%s - [%s - (%sx%s)]',
                         $library,
-                        $item->grandparentTitle ?? $item->originalTitle ?? '??',
-                        str_pad((string)($item->parentIndex ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($item->index ?? 0), 3, '0', STR_PAD_LEFT),
+                        ag($item, ['grandparentTitle', 'originalTitle'], '??'),
+                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     )
                 );
             }
 
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
-                    'payload' => (array)$item,
+                    'payload' => $item,
                 ]);
             }
 
-            $date = max((int)($item->lastViewedAt ?? 0), (int)($item->addedAt ?? 0));
+            $date = max((int)ag($item, 'lastViewedAt', 0), (int)ag($item, 'addedAt', 0));
 
             if (0 === $date) {
                 $this->logger->debug(
@@ -1572,11 +1687,11 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            $entity = $this->createEntity($item, $type);
+            $entity = $this->createEntity(item: $item, type: $type, opts: $opts);
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 if (true === Config::get('debug.import')) {
-                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->ratingKey . '.json';
+                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item['ratingKey'] . '.json';
 
                     if (!file_exists($name)) {
                         file_put_contents(
@@ -1591,17 +1706,17 @@ class PlexServer implements ServerInterface
 
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
-                if (empty($item->Guid)) {
+                if (empty($item['Guid'])) {
                     $message .= sprintf(' Most likely unmatched %s.', $entity->type);
                 }
 
-                if (null === ($item->Guid ?? null)) {
-                    $item->Guid = [['id' => $item->guid]];
+                if (null === ($item['Guid'] ?? null)) {
+                    $item['Guid'] = [['id' => $item['guid']]];
                 } else {
-                    $item->Guid[] = ['id' => $item->guid];
+                    $item['Guid'][] = ['id' => $item['guid']];
                 }
 
-                $this->logger->info($message, ['guids' => !empty($item->Guid) ? $item->Guid : 'None']);
+                $this->logger->info($message, ['guids' => !empty($item['Guid']) ? $item['Guid'] : 'None']);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
@@ -1622,8 +1737,9 @@ class PlexServer implements ServerInterface
         QueueRequests $queue,
         string $type,
         string $library,
-        StdClass $item,
-        DateTimeInterface|null $after = null
+        array $item,
+        DateTimeInterface|null $after = null,
+        array $opts = [],
     ): void {
         try {
             Data::increment($this->name, $type . '_total');
@@ -1632,50 +1748,50 @@ class PlexServer implements ServerInterface
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
-                    $item->title ?? $item->originalTitle ?? '??',
-                    $item->year ?? 0000
+                    ag($item, ['title', 'originalTitle'], '??'),
+                    ag($item, 'year', 0000)
                 );
             } else {
                 $iName = trim(
                     sprintf(
                         '%s - [%s - (%sx%s)]',
                         $library,
-                        $item->grandparentTitle ?? $item->originalTitle ?? '??',
-                        str_pad((string)($item->parentIndex ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($item->index ?? 0), 3, '0', STR_PAD_LEFT),
+                        ag($item, ['grandparentTitle', 'originalTitle'], '??'),
+                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     )
                 );
             }
 
-            $date = max((int)($item->lastViewedAt ?? 0), (int)($item->addedAt ?? 0));
+            $date = max((int)ag($item, 'lastViewedAt', 0), (int)ag($item, 'addedAt', 0));
 
             if (0 === $date) {
                 $this->logger->notice(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
-                        'payload' => get_object_vars($item),
+                        'payload' => $item,
                     ]
                 );
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
 
-            $rItem = $this->createEntity($item, $type);
+            $rItem = $this->createEntity(item: $item, type: $type, opts: $opts);
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
-                if (empty($item->Guid)) {
+                if (empty($item['Guid'])) {
                     $message .= sprintf(' Most likely unmatched %s.', $rItem->type);
                 }
 
-                if (null === ($item->Guid ?? null)) {
-                    $item->Guid = [['id' => $item->guid]];
+                if (null === ($item['Guid'] ?? null)) {
+                    $item['Guid'] = [['id' => $item['guid']]];
                 } else {
-                    $item->Guid[] = ['id' => $item->guid];
+                    $item['Guid'][] = ['id' => $item['guid']];
                 }
 
-                $this->logger->debug($message, ['guids' => !empty($item->Guid) ? $item->Guid : 'None']);
+                $this->logger->debug($message, ['guids' => !empty($item['Guid']) ? $item['Guid'] : 'None']);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
@@ -1743,7 +1859,7 @@ class PlexServer implements ServerInterface
                 http_build_query(
                     [
                         'identifier' => 'com.plexapp.plugins.library',
-                        'key' => $item->ratingKey,
+                        'key' => $item['ratingKey'],
                     ]
                 )
             );
@@ -1785,12 +1901,12 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function processShow(StdClass $item, string $library): void
+    protected function processShow(array $item, string $library): void
     {
-        if (null === ($item->Guid ?? null)) {
-            $item->Guid = [['id' => $item->guid]];
+        if (null === ($item['Guid'] ?? null)) {
+            $item['Guid'] = [['id' => $item['guid']]];
         } else {
-            $item->Guid[] = ['id' => $item->guid];
+            $item['Guid'][] = ['id' => $item['guid']];
         }
 
         $iName = sprintf(
@@ -1802,39 +1918,39 @@ class PlexServer implements ServerInterface
 
         if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
             $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
-                'payload' => (array)$item,
+                'payload' => $item,
             ]);
         }
 
-        if (!$this->hasSupportedGuids(guids: $item->Guid)) {
-            if (null === ($item->Guid ?? null)) {
-                $item->Guid = [['id' => $item->guid]];
+        if (!$this->hasSupportedGuids(guids: $item['Guid'])) {
+            if (null === ($item['Guid'] ?? null)) {
+                $item['Guid'] = [['id' => $item['guid']]];
             } else {
-                $item->Guid[] = ['id' => $item->guid];
+                $item['Guid'][] = ['id' => $item['guid']];
             }
 
             $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
-            if (empty($item->Guid)) {
+            if (empty($item['Guid'] ?? [])) {
                 $message .= ' Most likely unmatched TV show.';
             }
 
-            $this->logger->info($message, ['guids' => !empty($item->Guid) ? $item->Guid : 'None']);
+            $this->logger->info($message, ['guids' => !empty($item['Guid']) ? $item['Guid'] : 'None']);
 
             return;
         }
 
-        $this->cache['shows'][$item->ratingKey] = Guid::fromArray($this->getGuids($item->Guid))->getAll();
+        $this->cache['shows'][$item['ratingKey']] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
     }
 
     protected function parseGuids(array $guids): array
     {
         $guid = [];
 
-        foreach ($guids as $_id) {
-            try {
-                $val = is_object($_id) ? $_id->id : $_id['id'];
+        $ids = array_column($guids, 'id');
 
+        foreach ($ids as $val) {
+            try {
                 if (empty($val)) {
                     continue;
                 }
@@ -1869,10 +1985,10 @@ class PlexServer implements ServerInterface
     {
         $guid = [];
 
-        foreach ($guids as $_id) {
-            try {
-                $val = is_object($_id) ? $_id->id : $_id['id'];
+        $ids = array_column($guids, 'id');
 
+        foreach ($ids as $val) {
+            try {
                 if (empty($val)) {
                     continue;
                 }
@@ -2008,73 +2124,88 @@ class PlexServer implements ServerInterface
         }
     }
 
-    protected function createEntity(StdClass $item, string $type): StateEntity
+    protected function createEntity(StdClass|array $item, string $type, array $opts = []): StateEntity
     {
-        if (null === ($item->Guid ?? null)) {
-            $item->Guid = [['id' => $item->guid]];
-        } else {
-            $item->Guid[] = ['id' => $item->guid];
+        if (false === is_array($item)) {
+            $item = (array)$item;
         }
 
-        $date = max((int)($item->lastViewedAt ?? 0), (int)($item->addedAt ?? 0));
+        if (null === ag($item, 'Guid')) {
+            $item['Guid'] = [['id' => ag($item, 'guid')]];
+        } else {
+            $item['Guid'][] = ['id' => ag($item, 'guid')];
+        }
 
-        $guids = $this->getGuids($item->Guid ?? []);
-        $guids += Guid::makeVirtualGuid($this->name, (string)$item->ratingKey);
+        $date = max((int)ag($item, 'lastViewedAt', 0), (int)(ag($item, 'addedAt', 0)));
 
-        $row = [
+        $guids = $this->getGuids(ag($item, 'Guid', []));
+        $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'ratingKey'));
+
+        $builder = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => $date,
-            iFace::COLUMN_WATCHED => (int)(bool)($item->viewCount ?? false),
+            iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
             iFace::COLUMN_VIA => $this->name,
-            iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
+            iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
             iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
-                    iFace::COLUMN_ID => (string)$item->ratingKey,
+                    iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)($item->viewCount ?? false),
+                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($item, 'viewCount', false),
                     iFace::COLUMN_VIA => $this->name,
-                    iFace::COLUMN_TITLE => $item->title ?? $item->originalTitle ?? '??',
-                    iFace::COLUMN_GUIDS => $this->parseGuids($item->Guid ?? []),
-                    iFace::COLUMN_META_DATA_ADDED_AT => (string)$item->addedAt,
+                    iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+                    iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
+                    iFace::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
         ];
 
+        $metadata = &$builder[iFace::COLUMN_META_DATA][$this->name];
+        $metadataExtra = &$metadata[iFace::COLUMN_META_DATA_EXTRA];
+
+        if (null !== ($library = ag($item, 'librarySectionID', $opts['library'] ?? null))) {
+            $metadata[iFace::COLUMN_META_LIBRARY] = (string)$library;
+        }
+
         if (iFace::TYPE_EPISODE === $type) {
-            $row[iFace::COLUMN_TITLE] = $item->grandparentTitle ?? '??';
-            $row[iFace::COLUMN_SEASON] = $item->parentIndex ?? 0;
-            $row[iFace::COLUMN_EPISODE] = $item->index ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = $item->grandparentTitle ?? '??';
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->title ?? $item->originalTitle ?? '??';
+            $builder[iFace::COLUMN_SEASON] = (int)ag($item, 'parentIndex', 0);
+            $builder[iFace::COLUMN_EPISODE] = (int)ag($item, 'index', 0);
 
-            $parentId = $item->grandparentRatingKey ?? $item->parentRatingKey ?? null;
+            $metadata[iFace::COLUMN_META_SHOW] = (string)ag($item, ['grandparentRatingKey', 'parentRatingKey'], '??');
 
-            if (null !== $parentId) {
-                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
-                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
+            $metadata[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
+            $metadata[iFace::COLUMN_SEASON] = (string)$builder[iFace::COLUMN_SEASON];
+            $metadata[iFace::COLUMN_EPISODE] = (string)$builder[iFace::COLUMN_EPISODE];
+
+            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iFace::COLUMN_TITLE];
+            $builder[iFace::COLUMN_TITLE] = $metadata[iFace::COLUMN_TITLE];
+
+            if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey']))) {
+                $builder[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
+                $metadata[iFace::COLUMN_PARENT] = $builder[iFace::COLUMN_PARENT];
             }
         }
 
-        if (null !== ($mediaYear = $item->grandParentYear ?? $item->parentYear ?? $item->year ?? null)) {
-            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
+        if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year'])) && !empty($mediaYear)) {
+            $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
 
-        if (null !== ($item->originallyAvailableAt ?? null)) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-                $item->originallyAvailableAt
-            )->format('Y-m-d');
+        if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {
+            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
-        if (null !== ($item->lastViewedAt ?? null)) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$item->lastViewedAt;
+        if (null !== ($playedAt = ag($item, 'lastViewedAt'))) {
+            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$playedAt;
         }
 
-        return Container::get(iFace::class)::fromArray($row);
+        unset($metadata, $metadataExtra);
+
+        $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+
+        return Container::get(iFace::class)::fromArray($builder);
     }
 
     protected function getEpisodeParent(int|string $id): array
