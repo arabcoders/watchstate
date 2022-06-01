@@ -28,7 +28,6 @@ final class MismatchCommand extends Command
     {
         $this->setName('backend:library:mismatch')
             ->setDescription('Find possible mis-identified movies or shows in a specific library.')
-            ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Library id.')
             ->addOption(
                 'output',
                 'o',
@@ -56,13 +55,16 @@ final class MismatchCommand extends Command
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addArgument('id', InputArgument::REQUIRED, 'Library id.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
         $percentage = $input->getOption('percentage');
+        $backend = $input->getArgument('backend');
+        $id = $input->getArgument('id');
 
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
@@ -77,15 +79,6 @@ final class MismatchCommand extends Command
             }
         }
 
-        if (null === ($id = $input->getOption('id'))) {
-            $arr = [
-                'error' => 'Library mismatch search require library id to be passed in [-i, --id].'
-            ];
-
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-            return self::FAILURE;
-        }
-
         try {
             $serverOpts = $opts = $list = [];
 
@@ -97,7 +90,7 @@ final class MismatchCommand extends Command
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            foreach ($this->getBackend($input->getArgument('backend'), $serverOpts)->getLibrary($id, $opts) as $item) {
+            foreach ($this->getBackend($backend, $serverOpts)->getLibrary(id: $id, opts: $opts) as $item) {
                 $processed = $this->compare(item: $item, method: $input->getOption('method'));
 
                 if (empty($processed) || $processed['percent'] >= (float)$percentage) {
@@ -108,7 +101,7 @@ final class MismatchCommand extends Command
             }
         } catch (Throwable $e) {
             $arr = [
-                'error' => $e->getMessage(),
+                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
             ];
 
             if ('table' !== $mode) {
@@ -126,7 +119,7 @@ final class MismatchCommand extends Command
 
         if (empty($list)) {
             $arr = [
-                'info' => 'No mis-identified items were found using given parameters.',
+                'info' => sprintf('%s: No mis-identified items were found using given parameters.', $backend)
             ];
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);

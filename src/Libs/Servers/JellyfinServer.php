@@ -30,7 +30,6 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
-use StdClass;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -64,15 +63,6 @@ class JellyfinServer implements ServerInterface
     protected const WEBHOOK_TAINTED_EVENTS = [
         'PlaybackStart',
         'PlaybackStop',
-    ];
-
-    protected const BACKEND_CAST_KEYS = [
-        'StartPositionTicks' => 'duration_mil',
-        'RunTimeTicks' => 'duration_mil',
-        'PremiereDate' => 'datetime',
-        'DateCreated' => 'datetime',
-        'LastPlayedDate' => 'datetime',
-        'Size' => 'size',
     ];
 
     protected UriInterface|null $url = null;
@@ -205,16 +195,20 @@ class JellyfinServer implements ServerInterface
             $date = ag($user, ['LastActivityDate', 'LastLoginDate'], null);
 
             $data = [
-                'user_id' => ag($user, 'Id'),
-                'username' => ag($user, 'Name'),
-                'is_admin' => ag($user, 'Policy.IsAdministrator') ? 'Yes' : 'No',
-                'is_hidden' => ag($user, 'Policy.IsHidden') ? 'Yes' : 'No',
-                'is_disabled' => ag($user, 'Policy.IsDisabled') ? 'Yes' : 'No',
-                'updated_at' => null !== $date ? makeDate($date) : 'Never',
+                'id' => ag($user, 'Id'),
+                'name' => ag($user, 'Name'),
+                'admin' => (bool)ag($user, 'Policy.IsAdministrator'),
+                'Hidden' => (bool)ag($user, 'Policy.IsHidden'),
+                'disabled' => (bool)ag($user, 'Policy.IsDisabled'),
+                'updatedAt' => null !== $date ? makeDate($date) : 'Never',
             ];
 
             if (true === ag($opts, 'tokens', false)) {
                 $data['token'] = $this->token;
+            }
+
+            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                $data['raw'] = $user;
             }
 
             $list[] = $data;
@@ -295,111 +289,99 @@ class JellyfinServer implements ServerInterface
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', afterLast(__CLASS__, '\\')), 400);
+            throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
         }
 
         $event = ag($json, 'NotificationType', 'unknown');
         $type = ag($json, 'ItemType', 'not_found');
+        $id = ag($json, 'ItemId');
 
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(sprintf('%s: Not allowed type [%s]', self::NAME, $type), 200);
+            throw new HttpException(
+                sprintf('%s: Webhook content type is not supported. [%s]', $this->getName(), $type), 200
+            );
+        }
+
+        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
+            throw new HttpException(
+                sprintf('%s: Webhook event type is not supported. [%s]', $this->getName(), $event), 200
+            );
+        }
+
+        if (null === $id) {
+            throw new HttpException(sprintf('%s: Webhook payload has no id.', $this->getName()), 400);
         }
 
         $type = strtolower($type);
 
-        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(sprintf('%s: Not allowed event [%s]', self::NAME, $event), 200);
-        }
+        try {
+            $isPlayed = (bool)ag($json, 'Played');
+            $lastPlayedAt = true === $isPlayed ? ag($json, 'LastPlayedDate') : null;
 
-        $isTainted = in_array($event, self::WEBHOOK_TAINTED_EVENTS);
-
-        $providersId = [];
-
-        foreach ($json as $key => $val) {
-            if (false === str_starts_with($key, 'Provider_')) {
-                continue;
-            }
-            $providersId[after($key, 'Provider_')] = $val;
-        }
-
-        $guids = $this->getGuids($providersId);
-        $guids += Guid::makeVirtualGuid($this->name, (string)ag($json, 'ItemId'));
-
-        $row = [
-            iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => strtotime(ag($json, ['UtcTimestamp', 'Timestamp', 'LastPlayedDate'], 'now')),
-            iFace::COLUMN_WATCHED => (int)(bool)ag($json, 'Played', 0),
-            iFace::COLUMN_VIA => $this->name,
-            iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $guids,
-            iFace::COLUMN_META_DATA => [
-                $this->name => [
-                    iFace::COLUMN_ID => (string)ag($json, 'ItemId'),
-                    iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($json, 'Played', 0),
-                    iFace::COLUMN_VIA => $this->name,
-                    iFace::COLUMN_TITLE => ag($json, ['Name', 'OriginalTitle'], '??'),
-                    iFace::COLUMN_GUIDS => array_change_key_case($providersId, CASE_LOWER)
-                ]
-            ],
-            iFace::COLUMN_EXTRA => [
-                $this->name => [
-                    iFace::COLUMN_EXTRA_EVENT => $event,
-                    iFace::COLUMN_EXTRA_DATE => makeDate(ag($json, ['UtcTimestamp', 'Timestamp'], 'now')),
+            $fields = [
+                iFace::COLUMN_WATCHED => (int)$isPlayed,
+                iFace::COLUMN_META_DATA => [
+                    $this->name => [
+                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
+                    ]
                 ],
-            ],
-        ];
+                iFace::COLUMN_EXTRA => [
+                    $this->name => [
+                        iFace::COLUMN_EXTRA_EVENT => $event,
+                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
+                    ],
+                ],
+            ];
 
-        if (iFace::TYPE_EPISODE === $type) {
-            $seriesName = ag($json, 'SeriesName');
-
-            $row[iFace::COLUMN_TITLE] = $seriesName ?? '??';
-            $row[iFace::COLUMN_SEASON] = ag($json, 'SeasonNumber', 0);
-            $row[iFace::COLUMN_EPISODE] = ag($json, 'EpisodeNumber', 0);
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = $seriesName ?? '??';
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = ag(
-                $json,
-                ['Name', 'OriginalTitle'],
-                '??'
-            );
-
-            if (null !== $seriesName) {
-                $row[iFace::COLUMN_PARENT] = $this->getEpisodeParent(
-                    ag($json, 'ItemId'),
-                    $seriesName . ':' . $row['year']
-                );
+            if (true === $isPlayed && null !== $lastPlayedAt) {
+                $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
+                $fields = array_replace_recursive($fields, [
+                    iFace::COLUMN_UPDATED => $lastPlayedAt,
+                    iFace::COLUMN_META_DATA => [
+                        $this->name => [
+                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ]);
             }
-        }
 
-        if (null !== ($mediaYear = ag($json, 'Year'))) {
-            $row[iFace::COLUMN_YEAR] = (int)$mediaYear;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$mediaYear;
-        }
+            $providersId = [];
 
-        if (null !== ($premiereDate = ag($json, 'PremiereDate'))) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-                $premiereDate
-            )->format('Y-m-d');
-        }
+            foreach ($json as $key => $val) {
+                if (false === str_starts_with($key, 'Provider_')) {
+                    continue;
+                }
+                $providersId[after($key, 'Provider_')] = $val;
+            }
 
-        if (null !== ($addedAt = ag($json, 'DateCreated'))) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_ADDED_AT] = makeDate(
-                $addedAt
-            )->getTimestamp();
-        }
+            if (null !== ($guids = $this->getGuids($providersId)) && false === empty($guids)) {
+                $guids += Guid::makeVirtualGuid($this->name, (string)$id);
+                $fields[iFace::COLUMN_GUIDS] = $guids;
+                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+            }
 
-        if (null !== ($lastPlayedAt = ag($json, 'LastPlayedDate')) && true === (bool)ag($json, 'Played')) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = makeDate(
-                $lastPlayedAt
-            )->getTimestamp();
+            $entity = $this->createEntity(
+                item: $this->getMetadata(id: $id),
+                type: $type,
+                opts: ['override' => $fields],
+            )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
+        } catch (Throwable $e) {
+            $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'kind' => get_class($e),
+            ]);
+            throw new HttpException(
+                sprintf(
+                    '%s: Unable to process item id \'%s\'.',
+                    $this->getName(),
+                    $id,
+                ), 200
+            );
         }
-
-        $entity = Container::get(iFace::class)::fromArray($row)->setIsTainted($isTainted);
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $message = sprintf('%s: No valid/supported External ids.', self::NAME);
+            $message = sprintf('%s: No valid/supported external ids.', self::NAME);
 
             if (empty($providersId)) {
                 $message .= sprintf(' Most likely unmatched %s.', $entity->type);
@@ -420,15 +402,18 @@ class JellyfinServer implements ServerInterface
         try {
             $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
                 http_build_query(
-                    [
-                        'searchTerm' => $query,
-                        'Limit' => $limit,
-                        'Recursive' => 'true',
-                        'Fields' => 'ProviderIds',
-                        'enableUserData' => 'true',
-                        'enableImages' => 'false',
-                        'IncludeItemTypes' => 'Episode,Movie,Series',
-                    ]
+                    array_replace_recursive(
+                        [
+                            'searchTerm' => $query,
+                            'Limit' => $limit,
+                            'Recursive' => 'true',
+                            'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
+                            'enableUserData' => 'true',
+                            'enableImages' => 'false',
+                            'IncludeItemTypes' => 'Episode,Movie,Series',
+                        ],
+                        $opts['query'] ?? []
+                    )
                 )
             );
 
@@ -436,7 +421,11 @@ class JellyfinServer implements ServerInterface
                 'url' => $url
             ]);
 
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+            $response = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive($this->getHeaders(), $opts['headers'] ?? [])
+            );
 
             if (200 !== $response->getStatusCode()) {
                 throw new RuntimeException(
@@ -455,41 +444,150 @@ class JellyfinServer implements ServerInterface
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
-            $list = ag($json, 'Items', []);
+            $list = [];
 
-            return true === ag($opts, Options::RAW_RESPONSE) ? $list : filterResponse($list, self::BACKEND_CAST_KEYS);
+            foreach (ag($json, 'Items', []) as $item) {
+                $watchedAt = ag($item, 'UserData.LastPlayedDate');
+                $year = (int)ag($item, 'Year', 0);
+
+                if (0 === $year && null !== ($airDate = ag($item, 'PremiereDate'))) {
+                    $year = (int)makeDate($airDate)->format('Y');
+                }
+
+                $type = strtolower(ag($item, 'Type'));
+
+                $episodeNumber = ('episode' === $type) ? sprintf(
+                    '%sx%s - ',
+                    str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
+                    str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
+                ) : null;
+
+                $builder = [
+                    'id' => ag($item, 'Id'),
+                    'type' => ucfirst($type),
+                    'title' => $episodeNumber . mb_substr(ag($item, ['Name', 'OriginalTitle'], '??'), 0, 50),
+                    'year' => $year,
+                    'addedAt' => makeDate(ag($item, 'DateCreated', 'now'))->format('Y-m-d H:i:s T'),
+                    'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
+                ];
+
+                if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                    $builder['raw'] = $item;
+                }
+
+                $list[] = $builder;
+            }
+
+            return $list;
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function searchId(string|int $id, array $opts = []): array
     {
+        $item = $this->getMetadata($id, $opts);
+
+        $year = (int)ag($item, 'Year', 0);
+
+        if (0 === $year && null !== ($airDate = ag($item, 'PremiereDate'))) {
+            $year = (int)makeDate($airDate)->format('Y');
+        }
+
+        $type = strtolower(ag($item, 'Type'));
+
+        $episodeNumber = ('episode' === $type) ? sprintf(
+            '%sx%s - ',
+            str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
+            str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
+        ) : null;
+
+        $builder = [
+            'id' => ag($item, 'Id'),
+            'type' => ucfirst($type),
+            'title' => $episodeNumber . mb_substr(ag($item, ['Name', 'OriginalTitle'], '??'), 0, 50),
+            'year' => $year,
+            'addedAt' => makeDate(ag($item, 'DateCreated', 'now'))->format('Y-m-d H:i:s T'),
+        ];
+
+        if (null !== ($watchedAt = ag($item, 'UserData.LastPlayedDate'))) {
+            $builder['watchedAt'] = makeDate($watchedAt)->format('Y-m-d H:i:s T');
+        }
+
+        if (null !== ($endDate = ag($item, 'EndDate'))) {
+            $builder['EndedAt'] = makeDate($endDate)->format('Y-m-d H:i:s T');
+        }
+
+        if (('movie' === $type || 'series' === $type) && null !== ($premiereDate = ag($item, 'PremiereDate'))) {
+            $builder['premieredAt'] = makeDate($premiereDate)->format('Y-m-d H:i:s T');
+        }
+
+        if (null !== $watchedAt) {
+            $builder['watchedAt'] = makeDate($watchedAt)->format('Y-m-d H:i:s T');
+        }
+
+        if (('episode' === $type || 'movie' === $type) && null !== ($duration = ag($item, 'RunTimeTicks'))) {
+            $builder['duration'] = formatDuration($duration / 10000);
+        }
+
+        if (null !== ($status = ag($item, 'Status'))) {
+            $builder['status'] = $status;
+        }
+
+        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+            $builder['raw'] = $item;
+        }
+
+        return $builder;
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function getMetadata(string|int $id, array $opts = []): array
+    {
         $this->checkConfig();
+
+        $cacheKey = false === ((bool)($opts['nocache'] ?? false)) ? $this->getName() . '_' . $id . '_metadata' : null;
+
+        if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
+            return $this->cacheIO->get(key: $cacheKey);
+        }
 
         try {
             $url = $this->url->withPath(sprintf('/Users/%s/items/' . $id, $this->user))->withQuery(
                 http_build_query(
-                    [
-                        'Recursive' => 'false',
-                        'Fields' => 'ProviderIds',
-                        'enableUserData' => 'true',
-                        'enableImages' => 'false',
-                        'IncludeItemTypes' => 'Episode,Movie,Series',
-                    ]
+                    array_merge_recursive(
+                        [
+                            'Recursive' => 'false',
+                            'Fields' => 'ProviderIds',
+                            'enableUserData' => 'true',
+                            'enableImages' => 'false',
+                            'IncludeItemTypes' => 'Episode,Movie,Series',
+                        ],
+                        $opts['query'] ?? []
+                    ),
                 )
             );
 
-            $this->logger->debug(sprintf('%s: Sending get meta data for id \'%s\'.', $this->name, $id), [
-                'url' => $url
-            ]);
+            $this->logger->debug(sprintf('%s: Requesting metadata for #\'%s\'.', $this->name, $id), ['url' => $url]);
 
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
+            $response = $this->http->request(
+                'GET',
+                (string)$url,
+                array_replace_recursive(
+                    $this->getHeaders(),
+                    $opts['headers'] ?? []
+                )
+            );
 
             if (200 !== $response->getStatusCode()) {
                 throw new RuntimeException(
                     sprintf(
-                        '%s: Get metadata request for id \'%s\' responded with unexpected http status code \'%d\'.',
+                        '%s: Request for #\'%s\' metadata responded with unexpected http status code \'%d\'.',
                         $this->name,
                         $id,
                         $response->getStatusCode()
@@ -497,13 +595,17 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
-            $json = json_decode(
+            $item = json_decode(
                 json:        $response->getContent(),
                 associative: true,
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
-            return true === ag($opts, Options::RAW_RESPONSE) ? $json : filterResponse($json, self::BACKEND_CAST_KEYS);
+            if (null !== $cacheKey) {
+                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
+            }
+
+            return $item;
         } catch (ExceptionInterface|JsonException $e) {
             throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
         }
@@ -745,7 +847,7 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    public function listLibraries(): array
+    public function listLibraries(array $opts = []): array
     {
         $this->checkConfig(true);
 
@@ -824,13 +926,19 @@ class JellyfinServer implements ServerInterface
             $key = (string)ag($section, 'Id');
             $type = ag($section, 'CollectionType', 'unknown');
 
-            $list[] = [
+            $builder = [
                 'id' => $key,
                 'title' => ag($section, 'Name', '???'),
                 'type' => $type,
                 'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
                 'supported' => 'movies' === $type || 'tvshows' === $type,
             ];
+
+            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                $builder['raw'] = $section;
+            }
+
+            $list[] = $builder;
         }
 
         return $list;
@@ -839,8 +947,8 @@ class JellyfinServer implements ServerInterface
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($after, $mapper) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after) {
+            ok: function (string $cName, string $type, string|int $id, UriInterface|string $url) use ($after, $mapper) {
+                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after, $id, $url) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
@@ -848,7 +956,11 @@ class JellyfinServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $response->getStatusCode()
-                            )
+                            ),
+                            [
+                                'id' => $id,
+                                'url' => (string)$url
+                            ]
                         );
                         return;
                     }
@@ -857,13 +969,16 @@ class JellyfinServer implements ServerInterface
                         $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
 
                         $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/Items',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
+                            iterable: httpClientChunks(stream: $this->http->stream($response)),
+                            options:  [
+                                          'pointer' => '/Items',
+                                          'decoder' => new ErrorWrappingDecoder(
+                                              innerDecoder: new ExtJsonDecoder(
+                                                                assoc:   true,
+                                                                options: JSON_INVALID_UTF8_IGNORE
+                                                            )
+                                          )
+                                      ]
                         );
 
                         foreach ($it as $entity) {
@@ -881,7 +996,15 @@ class JellyfinServer implements ServerInterface
                                 );
                                 continue;
                             }
-                            $this->processImport($mapper, $type, $cName, $entity, $after);
+
+                            $this->processImport(
+                                mapper:  $mapper,
+                                type:    $type,
+                                library: $cName,
+                                item:    $entity,
+                                after:   $after,
+                                opts:    ['library' => $id],
+                            );
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
@@ -916,10 +1039,11 @@ class JellyfinServer implements ServerInterface
                     $this->logger->info(sprintf('%s: Parsing \'%s\' response complete.', $this->name, $cName));
                 };
             },
-            error: function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, string|int $id, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
                     [
+                        'id' => $id,
                         'url' => $url,
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
@@ -1058,7 +1182,8 @@ class JellyfinServer implements ServerInterface
                 }
 
                 if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                    $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated'], null);
+                    $isPlayed = true === (bool)ag($json, 'UserData.Played');
+                    $date = ag($json, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated');
 
                     if (null === $date) {
                         $this->logger->error(
@@ -1146,8 +1271,12 @@ class JellyfinServer implements ServerInterface
     public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type) use ($mapper, $queue, $after) {
-                return function (ResponseInterface $response) use ($mapper, $queue, $cName, $type, $after) {
+            ok: function (string $cName, string $type, string|int $id, UriInterface|string $url) use (
+                $mapper,
+                $queue,
+                $after
+            ) {
+                return function (ResponseInterface $response) use ($mapper, $queue, $cName, $type, $after, $id, $url) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
                             sprintf(
@@ -1155,7 +1284,11 @@ class JellyfinServer implements ServerInterface
                                 $this->name,
                                 $cName,
                                 $response->getStatusCode()
-                            )
+                            ),
+                            [
+                                'id' => $id,
+                                'url' => (string)$url,
+                            ]
                         );
                         return;
                     }
@@ -1164,13 +1297,16 @@ class JellyfinServer implements ServerInterface
                         $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
 
                         $it = Items::fromIterable(
-                            httpClientChunks($this->http->stream($response)),
-                            [
-                                'pointer' => '/Items',
-                                'decoder' => new ErrorWrappingDecoder(
-                                    new ExtJsonDecoder(options: JSON_INVALID_UTF8_IGNORE)
-                                )
-                            ]
+                            iterable: httpClientChunks(stream: $this->http->stream($response)),
+                            options:  [
+                                          'pointer' => '/Items',
+                                          'decoder' => new ErrorWrappingDecoder(
+                                              innerDecoder: new ExtJsonDecoder(
+                                                                assoc:   true,
+                                                                options: JSON_INVALID_UTF8_IGNORE
+                                                            )
+                                          )
+                                      ]
                         );
 
                         foreach ($it as $entity) {
@@ -1188,7 +1324,16 @@ class JellyfinServer implements ServerInterface
                                 );
                                 continue;
                             }
-                            $this->processExport($mapper, $queue, $type, $cName, $entity, $after);
+
+                            $this->processExport(
+                                mapper:  $mapper,
+                                queue:   $queue,
+                                type:    $type,
+                                library: $cName,
+                                item:    $entity,
+                                after:   $after,
+                                opts:    ['library' => $id],
+                            );
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
@@ -1223,7 +1368,7 @@ class JellyfinServer implements ServerInterface
                     $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
                 };
             },
-            error: function (string $cName, string $type, UriInterface|string $url) {
+            error: function (string $cName, string $type, string|int $id, UriInterface|string $url) {
                 return fn(Throwable $e) => $this->logger->error(
                     sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
                     [
@@ -1345,6 +1490,7 @@ class JellyfinServer implements ServerInterface
             foreach ($listDirs as $section) {
                 $key = (string)ag($section, 'Id');
                 $title = trim((string)ag($section, 'Name', '???'));
+                $type = ag($section, 'CollectionType', 'unknown');
 
                 if ('tvshows' !== ag($section, 'CollectionType', 'unknown')) {
                     continue;
@@ -1353,6 +1499,10 @@ class JellyfinServer implements ServerInterface
                 $cName = sprintf('(%s) - (%s:%s)', $title, 'show', $key);
 
                 if (null !== $ignoreIds && in_array($key, $ignoreIds, true)) {
+                    $this->logger->info(sprintf('%s: Skipping \'%s\'. Ignored by user config.', $this->name, $title), [
+                        'id' => $key,
+                        'type' => $type,
+                    ]);
                     continue;
                 }
 
@@ -1379,8 +1529,8 @@ class JellyfinServer implements ServerInterface
                         (string)$url,
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
-                                'ok' => $ok($cName, 'show', $url),
-                                'error' => $error($cName, 'show', $url),
+                                'ok' => $ok(cName: $cName, type: 'show', id: $key, url: $url),
+                                'error' => $error(cName: $cName, type: 'show', id: $key, url: $url),
                             ]
                         ])
                     );
@@ -1454,8 +1604,8 @@ class JellyfinServer implements ServerInterface
                     (string)$url,
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
-                            'ok' => $ok($cName, $type, $url),
-                            'error' => $error($cName, $type, $url),
+                            'ok' => $ok(cName: $cName, type: $type, id: $key, url: $url),
+                            'error' => $error(cName: $cName, type: $type, id: $key, url: $url),
                         ]
                     ])
                 );
@@ -1489,8 +1639,9 @@ class JellyfinServer implements ServerInterface
         ImportInterface $mapper,
         string $type,
         string $library,
-        StdClass $item,
-        DateTimeInterface|null $after = null
+        array $item,
+        DateTimeInterface|null $after = null,
+        array $opts = [],
     ): void {
         try {
             if ('show' === $type) {
@@ -1505,30 +1656,30 @@ class JellyfinServer implements ServerInterface
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
-                    $item->Name ?? $item->OriginalTitle ?? '??',
-                    $item->ProductionYear ?? 0000
+                    ag($item, ['Name', 'OriginalTitle'], '??'),
+                    ag($item, 'ProductionYear', 0000)
                 );
             } else {
                 $iName = trim(
                     sprintf(
                         '%s - [%s - (%sx%s)]',
                         $library,
-                        $item->SeriesName ?? '??',
-                        str_pad((string)($item->ParentIndexNumber ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($item->IndexNumber ?? 0), 3, '0', STR_PAD_LEFT),
+                        ag($item, 'SeriesName', '??'),
+                        str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                     )
                 );
             }
 
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
-                    'payload' => (array)$item,
+                    'payload' => $item
                 ]);
             }
 
-            $date = $item->UserData->LastPlayedDate ?? $item->DateCreated ?? null;
+            $isPlayed = true === (bool)ag($item, 'UserData.Played');
 
-            if (null === $date) {
+            if (null === ag($item, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated')) {
                 $this->logger->warning(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
@@ -1539,24 +1690,24 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            $entity = $this->createEntity($item, $type);
+            $entity = $this->createEntity(item: $item, type: $type, opts: $opts);
 
-            if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                if (true === Config::get('debug.import')) {
-                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item->Id . '.json';
+            if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
+                if (true === (bool)Config::get('debug.import')) {
+                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . ag($item, 'Id') . '.json';
 
                     if (!file_exists($name)) {
                         file_put_contents(
-                            $name,
-                            json_encode(
-                                $item,
-                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE
-                            )
+                            filename: $name,
+                            data:     json_encode(
+                                          value: $item,
+                                          flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE
+                                      )
                         );
                     }
                 }
 
-                $providerIds = (array)($item->ProviderIds ?? []);
+                $providerIds = (array)ag($item, 'ProviderIds', []);
 
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
@@ -1564,27 +1715,32 @@ class JellyfinServer implements ServerInterface
                     $message .= sprintf(' Most likely unmatched %s.', $entity->type);
                 }
 
-                $kvStore = [
+                $context = [
                     'guids' => !empty($providerIds) ? $providerIds : 'None'
                 ];
 
                 if (true === (bool)ag($this->options, Options::DEBUG_TRACE, false)) {
-                    $kvStore['entity'] = $entity->getAll();
-                    $kvStore['payload'] = json_decode(
-                        json:        json_encode($item),
+                    $context['entity'] = $entity->getAll();
+                    $context['payload'] = json_decode(
+                        json:        json_encode(value: $item),
                         associative: true,
                         flags:       JSON_INVALID_UTF8_IGNORE
                     );
                 }
 
-                $this->logger->info($message, $kvStore);
+                $this->logger->info($message, $context);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
 
                 return;
             }
 
-            $mapper->add($this->name, $this->name . ' - ' . $iName, $entity, ['after' => $after]);
+            $mapper->add(
+                bucket: $this->name,
+                name:   $this->name . ' - ' . $iName,
+                entity: $entity,
+                opts:   ['after' => $after]
+            );
         } catch (Throwable $e) {
             $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),
@@ -1599,8 +1755,9 @@ class JellyfinServer implements ServerInterface
         QueueRequests $queue,
         string $type,
         string $library,
-        StdClass $item,
-        DateTimeInterface|null $after = null
+        array $item,
+        DateTimeInterface|null $after = null,
+        array $opts = []
     ): void {
         Data::increment($this->name, $type . '_total');
 
@@ -1609,38 +1766,38 @@ class JellyfinServer implements ServerInterface
                 $iName = sprintf(
                     '%s - [%s (%d)]',
                     $library,
-                    $item->Name ?? $item->OriginalTitle ?? '??',
-                    $item->ProductionYear ?? 0000
+                    ag($item, ['Name', 'OriginalTitle', '??']),
+                    ag($item, 'ProductionYear', 0000)
                 );
             } else {
                 $iName = trim(
                     sprintf(
                         '%s - [%s - (%sx%s)]',
                         $library,
-                        $item->SeriesName ?? '??',
-                        str_pad((string)($item->ParentIndexNumber ?? 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)($item->IndexNumber ?? 0), 3, '0', STR_PAD_LEFT),
+                        ag($item, ['SeriesName', 'OriginalTitle'], '??'),
+                        str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                     )
                 );
             }
 
-            $date = $item->UserData?->LastPlayedDate ?? $item->DateCreated ?? null;
+            $isPlayed = true === (bool)ag($item, 'UserData.Played');
 
-            if (null === $date) {
+            if (null === ag($item, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated')) {
                 $this->logger->notice(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
-                        'payload' => get_object_vars($item),
+                        'payload' => $item,
                     ]
                 );
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
 
-            $rItem = $this->createEntity($item, $type);
+            $rItem = $this->createEntity(item: $item, type: $type, opts: $opts);
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $providerIds = (array)($item->ProviderIds ?? []);
+                $providerIds = (array)ag($item, 'ProviderIds', []);
 
                 $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
 
@@ -1669,11 +1826,7 @@ class JellyfinServer implements ServerInterface
 
             if (null === ($entity = $mapper->get($rItem))) {
                 $this->logger->info(
-                    sprintf(
-                        '%s: Ignoring \'%s\'. Media item is not imported.',
-                        $this->name,
-                        $iName,
-                    ),
+                    sprintf('%s: Ignoring \'%s\'. Item is not imported.', $this->name, $iName),
                     [
                         'played' => $rItem->isWatched() ? 'Yes' : 'No',
                         'guids' => $rItem->hasGuids() ? $rItem->getGuids() : 'None',
@@ -1711,7 +1864,7 @@ class JellyfinServer implements ServerInterface
                 }
             }
 
-            $url = $this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, $item->Id));
+            $url = $this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, ag($item, 'Id')));
 
             $this->logger->debug(
                 sprintf(
@@ -1721,7 +1874,7 @@ class JellyfinServer implements ServerInterface
                     $entity->isWatched() ? 'Played' : 'Unplayed',
                 ),
                 [
-                    'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
+                    'backend' => $rItem->isWatched() ? 'Played' : 'Unplayed',
                     'method' => $entity->isWatched() ? 'POST' : 'DELETE',
                     'url' => $url,
                 ]
@@ -1729,17 +1882,17 @@ class JellyfinServer implements ServerInterface
 
             if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
                 $queue->add(
-                    $this->http->request(
-                        $entity->isWatched() ? 'POST' : 'DELETE',
-                        (string)$url,
-                        array_replace_recursive($this->getHeaders(), [
-                            'user_data' => [
-                                'itemName' => $iName,
-                                'server' => $this->name,
-                                'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                            ],
-                        ])
-                    )
+                    request: $this->http->request(
+                               $entity->isWatched() ? 'POST' : 'DELETE',
+                               (string)$url,
+                               array_replace_recursive($this->getHeaders(), [
+                                   'user_data' => [
+                                       'itemName' => $iName,
+                                       'server' => $this->name,
+                                       'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                   ],
+                               ])
+                           )
                 );
             }
         } catch (Throwable $e) {
@@ -1751,22 +1904,22 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    protected function processShow(StdClass $item, string $library): void
+    protected function processShow(array $item, string $library): void
     {
-        $providersId = (array)($item->ProviderIds ?? []);
-
         $iName = sprintf(
             '%s - [%s (%d)]',
             $library,
-            $item->Name ?? $item->OriginalTitle ?? '??',
-            $item->ProductionYear ?? 0000
+            ag($item, ['Name', 'OriginalTitle'], '??'),
+            ag($item, 'ProductionYear', 0000)
         );
 
         if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
             $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
-                'payload' => (array)$item,
+                'payload' => $item,
             ]);
         }
+
+        $providersId = (array)ag($item, 'ProviderIds', []);
 
         if (!$this->hasSupportedIds($providersId)) {
             $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
@@ -1780,18 +1933,14 @@ class JellyfinServer implements ServerInterface
             return;
         }
 
-        $cacheName = ag($item, ['Name', 'OriginalTitle'], '??') . ':' . ag($item, 'ProductionYear', 0000);
-        $this->cache['shows'][$item->Id] = Guid::fromArray($this->getGuids($providersId))->getAll();
-        $this->cache['shows'][$cacheName] = &$this->cache['shows'][$item->Id];
+        $this->cache['shows'][ag($item, 'Id')] = Guid::fromArray($this->getGuids($providersId))->getAll();
     }
 
     protected function getGuids(array $ids): array
     {
         $guid = [];
 
-        $ids = array_change_key_case($ids, CASE_LOWER);
-
-        foreach ($ids as $key => $value) {
+        foreach (array_change_key_case($ids, CASE_LOWER) as $key => $value) {
             if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
                 continue;
             }
@@ -1812,9 +1961,7 @@ class JellyfinServer implements ServerInterface
 
     protected function hasSupportedIds(array $ids): bool
     {
-        $ids = array_change_key_case($ids, CASE_LOWER);
-
-        foreach ($ids as $key => $value) {
+        foreach (array_change_key_case($ids, CASE_LOWER) as $key => $value) {
             if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
                 return true;
             }
@@ -1838,111 +1985,104 @@ class JellyfinServer implements ServerInterface
         }
     }
 
-    protected function createEntity(stdClass $item, string $type): StateEntity
+    protected function createEntity(array $item, string $type, array $opts = []): StateEntity
     {
-        $date = $item->UserData->LastPlayedDate ?? $item->DateCreated ?? null;
+        // -- Handle watched/updated column in a special way to support mark as unplayed.
+        if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
+            $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
+            $date = $opts['override'][iFace::COLUMN_WATCHED] ?? ag($item, 'DateCreated');
+        } else {
+            $isPlayed = (bool)ag($item, 'UserData.Played', false);
+            $date = ag($item, true === $isPlayed ? ['UserData.LastPlayedDate', 'DateCreated'] : 'DateCreated');
+        }
 
         if (null === $date) {
             throw new RuntimeException('No date was set on object.');
         }
 
-        $guids = $this->getGuids((array)($item->ProviderIds ?? []));
-        $guids += Guid::makeVirtualGuid($this->name, (string)$item->Id);
+        $guids = $this->getGuids(ag($item, 'ProviderIds', []));
+        $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'Id'));
 
-        $row = [
+        $builder = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
-            iFace::COLUMN_WATCHED => (int)(bool)($item->UserData->Played ?? false),
+            iFace::COLUMN_WATCHED => (int)$isPlayed,
             iFace::COLUMN_VIA => $this->name,
-            iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
+            iFace::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
             iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
                 $this->name => [
-                    iFace::COLUMN_ID => (string)$item->Id,
+                    iFace::COLUMN_ID => (string)ag($item, 'Id'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)($item->UserData->Played ?? false),
+                    iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iFace::COLUMN_VIA => $this->name,
-                    iFace::COLUMN_TITLE => $item->Name ?? $item->OriginalTitle ?? '??',
-                    iFace::COLUMN_GUIDS => array_change_key_case((array)($item->ProviderIds ?? []), CASE_LOWER),
-                    iFace::COLUMN_META_DATA_ADDED_AT => (string)makeDate($item->DateCreated)->getTimestamp(),
+                    iFace::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
+                    iFace::COLUMN_GUIDS => array_change_key_case((array)ag($item, 'ProviderIds', []), CASE_LOWER),
+                    iFace::COLUMN_META_DATA_ADDED_AT => (string)makeDate(ag($item, 'DateCreated'))->getTimestamp(),
                 ],
             ],
             iFace::COLUMN_EXTRA => [],
         ];
 
-        if (iFace::TYPE_EPISODE === $type) {
-            $row[iFace::COLUMN_TITLE] = $item->SeriesName ?? '??';
-            $row[iFace::COLUMN_SEASON] = $item->ParentIndexNumber ?? 0;
-            $row[iFace::COLUMN_EPISODE] = $item->IndexNumber ?? 0;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_TITLE] = $item->SeriesName ?? '??';
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_SEASON] = (string)$row[iFace::COLUMN_SEASON];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_EPISODE] = (string)$row[iFace::COLUMN_EPISODE];
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_TITLE] = $item->Name ?? $item->OriginalTitle ?? '??';
+        $metadata = &$builder[iFace::COLUMN_META_DATA][$this->name];
+        $metadataExtra = &$metadata[iFace::COLUMN_META_DATA_EXTRA];
 
-            if (null !== ($item->SeriesId ?? null)) {
-                $row[iFace::COLUMN_PARENT] = $this->cache['shows'][$item->SeriesId] ?? [];
-                $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_PARENT] = $row[iFace::COLUMN_PARENT];
+        // -- jellyfin/emby API does not provide library ID.
+        if (null !== ($library = $opts['library'] ?? null)) {
+            $metadata[iFace::COLUMN_META_LIBRARY] = (string)$library;
+        }
+
+        if (iFace::TYPE_EPISODE === $type) {
+            $builder[iFace::COLUMN_SEASON] = ag($item, 'ParentIndexNumber', 0);
+            $builder[iFace::COLUMN_EPISODE] = ag($item, 'IndexNumber', 0);
+
+            if (null !== ($parentId = ag($item, 'SeriesId'))) {
+                $metadata[iFace::COLUMN_META_SHOW] = (string)$parentId;
+            }
+
+            $metadata[iFace::COLUMN_TITLE] = ag($item, 'SeriesName', '??');
+            $metadata[iFace::COLUMN_SEASON] = (string)$builder[iFace::COLUMN_SEASON];
+            $metadata[iFace::COLUMN_EPISODE] = (string)$builder[iFace::COLUMN_EPISODE];
+
+            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iFace::COLUMN_TITLE];
+            $builder[iFace::COLUMN_TITLE] = $metadata[iFace::COLUMN_TITLE];
+
+            if (null !== $parentId) {
+                $builder[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId, '');
+                $metadata[iFace::COLUMN_PARENT] = $builder[iFace::COLUMN_PARENT];
             }
         }
 
-        if (null !== ($item->ProductionYear ?? null)) {
-            $row[iFace::COLUMN_YEAR] = (int)$item->ProductionYear;
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_YEAR] = (string)$item->ProductionYear;
+        if (null !== ($mediaYear = ag($item, 'ProductionYear')) && !empty($metadata)) {
+            $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
 
-        if (null !== ($item->PremiereDate ?? null)) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_EXTRA][iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate(
-                $item->PremiereDate
-            )->format('Y-m-d');
+        if (null !== ($PremieredAt = ag($item, 'PremiereDate'))) {
+            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
-        if (null !== ($item->UserData->LastPlayedDate ?? null)) {
-            $row[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate(
-                $item->UserData->LastPlayedDate
-            )->getTimestamp();
+        if (true === $isPlayed) {
+            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($date)->getTimestamp();
         }
 
-        return Container::get(iFace::class)::fromArray($row);
+        unset($metadata, $metadataExtra);
+
+        if (null !== ($opts['override'] ?? null)) {
+            $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        }
+
+        return Container::get(iFace::class)::fromArray($builder);
     }
 
-    protected function getEpisodeParent(mixed $id, string $cacheName): array
+    protected function getEpisodeParent(int|string $id): array
     {
-        if (array_key_exists($cacheName, $this->cache['shows'] ?? [])) {
-            return $this->cache['shows'][$cacheName];
+        if (array_key_exists($id, $this->cache['shows'] ?? [])) {
+            return $this->cache['shows'][$id];
         }
 
         try {
-            $response = $this->http->request(
-                'GET',
-                (string)$this->url->withPath(
-                    sprintf('/Users/%s/items/' . $id, $this->user)
-                ),
-                $this->getHeaders()
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            if (null === ($type = ag($json, 'Type'))) {
-                return [];
-            }
-
-            if (iFace::TYPE_EPISODE !== strtolower($type)) {
-                return [];
-            }
-
-            if (null === ($seriesId = ag($json, 'SeriesId'))) {
-                return [];
-            }
-
-            $url = (string)$this->url->withPath(sprintf('/Users/%s/items/' . $seriesId, $this->user))->withQuery(
+            $url = (string)$this->url->withPath(sprintf('/Users/%s/items/' . $id, $this->user))->withQuery(
                 http_build_query(
                     [
                         'Fields' => 'ProviderIds'
@@ -1953,6 +2093,7 @@ class JellyfinServer implements ServerInterface
             $response = $this->http->request('GET', $url, $this->getHeaders());
 
             if (200 !== $response->getStatusCode()) {
+                $this->cache['shows'][$id] = [];
                 return [];
             }
 
@@ -1962,17 +2103,21 @@ class JellyfinServer implements ServerInterface
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
-            $providersId = (array)ag($json, 'ProviderIds', []);
-
-            if (!$this->hasSupportedIds($providersId)) {
-                $this->cache['shows'][$seriesId] = $this->cache['shows'][$cacheName] = [];
+            if (null === ($itemType = ag($json, 'Type')) || 'Series' !== $itemType) {
+                $this->cache['shows'][$id] = [];
                 return [];
             }
 
-            $this->cache['shows'][$seriesId] = Guid::fromArray($this->getGuids($providersId))->getAll();
-            $this->cache['shows'][$cacheName] = &$this->cache['shows'][$seriesId];
+            $providersId = (array)ag($json, 'ProviderIds', []);
 
-            return $this->cache['shows'][$seriesId];
+            if (!$this->hasSupportedIds($providersId)) {
+                $this->cache['shows'][$id] = [];
+                return [];
+            }
+
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId))->getAll();
+
+            return $this->cache['shows'][$id];
         } catch (ExceptionInterface $e) {
             $this->logger->error($e->getMessage(), [
                 'file' => $e->getFile(),
@@ -1983,7 +2128,7 @@ class JellyfinServer implements ServerInterface
             return [];
         } catch (JsonException $e) {
             $this->logger->error(
-                sprintf('%s: Unable to decode \'%s\' JSON response. %s', $this->name, $cacheName, $e->getMessage()),
+                sprintf('%s: Unable to decode \'%s\' JSON response. %s', $this->name, $id, $e->getMessage()),
                 [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -1993,7 +2138,7 @@ class JellyfinServer implements ServerInterface
             return [];
         } catch (Throwable $e) {
             $this->logger->error(
-                sprintf('%s: Failed to handle \'%s\' response. %s', $this->name, $cacheName, $e->getMessage()),
+                sprintf('%s: Failed to handle \'%s\' response. %s', $this->name, $id, $e->getMessage()),
                 [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backend\Library;
+namespace App\Commands\Backend\Users;
 
 use App\Command;
 use App\Libs\Config;
@@ -15,13 +15,14 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 
 final class ListCommand extends Command
 {
     protected function configure(): void
     {
-        $this->setName('backend:library:list')
-            ->setDescription('Get Backend libraries list.')
+        $this->setName('backend:users:list')
+            ->setDescription('Get backend users list.')
             ->addOption(
                 'output',
                 'o',
@@ -29,6 +30,7 @@ final class ListCommand extends Command
                 sprintf('Output mode. Can be [%s].', implode(', ', $this->outputs)),
                 $this->outputs[0],
             )
+            ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
@@ -55,11 +57,15 @@ final class ListCommand extends Command
         try {
             $opts = [];
 
+            if ($input->getOption('with-tokens')) {
+                $opts['tokens'] = true;
+            }
+
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            $libraries = $this->getBackend($backend)->listLibraries(opts: $opts);
+            $libraries = $this->getBackend($backend)->getUsersList(opts: $opts);
 
             if (count($libraries) < 1) {
                 $arr = [
@@ -88,7 +94,7 @@ final class ListCommand extends Command
             $this->displayContent($libraries, $output, $mode);
 
             return self::SUCCESS;
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
             $arr = [
                 'error' => sprintf('%s: %s', $backend, $e->getMessage()),
             ];

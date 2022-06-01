@@ -129,6 +129,16 @@ interface ServerInterface
     public function searchId(string|int $id, array $opts = []): array;
 
     /**
+     * Get Specific item metadata.
+     *
+     * @param string|int $id
+     * @param array $opts
+     *
+     * @return array
+     */
+    public function getMetadata(string|int $id, array $opts = []): array;
+
+    /**
      * Get Library content.
      *
      * @param string|int $id
@@ -181,8 +191,9 @@ interface ServerInterface
     /**
      * Return list of server libraries.
      *
+     * @param array $opts
+     *
      * @return array
      */
-    public function listLibraries(): array;
-
+    public function listLibraries(array $opts = []): array;
 }

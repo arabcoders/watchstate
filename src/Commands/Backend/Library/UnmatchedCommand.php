@@ -23,8 +23,7 @@ final class UnmatchedCommand extends Command
     {
         $this->setName('backend:library:unmatched')
             ->setDescription('Find top level Items in library that has no external ids.')
-            ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Library id.')
-            ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all content regardless.')
+            ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of the match status.')
             ->addOption(
                 'output',
                 'o',
@@ -44,13 +43,16 @@ final class UnmatchedCommand extends Command
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addArgument('id', InputArgument::REQUIRED, 'Library id.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
         $showAll = $input->getOption('show-all');
+        $backend = $input->getArgument('backend');
+        $id = $input->getArgument('id');
 
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
@@ -65,15 +67,6 @@ final class UnmatchedCommand extends Command
             }
         }
 
-        if (null === ($id = $input->getOption('id'))) {
-            $arr = [
-                'error' => 'Library mismatch search require library id to be passed in [-i, --id].'
-            ];
-
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-            return self::FAILURE;
-        }
-
         try {
             $serverOpts = $opts = $list = [];
 
@@ -85,7 +78,7 @@ final class UnmatchedCommand extends Command
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            foreach ($this->getBackend($input->getArgument('backend'), $serverOpts)->getLibrary($id, $opts) as $item) {
+            foreach ($this->getBackend($backend, $serverOpts)->getLibrary(id: $id, opts: $opts) as $item) {
                 if (true === $showAll) {
                     $list[] = $item;
                     continue;
@@ -96,7 +89,7 @@ final class UnmatchedCommand extends Command
             }
         } catch (Throwable $e) {
             $arr = [
-                'error' => $e->getMessage(),
+                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
             ];
             if ('table' !== $mode) {
                 $arr += [

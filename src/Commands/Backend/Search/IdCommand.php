@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backend\Library;
+namespace App\Commands\Backend\Search;
 
 use App\Command;
 use App\Libs\Config;
@@ -16,12 +16,12 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-final class ListCommand extends Command
+final class IdCommand extends Command
 {
     protected function configure(): void
     {
-        $this->setName('backend:library:list')
-            ->setDescription('Get Backend libraries list.')
+        $this->setName('backend:search:id')
+            ->setDescription('Get backend metadata related to specific id.')
             ->addOption(
                 'output',
                 'o',
@@ -31,13 +31,14 @@ final class ListCommand extends Command
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addArgument('id', InputArgument::REQUIRED, 'Item id.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
-        $backend = $input->getArgument('backend');
+        $id = $input->getArgument('id');
 
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
@@ -53,44 +54,30 @@ final class ListCommand extends Command
         }
 
         try {
+            $backend = $this->getBackend($input->getArgument('backend'));
+
             $opts = [];
 
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            $libraries = $this->getBackend($backend)->listLibraries(opts: $opts);
+            $results = $backend->searchId(id: $id, opts: $opts);
 
-            if (count($libraries) < 1) {
+            if (count($results) < 1) {
                 $arr = [
-                    'info' => sprintf('%s: No libraries were found.', $backend),
+                    'info' => sprintf('%s: No results were found for this id #\'%s\' .', $backend->getName(), $id),
                 ];
                 $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
                 return self::FAILURE;
             }
 
-            if ('table' === $mode) {
-                $list = [];
-
-                foreach ($libraries as $item) {
-                    foreach ($item as $key => $val) {
-                        if (false === is_bool($val)) {
-                            continue;
-                        }
-                        $item[$key] = $val ? 'Yes' : 'No';
-                    }
-                    $list[] = $item;
-                }
-
-                $libraries = $list;
-            }
-
-            $this->displayContent($libraries, $output, $mode);
+            $this->displayContent('table' === $mode ? [$results] : $results, $output, $mode);
 
             return self::SUCCESS;
         } catch (RuntimeException $e) {
             $arr = [
-                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
+                'error' => $e->getMessage(),
             ];
             if ('table' !== $mode) {
                 $arr += [

@@ -167,8 +167,6 @@ class Command extends BaseCommand
             );
         } elseif ('table' === $mode) {
             $list = [];
-            $x = 0;
-            $count = count($content);
 
             foreach ($content as $_ => $item) {
                 if (false === is_array($item)) {
@@ -184,14 +182,12 @@ class Command extends BaseCommand
                     $subItem[$key] = $leaf;
                 }
 
-                $x++;
                 $list[] = $subItem;
-                if ($x < $count) {
-                    $list[] = new TableSeparator();
-                }
+                $list[] = new TableSeparator();
             }
 
             if (!empty($list)) {
+                array_pop($list);
                 (new Table($output))->setStyle('box')->setHeaders(
                     array_map(fn($title) => is_string($title) ? ucfirst($title) : $title, array_keys($list[0]))
                 )->setRows($list)->render();

@@ -2,9 +2,7 @@
 
 ### Q: How to update play state for newly added media backend without overwriting my current play state?
 
-First, add the media backend and when asked, answer `n` for allow import from this server. when you finish, run the
-following
-command:
+Add the backend and when asked, answer `no` for allow import. when you finish, then run the following command:
 
 ```bash
 $ docker exec -ti watchstate console state:export -vv --ignore-date --force-full --servers-filter [SERVER_NAME]
@@ -19,17 +17,17 @@ successful you can then enable the import feature if you want.
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user.
 
-Note: for Plex managed users run the following command to extract each managed user token.
+Note: for Plex managed users run the following command to extract each managed user access token.
 
 ```bash
-$ docker exec -ti console servers:remote --list-users-with-tokens -- my_plex_1
+$ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
 ```
 
-For jellyfin/emby, you can use same api-token and just replace the userId.
+For Jellyfin/Emby, you can use same api token and just replace the user id.
 
 ---
 
-### Q: Sometimes newly added episodes or movies don't make it to webhook server?
+### Q: Sometimes newly added episodes or movies don't make it to webhook endpoint?
 
 As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
 complement webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to
@@ -37,12 +35,32 @@ remap the data.
 
 ----
 
+### Q: How to get library id?
+
+Run the following command to get list of backend libraries.
+
+```bash
+$ docker exec -ti watchstate console backend:library:list [SERVER_NAME] 
+```
+
+it should display something like
+
+| Id  | Title       | Type   | Ignored | Supported |
+|-----|-------------|--------|---------|-----------|
+| 2   | Movies      | movie  | No      | Yes       | 
+| 1   | shows       | show   | No      | Yes       | 
+| 17  | Audio Books | artist | Yes     | No        |
+
+The id column refers to backend side id.
+
+---
+
 ### Q: Can this tool run without docker?
 
 Yes, if you have the required PHP version and the needed extensions. to run this tool you need the following `php8.1`,
-and `php8.1-fpm` and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`, `php8.1-curl`,
-`php8.1-sqlite3` and [composer](https://getcomposer.org/). once you have the required runtime dependencies, for first
-time run:
+`php8.1-fpm` and `redis-server` and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`
+, `php8.1-curl`,`php8.1-sqlite3`, `php8.1-redis`, and [composer](https://getcomposer.org/). once you have the required
+runtime dependencies, for first time run:
 
 ```bash
 cd ~/watchstate
@@ -58,7 +76,7 @@ $ php console
 The app should save your data into `./var` directory. If you want to change the directory you can export the environment
 variable `WS_DATA_PATH` for console and browser. you can add a file called `.env` in main tool directory with the
 environment variables. take look at the files inside `docker/files` directory to know how to run the scheduled tasks and
-ofc if you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
+if you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
 
 ---
 
@@ -87,23 +105,6 @@ of the following conditions has to be met:
 
 ---
 
-### Q: I enabled strict user match to allow only my user to update the play state, and now webhook requests are failing to be processed?
-
-#### For Jellyfin backend
-
-If this relates to jellyfin backend, then please make sure you have selected "Send All Properties (ignores template)".
-
-#### For Plex backend
-
-if your account is the admin account then update the `user` to `1` by running the following command, just change
-the `[SERVER_NAME]` to your server config name.
-
-```bash
-$ docker exec -ti watchstate console servers:edit --key user --set 1 -- [SERVER_NAME]
-```
-
----
-
 ### Q: Does this tool require webhooks to work?
 
 No, You can use the task scheduler or on demand sync if you want. However, we recommend the webhook method as it's the
@@ -118,14 +119,7 @@ Just reload the page make sure there is only one added watchstate endpoint.
 
 ---
 
-### Q: I keep on seeing "..., entity state is tainted." what does that means?
-
-Tainted events are events that are not used to update the play state, but are interesting enough for us to keep around
-for other benefits like updating the external ids mapping for movies/episodes. It's normal do not worry about it.
-
----
-
-### Q: How can I see my play state list?
+### Q: How to see my data?
 
 ```bash
 $ docker exec -ti watchstate console db:list
@@ -136,21 +130,15 @@ can run the same command with `[-h, --help]` to see more options to extend the l
 
 ---
 
-### Q: Can I ignore specific libraries from being processed?
+### Q: How to ignore specific libraries from being processed?
 
-Yes, First run the following command
-
-```bash
-$ docker exec -ti watchstate console backend:library:list -- [SERVER_NAME] 
-```
-
-it should show you list of given server libraries, you are mainly interested in the ID column. take note of the library
-id, after that run the following command to ignore the libraries. The `options.ignore` accepts comma seperated list of
-ids to ignore.
+Run the following command:
 
 ```bash
 $ docker exec -ti watchstate console servers:edit --key options.ignore --set 'id1,id2,id3' -- [SERVER_NAME] 
 ```
+
+where `id1,id2,id3` refers to backend library id
 
 If you ignored a library by mistake you can run the same command again and omit the id, or you can just delete the key
 entirely by running the following command
@@ -158,6 +146,11 @@ entirely by running the following command
 ```bash
 $ docker exec -ti watchstate console servers:edit --delete --key options.ignore -- [SERVER_NAME] 
 ```
+
+##### Notice
+
+While this feature works for manual/task scheduler for all supported backends, Jellyfin/Emby does not report library id
+on webhook event. So, this feature will not work for them in webhook context and the items will be processed.
 
 ---
 
@@ -177,125 +170,99 @@ after that you can do `./ws command` for example, `./ws db:list`
 
 ### Q: I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
 
-Sometimes there are problems related to HTTP/2 in the underlying library we use, so before reporting bug please try
-running the following command
+Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
 
 ```bash
 $ docker exec -ti watchstate console servers:edit --key options.client.http_version --set 1.0 -- [SERVER_NAME] 
 ```
 
-if it does not fix your problem, please open issue about it.
+This will force set the internal http client to use http v1 if it does not fix your problem, please open bug report
+about it.
 
 ---
 
-### Q: My sync operations are failing due to timeout can I increase that?
+### Q: Sync operations are failing due to request timeout?
 
-We use [symfony/httpClient](https://symfony.com/doc/current/http_client.html) internally, So any options available in [
-configuration](https://symfony.com/doc/current/http_client.html#configuration) section, can be used
-under `options.client.` key for example if you want to increase the timeout you can do
+If you want to increase the timeout for specific backend you can run the following command:
 
 ```bash
 $ docker exec -ti watchstate console servers:edit --key options.client.timeout --set 600 -- [SERVER_NAME] 
 ```
 
----
-
-### Q: Can I search my server remote libraries?
-
-Yes, you can search your backend media servers. You can use `--search '[searchTerm]'`
-or `--search-id [backend_media_id]`. For example, to search for specific title keyword run the following command:
-
-```bash
-$ docker exec -ti console server servers:remote --search 'Gundam' -- [SERVER_NAME]
-```
-
-or if you want to get a specific item metadata run the following command:
-
-```bash
-$ docker exec -ti console server servers:remote --search-id 2514 -- [SERVER_NAME]
-```
-
-### Optional flags that can be used with `--search` or `--search-id`
-
-* `--search-raw` Return unfiltered response.
-* `--search-limit` To limit returned results. Defaults to `25`.
-* `--search-output` Set output style, it can be `yaml` or `json`. Defaults to `json`.
+where `600` is the number of secs before the timeout handler kill the request.
 
 ---
 
-### Q: Is it possible to look for mis-identified items?
+### Q: How to perform search on backend libraries?
 
-Yes, You can use the command `backend:library:mismatch`, For example
-
-first get your library id by running the following command
+Use the following command:
 
 ```bash
-$ docker exec -ti watchstate console backend:library:list -- [SERVER_NAME] 
+$ docker exec -ti console backend:search:query [BACKEND_NAME] '[QUERY_STRING]'
 ```
 
-it should display something like
-
-| Id  | Title       | Type   | Ignored | Supported |
-|-----|-------------|--------|---------|-----------|
-| 2   | Movies      | movie  | No      | Yes       | 
-| 1   | shows       | show   | No      | Yes       | 
-| 17  | Audio Books | artist | Yes     | No        |
-
-Note the library id that you want to scan for possible mis-identified items, then run the following command:
-
-```bash
-$ docker exec -ti console server backend:library:mismatch --id [LIBRARY_ID] -- [BACKEND_NAME]
-```
-
-### Required flags
-
-* `[-i, --id]` Library id.
+where `[QUERY_STRING]` is the keyword that you want to search for
 
 ### Optional flags
 
-* `[-p, --percentage]` How much in percentage the title has to be in path to be marked as matched item. Defaults
-  to `50.0%`.
-* `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Defaults to `table`.
-* `[-m, --method]` Which algorithm to use, it can be `similarity`, or `levenshtein`. Defaults to `similarity`.
-* `[--timeout]` Set request timeout in seconds.
+* `[-l, --limit]` To limit returned results. Default to `25`.
+* `[-o, --output]` Set output style, it can be `yaml`, `json` or `table`. Default to `table`.
 * `[--include-raw-response]` will include backend response in main response body with `raw` key.
+
+---
+
+### Q: How to the metadata about specific item?
+
+Use the following command:
+
+```bash
+$ docker exec -ti console server backend:search:id [BACKEND_NAME] [ITEM_ID]
+```
+
+where `[ITEM_ID]` refers to backend item id
+
+### Optional flags
+
+* `[-o, --output]` Set output style, it can be `yaml`, `json` or `table`. Default to `table`.
+* `[--include-raw-response]` will include backend response in main response body with `raw` key.
+
+---
+
+### Q: How to look for mis-identified items?
+
+Use the `backend:library:mismatch` command. For example,
+
+```bash
+$ docker exec -ti console server backend:library:mismatch [BACKEND_NAME] [LIBRARY_ID]
+```
+
+where `[LIBRARY_ID]` refers to backend library id
+
+### Optional flags
+
+* `[-p, --percentage]` How much in percentage the title has to be in path to be marked as matched item. Default
+  to `50.0%`.
+* `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Default to `table`.
+* `[-m, --method]` Which algorithm to use, it can be `similarity`, or `levenshtein`. Default to `similarity`.
+* `[--include-raw-response]` Will include backend response in main response body with `raw` key.
 
 ---
 
 ### Q: Is it possible to look for unmatched items?
 
-Yes, You can use the command `backend:library:unmatched`, For example
-
-first get your library id by running the following command
+Use the `backend:library:unmatched` command. For example,
 
 ```bash
-$ docker exec -ti watchstate console backend:library:list -- [SERVER_NAME] 
+$ docker exec -ti console server backend:library:unmatched [BACKEND_NAME] [LIBRARY_ID]
 ```
 
-it should display something like
-
-| Id  | Title       | Type   | Ignored | Supported |
-|-----|-------------|--------|---------|-----------|
-| 2   | Movies      | movie  | No      | Yes       | 
-| 1   | shows       | show   | No      | Yes       | 
-| 17  | Audio Books | artist | Yes     | No        |
-
-Note the library id that you want to scan for unmatched items, then run the following command:
-
-```bash
-$ docker exec -ti console server backend:library:unmatched --id [LIBRARY_ID] -- [BACKEND_NAME]
-```
-
-### Required flags
-
-* `[-i, --id]` Library id.
+where `[LIBRARY_ID]` refers to backend library id
 
 ### Optional flags
 
 * `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Defaults to `table`.
-* `[--timeout]` Set request timeout in seconds.
-* `[--show-all]` will display all library items regardless if match or unmatched.
-* `[--include-raw-response]` will include backend response in main response body with `raw` key.
+* `[--show-all]` Will show all library items regardless of the match status.
+* `[--include-raw-response]` Will include backend response in main response body with `raw` key.
 
 ---
 
