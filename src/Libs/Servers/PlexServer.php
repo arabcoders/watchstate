@@ -2137,7 +2137,7 @@ class PlexServer implements ServerInterface
         // -- Handle watched/updated column in a special way to support mark as unplayed.
         if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
             $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
-            $date = $opts['override'][iFace::COLUMN_WATCHED] ?? ag($item, 'addedAt');
+            $date = $opts['override'][iFace::COLUMN_UPDATED] ?? ag($item, 'addedAt');
         } else {
             $isPlayed = (bool)ag($item, 'viewCount', false);
             $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
