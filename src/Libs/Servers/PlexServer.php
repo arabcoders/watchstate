@@ -363,7 +363,7 @@ class PlexServer implements ServerInterface
 
         try {
             $isPlayed = (bool)ag($item, 'viewCount', false);
-            $lastPlayedAt = ag($item, 'lastViewedAt');
+            $lastPlayedAt = true === $isPlayed ? ag($item, 'lastViewedAt') : null;
 
             $fields = [
                 iFace::COLUMN_EXTRA => [
@@ -505,7 +505,7 @@ class PlexServer implements ServerInterface
                         'title' => $episodeNumber . mb_substr(ag($item, ['title', 'originalTitle'], '??'), 0, 50),
                         'year' => $year,
                         'addedAt' => makeDate(ag($item, 'addedAt'))->format('Y-m-d H:i:s T'),
-                        'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'None',
+                        'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
                     ];
 
                     if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
@@ -553,7 +553,7 @@ class PlexServer implements ServerInterface
             'title' => $episodeNumber . mb_substr(ag($metadata, ['title', 'originalTitle'], '??'), 0, 50),
             'year' => $year,
             'addedAt' => makeDate(ag($metadata, 'addedAt'))->format('Y-m-d H:i:s T'),
-            'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'None',
+            'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
             'duration' => ag($metadata, 'duration') ? formatDuration(ag($metadata, 'duration')) : 'None',
         ];
 
@@ -1198,9 +1198,9 @@ class PlexServer implements ServerInterface
                 $isWatched = (int)(bool)ag($json, 'viewCount', 0);
 
                 if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                    $date = max((int)ag($json, 'lastViewedAt', 0), (int)ag($json, 'addedAt', 0));
+                    $date = ag($json, true === (bool)ag($json, 'viewCount', false) ? 'lastViewedAt' : 'addedAt');
 
-                    if (0 === $date) {
+                    if (null === $date) {
                         $this->logger->error(
                             sprintf(
                                 '%s: Ignoring \'%s\'. No date is set on backend object.',
@@ -1683,9 +1683,7 @@ class PlexServer implements ServerInterface
                 ]);
             }
 
-            $date = max((int)ag($item, 'lastViewedAt', 0), (int)ag($item, 'addedAt', 0));
-
-            if (0 === $date) {
+            if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
@@ -1772,9 +1770,7 @@ class PlexServer implements ServerInterface
                 );
             }
 
-            $date = max((int)ag($item, 'lastViewedAt', 0), (int)ag($item, 'addedAt', 0));
-
-            if (0 === $date) {
+            if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->notice(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
@@ -2139,21 +2135,27 @@ class PlexServer implements ServerInterface
             $item = (array)$item;
         }
 
+        // -- Plex does not send played flag, so we have to rely on viewCount.
+        $isPlayed = (bool)ag($item, 'viewCount', false);
+        $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
+
+        if (null === $date) {
+            throw new RuntimeException('No date was set on object.');
+        }
+
         if (null === ag($item, 'Guid')) {
             $item['Guid'] = [['id' => ag($item, 'guid')]];
         } else {
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
-        $date = max((int)ag($item, 'lastViewedAt', 0), (int)(ag($item, 'addedAt', 0)));
-
         $guids = $this->getGuids(ag($item, 'Guid', []));
         $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'ratingKey'));
 
         $builder = [
             iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => $date,
-            iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'viewCount', false),
+            iFace::COLUMN_UPDATED => (int)$date,
+            iFace::COLUMN_WATCHED => (int)$isPlayed,
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
             iFace::COLUMN_GUIDS => $guids,
@@ -2161,7 +2163,7 @@ class PlexServer implements ServerInterface
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($item, 'viewCount', false),
+                    iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
                     iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
@@ -2206,13 +2208,15 @@ class PlexServer implements ServerInterface
             $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
-        if (null !== ($playedAt = ag($item, 'lastViewedAt'))) {
-            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$playedAt;
+        if (true === $isPlayed) {
+            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
         }
 
         unset($metadata, $metadataExtra);
 
-        $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        if (null !== ($opts['override'] ?? null)) {
+            $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        }
 
         return Container::get(iFace::class)::fromArray($builder);
     }

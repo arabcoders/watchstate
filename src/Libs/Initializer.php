@@ -371,15 +371,9 @@ final class Initializer
                     );
                 }
 
-                if ($local->updated > $entity->updated) {
-                    $message = sprintf('%s date is older than the recorded date in storage.', ucfirst($entity->type));
-                } else {
-                    $message = '[D] No difference detected.';
-                }
-
                 return new Response(
                     status:  200,
-                    headers: $responseHeaders + ['X-Status' => $message]
+                    headers: $responseHeaders + ['X-Status' => '[D] No difference detected.']
                 );
             }
 

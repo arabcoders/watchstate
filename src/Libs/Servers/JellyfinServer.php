@@ -316,7 +316,7 @@ class JellyfinServer implements ServerInterface
 
         try {
             $isPlayed = (bool)ag($json, 'Played');
-            $lastPlayedAt = ag($json, 'LastPlayedDate');
+            $lastPlayedAt = true === $isPlayed ? ag($json, 'LastPlayedDate') : null;
 
             $fields = [
                 iFace::COLUMN_EXTRA => [
@@ -465,7 +465,7 @@ class JellyfinServer implements ServerInterface
                     'title' => $episodeNumber . mb_substr(ag($item, ['Name', 'OriginalTitle'], '??'), 0, 50),
                     'year' => $year,
                     'addedAt' => makeDate(ag($item, 'DateCreated', 'now'))->format('Y-m-d H:i:s T'),
-                    'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'None',
+                    'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
                 ];
 
                 if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
@@ -1179,7 +1179,8 @@ class JellyfinServer implements ServerInterface
                 }
 
                 if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                    $date = ag($json, ['UserData.LastPlayedDate', 'DateCreated'], null);
+                    $isPlayed = true === (bool)ag($json, 'UserData.Played');
+                    $date = ag($json, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated');
 
                     if (null === $date) {
                         $this->logger->error(
@@ -1673,7 +1674,9 @@ class JellyfinServer implements ServerInterface
                 ]);
             }
 
-            if (null === ag($item, ['UserData.LastPlayedDate', 'DateCreated'])) {
+            $isPlayed = true === (bool)ag($item, 'UserData.Played');
+
+            if (null === ag($item, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated')) {
                 $this->logger->warning(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
@@ -1775,7 +1778,9 @@ class JellyfinServer implements ServerInterface
                 );
             }
 
-            if (null === ag($item, ['UserData.LastPlayedDate', 'DateCreated'])) {
+            $isPlayed = true === (bool)ag($item, 'UserData.Played');
+
+            if (null === ag($item, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated')) {
                 $this->logger->notice(
                     sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
                     [
@@ -1979,7 +1984,11 @@ class JellyfinServer implements ServerInterface
 
     protected function createEntity(array $item, string $type, array $opts = []): StateEntity
     {
-        if (null === ($date = ag($item, ['UserData.LastPlayedDate', 'DateCreated', 'PremiereDate'], null))) {
+        $isPlayed = (bool)ag($item, 'UserData.Played', false);
+
+        $date = ag($item, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated');
+
+        if (null === $date) {
             throw new RuntimeException('No date was set on object.');
         }
 
@@ -1989,7 +1998,7 @@ class JellyfinServer implements ServerInterface
         $builder = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
-            iFace::COLUMN_WATCHED => (int)(bool)ag($item, 'UserData.Played', false),
+            iFace::COLUMN_WATCHED => (int)$isPlayed,
             iFace::COLUMN_VIA => $this->name,
             iFace::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
             iFace::COLUMN_GUIDS => $guids,
@@ -1997,7 +2006,7 @@ class JellyfinServer implements ServerInterface
                 $this->name => [
                     iFace::COLUMN_ID => (string)ag($item, 'Id'),
                     iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => (string)(int)(bool)ag($item, 'UserData.Played', false),
+                    iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iFace::COLUMN_VIA => $this->name,
                     iFace::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
                     iFace::COLUMN_GUIDS => array_change_key_case((array)ag($item, 'ProviderIds', []), CASE_LOWER),
@@ -2045,13 +2054,15 @@ class JellyfinServer implements ServerInterface
             $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
-        if (null !== ($playedAt = ag($item, 'UserData.LastPlayedDate'))) {
-            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($playedAt)->getTimestamp();
+        if (true === $isPlayed) {
+            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($date)->getTimestamp();
         }
 
         unset($metadata, $metadataExtra);
 
-        $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        if (null !== ($opts['override'] ?? null)) {
+            $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        }
 
         return Container::get(iFace::class)::fromArray($builder);
     }
