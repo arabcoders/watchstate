@@ -307,8 +307,9 @@ Click `Save Changes`
 # Container specific environment variables.
 
 - (int) `WS_NO_CHOWN` do not change ownership for `/app/, /config/` directories inside the container.
-- (int) `WS_DISABLE_HTTP` disable included HTTP server.
-- (int) `WS_DISABLE_CRON` disable included Task scheduler.
+- (int) `WS_DISABLE_HTTP` disable included HTTP Server.
+- (int) `WS_DISABLE_CRON` disable included Task Scheduler.
+- (int) `WS_DISABLE_CACHE` disable included Cache Server.
 - (int) `WS_UID` Container app user ID.
 - (int) `WS_GID` Container app group ID.
 
