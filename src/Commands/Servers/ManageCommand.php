@@ -22,10 +22,10 @@ final class ManageCommand extends Command
     protected function configure(): void
     {
         $this->setName('servers:manage')
-            ->setDescription('Manage Server settings.')
-            ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Server')
+            ->setDescription('Manage backend settings.')
+            ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('server', InputArgument::REQUIRED, 'Server name');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
     }
 
     /**
@@ -71,7 +71,7 @@ final class ManageCommand extends Command
         }
 
         $add = $input->getOption('add');
-        $name = $input->getArgument('server');
+        $name = $input->getArgument('backend');
 
         if (!isValidName($name)) {
             $output->writeln(
@@ -86,7 +86,7 @@ final class ManageCommand extends Command
         if (false === $add && null === ag($servers, "{$name}.type", null)) {
             $output->writeln(
                 sprintf(
-                    '<error>ERROR: Server \'%s\' not found. To add new server append --add flag to the command.</error>',
+                    '<error>ERROR: Backend \'%s\' not found. To add new backend append --add flag to the command.</error>',
                     $name,
                 )
             );
@@ -95,7 +95,7 @@ final class ManageCommand extends Command
 
         if (true === $add && null !== ag($servers, "{$name}.type", null)) {
             $output->writeln(
-                sprintf('<error>ERROR: Server name \'%s\' already exists in \'%s\'.</error>', $name, $config)
+                sprintf('<error>ERROR: Backend name \'%s\' already exists in \'%s\'.</error>', $name, $config)
             );
             return self::FAILURE;
         }
@@ -112,8 +112,8 @@ final class ManageCommand extends Command
 
             $question = new ChoiceQuestion(
                 sprintf(
-                    'Select Server Type %s',
-                    null !== $chosen ? "- <comment>[Default: {$chosen}]</comment>" : ''
+                    'Select backend type. %s',
+                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : ''
                 ),
                 $list,
                 false === $choice ? null : $choice
@@ -137,17 +137,17 @@ final class ManageCommand extends Command
             $chosen = ag($u, 'url');
             $question = new Question(
                 sprintf(
-                    'Please enter %s server url %s' . PHP_EOL . '> ',
+                    'Please enter %s URL. %s' . PHP_EOL . '> ',
                     ucfirst(ag($u, 'type')),
 
-                    null !== $chosen ? "- <comment>[Default: {$chosen}]</comment>" : '',
+                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
                 ),
                 $chosen
             );
 
             $question->setValidator(function ($answer) {
                 if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new \RuntimeException('Invalid server url was given.');
+                    throw new \RuntimeException('Invalid backend URL was given.');
                 }
                 return $answer;
             });
@@ -163,9 +163,9 @@ final class ManageCommand extends Command
             $chosen = ag($u, 'token');
             $question = new Question(
                 sprintf(
-                    'Please enter %s server API token %s' . PHP_EOL . '> ',
+                    'Please enter %s API token. %s' . PHP_EOL . '> ',
                     ucfirst(ag($u, 'type')),
-                    null !== $chosen ? "- <comment>[Default: {$chosen}]</comment>" : '',
+                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
                 ),
                 $chosen
             );
@@ -195,13 +195,13 @@ final class ManageCommand extends Command
         (function () use ($input, $output, &$u, $name) {
             try {
                 $output->writeln(
-                    '<info>Trying to get server unique identifier from given information... Please wait</info>'
+                    '<info>Getting backend unique identifier. Please wait...</info>'
                 );
 
-                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
+                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
                 $chosen = ag($u, 'uuid', fn() => makeServer($server, $name)->getServerUUID(true));
             } catch (Throwable $e) {
-                $output->writeln('<error>Failed to get the server unique identifier.</error>');
+                $output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $output->writeln(
                     sprintf(
                         '<error>ERROR - %s: %s.</error>' . PHP_EOL,
@@ -215,22 +215,22 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $question = new Question(
                 sprintf(
-                    'Please enter %s server unique identifier %s' . PHP_EOL . '> ',
+                    'Please enter %s unique identifier. %s' . PHP_EOL . '> ',
                     ucfirst(ag($u, 'type')),
-                    null !== $chosen ? "- <comment>[Default: {$chosen}]</comment>" : '',
+                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
                 ),
                 $chosen
             );
 
             $question->setValidator(function ($answer) {
                 if (empty($answer)) {
-                    throw new \RuntimeException('server unique identifier cannot be empty or null.');
+                    throw new \RuntimeException('Backend unique identifier cannot be empty.');
                 }
 
                 if (!is_string($answer) && !is_int($answer)) {
                     throw new \RuntimeException(
                         sprintf(
-                            'server unique identifier is invalid. Expecting [string|integer]. but got \'%s\' instead.',
+                            'Backend unique identifier is invalid. Expecting [string|integer]. but got \'%s\' instead.',
                             get_debug_type($answer)
                         )
                     );
@@ -254,8 +254,8 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you share your Plex server with other people? <comment>[Y|N]</comment>
-                <info>it's important to know otherwise their watch history might end up diluting yours if you use webhooks</info>
+                Do you share your Plex backend with other people? <comment>[Y|N]</comment>
+                <info>it's important to know otherwise their watch history might end up in your history if you use webhooks</info>
                 TEXT;
 
             $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
@@ -273,7 +273,7 @@ final class ManageCommand extends Command
 
             try {
                 $output->writeln(
-                    '<info>Trying to get users list from server Please wait</info>'
+                    '<info>Trying to get users list from backend. Please wait...</info>'
                 );
 
                 $list = $map = $ids = [];
@@ -281,12 +281,12 @@ final class ManageCommand extends Command
                 $users = makeServer($server, $name)->getUsersList();
 
                 if (empty($users)) {
-                    throw new \RuntimeException('Empty users list returned');
+                    throw new \RuntimeException('Backend returned empty list of users.');
                 }
 
                 foreach ($users as $user) {
-                    $uid = ag($user, 'user_id');
-                    $val = ag($user, 'username', '??');
+                    $uid = ag($user, 'id');
+                    $val = ag($user, 'name', '??');
                     $list[] = $val;
                     $ids[$uid] = $val;
                     $map[$val] = $uid;
@@ -297,8 +297,8 @@ final class ManageCommand extends Command
 
                 $question = new ChoiceQuestion(
                     sprintf(
-                        'Select which user to associate with this server %s',
-                        null !== $choice ? "- <comment>[Default: {$choice}]</comment>" : ''
+                        'Select which user to associate with this backend. %s',
+                        null !== $choice ? "<comment>[Default: {$choice}]</comment>" : ''
                     ),
                     $list,
                     false === $choice ? null : $choice
@@ -313,7 +313,7 @@ final class ManageCommand extends Command
 
                 return;
             } catch (Throwable $e) {
-                $output->writeln('<error>Failed to get the users list from server.</error>');
+                $output->writeln('<error>Failed to get the users list from backend.</error>');
                 $output->writeln(
                     sprintf(
                         '<error>ERROR - %s: %s.</error>' . PHP_EOL,
@@ -335,13 +335,13 @@ final class ManageCommand extends Command
 
             $question->setValidator(function ($answer) {
                 if (empty($answer)) {
-                    throw new \RuntimeException('Server user id cannot be empty or null.');
+                    throw new \RuntimeException('Backend user id cannot be empty.');
                 }
 
                 if (!is_string($answer) && !is_int($answer)) {
                     throw new \RuntimeException(
                         sprintf(
-                            'Server user id is invalid. Expecting [string|integer]. but got \'%s\' instead.',
+                            'Backend user id is invalid. Expecting [string|integer]. but got \'%s\' instead.',
                             get_debug_type($answer)
                         )
                     );
@@ -361,7 +361,7 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to enable <info>"Import"</info> from this server via scheduled task? <comment>%s</comment>
+                Do you want to enable <info>"Import"</info> from this backend via scheduled task? <comment>%s</comment>
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -384,7 +384,7 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to enable <info>"Export"</info> to this server via scheduled task? <comment>%s</comment>
+                Do you want to enable <info>"Export"</info> to this backend via scheduled task? <comment>%s</comment>
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -407,9 +407,9 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to enable <info>"Import"</info> via <info>webhooks</info> for this server? <comment>%s</comment>
+                Do you want to enable <info>"Import"</info> via <info>webhooks</info> for this backend? <comment>%s</comment>
                 -----------------
-                <info>Do not forget to add the webhook end point to the server if you enabled this option.</info>
+                <info>Do not forget to add the webhook end point to the backend if you enabled this option.</info>
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -432,9 +432,9 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to enable <info>"Push"</info> to this server on received <info>webhooks</info> events? <comment>%s</comment>
+                Do you want to enable <info>"Push"</info> to this backend on received <info>webhooks</info> events? <comment>%s</comment>
                 -----------------
-                <info>The way push works is to queue watched state and then push them to the server.</info>
+                <info>The way push works is to queue watched state and then push them to the backend.</info>
                 -----------------
                 This approach has both strength and limitations, please refer to docs for more info on webhooks.
                 TEXT;
@@ -459,9 +459,9 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to limit this <info>server</info> webhook events to <info>the specified user</info>? <comment>%s</comment>
+                Do you want to <info>scope</info> this <info>backend</info> webhook events to the specified <info>user</info>? <comment>%s</comment>
                 ------------------
-                Helpful for Plex Multi user/servers setup.
+                Helpful for Plex multi user/servers setup.
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -484,9 +484,9 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to limit this <info>server</info> webhook events to <info>the specified server unique id</info>? <comment>%s</comment>
+                Do you want to <info>scope</info> this <info>backend</info> webhook events to the specified <info>backend unique id</info>? <comment>%s</comment>
                 ------------------
-                Helpful for Plex Multi user/servers setup.
+                Helpful for Plex multi user/servers setup.
                 TEXT;
 
             $question = new ConfirmationQuestion(
