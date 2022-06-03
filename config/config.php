@@ -194,7 +194,7 @@ return (function () {
         ],
         PruneCommand::TASK_NAME => [
             Task::NAME => PruneCommand::TASK_NAME,
-            Task::ENABLED => true,
+            Task::ENABLED => 'disable' !== ag($config,'logs.prune.after'),
             Task::RUN_AT => '0 */12 * * *',
             Task::COMMAND => '@config:prune',
             Task::ARGS => '-v',

@@ -268,7 +268,8 @@ Click `Save Changes`
 
 * Emby does not send webhooks events for newly added
   items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)
-* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as played/unplayed you
+* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
+  played/unplayed you
   should see changes reflected in `docker exec -ti watchstate console db:list`.
 
 # Jellyfin
@@ -280,42 +281,39 @@ Click `Save Changes`
 
 # Environment variables.
 
-- (string) `WS_DATA_PATH` Where key data stored (config|db).
-- (string) `WS_TMP_DIR` Where temp data stored. (logs|cache). Defaults to `WS_DATA_PATH` if not set.
-- (string) `WS_TZ` Set timezone for example, `UTC`
-- (bool) `WS_WEBHOOK_DEBUG` enable debug mode for webhook events.
-- (bool) `WS_REQUEST_DEBUG` enable debug mode for pre webhook request.
-- (integer) `WS_WEBHOOK_TOKEN_LENGTH` how many bits for the webhook api key generator.
-- (bool) `WS_LOGGER_FILE_ENABLE` enable file logging.
-- (string) `WS_LOGGER_FILE` full path for log file. By default, it's stored at `$(WS_TMP_DIR)/logs/app.log`
-- (string) `WS_LOGGER_FILE_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
-- (bool) `WS_LOGGER_SYSLOG_ENABLED` enable syslog logger.
-- (int) `WS_LOGGER_SYSLOG_FACILITY` syslog logging facility
-- (string) `WS_LOGGER_SYSLOG_LEVEL` level to log (DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|ALERT|EMERGENCY).
-- (string) `WS_LOGGER_SYSLOG_NAME` What name should logs be under.
-- (int) `WS_CRON_IMPORT` enable import scheduled task.
-- (string) `WS_CRON_IMPORT_AT` cron expression timer.
-- (string) `WS_CRON_IMPORT_ARGS` set import command flags. Defaults to `-v`
-- (int) `WS_CRON_EXPORT` enable export scheduled task.
-- (string) `WS_CRON_EXPORT_AT` cron expression timer.
-- (string) `WS_CRON_EXPORT_ARGS` set export command flags. Defaults to `-v`
-- (int) `WS_CRON_PUSH` enable push scheduled task.
-- (string) `WS_CRON_PUSH_AT` cron expression timer.
-- (string) `WS_CRON_PUSH_ARGS` set push command flags. Defaults to `-v`
-- (string) `WS_LOGS_PRUNE_AFTER` Delete logs older than specified time, set to `disable` to disable logs pruning. it
-  follows php [strtotime](https://www.php.net/strtotime) function rules.
-- (bool) `WS_DEBUG_IMPORT` Whether to log invalid GUID items from server in `${WS_TMP_DIR}/debug`.
+| Environment key         | Value   | Description                                                                      | Default                        |
+|-------------------------|---------|----------------------------------------------------------------------------------|--------------------------------|
+| WS_DATA_PATH            | string  | Where key data stored (config, db).                                              | `${BASE_PATH}/var`             |
+| WS_TMP_DIR              | string  | Where temp data stored. (logs, cache).                                           | `${WS_DATA_PATH}`              |
+| WS_TZ                   | string  | Set timezone.                                                                    | `UTC`                          |
+| WS_WEBHOOK_DEBUG        | bool    | Store webhook payloads into `${WS_TMP_DIR}/webhooks`                             | `false`                        |
+| WS_REQUEST_DEBUG        | bool    | Store request payloads into `${WS_TMP_DIR}/debug`                                | `false`                        |
+| WS_WEBHOOK_TOKEN_LENGTH | integer | How many bits to use for webhook token generator                                 | `16`                           |
+| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                               | `true`                         |
+| WS_LOGGER_FILE          | string  | Full path to log file.                                                           | `${WS_TMP_DIR}/logs/app.log`   |
+| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                               | `ERROR`                        |
+| WS_CRON_IMPORT          | bool    | Enable import scheduled task. Value casted to bool.                              | `false`                        |
+| WS_CRON_IMPORT_AT       | string  | When to run import scheduled task. Valid Cron Expression Expected.               | `'0 */1 * * *` (Every 1h)      |
+| WS_CRON_IMPORT_ARGS     | string  | Flags to pass to the import command.                                             | `'-v`                          |
+| WS_CRON_EXPORT          | bool    | Enable export scheduled task. Value casted to bool.                              | `false`                        |
+| WS_CRON_EXPORT_AT       | string  | When to run export scheduled task. Valid Cron Expression Expected.               | `'30 */1 * * *` (Every 1h 30m) |
+| WS_CRON_EXPORT_ARGS     | string  | Flags to pass to the export command.                                             | `'-v`                          |
+| WS_CRON_PUSH            | bool    | Enable push scheduled task. Value casted to bool.                                | `false`                        |
+| WS_CRON_PUSH_AT         | string  | When to run push scheduled task. Valid Cron Expression Expected.                 | `'*/10 * * * *` (Every 10m)    |
+| WS_CRON_PUSH_ARGS       | string  | Flags to pass to the push command.                                               | `'-v`                          |
+| WS_LOGS_PRUNE_AFTER     | string  | Delete logs older than specified time. Set to `disable` to disable the pruning.  | `'-3 DAYS`                     |
+| WS_DEBUG_IMPORT         | bool    | Log no valid/externals id during import process. stored in `${WS_TMP_DIR}/debug` | `'false`                       |
 
 # Container specific environment variables.
 
-- (int) `WS_DISABLE_CHOWN` Do not change ownership for `/app/, /config/` directories inside the container.
-- (int) `WS_DISABLE_HTTP` Disable included HTTP Server.
-- (int) `WS_DISABLE_CRON` Disable included Task Scheduler.
-- (int) `WS_DISABLE_CACHE` Disable included Cache Server.
-- (int) `WS_UID` Container app user id.
-- (int) `WS_GID` Container app group id.
-
----
+| Environment key  | Value | Description                                                          | Default |
+|------------------|-------|----------------------------------------------------------------------|---------|
+| WS_DISABLE_CHOWN | int   | Do not change ownership for needed directories inside the container. | `0`     |
+| WS_DISABLE_HTTP  | int   | Disable included HTTP Server.                                        | `0`     |
+| WS_DISABLE_CRON  | int   | Disable included Task Scheduler.                                     | `0`     |
+| WS_DISABLE_CACHE | int   | Disable included Cache Server.                                       | `0`     |
+| WS_UID           | int   | Container app user id.                                               | `1000`  |
+| WS_GID           | int   | Container app group id.                                              | `1000`  |
 
 # FAQ
 
