@@ -268,6 +268,8 @@ Click `Save Changes`
 
 * Emby does not send webhooks events for newly added
   items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)
+* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as played/unplayed you
+  should see changes reflected in `docker exec -ti watchstate console db:list`.
 
 # Jellyfin
 
@@ -306,12 +308,12 @@ Click `Save Changes`
 
 # Container specific environment variables.
 
-- (int) `WS_NO_CHOWN` do not change ownership for `/app/, /config/` directories inside the container.
-- (int) `WS_DISABLE_HTTP` disable included HTTP Server.
-- (int) `WS_DISABLE_CRON` disable included Task Scheduler.
-- (int) `WS_DISABLE_CACHE` disable included Cache Server.
-- (int) `WS_UID` Container app user ID.
-- (int) `WS_GID` Container app group ID.
+- (int) `WS_DISABLE_CHOWN` Do not change ownership for `/app/, /config/` directories inside the container.
+- (int) `WS_DISABLE_HTTP` Disable included HTTP Server.
+- (int) `WS_DISABLE_CRON` Disable included Task Scheduler.
+- (int) `WS_DISABLE_CACHE` Disable included Cache Server.
+- (int) `WS_UID` Container app user id.
+- (int) `WS_GID` Container app group id.
 
 ---
 

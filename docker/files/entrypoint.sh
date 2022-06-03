@@ -3,7 +3,7 @@ set -e
 
 WS_UID=${WS_UID:-1000}
 WS_GID=${WS_GID:-1000}
-WS_NO_CHOWN=${WS_NO_CHOWN:-0}
+WS_DISABLE_CHOWN=${WS_DISABLE_CHOWN:-0}
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
 WS_DISABLE_CRON=${WS_DISABLE_CRON:-0}
 WS_DISABLE_CACHE=${WS_DISABLE_CACHE:-0}
@@ -36,7 +36,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
   chmod +x /usr/bin/run-app-cron
 fi
 
-if [ 0 = "${WS_NO_CHOWN}" ]; then
+if [ 0 = "${WS_DISABLE_CHOWN}" ]; then
   chown -R www-data:www-data /app /config /var/lib/nginx/ /etc/redis.conf
 fi
 
