@@ -306,14 +306,14 @@ Click `Save Changes`
 
 # Container specific environment variables.
 
-| Environment key  | Value | Description                                                          | Default |
-|------------------|-------|----------------------------------------------------------------------|---------|
-| WS_DISABLE_CHOWN | int   | Do not change ownership for needed directories inside the container. | `0`     |
-| WS_DISABLE_HTTP  | int   | Disable included HTTP Server.                                        | `0`     |
-| WS_DISABLE_CRON  | int   | Disable included Task Scheduler.                                     | `0`     |
-| WS_DISABLE_CACHE | int   | Disable included Cache Server.                                       | `0`     |
-| WS_UID           | int   | Set container user id.                                               | `1000`  |
-| WS_GID           | int   | Set container group id.                                              | `1000`  |
+| Environment key  | Value   | Description                                                          | Default |
+|------------------|---------|----------------------------------------------------------------------|---------|
+| WS_DISABLE_CHOWN | integer | Do not change ownership for needed directories inside the container. | `0`     |
+| WS_DISABLE_HTTP  | integer | Disable included HTTP Server.                                        | `0`     |
+| WS_DISABLE_CRON  | integer | Disable included Task Scheduler.                                     | `0`     |
+| WS_DISABLE_CACHE | integer | Disable included Cache Server.                                       | `0`     |
+| WS_UID           | integer | Set container user id.                                               | `1000`  |
+| WS_GID           | integer | Set container group id.                                              | `1000`  |
 
 # FAQ
 
