@@ -18,6 +18,7 @@ use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\HttpClient\CurlHttpClient;
@@ -50,16 +51,21 @@ return (function (): array {
 
         CacheInterface::class => [
             'class' => function () {
-                if (!extension_loaded('redis')) {
-                    return new Psr16Cache(
-                        new FilesystemAdapter(
-                            namespace: getAppVersion(),
-                            directory: Config::get('cache.path')
-                        )
-                    );
+                if (false === (bool)config::get('cache.enabled')) {
+                    return new Psr16Cache(new NullAdapter());
+                }
+
+                $ns = getAppVersion();
+
+                if (null !== ($prefix = Config::get('cache.prefix')) && true === isValidName($prefix)) {
+                    $ns .= '.' . $prefix;
                 }
 
                 try {
+                    if (!extension_loaded('redis')) {
+                        throw new RuntimeException('Redis extension is not loaded.');
+                    }
+
                     $uri = new Uri(Config::get('cache.url'));
                     $params = [];
 
@@ -81,11 +87,12 @@ return (function (): array {
 
                     $backend = new RedisAdapter(
                         redis:     $redis,
-                        namespace: getAppVersion()
+                        namespace: $ns,
                     );
                 } catch (Throwable) {
+                    // -- in case of error, fallback to file system cache.
                     $backend = new FilesystemAdapter(
-                        namespace: getAppVersion(),
+                        namespace: $ns,
                         directory: Config::get('cache.path')
                     );
                 }
