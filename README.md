@@ -312,8 +312,8 @@ Click `Save Changes`
 | WS_DISABLE_HTTP  | int   | Disable included HTTP Server.                                        | `0`     |
 | WS_DISABLE_CRON  | int   | Disable included Task Scheduler.                                     | `0`     |
 | WS_DISABLE_CACHE | int   | Disable included Cache Server.                                       | `0`     |
-| WS_UID           | int   | Container app user id.                                               | `1000`  |
-| WS_GID           | int   | Container app group id.                                              | `1000`  |
+| WS_UID           | int   | Set container user id.                                               | `1000`  |
+| WS_GID           | int   | Set container group id.                                              | `1000`  |
 
 # FAQ
 
