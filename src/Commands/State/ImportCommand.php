@@ -64,7 +64,7 @@ class ImportCommand extends Command
                 'metadata-only',
                 null,
                 InputOption::VALUE_NONE,
-                'Only import metadata do not update play state. Only works they are records in storage.'
+                'import metadata changes only. Works when there are records in storage.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
