@@ -314,6 +314,7 @@ final class StateEntity implements iFace
     public function markAsUnplayed(iFace $backend): StateInterface
     {
         $this->watched = 0;
+        $this->via = $backend->via;
         $this->updated = time();
 
         return $this;

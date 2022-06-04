@@ -294,8 +294,9 @@ interface StateInterface
      * If all conditions described at {@see StateInterface::shouldMarkAsUnplayed()} are met, then these actions **MUST** be taken:<br><br>
      *
      * 1- Manually set the watch property to false.<br>
-     * 2- Remove {@see iFace::COLUMN_META_DATA_PLAYED_AT}.<br>
-     * 3- Manually set {@see iFace::COLUMN_UPDATED} to current time.<br>
+     * 2- Manually set the via property.<br>
+     * 3- Remove {@see iFace::COLUMN_META_DATA_PLAYED_AT}.<br>
+     * 4- Manually set {@see iFace::COLUMN_UPDATED} to current time.<br>
      *
      * @param StateInterface $backend Backend object.
      *
