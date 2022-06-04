@@ -16,11 +16,11 @@ return [
     iFace::COLUMN_SEASON => 1,
     iFace::COLUMN_EPISODE => 2,
     iFace::COLUMN_PARENT => [
-        Guid::GUID_IMDB => '510',
+        Guid::GUID_IMDB => 'tt510',
         Guid::GUID_TVDB => '520',
     ],
     iFace::COLUMN_GUIDS => [
-        Guid::GUID_IMDB => '6100',
+        Guid::GUID_IMDB => 'tt6100',
         Guid::GUID_TVDB => '6200',
         Guid::GUID_TMDB => '6300',
         Guid::GUID_TVMAZE => '6400',

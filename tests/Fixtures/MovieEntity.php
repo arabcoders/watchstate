@@ -17,7 +17,7 @@ return [
     iFace::COLUMN_EPISODE => null,
     iFace::COLUMN_PARENT => [],
     iFace::COLUMN_GUIDS => [
-        Guid::GUID_IMDB => '1100',
+        Guid::GUID_IMDB => 'tt1100',
         Guid::GUID_TVDB => '1200',
         Guid::GUID_TMDB => '1300',
         Guid::GUID_TVMAZE => '1400',
