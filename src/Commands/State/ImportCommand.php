@@ -41,7 +41,7 @@ class ImportCommand extends Command
     protected function configure(): void
     {
         $this->setName('state:import')
-            ->setDescription('Import play state from backends.')
+            ->setDescription('Import play state and metadata from backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
@@ -52,13 +52,19 @@ class ImportCommand extends Command
                 'always-update-metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'Always update the locally stored metadata from backend.'
+                'Mapper option. Always update the locally stored metadata from backend.'
             )
             ->addOption(
                 'direct-mapper',
                 null,
                 InputOption::VALUE_NONE,
                 'Direct mapper is memory efficient, However its slower than the default mapper.'
+            )
+            ->addOption(
+                'metadata-only',
+                null,
+                InputOption::VALUE_NONE,
+                'import metadata changes only. Works when there are records in storage.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
     }
@@ -88,7 +94,7 @@ class ImportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
-        $inTradeMode = true === $input->getOption('trace');
+        $inTraceMode = true === $input->getOption('trace');
 
         $mapperOpts = [];
 
@@ -118,6 +124,7 @@ class ImportCommand extends Command
 
         foreach (Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
+            $metadata = false;
 
             if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
                 $this->logger->info(
@@ -126,7 +133,15 @@ class ImportCommand extends Command
                 continue;
             }
 
-            if (true !== ag($server, 'import.enabled')) {
+            if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                $metadata = true;
+            }
+
+            if (true === $input->getOption('metadata-only')) {
+                $metadata = true;
+            }
+
+            if (true !== ag($server, 'import.enabled') && false === $metadata) {
                 $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $serverName));
                 continue;
             }
@@ -173,7 +188,7 @@ class ImportCommand extends Command
         $this->logger->notice(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
 
         $this->logger->notice('MAPPER: Preloading database into memory.');
-        if ($inTradeMode) {
+        if ($inTraceMode) {
             $this->logger->notice(
                 sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
             );
@@ -181,7 +196,7 @@ class ImportCommand extends Command
 
         $this->mapper->loadData();
 
-        if ($inTradeMode) {
+        if ($inTraceMode) {
             $this->logger->notice(
                 sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
             );
@@ -193,8 +208,18 @@ class ImportCommand extends Command
 
         foreach ($list as $name => &$server) {
             Data::addBucket($name);
-
+            $metadata = false;
             $opts = ag($server, 'options', []);
+
+            if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                $opts[Options::IMPORT_METADATA_ONLY] = true;
+                $metadata = true;
+            }
+
+            if (true === $input->getOption('metadata-only')) {
+                $opts[Options::IMPORT_METADATA_ONLY] = true;
+                $metadata = true;
+            }
 
             if ($input->getOption('trace')) {
                 $opts[Options::DEBUG_TRACE] = true;
@@ -213,20 +238,23 @@ class ImportCommand extends Command
                 $after = null;
             }
 
-            if (null === $after) {
-                $this->logger->notice(
-                    sprintf('%s: Importing play state changes since beginning.', $name)
-                );
-            } else {
+            if (null !== $after) {
                 $after = makeDate($after);
-                $this->logger->notice(
-                    sprintf(
-                        '%s: Importing play state changes since \'%s\'.',
-                        $name,
-                        $after->format('Y-m-d H:i:s T')
-                    )
-                );
+                $context = [
+                    'context' => [
+                        'since' => $after->format('Y-m-d H:i:s T'),
+                    ],
+                ];
             }
+
+            $this->logger->notice(
+                sprintf(
+                    '%s: Importing metadata %s changes.',
+                    $name,
+                    (true === $metadata ? 'only' : 'and play state')
+                ),
+                $context ?? [],
+            );
 
             array_push($queue, ...$server['class']->pull($this->mapper, $after));
 
@@ -241,16 +269,22 @@ class ImportCommand extends Command
 
         unset($server);
 
-        $this->logger->notice(sprintf('HTTP: Waiting on \'%d\' external requests.', count($queue)));
+        $start = makeDate();
+        $this->logger->notice('SYSTEM: Waiting on backends requests.', [
+            'context' => [
+                'total' => number_format(count($queue)),
+                'start' => $start,
+            ],
+        ]);
 
-        if ($inTradeMode) {
+        if ($inTraceMode) {
             $this->logger->notice(
                 sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
             );
         }
 
         foreach ($queue as $_key => $response) {
-            if ($inTradeMode) {
+            if ($inTraceMode) {
                 $this->logger->notice(
                     sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
                 );
@@ -269,9 +303,17 @@ class ImportCommand extends Command
             gc_collect_cycles();
         }
 
-        $this->logger->notice('HTTP: Finished waiting on external requests.');
+        $end = makeDate();
+        $this->logger->notice('SYSTEM: Finished waiting on backends requests.', [
+            'context' => [
+                'total' => number_format(count($queue)),
+                'start' => $start,
+                'end' => $end,
+                'in_secs' => $end->getTimestamp() - $start->getTimestamp(),
+            ],
+        ]);
 
-        if ($inTradeMode) {
+        if ($inTraceMode) {
             $this->logger->notice(
                 sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
             );
@@ -282,8 +324,13 @@ class ImportCommand extends Command
         $total = count($this->mapper);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('MAPPER: Updating \'%d\' items.', $total));
-            if ($inTradeMode) {
+            $this->logger->notice('SYSTEM: Updating objects.', [
+                'context' => [
+                    'total' => $total,
+                ],
+            ]);
+
+            if ($inTraceMode) {
                 $this->logger->notice(
                     sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
                 );
@@ -326,7 +373,7 @@ class ImportCommand extends Command
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
-        if ($inTradeMode) {
+        if ($inTraceMode) {
             $this->logger->notice(
                 sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
             );

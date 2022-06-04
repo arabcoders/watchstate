@@ -63,6 +63,7 @@ final class ListCommand extends Command
             ->addOption('title', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified tv show.')
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number')
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number')
+            ->addOption('year', null, InputOption::VALUE_REQUIRED, 'Select year.')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number')
             ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'sort order by [id, updated]', 'updated')
             ->addOption('asc', null, InputOption::VALUE_NONE, 'Sort records in ascending order.')
@@ -127,6 +128,11 @@ final class ListCommand extends Command
         if ($input->getOption('via')) {
             $where[] = iFace::COLUMN_VIA . ' = :via';
             $params['via'] = $input->getOption('via');
+        }
+
+        if ($input->getOption('year')) {
+            $where[] = iFace::COLUMN_YEAR . ' = :year';
+            $params['year'] = $input->getOption('year');
         }
 
         if ($input->getOption('type')) {

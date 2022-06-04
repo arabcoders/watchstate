@@ -225,6 +225,11 @@ class Command extends BaseCommand
             $suggest = [];
 
             foreach (array_keys(Config::get('servers', [])) as $name) {
+                if (true === str_contains($currentValue, ',')) {
+                    $text = explode(',', $currentValue);
+                    $currentValue = array_pop($text);
+                }
+
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }

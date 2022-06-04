@@ -269,13 +269,14 @@ Click `Save Changes`
 * Emby does not send webhooks events for newly added
   items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)
 * Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
-  played/unplayed you
-  should see changes reflected in `docker exec -ti watchstate console db:list`.
+  played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
 # Jellyfin
 
-* If you don't select a user id, the Plugin will sometimes send `itemAdd` event without user info, and thus will fail
-  the check if you happen to enable `strict user match` for jellyfin.
+* If you don't select a user id, the Plugin will send `itemAdd` event without user data, and will fail the check if
+  you happen to enable `strict user match` for jellyfin.
+* Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
+* Even if you select user id, sometimes `itemAdd` event will fire without user data.
 
 ----
 

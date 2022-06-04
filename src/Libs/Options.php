@@ -14,6 +14,7 @@ final class Options
     public const RAW_RESPONSE = 'SHOW_RAW_RESPONSE';
     public const MAPPER_ALWAYS_UPDATE_META = 'ALWAYS_UPDATE_META';
     public const MAPPER_DISABLE_AUTOCOMMIT = 'DISABLE_AUTOCOMMIT';
+    public const IMPORT_METADATA_ONLY = 'IMPORT_METADATA_ONLY';
 
     private function __construct()
     {

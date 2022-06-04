@@ -6,6 +6,7 @@ namespace App\Libs\Mappers\Import;
 
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
@@ -15,28 +16,28 @@ use Psr\Log\LoggerInterface;
 
 final class MemoryMapper implements ImportInterface
 {
-    private const GUID = 'local_db://';
+    protected const GUID = 'local_db://';
 
     /**
      * @var array<int,iFace> Entities table.
      */
-    private array $objects = [];
+    protected array $objects = [];
 
     /**
      * @var array<string,int> Map GUIDs to entities.
      */
-    private array $guids = [];
+    protected array $pointers = [];
 
     /**
      * @var array<int,int> List Changed Entities.
      */
-    private array $changed = [];
+    protected array $changed = [];
 
-    private array $options = [];
+    protected array $options = [];
 
-    private bool $fullyLoaded = false;
+    protected bool $fullyLoaded = false;
 
-    public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
+    public function __construct(protected LoggerInterface $logger, protected StorageInterface $storage)
     {
     }
 
@@ -62,33 +63,58 @@ final class MemoryMapper implements ImportInterface
             $this->addPointers($this->objects[$pointer], $pointer);
         }
 
+        $this->logger->info('MAPPER: Loaded pointers and state into memory.', [
+            'context' => [
+                'pointers' => number_format(count($this->pointers)),
+                'objects' => number_format(count($this->objects)),
+            ],
+        ]);
+
         return $this;
     }
 
-    public function add(string $bucket, string $name, iFace $entity, array $opts = []): self
+    public function add(iFace $entity, array $opts = []): self
     {
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->warning(
-                sprintf(
-                    '%s: Ignoring \'%s\'. No valid/supported external ids.',
-                    $bucket,
-                    $entity->getName()
-                )
-            );
-            Data::increment($bucket, $entity->type . '_failed_no_guid');
+        if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
+            $this->logger->warning('MAPPER: Ignoring item no valid/supported external ids.', [
+                'context' => [
+                    'id' => $entity->id,
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                ],
+            ]);
+            Data::increment($entity->via, $entity->type . '_failed_no_guid');
             return $this;
         }
 
-        if (false === ($pointer = $this->getPointer($entity))) {
-            $this->objects[] = $entity;
+        $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
 
+        /**
+         * Handle new item logic here.
+         * if getPointer return false, it means most likely the item is not found in backend storage.
+         */
+        if (false === ($pointer = $this->getPointer($entity))) {
+            if (true === $metadataOnly) {
+                $this->logger->notice('MAPPER: Ignoring item. Does not exist in storage.', [
+                    'context' => [
+                        'metaOnly' => true,
+                        'backend' => $entity->via,
+                        'title' => $entity->getName(),
+                    ],
+                    'data' => $entity->getAll(),
+                ]);
+                return $this;
+            }
+
+            $this->objects[] = $entity;
             $pointer = array_key_last($this->objects);
+
             $this->changed[$pointer] = $pointer;
 
-            Data::increment($bucket, $entity->type . '_added');
+            Data::increment($entity->via, $entity->type . '_added');
             $this->addPointers($this->objects[$pointer], $pointer);
 
-            if ($this->inTraceMode()) {
+            if (true === $this->inTraceMode()) {
                 $data = $entity->getAll();
                 unset($data['id']);
                 $data[iFace::COLUMN_UPDATED] = makeDate($data[iFace::COLUMN_UPDATED]);
@@ -109,78 +135,125 @@ final class MemoryMapper implements ImportInterface
                 ];
             }
 
-            $this->logger->notice(
-                sprintf(
-                    '%s: Adding \'%s\'. As new Item.',
-                    $bucket,
-                    $entity->getName()
-                ),
-                $data
-            );
+            $this->logger->notice('MAPPER: Adding new item.', [
+                'context' => [
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                ],
+                true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
+            ]);
 
             return $this;
         }
 
-        // -- Item date is older than recorded last sync date,
+        $local = &$this->objects[$pointer];
+        $keys = [iFace::COLUMN_META_DATA];
+
+        /**
+         * DO NOT operate directly on this object it should be cloned.
+         * It should maintain pristine condition until changes are committed.
+         */
+        $cloned = clone $this->objects[$pointer];
+
+        /**
+         * ONLY update backend metadata as requested by caller.
+         */
+        if (true === $metadataOnly) {
+            if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                $localFields = array_merge($keys, [iFace::COLUMN_GUIDS]);
+                $this->changed[$pointer] = $pointer;
+                Data::increment($entity->via, $entity->type . '_updated');
+
+                $entity->guids = Guid::makeVirtualGuid(
+                    $entity->via,
+                    ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
+                );
+
+                $local = $local->apply(entity: $entity, fields: $localFields);
+
+                $this->removePointers($cloned)->addPointers($local, $pointer);
+
+                $this->logger->notice('MAPPER: Item metadata updated.', [
+                    'context' => [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                    ],
+                    'diff' => $local->diff(fields: $localFields)
+                ]);
+
+                return $this;
+            }
+
+            if (true === $this->inTraceMode()) {
+                $this->logger->notice('MAPPER: No metadata changes detected.', [
+                    'context' => [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                    ]
+                ]);
+            }
+
+            return $this;
+        }
+
+        // -- Item date is older than recorded last sync date logic handling.
         if (null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof DateTimeInterface)) {
             if ($opts['after']->getTimestamp() >= $entity->updated) {
-                $keys = [iFace::COLUMN_META_DATA];
-
                 // -- Handle mark as unplayed logic.
-                if (false === $entity->isWatched()) {
-                    $cloned = clone $this->objects[$pointer];
-                    if (true === $cloned->shouldMarkAsUnplayed($entity)) {
-                        $this->objects[$pointer] = $this->objects[$pointer]->apply(
-                            entity: $entity,
-                            fields: $keys
-                        )->markAsUnplayed($entity);
-                        $this->changed[$pointer] = $pointer;
-                        Data::increment($bucket, $entity->type . '_updated');
+                if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
+                    $this->changed[$pointer] = $pointer;
+                    Data::increment($entity->via, $entity->type . '_updated');
 
-                        $this->logger->notice(
-                            sprintf('%s: Updating \'%s\'. Item marked as unplayed.', $bucket, $entity->getName()),
-                            $this->objects[$pointer]->diff(
-                                fields: [iFace::COLUMN_UPDATED, iFace::COLUMN_WATCHED, iFace::COLUMN_META_DATA]
-                            ),
-                        );
+                    $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed(backend: $entity);
 
-                        return $this;
-                    }
+                    $this->logger->notice('MAPPER: Marked item as unplayed.', [
+                        'context' => [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                        ],
+                        'diff' => $local->diff(array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])),
+                    ]);
+
+                    return $this;
                 }
 
-                // -- this sometimes leads to never ending updates as data from backends conflicts.
-                // -- as such we have it disabled by default.
-
+                /**
+                 * this sometimes leads to never ending updates as data from backends conflicts.
+                 * as such we have it disabled by default.
+                 */
                 if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
-                    $cloned = clone $this->objects[$pointer];
-
-                    if (true === $cloned->apply($entity, $keys)->isChanged($keys)) {
-                        Data::increment($bucket, $entity->type . '_updated');
+                    if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                        $localFields = array_merge($keys, [iFace::COLUMN_GUIDS]);
                         $this->changed[$pointer] = $pointer;
+                        Data::increment($entity->via, $entity->type . '_updated');
 
-                        $this->removePointers($this->objects[$pointer]);
-
-                        $this->objects[$pointer] = $this->objects[$pointer]->apply(
-                            entity: $entity,
-                            fields: $keys
+                        $entity->guids = Guid::makeVirtualGuid(
+                            $entity->via,
+                            ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                         );
 
-                        $this->addPointers($this->objects[$pointer], $pointer);
+                        $local = $local->apply(entity: $entity, fields: $localFields);
 
-                        $this->logger->notice(
-                            sprintf(
-                                '%s: Updating \'%s\'. Metadata field.',
-                                $bucket,
-                                $this->objects[$pointer]->getName()
-                            ),
-                            $this->objects[$pointer]->diff(fields: $keys),
-                        );
+                        $this->logger->notice('MAPPER: Updating Item metadata.', [
+                            'context' => [
+                                'id' => $cloned->id,
+                                'backend' => $entity->via,
+                                'title' => $cloned->getName(),
+                            ],
+                            'diff' => $local::fromArray($cloned->getAll())->apply(
+                                entity: $entity,
+                                fields: $localFields
+                            )->diff(fields: $keys),
+                        ]);
 
                         return $this;
                     }
                 }
 
-                Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
+                Data::increment($entity->via, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
         }
@@ -193,36 +266,42 @@ final class MemoryMapper implements ImportInterface
                 )
             );
 
-        $cloned = clone $this->objects[$pointer];
-
-        if (true === $cloned->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-            Data::increment($bucket, $entity->type . '_updated');
+        if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             $this->changed[$pointer] = $pointer;
+            Data::increment($entity->via, $entity->type . '_updated');
 
-            $this->removePointers($this->objects[$pointer]);
+            $local = $local->apply(entity: $entity, fields: $keys);
+            $this->removePointers($cloned)->addPointers($local, $pointer);
 
-            $this->objects[$pointer]->apply(entity: $entity, fields: $keys);
-            $this->addPointers($this->objects[$pointer], $pointer);
-
-            $this->logger->notice(
-                sprintf('%s: Updating \'%s\'. State changed.', $bucket, $this->objects[$pointer]->getName()),
-                $this->objects[$pointer]->diff(fields: $keys),
-            );
+            $this->logger->notice('MAPPER: Item updated.', [
+                'context' => [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                ],
+                'diff' => $local::fromArray($cloned->getAll())->apply(entity: $entity, fields: $keys)->diff(
+                    fields: $keys
+                ),
+            ]);
 
             return $this;
         }
 
-        if ($this->inTraceMode()) {
-            $this->logger->debug(
-                sprintf('%s: \'%s\'. is identical.', $bucket, $entity->getName()),
-                [
-                    'backend' => $cloned->getAll(),
-                    'remote' => $entity->getAll(),
-                ]
-            );
+        if (true === $this->inTraceMode()) {
+            $this->logger->debug('MAPPER: Item state is identical.', [
+                'context' => [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                ],
+                'state' => [
+                    'storage' => $cloned->getAll(),
+                    'backend' => $entity->getAll(),
+                ],
+            ]);
         }
 
-        Data::increment($bucket, $entity->type . '_ignored_no_change');
+        Data::increment($entity->via, $entity->type . '_ignored_no_change');
 
         return $this;
     }
@@ -261,9 +340,16 @@ final class MemoryMapper implements ImportInterface
 
             $count = count($this->changed);
 
-            $this->logger->notice(
-                0 === $count ? 'MAPPER: No changes detected.' : sprintf('MAPPER: Updating \'%d\' db records.', $count)
-            );
+            if (0 === $count) {
+                $this->logger->notice('MAPPER: No changes detected.');
+                return $list;
+            }
+
+            $this->logger->notice('MAPPER: Changes detected updating storage.', [
+                'context' => [
+                    'total' => $count
+                ],
+            ]);
 
             $inDryRunMode = $this->inDryRunMode();
 
@@ -304,7 +390,7 @@ final class MemoryMapper implements ImportInterface
     public function reset(): self
     {
         $this->fullyLoaded = false;
-        $this->objects = $this->changed = $this->guids = [];
+        $this->objects = $this->changed = $this->pointers = [];
 
         return $this;
     }
@@ -354,11 +440,13 @@ final class MemoryMapper implements ImportInterface
         return true === (bool)ag($this->options, Options::DEBUG_TRACE, false);
     }
 
-    private function addPointers(iFace $entity, string|int $pointer): void
+    protected function addPointers(iFace $entity, string|int $pointer): ImportInterface
     {
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
-            $this->guids[$key . '/' . $entity->type] = $pointer;
+            $this->pointers[$key . '/' . $entity->type] = $pointer;
         }
+
+        return $this;
     }
 
     /**
@@ -368,7 +456,7 @@ final class MemoryMapper implements ImportInterface
      *
      * @return int|string|bool int pointer for the object, Or false if not registered.
      */
-    private function getPointer(iFace $entity): int|string|bool
+    protected function getPointer(iFace $entity): int|string|bool
     {
         if (null !== $entity->id && null !== ($this->objects[self::GUID . $entity->id] ?? null)) {
             return self::GUID . $entity->id;
@@ -376,8 +464,8 @@ final class MemoryMapper implements ImportInterface
 
         foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
             $lookup = $key . '/' . $entity->type;
-            if (null !== ($this->guids[$lookup] ?? null)) {
-                return $this->guids[$lookup];
+            if (null !== ($this->pointers[$lookup] ?? null)) {
+                return $this->pointers[$lookup];
             }
         }
 
@@ -392,14 +480,16 @@ final class MemoryMapper implements ImportInterface
         return false;
     }
 
-    private function removePointers(iFace $entity): void
+    protected function removePointers(iFace $entity): ImportInterface
     {
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
             $lookup = $key . '/' . $entity->type;
-            if (null !== ($this->guids[$lookup] ?? null)) {
-                unset($this->guids[$lookup]);
+            if (null !== ($this->pointers[$lookup] ?? null)) {
+                unset($this->pointers[$lookup]);
             }
         }
+
+        return $this;
     }
 
 }
