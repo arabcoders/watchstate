@@ -1735,12 +1735,10 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            $mapper->add(
-                bucket: $this->name,
-                name:   $this->name . ' - ' . $iName,
-                entity: $entity,
-                opts:   ['after' => $after]
-            );
+            $mapper->add(entity: $entity, opts: [
+                'after' => $after,
+                Options::IMPORT_METADATA_ONLY => true === (bool)ag($this->options, Options::IMPORT_METADATA_ONLY),
+            ]);
         } catch (Throwable $e) {
             $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
                 'file' => $e->getFile(),

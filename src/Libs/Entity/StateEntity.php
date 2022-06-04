@@ -106,13 +106,13 @@ final class StateEntity implements iFace
         $year = ag($this->data, iFace::COLUMN_YEAR, $this->year);
 
         if ($this->isMovie()) {
-            return sprintf('%s (%d)', $title, $year ?? 0000);
+            return sprintf('%s (%s)', $title, $year ?? '0000');
         }
 
         return sprintf(
             '%s (%s) - %sx%s',
             $title ?? '??',
-            $year ?? 0000,
+            $year ?? '0000',
             str_pad((string)ag($this->data, iFace::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT),
             str_pad((string)ag($this->data, iFace::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT)
         );
@@ -289,14 +289,14 @@ final class StateEntity implements iFace
         return $this->extra[$via] ?? [];
     }
 
-    public function shouldMarkAsUnplayed(iFace $remote): bool
+    public function shouldMarkAsUnplayed(iFace $backend): bool
     {
-        if (false !== $remote->isWatched() && true === $this->isWatched()) {
+        if (false !== $backend->isWatched() && true === $this->isWatched()) {
             return false;
         }
 
-        $addedAt = ag($this->metadata[$remote->via] ?? [], iFace::COLUMN_META_DATA_ADDED_AT);
-        $playedAt = ag($this->metadata[$remote->via] ?? [], iFace::COLUMN_META_DATA_PLAYED_AT);
+        $addedAt = ag($this->getMetadata($backend->via), iFace::COLUMN_META_DATA_ADDED_AT);
+        $playedAt = ag($this->getMetadata($backend->via), iFace::COLUMN_META_DATA_PLAYED_AT);
 
         // -- Required columns are not recorded at the backend database. so discontinue.
         if (null === $playedAt || null === $addedAt) {
@@ -304,14 +304,14 @@ final class StateEntity implements iFace
         }
 
         // -- Recorded added_at at database is not equal to remote updated.
-        if ((int)$addedAt !== $remote->updated) {
+        if ((int)$addedAt !== $backend->updated) {
             return false;
         }
 
         return true;
     }
 
-    public function markAsUnplayed(iFace $remote): StateInterface
+    public function markAsUnplayed(iFace $backend): StateInterface
     {
         $this->watched = 0;
         $this->updated = time();

@@ -54,7 +54,7 @@ class DirectMapperTest extends TestCase
         // -- expect 0 as we have not modified or added new item yet.
         $this->assertCount(0, $this->mapper);
 
-        $this->mapper->add('test', 'test1', $testEpisode)->add('test', 'test2', $testMovie);
+        $this->mapper->add($testEpisode)->add($testMovie);
 
         $this->assertCount(2, $this->mapper);
 
@@ -71,7 +71,7 @@ class DirectMapperTest extends TestCase
 
         $testEpisode->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
 
-        $this->mapper->add('test', 'test1', $testEpisode);
+        $this->mapper->add($testEpisode);
 
         $this->assertCount(1, $this->mapper);
 
@@ -123,8 +123,8 @@ class DirectMapperTest extends TestCase
         $testEpisode = new StateEntity($this->testEpisode);
 
         $insert = $this->mapper
-            ->add('test', 'movie', $testMovie)
-            ->add('test', 'episode', $testEpisode)
+            ->add($testMovie)
+            ->add($testEpisode)
             ->commit();
 
         $this->assertSame(
@@ -139,8 +139,8 @@ class DirectMapperTest extends TestCase
         $testEpisode->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
 
         $this->mapper
-            ->add('test', 'movie', $testMovie, ['diff_keys' => iFace::ENTITY_KEYS])
-            ->add('test', 'episode', $testEpisode, ['diff_keys' => iFace::ENTITY_KEYS]);
+            ->add($testMovie, ['diff_keys' => iFace::ENTITY_KEYS])
+            ->add($testEpisode, ['diff_keys' => iFace::ENTITY_KEYS]);
 
         $updated = $this->mapper->commit();
 
@@ -159,7 +159,7 @@ class DirectMapperTest extends TestCase
         $testEpisode = new StateEntity($this->testEpisode);
 
         $this->assertFalse($this->mapper->remove($testEpisode));
-        $this->mapper->add('test', 'episode', $testEpisode)->add('test', 'movie', $testMovie)->commit();
+        $this->mapper->add($testEpisode)->add($testMovie)->commit();
         $this->assertTrue($this->mapper->remove($testEpisode));
     }
 
@@ -176,7 +176,7 @@ class DirectMapperTest extends TestCase
         $testEpisode = new StateEntity($this->testEpisode);
         $this->assertCount(0, $this->mapper);
 
-        $this->mapper->add('test', 'episode', $testEpisode);
+        $this->mapper->add($testEpisode);
         $this->assertCount(1, $this->mapper);
 
         $this->mapper->reset();
@@ -190,8 +190,7 @@ class DirectMapperTest extends TestCase
 
         $this->assertCount(0, $this->mapper->getObjects());
 
-        $this->mapper->add('test', 'test_movie', $testMovie)
-            ->add('test', 'test_episode', $testEpisode);
+        $this->mapper->add($testMovie)->add($testEpisode);
 
         $this->assertCount(2, $this->mapper->getObjects());
         $this->assertCount(0, $this->mapper->reset()->getObjects());

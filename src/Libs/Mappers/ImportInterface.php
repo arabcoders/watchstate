@@ -34,14 +34,12 @@ interface ImportInterface extends Countable
      * Add Entity. it has to search for
      * existing entity, and if found update it.
      *
-     * @param string $bucket bucket name.
-     * @param string $name Item name.
-     * @param StateInterface $entity
-     * @param array $opts
+     * @param StateInterface $entity Refers to the item state from backend.
+     * @param array $opts options.
      *
      * @return self
      */
-    public function add(string $bucket, string $name, StateInterface $entity, array $opts = []): self;
+    public function add(StateInterface $entity, array $opts = []): self;
 
     /**
      * Get Entity.

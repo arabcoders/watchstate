@@ -7,6 +7,7 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
@@ -20,31 +21,31 @@ final class DirectMapper implements ImportInterface
     /**
      * @var array<int,int> List used objects.
      */
-    private array $objects = [];
+    protected array $objects = [];
 
     /**
      * @var array<array-key,int>
      */
-    private array $pointers = [];
+    protected array $pointers = [];
 
     /**
      * @var array<int,int> List changed entities.
      */
-    private array $changed = [];
+    protected array $changed = [];
 
     /**
      * @var array<array-key,<string,int>>
      */
-    private array $actions = [
+    protected array $actions = [
         iFace::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
         iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
     ];
 
-    private array $options = [];
+    protected array $options = [];
 
-    private bool $fullyLoaded = false;
+    protected bool $fullyLoaded = false;
 
-    public function __construct(private LoggerInterface $logger, private StorageInterface $storage)
+    public function __construct(protected LoggerInterface $logger, protected StorageInterface $storage)
     {
     }
 
@@ -90,23 +91,39 @@ final class DirectMapper implements ImportInterface
         return $this;
     }
 
-    public function add(string $bucket, string $name, iFace $entity, array $opts = []): self
+    public function add(iFace $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->warning(sprintf('%s: Ignoring item no valid/supported external ids.', $bucket), [
+            $this->logger->warning('MAPPER: Ignoring item no valid/supported external ids.', [
                 'context' => [
                     'id' => $entity->id,
+                    'backend' => $entity->via,
                     'title' => $entity->getName(),
                 ],
             ]);
-
-            Data::increment($bucket, $entity->type . '_failed_no_guid');
+            Data::increment($entity->via, $entity->type . '_failed_no_guid');
             return $this;
         }
 
+        $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
         $inDryRunMode = $this->inDryRunMode();
 
+        /**
+         * Handle adding new item logic.
+         */
         if (null === ($local = $this->get($entity))) {
+            if (true === $metadataOnly) {
+                $this->logger->notice('MAPPER: Ignoring item. Does not exist in storage.', [
+                    'context' => [
+                        'metaOnly' => true,
+                        'backend' => $entity->via,
+                        'title' => $entity->getName(),
+                    ],
+                    'data' => $entity->getAll(),
+                ]);
+                return $this;
+            }
+
             try {
                 if ($this->inTraceMode()) {
                     $data = $entity->getAll();
@@ -129,15 +146,16 @@ final class DirectMapper implements ImportInterface
                     ];
                 }
 
-                if (false === $inDryRunMode) {
-                    $entity = $this->storage->insert($entity);
-                } else {
+                if (true === $inDryRunMode) {
                     $entity->id = random_int((int)(PHP_INT_MAX / 2), PHP_INT_MAX);
+                } else {
+                    $entity = $this->storage->insert($entity);
                 }
 
-                $this->logger->notice(sprintf('%s: Adding new item.', $bucket), [
+                $this->logger->notice('MAPPER: Adding new item.', [
                     'context' => [
                         'id' => $entity->id,
+                        'backend' => $entity->via,
                         'title' => $entity->getName(),
                     ],
                     $this->inTraceMode() ? 'trace' : 'metadata' => $data,
@@ -147,15 +165,18 @@ final class DirectMapper implements ImportInterface
 
                 if (null === ($this->changed[$entity->id] ?? null)) {
                     $this->actions[$entity->type]['added']++;
-                    Data::increment($bucket, $entity->type . '_added');
+                    Data::increment($entity->via, $entity->type . '_added');
                 }
 
-                $this->changed[$entity->id] = $entity->id;
-                $this->objects[$entity->id] = $entity->id;
+                $this->changed[$entity->id] = $this->objects[$entity->id] = $entity->id;
             } catch (PDOException|Exception $e) {
                 $this->actions[$entity->type]['failed']++;
-                Data::increment($bucket, $entity->type . '_failed');
-                $this->logger->error(sprintf('%s: %s', $bucket, $e->getMessage()), [
+                Data::increment($entity->via, $entity->type . '_failed');
+                $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
+                    'context' => [
+                        'backend' => $entity->via,
+                        'title' => $entity->getName(),
+                    ],
                     'state' => $entity->getAll()
                 ]);
             }
@@ -164,14 +185,79 @@ final class DirectMapper implements ImportInterface
         }
 
         $cloned = clone $local;
+        $keys = [iFace::COLUMN_META_DATA];
+
+        /**
+         * Only allow metadata updates no play state changes.
+         */
+        if (true === $metadataOnly) {
+            if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                try {
+                    $localFields = array_merge($keys, [iFace::COLUMN_GUIDS]);
+
+                    $entity->guids = Guid::makeVirtualGuid(
+                        $entity->via,
+                        ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
+                    );
+
+                    $local = $local->apply(entity: $entity, fields: $localFields);
+                    $this->removePointers($cloned)->addPointers($local, $local->id);
+
+                    $this->logger->notice('MAPPER: Item metadata updated.', [
+                        'context' => [
+                            'id' => $local->id,
+                            'backend' => $entity->via,
+                            'title' => $local->getName(),
+                        ],
+                        'diff' => $local->diff(fields: $localFields)
+                    ]);
+
+                    if (false === $inDryRunMode) {
+                        $this->storage->update($local);
+                    }
+
+                    if (null === ($this->changed[$local->id] ?? null)) {
+                        $this->actions[$local->type]['updated']++;
+                        Data::increment($entity->via, $local->type . '_updated');
+                    }
+
+                    $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
+                } catch (PDOException $e) {
+                    $this->actions[$local->type]['failed']++;
+                    Data::increment($entity->via, $local->type . '_failed');
+                    $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
+                        'context' => [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                        ],
+                        'state' => [
+                            'storage' => $cloned->getAll(),
+                            'backend' => $entity->getAll()
+                        ],
+                    ]);
+                }
+
+                return $this;
+            }
+
+            if ($this->inTraceMode()) {
+                $this->logger->info('MAPPER: No metadata changes detected.', [
+                    'context' => [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                    ]
+                ]);
+            }
+            return $this;
+        }
 
         // -- Item date is older than recorded last sync date,
         if (null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof DateTimeInterface)) {
             if ($opts['after']->getTimestamp() >= $entity->updated) {
-                $keys = [iFace::COLUMN_META_DATA];
-
                 // -- Handle mark as unplayed logic.
-                if (false === $entity->isWatched() && true === (clone $cloned)->shouldMarkAsUnplayed($entity)) {
+                if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
                     try {
                         $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed($entity);
 
@@ -179,29 +265,28 @@ final class DirectMapper implements ImportInterface
                             $this->storage->update($local);
                         }
 
-                        $this->logger->notice(sprintf('%s: Marked item as unplayed.', $bucket), [
+                        $this->logger->notice('MAPPER: Marked item as unplayed.', [
                             'context' => [
                                 'id' => $cloned->id,
+                                'backend' => $entity->via,
                                 'title' => $cloned->getName(),
                             ],
-                            'diff' => $local->diff(
-                                fields: $keys + [iFace::COLUMN_UPDATED, iFace::COLUMN_WATCHED]
-                            ),
+                            'diff' => $local->diff(),
                         ]);
 
                         if (null === ($this->changed[$local->id] ?? null)) {
                             $this->actions[$local->type]['updated']++;
-                            Data::increment($bucket, $local->type . '_updated');
+                            Data::increment($entity->via, $local->type . '_updated');
                         }
 
-                        $this->changed[$local->id] = $local->id;
-                        $this->objects[$local->id] = $local->id;
+                        $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
                     } catch (PDOException $e) {
                         $this->actions[$local->type]['failed']++;
-                        Data::increment($bucket, $local->type . '_failed');
-                        $this->logger->error(sprintf('%s: %s', $bucket, $e->getMessage()), [
+                        Data::increment($entity->via, $local->type . '_failed');
+                        $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                             'context' => [
                                 'id' => $cloned->id,
+                                'backend' => $entity->via,
                                 'title' => $cloned->getName(),
                             ],
                             'state' => [
@@ -214,19 +299,29 @@ final class DirectMapper implements ImportInterface
                     return $this;
                 }
 
-                // -- this sometimes leads to never ending updates as data from backends conflicts.
-                // -- as such we have it disabled by default.
+                /**
+                 * this sometimes leads to never ending updates as data from backends conflicts.
+                 * as such we have it disabled by default.
+                 */
                 if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                         try {
-                            $local = $local->apply(entity: $entity, fields: $keys);
+                            $localFields = array_merge($keys, [iFace::COLUMN_GUIDS]);
 
-                            $this->logger->notice(sprintf('%s: Updating metadata.', $bucket), [
+                            $entity->guids = Guid::makeVirtualGuid(
+                                $entity->via,
+                                ag($entity->getMetadata($entity->via), 'id')
+                            );
+
+                            $local = $local->apply(entity: $entity, fields: $localFields);
+
+                            $this->logger->notice('MAPPER: Updating Item metadata.', [
                                 'context' => [
                                     'id' => $cloned->id,
+                                    'backend' => $entity->via,
                                     'title' => $cloned->getName(),
                                 ],
-                                'diff' => $local->diff(),
+                                'diff' => $local->diff(fields: $localFields),
                             ]);
 
                             if (false === $inDryRunMode) {
@@ -235,15 +330,14 @@ final class DirectMapper implements ImportInterface
 
                             if (null === ($this->changed[$local->id] ?? null)) {
                                 $this->actions[$local->type]['updated']++;
-                                Data::increment($bucket, $local->type . '_updated');
+                                Data::increment($entity->via, $local->type . '_updated');
                             }
 
-                            $this->changed[$local->id] = $local->id;
-                            $this->objects[$local->id] = $local->id;
+                            $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
                         } catch (PDOException $e) {
                             $this->actions[$local->type]['failed']++;
-                            Data::increment($bucket, $local->type . '_failed');
-                            $this->logger->error(sprintf('%s: %s', $bucket, $e->getMessage()), [
+                            Data::increment($entity->via, $local->type . '_failed');
+                            $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                                 'context' => [
                                     'id' => $cloned->id,
                                     'title' => $cloned->getName(),
@@ -259,7 +353,7 @@ final class DirectMapper implements ImportInterface
                     }
                 }
 
-                Data::increment($bucket, $entity->type . '_ignored_not_played_since_last_sync');
+                Data::increment($entity->via, $entity->type . '_ignored_not_played_since_last_sync');
                 return $this;
             }
         }
@@ -276,12 +370,13 @@ final class DirectMapper implements ImportInterface
             try {
                 $local = $local->apply(entity: $entity, fields: $keys);
 
-                $this->logger->notice(sprintf('%s: Item updated.', $bucket), [
+                $this->logger->notice('MAPPER: Item updated.', [
                     'context' => [
                         'id' => $cloned->id,
+                        'backend' => $entity->via,
                         'title' => $cloned->getName(),
                     ],
-                    'diff' => $local->diff()
+                    'diff' => $local->diff(fields: $keys)
                 ]);
 
                 if (false === $inDryRunMode) {
@@ -290,17 +385,17 @@ final class DirectMapper implements ImportInterface
 
                 if (null === ($this->changed[$local->id] ?? null)) {
                     $this->actions[$local->type]['updated']++;
-                    Data::increment($bucket, $entity->type . '_updated');
+                    Data::increment($entity->via, $entity->type . '_updated');
                 }
 
-                $this->changed[$local->id] = $local->id;
-                $this->objects[$local->id] = $local->id;
+                $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
             } catch (PDOException $e) {
                 $this->actions[$local->type]['failed']++;
-                Data::increment($bucket, $local->type . '_failed');
-                $this->logger->error(sprintf('%s: %s', $bucket, $e->getMessage()), [
+                Data::increment($entity->via, $local->type . '_failed');
+                $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                     'context' => [
                         'id' => $cloned->id,
+                        'backend' => $entity->via,
                         'title' => $cloned->getName(),
                     ],
                     'state' => [
@@ -313,20 +408,21 @@ final class DirectMapper implements ImportInterface
             return $this;
         }
 
-        if ($this->inTraceMode()) {
-            $this->logger->debug(sprintf('%s: Item state is identical.', $bucket), [
+        if (true === $this->inTraceMode()) {
+            $this->logger->debug('MAPPER: Item state is identical.', [
                 'context' => [
-                    'id' => $local->id,
-                    'title' => $local->getName(),
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
                 ],
                 'state' => [
-                    'storage' => $local->getAll(),
+                    'storage' => $cloned->getAll(),
                     'backend' => $entity->getAll(),
                 ],
             ]);
         }
 
-        Data::increment($bucket, $entity->type . '_ignored_no_change');
+        Data::increment($entity->via, $entity->type . '_ignored_no_change');
 
         return $this;
     }
@@ -428,11 +524,13 @@ final class DirectMapper implements ImportInterface
         return true === (bool)ag($this->options, Options::DEBUG_TRACE, false);
     }
 
-    private function addPointers(iFace $entity, string|int $pointer): void
+    protected function addPointers(iFace $entity, string|int $pointer): ImportInterface
     {
         foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
             $this->pointers[$key . '/' . $entity->type] = $pointer;
         }
+
+        return $this;
     }
 
     /**
@@ -442,7 +540,7 @@ final class DirectMapper implements ImportInterface
      *
      * @return iFace|int|string|bool int pointer for the object, Or false if not registered.
      */
-    private function getPointer(iFace $entity): iFace|int|string|bool
+    protected function getPointer(iFace $entity): iFace|int|string|bool
     {
         if (null !== $entity->id && null !== ($this->objects[$entity->id] ?? null)) {
             return $entity->id;
@@ -464,5 +562,16 @@ final class DirectMapper implements ImportInterface
         }
 
         return false;
+    }
+
+    protected function removePointers(iFace $entity): ImportInterface
+    {
+        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+            $lookup = $key . '/' . $entity->type;
+            if (null !== ($this->pointers[$lookup] ?? null)) {
+                unset($this->pointers[$lookup]);
+            }
+        }
+        return $this;
     }
 }
