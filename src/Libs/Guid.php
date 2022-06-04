@@ -25,6 +25,13 @@ final class Guid
         Guid::GUID_ANIDB => 'string',
     ];
 
+    private const VALIDATE_GUID = [
+        Guid::GUID_IMDB => [
+            'pattern' => '/tt(\d+)/i',
+            'example' => 'tt(number)',
+        ]
+    ];
+
     private const BACKEND_GUID = 'guidv_';
 
     private const LOOKUP_KEY = '%s://%s';
@@ -55,7 +62,7 @@ final class Guid
             if (!is_string($key)) {
                 throw new RuntimeException(
                     sprintf(
-                        'Unexpected key type was given. Was expecting \'string\' but got \'%s\' instead.',
+                        'Unexpected key type was given. Was expecting \'string\' but got \'%s\'.',
                         get_debug_type($key)
                     ),
                 );
@@ -74,12 +81,25 @@ final class Guid
             if ($supported[$key] !== ($valueType = get_debug_type($value))) {
                 throw new RuntimeException(
                     sprintf(
-                        'Unexpected value type for \'%s\'. Expecting \'%s\' but got \'%s\' instead.',
+                        'Unexpected value type for \'%s\'. Expecting \'%s\' but got \'%s\'.',
                         $key,
                         $supported[$key],
                         $valueType
                     )
                 );
+            }
+
+            if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
+                if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
+                    throw new RuntimeException(
+                        sprintf(
+                            'Unexpected value for \'%s\'. Expecting \'%s\' but got \'%s\'.',
+                            $key,
+                            self::VALIDATE_GUID[$key]['example'],
+                            $value
+                        )
+                    );
+                }
             }
 
             $this->data[$key] = $value;
