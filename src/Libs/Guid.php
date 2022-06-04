@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use JsonException;
-use RuntimeException;
+use Psr\Log\LoggerInterface;
 
 final class Guid
 {
@@ -38,13 +37,13 @@ final class Guid
 
     private array $data = [];
 
+    private static LoggerInterface|null $logger = null;
+
     /**
      * Create List of db => external id list.
      *
      * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
-     * @param bool $includeVirtual Whether to consider virtual Guids.
-     *
-     * @throws RuntimeException if key/value is of unexpected type or unsupported.
+     * @param bool $includeVirtual Whether to consider virtual guids.
      */
     public function __construct(array $guids, bool $includeVirtual = true)
     {
@@ -60,26 +59,28 @@ final class Guid
             }
 
             if (!is_string($key)) {
-                throw new RuntimeException(
+                $this->getLogger()->error(
                     sprintf(
-                        'Unexpected key type was given. Was expecting \'string\' but got \'%s\'.',
+                        'Unexpected key type was given. Expecting \'string\' but got \'%s\'.',
                         get_debug_type($key)
                     ),
                 );
+                continue;
             }
 
             if (null === ($supported[$key] ?? null)) {
-                throw new RuntimeException(
+                $this->getLogger()->error(
                     sprintf(
                         'Unexpected key \'%s\'. Expecting \'%s\'.',
                         $key,
                         implode(', ', array_keys($supported))
                     ),
                 );
+                continue;
             }
 
             if ($supported[$key] !== ($valueType = get_debug_type($value))) {
-                throw new RuntimeException(
+                $this->getLogger()->error(
                     sprintf(
                         'Unexpected value type for \'%s\'. Expecting \'%s\' but got \'%s\'.',
                         $key,
@@ -87,11 +88,12 @@ final class Guid
                         $valueType
                     )
                 );
+                continue;
             }
 
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
-                    throw new RuntimeException(
+                    $this->getLogger()->error(
                         sprintf(
                             'Unexpected value for \'%s\'. Expecting \'%s\' but got \'%s\'.',
                             $key,
@@ -99,6 +101,7 @@ final class Guid
                             $value
                         )
                     );
+                    continue;
                 }
             }
 
@@ -106,11 +109,37 @@ final class Guid
         }
     }
 
+    /**
+     * Set Logger.
+     *
+     * @param LoggerInterface $logger
+     * @return void
+     */
+    public static function setLogger(LoggerInterface $logger): void
+    {
+        self::$logger = $logger;
+    }
+
+    /**
+     * Make Virtual external id that point to backend://(backend_id)
+     *
+     * @param string $backend backend name.
+     * @param string $value backend id
+     *
+     * @return array<string,string>
+     */
     public static function makeVirtualGuid(string $backend, string $value): array
     {
         return [self::BACKEND_GUID . $backend => $value];
     }
 
+    /**
+     * Get Supported External ids sources.
+     *
+     * @param bool $includeVirtual Whether to include virtual ids.
+     *
+     * @return array<string,string>
+     */
     public static function getSupported(bool $includeVirtual = false): array
     {
         static $list = null;
@@ -133,31 +162,16 @@ final class Guid
     }
 
     /**
-     * Create new instance from array payload.
+     * Create new instance from array.
      *
-     * @param array $payload Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     * @param array $payload array of [ 'key' => 'value' ] pairs of [ 'db_source' => 'external id' ].
+     * @param bool $includeVirtual Whether to include parsing of Virtual guids.
      *
-     * @return static
+     * @return self
      */
     public static function fromArray(array $payload, bool $includeVirtual = true): self
     {
         return new self(guids: $payload, includeVirtual: $includeVirtual);
-    }
-
-    /**
-     * Create new instance from json payload.
-     *
-     * @param string $payload Key/value pair of db => external id. For example, { "guid_imdb" : "tt123456789" }
-     *
-     * @return static
-     * @throws JsonException if decoding JSON payload fails.
-     */
-    public static function fromJson(string $payload, bool $includeVirtual = true): self
-    {
-        return new self(
-            guids:          json_decode(json: $payload, associative: true, flags: JSON_THROW_ON_ERROR),
-            includeVirtual: $includeVirtual
-        );
     }
 
     /**
@@ -184,5 +198,19 @@ final class Guid
     public function getAll(): array
     {
         return $this->data;
+    }
+
+    /**
+     * Get Instance of logger.
+     *
+     * @return LoggerInterface
+     */
+    private function getLogger(): LoggerInterface
+    {
+        if (null === self::$logger) {
+            self::$logger = Container::get(LoggerInterface::class);
+        }
+
+        return self::$logger;
     }
 }
