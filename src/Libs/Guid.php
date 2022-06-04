@@ -59,7 +59,7 @@ final class Guid
             }
 
             if (!is_string($key)) {
-                $this->getLogger()->error(
+                $this->getLogger()->warning(
                     sprintf(
                         'Unexpected key type was given. Expecting \'string\' but got \'%s\'.',
                         get_debug_type($key)
@@ -69,7 +69,7 @@ final class Guid
             }
 
             if (null === ($supported[$key] ?? null)) {
-                $this->getLogger()->error(
+                $this->getLogger()->warning(
                     sprintf(
                         'Unexpected key \'%s\'. Expecting \'%s\'.',
                         $key,
@@ -80,7 +80,7 @@ final class Guid
             }
 
             if ($supported[$key] !== ($valueType = get_debug_type($value))) {
-                $this->getLogger()->error(
+                $this->getLogger()->warning(
                     sprintf(
                         'Unexpected value type for \'%s\'. Expecting \'%s\' but got \'%s\'.',
                         $key,
@@ -93,7 +93,7 @@ final class Guid
 
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
-                    $this->getLogger()->error(
+                    $this->getLogger()->warning(
                         sprintf(
                             'Unexpected value for \'%s\'. Expecting \'%s\' but got \'%s\'.',
                             $key,
