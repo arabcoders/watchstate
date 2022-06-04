@@ -111,7 +111,7 @@ class EmbyServer extends JellyfinServer
 
         $event = ag($json, 'Event', 'unknown');
         $type = ag($json, 'Item.Type', 'not_found');
-        $id = ag($json, 'Item.ItemId');
+        $id = ag($json, 'Item.Id');
 
         if (null === $type || !in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(
