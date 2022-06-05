@@ -40,26 +40,14 @@ class PushCommand extends Command
     protected function configure(): void
     {
         $this->setName('state:push')
-            ->setDescription('Push queued webhook queued events.')
-            ->addOption('keep-queue', null, InputOption::VALUE_NONE, 'Do not empty queue after run is successful.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
-            ->addOption(
-                'proxy',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'By default the HTTP client uses your ENV: HTTP_PROXY.'
-            )
-            ->addOption(
-                'no-proxy',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Disables the proxy for a comma-separated list of hosts that do not require it to get reached.'
-            )
+            ->setDescription('Push webhook queued events.')
+            ->addOption('keep', 'k', InputOption::VALUE_NONE, 'Do not expunge queue after run is complete.')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends. Will keep queue.')
             ->addOption(
                 'ignore-date',
                 null,
                 InputOption::VALUE_NONE,
-                'Ignore date comparison. Push db state to the server regardless of date.'
+                'Ignore date comparison. Push storage state to the backends regardless of date.'
             );
     }
 
@@ -71,16 +59,16 @@ class PushCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input), $output);
     }
 
     /**
      * @throws InvalidArgumentException
      */
-    protected function process(InputInterface $input, OutputInterface $output): int
+    protected function process(InputInterface $input): int
     {
         if (!$this->cache->has('queue')) {
-            $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_VERY_VERBOSE);
+            $this->logger->info('No items in the queue.');
             return self::SUCCESS;
         }
 
@@ -100,7 +88,7 @@ class PushCommand extends Command
 
         if (empty($entities)) {
             $this->cache->delete('queue');
-            $output->writeln('<info>No items in the queue.</info>', OutputInterface::VERBOSITY_VERY_VERBOSE);
+            $this->logger->debug('No items in the queue.');
             return self::SUCCESS;
         }
 
@@ -109,33 +97,40 @@ class PushCommand extends Command
         $list = [];
         $supported = Config::get('supported', []);
 
-        foreach (Config::get('servers', []) as $serverName => $server) {
+        foreach ((array)Config::get('servers', []) as $serverName => $server) {
             $type = strtolower(ag($server, 'type', 'unknown'));
 
-            if (true !== (bool)ag($server, 'webhook.push')) {
-                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $serverName));
+            // -- @RELEASE remove 'webhook.push'
+            if (true !== (bool)ag($server, ['export.enabled', 'webhook.push'])) {
+                $this->logger->info('Export to this backend is disabled by user choice.', [
+                    'context' => [
+                        'backend' => $serverName,
+                    ],
+                ]);
+
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error(
-                    sprintf(
-                        '%s: Unexpected type. Expecting \'%s\', but got \'%s\'.',
-                        $serverName,
-                        implode(', ', array_keys($supported)),
-                        $type
-                    )
-                );
+                $this->logger->error('Unexpected backend type.', [
+                    'context' => [
+                        'backend' => $serverName,
+                        'condition' => [
+                            'expected' => implode(', ', array_keys($supported)),
+                            'given' => $type,
+                        ],
+                    ],
+                ]);
                 continue;
             }
 
             if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error(
-                    sprintf('%s: Backend does not have valid url.', $serverName),
-                    [
-                        'url' => $url ?? 'None'
+                $this->logger->error('Invalid backend API URL.', [
+                    'context' => [
+                        'backend' => $serverName,
+                        'url' => $url ?? 'None',
                     ]
-                );
+                ]);
                 continue;
             }
 
@@ -144,7 +139,7 @@ class PushCommand extends Command
         }
 
         if (empty($list)) {
-            $output->writeln('No Backends have push via webhook enabled.');
+            $this->logger->warning('There are no backends with export enabled.');
             return self::FAILURE;
         }
 
@@ -160,14 +155,6 @@ class PushCommand extends Command
                 $opts[Options::DRY_RUN] = true;
             }
 
-            if ($input->getOption('proxy')) {
-                $opts['client']['proxy'] = $input->getOption('proxy');
-            }
-
-            if ($input->getOption('no-proxy')) {
-                $opts['client']['no_proxy'] = $input->getOption('no-proxy');
-            }
-
             $server['options'] = $opts;
             $server['class'] = makeServer(server: $server, name: $name);
 
@@ -179,37 +166,68 @@ class PushCommand extends Command
         $total = count($this->queue);
 
         if ($total >= 1) {
-            $this->logger->notice(sprintf('HTTP: Sending \'%d\' change play state requests.', $total));
+            $start = makeDate();
+            $this->logger->notice('SYSTEM: Sending change play state requests.', [
+                'context' => [
+                    'total' => $total,
+                    'time' => [
+                        'start' => $start,
+                    ],
+                ],
+            ]);
+
             foreach ($this->queue->getQueue() as $response) {
                 $requestData = $response->getInfo('user_data');
+
                 try {
                     if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Request to change \'%s\' play state responded with unexpected status code \'%d\'.',
-                                ag($requestData, 'server', '??'),
-                                ag($requestData, 'itemName', '??'),
-                                $response->getStatusCode()
-                            )
-                        );
+                        $this->logger->error('Unexpected change play state response code.', [
+                            'context' => [
+                                'backend' => ag($requestData, 'server', '??'),
+                                'title' => ag($requestData, 'itemName', '??'),
+                            ],
+                            'condition' => [
+                                'expected' => 200,
+                                'given' => $response->getStatusCode(),
+                            ],
+                        ]);
                         continue;
                     }
 
-                    $this->logger->notice(
-                        sprintf(
-                            '%s: Marked \'%s\' as \'%s\'.',
-                            ag($requestData, 'server', '??'),
-                            ag($requestData, 'itemName', '??'),
-                            ag($requestData, 'state', '??'),
-                        )
-                    );
+                    $this->logger->notice('Marked [{title}] as [{state}].', [
+                        'state' => ag($requestData, 'state', '??'),
+                        'backend' => ag($requestData, 'server', '??'),
+                        'title' => ag($requestData, 'itemName', '??'),
+                    ]);
                 } catch (ExceptionInterface $e) {
-                    $this->logger->error($e->getMessage());
+                    $this->logger->error($e->getMessage(), [
+                        'context' => [
+                            'backend' => ag($requestData ?? [], 'server', '??'),
+                            'title' => ag($requestData ?? [], 'itemName', '??'),
+                        ],
+                        'trace' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                        ],
+                    ]);
                 }
             }
-            $this->logger->notice(sprintf('HTTP: Processed \'%d\' change play state requests.', $total));
+
+            $end = makeDate();
+
+            $this->logger->notice('SYSTEM: Finished Sending change play state requests.', [
+                'context' => [
+                    'total' => $total,
+                    'time' => [
+                        'start' => $start,
+                        'end' => $end,
+                        'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                    ],
+                ],
+            ]);
         } else {
-            $this->logger->notice('No play state changes detected.');
+            $this->logger->notice('SYSTEM: No play state changes detected.');
         }
 
         if (false === $input->getOption('dry-run')) {
@@ -230,7 +248,7 @@ class PushCommand extends Command
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
-        if (false === $input->getOption('keep-queue') && false === $input->getOption('dry-run')) {
+        if (false === $input->getOption('keep') && false === $input->getOption('dry-run')) {
             $this->cache->delete('queue');
         }
 

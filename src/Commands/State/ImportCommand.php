@@ -273,7 +273,9 @@ class ImportCommand extends Command
         $this->logger->notice('SYSTEM: Waiting on backends requests.', [
             'context' => [
                 'total' => number_format(count($queue)),
-                'start' => $start,
+                'time' => [
+                    'start' => $start,
+                ],
             ],
         ]);
 
@@ -307,9 +309,11 @@ class ImportCommand extends Command
         $this->logger->notice('SYSTEM: Finished waiting on backends requests.', [
             'context' => [
                 'total' => number_format(count($queue)),
-                'start' => $start,
-                'end' => $end,
-                'in_secs' => $end->getTimestamp() - $start->getTimestamp(),
+                'time' => [
+                    'start' => $start,
+                    'end' => $end,
+                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                ],
             ],
         ]);
 

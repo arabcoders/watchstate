@@ -167,20 +167,28 @@ final class Initializer
         $request = $realRequest;
 
         try {
-            if (true === (bool)env('WS_REQUEST_DEBUG') || null !== ag($realRequest->getQueryParams(), 'rdebug')) {
+            $saveRequestPayload = false;
+
+            // -- Global request dump.
+            if (true === (bool)env('WS_REQUEST_DEBUG')) {
                 saveRequestPayload($realRequest);
+                $saveRequestPayload = true;
             }
 
-            // -- get apikey from header or query.
             $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
             if (empty($apikey)) {
                 $log[] = 'No webhook token found in headers or query';
                 throw new HttpException('No Webhook token was found.', 400);
             }
 
+            // -- Request specific dump.
+            if (false === $saveRequestPayload && null !== ag($realRequest->getQueryParams(), 'rdebug')) {
+                saveRequestPayload($realRequest);
+            }
+
             $validUser = $validUUid = null;
 
-            // -- Find Relevant backend
+            // -- Find Relevant backend.
             foreach (Config::get('servers', []) as $name => $info) {
                 if (null === ag($info, 'webhook.token')) {
                     continue;
@@ -213,8 +221,8 @@ final class Initializer
                         $validUser = false;
                         $server = $class = null;
                         $log[] = sprintf(
-                            'Request user [%s] does not match configured value [%s]',
-                            $requestUser ?? 'NO USER_ID',
+                            'Request user id [%s] does not match configured value [%s]',
+                            $requestUser ?? 'NOT SET',
                             $userId
                         );
                         continue;
@@ -226,19 +234,19 @@ final class Initializer
                 $uuid = ag($info, 'uuid', null);
 
                 if (true === (bool)ag($info, 'webhook.match.uuid') && null !== $uuid) {
-                    if (null === ($requestServerId = $request->getAttribute('SERVER_ID', null))) {
+                    if (null === ($requestBackendId = $request->getAttribute('SERVER_ID', null))) {
                         $validUUid = false;
                         $server = $class = null;
-                        $log[] = 'Media backend id is not set';
+                        $log[] = 'backend unique id is not set';
                         continue;
                     }
 
-                    if (false === hash_equals((string)$uuid, (string)$requestServerId)) {
+                    if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
                         $validUUid = false;
                         $server = $class = null;
                         $log[] = sprintf(
-                            'Request media backend id [%s] does not match configured value [%s]',
-                            $requestServerId ?? 'not_set',
+                            'Request backend unique id [%s] does not match configured value [%s]',
+                            $requestBackendId ?? 'NOT SET',
                             $uuid
                         );
                         continue;
@@ -253,20 +261,23 @@ final class Initializer
 
             if (empty($server) || null === $class) {
                 if (false === $validUser) {
-                    $message = 'Webhook token is valid, User matching failed.';
+                    $message = 'token is valid, User matching failed.';
                 } elseif (false === $validUUid) {
-                    $message = 'Webhook token and user are valid. Backend unique id matching failed.';
+                    $message = 'token and user are valid. Backend unique id matching failed.';
                 } else {
-                    $message = 'Invalid webhook token was given.';
+                    $message = 'Invalid token was given.';
                 }
                 throw new HttpException($message, 401);
             }
 
-            if (true !== ag($server, 'webhook.import')) {
-                $log[] = 'Import disabled for this server';
+            $metadataOnly = true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY);
+
+            // -- @RELEASE remove 'webhook.import'
+            if (true !== $metadataOnly && true !== (bool)ag($server, ['import.enabled', 'webhook.import'])) {
+                $log[] = 'Import disabled for this backend.';
                 throw new HttpException(
                     sprintf(
-                        '%s: Import via webhook is disabled for this server via user config.',
+                        '%s: Import is disabled for this backend.',
                         $class->getName()
                     ),
                     500
@@ -301,6 +312,14 @@ final class Initializer
             $storage = Container::get(StorageInterface::class);
 
             if (null === ($local = $storage->get($entity))) {
+                if (true === $metadataOnly) {
+                    $message = 'Unable to add new item. This backend is flagged for metadata only.';
+                    return new Response(
+                        status:  204,
+                        headers: $responseHeaders + ['X-Status' => $message]
+                    );
+                }
+
                 $entity = $storage->insert($entity);
 
                 if (true === $entity->isWatched()) {
@@ -320,27 +339,36 @@ final class Initializer
 
             $cloned = clone $local;
 
-            if (true === $entity->isTainted()) {
-                if ($cloned->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)->isChanged(
-                    fields: iFace::ENTITY_FORCE_UPDATE_FIELDS
-                )) {
-                    $local = $storage->update(
-                        $local->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
-                    );
+            if (true === $entity->isTainted() || true === $metadataOnly) {
+                $flag = true === $metadataOnly ? '[M]' : '[T]';
+                $keys = true === $metadataOnly ? [iFace::COLUMN_META_DATA] : iFace::ENTITY_FORCE_UPDATE_FIELDS;
+
+                if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                    if (true === $metadataOnly) {
+                        $entity->guids = Guid::makeVirtualGuid(
+                            $entity->via,
+                            ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
+                        );
+                        $keys = array_merge($keys, [iFace::COLUMN_GUIDS]);
+                    }
+
+                    $local = $storage->update($local->apply(entity: $entity, fields: $keys));
                     return jsonResponse(
                         status:  200,
                         body:    $local->getAll(),
-                        headers: $responseHeaders + ['X-Status' => '[T] Updated metadata.']
+                        headers: $responseHeaders + ['X-Status' => $flag . ' Updated metadata.']
                     );
                 }
 
                 return new Response(
                     status:  200,
-                    headers: $responseHeaders + ['X-Status' => '[T] This event is irrelevant.']
+                    headers: $responseHeaders + ['X-Status' => $flag . ' This event is irrelevant.']
                 );
             }
 
             if ($local->updated >= $entity->updated) {
+                $keys = iFace::ENTITY_FORCE_UPDATE_FIELDS;
+
                 // -- Handle mark as unplayed logic.
                 if (false === $entity->isWatched() && true === $local->shouldMarkAsUnplayed($entity)) {
                     $local = $storage->update(
@@ -358,12 +386,8 @@ final class Initializer
                     );
                 }
 
-                if ($cloned->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)->isChanged(
-                    fields: iFace::ENTITY_FORCE_UPDATE_FIELDS
-                )) {
-                    $local = $storage->update(
-                        $local->apply(entity: $entity, fields: iFace::ENTITY_FORCE_UPDATE_FIELDS)
-                    );
+                if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                    $local = $storage->update($local->apply(entity: $entity, fields: $keys));
                     return jsonResponse(
                         status:  200,
                         body:    $local->getAll(),
@@ -377,13 +401,13 @@ final class Initializer
                 );
             }
 
-            if ($local->apply($entity)->isChanged()) {
+            if ((clone $cloned)->apply($entity)->isChanged()) {
                 $local = $storage->update($local->apply($entity));
 
-                $message = 'Updated %1$s.';
+                $message = '%1$s Updated.';
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = '%1$s Marked as %2$s';
+                    $message = '%1$s Marked as [%2$s]';
                     queuePush($local);
                 }
 
@@ -393,7 +417,7 @@ final class Initializer
                     headers: $responseHeaders + [
                                  'X-Status' => sprintf(
                                      $message,
-                                     $entity->type,
+                                     ucfirst($entity->type),
                                      $entity->isWatched() ? 'Played' : 'Unplayed',
                                  ),
                              ]
@@ -413,10 +437,14 @@ final class Initializer
             }
 
             $logger->error(message: $e->getMessage(), context: [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'attributes' => $request->getAttributes(),
-                'log' => $log,
+                'context' => [
+                    'attributes' => $request->getAttributes(),
+                    'log' => $log,
+                ],
+                'trace' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
             ]);
 
             return jsonResponse(
