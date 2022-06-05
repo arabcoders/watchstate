@@ -27,7 +27,9 @@ final class MismatchCommand extends Command
     protected function configure(): void
     {
         $this->setName('backend:library:mismatch')
-            ->setDescription('Find possible mis-identified movies or shows in a specific library.')
+            ->setDescription(
+                'Find possible mis-identified item in a library. This only works for Media that follow Plex naming format.'
+            )
             ->addOption(
                 'output',
                 'o',

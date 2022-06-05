@@ -1,7 +1,10 @@
 # WatchState
 
-WatchState is a CLI based tool to sync your play state between your different media backends, without relying on
-3rd party services, this tool support the major media backends like `Jellyfin`, `Plex Media Server` and `Emby`.
+WatchState is primarily commandline tool that can sync your play state cross your different media backends, without
+relying on 3rd party services, this tool support `Jellyfin`, `Plex Media Server`and `Emby` out of the box.
+
+It's also come with some goodies, like finding `mis-identified items` or `unmatched items`. `querying` your
+backend for specific item.
 
 # Install
 

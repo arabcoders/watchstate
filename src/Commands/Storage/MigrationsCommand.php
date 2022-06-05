@@ -21,7 +21,7 @@ final class MigrationsCommand extends Command
     protected function configure(): void
     {
         $this->setName('storage:migrations')
-            ->setDescription('Update storage backend schema.')
+            ->setDescription('Migrate storage schema.')
             ->addOption('fresh', 'f', InputOption::VALUE_NONE, 'Start migrations from start.')
             ->addArgument('direction', InputArgument::OPTIONAL, 'Migrations path (up/down).', 'up');
     }
