@@ -7,6 +7,8 @@ return [
     'config:php' => App\Commands\Config\PHPCommand::class,
     'config:env' => App\Commands\Config\EnvCommand::class,
     'config:prune' => App\Commands\Config\PruneCommand::class,
+    'config:logs' => \App\Commands\Config\LogsCommand::class,
+    'logs' => \App\Commands\Config\LogsCommand::class,
     // -- state:
     'state:import' => App\Commands\State\ImportCommand::class,
     'state:export' => App\Commands\State\ExportCommand::class,
