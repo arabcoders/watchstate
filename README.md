@@ -1,7 +1,7 @@
 # WatchState
 
-WatchState is a CLI based tool to sync your watch state between different media backends, without relying on 3rd parties
-services, like trakt.tv, This tool support `Plex Media Server`, `Emby` and `Jellyfin` out of the box.
+WatchState is a CLI based tool to sync your play state between your different media backends, without relying on
+3rd party services, this tool support the major media backends like `Jellyfin`, `Plex Media Server` and `Emby`.
 
 # Install
 
@@ -25,7 +25,7 @@ services:
             - ${PWD}/:/config:rw # mount current directory to container /config directory.
 ```
 
-After creating your docker-compose file, start the container.
+After creating your docker compose file, start the container.
 
 ```bash
 $ docker-compose pull && docker-compose up -d
@@ -53,7 +53,7 @@ $ docker exec -ti watchstate console servers:manage --add -- [SERVER_NAME]
 
 This command is interactive and will ask you for some questions to add your backend, you can run the command as many
 times as you want, if you want to edit the config again or if you made mistake just run the same command without `--add`
-flag. After adding your backends, You should import your current watch state by running the following command.
+flag. After adding your backends, You should import your current play state by running the following command.
 
 ```bash
 $ docker exec -ti watchstate console state:import -vvf
@@ -61,7 +61,7 @@ $ docker exec -ti watchstate console state:import -vvf
 
 ---
 
-# Pulling watch state.
+# Pulling play state.
 
 Now that you have imported your current play state, you can stop manually running the command, and rely on the tasks
 scheduler and webhooks to keep update your play state. To start receiving webhook events from backends you need to do
@@ -85,7 +85,7 @@ $ docker exec -ti watchstate console servers:edit --regenerate-webhook-token -- 
 
 #### Notice:
 
-If you have multiple plex servers and use the same PlexPass account for all of them, you have to unify the API key, by
+If you have multiple plex backends and use the same PlexPass account for all of them, you have to unify the API key, by
 running the following command:
 
 ```bash
@@ -94,7 +94,7 @@ Plex global webhook API key is: [random_string]
 ```
 
 The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
-identify the servers, The unify command will do the necessary adjustments to handle multi plex server setup. for more
+identify the backends, The unify command will do the necessary adjustments to handle multi plex server setup. for more
 information run.
 
 ```bash
@@ -118,9 +118,9 @@ You should still have `WS_CRON_IMPORT` enabled to keep healthy relation between 
 
 ---
 
-# Export watch state
+# Exporting play state
 
-To manually export your watch state back to servers you can run the following command
+To manually export your play state back to backends you can run the following command
 
 ```bash
 $ docker exec -ti watchstate console state:export -vv
