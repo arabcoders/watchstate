@@ -1,7 +1,7 @@
 # WatchState
 
-WatchState is a CLI based tool to sync your watch state between different media backends, without relying on 3rd parties
-services, like trakt.tv, This tool support `Plex Media Server`, `Emby` and `Jellyfin` out of the box.
+WatchState is a CLI based tool to sync your play state between your different media backends, without relying on
+3rd party services, this tool support the major media backends like `Jellyfin`, `Plex Media Server` and `Emby`.
 
 # Install
 
@@ -25,7 +25,7 @@ services:
             - ${PWD}/:/config:rw # mount current directory to container /config directory.
 ```
 
-After creating your docker-compose file, start the container.
+After creating your docker compose file, start the container.
 
 ```bash
 $ docker-compose pull && docker-compose up -d
@@ -53,7 +53,7 @@ $ docker exec -ti watchstate console servers:manage --add -- [SERVER_NAME]
 
 This command is interactive and will ask you for some questions to add your backend, you can run the command as many
 times as you want, if you want to edit the config again or if you made mistake just run the same command without `--add`
-flag. After adding your backends, You should import your current watch state by running the following command.
+flag. After adding your backends, You should import your current play state by running the following command.
 
 ```bash
 $ docker exec -ti watchstate console state:import -vvf
@@ -61,7 +61,7 @@ $ docker exec -ti watchstate console state:import -vvf
 
 ---
 
-# Pulling watch state.
+# Pulling play state.
 
 Now that you have imported your current play state, you can stop manually running the command, and rely on the tasks
 scheduler and webhooks to keep update your play state. To start receiving webhook events from backends you need to do
@@ -85,7 +85,7 @@ $ docker exec -ti watchstate console servers:edit --regenerate-webhook-token -- 
 
 #### Notice:
 
-If you have multiple plex servers and use the same PlexPass account for all of them, you have to unify the API key, by
+If you have multiple plex backends and use the same PlexPass account for all of them, you have to unify the API key, by
 running the following command:
 
 ```bash
@@ -94,7 +94,7 @@ Plex global webhook API key is: [random_string]
 ```
 
 The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
-identify the servers, The unify command will do the necessary adjustments to handle multi plex server setup. for more
+identify the backends, The unify command will do the necessary adjustments to handle multi plex server setup. for more
 information run.
 
 ```bash
@@ -118,9 +118,9 @@ You should still have `WS_CRON_IMPORT` enabled to keep healthy relation between 
 
 ---
 
-# Export watch state
+# Exporting play state
 
-To manually export your watch state back to servers you can run the following command
+To manually export your play state back to backends you can run the following command
 
 ```bash
 $ docker exec -ti watchstate console state:export -vv
@@ -282,28 +282,28 @@ Click `Save Changes`
 
 # Environment variables.
 
-| Environment key         | Value   | Description                                                                      | Default                        |
-|-------------------------|---------|----------------------------------------------------------------------------------|--------------------------------|
-| WS_DATA_PATH            | string  | Where key data stored (config, db).                                              | `${BASE_PATH}/var`             |
-| WS_TMP_DIR              | string  | Where temp data stored. (logs, cache).                                           | `${WS_DATA_PATH}`              |
-| WS_TZ                   | string  | Set timezone.                                                                    | `UTC`                          |
-| WS_WEBHOOK_DEBUG        | bool    | Store webhook payloads into `${WS_TMP_DIR}/webhooks`                             | `false`                        |
-| WS_REQUEST_DEBUG        | bool    | Store request payloads into `${WS_TMP_DIR}/debug`                                | `false`                        |
-| WS_WEBHOOK_TOKEN_LENGTH | integer | How many bits to use for webhook token generator                                 | `16`                           |
-| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                               | `true`                         |
-| WS_LOGGER_FILE          | string  | Full path to log file.                                                           | `${WS_TMP_DIR}/logs/app.log`   |
-| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                               | `ERROR`                        |
-| WS_CRON_IMPORT          | bool    | Enable import scheduled task. Value casted to bool.                              | `false`                        |
-| WS_CRON_IMPORT_AT       | string  | When to run import scheduled task. Valid Cron Expression Expected.               | `'0 */1 * * *` (Every 1h)      |
-| WS_CRON_IMPORT_ARGS     | string  | Flags to pass to the import command.                                             | `'-v`                          |
-| WS_CRON_EXPORT          | bool    | Enable export scheduled task. Value casted to bool.                              | `false`                        |
-| WS_CRON_EXPORT_AT       | string  | When to run export scheduled task. Valid Cron Expression Expected.               | `'30 */1 * * *` (Every 1h 30m) |
-| WS_CRON_EXPORT_ARGS     | string  | Flags to pass to the export command.                                             | `'-v`                          |
-| WS_CRON_PUSH            | bool    | Enable push scheduled task. Value casted to bool.                                | `false`                        |
-| WS_CRON_PUSH_AT         | string  | When to run push scheduled task. Valid Cron Expression Expected.                 | `'*/10 * * * *` (Every 10m)    |
-| WS_CRON_PUSH_ARGS       | string  | Flags to pass to the push command.                                               | `'-v`                          |
-| WS_LOGS_PRUNE_AFTER     | string  | Delete logs older than specified time. Set to `disable` to disable the pruning.  | `'-3 DAYS`                     |
-| WS_DEBUG_IMPORT         | bool    | Log no valid/externals id during import process. stored in `${WS_TMP_DIR}/debug` | `'false`                       |
+| Environment key         | Value   | Description                                                                      | Default                            |
+|-------------------------|---------|----------------------------------------------------------------------------------|------------------------------------|
+| WS_DATA_PATH            | string  | Where key data stored (config, db).                                              | `${BASE_PATH}/var`                 |
+| WS_TMP_DIR              | string  | Where temp data stored. (logs, cache).                                           | `${WS_DATA_PATH}`                  |
+| WS_TZ                   | string  | Set timezone.                                                                    | `UTC`                              |
+| WS_WEBHOOK_DEBUG        | bool    | Store webhook payloads into `${WS_TMP_DIR}/webhooks`                             | `false`                            |
+| WS_REQUEST_DEBUG        | bool    | Store request payloads into `${WS_TMP_DIR}/debug`                                | `false`                            |
+| WS_WEBHOOK_TOKEN_LENGTH | integer | How many bits to use for webhook token generator                                 | `16`                               |
+| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                               | `true`                             |
+| WS_LOGGER_FILE          | string  | Full path to log file.                                                           | `${WS_TMP_DIR}/logs/app.(Ymd).log` |
+| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                               | `ERROR`                            |
+| WS_CRON_IMPORT          | bool    | Enable import scheduled task. Value casted to bool.                              | `false`                            |
+| WS_CRON_IMPORT_AT       | string  | When to run import scheduled task. Valid Cron Expression Expected.               | `'0 */1 * * *` (Every 1h)          |
+| WS_CRON_IMPORT_ARGS     | string  | Flags to pass to the import command.                                             | `'-v`                              |
+| WS_CRON_EXPORT          | bool    | Enable export scheduled task. Value casted to bool.                              | `false`                            |
+| WS_CRON_EXPORT_AT       | string  | When to run export scheduled task. Valid Cron Expression Expected.               | `'30 */1 * * *` (Every 1h 30m)     |
+| WS_CRON_EXPORT_ARGS     | string  | Flags to pass to the export command.                                             | `'-v`                              |
+| WS_CRON_PUSH            | bool    | Enable push scheduled task. Value casted to bool.                                | `false`                            |
+| WS_CRON_PUSH_AT         | string  | When to run push scheduled task. Valid Cron Expression Expected.                 | `'*/10 * * * *` (Every 10m)        |
+| WS_CRON_PUSH_ARGS       | string  | Flags to pass to the push command.                                               | `'-v`                              |
+| WS_LOGS_PRUNE_AFTER     | string  | Delete logs older than specified time. Set to `disable` to disable the pruning.  | `'-3 DAYS`                         |
+| WS_DEBUG_IMPORT         | bool    | Log no valid/externals id during import process. stored in `${WS_TMP_DIR}/debug` | `'false`                           |
 
 # Container specific environment variables.
 

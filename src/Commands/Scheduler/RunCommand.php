@@ -115,7 +115,7 @@ final class RunCommand extends Command
 
         if ($input->getOption('save-log')) {
             file_put_contents(
-                Config::get('tmpDir') . '/logs/crons/' . gmdate('Y_m_d') . '.log',
+                Config::get('tasks.logfile'),
                 preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)),
                 FILE_APPEND
             );
@@ -142,7 +142,7 @@ final class RunCommand extends Command
     {
         $tasks = [];
 
-        foreach (Config::get('tasks', []) as $i => $task) {
+        foreach (Config::get('tasks.commands', []) as $i => $task) {
             $task[Task::NAME] = $task[Task::NAME] ?? 'task_' . ((int)($i) + 1);
             $tasks[$task[Task::NAME]] = $task;
         }
