@@ -101,7 +101,7 @@ final class PruneCommand extends Command
                 if ($file->getMTime() > $expiresAt) {
                     $this->logger->debug('Path Not yet expired.', [
                         'path' => after($file->getRealPath(), Config::get('tmpDir')),
-                        'ttl' => $file->getMTime() - $expiresAt,
+                        'ttl' => number_format($file->getMTime() - $expiresAt),
                     ]);
                     continue;
                 }
