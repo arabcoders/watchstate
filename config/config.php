@@ -33,6 +33,8 @@ return (function () {
         ],
     ];
 
+    $config['logs']['affix'] = makeDate()->format('Ymd');
+
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
 
     $config['storage'] += [
@@ -85,7 +87,7 @@ return (function () {
             'options' => [
                 'save.handler' => 'file',
                 'save.handler.file' => [
-                    'filename' => ag($config, 'tmpDir') . '/profiler/profiler_' . gmdate('Y_m_d_His') . '.json'
+                    'filename' => ag($config, 'tmpDir') . '/profiler/run.' . makeDate()->format('Ymd_His') . '.json'
                 ],
             ],
         ],
@@ -103,7 +105,10 @@ return (function () {
             'type' => 'stream',
             'enabled' => env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
-            'filename' => env('WS_LOGGER_FILE', fn() => ag($config, 'tmpDir') . '/logs/app.log'),
+            'filename' => env(
+                'WS_LOGGER_FILE',
+                fn() => ag($config, 'tmpDir') . '/logs/app.' . ag($config, 'logs.affix') . '.log'
+            ),
         ],
         'stderr' => [
             'type' => 'stream',
@@ -171,33 +176,36 @@ return (function () {
     ];
 
     $config['tasks'] = [
-        ImportCommand::TASK_NAME => [
-            Task::NAME => ImportCommand::TASK_NAME,
-            Task::ENABLED => (bool)env('WS_CRON_IMPORT', false),
-            Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
-            Task::COMMAND => '@state:import',
-            Task::ARGS => env('WS_CRON_IMPORT_ARGS', '-v'),
-        ],
-        ExportCommand::TASK_NAME => [
-            Task::NAME => ExportCommand::TASK_NAME,
-            Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
-            Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
-            Task::COMMAND => '@state:export',
-            Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
-        ],
-        PushCommand::TASK_NAME => [
-            Task::NAME => PushCommand::TASK_NAME,
-            Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
-            Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
-            Task::COMMAND => '@state:push',
-            Task::ARGS => env('WS_CRON_PUSH_ARGS', '-v'),
-        ],
-        PruneCommand::TASK_NAME => [
-            Task::NAME => PruneCommand::TASK_NAME,
-            Task::ENABLED => 'disable' !== ag($config,'logs.prune.after'),
-            Task::RUN_AT => '0 */12 * * *',
-            Task::COMMAND => '@config:prune',
-            Task::ARGS => '-v',
+        'logfile' => ag($config, 'tmpDir') . '/logs/tasks/task.' . ag($config, 'logs.affix') . '.log',
+        'commands' => [
+            ImportCommand::TASK_NAME => [
+                Task::NAME => ImportCommand::TASK_NAME,
+                Task::ENABLED => (bool)env('WS_CRON_IMPORT', false),
+                Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
+                Task::COMMAND => '@state:import',
+                Task::ARGS => env('WS_CRON_IMPORT_ARGS', '-v'),
+            ],
+            ExportCommand::TASK_NAME => [
+                Task::NAME => ExportCommand::TASK_NAME,
+                Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
+                Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
+                Task::COMMAND => '@state:export',
+                Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
+            ],
+            PushCommand::TASK_NAME => [
+                Task::NAME => PushCommand::TASK_NAME,
+                Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
+                Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
+                Task::COMMAND => '@state:push',
+                Task::ARGS => env('WS_CRON_PUSH_ARGS', '-v'),
+            ],
+            PruneCommand::TASK_NAME => [
+                Task::NAME => PruneCommand::TASK_NAME,
+                Task::ENABLED => 'disable' !== ag($config, 'logs.prune.after'),
+                Task::RUN_AT => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
+                Task::COMMAND => '@config:prune',
+                Task::ARGS => env('WS_CRON_PRUNE_ARGS', '-v'),
+            ],
         ],
     ];
 

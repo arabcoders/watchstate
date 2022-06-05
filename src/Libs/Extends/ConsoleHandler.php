@@ -2,6 +2,7 @@
 
 namespace App\Libs\Extends;
 
+use DateTimeInterface;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Logger;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -51,13 +52,18 @@ class ConsoleHandler extends AbstractProcessingHandler
 
     protected function write(array $record): void
     {
+        $date = $record['datetime'] ?? 'No date set';
+
+        if (true === ($date instanceof DateTimeInterface)) {
+            $date = $date->format(DateTimeInterface::ATOM);
+        }
+
         $message = sprintf(
-            '[%s] %s.%s: %s %s',
-            $record['datetime'],
-            $record['channel'] ?? 'logger',
+            '[%s] %s: %s %s',
+            $date,
             $record['level_name'] ?? $record['level'] ?? '??',
             $record['message'],
-            !empty($record['context']) ? '{' . arrayToString($record['context']) . '}' : ''
+            !empty($record['context']) ? '{ ' . arrayToString($record['context']) . ' }' : ''
         );
 
         $this->output->writeln($message, $this->output->getVerbosity());
