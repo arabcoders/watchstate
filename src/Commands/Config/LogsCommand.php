@@ -46,7 +46,12 @@ final class LogsCommand extends Command
         }
 
         if (empty($file) || false === file_exists($file) || false === is_file($file) || false === is_readable($file)) {
-            $output->writeln(sprintf('<error>ERROR: Unable to read given log file \'%s\'.</error>', $file));
+            if ($file === Config::get('logger.file.filename')) {
+                $output->writeln('<info>Log file is empty. No records were found for today.</info>');
+                return self::SUCCESS;
+            }
+
+            $output->writeln(sprintf('<error>Unable to read logfile \'%s\'.</error>', $file));
             return self::FAILURE;
         }
 

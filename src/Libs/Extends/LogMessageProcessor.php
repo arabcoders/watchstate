@@ -15,18 +15,18 @@ class LogMessageProcessor implements ProcessorInterface
     private string $pattern;
 
     public function __construct(
-        private string $tagLeft = '%(',
-        private string $tagRight = ')'
+        private string $tagStart = '%(',
+        private string $tagEnd = ')'
     ) {
-        $this->pattern = '#' . preg_quote($this->tagLeft, '#') . '([\w\d_.]+)' . preg_quote(
-                $this->tagRight,
+        $this->pattern = '#' . preg_quote($this->tagStart, '#') . '([\w\d_.]+)' . preg_quote(
+                $this->tagEnd,
                 '#'
             ) . '#is';
     }
 
     public function __invoke(array $record): array
     {
-        if (false === str_contains($record['message'], $this->tagLeft)) {
+        if (false === str_contains($record['message'], $this->tagStart)) {
             return $record;
         }
 
@@ -39,7 +39,7 @@ class LogMessageProcessor implements ProcessorInterface
         $replacements = [];
 
         foreach ($matches[1] as $key) {
-            $placeholder = $this->tagLeft . $key . $this->tagRight;
+            $placeholder = $this->tagStart . $key . $this->tagEnd;
 
             if (false === str_contains($record['message'], $placeholder)) {
                 continue;
