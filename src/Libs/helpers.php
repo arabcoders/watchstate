@@ -434,6 +434,8 @@ if (!function_exists('arrayToString')) {
 
             if (is_array($val)) {
                 $val = '[ ' . arrayToString($val) . ' ]';
+            } elseif (is_bool($val)) {
+                $val = true === $val ? 'true' : 'false';
             } else {
                 $val = $val ?? 'None';
             }

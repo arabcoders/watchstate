@@ -94,8 +94,6 @@ class ImportCommand extends Command
         $isCustom = !empty($serversFilter) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
-        $inTraceMode = true === $input->getOption('trace');
-
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
@@ -114,7 +112,6 @@ class ImportCommand extends Command
         }
 
         if ($input->getOption('direct-mapper')) {
-            $this->logger->info('Using Direct mapper');
             $this->mapper = new DirectMapper(logger: $this->logger, storage: $this->storage);
         }
 
@@ -127,10 +124,8 @@ class ImportCommand extends Command
             $metadata = false;
 
             if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
-                $this->logger->info('Ignoring backend as requested by [-s, --servers-filter].', [
-                    'context' => [
-                        'backend' => $serverName,
-                    ]
+                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by servers filter flag.', [
+                    'backend' => $serverName,
                 ]);
                 continue;
             }
@@ -151,33 +146,24 @@ class ImportCommand extends Command
             }
 
             if (true !== (bool)ag($server, 'import.enabled') && true !== $metadata) {
-                $this->logger->info('All imports from this backend is disabled by user choice.', [
-                    'context' => [
-                        'backend' => $serverName,
-                    ],
+                $this->logger->info('SYSTEM: Ignoring [%(backend)] imports are disabled for this backend.', [
+                    'backend' => $serverName,
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('Unexpected backend type.', [
-                    'context' => [
-                        'backend' => $serverName,
-                        'condition' => [
-                            'expected' => implode(', ', array_keys($supported)),
-                            'given' => $type,
-                        ],
-                    ],
+                $this->logger->error('SYSTEM: Ignoring [%(backend)] because of the unexpected type [%(type)].', [
+                    'type' => $type,
+                    'backend' => $serverName,
                 ]);
                 continue;
             }
 
             if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error('Invalid backend API URL.', [
-                    'context' => [
-                        'backend' => $serverName,
-                        'url' => $url ?? 'None',
-                    ]
+                $this->logger->error('SYSTEM: Ignoring [%(backend)] because of invalid URL.', [
+                    'backend' => $serverName,
+                    'url' => $url ?? 'None',
                 ]);
                 continue;
             }
@@ -197,28 +183,23 @@ class ImportCommand extends Command
 
         $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
-        $this->logger->notice('MAPPER: Preloading mapper data into memory.');
-        if ($inTraceMode) {
-            $this->logger->notice('SYSTEM: Memory Usage.', [
-                'context' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-            ]);
-        }
+        $this->logger->notice('SYSTEM: Preloading %(mapper) data.', [
+            'mapper' => afterLast($this->mapper::class, '\\'),
+            'memory' => [
+                'now' => getMemoryUsage(),
+                'peak' => getPeakMemoryUsage(),
+            ],
+        ]);
 
         $this->mapper->loadData();
 
-        if ($inTraceMode) {
-            $this->logger->notice('SYSTEM: Memory Usage.', [
-                'context' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-            ]);
-        }
-
-        $this->logger->notice('MAPPER: Finished Preloading mapper.');
+        $this->logger->notice('SYSTEM: Preloading %(mapper) data is complete.', [
+            'mapper' => afterLast($this->mapper::class, '\\'),
+            'memory' => [
+                'now' => getMemoryUsage(),
+                'peak' => getPeakMemoryUsage(),
+            ],
+        ]);
 
         $this->storage->singleTransaction();
 
@@ -256,65 +237,38 @@ class ImportCommand extends Command
 
             if (null !== $after) {
                 $after = makeDate($after);
-                $context = [
-                    'context' => [
-                        'since' => $after->format('Y-m-d H:i:s T'),
-                    ],
-                ];
             }
 
-            $this->logger->notice('Importing metadata %(play_state) changes from %(backend).', [
-                'play_state' => true === $metadata ? 'only' : 'and play state',
+            $this->logger->notice('SYSTEM: Importing [%(backend)] %(import_type) changes.', [
                 'backend' => $name,
-                ...$context ?? []
+                'import_type' => true === $metadata ? 'METADATA ONLY' : 'METADATA & PLAY STATE',
+                'since' => null === $after ? 'Beginning' : $after->format('Y-m-d H:i:s T'),
             ]);
 
             array_push($queue, ...$server['class']->pull($this->mapper, $after));
 
-            if (true === Data::get(sprintf('%s.no_import_update', $name))) {
-                $this->logger->warning('Not updating last sync date. Backend reported an error', [
-                    'context' => [
-                        'backend' => $name,
-                    ],
-                ]);
-            } else {
-                if (false === $this->mapper->inDryRunMode()) {
-                    Config::save(sprintf('servers.%s.import.lastSync', $name), time());
-                }
+            $inDryMode = $this->mapper->inDryRunMode() || ag($server, 'options.' . Options::DRY_RUN);
+
+            if (false === Data::get(sprintf('%s.no_import_update', $name)) && false === $inDryMode) {
+                Config::save(sprintf('servers.%s.import.lastSync', $name), time());
             }
         }
 
         unset($server);
 
         $start = makeDate();
-        $this->logger->notice('SYSTEM: Waiting on backends requests.', [
-            'context' => [
-                'total' => number_format(count($queue)),
-                'time' => [
-                    'start' => $start,
-                ],
+        $this->logger->notice('SYSTEM: Waiting on [%(total)] requests.', [
+            'total' => number_format(count($queue)),
+            'time' => [
+                'start' => $start,
+            ],
+            'memory' => [
+                'now' => getMemoryUsage(),
+                'peak' => getPeakMemoryUsage(),
             ],
         ]);
 
-        if ($inTraceMode) {
-            $this->logger->notice('SYSTEM: Memory Usage.', [
-                'context' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-            ]);
-        }
-
         foreach ($queue as $_key => $response) {
-            if ($inTraceMode) {
-                $this->logger->notice('SYSTEM: Memory Usage.', [
-                    'context' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
-                    ],
-                ]);
-            }
-
             $requestData = $response->getInfo('user_data');
 
             try {
@@ -329,45 +283,32 @@ class ImportCommand extends Command
         }
 
         $end = makeDate();
-        $this->logger->notice('SYSTEM: Finished waiting on backends requests.', [
-            'context' => [
-                'total' => number_format(count($queue)),
-                'time' => [
-                    'start' => $start,
-                    'end' => $end,
-                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
-                ],
+
+        $this->logger->notice('SYSTEM: Finished waiting on [%(total)] requests.', [
+            'total' => number_format(count($queue)),
+            'time' => [
+                'start' => $start,
+                'end' => $end,
+                'duration' => $end->getTimestamp() - $start->getTimestamp(),
+            ],
+            'memory' => [
+                'now' => getMemoryUsage(),
+                'peak' => getPeakMemoryUsage(),
             ],
         ]);
-
-        if ($inTraceMode) {
-            $this->logger->notice('SYSTEM: Memory Usage.', [
-                'context' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-            ]);
-        }
 
         $queue = $requestData = null;
 
         $total = count($this->mapper);
 
         if ($total >= 1) {
-            $this->logger->notice('SYSTEM: Updating objects.', [
-                'context' => [
-                    'total' => $total,
+            $this->logger->notice('SYSTEM: Found [%(total)] updated objects.', [
+                'total' => $total,
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
                 ],
             ]);
-
-            if ($inTraceMode) {
-                $this->logger->notice('SYSTEM: Memory Usage.', [
-                    'context' => [
-                        'now' => getMemoryUsage(),
-                        'peak' => getPeakMemoryUsage(),
-                    ],
-                ]);
-            }
         }
 
         $operations = $this->mapper->commit();
@@ -404,15 +345,6 @@ class ImportCommand extends Command
             }
 
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
-        }
-
-        if ($inTraceMode) {
-            $this->logger->notice('SYSTEM: Memory Usage.', [
-                'context' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-            ]);
         }
 
         return self::SUCCESS;

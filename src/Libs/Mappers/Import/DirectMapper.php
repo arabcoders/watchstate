@@ -81,11 +81,9 @@ final class DirectMapper implements ImportInterface
             $this->addPointers($entity, $pointer);
         }
 
-        $this->logger->info('MAPPER: Loaded pointers into memory.', [
-            'context' => [
-                'mapper' => afterLast(self::class, '\\'),
-                'pointers' => number_format(count($this->pointers)),
-            ],
+        $this->logger->info('MAPPER: Preloaded [%(pointers)] pointers into memory.', [
+            'mapper' => afterLast(self::class, '\\'),
+            'pointers' => number_format(count($this->pointers)),
         ]);
 
         return $this;
@@ -94,12 +92,10 @@ final class DirectMapper implements ImportInterface
     public function add(iFace $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->warning('MAPPER: Ignoring item no valid/supported external ids.', [
-                'context' => [
-                    'id' => $entity->id,
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                ],
+            $this->logger->warning('MAPPER: Ignoring [%(backend)] [%(title)] no valid/supported external ids.', [
+                'id' => $entity->id,
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
             ]);
             Data::increment($entity->via, $entity->type . '_failed_no_guid');
             return $this;
@@ -113,14 +109,16 @@ final class DirectMapper implements ImportInterface
          */
         if (null === ($local = $this->get($entity))) {
             if (true === $metadataOnly) {
-                $this->logger->notice('MAPPER: Ignoring item. Does not exist in storage.', [
-                    'context' => [
-                        'metaOnly' => true,
-                        'backend' => $entity->via,
-                        'title' => $entity->getName(),
-                    ],
+                $this->actions[$entity->type]['failed']++;
+                Data::increment($entity->via, $entity->type . '_failed');
+
+                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
+                    'metaOnly' => true,
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
                     'data' => $entity->getAll(),
                 ]);
+
                 return $this;
             }
 
@@ -152,12 +150,10 @@ final class DirectMapper implements ImportInterface
                     $entity = $this->storage->insert($entity);
                 }
 
-                $this->logger->notice('MAPPER: Adding new item.', [
-                    'context' => [
-                        'id' => $entity->id,
-                        'backend' => $entity->via,
-                        'title' => $entity->getName(),
-                    ],
+                $this->logger->notice('MAPPER: [%(backend)] added [%(title)] as new item.', [
+                    'id' => $entity->id,
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
                     $this->inTraceMode() ? 'trace' : 'metadata' => $data,
                 ]);
 
@@ -173,10 +169,8 @@ final class DirectMapper implements ImportInterface
                 $this->actions[$entity->type]['failed']++;
                 Data::increment($entity->via, $entity->type . '_failed');
                 $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                    'context' => [
-                        'backend' => $entity->via,
-                        'title' => $entity->getName(),
-                    ],
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
                     'state' => $entity->getAll()
                 ]);
             }
@@ -203,13 +197,11 @@ final class DirectMapper implements ImportInterface
                     $local = $local->apply(entity: $entity, fields: $localFields);
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                    $this->logger->notice('MAPPER: Item metadata updated.', [
-                        'context' => [
-                            'id' => $local->id,
-                            'backend' => $entity->via,
-                            'title' => $local->getName(),
-                        ],
-                        'diff' => $local->diff(fields: $localFields)
+                    $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                        'id' => $local->id,
+                        'backend' => $entity->via,
+                        'title' => $local->getName(),
+                        'changes' => $local->diff(fields: $localFields)
                     ]);
 
                     if (false === $inDryRunMode) {
@@ -226,11 +218,9 @@ final class DirectMapper implements ImportInterface
                     $this->actions[$local->type]['failed']++;
                     Data::increment($entity->via, $local->type . '_failed');
                     $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                        'context' => [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'title' => $cloned->getName(),
-                        ],
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
                         'state' => [
                             'storage' => $cloned->getAll(),
                             'backend' => $entity->getAll()
@@ -242,14 +232,13 @@ final class DirectMapper implements ImportInterface
             }
 
             if ($this->inTraceMode()) {
-                $this->logger->info('MAPPER: No metadata changes detected.', [
-                    'context' => [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                    ]
+                $this->logger->info('MAPPER: [%(backend)] [%(title)] No metadata changes detected.', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
                 ]);
             }
+
             return $this;
         }
 
@@ -265,13 +254,11 @@ final class DirectMapper implements ImportInterface
                             $this->storage->update($local);
                         }
 
-                        $this->logger->notice('MAPPER: Marked item as unplayed.', [
-                            'context' => [
-                                'id' => $cloned->id,
-                                'backend' => $entity->via,
-                                'title' => $cloned->getName(),
-                            ],
-                            'diff' => $local->diff(),
+                        $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'changes' => $local->diff(),
                         ]);
 
                         if (null === ($this->changed[$local->id] ?? null)) {
@@ -284,11 +271,9 @@ final class DirectMapper implements ImportInterface
                         $this->actions[$local->type]['failed']++;
                         Data::increment($entity->via, $local->type . '_failed');
                         $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                            'context' => [
-                                'id' => $cloned->id,
-                                'backend' => $entity->via,
-                                'title' => $cloned->getName(),
-                            ],
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
                             'state' => [
                                 'storage' => $cloned->getAll(),
                                 'backend' => $entity->getAll()
@@ -315,13 +300,11 @@ final class DirectMapper implements ImportInterface
 
                             $local = $local->apply(entity: $entity, fields: $localFields);
 
-                            $this->logger->notice('MAPPER: Updating Item metadata.', [
-                                'context' => [
-                                    'id' => $cloned->id,
-                                    'backend' => $entity->via,
-                                    'title' => $cloned->getName(),
-                                ],
-                                'diff' => $local->diff(fields: $localFields),
+                            $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                                'id' => $cloned->id,
+                                'backend' => $entity->via,
+                                'title' => $cloned->getName(),
+                                'changes' => $local->diff(fields: $localFields),
                             ]);
 
                             if (false === $inDryRunMode) {
@@ -338,10 +321,8 @@ final class DirectMapper implements ImportInterface
                             $this->actions[$local->type]['failed']++;
                             Data::increment($entity->via, $local->type . '_failed');
                             $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                                'context' => [
-                                    'id' => $cloned->id,
-                                    'title' => $cloned->getName(),
-                                ],
+                                'id' => $cloned->id,
+                                'title' => $cloned->getName(),
                                 'state' => [
                                     'storage' => $cloned->getAll(),
                                     'backend' => $entity->getAll()
@@ -370,13 +351,11 @@ final class DirectMapper implements ImportInterface
             try {
                 $local = $local->apply(entity: $entity, fields: $keys);
 
-                $this->logger->notice('MAPPER: Item updated.', [
-                    'context' => [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                    ],
-                    'diff' => $local->diff(fields: $keys)
+                $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'changes' => $local->diff(fields: $keys)
                 ]);
 
                 if (false === $inDryRunMode) {
@@ -393,11 +372,9 @@ final class DirectMapper implements ImportInterface
                 $this->actions[$local->type]['failed']++;
                 Data::increment($entity->via, $local->type . '_failed');
                 $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                    'context' => [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                    ],
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
                     'state' => [
                         'storage' => $cloned->getAll(),
                         'backend' => $entity->getAll()
@@ -409,12 +386,10 @@ final class DirectMapper implements ImportInterface
         }
 
         if (true === $this->inTraceMode()) {
-            $this->logger->debug('MAPPER: Item state is identical.', [
-                'context' => [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                ],
+            $this->logger->debug('MAPPER: [%(backend)] [%(title)] metadata and play state is identical.', [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $cloned->getName(),
                 'state' => [
                     'storage' => $cloned->getAll(),
                     'backend' => $entity->getAll(),
