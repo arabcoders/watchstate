@@ -6,6 +6,7 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Options;
 use Exception;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -95,7 +96,11 @@ final class ManageCommand extends Command
 
         if (true === $add && null !== ag($servers, "{$name}.type", null)) {
             $output->writeln(
-                sprintf('<error>ERROR: Backend name \'%s\' already exists in \'%s\'.</error>', $name, $config)
+                sprintf(
+                    '<error>ERROR: Backend name \'%s\' already exists in \'%s\' omit the --add flag if you want to edit the config.</error>',
+                    $name,
+                    $config
+                )
             );
             return self::FAILURE;
         }
@@ -103,7 +108,7 @@ final class ManageCommand extends Command
         $u = $rerun ?? ag($servers, $name, []);
 
         // -- $name.type
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $list = array_keys(Config::get('supported', []));
             $chosen = ag($u, 'type');
 
@@ -112,7 +117,8 @@ final class ManageCommand extends Command
 
             $question = new ChoiceQuestion(
                 sprintf(
-                    'Select backend type. %s',
+                    'Select %s type. %s',
+                    $name,
                     null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : ''
                 ),
                 $list,
@@ -132,14 +138,13 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.url
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $helper = $this->getHelper('question');
             $chosen = ag($u, 'url');
             $question = new Question(
                 sprintf(
-                    'Please enter %s URL. %s' . PHP_EOL . '> ',
-                    ucfirst(ag($u, 'type')),
-
+                    'Enter %s URL. %s' . PHP_EOL . '> ',
+                    $name,
                     null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
                 ),
                 $chosen
@@ -158,13 +163,13 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.token
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $helper = $this->getHelper('question');
             $chosen = ag($u, 'token');
             $question = new Question(
                 sprintf(
-                    'Please enter %s API token. %s' . PHP_EOL . '> ',
-                    ucfirst(ag($u, 'type')),
+                    'Enter %s API token. %s' . PHP_EOL . '> ',
+                    $name,
                     null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
                 ),
                 $chosen
@@ -215,8 +220,8 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $question = new Question(
                 sprintf(
-                    'Please enter %s unique identifier. %s' . PHP_EOL . '> ',
-                    ucfirst(ag($u, 'type')),
+                    'Enter %s backend unique identifier. %s' . PHP_EOL . '> ',
+                    $name,
                     null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
                 ),
                 $chosen
@@ -243,32 +248,8 @@ final class ManageCommand extends Command
         })();
         $output->writeln('');
 
-        // -- if the backend is plex we may need to skip user validation
-        $chooseUser = (function () use ($input, $output, &$u) {
-            $chosen = ag($u, 'type');
-
-            if ('plex' !== $chosen || null !== ag($u, 'user')) {
-                return true;
-            }
-
-            $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                Do you share your Plex backend with other people? <comment>[Y|N]</comment>
-                <info>it's important to know otherwise their watch history might end up in your history if you use webhooks</info>
-                TEXT;
-
-            $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
-
-            return $helper->ask($input, $output, $question);
-        })();
-
         // -- $name.user
-        (function () use ($input, $output, &$u, $name, $chooseUser) {
-            if (false === $chooseUser) {
-                return;
-            }
-
+        (function () use ($input, $output, &$u, $name) {
             $chosen = ag($u, 'user');
 
             try {
@@ -359,10 +340,7 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'import.enabled', true);
 
             $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                Do you want to enable <info>"Import"</info> from this backend via scheduled task? <comment>%s</comment>
-                TEXT;
+            $text = 'Enable <info>Importing</info> <comment>metadata</comment> and <comment>play state</comment> from this backend? <comment>%s</comment>';
 
             $question = new ConfirmationQuestion(
                 sprintf(
@@ -382,10 +360,7 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'export.enabled', true);
 
             $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                Do you want to enable <info>"Export"</info> to this backend via scheduled task? <comment>%s</comment>
-                TEXT;
+            $text = 'Enable <info>Exporting</info> <comment>play state</comment> to this backend? <comment>%s</comment>';
 
             $question = new ConfirmationQuestion(
                 sprintf(
@@ -400,16 +375,28 @@ final class ManageCommand extends Command
         })();
         $output->writeln('');
 
-        // -- $name.webhook.import
+        // -- $name.options.IMPORT_METADATA_ONLY
         (function () use ($input, $output, &$u) {
-            $chosen = (bool)ag($u, 'webhook.import', true);
+            if (true === (bool)ag($u, 'import.enabled')) {
+                return;
+            }
+
+            if (false === (bool)ag($u, 'export.enabled')) {
+                return;
+            }
+
+            $chosen = (bool)ag($u, 'options.' . Options::IMPORT_METADATA_ONLY, true);
 
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to enable <info>"Import"</info> via <info>webhooks</info> for this backend? <comment>%s</comment>
-                -----------------
-                <info>Do not forget to add the webhook end point to the backend if you enabled this option.</info>
+                Enable <info>Importing</info> <comment>metadata ONLY</comment> from this backend? <comment>%s</comment>
+                ------------------
+                To efficiently <info>export</info> to this backend we need relation map and this require
+                us to get metadata from the backend. You have <comment>Importing</comment> disabled, as such this option
+                allow us to import this backend <info>metadata</info> without altering your play state.
+                ------------------
+                <info>This option is SAFE and WILL NOT change your play state or add new items.</info>
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -421,34 +408,7 @@ final class ManageCommand extends Command
             );
 
             $response = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'webhook.import', (bool)$response);
-        })();
-        $output->writeln('');
-
-        // -- $name.webhook.push
-        (function () use ($input, $output, &$u) {
-            $chosen = (bool)ag($u, 'webhook.push', true);
-
-            $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                Do you want to enable <info>"Push"</info> to this backend on received <info>webhooks</info> events? <comment>%s</comment>
-                -----------------
-                <info>The way push works is to queue watched state and then push them to the backend.</info>
-                -----------------
-                This approach has both strength and limitations, please refer to docs for more info on webhooks.
-                TEXT;
-
-            $question = new ConfirmationQuestion(
-                sprintf(
-                    $text . PHP_EOL . '> ',
-                    '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
-                ),
-                $chosen
-            );
-
-            $response = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'webhook.push', (bool)$response);
+            $u = ag_set($u, 'options.' . Options::IMPORT_METADATA_ONLY, (bool)$response);
         })();
         $output->writeln('');
 
@@ -459,9 +419,10 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to <info>scope</info> this <info>backend</info> webhook events to the specified <info>user</info>? <comment>%s</comment>
+                <info>Limit</info> backend webhook events to the selected <info>user</info>? <comment>%s</comment>
                 ------------------
-                Helpful for Plex multi user/servers setup.
+                <comment>Helpful for Plex multi user/servers setup.</comment>
+                <comment>Lead sometimes to missed events for jellyfin itemAdd events. You should scope the token at jellyfin level.</comment>
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -484,9 +445,9 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
-                Do you want to <info>scope</info> this <info>backend</info> webhook events to the specified <info>backend unique id</info>? <comment>%s</comment>
+                <info>Limit</info> backend webhook events to the selected <info>backend unique id</info>? <comment>%s</comment>
                 ------------------
-                Helpful for Plex multi user/servers setup.
+                <comment>Helpful for Plex multi user/servers setup.</comment>
                 TEXT;
 
             $question = new ConfirmationQuestion(
@@ -502,26 +463,23 @@ final class ManageCommand extends Command
         })();
         $output->writeln('');
 
-        // -- $name.webhook.token
-        (function () use ($output, &$u, $name) {
-            $cond = true === ag($u, 'webhook.import') && null === ag($u, 'webhook.token');
-
-            if (true === $cond) {
-                try {
-                    $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
-
-                    $output->writeln(
-                        sprintf('<info>The API key for \'%s\' webhook endpoint is: %s</info>', $name, $apiToken)
-                    );
-
-                    $u = ag_set($u, 'webhook.token', $apiToken);
-                } catch (Throwable $e) {
-                    $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
-                    exit(self::FAILURE);
-                }
+        if (null === ag($u, 'webhook.token')) {
+            try {
+                $u = ag_set($u, 'webhook.token', bin2hex(random_bytes(Config::get('webhook.tokenLength'))));
+            } catch (Throwable $e) {
+                $output->writeln(
+                    sprintf('<error>Generating webhook api token has failed. %s</error>', $e->getMessage())
+                );
+                return self::FAILURE;
             }
-        })();
-        $output->writeln('');
+        }
+
+        // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
+        if (true === (bool)ag($u, 'import.enabled')) {
+            if (true === ag_exists($u, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                $u = ag_delete($u, 'options.' . Options::IMPORT_METADATA_ONLY);
+            }
+        }
 
         $output->writeln('-----------');
         $output->writeln('');
