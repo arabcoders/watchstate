@@ -270,6 +270,13 @@ final class Initializer
                 throw new HttpException($message, 401);
             }
 
+            // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
+            if (true !== (bool)ag($server, ['import.enabled', 'webhook.import'])) {
+                if (true === ag_exists($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                    $server = ag_delete($server, 'options.' . Options::IMPORT_METADATA_ONLY);
+                }
+            }
+
             $metadataOnly = true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY);
 
             // -- @RELEASE remove 'webhook.import'

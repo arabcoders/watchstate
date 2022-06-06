@@ -127,10 +127,19 @@ class ImportCommand extends Command
             $metadata = false;
 
             if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
-                $this->logger->info(
-                    sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $serverName)
-                );
+                $this->logger->info('Ignoring backend as requested by [-s, --servers-filter].', [
+                    'context' => [
+                        'backend' => $serverName,
+                    ]
+                ]);
                 continue;
+            }
+
+            // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
+            if (true === (bool)ag($server, 'import.enabled')) {
+                if (true === ag_exists($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                    $server = ag_delete($server, 'options.' . Options::IMPORT_METADATA_ONLY);
+                }
             }
 
             if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
@@ -141,30 +150,35 @@ class ImportCommand extends Command
                 $metadata = true;
             }
 
-            if (true !== ag($server, 'import.enabled') && false === $metadata) {
-                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $serverName));
+            if (true !== (bool)ag($server, 'import.enabled') && true !== $metadata) {
+                $this->logger->info('All imports from this backend is disabled by user choice.', [
+                    'context' => [
+                        'backend' => $serverName,
+                    ],
+                ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error(
-                    sprintf(
-                        '%s: Unexpected type. Expecting \'%s\' but got \'%s\'.',
-                        $serverName,
-                        implode(', ', array_keys($supported)),
-                        $type
-                    )
-                );
+                $this->logger->error('Unexpected backend type.', [
+                    'context' => [
+                        'backend' => $serverName,
+                        'condition' => [
+                            'expected' => implode(', ', array_keys($supported)),
+                            'given' => $type,
+                        ],
+                    ],
+                ]);
                 continue;
             }
 
             if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error(
-                    sprintf('%s: Backend does not have valid url.', $serverName),
-                    [
-                        'url' => $url ?? 'None'
+                $this->logger->error('Invalid backend API URL.', [
+                    'context' => [
+                        'backend' => $serverName,
+                        'url' => $url ?? 'None',
                     ]
-                );
+                ]);
                 continue;
             }
 
@@ -173,36 +187,38 @@ class ImportCommand extends Command
         }
 
         if (empty($list)) {
-            $output->writeln(
-                sprintf(
-                    '<error>%s</error>',
-                    $isCustom ? '[-s, --servers-filter] Filter did not match any server.' : 'No servers were found.'
-                )
-            );
+            // -- @RELEASE - expand this message to account for filtering, import status etc.
+            $this->logger->warning('No backends were found');
             return self::FAILURE;
         }
 
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->notice(sprintf('Running WatchState Version \'%s\'.', getAppVersion()));
+        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
-        $this->logger->notice('MAPPER: Preloading database into memory.');
+        $this->logger->notice('MAPPER: Preloading mapper data into memory.');
         if ($inTraceMode) {
-            $this->logger->notice(
-                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-            );
+            $this->logger->notice('SYSTEM: Memory Usage.', [
+                'context' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
         }
 
         $this->mapper->loadData();
 
         if ($inTraceMode) {
-            $this->logger->notice(
-                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-            );
+            $this->logger->notice('SYSTEM: Memory Usage.', [
+                'context' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
         }
 
-        $this->logger->notice('MAPPER: Finished Preloading database.');
+        $this->logger->notice('MAPPER: Finished Preloading mapper.');
 
         $this->storage->singleTransaction();
 
@@ -247,19 +263,17 @@ class ImportCommand extends Command
                 ];
             }
 
-            $this->logger->notice(
-                sprintf(
-                    '%s: Importing metadata %s changes.',
-                    $name,
-                    (true === $metadata ? 'only' : 'and play state')
-                ),
-                $context ?? [],
-            );
+            $this->logger->notice('Importing metadata {play_state} changes.', [
+                'play_state' => true === $metadata ? 'only' : 'and play state',
+                ...$context ?? []
+            ]);
 
             array_push($queue, ...$server['class']->pull($this->mapper, $after));
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
-                $this->logger->notice(sprintf('%s: Not updating last sync date. Backend reported an error.', $name));
+                $this->logger->warning('Not updating last sync date. Backend reported an error', [
+                    'context' => $name,
+                ]);
             } else {
                 if (false === $this->mapper->inDryRunMode()) {
                     Config::save(sprintf('servers.%s.import.lastSync', $name), time());
@@ -280,16 +294,22 @@ class ImportCommand extends Command
         ]);
 
         if ($inTraceMode) {
-            $this->logger->notice(
-                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-            );
+            $this->logger->notice('SYSTEM: Memory Usage.', [
+                'context' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
         }
 
         foreach ($queue as $_key => $response) {
             if ($inTraceMode) {
-                $this->logger->notice(
-                    sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-                );
+                $this->logger->notice('SYSTEM: Memory Usage.', [
+                    'context' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                ]);
             }
 
             $requestData = $response->getInfo('user_data');
@@ -318,9 +338,12 @@ class ImportCommand extends Command
         ]);
 
         if ($inTraceMode) {
-            $this->logger->notice(
-                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-            );
+            $this->logger->notice('SYSTEM: Memory Usage.', [
+                'context' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
         }
 
         $queue = $requestData = null;
@@ -335,9 +358,12 @@ class ImportCommand extends Command
             ]);
 
             if ($inTraceMode) {
-                $this->logger->notice(
-                    sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-                );
+                $this->logger->notice('SYSTEM: Memory Usage.', [
+                    'context' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                ]);
             }
         }
 
@@ -378,9 +404,12 @@ class ImportCommand extends Command
         }
 
         if ($inTraceMode) {
-            $this->logger->notice(
-                sprintf('SYSTEM: Memory Usage (Now: %s) - (Peak: %s).', getMemoryUsage(), getPeakMemoryUsage())
-            );
+            $this->logger->notice('SYSTEM: Memory Usage.', [
+                'context' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
         }
 
         return self::SUCCESS;
