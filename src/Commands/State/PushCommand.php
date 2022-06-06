@@ -194,7 +194,7 @@ class PushCommand extends Command
                         continue;
                     }
 
-                    $this->logger->notice('Marked [{title}] as [{state}].', [
+                    $this->logger->notice('Marked [%(title)] as [%(state)].', [
                         'state' => ag($requestData, 'state', '??'),
                         'backend' => ag($requestData, 'server', '??'),
                         'title' => ag($requestData, 'itemName', '??'),

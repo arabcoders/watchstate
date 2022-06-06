@@ -1161,7 +1161,7 @@ class PlexServer implements ServerInterface
 
                 $context['url'] = $url;
 
-                $this->logger->debug('Requesting {type} state.', [
+                $this->logger->debug('Requesting %(type) state.', [
                     'context' => $context,
                     'type' => $entity->type,
                 ]);
@@ -1235,7 +1235,7 @@ class PlexServer implements ServerInterface
                 $json = ag($body, 'MediaContainer.Metadata', [])[0] ?? [];
 
                 if (empty($json)) {
-                    $this->logger->error('Ignoring {type}. Backend responded with unexpected body.', [
+                    $this->logger->error('Ignoring %(type). Backend responded with unexpected body.', [
                         'type' => $entity->type,
                         'context' => $context,
                         'response' => [
@@ -1248,7 +1248,7 @@ class PlexServer implements ServerInterface
                 $isWatched = (int)(bool)ag($json, 'viewCount', 0);
 
                 if ($entity->watched === $isWatched) {
-                    $this->logger->info('Ignoring {type}. Play state is identical.', [
+                    $this->logger->info('Ignoring %(type). Play state is identical.', [
                         'type' => $entity->type,
                         'context' => $context,
                     ]);
@@ -1259,7 +1259,7 @@ class PlexServer implements ServerInterface
                     $date = ag($json, true === (bool)ag($json, 'viewCount', false) ? 'lastViewedAt' : 'addedAt');
 
                     if (null === $date) {
-                        $this->logger->error('Ignoring {type}. No date is set on backend object.', [
+                        $this->logger->error('Ignoring %(type). No date is set on backend object.', [
                             'type' => $entity->type,
                             'context' => $context,
                             'response' => [
@@ -1274,7 +1274,7 @@ class PlexServer implements ServerInterface
                     $timeExtra = (int)(ag($this->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
 
                     if ($date->getTimestamp() >= ($timeExtra + $entity->updated)) {
-                        $this->logger->notice('Ignoring {type}. Storage recorded time is older than backend time.', [
+                        $this->logger->notice('Ignoring %(type). Storage recorded time is older than backend time.', [
                             'type' => $entity->type,
                             'context' => $context,
                             'condition' => [
@@ -1301,7 +1301,7 @@ class PlexServer implements ServerInterface
 
                 $context['url'] = $url;
 
-                $this->logger->debug('Queuing request to change play state to [{state}].', [
+                $this->logger->debug('Queuing request to change play state to [%(state)].', [
                     'context' => $context,
                     'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                 ]);

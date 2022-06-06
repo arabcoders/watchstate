@@ -263,7 +263,7 @@ class ImportCommand extends Command
                 ];
             }
 
-            $this->logger->notice('Importing metadata {play_state} changes from {backend}.', [
+            $this->logger->notice('Importing metadata %(play_state) changes from %(backend).', [
                 'play_state' => true === $metadata ? 'only' : 'and play state',
                 'backend' => $name,
                 ...$context ?? []

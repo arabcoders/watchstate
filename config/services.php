@@ -7,13 +7,13 @@ use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\QueueRequests;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Monolog\Logger;
-use Monolog\Processor\PsrLogMessageProcessor;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -29,11 +29,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 return (function (): array {
     return [
         LoggerInterface::class => [
-            'class' => fn() => new Logger(name: 'logger', processors: [
-                new PsrLogMessageProcessor(
-                    removeUsedContextFields: true
-                )
-            ])
+            'class' => fn() => new Logger(name: 'logger', processors: [new LogMessageProcessor()])
         ],
 
         HttpClientInterface::class => [
