@@ -20,7 +20,7 @@ final class MakeCommand extends Command
     protected function configure(): void
     {
         $this->setName('storage:make')
-            ->setDescription('Create storage backend migration.')
+            ->setDescription('Create storage migration.')
             ->addArgument('filename', InputArgument::REQUIRED, 'Migration name.');
     }
 

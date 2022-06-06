@@ -19,7 +19,7 @@ final class MaintenanceCommand extends Command
     protected function configure(): void
     {
         $this->setName('storage:maintenance')
-            ->setDescription('Run maintenance tasks on storage backend.');
+            ->setDescription('Run maintenance tasks on storage.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

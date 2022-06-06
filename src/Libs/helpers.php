@@ -321,7 +321,7 @@ if (!function_exists('httpClientChunks')) {
 }
 
 if (!function_exists('queuePush')) {
-    function queuePush(StateInterface $entity): void
+    function queuePush(StateInterface $entity, bool $remove = false): void
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             return;
@@ -332,7 +332,11 @@ if (!function_exists('queuePush')) {
 
             $list = $cache->get('queue', []);
 
-            $list[$entity->id] = ['id' => $entity->id];
+            if (true === $remove && array_key_exists($entity->id, $list)) {
+                unset($list[$entity->id]);
+            } else {
+                $list[$entity->id] = ['id' => $entity->id];
+            }
 
             $cache->set('queue', $list, new DateInterval('P7D'));
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {

@@ -1059,10 +1059,9 @@ class JellyfinServer implements ServerInterface
         $this->checkConfig(true);
 
         $requests = [];
-        $count = count($entities);
 
         foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof StateEntity)) {
+            if (true !== ($entity instanceof iFace)) {
                 continue;
             }
 
@@ -1072,15 +1071,21 @@ class JellyfinServer implements ServerInterface
                 }
             }
 
-            $iName = $entity->getName();
             $metadata = ag($entity->metadata, $this->name, []);
+            $context = [
+                'id' => $entity->id,
+                'backend' => $this->name,
+                'title' => $entity->getName()
+            ];
 
             if (null === ag($metadata, iFace::COLUMN_ID, null)) {
-                $this->logger->warning(sprintf('%s: Ignoring \'%s\'. No metadata relation map.', $this->name, $iName), [
-                    'id' => $entity->id
+                $this->logger->warning(sprintf('Ignoring %s. No metadata relation map found.', $entity->type), [
+                    'context' => $context,
                 ]);
                 continue;
             }
+
+            $context['backend_id'] = ag($metadata, iFace::COLUMN_ID);
 
             try {
                 $url = $this->url->withPath(sprintf('/Users/%s/items', $this->user))->withQuery(
@@ -1094,11 +1099,12 @@ class JellyfinServer implements ServerInterface
                     )
                 );
 
-                if ($count < 20) {
-                    $this->logger->debug(sprintf('%s: Requesting \'%s\' state.', $this->name, $iName), [
-                        'url' => $url
-                    ]);
-                }
+                $context['url'] = $url->withQuery('');
+
+                $this->logger->debug('Requesting {type} state.', [
+                    'context' => $context,
+                    'type' => $entity->type,
+                ]);
 
                 $requests[] = $this->http->request(
                     'GET',
@@ -1106,78 +1112,85 @@ class JellyfinServer implements ServerInterface
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
                             'id' => $key,
+                            'context' => $context,
                             'suid' => ag($metadata, iFace::COLUMN_ID),
                         ]
                     ])
                 );
             } catch (Throwable $e) {
-                $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
+                $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
+                    'context' => $context,
+                    'trace' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                    ],
                 ]);
             }
         }
 
+        $context = null;
+
         foreach ($requests as $response) {
+            $context = ag($response->getInfo('user_data'), 'context', ['backend' => $this->name]);
+
             try {
                 if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
-                    $this->logger->error(sprintf('%s: Unable to get item entity state.', $this->name));
+                    $this->logger->error('Unable to get item object.', [
+                        'context' => $context,
+                    ]);
                     continue;
                 }
 
-                $state = $entities[$id];
+                $entity = $entities[$id];
 
-                assert($state instanceof iFace);
+                assert($entity instanceof iFace);
 
                 switch ($response->getStatusCode()) {
                     case 200:
                         break;
                     case 404:
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Request to get \'%s\' metadata returned \'404 Not Found\' error.',
-                                $this->name,
-                                $state->getName(),
-
-                            ), [
-                                'id' => ag($response->getInfo('user_data'), 'suid', '??'),
-                            ]
-                        );
+                        $this->logger->warning('Request to get item play state returned with (NOT FOUND) status.', [
+                            'context' => $context
+                        ]);
                         continue 2;
                     default:
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Request to get \'%s\' metadata responded with unexpected http status code \'%d\'.',
-                                $this->name,
-                                $state->getName(),
-                                $response->getStatusCode()
-                            )
-                        );
+                        $this->logger->error('Request to get item play state returned with unexpected status code.', [
+                            'context' => $context,
+                            'condition' => [
+                                'expected' => 200,
+                                'given' => $response->getStatusCode(),
+                            ]
+                        ]);
                         continue 2;
                 }
 
-                $json = json_decode(
+                $body = json_decode(
                     json:        $response->getContent(false),
                     associative: true,
                     flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
 
-                $json = ag($json, 'Items', [])[0] ?? [];
+                $json = ag($body, 'Items', [])[0] ?? [];
 
                 if (empty($json)) {
-                    $this->logger->error(
-                        sprintf('%s: Ignoring \'%s\'. Backend returned empty result.', $this->name, $state->getName())
-                    );
+                    $this->logger->error('Ignoring {type}. Backend responded with unexpected body.', [
+                        'type' => $entity->type,
+                        'context' => $context,
+                        'response' => [
+                            'body' => $body,
+                        ],
+                    ]);
                     continue;
                 }
 
                 $isWatched = (int)(bool)ag($json, 'UserData.Played', false);
 
-                if ($state->watched === $isWatched) {
-                    $this->logger->info(
-                        sprintf('%s: Ignoring \'%s\'. Play state is identical.', $this->name, $state->getName())
-                    );
+                if ($entity->watched === $isWatched) {
+                    $this->logger->info('Ignoring {type}. Play state is identical.', [
+                        'type' => $entity->type,
+                        'context' => $context,
+                    ]);
                     continue;
                 }
 
@@ -1186,14 +1199,13 @@ class JellyfinServer implements ServerInterface
                     $date = ag($json, true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated');
 
                     if (null === $date) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Ignoring \'%s\'. No date is set on backend object.',
-                                $this->name,
-                                $state->getName()
-                            ),
-                            $json
-                        );
+                        $this->logger->error('Ignoring {type}. No date is set on backend object.', [
+                            'type' => $entity->type,
+                            'context' => $context,
+                            'response' => [
+                                'body' => $body,
+                            ],
+                        ]);
                         continue;
                     }
 
@@ -1201,53 +1213,45 @@ class JellyfinServer implements ServerInterface
 
                     $timeExtra = (int)(ag($this->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
 
-                    if ($date->getTimestamp() >= ($timeExtra + $state->updated)) {
-                        $this->logger->notice(
-                            sprintf(
-                                '%s: Ignoring \'%s\'. Record time is older than backend time.',
-                                $this->name,
-                                $state->getName()
-                            ),
-                            [
-                                'record' => makeDate($state->updated),
+                    if ($date->getTimestamp() >= ($timeExtra + $entity->updated)) {
+                        $this->logger->notice('Ignoring {type}. Storage recorded time is older than backend time.', [
+                            'type' => $entity->type,
+                            'context' => $context,
+                            'condition' => [
+                                'storage' => makeDate($entity->updated),
                                 'backend' => $date,
-                                'time_difference' => $date->getTimestamp() - $state->updated,
+                                'difference' => $date->getTimestamp() - $entity->updated,
                                 'extra_margin' => [
                                     Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra,
                                 ],
-                            ]
-                        );
+                            ],
+                        ]);
                         continue;
                     }
                 }
 
                 $url = $this->url->withPath(sprintf('/Users/%s/PlayedItems/%s', $this->user, ag($json, 'Id')));
 
-                $this->logger->debug(
-                    sprintf(
-                        '%s: Changing \'%s\' play state to \'%s\'.',
-                        $this->name,
-                        $state->getName(),
-                        $state->isWatched() ? 'Played' : 'Unplayed',
-                    ),
-                    [
-                        'backend' => $isWatched ? 'Played' : 'Unplayed',
-                        'url' => $url,
-                    ]
-                );
+                $context['url'] = $url;
+
+                $this->logger->debug('Queuing request to change play state to [{state}].', [
+                    'context' => $context,
+                    'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                ]);
 
                 if (false === (bool)ag($this->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
-                            $state->isWatched() ? 'POST' : 'DELETE',
+                            $entity->isWatched() ? 'POST' : 'DELETE',
                             (string)$url,
                             array_replace_recursive(
                                 $this->getHeaders(),
                                 [
                                     'user_data' => [
-                                        'itemName' => $state->getName(),
+                                        'itemName' => $entity->getName(),
                                         'server' => $this->name,
-                                        'state' => $state->isWatched() ? 'Played' : 'Unplayed',
+                                        'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                        'context' => $context,
                                     ],
                                 ]
                             )
@@ -1255,10 +1259,13 @@ class JellyfinServer implements ServerInterface
                     );
                 }
             } catch (Throwable $e) {
-                $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
+                $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
+                    'context' => $context,
+                    'trace' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                    ],
                 ]);
             }
         }
