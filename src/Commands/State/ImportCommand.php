@@ -263,8 +263,9 @@ class ImportCommand extends Command
                 ];
             }
 
-            $this->logger->notice('Importing metadata {play_state} changes.', [
+            $this->logger->notice('Importing metadata {play_state} changes from {backend}.', [
                 'play_state' => true === $metadata ? 'only' : 'and play state',
+                'backend' => $name,
                 ...$context ?? []
             ]);
 
@@ -272,7 +273,9 @@ class ImportCommand extends Command
 
             if (true === Data::get(sprintf('%s.no_import_update', $name))) {
                 $this->logger->warning('Not updating last sync date. Backend reported an error', [
-                    'context' => $name,
+                    'context' => [
+                        'backend' => $name,
+                    ],
                 ]);
             } else {
                 if (false === $this->mapper->inDryRunMode()) {
