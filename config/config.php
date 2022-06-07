@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Commands\Config\PruneCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
+use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Scheduler\Task;
 use App\Libs\Servers\EmbyServer;
@@ -204,7 +204,7 @@ return (function () {
                 Task::NAME => PruneCommand::TASK_NAME,
                 Task::ENABLED => 'disable' !== ag($config, 'logs.prune.after'),
                 Task::RUN_AT => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
-                Task::COMMAND => '@config:prune',
+                Task::COMMAND => '@system:prune',
                 Task::ARGS => env('WS_CRON_PRUNE_ARGS', '-v'),
             ],
         ],

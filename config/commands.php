@@ -5,10 +5,13 @@ declare(strict_types=1);
 return [
     // config:
     'config:php' => App\Commands\Config\PHPCommand::class,
-    'config:env' => App\Commands\Config\EnvCommand::class,
-    'config:prune' => App\Commands\Config\PruneCommand::class,
-    'config:logs' => \App\Commands\Config\LogsCommand::class,
-    'logs' => \App\Commands\Config\LogsCommand::class,
+
+    // system:
+    'system:prune' => \App\Commands\System\PruneCommand::class,
+    'system:env' => \App\Commands\System\EnvCommand::class,
+    'system:logs' => \App\Commands\System\LogsCommand::class,
+    'logs' => \App\Commands\System\LogsCommand::class,
+
     // -- state:
     'state:import' => App\Commands\State\ImportCommand::class,
     'state:export' => App\Commands\State\ExportCommand::class,

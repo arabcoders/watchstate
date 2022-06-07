@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Config;
+namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
@@ -23,16 +23,16 @@ final class PruneCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('config:prune')
+        $this->setName('system:prune')
             ->addOption(
                 'older-than',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'delete files older specified time',
+                'Delete logs older than.',
                 Config::get('logs.prune.after', '-3 DAYS')
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not take any action.')
-            ->setDescription('Prune old logs files.');
+            ->setDescription('Delete old logs files.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -80,7 +80,7 @@ final class PruneCommand extends Command
             $path = ag($item, 'path');
 
             if (null === $path || !is_dir($path)) {
-                $this->logger->warning('Path does not exists.', [
+                $this->logger->warning('Path [%(path)] not found or inaccessible.', [
                     'path' => $path
                 ]);
                 continue;
@@ -92,21 +92,21 @@ final class PruneCommand extends Command
                 $fileName = $file->getBasename();
 
                 if ('.' === $fileName || '..' === $fileName || true === $file->isDir() || false === $file->isFile()) {
-                    $this->logger->debug('Path is not considered valid file.', [
+                    $this->logger->debug('Path [%(path)] is not considered valid file.', [
                         'path' => $file->getRealPath(),
                     ]);
                     continue;
                 }
 
                 if ($file->getMTime() > $expiresAt) {
-                    $this->logger->debug('Path Not yet expired.', [
-                        'path' => after($file->getRealPath(), Config::get('tmpDir')),
+                    $this->logger->debug('File [%(file)] Not yet expired. %(ttl) left seconds.', [
+                        'file' => after($file->getRealPath(), Config::get('tmpDir') . '/'),
                         'ttl' => number_format($file->getMTime() - $expiresAt),
                     ]);
                     continue;
                 }
 
-                $this->logger->notice('Deleting File.', [
+                $this->logger->notice('Removing [%(file)].', [
                     'file' => after($file->getRealPath(), Config::get('tmpDir'))
                 ]);
 

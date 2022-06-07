@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Config;
+namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
@@ -19,13 +19,13 @@ final class LogsCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('config:logs')
+        $this->setName('system:logs')
             ->addOption(
                 'filename',
                 'f',
                 InputOption::VALUE_OPTIONAL,
-                'Read output of given file.',
-                Config::get('logger.file.filename')
+                'Read contents of given file.',
+                after(Config::get('logger.file.filename'), Config::get('tmpDir') . '/')
             )
             ->addOption('limit', 'l', InputOption::VALUE_OPTIONAL, 'Show last X number messages.', self::DEFAULT_LIMIT)
             ->addOption('tail', 't', InputOption::VALUE_NONE, 'Tail logfile.')
@@ -66,7 +66,7 @@ final class LogsCommand extends Command
                 clearstatcache(false, $p);
                 $len = filesize($p);
                 if ($len < $lastPos) {
-                    //file deleted or reset
+                    //-- file deleted or reset
                     $lastPos = $len;
                 } elseif ($len > $lastPos) {
                     if (false === ($f = fopen($p, 'rb'))) {
