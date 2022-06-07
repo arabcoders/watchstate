@@ -63,6 +63,10 @@ if (!function_exists('makeDate')) {
             $tz = new DateTimeZone($tz);
         }
 
+        if (true === ($date instanceof DateTimeInterface)) {
+            $date = $date->format(DateTimeInterface::ATOM);
+        }
+
         return (new Date($date))->setTimezone($tz);
     }
 }
