@@ -437,7 +437,10 @@ class ExportCommand extends Command
                 continue;
             }
 
-            if (false === (bool)ag($backend, 'import.enabled')) {
+            if (false === (bool)ag($backend, 'import.enabled') && false === (bool)ag(
+                    $backends,
+                    'options.' . Options::IMPORT_METADATA_ONLY
+                )) {
                 $this->logger->info(
                     sprintf('%s: Import are disabled from this backend. Falling back to export mode.', $name)
                 );
