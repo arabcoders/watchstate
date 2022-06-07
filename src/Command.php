@@ -39,6 +39,10 @@ class Command extends BaseCommand
             Config::save('logs.context', false);
         }
 
+        if ($input->hasOption('trace') && true === $input->getOption('trace')) {
+            Config::save('logs.context', true);
+        }
+
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {
             return $this->runCommand($input, $output);
         }
