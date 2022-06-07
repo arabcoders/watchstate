@@ -2,6 +2,7 @@
 
 namespace App\Libs\Extends;
 
+use App\Libs\Config;
 use DateTimeInterface;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Logger;
@@ -59,12 +60,15 @@ class ConsoleHandler extends AbstractProcessingHandler
         }
 
         $message = sprintf(
-            '[%s] %s: %s %s',
+            '[%s] %s: %s',
             $date,
             $record['level_name'] ?? $record['level'] ?? '??',
             $record['message'],
-            !empty($record['context']) ? '{ ' . arrayToString($record['context']) . ' }' : ''
         );
+
+        if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
+            $message .= ' { ' . arrayToString($record['context']) . ' }';
+        }
 
         $this->output->writeln($message, $this->output->getVerbosity());
     }

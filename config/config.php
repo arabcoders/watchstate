@@ -20,6 +20,7 @@ return (function () {
         'tz' => env('WS_TZ', 'UTC'),
         'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
         'logs' => [
+            'context' => (bool)env('WS_LOGS_CONTEXT', false),
             'prune' => [
                 'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
             ],
@@ -103,7 +104,7 @@ return (function () {
     $config['logger'] = [
         'file' => [
             'type' => 'stream',
-            'enabled' => env('WS_LOGGER_FILE_ENABLE', true),
+            'enabled' => (bool)env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
             'filename' => env(
                 'WS_LOGGER_FILE',
@@ -126,7 +127,7 @@ return (function () {
             'type' => 'syslog',
             'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
-            'enabled' => env('WS_LOGGER_SYSLOG_ENABLED', !env('IN_DOCKER')),
+            'enabled' => (bool)env('WS_LOGGER_SYSLOG_ENABLED', !env('IN_DOCKER')),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
             'name' => env('WS_LOGGER_SYSLOG_NAME', ag($config, 'name')),
         ],

@@ -31,6 +31,10 @@ class Command extends BaseCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        if ($input->hasOption('with-context') && true === $input->getOption('with-context')) {
+            Config::save('logs.context', true);
+        }
+
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {
             return $this->runCommand($input, $output);
         }
