@@ -103,15 +103,19 @@ final class MismatchCommand extends Command
             }
         } catch (Throwable $e) {
             $arr = [
-                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
+                'error' => $e->getMessage(),
             ];
 
             if ('table' !== $mode) {
-                $arr += [
+                $arr['exception'] = [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'item' => $item ?? [],
                 ];
+
+                if (!empty($item)) {
+                    $arr['item'] = $item;
+                }
             }
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
@@ -121,7 +125,11 @@ final class MismatchCommand extends Command
 
         if (empty($list)) {
             $arr = [
-                'info' => sprintf('%s: No mis-identified items were found using given parameters.', $backend)
+                'info' => sprintf(
+                    'No mis-identified items were found in [%s] library [%s] using given parameters.',
+                    $backend,
+                    $id
+                )
             ];
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
