@@ -35,6 +35,10 @@ class Command extends BaseCommand
             Config::save('logs.context', true);
         }
 
+        if ($input->hasOption('no-with-context') && true === $input->getOption('no-with-context')) {
+            Config::save('logs.context', false);
+        }
+
         if (!$input->hasOption('profile') || !$input->getOption('profile')) {
             return $this->runCommand($input, $output);
         }

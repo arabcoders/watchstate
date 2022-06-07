@@ -34,7 +34,7 @@ class Cli extends Application
         }
 
         $definition->addOption(
-            new InputOption('with-context', null, InputOption::VALUE_NONE, 'Add context to output messages.')
+            new InputOption('with-context', null, InputOption::VALUE_NEGATABLE, 'Add context to output messages.')
         );
 
         return $definition;
