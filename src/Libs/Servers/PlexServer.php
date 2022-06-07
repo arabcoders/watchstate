@@ -1938,6 +1938,11 @@ class PlexServer implements ServerInterface
         $type = ag($item, 'type');
 
         try {
+            if ('show' === $type) {
+                $this->processShow($item, $context);
+                return;
+            }
+
             Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
 
@@ -1956,7 +1961,7 @@ class PlexServer implements ServerInterface
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
                 },
-                'type' => ag($item, 'type', 'unknown'),
+                'type' => $type,
             ];
 
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
