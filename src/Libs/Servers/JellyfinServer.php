@@ -1385,7 +1385,7 @@ class JellyfinServer implements ServerInterface
                     ]
                 );
             },
-            includeParent: false,
+            includeParent: false === count(ag($this->cache, 'shows', [])) > 1,
         );
     }
 
@@ -1767,6 +1767,11 @@ class JellyfinServer implements ServerInterface
         Data::increment($this->name, $type . '_total');
 
         try {
+            if ('show' === $type) {
+                $this->processShow($item, $library);
+                return;
+            }
+
             if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
                     '%s - [%s (%d)]',
