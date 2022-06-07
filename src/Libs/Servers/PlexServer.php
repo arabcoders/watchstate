@@ -161,7 +161,7 @@ class PlexServer implements ServerInterface
         $url = $this->url->withPath('/');
 
         $this->logger->debug('Requesting [%(backend)] unique identifier.', [
-            'backend' => $this->name,
+            'backend' => $this->getName(),
             'url' => $url,
         ]);
 
@@ -170,8 +170,10 @@ class PlexServer implements ServerInterface
         if (200 !== $response->getStatusCode()) {
             $this->logger->error('Request for [%(backend)] unique identifier responded with unexpected status code.', [
                 'backend' => $this->getName(),
-                'expected' => 200,
-                'received' => $response->getStatusCode(),
+                'condition' => [
+                    'expected' => 200,
+                    'received' => $response->getStatusCode(),
+                ],
             ]);
 
             return null;
@@ -206,9 +208,9 @@ class PlexServer implements ServerInterface
         if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
                 sprintf(
-                    'Request for [%s] users list responded with unexpected code. %s',
+                    'Request for [%s] users list responded with unexpected [%s] status code.',
                     $this->name,
-                    arrayToString(['expected' => 200, 'received' => $response->getStatusCode()])
+                    $response->getStatusCode(),
                 )
             );
         }
@@ -316,12 +318,13 @@ class PlexServer implements ServerInterface
                 $request = $request->withAttribute($key, $val);
             }
         } catch (Throwable $e) {
-            $logger?->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
-                'in' => 'parseWebhook',
-                'trace' => [
+            $logger?->error('Unhandled exception was thrown in [%(client)] during request processing.', [
+                'client' => self::NAME,
+                'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'message' => $e->getMessage(),
                 ],
             ]);
         }
@@ -342,18 +345,18 @@ class PlexServer implements ServerInterface
 
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(
-                sprintf('%s: Webhook content type is not supported. [%s]', $this->getName(), $type), 200
+                sprintf('%s: Webhook content type [%s] is not supported.', $this->getName(), $type), 200
             );
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             throw new HttpException(
-                sprintf('%s: Webhook event type is not supported. [%s]', $this->getName(), $event), 200
+                sprintf('%s: Webhook event type [%s] is not supported.', $this->getName(), $event), 200
             );
         }
 
         if (null === $id) {
-            throw new HttpException(sprintf('%s: Webhook body has no id.', $this->getName()), 400);
+            throw new HttpException(sprintf('%s: No item id was found in webhook body.', $this->getName()), 400);
         }
 
         if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
@@ -361,7 +364,7 @@ class PlexServer implements ServerInterface
         }
 
         if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
-            throw new HttpException('The library which contain this item is ignored by user choice.', 200);
+            throw new HttpException(sprintf('%s: library is ignored by user choice.', $this->getName()), 200);
         }
 
         try {
@@ -406,21 +409,22 @@ class PlexServer implements ServerInterface
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
-            $this->logger->error('%(backend): %(trace.message)', [
-                'backend' => $id,
-                'payload' => $request->getParsedBody(),
-                'attributes' => $request->getAttributes(),
-                'trace' => [
+            $this->logger->error('Unhandled exception was thrown during [%(backend)] webhook event parsing.', [
+                'backend' => $this->getName(),
+                'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
                     'message' => $e->getMessage(),
                 ],
+                'context' => [
+                    'attributes' => $request->getAttributes(),
+                    'payload' => $request->getParsedBody(),
+                ],
             ]);
 
             throw new HttpException(
-                sprintf('Failed to process [%s] webhook payload check logs.', $this->getName()),
-                200
+                sprintf('%s: Failed to handle webhook payload check logs.', $this->getName()), 200
             );
         }
 
@@ -434,7 +438,11 @@ class PlexServer implements ServerInterface
                     'payload' => $request->getParsedBody(),
                 ],
             ]);
-            throw new HttpException('Import ignored, No valid/supported external ids.', 200);
+
+            throw new HttpException(
+                sprintf('%s: Import ignored. No valid/supported external ids.', $this->getName()),
+                200
+            );
         }
 
         return $entity;
@@ -475,17 +483,10 @@ class PlexServer implements ServerInterface
             if (200 !== $response->getStatusCode()) {
                 throw new RuntimeException(
                     sprintf(
-                        'Search request for [%s] in [%s] responded with unexpected status code. %s',
+                        'Search request for [%s] in [%s] responded with unexpected [%s] status code.',
                         $query,
-                        $this->name,
-                        arrayToString(
-                            [
-                                'condition' => [
-                                    'expected' => 200,
-                                    'received' => $response->getStatusCode(),
-                                ],
-                            ]
-                        )
+                        $this->getName(),
+                        $response->getStatusCode(),
                     )
                 );
             }
@@ -539,13 +540,10 @@ class PlexServer implements ServerInterface
 
             return $list;
         } catch (ExceptionInterface|JsonException $e) {
-            throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
+            throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
         }
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function searchId(string|int $id, array $opts = []): array
     {
         $item = $this->getMetadata($id, $opts);
@@ -586,26 +584,23 @@ class PlexServer implements ServerInterface
         return $builder;
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function getMetadata(string|int $id, array $opts = []): array
     {
         $this->checkConfig();
 
-        $cacheKey = false === (bool)($opts['nocache'] ?? false) ? $this->getName() . '_' . $id . '_metadata' : null;
-
-        if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
-            return $this->cacheIO->get(key: $cacheKey);
-        }
-
         try {
+            $cacheKey = false === (bool)($opts['nocache'] ?? false) ? $this->getName() . '_' . $id . '_metadata' : null;
+
+            if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
+                return $this->cacheIO->get(key: $cacheKey);
+            }
+
             $url = $this->url->withPath('/library/metadata/' . $id)->withQuery(
                 http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? []))
             );
 
-            $this->logger->debug('Requesting [%(backend)] item id [%(id)] metadata.', [
-                'backend' => $this->name,
+            $this->logger->debug('Requesting [%(backend)] item [%(id)] metadata.', [
+                'backend' => $this->getName(),
                 'id' => $id,
                 'url' => $url
             ]);
@@ -622,17 +617,10 @@ class PlexServer implements ServerInterface
             if (200 !== $response->getStatusCode()) {
                 throw new RuntimeException(
                     sprintf(
-                        'Request for [%s] item id [%s] responded with unexpected status code. %s',
+                        'Request for [%s] item [%s] responded with unexpected [%s] status code.',
                         $this->name,
                         $id,
-                        arrayToString(
-                            [
-                                'condition' => [
-                                    'expected' => 200,
-                                    'received' => $response->getStatusCode(),
-                                ],
-                            ]
-                        )
+                        $response->getStatusCode(),
                     )
                 );
             }
@@ -648,7 +636,7 @@ class PlexServer implements ServerInterface
             }
 
             return $item;
-        } catch (ExceptionInterface|JsonException $e) {
+        } catch (ExceptionInterface|JsonException|InvalidArgumentException $e) {
             throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
         }
     }
@@ -983,7 +971,7 @@ class PlexServer implements ServerInterface
         } catch (ExceptionInterface $e) {
             $this->logger->error('Request for [%(backend)] libraries has failed.', [
                 'backend' => $this->getName(),
-                'trace' => [
+                'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
@@ -993,7 +981,7 @@ class PlexServer implements ServerInterface
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
-                'trace' => [
+                'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'message' => $e->getMessage(),
@@ -1035,26 +1023,33 @@ class PlexServer implements ServerInterface
     public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type, string|int $id, UriInterface|string $url) use ($after, $mapper) {
-                return function (ResponseInterface $response) use ($mapper, $cName, $type, $after, $id, $url) {
+            ok: function (array $context = []) use ($after, $mapper) {
+                return function (ResponseInterface $response) use ($mapper, $after, $context) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
-                            sprintf(
-                                '%s: Request to \'%s\' responded with unexpected http status code \'%d\'.',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            ),
+                            'Request for [%(backend)] [%(library.title)] content responded with unexpected status code.',
                             [
-                                'url' => (string)$url,
+                                'backend' => $this->getName(),
+                                ...$context,
+                                'condition' => [
+                                    'expected' => 200,
+                                    'received' => $response->getStatusCode(),
+                                ],
                             ]
                         );
                         return;
                     }
 
-                    try {
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
+                    $start = makeDate();
+                    $this->logger->info('Parsing [%(backend)] [%(library.title)] response.', [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'time' => [
+                            'start' => $start,
+                        ],
+                    ]);
 
+                    try {
                         $it = Items::fromIterable(
                             iterable: httpClientChunks($this->http->stream($response)),
                             options:  [
@@ -1071,14 +1066,14 @@ class PlexServer implements ServerInterface
                         foreach ($it as $entity) {
                             if ($entity instanceof DecodingError) {
                                 $this->logger->warning(
-                                    sprintf(
-                                        '%s: Failed to decode one of \'%s\' items. %s',
-                                        $this->name,
-                                        $cName,
-                                        $entity->getErrorMessage()
-                                    ),
+                                    'Failed to decode one item of [%(backend)] [%(library.title)] content.',
                                     [
-                                        'payload' => $entity->getMalformedJson(),
+                                        'backend' => $this->getName(),
+                                        ...$context,
+                                        'context' => [
+                                            'error' => $entity->getErrorMessage(),
+                                            'body' => $entity->getMalformedJson(),
+                                        ],
                                     ]
                                 );
                                 continue;
@@ -1086,53 +1081,62 @@ class PlexServer implements ServerInterface
 
                             $this->processImport(
                                 mapper:  $mapper,
-                                type:    $type,
-                                library: $cName,
                                 item:    $entity,
-                                after:   $after,
-                                opts:    ['library' => $id]
+                                context: $context,
+                                opts:    ['after' => $after],
                             );
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
-                            sprintf(
-                                '%s: Failed to find items in \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
+                            'Failed to find any item in [%(backend)] [%(library.title)] response.',
                             [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
+                                'backend' => $this->getName(),
+                                ...$context,
+                                'exception' => [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'message' => $e->getMessage(),
+                                ],
+                            ]
                         );
                     } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
+                        $this->logger->error('Failed to handle [%(backend)] [%(library.title)] response.', [
+                            'backend' => $this->getName(),
+                            ...$context,
+                            'exception' => [
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
+                                'message' => $e->getMessage(),
                             ],
-                        );
+                        ]);
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
+                    $end = makeDate();
+                    $this->logger->info('Parsing [%(backend)] [%(library.title)] response is complete.', [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'time' => [
+                            'start' => $start,
+                            'end' => $end,
+                            'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                        ],
+                    ]);
                 };
             },
-            error: function (string $cName, string $type, string|int $id, UriInterface|string $url) {
+            error: function (array $context = []) {
                 return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
+                    'Unhandled Exception was thrown in [%(backend)] [%(library.title)] request.',
                     [
-                        'url' => (string)$url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
                     ]
                 );
             },
@@ -1198,7 +1202,7 @@ class PlexServer implements ServerInterface
             } catch (Throwable $e) {
                 $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
                     'context' => $context,
-                    'trace' => [
+                    'exception' => [
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
@@ -1341,7 +1345,7 @@ class PlexServer implements ServerInterface
             } catch (Throwable $e) {
                 $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
                     'context' => $context,
-                    'trace' => [
+                    'exception' => [
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
@@ -1358,30 +1362,33 @@ class PlexServer implements ServerInterface
     public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         return $this->getLibraries(
-            ok: function (string $cName, string $type, string|int $id, UriInterface|string $url) use (
-                $mapper,
-                $queue,
-                $after
-            ) {
-                return function (ResponseInterface $response) use ($mapper, $queue, $cName, $type, $after, $id, $url) {
+            ok: function (array $context = []) use ($mapper, $queue, $after) {
+                return function (ResponseInterface $response) use ($mapper, $queue, $after, $context) {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
-                            sprintf(
-                                '%s: Request for \'%s\' responded with unexpected http status code (%d).',
-                                $this->name,
-                                $cName,
-                                $response->getStatusCode()
-                            ),
+                            'Request for [%(backend)] [%(library.title)] content responded with unexpected status code.',
                             [
-                                'url' => (string)$url,
+                                'backend' => $this->getName(),
+                                ...$context,
+                                'condition' => [
+                                    'expected' => 200,
+                                    'received' => $response->getStatusCode(),
+                                ],
                             ]
                         );
                         return;
                     }
 
-                    try {
-                        $this->logger->info(sprintf('%s: Parsing \'%s\' response.', $this->name, $cName));
+                    $start = makeDate();
+                    $this->logger->info('Parsing [%(backend)] [%(library.title)] response.', [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'time' => [
+                            'start' => $start,
+                        ],
+                    ]);
 
+                    try {
                         $it = Items::fromIterable(
                             iterable: httpClientChunks(stream: $this->http->stream($response)),
                             options:  [
@@ -1397,15 +1404,15 @@ class PlexServer implements ServerInterface
 
                         foreach ($it as $entity) {
                             if ($entity instanceof DecodingError) {
-                                $this->logger->notice(
-                                    sprintf(
-                                        '%s: Failed to decode one of \'%s\' items. %s',
-                                        $this->name,
-                                        $cName,
-                                        $entity->getErrorMessage()
-                                    ),
+                                $this->logger->warning(
+                                    'Failed to decode one item of [%(backend)] [%(library.title)] content.',
                                     [
-                                        'payload' => $entity->getMalformedJson(),
+                                        'backend' => $this->getName(),
+                                        ...$context,
+                                        'context' => [
+                                            'error' => $entity->getErrorMessage(),
+                                            'body' => $entity->getMalformedJson(),
+                                        ],
                                     ]
                                 );
                                 continue;
@@ -1414,53 +1421,62 @@ class PlexServer implements ServerInterface
                             $this->processExport(
                                 mapper:  $mapper,
                                 queue:   $queue,
-                                type:    $type,
-                                library: $cName,
                                 item:    $entity,
-                                after:   $after,
-                                opts:    ['library' => $id]
+                                context: $context,
+                                opts:    ['after' => $after]
                             );
                         }
                     } catch (PathNotFoundException $e) {
                         $this->logger->error(
-                            sprintf(
-                                '%s: Failed to find items in \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage()
-                            ),
+                            'Failed to find any item in [%(backend)] [%(library.title)] response.',
                             [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                            ],
+                                'backend' => $this->getName(),
+                                ...$context,
+                                'exception' => [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'message' => $e->getMessage(),
+                                ],
+                            ]
                         );
                     } catch (Throwable $e) {
-                        $this->logger->error(
-                            sprintf(
-                                '%s: Failed to handle \'%s\' response. %s',
-                                $this->name,
-                                $cName,
-                                $e->getMessage(),
-                            ),
-                            [
+                        $this->logger->error('Failed to handle [%(backend)] [%(library.title)] response.', [
+                            'backend' => $this->getName(),
+                            ...$context,
+                            'exception' => [
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
+                                'message' => $e->getMessage(),
                             ],
-                        );
+                        ]);
                     }
 
-                    $this->logger->info(sprintf('%s: Parsing \'%s\' response is complete.', $this->name, $cName));
+                    $end = makeDate();
+                    $this->logger->info('Parsing [%(backend)] [%(library.title)] response is complete.', [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'time' => [
+                            'start' => $start,
+                            'end' => $end,
+                            'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                        ],
+                    ]);
                 };
             },
-            error: function (string $cName, string $type, string|int $id, UriInterface|string $url) {
+            error: function (array $context = []) {
                 return fn(Throwable $e) => $this->logger->error(
-                    sprintf('%s: Error encountered in \'%s\' request. %s', $this->name, $cName, $e->getMessage()),
+                    'Unhandled Exception was thrown in [%(backend)] [%(library.title)] request.',
                     [
-                        'url' => $url,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
                     ]
                 );
             },
@@ -1567,13 +1583,10 @@ class PlexServer implements ServerInterface
         if (true === $includeParent) {
             foreach ($listDirs as $section) {
                 $key = (int)ag($section, 'key');
-                $title = trim((string)ag($section, 'title', '???'));
 
                 if ('show' !== ag($section, 'type', 'unknown')) {
                     continue;
                 }
-
-                $cName = sprintf('(%s) - (%s:%s)', trim($title), 'show', $key);
 
                 if (null !== $ignoreIds && in_array($key, $ignoreIds)) {
                     continue;
@@ -1589,8 +1602,18 @@ class PlexServer implements ServerInterface
                     )
                 );
 
-                $this->logger->debug(sprintf('%s: Requesting \'%s\' tv shows external ids.', $this->name, $cName), [
-                    'url' => $url
+                $context = [
+                    'library' => [
+                        'id' => $key,
+                        'title' => ag($section, 'title', '??'),
+                        'type' => ag($section, 'type', 'unknown'),
+                        'url' => $url,
+                    ],
+                ];
+
+                $this->logger->debug('Requesting [%(backend)] [%(library.title)] series external ids.', [
+                    'backend' => $this->getName(),
+                    ...$context,
                 ]);
 
                 try {
@@ -1599,24 +1622,23 @@ class PlexServer implements ServerInterface
                         (string)$url,
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
-                                'ok' => $ok(cName: $cName, type: 'show', id: $key, url: $url),
-                                'error' => $error(cName: $cName, type: 'show', id: $key, url: $url),
+                                'ok' => $ok(context: $context),
+                                'error' => $error(context: $context),
                             ]
                         ])
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
-                        sprintf(
-                            '%s: Request for \'%s\' tv shows external ids has failed. %s',
-                            $this->name,
-                            $cName,
-                            $e->getMessage()
-                        ),
+                        'Request for [%(backend)] [%(library.title)] series external ids has failed.',
                         [
-                            'url' => $url,
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
+                            'backend' => $this->getName(),
+                            ...$context,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                            ],
                         ]
                     );
                     continue;
@@ -1627,29 +1649,34 @@ class PlexServer implements ServerInterface
         foreach ($listDirs as $section) {
             $key = (int)ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
-            $title = trim((string)ag($section, 'title', '???'));
+
+            $context = [
+                'library' => [
+                    'id' => ag($section, 'key'),
+                    'title' => ag($section, 'title', '??'),
+                    'type' => ag($section, 'type', 'unknown'),
+                ],
+            ];
+
+            if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
+                $ignored++;
+                $this->logger->info('Ignoring [%(backend)] [%(library.title)] as requested by user choice.', [
+                    'backend' => $this->getName(),
+                    ...$context,
+                ]);
+                continue;
+            }
 
             if ('movie' !== $type && 'show' !== $type) {
                 $unsupported++;
-                $this->logger->info(sprintf('%s: Skipping \'%s\'. Unsupported type.', $this->name, $title), [
-                    'id' => $key,
-                    'type' => $type,
+                $this->logger->info('Ignoring [%(backend)] [%(library.title)] as library type is not supported.', [
+                    'backend' => $this->getName(),
+                    ...$context,
                 ]);
                 continue;
             }
 
             $type = $type === 'movie' ? iFace::TYPE_MOVIE : iFace::TYPE_EPISODE;
-
-            if (null !== $ignoreIds && true === in_array($key, $ignoreIds)) {
-                $ignored++;
-                $this->logger->info(sprintf('%s: Skipping \'%s\'. Ignored by user.', $this->name, $title), [
-                    'id' => $key,
-                    'type' => $type,
-                ]);
-                continue;
-            }
-
-            $cName = sprintf('(%s) - (%s:%s)', $title, $type, $key);
 
             $url = $this->url->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
                 http_build_query(
@@ -1661,8 +1688,12 @@ class PlexServer implements ServerInterface
                 )
             );
 
-            $this->logger->debug(sprintf('%s: Requesting \'%s\' media items.', $this->name, $cName), [
-                'url' => $url
+            $context['library']['type'] = $type;
+            $context['library']['url'] = $url;
+
+            $this->logger->debug('Requesting [%(backend)] [%(library.title)] content.', [
+                'backend' => $this->getName(),
+                ...$context,
             ]);
 
             try {
@@ -1671,30 +1702,36 @@ class PlexServer implements ServerInterface
                     (string)$url,
                     array_replace_recursive($this->getHeaders(), [
                         'user_data' => [
-                            'ok' => $ok(cName: $cName, type: $type, id: $key, url: $url),
-                            'error' => $error(cName: $cName, type: $type, id: $key, url: $url),
+                            'ok' => $ok(context: $context),
+                            'error' => $error(context: $context),
                         ]
                     ])
                 );
             } catch (ExceptionInterface $e) {
-                $this->logger->error(
-                    sprintf('%s: Request for \'%s\' media items has failed. %s', $this->name, $cName, $e->getMessage()),
-                    [
-                        'url' => $url,
+                $this->logger->error('Requesting for [%(backend)] [%(library.title)] content has failed.', [
+                    'backend' => $this->getName(),
+                    ...$context,
+                    'exception' => [
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
-                    ]
-                );
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ],
+                ]);
                 continue;
             }
         }
 
         if (0 === count($promises)) {
-            $this->logger->warning(sprintf('%s: No library requests were made.', $this->name), [
-                'total' => count($listDirs),
-                'ignored' => $ignored,
-                'unsupported' => $unsupported,
+            $this->logger->warning('No requests for [%(backend)] were queued.', [
+                'backend' => $this->getName(),
+                'context' => [
+                    'total' => count($listDirs),
+                    'ignored' => $ignored,
+                    'unsupported' => $unsupported,
+                ],
             ]);
+
             Data::add($this->name, 'no_import_update', true);
             return [];
         }
@@ -1702,60 +1739,59 @@ class PlexServer implements ServerInterface
         return $promises;
     }
 
-    protected function processImport(
-        ImportInterface $mapper,
-        string $type,
-        string $library,
-        array $item,
-        DateTimeInterface|null $after = null,
-        array $opts = []
-    ): void {
+    protected function processImport(ImportInterface $mapper, array $item, array $context = [], array $opts = []): void
+    {
+        $after = ag($opts, 'after', null);
+        $library = ag($context, 'library.id');
+        $type = ag($item, 'type');
+
         try {
             if ('show' === $type) {
-                $this->processShow($item, $library);
+                $this->processShow($item, $context);
                 return;
             }
 
             Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
 
-            if (iFace::TYPE_MOVIE === $type) {
-                $iName = sprintf(
-                    '%s - [%s (%d)]',
-                    $library,
-                    ag($item, ['title', 'originalTitle'], '??'),
-                    ag($item, 'year', 0000)
-                );
-            } else {
-                $iName = trim(
-                    sprintf(
-                        '%s - [%s - (%sx%s)]',
-                        $library,
-                        ag($item, ['grandparentTitle', 'originalTitle'], '??'),
+            $context['item'] = [
+                'id' => ag($item, 'ratingKey'),
+                'title' => match ($type) {
+                    iFace::TYPE_MOVIE => sprintf(
+                        '%s (%s)',
+                        ag($item, ['title', 'originalTitle'], '??'),
+                        ag($item, 'year', '0000')
+                    ),
+                    iFace::TYPE_EPISODE => sprintf(
+                        '%s - (%sx%s)',
+                        ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
                         str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                    )
-                );
-            }
+                    ),
+                },
+                'type' => ag($item, 'type', 'unknown'),
+            ];
 
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
-                $this->logger->debug(sprintf('%s: Processing Payload.', self::NAME), [
-                    'context' => [
-                        'backend' => $this->name,
-                        'title' => $iName,
-                    ],
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)]', [
+                    'backend' => $this->getName(),
+                    ...$context,
                     'payload' => $item,
                 ]);
             }
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
-                $this->logger->debug(sprintf('%s: Ignoring item date is not set on object.', self::NAME), [
-                    'context' => [
-                        'backend' => $this->name,
-                        'title' => $iName,
+                $this->logger->debug('Ignoring [%(backend)] [%(item.title)]. No Date is set on object.', [
+                    'backend' => $this->getName(),
+                    ...$context,
+                    'condition' => [
+                        'expectedKey' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
                     ],
-                    'payload' => $item,
+                    'response' => [
+                        'body' => $item,
+                    ],
                 ]);
+
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
@@ -1777,11 +1813,7 @@ class PlexServer implements ServerInterface
                     }
                 }
 
-                $message = sprintf(
-                    '%s: Ignoring %s no valid/supported external ids.',
-                    self::NAME,
-                    ucfirst($entity->type)
-                );
+                $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -1792,15 +1824,15 @@ class PlexServer implements ServerInterface
                 }
 
                 if (empty($item['Guid'])) {
-                    $message .= ' Most likely unmatched item.';
+                    $message .= ' Most likely unmatched %(item.type).';
                 }
 
                 $this->logger->info($message, [
+                    'backend' => $this->getName(),
+                    ...$context,
                     'context' => [
-                        'backend' => $entity->via,
-                        'title' => $entity->getName(),
+                        'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
                     ],
-                    'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
                 ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
@@ -1812,14 +1844,14 @@ class PlexServer implements ServerInterface
                 Options::IMPORT_METADATA_ONLY => true === (bool)ag($this->options, Options::IMPORT_METADATA_ONLY),
             ]);
         } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
-                'context' => [
-                    'backend' => $this->name
-                ],
-                'trace' => [
+            $this->logger->error('Failed to handle [%(backend)] [%(library.title)] [%(item.title)].', [
+                'backend' => $this->getName(),
+                ...$context,
+                'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'message' => $e->getMessage(),
                 ],
             ]);
         }
@@ -1828,14 +1860,35 @@ class PlexServer implements ServerInterface
     protected function processExport(
         ImportInterface $mapper,
         QueueRequests $queue,
-        string $type,
-        string $library,
         array $item,
-        DateTimeInterface|null $after = null,
+        array $context = [],
         array $opts = [],
     ): void {
+        $after = ag($opts, 'after', null);
+        $library = ag($context, 'library.id');
+        $type = ag($item, 'type');
+
         try {
+            Data::increment($this->name, $library . '_total');
             Data::increment($this->name, $type . '_total');
+
+            $context['item'] = [
+                'id' => ag($item, 'ratingKey'),
+                'title' => match ($type) {
+                    iFace::TYPE_MOVIE => sprintf(
+                        '%s (%s)',
+                        ag($item, ['title', 'originalTitle'], '??'),
+                        ag($item, 'year', '0000')
+                    ),
+                    iFace::TYPE_EPISODE => sprintf(
+                        '%s - (%sx%s)',
+                        ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                    ),
+                },
+                'type' => ag($item, 'type', 'unknown'),
+            ];
 
             if (iFace::TYPE_MOVIE === $type) {
                 $iName = sprintf(
@@ -1856,13 +1909,26 @@ class PlexServer implements ServerInterface
                 );
             }
 
+            if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)]', [
+                    'backend' => $this->getName(),
+                    ...$context,
+                    'payload' => $item,
+                ]);
+            }
+
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
-                $this->logger->notice(
-                    sprintf('%s: Ignoring \'%s\'. Date is not set on backend object.', $this->name, $iName),
-                    [
-                        'payload' => $item,
-                    ]
-                );
+                $this->logger->debug('Ignoring [%(backend)] [%(item.title)]. No Date is set on object.', [
+                    'backend' => $this->getName(),
+                    ...$context,
+                    'condition' => [
+                        'expectedKey' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
+                    ],
+                    'response' => [
+                        'body' => $item,
+                    ],
+                ]);
+
                 Data::increment($this->name, $type . '_ignored_no_date_is_set');
                 return;
             }
@@ -1870,49 +1936,57 @@ class PlexServer implements ServerInterface
             $rItem = $this->createEntity(item: $item, type: $type, opts: $opts);
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
-
-                if (empty($item['Guid'])) {
-                    $message .= sprintf(' Most likely unmatched %s.', $rItem->type);
-                }
+                $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
 
                 if (null === ($item['Guid'] ?? null)) {
-                    $item['Guid'] = [['id' => $item['guid']]];
-                } else {
-                    $item['Guid'][] = ['id' => $item['guid']];
+                    $item['Guid'] = [];
                 }
 
-                $this->logger->debug($message, ['guids' => !empty($item['Guid']) ? $item['Guid'] : 'None']);
+                if (null !== ($itemGuid = ag($item, 'guid')) && false === $this->isLocalPlexId($itemGuid)) {
+                    $item['Guid'][] = $itemGuid;
+                }
+
+                if (empty($item['Guid'])) {
+                    $message .= ' Most likely unmatched %(item.type).';
+                }
+
+                $this->logger->info($message, [
+                    'backend' => $this->getName(),
+                    ...$context,
+                    'context' => [
+                        'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
+                    ],
+                ]);
 
                 Data::increment($this->name, $type . '_ignored_no_supported_guid');
                 return;
             }
 
             if (false === ag($this->options, Options::IGNORE_DATE, false)) {
-                if (null !== $after && $rItem->updated >= $after->getTimestamp()) {
+                if (true === ($after instanceof DateTimeInterface) && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
-                        sprintf(
-                            '%s: Ignoring \'%s\'. Backend reported date is equal or newer than last sync date.',
-                            $this->name,
-                            $iName
-                        )
+                        'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than last sync date.',
+                        [
+                            'backend' => $this->getName(),
+                            ...$context,
+                            'content' => [
+                                'lastSync' => makeDate($after),
+                                'backend' => makeDate($rItem->updated),
+                            ],
+                        ]
                     );
+
                     Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
                     return;
                 }
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
-                $this->logger->debug(
-                    sprintf(
-                        '%s: Ignoring \'%s\'. Media item is not imported.',
-                        $this->name,
-                        $iName,
-                    ),
+                $this->logger->warning(
+                    'Ignoring [%(backend)] [%(item.title)]. %(item.type) Is not imported.',
                     [
-                        'played' => $rItem->isWatched() ? 'Yes' : 'No',
-                        'guids' => $rItem->hasGuids() ? $rItem->getGuids() : 'None',
-                        'rGuids' => $rItem->hasRelativeGuid() ? $rItem->getRelativeGuids() : 'None',
+                        'backend' => $this->getName(),
+                        ...$context,
                     ]
                 );
                 Data::increment($this->name, $type . '_ignored_not_found_in_db');
@@ -1920,30 +1994,39 @@ class PlexServer implements ServerInterface
             }
 
             if ($rItem->watched === $entity->watched) {
-                $this->logger->debug(sprintf('%s: Ignoring \'%s\'. Played state is identical.', $this->name, $iName), [
-                    'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                    'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
-                ]);
+                if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
+                    $this->logger->debug(
+                        'Ignoring [%(backend)] [%(item.title)]. %(item.type) play state is identical.',
+                        [
+                            'backend' => $this->getName(),
+                            ...$context,
+                            'context' => [
+                                'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
+                            ],
+                        ]
+                    );
+                }
+
                 Data::increment($this->name, $type . '_ignored_state_unchanged');
                 return;
             }
 
-            if (false === ag($this->options, Options::IGNORE_DATE, false)) {
-                if ($rItem->updated >= $entity->updated) {
-                    $this->logger->debug(
-                        sprintf(
-                            '%s: Ignoring \'%s\'. Record date is newer or equal to backend item.',
-                            $this->name,
-                            $iName
-                        ),
-                        [
-                            'backend' => makeDate($entity->updated),
-                            'remote' => makeDate($rItem->updated),
-                        ]
-                    );
-                    Data::increment($this->name, $type . '_ignored_date_is_newer');
-                    return;
-                }
+            if (false === ag($this->options, Options::IGNORE_DATE, false) && $rItem->updated >= $entity->updated) {
+                $this->logger->debug(
+                    'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
+                    [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'content' => [
+                            'storage' => makeDate($entity->updated),
+                            'backend' => makeDate($rItem->updated),
+                        ],
+                    ]
+                );
+
+                Data::increment($this->name, $type . '_ignored_date_is_newer');
+                return;
             }
 
             $url = $this->url->withPath('/:' . ($entity->isWatched() ? '/scrobble' : '/unscrobble'))->withQuery(
@@ -1955,16 +2038,14 @@ class PlexServer implements ServerInterface
                 )
             );
 
+            $context['item']['url'] = $url;
+
             $this->logger->debug(
-                sprintf(
-                    '%s: Changing \'%s\' play state to \'%s\'.',
-                    $this->name,
-                    $iName,
-                    $entity->isWatched() ? 'Played' : 'Unplayed',
-                ),
+                'Queuing Request for [%(backend)] to change the play state of [%(item.title)] to [%(play_state)].',
                 [
-                    'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
-                    'url' => $url,
+                    'backend' => $this->getName(),
+                    'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                    ...$context,
                 ]
             );
 
@@ -1978,21 +2059,27 @@ class PlexServer implements ServerInterface
                                 'itemName' => $iName,
                                 'server' => $this->name,
                                 'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                'context' => $context,
                             ]
                         ])
                     )
                 );
             }
         } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
+            $this->logger->error('Failed to handle [%(backend)] [%(library.title)] [%(item.title)].', [
+                'backend' => $this->getName(),
+                ...$context,
+                'exception' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                    'message' => $e->getMessage(),
+                ],
             ]);
         }
     }
 
-    protected function processShow(array $item, string $library): void
+    protected function processShow(array $item, array $context): void
     {
         if (null === ($item['Guid'] ?? null)) {
             $item['Guid'] = [['id' => $item['guid']]];
@@ -2000,38 +2087,50 @@ class PlexServer implements ServerInterface
             $item['Guid'][] = ['id' => $item['guid']];
         }
 
-        $iName = sprintf(
-            '%s - [%s (%d)]',
-            $library,
-            ag($item, ['title', 'originalTitle'], '??'),
-            ag($item, 'year', '0000')
-        );
+        $context['item'] = [
+            'id' => ag($item, 'ratingKey'),
+            'title' => ag($item, ['title', 'originalTitle'], '??'),
+            'year' => ag($item, 'year', '0000'),
+            'type' => ag($item, 'type', 'unknown'),
+        ];
 
         if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
-            $this->logger->debug(sprintf('%s: Processing \'%s\' Payload.', $this->name, $iName), [
-                'payload' => $item,
+            $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', [
+                'backend' => $this->getName(),
+                ...$context,
+                'response' => [
+                    'body' => $item,
+                ],
             ]);
         }
 
         if (!$this->hasSupportedGuids(guids: $item['Guid'])) {
             if (null === ($item['Guid'] ?? null)) {
-                $item['Guid'] = [['id' => $item['guid']]];
-            } else {
+                $item['Guid'] = [];
+            }
+
+            if (null !== ($item['guid'] ?? null) && false === $this->isLocalPlexId($item['guid'])) {
                 $item['Guid'][] = ['id' => $item['guid']];
             }
 
-            $message = sprintf('%s: Ignoring \'%s\'. No valid/supported external ids.', $this->name, $iName);
+            $message = 'Ignoring [%(backend)] [%(item.title)]. %(item.type) has no valid/supported external ids.';
 
             if (empty($item['Guid'] ?? [])) {
-                $message .= ' Most likely unmatched TV show.';
+                $message .= ' Most likely unmatched %(item.type).';
             }
 
-            $this->logger->info($message, ['guids' => !empty($item['Guid']) ? $item['Guid'] : 'None']);
+            $this->logger->info($message, [
+                'backend' => $this->getName(),
+                ...$context,
+                'data' => [
+                    'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
+                ],
+            ]);
 
             return;
         }
 
-        $this->cache['shows'][$item['ratingKey']] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
+        $this->cache['shows'][$context['item']['id']] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
     }
 
     protected function parseGuids(array $guids): array
@@ -2072,7 +2171,7 @@ class PlexServer implements ServerInterface
         return $guid;
     }
 
-    protected function getGuids(array $guids): array
+    protected function getGuids(array $guids, array $context = []): array
     {
         $guid = [];
 
@@ -2088,13 +2187,11 @@ class PlexServer implements ServerInterface
                     // -- DO NOT accept plex relative unique ids, we generate our own.
                     if (substr_count($val, '/') >= 3) {
                         if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
-                            $this->logger->warning(
-                                sprintf(
-                                    '%s: Parsing \'%s\' custom agent identifier is not supported.',
-                                    $this->name,
-                                    $val
-                                )
-                            );
+                            $this->logger->warning('Parsing [%(backend)] [%(agent)] identifier is not supported.', [
+                                'backend' => $this->getName(),
+                                'agent' => $val,
+                                ...$context
+                            ]);
                         }
                         continue;
                     }
@@ -2103,12 +2200,11 @@ class PlexServer implements ServerInterface
 
                 if (false === str_contains($val, '://')) {
                     $this->logger->info(
-                        sprintf(
-                            '%s: Encountered unsupported external id format. Possibly duplicate movie?',
-                            $this->name
-                        ),
+                        'Parsing [%(backend)] [%(agent)] identifier impossible. Probably alternative version of movie?',
                         [
-                            'guid' => $val
+                            'backend' => $this->getName(),
+                            'agent' => $val ?? null,
+                            ...$context
                         ]
                     );
                     continue;
@@ -2130,13 +2226,16 @@ class PlexServer implements ServerInterface
                 $guid[self::GUID_MAPPER[$key]] = $value;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    sprintf(
-                        '%s: Error occurred while parsing external id. %s',
-                        $this->name,
-                        $e->getMessage()
-                    ),
+                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
                     [
-                        'guid' => $val ?? null,
+                        'backend' => $this->getName(),
+                        'agent' => $val ?? null,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
                     ]
                 );
                 continue;
@@ -2148,7 +2247,7 @@ class PlexServer implements ServerInterface
         return $guid;
     }
 
-    protected function hasSupportedGuids(array $guids): bool
+    protected function hasSupportedGuids(array $guids, array $context = []): bool
     {
         foreach ($guids as $_id) {
             try {
@@ -2162,13 +2261,11 @@ class PlexServer implements ServerInterface
                     // -- DO NOT accept plex relative unique ids, we generate our own.
                     if (substr_count($val, '/') >= 3) {
                         if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
-                            $this->logger->warning(
-                                sprintf(
-                                    '%s: Parsing this \'%s\' custom agent identifier is not supported.',
-                                    $this->name,
-                                    $val
-                                )
-                            );
+                            $this->logger->warning('Parsing [%(backend)] [%(agent)] identifier is not supported.', [
+                                'backend' => $this->getName(),
+                                'agent' => $val,
+                                ...$context
+                            ]);
                         }
                         continue;
                     }
@@ -2187,14 +2284,16 @@ class PlexServer implements ServerInterface
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    sprintf(
-                        '%s: An error occurred while parsing external id. %s',
-                        $this->name,
-                        $e->getMessage()
-                    ),
+                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
                     [
-                        'id' => $val ?? null,
-                        'list' => $guids,
+                        'backend' => $this->getName(),
+                        'agent' => $val ?? null,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
                     ]
                 );
                 continue;
@@ -2308,28 +2407,14 @@ class PlexServer implements ServerInterface
         return Container::get(iFace::class)::fromArray($builder);
     }
 
-    protected function getEpisodeParent(int|string $id): array
+    protected function getEpisodeParent(int|string $id, array $context = []): array
     {
         if (array_key_exists($id, $this->cache['shows'] ?? [])) {
             return $this->cache['shows'][$id];
         }
 
-        $url = (string)$this->url->withPath('/library/metadata/' . $id);
-
         try {
-            $response = $this->http->request('GET', $url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $json = ag($json, 'MediaContainer.Metadata')[0] ?? [];
+            $json = ag($this->getMetadata($id), 'MediaContainer.Metadata.0', []);
 
             if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
                 return [];
@@ -2349,34 +2434,16 @@ class PlexServer implements ServerInterface
             $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
 
             return $this->cache['shows'][$id];
-        } catch (ExceptionInterface $e) {
+        } catch (RuntimeException $e) {
             $this->logger->error($e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-                'url' => $url,
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error(
-                sprintf('%s: Unable to decode show id \'%s\' JSON response. %s', $this->name, $id, $e->getMessage()),
-                [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'url' => $url,
-                ]
-            );
-            return [];
-        } catch (Throwable $e) {
-            $this->logger->error(
-                sprintf('%s: Failed to handle show id \'%s\' response. %s', $this->name, $id, $e->getMessage()),
-                [
+                'backend' => $this->getName(),
+                ...$context,
+                'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
-                    'url' => $url,
-                ]
-            );
+                ],
+            ]);
             return [];
         }
     }
@@ -2422,9 +2489,16 @@ class PlexServer implements ServerInterface
             return $agentGuid[0] . '://' . before($agentGuid[1], '?');
         } catch (Throwable $e) {
             $this->logger->error(
-                sprintf('%s: Error parsing plex legacy agent identifier. %s', $this->name, $e->getMessage()),
+                'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
                 [
-                    'guid' => $agent,
+                    'backend' => $this->getName(),
+                    'agent' => $agent,
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ],
                 ]
             );
             return $agent;
@@ -2460,8 +2534,10 @@ class PlexServer implements ServerInterface
                 'plex.tv'
             )->withPath(sprintf('/api/v2/home/users/%s/switch', $userId));
 
-            $this->logger->debug(sprintf('%s: Requesting temp token for user id \'%s\'.', $this->name, $userId), [
-                'url' => (string)$url
+            $this->logger->debug('Requesting temporary token for [%(backend)] user id [%(user_id)].', [
+                'backend' => $this->getName(),
+                'user_id' => $userId,
+                'url' => (string)$url,
             ]);
 
             $response = $this->http->request('POST', (string)$url, [
@@ -2474,14 +2550,16 @@ class PlexServer implements ServerInterface
 
             if (201 !== $response->getStatusCode()) {
                 $this->logger->error(
-                    sprintf(
-                        '%s: Request to get temp token for user id \'%s\' responded with unexpected http status code \'%d\'.',
-                        $this->name,
-                        $userId,
-                        $response->getStatusCode()
-                    )
+                    'Request for [%(backend)] [%(user_id)] temporary token responded with unexpected status code.',
+                    [
+                        'backend' => $this->getName(),
+                        'user_id' => $userId,
+                        'condition' => [
+                            'expected' => 200,
+                            'received' => $response->getStatusCode(),
+                        ],
+                    ]
                 );
-
                 return null;
             }
 
@@ -2504,12 +2582,11 @@ class PlexServer implements ServerInterface
                     )
                 );
 
-            $this->logger->debug(
-                sprintf('%s: Requesting real server token for user id \'%s\'.', $this->name, $userId),
-                [
-                    'url' => (string)$url
-                ]
-            );
+            $this->logger->debug('Requesting permanent token for [%(backend)] user id [%(user_id)].', [
+                'backend' => $this->getName(),
+                'user_id' => $userId,
+                'url' => (string)$url,
+            ]);
 
             $response = $this->http->request('GET', (string)$url, [
                 'headers' => [
@@ -2534,11 +2611,20 @@ class PlexServer implements ServerInterface
 
             return null;
         } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', $this->name, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
+            $this->logger->error(
+                'Unhandled exception was thrown during request for [%(backend)] [%(user_id)] access token.',
+                [
+                    'backend' => $this->getName(),
+                    'user_id' => $userId,
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ],
+                ]
+            );
+
             return null;
         }
     }
