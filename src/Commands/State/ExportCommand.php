@@ -438,7 +438,7 @@ class ExportCommand extends Command
             }
 
             if (false === (bool)ag($backend, 'import.enabled') && false === (bool)ag(
-                    $backends,
+                    $backend,
                     'options.' . Options::IMPORT_METADATA_ONLY
                 )) {
                 $this->logger->info(
