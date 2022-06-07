@@ -1539,7 +1539,7 @@ class PlexServer implements ServerInterface
                     ]
                 );
             },
-            includeParent: false
+            includeParent: false === count(ag($this->cache, 'shows', [])) > 1,
         );
     }
 
