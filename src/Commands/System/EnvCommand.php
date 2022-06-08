@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Config;
+namespace App\Commands\System;
 
 use App\Command;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -17,7 +15,7 @@ final class EnvCommand extends Command
 {
     protected function configure(): void
     {
-        $this->setName('config:env')
+        $this->setName('system:env')
             ->addOption(
                 'output',
                 'o',
@@ -34,17 +32,22 @@ final class EnvCommand extends Command
         $keys = [];
 
         foreach (getenv() as $key => $val) {
-            if (!str_starts_with($key, 'WS_')) {
+            if (false === str_starts_with($key, 'WS_')) {
                 continue;
             }
 
-            $keys[] = ['key' => $key, 'value' => $val];
+            $keys[$key] = $val;
         }
 
-        if (!empty($key)) {
-            array_pop($keys);
-        }
+        if ('table' === $mode) {
+            $list = [];
 
+            foreach ($keys as $key => $val) {
+                $list[] = ['key' => $key, 'value' => $val];
+            }
+
+            $keys = $list;
+        }
 
         $this->displayContent($keys, $output, $mode);
 

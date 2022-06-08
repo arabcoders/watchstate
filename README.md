@@ -297,16 +297,17 @@ Click `Save Changes`
 | WS_LOGGER_FILE          | string  | Full path to log file.                                                           | `${WS_TMP_DIR}/logs/app.(Ymd).log` |
 | WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                               | `ERROR`                            |
 | WS_CRON_IMPORT          | bool    | Enable import scheduled task. Value casted to bool.                              | `false`                            |
-| WS_CRON_IMPORT_AT       | string  | When to run import scheduled task. Valid Cron Expression Expected.               | `'0 */1 * * *` (Every 1h)          |
-| WS_CRON_IMPORT_ARGS     | string  | Flags to pass to the import command.                                             | `'-v`                              |
+| WS_CRON_IMPORT_AT       | string  | When to run import scheduled task. Valid Cron Expression Expected.               | `0 */1 * * *` (Every 1h)           |
+| WS_CRON_IMPORT_ARGS     | string  | Flags to pass to the import command.                                             | `-v`                               |
 | WS_CRON_EXPORT          | bool    | Enable export scheduled task. Value casted to bool.                              | `false`                            |
-| WS_CRON_EXPORT_AT       | string  | When to run export scheduled task. Valid Cron Expression Expected.               | `'30 */1 * * *` (Every 1h 30m)     |
-| WS_CRON_EXPORT_ARGS     | string  | Flags to pass to the export command.                                             | `'-v`                              |
+| WS_CRON_EXPORT_AT       | string  | When to run export scheduled task. Valid Cron Expression Expected.               | `30 */1 * * *` (Every 1h 30m)      |
+| WS_CRON_EXPORT_ARGS     | string  | Flags to pass to the export command.                                             | `-v`                               |
 | WS_CRON_PUSH            | bool    | Enable push scheduled task. Value casted to bool.                                | `false`                            |
-| WS_CRON_PUSH_AT         | string  | When to run push scheduled task. Valid Cron Expression Expected.                 | `'*/10 * * * *` (Every 10m)        |
-| WS_CRON_PUSH_ARGS       | string  | Flags to pass to the push command.                                               | `'-v`                              |
-| WS_LOGS_PRUNE_AFTER     | string  | Delete logs older than specified time. Set to `disable` to disable the pruning.  | `'-3 DAYS`                         |
-| WS_DEBUG_IMPORT         | bool    | Log no valid/externals id during import process. stored in `${WS_TMP_DIR}/debug` | `'false`                           |
+| WS_CRON_PUSH_AT         | string  | When to run push scheduled task. Valid Cron Expression Expected.                 | `*/10 * * * *` (Every 10m)         |
+| WS_CRON_PUSH_ARGS       | string  | Flags to pass to the push command.                                               | `-v`                               |
+| WS_LOGS_PRUNE_AFTER     | string  | Delete logs older than specified time. Set to `disable` to disable the pruning.  | `-3 DAYS`                          |
+| WS_DEBUG_IMPORT         | bool    | Log no valid/externals id during import process. stored in `${WS_TMP_DIR}/debug` | `false`                            |
+| WS_LOGS_CONTEXT         | bool    | Add context to console output messages.                                          | `false`                            |
 
 # Container specific environment variables.
 

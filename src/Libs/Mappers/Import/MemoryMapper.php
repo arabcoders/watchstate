@@ -63,11 +63,9 @@ final class MemoryMapper implements ImportInterface
             $this->addPointers($this->objects[$pointer], $pointer);
         }
 
-        $this->logger->info('MAPPER: Loaded pointers and state into memory.', [
-            'context' => [
-                'pointers' => number_format(count($this->pointers)),
-                'objects' => number_format(count($this->objects)),
-            ],
+        $this->logger->info('MAPPER: Preloaded [%(pointers)] pointer and [%(objects)] object into memory.', [
+            'pointers' => number_format(count($this->pointers)),
+            'objects' => number_format(count($this->objects)),
         ]);
 
         return $this;
@@ -76,12 +74,10 @@ final class MemoryMapper implements ImportInterface
     public function add(iFace $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->warning('MAPPER: Ignoring item no valid/supported external ids.', [
-                'context' => [
-                    'id' => $entity->id,
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                ],
+            $this->logger->warning('MAPPER: Ignoring [%(backend)] [%(title)] no valid/supported external ids.', [
+                'id' => $entity->id,
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
             ]);
             Data::increment($entity->via, $entity->type . '_failed_no_guid');
             return $this;
@@ -91,16 +87,16 @@ final class MemoryMapper implements ImportInterface
 
         /**
          * Handle new item logic here.
-         * if getPointer return false, it means most likely the item is not found in backend storage.
+         * if getPointer return false, it means most likely the item is not found in storage.
          */
         if (false === ($pointer = $this->getPointer($entity))) {
+            Data::increment($entity->via, $entity->type . '_failed');
+
             if (true === $metadataOnly) {
-                $this->logger->notice('MAPPER: Ignoring item. Does not exist in storage.', [
-                    'context' => [
-                        'metaOnly' => true,
-                        'backend' => $entity->via,
-                        'title' => $entity->getName(),
-                    ],
+                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
+                    'metaOnly' => true,
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
                     'data' => $entity->getAll(),
                 ]);
                 return $this;
@@ -135,11 +131,9 @@ final class MemoryMapper implements ImportInterface
                 ];
             }
 
-            $this->logger->notice('MAPPER: Adding new item.', [
-                'context' => [
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                ],
+            $this->logger->notice('MAPPER: [%(backend)] added [%(title)] as new item.', [
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
                 true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
             ]);
 
@@ -173,25 +167,21 @@ final class MemoryMapper implements ImportInterface
 
                 $this->removePointers($cloned)->addPointers($local, $pointer);
 
-                $this->logger->notice('MAPPER: Item metadata updated.', [
-                    'context' => [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                    ],
-                    'diff' => $local->diff(fields: $localFields)
+                $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'changes' => $local->diff(fields: $localFields)
                 ]);
 
                 return $this;
             }
 
             if (true === $this->inTraceMode()) {
-                $this->logger->notice('MAPPER: No metadata changes detected.', [
-                    'context' => [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                    ]
+                $this->logger->info('MAPPER: [%(backend)] [%(title)] No metadata changes detected.', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
                 ]);
             }
 
@@ -208,13 +198,11 @@ final class MemoryMapper implements ImportInterface
 
                     $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed(backend: $entity);
 
-                    $this->logger->notice('MAPPER: Marked item as unplayed.', [
-                        'context' => [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'title' => $cloned->getName(),
-                        ],
-                        'diff' => $local->diff(array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])),
+                    $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                        'changes' => $local->diff(array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])),
                     ]);
 
                     return $this;
@@ -237,16 +225,15 @@ final class MemoryMapper implements ImportInterface
 
                         $local = $local->apply(entity: $entity, fields: $localFields);
 
-                        $this->logger->notice('MAPPER: Updating Item metadata.', [
-                            'context' => [
-                                'id' => $cloned->id,
-                                'backend' => $entity->via,
-                                'title' => $cloned->getName(),
-                            ],
-                            'diff' => $local::fromArray($cloned->getAll())->apply(
+                        $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'changes' => $local::fromArray($cloned->getAll())->apply(
                                 entity: $entity,
                                 fields: $localFields
                             )->diff(fields: $keys),
+                            'fields' => implode(',', $localFields),
                         ]);
 
                         return $this;
@@ -273,27 +260,24 @@ final class MemoryMapper implements ImportInterface
             $local = $local->apply(entity: $entity, fields: $keys);
             $this->removePointers($cloned)->addPointers($local, $pointer);
 
-            $this->logger->notice('MAPPER: Item updated.', [
-                'context' => [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                ],
-                'diff' => $local::fromArray($cloned->getAll())->apply(entity: $entity, fields: $keys)->diff(
+            $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $cloned->getName(),
+                'changes' => $local::fromArray($cloned->getAll())->apply(entity: $entity, fields: $keys)->diff(
                     fields: $keys
                 ),
+                'fields' => implode(', ', $keys),
             ]);
 
             return $this;
         }
 
         if (true === $this->inTraceMode()) {
-            $this->logger->debug('MAPPER: Item state is identical.', [
-                'context' => [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                ],
+            $this->logger->debug('MAPPER: [%(backend)] [%(title)] metadata and play state is identical.', [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $cloned->getName(),
                 'state' => [
                     'storage' => $cloned->getAll(),
                     'backend' => $entity->getAll(),
@@ -344,14 +328,13 @@ final class MemoryMapper implements ImportInterface
                 $this->logger->notice('MAPPER: No changes detected.');
                 return $list;
             }
-
-            $this->logger->notice('MAPPER: Changes detected updating storage.', [
-                'context' => [
-                    'total' => $count
-                ],
-            ]);
-
             $inDryRunMode = $this->inDryRunMode();
+
+            if (true === $inDryRunMode) {
+                $this->logger->notice('MAPPER: Recorded [%(total)] object changes.', [
+                    'total' => $count
+                ]);
+            }
 
             foreach ($this->changed as $pointer) {
                 try {

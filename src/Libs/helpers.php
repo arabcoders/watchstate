@@ -44,12 +44,12 @@ if (!function_exists('makeDate')) {
     /**
      * Make Date Time Object.
      *
-     * @param string|int $date Defaults to now
+     * @param string|int|DateTimeInterface $date Defaults to now
      * @param string|DateTimeZone|null $tz For given $date, not for display.
      *
      * @return Date
      */
-    function makeDate(string|int $date = 'now', DateTimeZone|string|null $tz = null): Date
+    function makeDate(string|int|DateTimeInterface $date = 'now', DateTimeZone|string|null $tz = null): Date
     {
         if (ctype_digit((string)$date)) {
             $date = '@' . $date;
@@ -61,6 +61,10 @@ if (!function_exists('makeDate')) {
 
         if (!($tz instanceof DateTimeZone)) {
             $tz = new DateTimeZone($tz);
+        }
+
+        if (true === ($date instanceof DateTimeInterface)) {
+            $date = $date->format(DateTimeInterface::ATOM);
         }
 
         return (new Date($date))->setTimezone($tz);
@@ -434,6 +438,8 @@ if (!function_exists('arrayToString')) {
 
             if (is_array($val)) {
                 $val = '[ ' . arrayToString($val) . ' ]';
+            } elseif (is_bool($val)) {
+                $val = true === $val ? 'true' : 'false';
             } else {
                 $val = $val ?? 'None';
             }

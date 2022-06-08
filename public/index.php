@@ -9,7 +9,7 @@ ini_set('display_errors', 'Off');
 require __DIR__ . '/../pre_init.php';
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    print 'Tool is not yet. Composer dependencies is not installed.';
+    print 'Dependencies are missing please refer to the documentation to know more about this.';
     exit(1);
 }
 

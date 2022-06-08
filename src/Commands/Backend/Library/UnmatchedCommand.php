@@ -89,14 +89,19 @@ final class UnmatchedCommand extends Command
             }
         } catch (Throwable $e) {
             $arr = [
-                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
+                'error' => $e->getMessage(),
             ];
+
             if ('table' !== $mode) {
-                $arr += [
+                $arr['exception'] = [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'item' => $item ?? [],
                 ];
+
+                if (!empty($item)) {
+                    $arr['item'] = $item;
+                }
             }
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
@@ -106,7 +111,11 @@ final class UnmatchedCommand extends Command
 
         if (empty($list)) {
             $arr = [
-                'info' => 'No un-matched items were found in given library.',
+                'info' => sprintf(
+                    'No un-unmatched items were found in [%s] library [%s] given library.',
+                    $backend,
+                    $id
+                ),
             ];
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
