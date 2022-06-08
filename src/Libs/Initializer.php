@@ -209,7 +209,7 @@ final class Initializer
 
                 $userId = ag($info, 'user', null);
 
-                if (true === (bool)ag($info, 'webhook.match.user') && null !== $userId) {
+                if (null !== $userId && true === (bool)ag($info, 'webhook.match.user')) {
                     if (null === ($requestUser = $request->getAttribute('USER_ID', null))) {
                         $validUser = false;
                         $server = $class = null;
@@ -233,7 +233,7 @@ final class Initializer
 
                 $uuid = ag($info, 'uuid', null);
 
-                if (true === (bool)ag($info, 'webhook.match.uuid') && null !== $uuid) {
+                if (null !== $uuid && true === (bool)ag($info, 'webhook.match.uuid')) {
                     if (null === ($requestBackendId = $request->getAttribute('SERVER_ID', null))) {
                         $validUUid = false;
                         $server = $class = null;
@@ -271,7 +271,7 @@ final class Initializer
             }
 
             // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-            if (true !== (bool)ag($server, ['import.enabled', 'webhook.import'])) {
+            if (true === (bool)ag($server, ['import.enabled', 'webhook.import'])) {
                 if (true === ag_exists($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                     $server = ag_delete($server, 'options.' . Options::IMPORT_METADATA_ONLY);
                 }
@@ -346,7 +346,7 @@ final class Initializer
 
             $cloned = clone $local;
 
-            if (true === $entity->isTainted() || true === $metadataOnly) {
+            if (true === $metadataOnly || true === $entity->isTainted()) {
                 $flag = true === $metadataOnly ? '[M]' : '[T]';
                 $keys = true === $metadataOnly ? [iFace::COLUMN_META_DATA] : iFace::ENTITY_FORCE_UPDATE_FIELDS;
 
@@ -356,7 +356,7 @@ final class Initializer
                             $entity->via,
                             ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                         );
-                        $keys = array_merge($keys, [iFace::COLUMN_GUIDS]);
+                        $keys = array_merge($keys, [iFace::COLUMN_GUIDS, iFace::COLUMN_EXTRA]);
                     }
 
                     $local = $storage->update($local->apply(entity: $entity, fields: $keys));
