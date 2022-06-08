@@ -7,11 +7,11 @@ namespace Tests\Mappers\Import;
 use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
-use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
+use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
 use PHPUnit\Framework\TestCase;
@@ -25,6 +25,7 @@ class MemoryMapperTest extends TestCase
 
     private MemoryMapper|null $mapper = null;
     private StorageInterface|null $storage = null;
+    protected TestHandler|null $handler = null;
 
     public function setUp(): void
     {
@@ -34,8 +35,10 @@ class MemoryMapperTest extends TestCase
         $this->testMovie = require __DIR__ . '/../../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../../Fixtures/EpisodeEntity.php';
 
+        $this->handler = new TestHandler();
         $logger = new Logger('logger');
-        $logger->pushHandler(new ConsoleHandler($this->output));
+        $logger->pushHandler($this->handler);
+        Guid::setLogger($logger);
 
         $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
         $this->storage->migrations('up');
