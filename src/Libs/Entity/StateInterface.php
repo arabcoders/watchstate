@@ -8,6 +8,7 @@ interface StateInterface
 {
     public const TYPE_MOVIE = 'movie';
     public const TYPE_EPISODE = 'episode';
+    public const TYPE_SHOW = 'show';
 
     /**
      * If you must reference field directly, use those constants.

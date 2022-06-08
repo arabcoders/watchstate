@@ -168,14 +168,13 @@ class PlexServer implements ServerInterface
         $response = $this->http->request('GET', (string)$url, $this->getHeaders());
 
         if (200 !== $response->getStatusCode()) {
-            $this->logger->error('Request for [%(backend)] unique identifier responded with unexpected status code.', [
-                'backend' => $this->getName(),
-                'condition' => [
-                    'expected' => 200,
-                    'received' => $response->getStatusCode(),
-                ],
-            ]);
-
+            $this->logger->error(
+                'Request for [%(backend)] unique identifier returned with unexpected [%(status_code)] status code.',
+                [
+                    'backend' => $this->getName(),
+                    'status_code' => $response->getStatusCode(),
+                ]
+            );
             return null;
         }
 
@@ -208,8 +207,8 @@ class PlexServer implements ServerInterface
         if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
                 sprintf(
-                    'Request for [%s] users list responded with unexpected [%s] status code.',
-                    $this->name,
+                    'Request for [%s] users list returned with unexpected [%s] status code.',
+                    $this->getName(),
                     $response->getStatusCode(),
                 )
             );
@@ -374,12 +373,12 @@ class PlexServer implements ServerInterface
             $fields = [
                 iFace::COLUMN_WATCHED => (int)$isPlayed,
                 iFace::COLUMN_META_DATA => [
-                    $this->name => [
+                    $this->getName() => [
                         iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     ]
                 ],
                 iFace::COLUMN_EXTRA => [
-                    $this->name => [
+                    $this->getName() => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
                         iFace::COLUMN_EXTRA_DATE => makeDate('now'),
                     ],
@@ -390,7 +389,7 @@ class PlexServer implements ServerInterface
                 $fields = array_replace_recursive($fields, [
                     iFace::COLUMN_UPDATED => (int)$lastPlayedAt,
                     iFace::COLUMN_META_DATA => [
-                        $this->name => [
+                        $this->getName() => [
                             iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
                         ]
                     ],
@@ -398,9 +397,9 @@ class PlexServer implements ServerInterface
             }
 
             if (null !== ($guids = $this->getGuids(ag($item, 'Guid', []))) && false === empty($guids)) {
-                $guids += Guid::makeVirtualGuid($this->name, (string)$id);
+                $guids += Guid::makeVirtualGuid($this->getName(), (string)$id);
                 $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$this->name][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+                $fields[iFace::COLUMN_META_DATA][$this->getName()][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
             }
 
             $entity = $this->createEntity(
@@ -469,7 +468,7 @@ class PlexServer implements ServerInterface
             );
 
             $this->logger->debug('Searching for [%(query)] in [%(backend)].', [
-                'backend' => $this->name,
+                'backend' => $this->getName(),
                 'query' => $query,
                 'url' => $url
             ]);
@@ -618,7 +617,7 @@ class PlexServer implements ServerInterface
                 throw new RuntimeException(
                     sprintf(
                         'Request for [%s] item [%s] responded with unexpected [%s] status code.',
-                        $this->name,
+                        $this->getName(),
                         $id,
                         $response->getStatusCode(),
                     )
@@ -674,7 +673,6 @@ class PlexServer implements ServerInterface
         );
 
         $context = [];
-        $type = null;
         $found = false;
 
         foreach (ag($json, 'MediaContainer.Directory', []) as $section) {
@@ -682,7 +680,6 @@ class PlexServer implements ServerInterface
                 continue;
             }
             $found = true;
-            $type = ag($section, 'type', 'unknown');
             $context = [
                 'library' => [
                     'id' => ag($section, 'key'),
@@ -699,7 +696,7 @@ class PlexServer implements ServerInterface
             );
         }
 
-        if (iFace::TYPE_MOVIE !== ag($context, 'library.type') && 'show' !== ag($context, 'library.type')) {
+        if (true !== in_array(ag($context, 'library.type'), [iFace::TYPE_MOVIE, 'show'])) {
             throw new RuntimeException(
                 sprintf(
                     'The requested [%s] library [%s] is of [%s] type. Which is not supported type.',
@@ -715,7 +712,7 @@ class PlexServer implements ServerInterface
             'includeGuids' => 1,
         ];
 
-        if (iFace::TYPE_MOVIE === $type) {
+        if (iFace::TYPE_MOVIE === ag($context, 'library.type')) {
             $query['type'] = 1;
         }
 
@@ -734,110 +731,107 @@ class PlexServer implements ServerInterface
             throw new RuntimeException(
                 sprintf(
                     'Request for [%s] library [%s] content returned with unexpected [%s] status code.',
-                    $this->name,
+                    $this->getName(),
                     ag($context, 'library.title', $id),
                     $response->getStatusCode(),
                 )
             );
         }
 
-        $handleRequest = function (array $item, array $context = []) use ($opts): array {
-            $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
-            $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
+        $handleRequest = $opts['handler'] ?? function (array $item, array $context = []) use ($opts): array {
+                $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
+                $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
 
-            $year = ag($item, 'year');
-            $type = ag($item, 'type', 'unknown');
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] response.', [
+                    'backend' => $this->getName(),
+                    ...$context,
+                ]);
 
-            $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] response.', [
-                'backend' => $this->name,
-                ...$context,
-            ]);
+                $metadata = [
+                    'id' => (int)ag($item, 'ratingKey'),
+                    'type' => ucfirst(ag($item, 'type', 'unknown')),
+                    'url' => (string)$url,
+                    'title' => ag($item, $possibleTitlesList, '??'),
+                    'year' => ag($item, 'year'),
+                    'guids' => [],
+                    'match' => [
+                        'titles' => [],
+                        'paths' => [],
+                    ],
+                ];
 
-            $metadata = [
-                'id' => (int)ag($item, 'ratingKey'),
-                'type' => ucfirst($type),
-                'url' => (string)$url,
-                'title' => ag($item, $possibleTitlesList, '??'),
-                'year' => $year,
-                'guids' => [],
-                'match' => [
-                    'titles' => [],
-                    'paths' => [],
-                ],
-            ];
-
-            foreach ($possibleTitlesList as $title) {
-                if (null === ($title = ag($item, $title))) {
-                    continue;
-                }
-
-                $isASCII = mb_detect_encoding($title, 'ASCII', true);
-                $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
-
-                if (true === in_array($title, $metadata['match']['titles'])) {
-                    continue;
-                }
-
-                $metadata['match']['titles'][] = $title;
-            }
-
-            switch (ag($item, 'type')) {
-                case 'show':
-                    foreach (ag($item, 'Location', []) as $path) {
-                        $path = ag($path, 'path');
-                        $metadata['match']['paths'][] = [
-                            'full' => $path,
-                            'short' => basename($path),
-                        ];
+                foreach ($possibleTitlesList as $title) {
+                    if (null === ($title = ag($item, $title))) {
+                        continue;
                     }
-                    break;
-                case iFace::TYPE_MOVIE:
-                    foreach (ag($item, 'Media', []) as $leaf) {
-                        foreach (ag($leaf, 'Part', []) as $path) {
-                            $path = ag($path, 'file');
-                            $dir = dirname($path);
 
+                    $isASCII = mb_detect_encoding($title, 'ASCII', true);
+                    $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
+
+                    if (true === in_array($title, $metadata['match']['titles'])) {
+                        continue;
+                    }
+
+                    $metadata['match']['titles'][] = $title;
+                }
+
+                switch (ag($item, 'type')) {
+                    case 'show':
+                        foreach (ag($item, 'Location', []) as $path) {
+                            $path = ag($path, 'path');
                             $metadata['match']['paths'][] = [
                                 'full' => $path,
                                 'short' => basename($path),
                             ];
+                        }
+                        break;
+                    case iFace::TYPE_MOVIE:
+                        foreach (ag($item, 'Media', []) as $leaf) {
+                            foreach (ag($leaf, 'Part', []) as $path) {
+                                $path = ag($path, 'file');
+                                $dir = dirname($path);
 
-                            if (false === str_starts_with(basename($path), basename($dir))) {
                                 $metadata['match']['paths'][] = [
                                     'full' => $path,
-                                    'short' => basename($dir),
+                                    'short' => basename($path),
                                 ];
+
+                                if (false === str_starts_with(basename($path), basename($dir))) {
+                                    $metadata['match']['paths'][] = [
+                                        'full' => $path,
+                                        'short' => basename($dir),
+                                    ];
+                                }
                             }
                         }
-                    }
-                    break;
-                default:
-                    throw new RuntimeException(
-                        sprintf(
-                            'While parsing [%s] library [%s] items, we encountered unexpected item [%s] type.',
-                            $this->getName(),
-                            ag($context, 'library.title', '??'),
-                            ag($item, 'type')
-                        )
-                    );
-            }
+                        break;
+                    default:
+                        throw new RuntimeException(
+                            sprintf(
+                                'While parsing [%s] library [%s] items, we encountered unexpected item [%s] type.',
+                                $this->getName(),
+                                ag($context, 'library.title', '??'),
+                                ag($item, 'type')
+                            )
+                        );
+                }
 
-            $itemGuid = ag($item, 'guid');
+                $itemGuid = ag($item, 'guid');
 
-            if (null !== $itemGuid && false === $this->isLocalPlexId($itemGuid)) {
-                $metadata['guids'][] = $itemGuid;
-            }
+                if (null !== $itemGuid && false === $this->isLocalPlexId($itemGuid)) {
+                    $metadata['guids'][] = $itemGuid;
+                }
 
-            foreach (ag($item, 'Guid', []) as $guid) {
-                $metadata['guids'][] = ag($guid, 'id');
-            }
+                foreach (ag($item, 'Guid', []) as $guid) {
+                    $metadata['guids'][] = ag($guid, 'id');
+                }
 
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $metadata['raw'] = $item;
-            }
+                if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+                    $metadata['raw'] = $item;
+                }
 
-            return $metadata;
-        };
+                return $metadata;
+            };
 
         $it = Items::fromIterable(
             iterable: httpClientChunks(stream: $this->http->stream($response)),
@@ -853,14 +847,17 @@ class PlexServer implements ServerInterface
 
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
-                $this->logger->warning('Failed to decode one item of [%(backend)] library id [%(id)] content.', [
-                    'backend' => $this->name,
-                    'id' => $id,
-                    'context' => [
-                        'error' => $entity->getErrorMessage(),
-                        'payload' => $entity->getMalformedJson(),
-                    ],
-                ]);
+                $this->logger->warning(
+                    'Failed to decode one item of [%(backend)] library id [%(library.title)] content.',
+                    [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'error' => [
+                            'message' => $entity->getErrorMessage(),
+                            'body' => $entity->getMalformedJson(),
+                        ],
+                    ]
+                );
                 continue;
             }
 
@@ -868,11 +865,11 @@ class PlexServer implements ServerInterface
                 'id' => ag($entity, 'ratingKey'),
                 'title' => ag($entity, ['title', 'originalTitle'], '??'),
                 'year' => ag($entity, 'year', '0000'),
-                'type' => $type,
+                'type' => ag($entity, 'type'),
                 'url' => (string)$url,
             ];
 
-            if (iFace::TYPE_MOVIE === $type) {
+            if (iFace::TYPE_MOVIE === ag($context, 'item.type')) {
                 yield $handleRequest(item: $entity, context: $context);
             } else {
                 $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($entity, 'ratingKey')));
@@ -894,7 +891,7 @@ class PlexServer implements ServerInterface
             }
         }
 
-        if (iFace::TYPE_MOVIE !== $type && empty($requests)) {
+        if (iFace::TYPE_MOVIE !== ag($context, 'library.type') && empty($requests)) {
             throw new RuntimeException(
                 sprintf(
                     'No requests were made [%s] library [%s] is empty.',
@@ -952,7 +949,7 @@ class PlexServer implements ServerInterface
             $url = $this->url->withPath('/library/sections');
 
             $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->name,
+                'backend' => $this->getName(),
                 'url' => $url
             ]);
 
@@ -966,7 +963,6 @@ class PlexServer implements ServerInterface
                         'status_code' => $response->getStatusCode(),
                     ]
                 );
-
                 return [];
             }
 
@@ -1039,130 +1035,6 @@ class PlexServer implements ServerInterface
         return $list;
     }
 
-    public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
-    {
-        return $this->getLibraries(
-            ok: function (array $context = []) use ($after, $mapper) {
-                return function (ResponseInterface $response) use ($mapper, $after, $context) {
-                    if (200 !== $response->getStatusCode()) {
-                        $this->logger->error(
-                            'Request for [%(backend)] [%(library.title)] content returned with unexpected [%(status_code)] status code.',
-                            [
-                                'backend' => $this->getName(),
-                                'status_code' => $response->getStatusCode(),
-                                ...$context,
-                            ]
-                        );
-                        return;
-                    }
-
-                    $start = makeDate();
-                    $this->logger->info('Parsing [%(backend)] library [%(library.title)] response.', [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'time' => [
-                            'start' => $start,
-                        ],
-                    ]);
-
-                    try {
-                        $it = Items::fromIterable(
-                            iterable: httpClientChunks($this->http->stream($response)),
-                            options:  [
-                                          'pointer' => '/MediaContainer/Metadata',
-                                          'decoder' => new ErrorWrappingDecoder(
-                                              innerDecoder: new ExtJsonDecoder(
-                                                                assoc:   true,
-                                                                options: JSON_INVALID_UTF8_IGNORE
-                                                            )
-                                          )
-                                      ]
-                        );
-
-                        foreach ($it as $entity) {
-                            if ($entity instanceof DecodingError) {
-                                $this->logger->warning(
-                                    'Failed to decode one item of [%(backend)] [%(library.title)] content.',
-                                    [
-                                        'backend' => $this->getName(),
-                                        ...$context,
-                                        'context' => [
-                                            'error' => $entity->getErrorMessage(),
-                                            'body' => $entity->getMalformedJson(),
-                                        ],
-                                    ]
-                                );
-                                continue;
-                            }
-
-                            $this->processImport(
-                                mapper:  $mapper,
-                                item:    $entity,
-                                context: $context,
-                                opts:    ['after' => $after],
-                            );
-                        }
-                    } catch (PathNotFoundException $e) {
-                        $this->logger->error(
-                            'No Items were found in [%(backend)] library [%(library.title)] response.',
-                            [
-                                'backend' => $this->getName(),
-                                ...$context,
-                                'exception' => [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                    'message' => $e->getMessage(),
-                                ],
-                            ]
-                        );
-                    } catch (Throwable $e) {
-                        $this->logger->error(
-                            'Unhandled exception was thrown in parsing [%(backend)] library [%(library.title)] response.',
-                            [
-                                'backend' => $this->getName(),
-                                ...$context,
-                                'exception' => [
-                                    'file' => $e->getFile(),
-                                    'line' => $e->getLine(),
-                                    'kind' => get_class($e),
-                                    'message' => $e->getMessage(),
-                                ],
-                            ]
-                        );
-                    }
-
-                    $end = makeDate();
-                    $this->logger->info('Parsing [%(backend)] library [%(library.title)] response is complete.', [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'time' => [
-                            'start' => $start,
-                            'end' => $end,
-                            'duration' => number_format($end->getTimestamp() - $start->getTimestamp()),
-                        ],
-                    ]);
-                };
-            },
-            error: function (array $context = []) {
-                return fn(Throwable $e) => $this->logger->error(
-                    'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-            },
-            includeParent: true
-        );
-    }
-
     public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         $this->checkConfig();
@@ -1180,7 +1052,7 @@ class PlexServer implements ServerInterface
                 }
             }
 
-            $metadata = $entity->getMetadata($this->name);
+            $metadata = $entity->getMetadata($this->getName());
 
             $context = [
                 'item' => [
@@ -1283,7 +1155,7 @@ class PlexServer implements ServerInterface
                 }
 
                 $body = json_decode(
-                    json:        $response->getContent(),
+                    json:        $response->getContent(false),
                     associative: true,
                     flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
@@ -1342,7 +1214,7 @@ class PlexServer implements ServerInterface
 
                     if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
                         $this->logger->notice(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Storage record date is older than backend date.',
+                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Storage date is older than backend date.',
                             [
                                 'backend' => $this->getName(),
                                 ...$context,
@@ -1388,7 +1260,7 @@ class PlexServer implements ServerInterface
                             array_replace_recursive($this->getHeaders(), [
                                 'user_data' => [
                                     'itemName' => $entity->getName(),
-                                    'server' => $this->name,
+                                    'server' => $this->getName(),
                                     'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                     'context' => $context,
                                 ]
@@ -1416,6 +1288,130 @@ class PlexServer implements ServerInterface
         unset($requests);
 
         return [];
+    }
+
+    public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array
+    {
+        return $this->getLibraries(
+            ok: function (array $context = []) use ($after, $mapper) {
+                return function (ResponseInterface $response) use ($mapper, $after, $context) {
+                    if (200 !== $response->getStatusCode()) {
+                        $this->logger->error(
+                            'Request for [%(backend)] [%(library.title)] content returned with unexpected [%(status_code)] status code.',
+                            [
+                                'backend' => $this->getName(),
+                                'status_code' => $response->getStatusCode(),
+                                ...$context,
+                            ]
+                        );
+                        return;
+                    }
+
+                    $start = makeDate();
+                    $this->logger->info('Parsing [%(backend)] library [%(library.title)] response.', [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'time' => [
+                            'start' => $start,
+                        ],
+                    ]);
+
+                    try {
+                        $it = Items::fromIterable(
+                            iterable: httpClientChunks($this->http->stream($response)),
+                            options:  [
+                                          'pointer' => '/MediaContainer/Metadata',
+                                          'decoder' => new ErrorWrappingDecoder(
+                                              innerDecoder: new ExtJsonDecoder(
+                                                                assoc:   true,
+                                                                options: JSON_INVALID_UTF8_IGNORE
+                                                            )
+                                          )
+                                      ]
+                        );
+
+                        foreach ($it as $entity) {
+                            if ($entity instanceof DecodingError) {
+                                $this->logger->warning(
+                                    'Failed to decode one item of [%(backend)] [%(library.title)] content.',
+                                    [
+                                        'backend' => $this->getName(),
+                                        ...$context,
+                                        'error' => [
+                                            'message' => $entity->getErrorMessage(),
+                                            'body' => $entity->getMalformedJson(),
+                                        ],
+                                    ]
+                                );
+                                continue;
+                            }
+
+                            $this->processImport(
+                                mapper:  $mapper,
+                                item:    $entity,
+                                context: $context,
+                                opts:    ['after' => $after],
+                            );
+                        }
+                    } catch (PathNotFoundException $e) {
+                        $this->logger->error(
+                            'No Items were found in [%(backend)] library [%(library.title)] response.',
+                            [
+                                'backend' => $this->getName(),
+                                ...$context,
+                                'exception' => [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'message' => $e->getMessage(),
+                                ],
+                            ]
+                        );
+                    } catch (Throwable $e) {
+                        $this->logger->error(
+                            'Unhandled exception was thrown in parsing [%(backend)] library [%(library.title)] response.',
+                            [
+                                'backend' => $this->getName(),
+                                ...$context,
+                                'exception' => [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'message' => $e->getMessage(),
+                                ],
+                            ]
+                        );
+                    }
+
+                    $end = makeDate();
+                    $this->logger->info('Parsing [%(backend)] library [%(library.title)] response is complete.', [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'time' => [
+                            'start' => $start,
+                            'end' => $end,
+                            'duration' => number_format($end->getTimestamp() - $start->getTimestamp()),
+                        ],
+                    ]);
+                };
+            },
+            error: function (array $context = []) {
+                return fn(Throwable $e) => $this->logger->error(
+                    'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
+                    [
+                        'backend' => $this->getName(),
+                        ...$context,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
+                    ]
+                );
+            },
+            includeParent: true
+        );
     }
 
     public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array
@@ -1465,8 +1461,8 @@ class PlexServer implements ServerInterface
                                     [
                                         'backend' => $this->getName(),
                                         ...$context,
-                                        'context' => [
-                                            'error' => $entity->getErrorMessage(),
+                                        'error' => [
+                                            'message' => $entity->getErrorMessage(),
                                             'body' => $entity->getMalformedJson(),
                                         ],
                                     ]
@@ -1577,7 +1573,7 @@ class PlexServer implements ServerInterface
             $url = $this->url->withPath('/library/sections');
 
             $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->name,
+                'backend' => $this->getName(),
                 'url' => $url
             ]);
 
@@ -1592,7 +1588,7 @@ class PlexServer implements ServerInterface
                     ]
                 );
 
-                Data::add($this->name, 'no_import_update', true);
+                Data::add($this->getName(), 'no_import_update', true);
                 return [];
             }
 
@@ -1611,7 +1607,7 @@ class PlexServer implements ServerInterface
                         'body' => $json,
                     ]
                 ]);
-                Data::add($this->name, 'no_import_update', true);
+                Data::add($this->getName(), 'no_import_update', true);
                 return [];
             }
         } catch (ExceptionInterface $e) {
@@ -1624,7 +1620,7 @@ class PlexServer implements ServerInterface
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($this->name, 'no_import_update', true);
+            Data::add($this->getName(), 'no_import_update', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
@@ -1634,7 +1630,7 @@ class PlexServer implements ServerInterface
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($this->name, 'no_import_update', true);
+            Data::add($this->getName(), 'no_import_update', true);
             return [];
         }
 
@@ -1800,7 +1796,7 @@ class PlexServer implements ServerInterface
                 ],
             ]);
 
-            Data::add($this->name, 'no_import_update', true);
+            Data::add($this->getName(), 'no_import_update', true);
             return [];
         }
 
@@ -1819,8 +1815,8 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            Data::increment($this->name, $library . '_total');
-            Data::increment($this->name, $type . '_total');
+            Data::increment($this->getName(), $library . '_total');
+            Data::increment($this->getName(), $type . '_total');
 
             $context['item'] = [
                 'id' => ag($item, 'ratingKey'),
@@ -1858,7 +1854,7 @@ class PlexServer implements ServerInterface
                     ],
                 ]);
 
-                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                Data::increment($this->getName(), $type . '_ignored_no_date_is_set');
                 return;
             }
 
@@ -1866,7 +1862,7 @@ class PlexServer implements ServerInterface
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 if (true === (bool)Config::get('debug.import')) {
-                    $name = Config::get('tmpDir') . '/debug/' . $this->name . '.' . $item['ratingKey'] . '.json';
+                    $name = Config::get('tmpDir') . '/debug/' . $this->getName() . '.' . $item['ratingKey'] . '.json';
 
                     if (!file_exists($name)) {
                         file_put_contents(
@@ -1901,7 +1897,7 @@ class PlexServer implements ServerInterface
                     ],
                 ]);
 
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                Data::increment($this->getName(), $type . '_ignored_no_supported_guid');
                 return;
             }
 
@@ -1943,8 +1939,8 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            Data::increment($this->name, $library . '_total');
-            Data::increment($this->name, $type . '_total');
+            Data::increment($this->getName(), $library . '_total');
+            Data::increment($this->getName(), $type . '_total');
 
             $context['item'] = [
                 'id' => ag($item, 'ratingKey'),
@@ -1982,7 +1978,7 @@ class PlexServer implements ServerInterface
                     ],
                 ]);
 
-                Data::increment($this->name, $type . '_ignored_no_date_is_set');
+                Data::increment($this->getName(), $type . '_ignored_no_date_is_set');
                 return;
             }
 
@@ -2011,7 +2007,7 @@ class PlexServer implements ServerInterface
                     ],
                 ]);
 
-                Data::increment($this->name, $type . '_ignored_no_supported_guid');
+                Data::increment($this->getName(), $type . '_ignored_no_supported_guid');
                 return;
             }
 
@@ -2029,7 +2025,7 @@ class PlexServer implements ServerInterface
                         ]
                     );
 
-                    Data::increment($this->name, $type . '_ignored_date_is_equal_or_higher');
+                    Data::increment($this->getName(), $type . '_ignored_date_is_equal_or_higher');
                     return;
                 }
             }
@@ -2039,7 +2035,7 @@ class PlexServer implements ServerInterface
                     'backend' => $this->getName(),
                     ...$context,
                 ]);
-                Data::increment($this->name, $type . '_ignored_not_found_in_db');
+                Data::increment($this->getName(), $type . '_ignored_not_found_in_db');
                 return;
             }
 
@@ -2050,7 +2046,7 @@ class PlexServer implements ServerInterface
                         [
                             'backend' => $this->getName(),
                             ...$context,
-                            'context' => [
+                            'comparison' => [
                                 'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                 'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
                             ],
@@ -2058,7 +2054,7 @@ class PlexServer implements ServerInterface
                     );
                 }
 
-                Data::increment($this->name, $type . '_ignored_state_unchanged');
+                Data::increment($this->getName(), $type . '_ignored_state_unchanged');
                 return;
             }
 
@@ -2068,14 +2064,14 @@ class PlexServer implements ServerInterface
                     [
                         'backend' => $this->getName(),
                         ...$context,
-                        'content' => [
+                        'comparison' => [
                             'storage' => makeDate($entity->updated),
                             'backend' => makeDate($rItem->updated),
                         ],
                     ]
                 );
 
-                Data::increment($this->name, $type . '_ignored_date_is_newer');
+                Data::increment($this->getName(), $type . '_ignored_date_is_newer');
                 return;
             }
 
@@ -2107,7 +2103,7 @@ class PlexServer implements ServerInterface
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
                                 'itemName' => $entity->getName(),
-                                'server' => $this->name,
+                                'server' => $this->getName(),
                                 'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                 'context' => $context,
                             ]
@@ -2183,7 +2179,7 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][$context['item']['id']] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
     }
 
     protected function parseGuids(array $guids): array
@@ -2389,21 +2385,21 @@ class PlexServer implements ServerInterface
         }
 
         $guids = $this->getGuids(ag($item, 'Guid', []));
-        $guids += Guid::makeVirtualGuid($this->name, (string)ag($item, 'ratingKey'));
+        $guids += Guid::makeVirtualGuid($this->getName(), (string)ag($item, 'ratingKey'));
 
         $builder = [
             iFace::COLUMN_TYPE => $type,
             iFace::COLUMN_UPDATED => (int)$date,
             iFace::COLUMN_WATCHED => (int)$isPlayed,
-            iFace::COLUMN_VIA => $this->name,
+            iFace::COLUMN_VIA => $this->getName(),
             iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
             iFace::COLUMN_GUIDS => $guids,
             iFace::COLUMN_META_DATA => [
-                $this->name => [
+                $this->getName() => [
                     iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
                     iFace::COLUMN_TYPE => $type,
                     iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    iFace::COLUMN_VIA => $this->name,
+                    iFace::COLUMN_VIA => $this->getName(),
                     iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
                     iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
                     iFace::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
@@ -2412,7 +2408,7 @@ class PlexServer implements ServerInterface
             iFace::COLUMN_EXTRA => [],
         ];
 
-        $metadata = &$builder[iFace::COLUMN_META_DATA][$this->name];
+        $metadata = &$builder[iFace::COLUMN_META_DATA][$this->getName()];
         $metadataExtra = &$metadata[iFace::COLUMN_META_DATA_EXTRA];
 
         if (null !== ($library = ag($item, 'librarySectionID', $opts['library'] ?? null))) {

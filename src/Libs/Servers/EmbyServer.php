@@ -178,30 +178,40 @@ class EmbyServer extends JellyfinServer
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
-            $this->logger->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
+            $this->logger->error('Unhandled exception was thrown during [%(backend)] webhook event parsing.', [
+                'backend' => $this->getName(),
+                'exception' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                    'message' => $e->getMessage(),
+                ],
+                'context' => [
+                    'attributes' => $request->getAttributes(),
+                    'payload' => $request->getParsedBody(),
+                ],
             ]);
+
             throw new HttpException(
-                sprintf(
-                    '%s: Unable to process item id \'%s\'.',
-                    $this->getName(),
-                    $id,
-                ), 200
+                sprintf('%s: Failed to handle webhook payload check logs.', $this->getName()), 200
             );
         }
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $message = sprintf('%s: No valid/supported external ids.', self::NAME);
+            $this->logger->error('Ignoring [%(backend)] [%(title)] webhook event. No valid/supported external ids.', [
+                'backend' => $id,
+                'title' => $entity->getName(),
+                'context' => [
+                    'attributes' => $request->getAttributes(),
+                    'parsed' => $entity->getAll(),
+                    'payload' => $request->getParsedBody(),
+                ],
+            ]);
 
-            if (empty($providersId)) {
-                $message .= sprintf(' Most likely unmatched %s.', $entity->type);
-            }
-
-            $message .= sprintf(' [%s].', arrayToString(['guids' => !empty($providersId) ? $providersId : 'None']));
-
-            throw new HttpException($message, 400);
+            throw new HttpException(
+                sprintf('%s: Import ignored. No valid/supported external ids.', $this->getName()),
+                200
+            );
         }
 
         return $entity;
