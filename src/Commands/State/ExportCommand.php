@@ -164,9 +164,9 @@ class ExportCommand extends Command
 
         unset($backend);
 
-        if (true === $this->isPushable($backends, $input)) {
+        if (true === $this->isPushable($backends, $input, ['push' => false])) {
             $this->logger->info('Using push mode.');
-            $this->push($backends, $input);
+            $this->push($backends);
         } else {
             $this->logger->info('Using export mode.');
             $this->export($backends, $input);
@@ -410,23 +410,30 @@ class ExportCommand extends Command
      *
      * @param array $backends
      * @param InputInterface $input
+     * @param array $opts
      *
      * @return bool
      */
-    protected function isPushable(array $backends, InputInterface $input): bool
+    protected function isPushable(array $backends, InputInterface $input, array $opts = []): bool
     {
+        // -- disable push mode in response to #150
+        if (false === (bool)ag($opts, 'push')) {
+            $this->logger->notice('Push mode is disabled for export in response to bug report #150.');
+            return false;
+        }
+
         if (true === $input->getOption('force-full')) {
-            $this->logger->info('Not possible to use push mode when [-f, --force-full] flag is used.');
+            $this->logger->notice('Not possible to use push mode when [-f, --force-full] flag is used.');
             return false;
         }
 
         if (true === $input->getOption('force-push-mode')) {
-            $this->logger->info('Force Push mode flag is used.');
+            $this->logger->notice('Force Push mode flag is used.');
             return true;
         }
 
         if (true === $input->getOption('force-export-mode')) {
-            $this->logger->info('Force Export mode flag is used.');
+            $this->logger->notice('Force Export mode flag is used.');
             return false;
         }
 
@@ -441,14 +448,14 @@ class ExportCommand extends Command
                     $backend,
                     'options.' . Options::IMPORT_METADATA_ONLY
                 )) {
-                $this->logger->info(
+                $this->logger->notice(
                     sprintf('%s: Import are disabled from this backend. Falling back to export mode.', $name)
                 );
                 return false;
             }
 
             if (null === ($after = ag($backend, 'export.lastSync', null))) {
-                $this->logger->info(
+                $this->logger->notice(
                     sprintf('%s: This backend has not been synced before. falling back to export mode.', $name)
                 );
                 return false;
@@ -457,7 +464,7 @@ class ExportCommand extends Command
             $count = $this->storage->getCount(makeDate($after));
 
             if ($count > $threshold) {
-                $this->logger->info(
+                $this->logger->notice(
                     sprintf('%s: Media changes exceed push threshold. falling back to export mode.', $name),
                     [
                         'threshold' => $threshold,
