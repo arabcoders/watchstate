@@ -742,10 +742,16 @@ class PlexServer implements ServerInterface
                 $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
                 $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
 
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] response.', [
+                $data = [
                     'backend' => $this->getName(),
                     ...$context,
-                ]);
+                ];
+
+                if (true === ag($this->options, Options::DEBUG_TRACE)) {
+                    $data['trace'] = $item;
+                }
+
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', $data);
 
                 $metadata = [
                     'id' => (int)ag($item, 'ratingKey'),

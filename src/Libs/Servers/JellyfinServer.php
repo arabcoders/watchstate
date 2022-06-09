@@ -669,9 +669,10 @@ class JellyfinServer implements ServerInterface
         $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
             http_build_query(
                 [
-                    'Recursive' => 'false',
+                    'recursive' => 'false',
                     'enableUserData' => 'false',
                     'enableImages' => 'false',
+                    'fields' => implode(',', self::FIELDS),
                 ]
             )
         );
@@ -742,6 +743,7 @@ class JellyfinServer implements ServerInterface
                     'enableImages' => 'false',
                     'excludeLocationTypes' => 'Virtual',
                     'include' => 'Series,Movie',
+                    'fields' => implode(',', self::FIELDS)
                 ]
             )
         );
@@ -770,10 +772,16 @@ class JellyfinServer implements ServerInterface
                 $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($item, 'Id')));
                 $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
 
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] response.', [
+                $data = [
                     'backend' => $this->getName(),
                     ...$context,
-                ]);
+                ];
+
+                if (true === ag($this->options, Options::DEBUG_TRACE)) {
+                    $data['trace'] = $item;
+                }
+
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', $data);
 
                 $metadata = [
                     'id' => ag($item, 'Id'),
@@ -842,8 +850,6 @@ class JellyfinServer implements ServerInterface
                       ]
         );
 
-        $requests = [];
-
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
                 $this->logger->warning(
@@ -860,6 +866,7 @@ class JellyfinServer implements ServerInterface
                 continue;
             }
 
+
             $url = $this->url->withPath(sprintf('/Users/%s/items/%s', $this->user, ag($entity, 'Id')));
 
             $context['item'] = [
@@ -870,66 +877,7 @@ class JellyfinServer implements ServerInterface
                 'url' => (string)$url,
             ];
 
-            $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title) (%(item.year))] metadata.', [
-                'backend' => $this->getName(),
-                ...$context,
-            ]);
-
-            $requests[] = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive($this->getHeaders(), [
-                    'user_data' => [
-                        'context' => $context
-                    ]
-                ])
-            );
-        }
-
-        if (empty($requests)) {
-            throw new RuntimeException(
-                sprintf(
-                    'No requests were made [%s] library [%s] is empty.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id)
-                )
-            );
-        }
-
-        $this->logger->info(
-            'Requesting [%(total)] items metadata from [%(backend)] library [%(library.title)].',
-            [
-                'backend' => $this->getName(),
-                'total' => number_format(count($requests)),
-                'library' => ag($context, 'library', []),
-            ]
-        );
-
-        foreach ($requests as $response) {
-            $requestContext = ag($response->getInfo('user_data'), 'context', []);
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->warning(
-                    'Request for [%(backend)] %(item.type) [%(item.title)] metadata returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->getName(),
-                        'status_code' => $response->getStatusCode(),
-                        ...$requestContext
-                    ]
-                );
-                continue;
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            yield $handleRequest(
-                item:    $json,
-                context: $requestContext,
-            );
+            yield $handleRequest(item: $entity, context: $context);
         }
     }
 
@@ -1574,9 +1522,10 @@ class JellyfinServer implements ServerInterface
             $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
                 http_build_query(
                     [
-                        'Recursive' => 'false',
+                        'recursive' => 'false',
                         'enableUserData' => 'false',
                         'enableImages' => 'false',
+                        'fields' => implode(',', self::FIELDS),
                     ]
                 )
             );
