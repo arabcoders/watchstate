@@ -194,7 +194,7 @@ class ExportCommand extends Command
 
             if (count($entities) < 1 && count($export) < 1) {
                 $this->logger->notice('STORAGE: No play state change detected since [%(date)].', [
-                    'date' => $lastSync,
+                    'date' => $lastSync->format('Y-m-d H:i:s T')
                 ]);
                 return self::SUCCESS;
             }
