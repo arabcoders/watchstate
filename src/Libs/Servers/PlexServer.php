@@ -742,10 +742,16 @@ class PlexServer implements ServerInterface
                 $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
                 $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
 
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] response.', [
+                $data = [
                     'backend' => $this->getName(),
                     ...$context,
-                ]);
+                ];
+
+                if (true === ag($this->options, Options::DEBUG_TRACE)) {
+                    $data['trace'] = $item;
+                }
+
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', $data);
 
                 $metadata = [
                     'id' => (int)ag($item, 'ratingKey'),
@@ -1858,7 +1864,20 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            $entity = $this->createEntity(item: $item, type: $type, opts: $opts);
+            $entity = $this->createEntity(
+                item: $item,
+                type: $type,
+                opts: $opts + [
+                          'override' => [
+                              iFace::COLUMN_EXTRA => [
+                                  $this->getName() => [
+                                      iFace::COLUMN_EXTRA_EVENT => 'task.import',
+                                      iFace::COLUMN_EXTRA_DATE => makeDate('now'),
+                                  ],
+                              ],
+                          ],
+                      ]
+            );
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 if (true === (bool)Config::get('debug.import')) {
@@ -2435,8 +2454,12 @@ class PlexServer implements ServerInterface
         }
 
         if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year'])) && !empty($mediaYear)) {
-            $builder[iFace::COLUMN_YEAR] = $mediaYear;
-            $metadata[iFace::COLUMN_YEAR] = $mediaYear;
+            $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
+            $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
+        }
+
+        if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
+            $metadata[iFace::COLUMN_META_PATH] = (string)$mediaPath;
         }
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {

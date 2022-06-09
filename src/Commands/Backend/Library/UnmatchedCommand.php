@@ -68,17 +68,21 @@ final class UnmatchedCommand extends Command
         }
 
         try {
-            $serverOpts = $opts = $list = [];
+            $backendOpts = $opts = $list = [];
 
             if ($input->getOption('timeout')) {
-                $serverOpts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
+                $backendOpts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
+            }
+
+            if ($input->getOption('trace')) {
+                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
             }
 
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            foreach ($this->getBackend($backend, $serverOpts)->getLibrary(id: $id, opts: $opts) as $item) {
+            foreach ($this->getBackend($backend, $backendOpts)->getLibrary(id: $id, opts: $opts) as $item) {
                 if (true === $showAll) {
                     $list[] = $item;
                     continue;

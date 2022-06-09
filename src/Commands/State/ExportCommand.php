@@ -45,7 +45,6 @@ class ExportCommand extends Command
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic to exclude.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
-            ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable debug tracing mode.')
             ->addOption(
                 'always-update-metadata',
                 null,

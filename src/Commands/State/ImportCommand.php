@@ -47,7 +47,6 @@ class ImportCommand extends Command
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
-            ->addOption('trace', null, InputOption::VALUE_NONE, 'Enable Debug Tracing mode.')
             ->addOption(
                 'always-update-metadata',
                 null,

@@ -27,6 +27,7 @@ interface StateInterface
     public const COLUMN_META_DATA = 'metadata';
     public const COLUMN_META_SHOW = 'show';
     public const COLUMN_META_LIBRARY = 'library';
+    public const COLUMN_META_PATH = 'path';
     public const COLUMN_META_DATA_ADDED_AT = 'added_at';
     public const COLUMN_META_DATA_PLAYED_AT = 'played_at';
     public const COLUMN_META_DATA_EXTRA = 'extra';

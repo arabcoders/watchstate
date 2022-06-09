@@ -29,13 +29,15 @@ class Cli extends Application
 
         if (InstalledVersions::isInstalled('perftools/php-profiler')) {
             $definition->addOption(
-                new InputOption('profile', null, InputOption::VALUE_NONE, 'Profile command.')
+                new InputOption('profile', null, InputOption::VALUE_NONE, 'Run profiler on command execution.')
             );
         }
 
         $definition->addOption(
             new InputOption('with-context', null, InputOption::VALUE_NEGATABLE, 'Add context to output messages.')
         );
+
+        $definition->addOption(new InputOption('trace', null, InputOption::VALUE_NONE, 'Enable tracing mode.'));
 
         return $definition;
     }
