@@ -194,7 +194,7 @@ final class DirectMapper implements ImportInterface
                         ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                     );
 
-                    $local = $local->apply(entity: $entity, fields: $localFields);
+                    $local = $local->apply(entity: $entity, fields: array_merge($localFields, [iFace::COLUMN_EXTRA]));
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
                     $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
@@ -248,7 +248,10 @@ final class DirectMapper implements ImportInterface
                 // -- Handle mark as unplayed logic.
                 if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
                     try {
-                        $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed($entity);
+                        $local = $local->apply(
+                            entity: $entity,
+                            fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+                        )->markAsUnplayed($entity);
 
                         if (false === $inDryRunMode) {
                             $this->storage->update($local);
@@ -298,7 +301,10 @@ final class DirectMapper implements ImportInterface
                                 ag($entity->getMetadata($entity->via), 'id')
                             );
 
-                            $local = $local->apply(entity: $entity, fields: $localFields);
+                            $local = $local->apply(
+                                entity: $entity,
+                                fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
+                            );
 
                             $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                                 'id' => $cloned->id,
@@ -349,7 +355,7 @@ final class DirectMapper implements ImportInterface
 
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             try {
-                $local = $local->apply(entity: $entity, fields: $keys);
+                $local = $local->apply(entity: $entity, fields: array_merge($keys, [iFace::COLUMN_EXTRA]));
 
                 $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
                     'id' => $cloned->id,

@@ -163,7 +163,7 @@ final class MemoryMapper implements ImportInterface
                     ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                 );
 
-                $local = $local->apply(entity: $entity, fields: $localFields);
+                $local = $local->apply(entity: $entity, fields: array_merge($localFields, [iFace::COLUMN_EXTRA]));
 
                 $this->removePointers($cloned)->addPointers($local, $pointer);
 
@@ -196,7 +196,10 @@ final class MemoryMapper implements ImportInterface
                     $this->changed[$pointer] = $pointer;
                     Data::increment($entity->via, $entity->type . '_updated');
 
-                    $local = $local->apply(entity: $entity, fields: $keys)->markAsUnplayed(backend: $entity);
+                    $local = $local->apply(
+                        entity: $entity,
+                        fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+                    )->markAsUnplayed(backend: $entity);
 
                     $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
                         'id' => $cloned->id,
@@ -223,7 +226,10 @@ final class MemoryMapper implements ImportInterface
                             ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                         );
 
-                        $local = $local->apply(entity: $entity, fields: $localFields);
+                        $local = $local->apply(
+                            entity: $entity,
+                            fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
+                        );
 
                         $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                             'id' => $cloned->id,
@@ -257,7 +263,7 @@ final class MemoryMapper implements ImportInterface
             $this->changed[$pointer] = $pointer;
             Data::increment($entity->via, $entity->type . '_updated');
 
-            $local = $local->apply(entity: $entity, fields: $keys);
+            $local = $local->apply(entity: $entity, fields: array_merge($keys, [iFace::COLUMN_EXTRA]));
             $this->removePointers($cloned)->addPointers($local, $pointer);
 
             $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [

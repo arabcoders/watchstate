@@ -359,7 +359,13 @@ final class Initializer
                         $keys = array_merge($keys, [iFace::COLUMN_GUIDS, iFace::COLUMN_EXTRA]);
                     }
 
-                    $local = $storage->update($local->apply(entity: $entity, fields: $keys));
+                    $local = $storage->update(
+                        $local->apply(
+                            entity: $entity,
+                            fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+                        )
+                    );
+
                     return jsonResponse(
                         status:  200,
                         body:    $local->getAll(),
@@ -394,7 +400,12 @@ final class Initializer
                 }
 
                 if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                    $local = $storage->update($local->apply(entity: $entity, fields: $keys));
+                    $local = $storage->update(
+                        $local->apply(
+                            entity: $entity,
+                            fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+                        )
+                    );
                     return jsonResponse(
                         status:  200,
                         body:    $local->getAll(),
@@ -414,7 +425,7 @@ final class Initializer
                 $message = '%1$s Updated.';
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = '%1$s Marked as [%2$s]';
+                    $message = '%1$s marked as [%2$s]';
                     queuePush($local);
                 }
 

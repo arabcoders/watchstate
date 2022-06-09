@@ -78,6 +78,17 @@ class JellyfinServer implements ServerInterface
         'PlaybackStop',
     ];
 
+    protected const FIELDS = [
+        'ProviderIds',
+        'DateCreated',
+        'OriginalTitle',
+        'SeasonUserData',
+        'DateLastSaved',
+        'PremiereDate',
+        'ProductionYear',
+        'Path',
+    ];
+
     protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected string|null $user = null;
@@ -436,12 +447,12 @@ class JellyfinServer implements ServerInterface
                     array_replace_recursive(
                         [
                             'searchTerm' => $query,
-                            'Limit' => $limit,
-                            'Recursive' => 'true',
-                            'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
+                            'limit' => $limit,
+                            'recursive' => 'true',
+                            'fields' => implode(',', self::FIELDS),
                             'enableUserData' => 'true',
                             'enableImages' => 'false',
-                            'IncludeItemTypes' => 'Episode,Movie,Series',
+                            'includeItemTypes' => 'Episode,Movie,Series',
                         ],
                         $opts['query'] ?? []
                     )
@@ -595,11 +606,11 @@ class JellyfinServer implements ServerInterface
                 http_build_query(
                     array_merge_recursive(
                         [
-                            'Recursive' => 'false',
-                            'Fields' => 'ProviderIds',
+                            'recursive' => 'false',
+                            'fields' => implode(',', self::FIELDS),
                             'enableUserData' => 'true',
                             'enableImages' => 'false',
-                            'IncludeItemTypes' => 'Episode,Movie,Series',
+                            'includeItemTypes' => 'Episode,Movie,Series',
                         ],
                         $opts['query'] ?? []
                     ),
@@ -729,7 +740,7 @@ class JellyfinServer implements ServerInterface
                     'parentId' => $id,
                     'enableUserData' => 'false',
                     'enableImages' => 'false',
-                    'ExcludeLocationTypes' => 'Virtual',
+                    'excludeLocationTypes' => 'Virtual',
                     'include' => 'Series,Movie',
                 ]
             )
@@ -930,8 +941,8 @@ class JellyfinServer implements ServerInterface
             $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
                 http_build_query(
                     [
-                        'Recursive' => 'false',
-                        'Fields' => 'ProviderIds',
+                        'recursive' => 'false',
+                        'fields' => implode(',', self::FIELDS),
                         'enableUserData' => 'true',
                         'enableImages' => 'false',
                     ]
@@ -1068,7 +1079,7 @@ class JellyfinServer implements ServerInterface
                     http_build_query(
                         [
                             'ids' => ag($metadata, iFace::COLUMN_ID),
-                            'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved',
+                            'fields' => implode(',', self::FIELDS),
                             'enableUserData' => 'true',
                             'enableImages' => 'false',
                         ]
@@ -1663,8 +1674,8 @@ class JellyfinServer implements ServerInterface
                             'recursive' => 'false',
                             'enableUserData' => 'false',
                             'enableImages' => 'false',
-                            'Fields' => 'ProviderIds,DateCreated,OriginalTitle',
-                            'ExcludeLocationTypes' => 'Virtual',
+                            'fields' => implode(',', self::FIELDS),
+                            'excludeLocationTypes' => 'Virtual',
                         ]
                     )
                 );
@@ -1744,8 +1755,8 @@ class JellyfinServer implements ServerInterface
                         'enableUserData' => 'true',
                         'enableImages' => 'false',
                         'includeItemTypes' => 'Movie,Episode',
-                        'Fields' => 'ProviderIds,DateCreated,OriginalTitle,SeasonUserData,DateLastSaved,PremiereDate,ProductionYear',
-                        'ExcludeLocationTypes' => 'Virtual',
+                        'fields' => implode(',', self::FIELDS),
+                        'excludeLocationTypes' => 'Virtual',
                     ]
                 )
             );
@@ -1861,7 +1872,17 @@ class JellyfinServer implements ServerInterface
             $entity = $this->createEntity(
                 item: $item,
                 type: $type,
-                opts: array_replace_recursive($opts, ['library' => ag($context, 'library.id')])
+                opts: $opts + [
+                          'library' => ag($context, 'library.id'),
+                          'override' => [
+                              iFace::COLUMN_EXTRA => [
+                                  $this->getName() => [
+                                      iFace::COLUMN_EXTRA_EVENT => 'task.import',
+                                      iFace::COLUMN_EXTRA_DATE => makeDate('now'),
+                                  ],
+                              ],
+                          ]
+                      ],
             );
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
@@ -2286,6 +2307,10 @@ class JellyfinServer implements ServerInterface
             $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
 
+        if (null !== ($mediaPath = ag($item, 'Path')) && !empty($mediaPath)) {
+            $metadata[iFace::COLUMN_META_PATH] = (string)$mediaPath;
+        }
+
         if (null !== ($PremieredAt = ag($item, 'PremiereDate'))) {
             $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
@@ -2313,7 +2338,7 @@ class JellyfinServer implements ServerInterface
             $url = (string)$this->url->withPath(sprintf('/Users/%s/items/' . $id, $this->user))->withQuery(
                 http_build_query(
                     [
-                        'Fields' => 'ProviderIds'
+                        'fields' => implode(',', self::FIELDS),
                     ]
                 )
             );
