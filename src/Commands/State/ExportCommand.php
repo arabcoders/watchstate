@@ -194,13 +194,12 @@ class ExportCommand extends Command
 
             if (count($entities) < 1 && count($export) < 1) {
                 $this->logger->notice('STORAGE: No play state change detected since [%(date)].', [
-                    'date' => $lastSync,
+                    'date' => $lastSync->format('Y-m-d H:i:s T')
                 ]);
                 return self::SUCCESS;
             }
 
             if (count($entities) >= 1) {
-
                 $this->logger->info(
                     'SYSTEM: Checking [%(total)] media items for push mode compatibility.',
                     (function () use ($entities, $input): array {
@@ -318,8 +317,10 @@ class ExportCommand extends Command
             $this->logger->notice('SYSTEM: Sent [%(total)] change play state requests.', [
                 'total' => $total
             ]);
+
+            $this->logger->notice(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
         } else {
-            $this->logger->notice('No play state changes detected.');
+            $this->logger->notice('SYSTEM: No play state changes detected.');
         }
 
         if (false === $input->getOption('dry-run')) {
@@ -345,7 +346,6 @@ class ExportCommand extends Command
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
-        $this->logger->notice(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
         return self::SUCCESS;
     }
