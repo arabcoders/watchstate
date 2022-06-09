@@ -8,8 +8,6 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
 use RuntimeException;
-use Symfony\Component\Console\Completion\CompletionInput;
-use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -24,16 +22,6 @@ final class UnmatchedCommand extends Command
         $this->setName('backend:library:unmatched')
             ->setDescription('Find top level Items in library that has no external ids.')
             ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of the match status.')
-            ->addOption(
-                'output',
-                'o',
-                InputOption::VALUE_OPTIONAL,
-                sprintf(
-                    'Output mode. Can be [%s]. Modes other than table mode gives more info.',
-                    implode(', ', $this->outputs)
-                ),
-                $this->outputs[0],
-            )
             ->addOption(
                 'timeout',
                 null,
@@ -150,30 +138,5 @@ final class UnmatchedCommand extends Command
         $this->displayContent($list, $output, $mode);
 
         return self::SUCCESS;
-    }
-
-    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
-    {
-        parent::complete($input, $suggestions);
-
-        $methods = [
-            'output' => 'outputs',
-        ];
-
-        foreach ($methods as $key => $of) {
-            if ($input->mustSuggestOptionValuesFor($key)) {
-                $currentValue = $input->getCompletionValue();
-
-                $suggest = [];
-
-                foreach ($this->{$of} as $name) {
-                    if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                        $suggest[] = $name;
-                    }
-                }
-
-                $suggestions->suggestValues($suggest);
-            }
-        }
     }
 }
