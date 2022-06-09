@@ -23,7 +23,7 @@ class Command extends BaseCommand
 {
     use LockableTrait;
 
-    protected array $outputs = [
+    public const DISPLAY_OUTPUT = [
         'table',
         'json',
         'yaml',
@@ -31,11 +31,11 @@ class Command extends BaseCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if ($input->hasOption('with-context') && true === $input->getOption('with-context')) {
+        if ($input->hasOption('context') && true === $input->getOption('context')) {
             Config::save('logs.context', true);
         }
 
-        if ($input->hasOption('no-with-context') && true === $input->getOption('no-with-context')) {
+        if ($input->hasOption('no-context') && true === $input->getOption('no-context')) {
             Config::save('logs.context', false);
         }
 
@@ -242,6 +242,20 @@ class Command extends BaseCommand
                     $currentValue = array_pop($text);
                 }
 
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('output')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (self::DISPLAY_OUTPUT as $name) {
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }

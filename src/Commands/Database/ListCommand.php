@@ -24,7 +24,7 @@ use Symfony\Component\Yaml\Yaml;
 
 final class ListCommand extends Command
 {
-    public const CHANGEABLE_COLUMNS = [
+    private const COLUMNS_CHANGEABLE = [
         iFace::COLUMN_WATCHED,
         iFace::COLUMN_VIA,
         iFace::COLUMN_TITLE,
@@ -32,6 +32,18 @@ final class ListCommand extends Command
         iFace::COLUMN_SEASON,
         iFace::COLUMN_EPISODE,
         iFace::COLUMN_UPDATED,
+    ];
+
+    private const COLUMNS_SORTABLE = [
+        iFace::COLUMN_ID,
+        iFace::COLUMN_TYPE,
+        iFace::COLUMN_UPDATED,
+        iFace::COLUMN_WATCHED,
+        iFace::COLUMN_VIA,
+        iFace::COLUMN_TITLE,
+        iFace::COLUMN_YEAR,
+        iFace::COLUMN_SEASON,
+        iFace::COLUMN_EPISODE,
     ];
 
     private PDO $pdo;
@@ -51,9 +63,8 @@ final class ListCommand extends Command
                 'via',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Limit results to this specified server. This filter is not reliable. and changes based on last server query.'
+                'Limit results to this specified backend. This filter is not reliable. and changes based on last backend query.'
             )
-            ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Display output as [json, yaml, table]', 'table')
             ->addOption(
                 'type',
                 null,
@@ -65,14 +76,17 @@ final class ListCommand extends Command
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number')
             ->addOption('year', null, InputOption::VALUE_REQUIRED, 'Select year.')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number')
-            ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'sort order by [id, updated]', 'updated')
-            ->addOption('asc', null, InputOption::VALUE_NONE, 'Sort records in ascending order.')
-            ->addOption('desc', null, InputOption::VALUE_NONE, 'Sort records in descending order. (Default)')
+            ->addOption(
+                'sort',
+                null,
+                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+                'Set sort by columns. for example, <comment>--sort season:asc --sort episode:desc</comment>',
+            )
             ->addOption(
                 'metadata-as',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Display metadata from this server instead of latest.'
+                'Display metadata from this backend instead of latest.'
             )
             ->setDescription('List Database entries.');
 
@@ -93,13 +107,19 @@ final class ListCommand extends Command
                 'metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'Search in (metadata) provided by servers JSON Field using (--key, --value) options.'
+                'Search in (metadata) provided by backends JSON Field using (--key, --value) options.'
             )
             ->addOption(
                 'extra',
                 null,
                 InputOption::VALUE_NONE,
                 'Search in (extra information) JSON Field using (--key, --value) options.'
+            )
+            ->addOption(
+                'dump-query',
+                null,
+                InputOption::VALUE_NONE,
+                'Dump the generated query and exit.'
             );
     }
 
@@ -108,35 +128,35 @@ final class ListCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $list = [];
-
         $limit = (int)$input->getOption('limit');
+
+        $es = fn(string $val) => $this->storage->identifier($val);
 
         $params = [
             'limit' => $limit <= 0 ? 20 : $limit,
         ];
 
-        $where = [];
+        $sql = $where = [];
 
-        $sql = "SELECT * FROM state ";
+        $sql[] = sprintf('SELECT * FROM %s', $es('state'));
 
         if ($input->getOption('id')) {
-            $where[] = iFace::COLUMN_ID . ' = :id';
+            $where[] = $es(iFace::COLUMN_ID) . ' = :id';
             $params['id'] = $input->getOption('id');
         }
 
         if ($input->getOption('via')) {
-            $where[] = iFace::COLUMN_VIA . ' = :via';
+            $where[] = $es(iFace::COLUMN_VIA) . ' = :via';
             $params['via'] = $input->getOption('via');
         }
 
         if ($input->getOption('year')) {
-            $where[] = iFace::COLUMN_YEAR . ' = :year';
+            $where[] = $es(iFace::COLUMN_YEAR) . ' = :year';
             $params['year'] = $input->getOption('year');
         }
 
         if ($input->getOption('type')) {
-            $where[] = iFace::COLUMN_TYPE . ' = :type';
+            $where[] = $es(iFace::COLUMN_TYPE) . ' = :type';
             $params['type'] = match ($input->getOption('type')) {
                 iFace::TYPE_MOVIE => iFace::TYPE_MOVIE,
                 default => iFace::TYPE_EPISODE,
@@ -144,17 +164,17 @@ final class ListCommand extends Command
         }
 
         if ($input->getOption('title')) {
-            $where[] = iFace::COLUMN_TITLE . " LIKE '%' || :title || '%'";
+            $where[] = $es(iFace::COLUMN_TITLE) . ' LIKE "%" || :title || "%"';
             $params['title'] = $input->getOption('title');
         }
 
         if (null !== $input->getOption('season')) {
-            $where[] = iFace::COLUMN_SEASON . ' = :season';
+            $where[] = $es(iFace::COLUMN_SEASON) . ' = :season';
             $params['season'] = $input->getOption('season');
         }
 
         if (null !== $input->getOption('episode')) {
-            $where[] = iFace::COLUMN_EPISODE . ' = :episode';
+            $where[] = $es(iFace::COLUMN_EPISODE) . ' = :episode';
             $params['episode'] = $input->getOption('episode');
         }
 
@@ -203,20 +223,53 @@ final class ListCommand extends Command
         }
 
         if (count($where) >= 1) {
-            $sql .= 'WHERE ' . implode(' AND ', $where);
+            $sql[] = 'WHERE ' . implode(' AND ', $where);
         }
 
-        $sort = match ($input->getOption('sort')) {
-            'id' => iFace::COLUMN_ID,
-            'season' => iFace::COLUMN_SEASON,
-            'episode' => iFace::COLUMN_EPISODE,
-            'type' => iFace::COLUMN_TYPE,
-            default => iFace::COLUMN_UPDATED,
-        };
+        $sorts = [];
 
-        $sortOrder = ($input->getOption('asc')) ? 'ASC' : 'DESC';
+        foreach ($input->getOption('sort') as $sort) {
+            if (1 !== preg_match('/(?P<field>\w+)(:(?P<dir>\w+))?/', $sort, $matches)) {
+                continue;
+            }
 
-        $sql .= " ORDER BY {$sort} {$sortOrder} LIMIT :limit";
+            if (null === ($matches['field'] ?? null) || false === in_array($matches['field'], self::COLUMNS_SORTABLE)) {
+                continue;
+            }
+
+            $sorts[] = sprintf(
+                '%s %s',
+                $es($matches['field']),
+                match (strtolower($matches['dir'] ?? 'desc')) {
+                    default => 'DESC',
+                    'asc' => 'ASC',
+                }
+            );
+        }
+
+        if (count($sorts) < 1) {
+            $sorts[] = sprintf('%s DESC', $es('updated'));
+        }
+
+        $sql[] = 'ORDER BY ' . implode(', ', $sorts) . ' LIMIT :limit';
+        $sql = implode(' ', $sql);
+
+        if ($input->getOption('dump-query')) {
+            $arr = [
+                'query' => $sql,
+                'parameters' => $params,
+                'raw' => $this->storage->getRawSQLString($sql, $params),
+            ];
+
+            if ('table' === $input->getOption('output')) {
+                $arr['parameters'] = arrayToString($params);
+                unset($arr['raw']);
+                $arr = [$arr];
+            }
+
+            $this->displayContent($arr, $output, $input->getOption('output'));
+            return self::SUCCESS;
+        }
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -262,15 +315,16 @@ final class ListCommand extends Command
             if (null !== ($via = $input->getOption('metadata-as'))) {
                 $path = $row[iFace::COLUMN_META_DATA][$via] ?? [];
 
-                foreach (self::CHANGEABLE_COLUMNS as $column) {
+                foreach (self::COLUMNS_CHANGEABLE as $column) {
                     if (null === ($path[$column] ?? null)) {
                         continue;
                     }
 
                     $row[$column] = 'int' === get_debug_type($row[$column]) ? (int)$path[$column] : $path[$column];
                 }
-                if (null !== ($row[iFace::COLUMN_EXTRA][$via][iFace::COLUMN_EXTRA_DATE] ?? null)) {
-                    $row[iFace::COLUMN_UPDATED] = $row[iFace::COLUMN_EXTRA][$via][iFace::COLUMN_EXTRA_DATE];
+
+                if (null !== ($dateFromBackend = $path[iFace::COLUMN_META_DATA_PLAYED_AT] ?? $path[iFace::COLUMN_META_DATA_ADDED_AT] ?? null)) {
+                    $row[iFace::COLUMN_UPDATED] = $dateFromBackend;
                 }
             }
 
@@ -280,44 +334,37 @@ final class ListCommand extends Command
 
         unset($row);
 
-        if ('json' === $input->getOption('output')) {
-            $output->writeln(
-                json_encode(
-                    1 === count($rows) ? $rows[0] : $rows,
-                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                )
-            );
-        } elseif ('yaml' === $input->getOption('output')) {
-            $output->writeln(Yaml::dump(1 === count($rows) ? $rows[0] : $rows, 8, 2));
-        } else {
-            $x = 0;
+        if ('table' === $input->getOption('output')) {
+            $list = [];
 
             foreach ($rows as $row) {
                 $row[iFace::COLUMN_UPDATED] = $row[iFace::COLUMN_UPDATED]->getTimestamp();
                 $row[iFace::COLUMN_WATCHED] = (int)$row[iFace::COLUMN_WATCHED];
                 $entity = Container::get(iFace::class)->fromArray($row);
 
-                $x++;
-
-                $list[] = [
-                    $entity->id,
-                    ucfirst($entity->type),
-                    $entity->getName(),
-                    $entity->via ?? '??',
-                    makeDate($entity->updated)->format('Y-m-d H:i:s T'),
-                    $entity->isWatched() ? 'Yes' : 'No',
-                    ag($entity->extra[$entity->via] ?? [], iFace::COLUMN_EXTRA_EVENT, '-'),
+                $item = [
+                    'id' => $entity->id,
+                    'Type' => ucfirst($entity->type),
+                    'Title' => $entity->getName(),
+                    'Via (Last)' => $entity->via ?? '??',
+                    'Date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
+                    'Played' => $entity->isWatched() ? 'Yes' : 'No',
+                    'Via (Event)' => ag($entity->extra[$entity->via] ?? [], iFace::COLUMN_EXTRA_EVENT, '-'),
                 ];
 
-                if ($x < $rowCount) {
-                    $list[] = new TableSeparator();
-                }
+                $list[] = $item;
+                $list[] = new TableSeparator();
             }
 
             $rows = null;
 
-            (new Table($output))->setHeaders(['Id', 'Type', 'Title', 'Via (Last)', 'Date', 'Played', 'Via Event'])
-                ->setStyle('box')->setRows($list)->render();
+            if (count($list) >= 2) {
+                array_pop($list);
+            }
+
+            (new Table($output))->setHeaders(array_keys($list[0] ?? []))->setStyle('box')->setRows($list)->render();
+        } else {
+            $this->displayContent($rows, $output, $input->getOption('output'));
         }
 
         return self::SUCCESS;
@@ -355,14 +402,16 @@ final class ListCommand extends Command
             $suggestions->suggestValues($suggest);
         }
 
-        if ($input->mustSuggestOptionValuesFor('output')) {
+        if ($input->mustSuggestOptionValuesFor('sort')) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];
 
-            foreach (['json', 'yaml', 'table'] as $name) {
-                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                    $suggest[] = $name;
+            foreach (self::COLUMNS_SORTABLE as $name) {
+                foreach ([$name . ':desc', $name . ':asc'] as $subName) {
+                    if (empty($currentValue) || true === str_starts_with($subName, $currentValue)) {
+                        $suggest[] = $subName;
+                    }
                 }
             }
 

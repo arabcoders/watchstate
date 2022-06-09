@@ -30,16 +30,6 @@ final class MismatchCommand extends Command
             ->setDescription(
                 'Find possible mis-identified item in a library. This only works for Media that follow Plex naming format.'
             )
-            ->addOption(
-                'output',
-                'o',
-                InputOption::VALUE_OPTIONAL,
-                sprintf(
-                    'Output mode. Can be [%s]. Modes other than table mode gives more info.',
-                    implode(', ', $this->outputs)
-                ),
-                $this->outputs[0],
-            )
             ->addOption('percentage', 'p', InputOption::VALUE_OPTIONAL, 'Acceptable percentage.', 50.0)
             ->addOption(
                 'method',
@@ -269,7 +259,6 @@ final class MismatchCommand extends Command
         parent::complete($input, $suggestions);
 
         $methods = [
-            'output' => 'outputs',
             'method' => 'methods',
         ];
 

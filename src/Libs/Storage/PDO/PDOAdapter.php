@@ -33,8 +33,15 @@ final class PDOAdapter implements StorageInterface
         'update' => null,
     ];
 
+    private string $driver = 'sqlite';
+
     public function __construct(private LoggerInterface $logger, private PDO $pdo)
     {
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        if (is_string($driver)) {
+            $this->driver = $driver;
+        }
     }
 
     public function setOptions(array $options): self
@@ -515,13 +522,45 @@ final class PDOAdapter implements StorageInterface
      */
     public function getRawSQLString(string $sql, array $parameters): string
     {
-        $keys = $replace = [];
+        $replacer = [];
 
         foreach ($parameters as $key => $val) {
-            $keys[] = '/(\:' . preg_quote($key, '/') . ')(?:\b|\,)/';
-            $replace[] = ctype_digit((string)$val) ? $val : "'{$val}'";
+            $replacer['/(\:' . preg_quote($key, '/') . ')(?:\b|\,)/'] = ctype_digit(
+                (string)$val
+            ) ? (int)$val : '"' . $val . '"';
         }
 
-        return preg_replace($keys, $replace, $sql);
+        return preg_replace(array_keys($replacer), array_values($replacer), $sql);
     }
+
+    public function identifier(string $text, bool $quote = true): string
+    {
+        // table or column has to be valid ASCII name.
+        // this is opinionated, but we only allow [a-zA-Z0-9_] in column/table name.
+        if (!\preg_match('#\w#', $text)) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Invalid identifier "%s": Column/table must be valid ASCII code.',
+                    $text
+                )
+            );
+        }
+
+        // The first character cannot be [0-9]:
+        if (\preg_match('/^\d/', $text)) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Invalid identifier "%s": Must begin with a letter or underscore.',
+                    $text
+                )
+            );
+        }
+
+        return !$quote ? $text : match ($this->driver) {
+            'mssql' => '[' . $text . ']',
+            'mysql' => '`' . $text . '`',
+            default => '"' . $text . '"',
+        };
+    }
+
 }

@@ -34,10 +34,18 @@ class Cli extends Application
         }
 
         $definition->addOption(
-            new InputOption('with-context', null, InputOption::VALUE_NEGATABLE, 'Add context to output messages.')
+            new InputOption('context', null, InputOption::VALUE_NEGATABLE, 'Add context to output messages.')
         );
 
         $definition->addOption(new InputOption('trace', null, InputOption::VALUE_NONE, 'Enable tracing mode.'));
+
+        $definition->addOption(
+            new InputOption(
+                'output', 'o', InputOption::VALUE_REQUIRED,
+                sprintf('Output mode. Can be [%s].', implode(', ', Command::DISPLAY_OUTPUT)),
+                Command::DISPLAY_OUTPUT[0]
+            )
+        );
 
         return $definition;
     }
