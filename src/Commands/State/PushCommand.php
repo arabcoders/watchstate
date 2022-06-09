@@ -211,7 +211,7 @@ class PushCommand extends Command
                 ],
             ]);
 
-            $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+            $this->logger->notice(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');
         }
