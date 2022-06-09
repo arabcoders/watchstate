@@ -19,7 +19,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 class PushCommand extends Command
 {
@@ -91,8 +90,6 @@ class PushCommand extends Command
             $this->logger->debug('No items in the queue.');
             return self::SUCCESS;
         }
-
-        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
         $list = [];
         $supported = Config::get('supported', []);
@@ -167,65 +164,54 @@ class PushCommand extends Command
 
         if ($total >= 1) {
             $start = makeDate();
-            $this->logger->notice('SYSTEM: Sending change play state requests.', [
-                'context' => [
-                    'total' => $total,
-                    'time' => [
-                        'start' => $start,
-                    ],
+            $this->logger->notice('SYSTEM: Sending [%(total)] change play state requests.', [
+                'total' => $total,
+                'time' => [
+                    'start' => $start,
                 ],
             ]);
 
             foreach ($this->queue->getQueue() as $response) {
-                $requestData = $response->getInfo('user_data');
+                $context = ag($response->getInfo('user_data'), 'context', []);
 
                 try {
                     if (200 !== $response->getStatusCode()) {
-                        $this->logger->error('Unexpected change play state response code.', [
-                            'context' => [
-                                'backend' => ag($requestData, 'server', '??'),
-                                'title' => ag($requestData, 'itemName', '??'),
-                            ],
-                            'condition' => [
-                                'expected' => 200,
-                                'given' => $response->getStatusCode(),
-                            ],
-                        ]);
+                        $this->logger->error(
+                            'Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
+                            $context
+                        );
                         continue;
                     }
 
-                    $this->logger->notice('Marked [%(title)] as [%(state)].', [
-                        'state' => ag($requestData, 'state', '??'),
-                        'backend' => ag($requestData, 'server', '??'),
-                        'title' => ag($requestData, 'itemName', '??'),
-                    ]);
-                } catch (ExceptionInterface $e) {
-                    $this->logger->error($e->getMessage(), [
-                        'context' => [
-                            'backend' => ag($requestData ?? [], 'server', '??'),
-                            'title' => ag($requestData ?? [], 'itemName', '??'),
-                        ],
-                        'trace' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                        ],
-                    ]);
+                    $this->logger->notice('Marked [%(backend)] [%(item.title)] as [%(play_state)].', $context);
+                } catch (\Throwable $e) {
+                    $this->logger->error(
+                        'Unhandled exception thrown during request to change play state of [%(backend)] %(item.type) [%(item.title)].',
+                        [
+                            ...$context,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                            ],
+                        ]
+                    );
                 }
             }
 
             $end = makeDate();
 
-            $this->logger->notice('SYSTEM: Finished Sending change play state requests.', [
-                'context' => [
-                    'total' => $total,
-                    'time' => [
-                        'start' => $start,
-                        'end' => $end,
-                        'duration' => $end->getTimestamp() - $start->getTimestamp(),
-                    ],
+            $this->logger->notice('SYSTEM: Sent [%(total)] change play state requests.', [
+                'total' => $total,
+                'time' => [
+                    'start' => $start,
+                    'end' => $end,
+                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
                 ],
             ]);
+
+            $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');
         }
