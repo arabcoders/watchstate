@@ -1247,17 +1247,14 @@ class JellyfinServer implements ServerInterface
                         $this->http->request(
                             $entity->isWatched() ? 'POST' : 'DELETE',
                             (string)$url,
-                            array_replace_recursive(
-                                $this->getHeaders(),
-                                [
-                                    'user_data' => [
-                                        'itemName' => $entity->getName(),
-                                        'server' => $this->getName(),
-                                        'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                        'context' => $context,
-                                    ],
-                                ]
-                            )
+                            array_replace_recursive($this->getHeaders(), [
+                                'user_data' => [
+                                    'context' => $context + [
+                                            'backend' => $this->getName(),
+                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                        ],
+                                ],
+                            ])
                         )
                     );
                 }
@@ -1961,8 +1958,6 @@ class JellyfinServer implements ServerInterface
                 'type' => $type,
             ];
 
-            $iName = $context['item']['title'];
-
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
                     'backend' => $this->getName(),
@@ -2101,10 +2096,10 @@ class JellyfinServer implements ServerInterface
                         (string)$url,
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
-                                'itemName' => $iName,
-                                'server' => $this->getName(),
-                                'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                'context' => $context,
+                                'context' => $context + [
+                                        'backend' => $this->getName(),
+                                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                    ],
                             ],
                         ])
                     )

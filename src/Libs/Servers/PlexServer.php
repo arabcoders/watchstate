@@ -1259,10 +1259,10 @@ class PlexServer implements ServerInterface
                             (string)$url,
                             array_replace_recursive($this->getHeaders(), [
                                 'user_data' => [
-                                    'itemName' => $entity->getName(),
-                                    'server' => $this->getName(),
-                                    'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                    'context' => $context,
+                                    'context' => $context + [
+                                            'backend' => $this->getName(),
+                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                        ],
                                 ]
                             ])
                         )
@@ -2102,10 +2102,10 @@ class PlexServer implements ServerInterface
                         (string)$url,
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
-                                'itemName' => $entity->getName(),
-                                'server' => $this->getName(),
-                                'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                'context' => $context,
+                                'context' => $context + [
+                                        'backend' => $this->getName(),
+                                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                    ],
                             ]
                         ])
                     )
