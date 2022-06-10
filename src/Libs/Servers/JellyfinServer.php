@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
@@ -269,52 +270,7 @@ class JellyfinServer implements ServerInterface
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        $logger = null;
-
-        try {
-            $logger = $opts[LoggerInterface::class] ?? Container::get(LoggerInterface::class);
-
-            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
-
-            if (false === str_starts_with($userAgent, 'Jellyfin-Server/')) {
-                return $request;
-            }
-
-            $payload = (string)$request->getBody();
-
-            if (null === ($json = json_decode(json: $payload, associative: true, flags: JSON_INVALID_UTF8_IGNORE))) {
-                return $request;
-            }
-
-            $request = $request->withParsedBody($json);
-
-            $attributes = [
-                'ITEM_ID' => ag($json, 'ItemId', ''),
-                'SERVER_ID' => ag($json, 'ServerId', ''),
-                'SERVER_NAME' => ag($json, 'ServerName', ''),
-                'SERVER_VERSION' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
-                'USER_ID' => ag($json, 'UserId', ''),
-                'USER_NAME' => ag($json, 'NotificationUsername', ''),
-                'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
-                'WH_TYPE' => ag($json, 'ItemType', 'not_set'),
-            ];
-
-            foreach ($attributes as $key => $val) {
-                $request = $request->withAttribute($key, $val);
-            }
-        } catch (Throwable $e) {
-            $logger?->error('Unhandled exception was thrown in [%(client)] during request processing.', [
-                'client' => self::NAME,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-        }
-
-        return $request;
+        return (new InspectRequest(logger: $this->logger))(request: $request);
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace

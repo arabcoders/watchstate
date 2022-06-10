@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
-use App\Libs\Container;
+use App\Backends\Emby\Action\InspectRequest;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
-use Psr\Log\LoggerInterface;
 use Throwable;
 
 class EmbyServer extends JellyfinServer
@@ -53,48 +52,7 @@ class EmbyServer extends JellyfinServer
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        $logger = null;
-
-        try {
-            $logger = $opts[LoggerInterface::class] ?? Container::get(LoggerInterface::class);
-
-            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
-
-            if (false === str_starts_with($userAgent, 'Emby Server/')) {
-                return $request;
-            }
-
-            $payload = (string)ag($request->getParsedBody() ?? [], 'data', null);
-
-            if (null === ($json = json_decode(json: $payload, associative: true, flags: JSON_INVALID_UTF8_IGNORE))) {
-                return $request;
-            }
-
-            $request = $request->withParsedBody($json);
-
-            $attributes = [
-                'ITEM_ID' => ag($json, 'Item.Id', ''),
-                'SERVER_ID' => ag($json, 'Server.Id', ''),
-                'SERVER_NAME' => ag($json, 'Server.Name', ''),
-                'SERVER_VERSION' => afterLast($userAgent, '/'),
-                'USER_ID' => ag($json, 'User.Id', ''),
-                'USER_NAME' => ag($json, 'User.Name', ''),
-                'WH_EVENT' => ag($json, 'Event', 'not_set'),
-                'WH_TYPE' => ag($json, 'Item.Type', 'not_set'),
-            ];
-
-            foreach ($attributes as $key => $val) {
-                $request = $request->withAttribute($key, $val);
-            }
-        } catch (Throwable $e) {
-            $logger?->error(sprintf('%s: %s', self::NAME, $e->getMessage()), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'kind' => get_class($e),
-            ]);
-        }
-
-        return $request;
+        return (new InspectRequest(logger: $this->logger))(request: $request);
     }
 
     /**
