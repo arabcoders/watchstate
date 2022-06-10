@@ -285,33 +285,30 @@ Click `Save Changes`
 
 # Environment variables.
 
-| Environment key         | Value   | Description                                                                      | Default                            |
-|-------------------------|---------|----------------------------------------------------------------------------------|------------------------------------|
-| WS_DATA_PATH            | string  | Where key data stored (config, db).                                              | `${BASE_PATH}/var`                 |
-| WS_TMP_DIR              | string  | Where temp data stored. (logs, cache).                                           | `${WS_DATA_PATH}`                  |
-| WS_TZ                   | string  | Set timezone.                                                                    | `UTC`                              |
-| WS_WEBHOOK_DEBUG        | bool    | Store webhook payloads into `${WS_TMP_DIR}/webhooks`                             | `false`                            |
-| WS_REQUEST_DEBUG        | bool    | Store request payloads into `${WS_TMP_DIR}/debug`                                | `false`                            |
-| WS_WEBHOOK_TOKEN_LENGTH | integer | How many bits to use for webhook token generator                                 | `16`                               |
-| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                               | `true`                             |
-| WS_LOGGER_FILE          | string  | Full path to log file.                                                           | `${WS_TMP_DIR}/logs/app.(Ymd).log` |
-| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                               | `ERROR`                            |
-| WS_CRON_IMPORT          | bool    | Enable import scheduled task. Value casted to bool.                              | `false`                            |
-| WS_CRON_IMPORT_AT       | string  | When to run import scheduled task. Valid Cron Expression Expected.               | `0 */1 * * *` (Every 1h)           |
-| WS_CRON_IMPORT_ARGS     | string  | Flags to pass to the import command.                                             | `-v`                               |
-| WS_CRON_EXPORT          | bool    | Enable export scheduled task. Value casted to bool.                              | `false`                            |
-| WS_CRON_EXPORT_AT       | string  | When to run export scheduled task. Valid Cron Expression Expected.               | `30 */1 * * *` (Every 1h 30m)      |
-| WS_CRON_EXPORT_ARGS     | string  | Flags to pass to the export command.                                             | `-v`                               |
-| WS_CRON_PUSH            | bool    | Enable push scheduled task. Value casted to bool.                                | `false`                            |
-| WS_CRON_PUSH_AT         | string  | When to run push scheduled task. Valid Cron Expression Expected.                 | `*/10 * * * *` (Every 10m)         |
-| WS_CRON_PUSH_ARGS       | string  | Flags to pass to the push command.                                               | `-v`                               |
-| WS_LOGS_PRUNE_AFTER     | string  | Delete logs older than specified time. Set to `disable` to disable the pruning.  | `-3 DAYS`                          |
-| WS_DEBUG_IMPORT         | bool    | Log no valid/externals id during import process. stored in `${WS_TMP_DIR}/debug` | `false`                            |
-| WS_LOGS_CONTEXT         | bool    | Add context to console output messages.                                          | `false`                            |
+| Key                   | Type   | Description                                                                     | Default                            |
+|-----------------------|--------|---------------------------------------------------------------------------------|------------------------------------|
+| WS_DATA_PATH          | string | Where key data stored (config, db).                                             | `${BASE_PATH}/var`                 |
+| WS_TMP_DIR            | string | Where temp data stored. (logs, cache).                                          | `${WS_DATA_PATH}`                  |
+| WS_TZ                 | string | Set timezone.                                                                   | `UTC`                              |
+| WS_CRON_IMPORT        | bool   | Enable import scheduled task. Value casted to bool.                             | `false`                            |
+| WS_CRON_IMPORT_AT     | string | When to run import scheduled task. Valid Cron Expression Expected.              | `0 */1 * * *` (Every 1h)           |
+| WS_CRON_IMPORT_ARGS   | string | Flags to pass to the import command.                                            | `-v`                               |
+| WS_CRON_EXPORT        | bool   | Enable export scheduled task. Value casted to bool.                             | `false`                            |
+| WS_CRON_EXPORT_AT     | string | When to run export scheduled task. Valid Cron Expression Expected.              | `30 */1 * * *` (Every 1h 30m)      |
+| WS_CRON_EXPORT_ARGS   | string | Flags to pass to the export command.                                            | `-v`                               |
+| WS_CRON_PUSH          | bool   | Enable push scheduled task. Value casted to bool.                               | `false`                            |
+| WS_CRON_PUSH_AT       | string | When to run push scheduled task. Valid Cron Expression Expected.                | `*/10 * * * *` (Every 10m)         |
+| WS_CRON_PUSH_ARGS     | string | Flags to pass to the push command.                                              | `-v`                               |
+| WS_LOGS_PRUNE_AFTER   | string | Delete logs older than specified time. Set to `disable` to disable the pruning. | `-3 DAYS`                          |
+| WS_LOGS_CONTEXT       | bool   | Add context to console output messages.                                         | `false`                            |
+| WS_LOGGER_FILE_ENABLE | bool   | Save logs to file.                                                              | `true`                             |
+| WS_LOGGER_FILE        | string | Full path to log file.                                                          | `${WS_TMP_DIR}/logs/app.(Ymd).log` |
+| WS_LOGGER_FILE_LEVEL  | string | File Logger Level.                                                              | `ERROR`                            |
+| WS_WEBHOOK_DEBUG      | bool   | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters.   | `false`                            |
 
 # Container specific environment variables.
 
-| Environment key  | Value   | Description                                                          | Default |
+| Key              | Type    | Description                                                          | Default |
 |------------------|---------|----------------------------------------------------------------------|---------|
 | WS_DISABLE_CHOWN | integer | Do not change ownership for needed directories inside the container. | `0`     |
 | WS_DISABLE_HTTP  | integer | Disable included HTTP Server.                                        | `0`     |
