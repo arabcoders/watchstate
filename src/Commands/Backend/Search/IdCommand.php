@@ -21,6 +21,7 @@ final class IdCommand extends Command
         $this->setName('backend:search:id')
             ->setDescription('Get backend metadata related to specific id.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
+            ->addOption('no-cache', null, InputOption::VALUE_NONE, 'Request new response from backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
             ->addArgument('id', InputArgument::REQUIRED, 'Item id.');
@@ -45,12 +46,20 @@ final class IdCommand extends Command
         }
 
         try {
-            $backend = $this->getBackend($input->getArgument('backend'));
+            $backendOpts = $opts = [];
 
-            $opts = [];
+            if ($input->getOption('trace')) {
+                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+            }
+
+            $backend = $this->getBackend($input->getArgument('backend'), $backendOpts);
 
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
+            }
+
+            if ($input->getOption('no-cache')) {
+                $opts[Options::NO_CACHE] = true;
             }
 
             $results = $backend->searchId(id: $id, opts: $opts);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Backends\Emby;
 
-trait EmbyTrait
+trait EmbyActionTrait
 {
-    protected string $clientName = 'EmbyClient';
 }

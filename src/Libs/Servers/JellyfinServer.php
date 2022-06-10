@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Common\Context;
+use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -79,7 +81,7 @@ class JellyfinServer implements ServerInterface
         'PlaybackStop',
     ];
 
-    protected const FIELDS = [
+    public const FIELDS = [
         'ProviderIds',
         'DateCreated',
         'OriginalTitle',
@@ -103,6 +105,8 @@ class JellyfinServer implements ServerInterface
     protected array $cache = [];
 
     protected string|int|null $uuid = null;
+
+    protected Context|null $context = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -150,6 +154,18 @@ class JellyfinServer implements ServerInterface
         }
 
         $cloned->options = $options;
+
+        $cloned->context = new Context(
+            clientName:     static::NAME,
+            backendName:    $name,
+            backendUrl:     $url,
+            backendId:      $uuid,
+            backendToken:   $token,
+            backendUser:    $userId,
+            backendHeaders: $cloned->getHeaders(),
+            trace:          true === ag($options, Options::DEBUG_TRACE),
+            options:        $this->options
+        );
 
         return $cloned;
     }
@@ -265,18 +281,21 @@ class JellyfinServer implements ServerInterface
 
     public function getName(): string
     {
-        return $this->name ?? self::NAME;
+        return $this->name ?? static::NAME;
     }
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        return (new InspectRequest(logger: $this->logger))(request: $request);
+        $response = (new InspectRequest())(context: $this->context, request: $request);
+
+
+        return $response->isSuccessful() ? $response->response : $request;
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
+            throw new HttpException(sprintf('%s: No payload.', static::NAME), 400);
         }
 
         $event = ag($json, 'NotificationType', 'unknown');
@@ -549,70 +568,13 @@ class JellyfinServer implements ServerInterface
      */
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
 
-        $cacheKey = false === ((bool)($opts['nocache'] ?? false)) ? $this->getName() . '_' . $id . '_metadata' : null;
-
-        if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
-            return $this->cacheIO->get(key: $cacheKey);
+        if ($response->isSuccessful()) {
+            return $response->response;
         }
 
-        try {
-            $url = $this->url->withPath(sprintf('/Users/%s/items/' . $id, $this->user))->withQuery(
-                http_build_query(
-                    array_merge_recursive(
-                        [
-                            'recursive' => 'false',
-                            'fields' => implode(',', self::FIELDS),
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                            'includeItemTypes' => 'Episode,Movie,Series',
-                        ],
-                        $opts['query'] ?? []
-                    ),
-                )
-            );
-
-            $this->logger->debug('Requesting [%(backend)] item [%(id)] metadata.', [
-                'backend' => $this->getName(),
-                'id' => $id,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive(
-                    $this->getHeaders(),
-                    $opts['headers'] ?? []
-                )
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Request for [%s] item [%s] responded with unexpected [%s] status code.',
-                        $this->getName(),
-                        $id,
-                        $response->getStatusCode(),
-                    )
-                );
-            }
-
-            $item = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            if (null !== $cacheKey) {
-                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
-            }
-
-            return $item;
-        } catch (ExceptionInterface|JsonException $e) {
-            throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
-        }
+        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
     }
 
     /**
@@ -2127,15 +2089,15 @@ class JellyfinServer implements ServerInterface
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true, bool $checkUser = true): void
     {
         if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(self::NAME . ': No host was set.');
+            throw new RuntimeException(static::NAME . ': No host was set.');
         }
 
         if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(self::NAME . ': No token was set.');
+            throw new RuntimeException(static::NAME . ': No token was set.');
         }
 
         if (true === $checkUser && null === $this->user) {
-            throw new RuntimeException(self::NAME . ': No User was set.');
+            throw new RuntimeException(static::NAME . ': No User was set.');
         }
     }
 

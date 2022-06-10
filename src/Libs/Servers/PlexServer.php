@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Common\Context;
+use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -110,6 +112,7 @@ class PlexServer implements ServerInterface
 
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
+    protected Context|null $context = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -147,6 +150,18 @@ class PlexServer implements ServerInterface
         if ($cloned->cacheIO->has($cloned->cacheKey)) {
             $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
         }
+
+        $cloned->context = new Context(
+            clientName:     self::NAME,
+            backendName:    $name,
+            backendUrl:     $url,
+            backendId:      $uuid,
+            backendToken:   $token,
+            backendUser:    $userId,
+            backendHeaders: $cloned->getHeaders(),
+            trace:          true === ag($options, Options::DEBUG_TRACE),
+            options:        $this->options
+        );
 
         return $cloned;
     }
@@ -284,7 +299,9 @@ class PlexServer implements ServerInterface
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        return (new InspectRequest(logger: $this->logger))(request: $request);
+        $response = (new InspectRequest())(context: $this->context, request: $request);
+
+        return $response->isSuccessful() ? $response->response : $request;
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
@@ -533,7 +550,6 @@ class PlexServer implements ServerInterface
 
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
             $builder['raw'] = $item;
-            $builder['entity'] = $this->createEntity($metadata, $type);
         }
 
         return $builder;
@@ -541,59 +557,13 @@ class PlexServer implements ServerInterface
 
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
 
-        try {
-            $cacheKey = false === (bool)($opts['nocache'] ?? false) ? $this->getName() . '_' . $id . '_metadata' : null;
-
-            if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
-                return $this->cacheIO->get(key: $cacheKey);
-            }
-
-            $url = $this->url->withPath('/library/metadata/' . $id)->withQuery(
-                http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? []))
-            );
-
-            $this->logger->debug('Requesting [%(backend)] item [%(id)] metadata.', [
-                'backend' => $this->getName(),
-                'id' => $id,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive(
-                    $this->getHeaders(),
-                    $opts['headers'] ?? []
-                )
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Request for [%s] item [%s] responded with unexpected [%s] status code.',
-                        $this->getName(),
-                        $id,
-                        $response->getStatusCode(),
-                    )
-                );
-            }
-
-            $item = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            if (null !== $cacheKey) {
-                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
-            }
-
-            return $item;
-        } catch (ExceptionInterface|JsonException|InvalidArgumentException $e) {
-            throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
+        if ($response->isSuccessful()) {
+            return $response->response;
         }
+
+        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
     }
 
     /**
