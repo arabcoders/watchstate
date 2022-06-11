@@ -14,11 +14,13 @@ final class Error
      *
      * @param string $message Error message.
      * @param array $context Error message context.
+     * @param Levels $level Which log level the error should be logged into.
      * @param Throwable|null $previous Previous exception stack trace.
      */
     public function __construct(
         public readonly string $message,
         public readonly array $context = [],
+        public readonly Levels $level = Levels::ERROR,
         public readonly Throwable|null $previous = null,
     ) {
     }
@@ -41,6 +43,16 @@ final class Error
     public function hasTags(): bool
     {
         return true === str_contains($this->message, '%(');
+    }
+
+    /**
+     * Get which log level should this message be logged into.
+     *
+     * @return string
+     */
+    public function level(): string
+    {
+        return $this->level->value;
     }
 
     /**
