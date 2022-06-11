@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Backends\Emby\Action\InspectRequest;
+use App\Backends\Emby\Action\GetIdentifier;
+use App\Libs\Container;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 
@@ -52,4 +54,19 @@ class EmbyServer extends JellyfinServer
 
         return $response->isSuccessful() ? $response->response : $request;
     }
+
+
+    public function getServerUUID(bool $forceRefresh = false): int|string|null
+    {
+        if (false === $forceRefresh && null !== $this->uuid) {
+            return $this->uuid;
+        }
+
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
+
+        $this->uuid = $response->isSuccessful() ? $response->response : null;
+
+        return $this->uuid;
+    }
+
 }

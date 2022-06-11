@@ -7,6 +7,7 @@ namespace App\Libs\Servers;
 use App\Backends\Common\Context;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\InspectRequest;
+use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
@@ -176,35 +177,9 @@ class JellyfinServer implements ServerInterface
             return $this->uuid;
         }
 
-        $this->checkConfig(checkUser: false);
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
 
-        $url = $this->url->withPath('/system/Info');
-
-        $this->logger->debug('Requesting [%(backend)] unique identifier.', [
-            'backend' => $this->getName(),
-            'url' => $url,
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            $this->logger->error(
-                'Request for [%(backend)] unique identifier returned with unexpected [%(status_code)] status code.',
-                [
-                    'backend' => $this->getName(),
-                    'status_code' => $response->getStatusCode(),
-                ]
-            );
-            return null;
-        }
-
-        $json = json_decode(
-            json:        $response->getContent(),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $this->uuid = ag($json, 'Id', null);
+        $this->uuid = $response->isSuccessful() ? $response->response : null;
 
         return $this->uuid;
     }
@@ -1947,7 +1922,7 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, Options::IGNORE_DATE, false) && $rItem->updated >= $entity->updated) {
+            if ($rItem->updated >= $entity->updated && false === ag($this->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
                     'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
                     [
@@ -2169,7 +2144,7 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        if (null !== ($mediaYear = ag($item, 'ProductionYear')) && !empty($metadata)) {
+        if (!empty($metadata) && null !== ($mediaYear = ag($item, 'ProductionYear'))) {
             $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
             $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
         }

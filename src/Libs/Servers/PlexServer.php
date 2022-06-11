@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Backends\Common\Context;
+use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Libs\Config;
@@ -152,7 +153,7 @@ class PlexServer implements ServerInterface
         }
 
         $cloned->context = new Context(
-            clientName:     self::NAME,
+            clientName:     static::NAME,
             backendName:    $name,
             backendUrl:     $url,
             backendId:      $uuid,
@@ -172,35 +173,9 @@ class PlexServer implements ServerInterface
             return $this->uuid;
         }
 
-        $this->checkConfig();
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
 
-        $url = $this->url->withPath('/');
-
-        $this->logger->debug('Requesting [%(backend)] unique identifier.', [
-            'backend' => $this->getName(),
-            'url' => $url,
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            $this->logger->error(
-                'Request for [%(backend)] unique identifier returned with unexpected [%(status_code)] status code.',
-                [
-                    'backend' => $this->getName(),
-                    'status_code' => $response->getStatusCode(),
-                ]
-            );
-            return null;
-        }
-
-        $json = json_decode(
-            json:        $response->getContent(false),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $this->uuid = ag($json, 'MediaContainer.machineIdentifier', null);
+        $this->uuid = $response->isSuccessful() ? $response->response : null;
 
         return $this->uuid;
     }
@@ -294,7 +269,7 @@ class PlexServer implements ServerInterface
 
     public function getName(): string
     {
-        return $this->name ?? self::NAME;
+        return $this->name ?? static::NAME;
     }
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
@@ -307,7 +282,7 @@ class PlexServer implements ServerInterface
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
+            throw new HttpException(sprintf('%s: No payload.', static::NAME), 400);
         }
 
         $item = ag($json, 'Metadata', []);
@@ -823,7 +798,7 @@ class PlexServer implements ServerInterface
             }
         }
 
-        if (iFace::TYPE_MOVIE !== ag($context, 'library.type') && empty($requests)) {
+        if (empty($requests) && iFace::TYPE_MOVIE !== ag($context, 'library.type')) {
             throw new RuntimeException(
                 sprintf(
                     'No requests were made [%s] library [%s] is empty.',
@@ -2003,7 +1978,7 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, Options::IGNORE_DATE, false) && $rItem->updated >= $entity->updated) {
+            if ($rItem->updated >= $entity->updated && false === ag($this->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
                     'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
                     [
@@ -2300,11 +2275,11 @@ class PlexServer implements ServerInterface
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
     {
         if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(self::NAME . ': No host was set.');
+            throw new RuntimeException(static::NAME . ': No host was set.');
         }
 
         if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(self::NAME . ': No token was set.');
+            throw new RuntimeException(static::NAME . ': No token was set.');
         }
     }
 

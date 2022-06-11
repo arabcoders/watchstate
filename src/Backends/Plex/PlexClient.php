@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Backends\Plex;
 
 use App\Backends\Common\Context;
+use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Libs\Container;
 use Psr\Log\LoggerInterface;
@@ -40,5 +41,16 @@ class PlexClient
         }
 
         return $response->response;
+    }
+
+    public function getIdentifier(bool $forceRefresh = false): int|string|null
+    {
+        if (false === $forceRefresh && null !== $this->context->backendId) {
+            return $this->context->backendId;
+        }
+
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
+
+        return $response->isSuccessful() ? $response->response : null;
     }
 }
