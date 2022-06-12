@@ -167,23 +167,15 @@ final class Initializer
         $request = $realRequest;
 
         try {
-            $saveRequestPayload = false;
-
-            // -- Global request dump.
-            if (true === (bool)env('WS_REQUEST_DEBUG')) {
+            // -- Save request payload.
+            if (true === Config::get('webhook.debug') && true === (bool)ag($realRequest->getQueryParams(), 'rdump')) {
                 saveRequestPayload($realRequest);
-                $saveRequestPayload = true;
             }
 
             $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
             if (empty($apikey)) {
                 $log[] = 'No webhook token found in headers or query';
                 throw new HttpException('No Webhook token was found.', 400);
-            }
-
-            // -- Request specific dump.
-            if (false === $saveRequestPayload && null !== ag($realRequest->getQueryParams(), 'rdebug')) {
-                saveRequestPayload($realRequest);
             }
 
             $validUser = $validUUid = null;
@@ -271,6 +263,7 @@ final class Initializer
             }
 
             // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
+            // -- @RELEASE remove 'webhook.import'
             if (true === (bool)ag($server, ['import.enabled', 'webhook.import'])) {
                 if (true === ag_exists($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                     $server = ag_delete($server, 'options.' . Options::IMPORT_METADATA_ONLY);
@@ -293,9 +286,8 @@ final class Initializer
 
             $entity = $class->parseWebhook($request);
 
-            $savePayload = true === Config::get('webhook.debug') || null !== ag($request->getQueryParams(), 'debug');
-
-            if (true === $savePayload && false === $entity->isTainted()) {
+            // -- Dump Webhook context.
+            if (true === Config::get('webhook.debug') && true === (bool)ag($request->getQueryParams(), 'wdump')) {
                 saveWebhookPayload($entity, $request);
             }
 
@@ -455,13 +447,23 @@ final class Initializer
             }
 
             $logger->error(message: $e->getMessage(), context: [
-                'context' => [
-                    'attributes' => $request->getAttributes(),
-                    'log' => $log,
-                ],
+                'attributes' => $request->getAttributes(),
+                'log' => $log,
+                'context' => array_keys_diff(
+                         $realRequest->getServerParams(),
+                         [
+                             'HTTP_HOST',
+                             'SERVER_NAME',
+                             'REMOTE_ADDR',
+                             'X_REQUEST_ID',
+                             'HTTP_USER_AGENT'
+                         ],
+                    has: true
+                ),
                 'trace' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
+                    'kind' => get_class($e),
                 ],
             ]);
 

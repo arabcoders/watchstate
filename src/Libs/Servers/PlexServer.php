@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Common\Context;
+use App\Backends\Plex\Action\GetIdentifier;
+use App\Backends\Plex\Action\GetMetaData;
+use App\Backends\Plex\Action\InspectRequest;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
@@ -109,6 +113,7 @@ class PlexServer implements ServerInterface
 
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
+    protected Context|null $context = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -147,6 +152,18 @@ class PlexServer implements ServerInterface
             $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
         }
 
+        $cloned->context = new Context(
+            clientName:     static::NAME,
+            backendName:    $name,
+            backendUrl:     $url,
+            backendId:      $uuid,
+            backendToken:   $token,
+            backendUser:    $userId,
+            backendHeaders: $cloned->getHeaders(),
+            trace:          true === ag($options, Options::DEBUG_TRACE),
+            options:        $this->options
+        );
+
         return $cloned;
     }
 
@@ -156,35 +173,9 @@ class PlexServer implements ServerInterface
             return $this->uuid;
         }
 
-        $this->checkConfig();
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
 
-        $url = $this->url->withPath('/');
-
-        $this->logger->debug('Requesting [%(backend)] unique identifier.', [
-            'backend' => $this->getName(),
-            'url' => $url,
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            $this->logger->error(
-                'Request for [%(backend)] unique identifier returned with unexpected [%(status_code)] status code.',
-                [
-                    'backend' => $this->getName(),
-                    'status_code' => $response->getStatusCode(),
-                ]
-            );
-            return null;
-        }
-
-        $json = json_decode(
-            json:        $response->getContent(false),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $this->uuid = ag($json, 'MediaContainer.machineIdentifier', null);
+        $this->uuid = $response->isSuccessful() ? $response->response : null;
 
         return $this->uuid;
     }
@@ -278,63 +269,20 @@ class PlexServer implements ServerInterface
 
     public function getName(): string
     {
-        return $this->name ?? self::NAME;
+        return $this->name ?? static::NAME;
     }
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        $logger = null;
+        $response = (new InspectRequest())(context: $this->context, request: $request);
 
-        try {
-            $logger = $opts[LoggerInterface::class] ?? Container::get(LoggerInterface::class);
-
-            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
-
-            if (false === str_starts_with($userAgent, 'PlexMediaServer/')) {
-                return $request;
-            }
-
-            $payload = ag($request->getParsedBody() ?? [], 'payload', null);
-
-            if (null === ($json = json_decode(json: $payload, associative: true, flags: JSON_INVALID_UTF8_IGNORE))) {
-                return $request;
-            }
-
-            $request = $request->withParsedBody($json);
-
-            $attributes = [
-                'ITEM_ID' => ag($json, 'Metadata.ratingKey', ''),
-                'SERVER_ID' => ag($json, 'Server.uuid', ''),
-                'SERVER_NAME' => ag($json, 'Server.title', ''),
-                'SERVER_VERSION' => afterLast($userAgent, '/'),
-                'USER_ID' => ag($json, 'Account.id', ''),
-                'USER_NAME' => ag($json, 'Account.title', ''),
-                'WH_EVENT' => ag($json, 'event', 'not_set'),
-                'WH_TYPE' => ag($json, 'Metadata.type', 'not_set'),
-            ];
-
-            foreach ($attributes as $key => $val) {
-                $request = $request->withAttribute($key, $val);
-            }
-        } catch (Throwable $e) {
-            $logger?->error('Unhandled exception was thrown in [%(client)] during request processing.', [
-                'client' => self::NAME,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-        }
-
-        return $request;
+        return $response->isSuccessful() ? $response->response : $request;
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
+            throw new HttpException(sprintf('%s: No payload.', static::NAME), 400);
         }
 
         $item = ag($json, 'Metadata', []);
@@ -577,7 +525,6 @@ class PlexServer implements ServerInterface
 
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
             $builder['raw'] = $item;
-            $builder['entity'] = $this->createEntity($metadata, $type);
         }
 
         return $builder;
@@ -585,59 +532,13 @@ class PlexServer implements ServerInterface
 
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
 
-        try {
-            $cacheKey = false === (bool)($opts['nocache'] ?? false) ? $this->getName() . '_' . $id . '_metadata' : null;
-
-            if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
-                return $this->cacheIO->get(key: $cacheKey);
-            }
-
-            $url = $this->url->withPath('/library/metadata/' . $id)->withQuery(
-                http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? []))
-            );
-
-            $this->logger->debug('Requesting [%(backend)] item [%(id)] metadata.', [
-                'backend' => $this->getName(),
-                'id' => $id,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive(
-                    $this->getHeaders(),
-                    $opts['headers'] ?? []
-                )
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Request for [%s] item [%s] responded with unexpected [%s] status code.',
-                        $this->getName(),
-                        $id,
-                        $response->getStatusCode(),
-                    )
-                );
-            }
-
-            $item = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            if (null !== $cacheKey) {
-                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
-            }
-
-            return $item;
-        } catch (ExceptionInterface|JsonException|InvalidArgumentException $e) {
-            throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
+        if ($response->isSuccessful()) {
+            return $response->response;
         }
+
+        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
     }
 
     /**
@@ -897,7 +798,7 @@ class PlexServer implements ServerInterface
             }
         }
 
-        if (iFace::TYPE_MOVIE !== ag($context, 'library.type') && empty($requests)) {
+        if (empty($requests) && iFace::TYPE_MOVIE !== ag($context, 'library.type')) {
             throw new RuntimeException(
                 sprintf(
                     'No requests were made [%s] library [%s] is empty.',
@@ -2077,7 +1978,7 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, Options::IGNORE_DATE, false) && $rItem->updated >= $entity->updated) {
+            if ($rItem->updated >= $entity->updated && false === ag($this->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
                     'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
                     [
@@ -2198,7 +2099,10 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($item['Guid']), context: [
+            'backend' => $this->getName(),
+            ...$context,
+        ])->getAll();
     }
 
     protected function parseGuids(array $guids): array
@@ -2374,11 +2278,11 @@ class PlexServer implements ServerInterface
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
     {
         if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(self::NAME . ': No host was set.');
+            throw new RuntimeException(static::NAME . ': No host was set.');
         }
 
         if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(self::NAME . ': No token was set.');
+            throw new RuntimeException(static::NAME . ': No token was set.');
         }
     }
 
@@ -2488,6 +2392,13 @@ class PlexServer implements ServerInterface
         try {
             $json = ag($this->getMetadata($id), 'MediaContainer.Metadata.0', []);
 
+            $context['item'] = [
+                'id' => ag($json, 'ratingKey'),
+                'title' => ag($json, ['title', 'originalTitle'], '??'),
+                'year' => ag($json, 'year', '0000'),
+                'type' => ag($json, 'type', 'unknown'),
+            ];
+
             if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
                 return [];
             }
@@ -2503,7 +2414,10 @@ class PlexServer implements ServerInterface
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']), context: [
+                'backend' => $this->getName(),
+                ...$context,
+            ])->getAll();
 
             return $this->cache['shows'][$id];
         } catch (RuntimeException $e) {

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Common\Context;
+use App\Backends\Jellyfin\Action\GetMetaData;
+use App\Backends\Jellyfin\Action\InspectRequest;
+use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
@@ -78,7 +82,7 @@ class JellyfinServer implements ServerInterface
         'PlaybackStop',
     ];
 
-    protected const FIELDS = [
+    public const FIELDS = [
         'ProviderIds',
         'DateCreated',
         'OriginalTitle',
@@ -102,6 +106,8 @@ class JellyfinServer implements ServerInterface
     protected array $cache = [];
 
     protected string|int|null $uuid = null;
+
+    protected Context|null $context = null;
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -150,6 +156,18 @@ class JellyfinServer implements ServerInterface
 
         $cloned->options = $options;
 
+        $cloned->context = new Context(
+            clientName:     static::NAME,
+            backendName:    $name,
+            backendUrl:     $url,
+            backendId:      $uuid,
+            backendToken:   $token,
+            backendUser:    $userId,
+            backendHeaders: $cloned->getHeaders(),
+            trace:          true === ag($options, Options::DEBUG_TRACE),
+            options:        $this->options
+        );
+
         return $cloned;
     }
 
@@ -159,35 +177,9 @@ class JellyfinServer implements ServerInterface
             return $this->uuid;
         }
 
-        $this->checkConfig(checkUser: false);
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
 
-        $url = $this->url->withPath('/system/Info');
-
-        $this->logger->debug('Requesting [%(backend)] unique identifier.', [
-            'backend' => $this->getName(),
-            'url' => $url,
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            $this->logger->error(
-                'Request for [%(backend)] unique identifier returned with unexpected [%(status_code)] status code.',
-                [
-                    'backend' => $this->getName(),
-                    'status_code' => $response->getStatusCode(),
-                ]
-            );
-            return null;
-        }
-
-        $json = json_decode(
-            json:        $response->getContent(),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $this->uuid = ag($json, 'Id', null);
+        $this->uuid = $response->isSuccessful() ? $response->response : null;
 
         return $this->uuid;
     }
@@ -264,63 +256,21 @@ class JellyfinServer implements ServerInterface
 
     public function getName(): string
     {
-        return $this->name ?? self::NAME;
+        return $this->name ?? static::NAME;
     }
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        $logger = null;
+        $response = (new InspectRequest())(context: $this->context, request: $request);
 
-        try {
-            $logger = $opts[LoggerInterface::class] ?? Container::get(LoggerInterface::class);
 
-            $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
-
-            if (false === str_starts_with($userAgent, 'Jellyfin-Server/')) {
-                return $request;
-            }
-
-            $payload = (string)$request->getBody();
-
-            if (null === ($json = json_decode(json: $payload, associative: true, flags: JSON_INVALID_UTF8_IGNORE))) {
-                return $request;
-            }
-
-            $request = $request->withParsedBody($json);
-
-            $attributes = [
-                'ITEM_ID' => ag($json, 'ItemId', ''),
-                'SERVER_ID' => ag($json, 'ServerId', ''),
-                'SERVER_NAME' => ag($json, 'ServerName', ''),
-                'SERVER_VERSION' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
-                'USER_ID' => ag($json, 'UserId', ''),
-                'USER_NAME' => ag($json, 'NotificationUsername', ''),
-                'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
-                'WH_TYPE' => ag($json, 'ItemType', 'not_set'),
-            ];
-
-            foreach ($attributes as $key => $val) {
-                $request = $request->withAttribute($key, $val);
-            }
-        } catch (Throwable $e) {
-            $logger?->error('Unhandled exception was thrown in [%(client)] during request processing.', [
-                'client' => self::NAME,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-        }
-
-        return $request;
+        return $response->isSuccessful() ? $response->response : $request;
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
         if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', self::NAME), 400);
+            throw new HttpException(sprintf('%s: No payload.', static::NAME), 400);
         }
 
         $event = ag($json, 'NotificationType', 'unknown');
@@ -593,70 +543,13 @@ class JellyfinServer implements ServerInterface
      */
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
 
-        $cacheKey = false === ((bool)($opts['nocache'] ?? false)) ? $this->getName() . '_' . $id . '_metadata' : null;
-
-        if (null !== $cacheKey && $this->cacheIO->has($cacheKey)) {
-            return $this->cacheIO->get(key: $cacheKey);
+        if ($response->isSuccessful()) {
+            return $response->response;
         }
 
-        try {
-            $url = $this->url->withPath(sprintf('/Users/%s/items/' . $id, $this->user))->withQuery(
-                http_build_query(
-                    array_merge_recursive(
-                        [
-                            'recursive' => 'false',
-                            'fields' => implode(',', self::FIELDS),
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                            'includeItemTypes' => 'Episode,Movie,Series',
-                        ],
-                        $opts['query'] ?? []
-                    ),
-                )
-            );
-
-            $this->logger->debug('Requesting [%(backend)] item [%(id)] metadata.', [
-                'backend' => $this->getName(),
-                'id' => $id,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive(
-                    $this->getHeaders(),
-                    $opts['headers'] ?? []
-                )
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Request for [%s] item [%s] responded with unexpected [%s] status code.',
-                        $this->getName(),
-                        $id,
-                        $response->getStatusCode(),
-                    )
-                );
-            }
-
-            $item = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            if (null !== $cacheKey) {
-                $this->cacheIO->set(key: $cacheKey, value: $item, ttl: new DateInterval('PT5M'));
-            }
-
-            return $item;
-        } catch (ExceptionInterface|JsonException $e) {
-            throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
-        }
+        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
     }
 
     /**
@@ -2029,7 +1922,7 @@ class JellyfinServer implements ServerInterface
                 return;
             }
 
-            if (false === ag($this->options, Options::IGNORE_DATE, false) && $rItem->updated >= $entity->updated) {
+            if ($rItem->updated >= $entity->updated && false === ag($this->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
                     'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
                     [
@@ -2131,7 +2024,10 @@ class JellyfinServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($providersId))->getAll();
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($providersId), context: [
+            'backend' => $this->getName(),
+            ...$context,
+        ])->getAll();
     }
 
     protected function getGuids(array $ids): array
@@ -2171,15 +2067,15 @@ class JellyfinServer implements ServerInterface
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true, bool $checkUser = true): void
     {
         if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(self::NAME . ': No host was set.');
+            throw new RuntimeException(static::NAME . ': No host was set.');
         }
 
         if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(self::NAME . ': No token was set.');
+            throw new RuntimeException(static::NAME . ': No token was set.');
         }
 
         if (true === $checkUser && null === $this->user) {
-            throw new RuntimeException(self::NAME . ': No User was set.');
+            throw new RuntimeException(static::NAME . ': No User was set.');
         }
     }
 
@@ -2251,7 +2147,7 @@ class JellyfinServer implements ServerInterface
             }
         }
 
-        if (null !== ($mediaYear = ag($item, 'ProductionYear')) && !empty($metadata)) {
+        if (!empty($metadata) && null !== ($mediaYear = ag($item, 'ProductionYear'))) {
             $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
             $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
         }
@@ -2305,6 +2201,13 @@ class JellyfinServer implements ServerInterface
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
+            $context['item'] = [
+                'id' => ag($json, 'Id'),
+                'title' => ag($json, ['Name', 'OriginalTitle'], '??'),
+                'year' => ag($json, 'ProductionYear', null),
+                'type' => ag($json, 'Type'),
+            ];
+
             if (null === ($itemType = ag($json, 'Type')) || 'Series' !== $itemType) {
                 $this->cache['shows'][$id] = [];
                 return [];
@@ -2317,7 +2220,10 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId), context: [
+                'backend' => $this->getName(),
+                ...$context,
+            ])->getAll();
 
             return $this->cache['shows'][$id];
         } catch (Throwable $e) {

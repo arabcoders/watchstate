@@ -44,8 +44,9 @@ final class Guid
      *
      * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
      * @param bool $includeVirtual Whether to consider virtual guids.
+     * @param array $context
      */
-    public function __construct(array $guids, bool $includeVirtual = true)
+    public function __construct(array $guids, bool $includeVirtual = true, array $context = [])
     {
         $supported = self::getSupported(includeVirtual: $includeVirtual);
 
@@ -58,35 +59,40 @@ final class Guid
                 continue;
             }
 
-            if (!is_string($key)) {
+            if (false === is_string($key)) {
                 $this->getLogger()->warning(
-                    sprintf(
-                        'Unexpected key type was given. Expecting \'string\' but got \'%s\'.',
-                        get_debug_type($key)
-                    ),
+                    'Ignoring [%(backend)] %(item.type) [%(item.title)] external id. Unexpected key type [%(given)] was given.',
+                    [
+                        'key' => (string)$key,
+                        'given' => get_debug_type($key),
+                        ...$context,
+                    ]
                 );
                 continue;
             }
 
             if (null === ($supported[$key] ?? null)) {
                 $this->getLogger()->warning(
-                    sprintf(
-                        'Unexpected key \'%s\'. Expecting \'%s\'.',
-                        $key,
-                        implode(', ', array_keys($supported))
-                    ),
+                    'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Not supported.',
+                    [
+                        'key' => $key,
+                        ...$context,
+                    ]
                 );
                 continue;
             }
 
             if ($supported[$key] !== ($valueType = get_debug_type($value))) {
                 $this->getLogger()->warning(
-                    sprintf(
-                        'Unexpected value type for \'%s\'. Expecting \'%s\' but got \'%s\'.',
-                        $key,
-                        $supported[$key],
-                        $valueType
-                    )
+                    'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value type.',
+                    [
+                        'key' => $key,
+                        'condition' => [
+                            'expecting' => $supported[$key],
+                            'actual' => $valueType,
+                        ],
+                        ...$context,
+                    ]
                 );
                 continue;
             }
@@ -94,12 +100,13 @@ final class Guid
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
                     $this->getLogger()->warning(
-                        sprintf(
-                            'Unexpected value for \'%s\'. Expecting \'%s\' but got \'%s\'.',
-                            $key,
-                            self::VALIDATE_GUID[$key]['example'],
-                            $value
-                        )
+                        'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value expecting [%(expected)] but got [%(given)].',
+                        [
+                            'key' => $key,
+                            'expected' => self::VALIDATE_GUID[$key]['example'],
+                            'given' => $value,
+                            ...$context,
+                        ]
                     );
                     continue;
                 }
@@ -166,12 +173,13 @@ final class Guid
      *
      * @param array $payload array of [ 'key' => 'value' ] pairs of [ 'db_source' => 'external id' ].
      * @param bool $includeVirtual Whether to include parsing of Virtual guids.
+     * @param array $context
      *
      * @return self
      */
-    public static function fromArray(array $payload, bool $includeVirtual = true): self
+    public static function fromArray(array $payload, bool $includeVirtual = true, array $context = []): self
     {
-        return new self(guids: $payload, includeVirtual: $includeVirtual);
+        return new self(guids: $payload, includeVirtual: $includeVirtual, context: $context);
     }
 
     /**
