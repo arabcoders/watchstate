@@ -160,7 +160,16 @@ final class StateEntity implements iFace
             array_intersect_key(
                 $this->guids,
                 Guid::getSupported(includeVirtual: true)
-            )
+            ), context: [
+                'backend' => $this->via,
+                'backend_id' => ag($this->getMetadata($this->via) ?? [], 'id'),
+                'item' => [
+                    'id' => $this->id,
+                    'type' => $this->type,
+                    'year' => $this->year,
+                    'title' => $this->getName()
+                ]
+            ]
         )->getPointers();
     }
 
@@ -215,7 +224,16 @@ final class StateEntity implements iFace
             return [];
         }
 
-        $list = Guid::fromArray($this->getRelativeGuids())->getPointers();
+        $list = Guid::fromArray($this->getRelativeGuids(), context: [
+            'backend' => $this->via,
+            'backend_id' => ag($this->getMetadata($this->via) ?? [], 'id'),
+            'item' => [
+                'id' => $this->id,
+                'type' => $this->type,
+                'year' => $this->year,
+                'title' => $this->getName()
+            ]
+        ])->getPointers();
 
         $rPointers = [];
 

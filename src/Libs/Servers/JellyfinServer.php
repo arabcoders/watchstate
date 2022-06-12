@@ -2024,7 +2024,10 @@ class JellyfinServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($providersId))->getAll();
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($providersId), context: [
+            'backend' => $this->getName(),
+            ...$context,
+        ])->getAll();
     }
 
     protected function getGuids(array $ids): array
@@ -2198,6 +2201,13 @@ class JellyfinServer implements ServerInterface
                 flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
+            $context['item'] = [
+                'id' => ag($json, 'Id'),
+                'title' => ag($json, ['Name', 'OriginalTitle'], '??'),
+                'year' => ag($json, 'ProductionYear', null),
+                'type' => ag($json, 'Type'),
+            ];
+
             if (null === ($itemType = ag($json, 'Type')) || 'Series' !== $itemType) {
                 $this->cache['shows'][$id] = [];
                 return [];
@@ -2210,7 +2220,10 @@ class JellyfinServer implements ServerInterface
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId), context: [
+                'backend' => $this->getName(),
+                ...$context,
+            ])->getAll();
 
             return $this->cache['shows'][$id];
         } catch (Throwable $e) {

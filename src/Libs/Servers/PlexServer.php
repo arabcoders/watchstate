@@ -2099,7 +2099,10 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($item['Guid']))->getAll();
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($item['Guid']), context: [
+            'backend' => $this->getName(),
+            ...$context,
+        ])->getAll();
     }
 
     protected function parseGuids(array $guids): array
@@ -2389,6 +2392,13 @@ class PlexServer implements ServerInterface
         try {
             $json = ag($this->getMetadata($id), 'MediaContainer.Metadata.0', []);
 
+            $context['item'] = [
+                'id' => ag($json, 'ratingKey'),
+                'title' => ag($json, ['title', 'originalTitle'], '??'),
+                'year' => ag($json, 'year', '0000'),
+                'type' => ag($json, 'type', 'unknown'),
+            ];
+
             if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
                 return [];
             }
@@ -2404,7 +2414,10 @@ class PlexServer implements ServerInterface
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']))->getAll();
+            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']), context: [
+                'backend' => $this->getName(),
+                ...$context,
+            ])->getAll();
 
             return $this->cache['shows'][$id];
         } catch (RuntimeException $e) {
