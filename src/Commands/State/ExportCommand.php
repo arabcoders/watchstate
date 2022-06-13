@@ -278,9 +278,9 @@ class ExportCommand extends Command
             $this->export($export, $input);
         }
 
-        $total = $this->queue->getQueue();
+        $total = count($this->queue->getQueue());
 
-        if (count($total) >= 1) {
+        if ($total >= 1) {
             $this->logger->notice('SYSTEM: Sending [%(total)] change play state requests.', [
                 'total' => $total
             ]);
