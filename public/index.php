@@ -11,7 +11,7 @@ ini_set('display_errors', 'Off');
 require __DIR__ . '/../pre_init.php';
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    print 'Dependencies are missing please refer to the documentation to know more about this.';
+    print 'Dependencies are missing please refer to https://github.com/ArabCoders/watchstate/blob/master/FAQ.md';
     exit(Command::FAILURE);
 }
 
@@ -26,6 +26,7 @@ set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
     $message = trim(sprintf('%s: %s (%s:%d)', $number, $error, $file, $line));
     $out = fn($message) => env('IN_DOCKER') ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
     $out($message);
+
     exit(Command::FAILURE);
 });
 
