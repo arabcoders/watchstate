@@ -2220,7 +2220,7 @@ class PlexServer implements ServerInterface
 
                 // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
-                    $this->logger->warning(
+                    $this->logger->info(
                         '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
                         [
                             'key' => $key,
