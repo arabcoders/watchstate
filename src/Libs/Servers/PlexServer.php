@@ -363,6 +363,7 @@ class PlexServer implements ServerInterface
                             str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ),
                     },
+                    'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
                     'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
                 ],
             ]);
@@ -2122,12 +2123,14 @@ class PlexServer implements ServerInterface
             return;
         }
 
+        $gContext = ag_set(
+            $context,
+            'item.plex_id',
+            str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none'
+        );
         $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray(
-            payload: $this->getGuids($item['Guid'], context: $context),
-            context: [
-                         'backend' => $this->getName(),
-                         ...$context,
-                     ]
+            payload: $this->getGuids($item['Guid'], context: [...$gContext]),
+            context: ['backend' => $this->getName(), ...$context,]
         )->getAll();
     }
 
@@ -2217,7 +2220,7 @@ class PlexServer implements ServerInterface
 
                 // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
-                    $this->logger->info(
+                    $this->logger->warning(
                         '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
                         [
                             'key' => $key,
@@ -2366,7 +2369,8 @@ class PlexServer implements ServerInterface
                     ),
                 },
                 'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
-            ]
+                'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
+            ],
         ];
         $guids = $this->getGuids(ag($item, 'Guid', []), context: $context);
 
@@ -2476,10 +2480,16 @@ class PlexServer implements ServerInterface
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid'], context: $context), context: [
-                'backend' => $this->getName(),
-                ...$context,
-            ])->getAll();
+            $gContext = ag_set(
+                $context,
+                'item.plex_id',
+                str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none'
+            );
+
+            $this->cache['shows'][$id] = Guid::fromArray(
+                payload: $this->getGuids($json['Guid'], context: [...$gContext]),
+                context: ['backend' => $this->getName(), ...$context]
+            )->getAll();
 
             return $this->cache['shows'][$id];
         } catch (RuntimeException $e) {
