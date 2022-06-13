@@ -18,6 +18,8 @@ use Psr\Log\LoggerInterface;
 
 final class PDOAdapter implements StorageInterface
 {
+    private const LOCK_RETRY = 4;
+
     private bool $viaTransaction = false;
     private bool $singleTransaction = false;
 
@@ -87,7 +89,7 @@ final class PDOAdapter implements StorageInterface
                 );
             }
 
-            $this->stmt['insert']->execute($data);
+            $this->execute($this->stmt['insert'], $data);
 
             $entity->id = (int)$this->pdo->lastInsertId();
         } catch (PDOException $e) {
@@ -111,7 +113,7 @@ final class PDOAdapter implements StorageInterface
         }
 
         if (null !== $entity->id) {
-            $stmt = $this->pdo->query(
+            $stmt = $this->query(
                 sprintf(
                     'SELECT * FROM state WHERE %s = %d',
                     iFace::COLUMN_ID,
@@ -169,7 +171,7 @@ final class PDOAdapter implements StorageInterface
             $class = $opts['class'];
         }
 
-        foreach ($this->pdo->query($sql) as $row) {
+        foreach ($this->query($sql) as $row) {
             $arr[] = $class::fromArray($row);
         }
 
@@ -184,7 +186,7 @@ final class PDOAdapter implements StorageInterface
             $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
         }
 
-        return (int)$this->pdo->query($sql)->fetchColumn();
+        return (int)$this->query($sql)->fetchColumn();
     }
 
     public function find(iFace ...$items): array
@@ -235,7 +237,7 @@ final class PDOAdapter implements StorageInterface
                 );
             }
 
-            $this->stmt['update']->execute($data);
+            $this->execute($this->stmt['update'], $data);
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
             if (false === $this->viaTransaction && false === $this->singleTransaction) {
@@ -264,7 +266,7 @@ final class PDOAdapter implements StorageInterface
                 $id = $entity->id;
             }
 
-            $this->pdo->query(sprintf('DELETE FROM state WHERE %s = %d', iFace::COLUMN_ID, (int)$id));
+            $this->query(sprintf('DELETE FROM state WHERE %s = %d', iFace::COLUMN_ID, (int)$id));
         } catch (PDOException $e) {
             $this->logger->error($e->getMessage());
             return false;
@@ -500,7 +502,7 @@ final class PDOAdapter implements StorageInterface
 
         $stmt = $this->pdo->prepare($sql);
 
-        if (false === $stmt->execute($cond)) {
+        if (false === $this->execute($stmt, $cond)) {
             throw new StorageException('Failed to execute sql query.', 61);
         }
 
@@ -509,6 +511,60 @@ final class PDOAdapter implements StorageInterface
         }
 
         return $entity::fromArray($row);
+    }
+
+    private function execute(PDOStatement $stmt, array $cond = []): bool
+    {
+        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
+            try {
+                return $stmt->execute($cond);
+            } catch (PDOException $e) {
+                if (false !== stripos($e->getMessage(), 'database is locked')) {
+                    if ($i >= self::LOCK_RETRY) {
+                        throw $e;
+                    }
+
+                    /** @noinspection PhpUnhandledExceptionInspection */
+                    $sleep = self::LOCK_RETRY + random_int(1, 3);
+
+                    $this->logger->warning('Database is locked. sleeping for [%(sleep)].', ['sleep' => $sleep]);
+
+                    sleep($sleep);
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function query(string $sql): PDOStatement|false
+    {
+        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
+            try {
+                return $this->pdo->query($sql);
+            } catch (PDOException $e) {
+                if (false !== stripos($e->getMessage(), 'database is locked')) {
+                    if ($i >= self::LOCK_RETRY) {
+                        throw $e;
+                    }
+
+                    /** @noinspection PhpUnhandledExceptionInspection */
+                    $sleep = self::LOCK_RETRY + random_int(1, 3);
+
+                    $this->logger?->warning('Database is locked. sleeping for [%(sleep)].', context: [
+                        'sleep' => $sleep,
+                    ]);
+
+                    sleep($sleep);
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
