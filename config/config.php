@@ -70,7 +70,7 @@ return (function () {
         'default' => [
             'options' => [
                 'headers' => [
-                    'User-Agent' => ag($config, 'name') . '/' . ag($config, 'version'),
+                    'User-Agent' => ag($config, 'name') . '/' . getAppVersion(),
                 ],
                 'timeout' => 300.0,
                 'extra' => [

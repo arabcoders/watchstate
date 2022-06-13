@@ -344,14 +344,38 @@ class PlexServer implements ServerInterface
                 ]);
             }
 
-            if (null !== ($guids = $this->getGuids(ag($item, 'Guid', []))) && false === empty($guids)) {
+            $obj = ag($this->getMetadata(id: $id), 'MediaContainer.Metadata.0', []);
+
+            $guids = $this->getGuids(ag($item, 'Guid', []), context: [
+                'item' => [
+                    'id' => ag($item, 'ratingKey'),
+                    'type' => ag($item, 'type'),
+                    'title' => match ($type) {
+                        iFace::TYPE_MOVIE => sprintf(
+                            '%s (%s)',
+                            ag($item, ['title', 'originalTitle'], '??'),
+                            ag($item, 'year', '0000')
+                        ),
+                        iFace::TYPE_EPISODE => sprintf(
+                            '%s - (%sx%s)',
+                            ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                            str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                        ),
+                    },
+                    'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
+                    'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
+                ],
+            ]);
+
+            if (false === empty($guids)) {
                 $guids += Guid::makeVirtualGuid($this->getName(), (string)$id);
                 $fields[iFace::COLUMN_GUIDS] = $guids;
                 $fields[iFace::COLUMN_META_DATA][$this->getName()][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
             }
 
             $entity = $this->createEntity(
-                item: ag($this->getMetadata(id: $id), 'MediaContainer.Metadata.0', []),
+                item: $obj,
                 type: $type,
                 opts: ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
@@ -2058,7 +2082,7 @@ class PlexServer implements ServerInterface
 
         $context['item'] = [
             'id' => ag($item, 'ratingKey'),
-            'title' => ag($item, ['title', 'originalTitle'], '??'),
+            'title' => sprintf('%s (%s)', ag($item, ['title', 'originalTitle'], '??'), ag($item, 'year', '0000')),
             'year' => ag($item, 'year', '0000'),
             'type' => ag($item, 'type', 'unknown'),
         ];
@@ -2099,10 +2123,15 @@ class PlexServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($item['Guid']), context: [
-            'backend' => $this->getName(),
-            ...$context,
-        ])->getAll();
+        $gContext = ag_set(
+            $context,
+            'item.plex_id',
+            str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none'
+        );
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray(
+            payload: $this->getGuids($item['Guid'], context: [...$gContext]),
+            context: ['backend' => $this->getName(), ...$context,]
+        )->getAll();
     }
 
     protected function parseGuids(array $guids): array
@@ -2189,8 +2218,23 @@ class PlexServer implements ServerInterface
                     continue;
                 }
 
-                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($val)) {
-                    if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$val) {
+                // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
+                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
+                    $this->logger->info(
+                        '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
+                        [
+                            'key' => $key,
+                            'backend' => $this->getName(),
+                            'ids' => sprintf('%s, %s', $guid[self::GUID_MAPPER[$key]], $value),
+                            ...$context
+                        ]
+                    );
+
+                    if (false === ctype_digit($val)) {
+                        continue;
+                    }
+
+                    if ((int)$guid[self::GUID_MAPPER[$key]] < (int)$val) {
                         continue;
                     }
                 }
@@ -2307,7 +2351,29 @@ class PlexServer implements ServerInterface
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
-        $guids = $this->getGuids(ag($item, 'Guid', []));
+        $context = [
+            'item' => [
+                'id' => ag($item, 'ratingKey'),
+                'type' => ag($item, 'type'),
+                'title' => match ($type) {
+                    iFace::TYPE_MOVIE, 'show' => sprintf(
+                        '%s (%s)',
+                        ag($item, ['title', 'originalTitle'], '??'),
+                        ag($item, 'year', '0000')
+                    ),
+                    iFace::TYPE_EPISODE => sprintf(
+                        '%s - (%sx%s)',
+                        ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                    ),
+                },
+                'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
+                'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
+            ],
+        ];
+        $guids = $this->getGuids(ag($item, 'Guid', []), context: $context);
+
         $guids += Guid::makeVirtualGuid($this->getName(), (string)ag($item, 'ratingKey'));
 
         $builder = [
@@ -2394,8 +2460,8 @@ class PlexServer implements ServerInterface
 
             $context['item'] = [
                 'id' => ag($json, 'ratingKey'),
-                'title' => ag($json, ['title', 'originalTitle'], '??'),
-                'year' => ag($json, 'year', '0000'),
+                'title' => sprintf('%s (%s)', ag($json, ['title', 'originalTitle'], '??'), ag($json, 'year', '0000')),
+                'year' => ag($json, ['grandParentYear', 'parentYear', 'year'], '0000'),
                 'type' => ag($json, 'type', 'unknown'),
             ];
 
@@ -2414,10 +2480,16 @@ class PlexServer implements ServerInterface
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($json['Guid']), context: [
-                'backend' => $this->getName(),
-                ...$context,
-            ])->getAll();
+            $gContext = ag_set(
+                $context,
+                'item.plex_id',
+                str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none'
+            );
+
+            $this->cache['shows'][$id] = Guid::fromArray(
+                payload: $this->getGuids($json['Guid'], context: [...$gContext]),
+                context: ['backend' => $this->getName(), ...$context]
+            )->getAll();
 
             return $this->cache['shows'][$id];
         } catch (RuntimeException $e) {

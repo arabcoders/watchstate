@@ -23,7 +23,7 @@ final class ViewCommand extends Command
     protected function configure(): void
     {
         $this->setName('servers:view')
-            ->setDescription('View Servers settings.')
+            ->setDescription('View Backends settings.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
@@ -70,7 +70,7 @@ final class ViewCommand extends Command
 
         if (empty($list)) {
             throw new RuntimeException(
-                $isCustom ? '--servers-filter/-s did not return any server.' : 'No server were found.'
+                $isCustom ? '--servers-filter/-s did not return any backend.' : 'No backends were found.'
             );
         }
 
@@ -91,7 +91,7 @@ final class ViewCommand extends Command
         }
 
         (new Table($output))->setStyle('box')
-            ->setHeaders(['Server', 'Filter: ' . (empty($filter) ? 'None' : $filter)]
+            ->setHeaders(['Backend', 'Filter: ' . (empty($filter) ? 'None' : $filter)]
             )->setRows($rows)
             ->render();
 
