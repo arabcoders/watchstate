@@ -69,13 +69,13 @@ please refer to [Environment variables list](FAQ.md#q-what-environment-variables
 ### Supported import methods
 
 * Scheduled Task.
-* On demand sync.
+* On demand.
 * Webhooks.
 
 ### Note:
 
-Even if you use webhooks import method, you should still have import task enabled to keep healthy relationship. and pick
-up any missed events.
+Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy relationship.
+and pick up any missed events.
 
 ---
 
