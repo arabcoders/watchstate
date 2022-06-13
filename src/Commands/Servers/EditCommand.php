@@ -20,7 +20,7 @@ final class EditCommand extends Command
     protected function configure(): void
     {
         $this->setName('servers:edit')
-            ->setDescription('Edit Server settings inline.')
+            ->setDescription('Edit backend settings inline.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')

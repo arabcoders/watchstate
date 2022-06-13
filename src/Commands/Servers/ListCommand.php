@@ -6,10 +6,10 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Options;
+use DateTimeInterface;
 use Exception;
 use RuntimeException;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -21,7 +21,7 @@ final class ListCommand extends Command
     {
         $this->setName('servers:list')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->setDescription('List servers.');
+            ->setDescription('List Added backends.');
     }
 
     /**
@@ -41,50 +41,35 @@ final class ListCommand extends Command
 
         $list = [];
 
-        $table = new Table($output);
-        $table->setHeaders(
-            [
-                'Server Name',
-                'Server Type',
-                'Webhook: Import',
-                'Webhook: Push',
-                'Scheduled Task: Import',
-                'Scheduled Task: Export'
-            ]
-        );
+        foreach (Config::get('servers', []) as $name => $server) {
+            $import = 'Disabled';
 
-        $x = 0;
-        $servers = Config::get('servers', []);
-        $count = count($servers);
+            if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                $import = 'Metadata only';
+            }
 
-        foreach ($servers as $name => $server) {
-            $x++;
-            if (true === ag($server, 'import.enabled')) {
-                $importStatus = ($date = ag($server, 'import.lastSync')) ? makeDate($date) : 'Never';
-            } else {
-                $importStatus = 'Disabled';
+            if (true === (bool)ag($server, 'import.enabled')) {
+                $import = 'Play state & Metadata';
             }
-            if (true === ag($server, 'export.enabled')) {
-                $exportStatus = ($date = ag($server, 'export.lastSync')) ? makeDate($date) : 'Never';
-            } else {
-                $exportStatus = 'Disabled';
-            }
+
+            $importLastRun = ($date = ag($server, 'import.lastSync')) ? makeDate($date) : 'No record';
+            $exportLastRun = ($date = ag($server, 'export.lastSync')) ? makeDate($date) : 'No record';
 
             $list[] = [
-                $name,
-                ucfirst(ag($server, 'type')),
-                ag($server, 'webhook.token') && ag($server, 'webhook.import') ? 'Enabled' : 'Disabled',
-                true === ag($server, 'webhook.push') ? 'Enabled' : 'Disabled',
-                $importStatus,
-                $exportStatus,
+                'Name' => $name,
+                'Type' => ucfirst(ag($server, 'type')),
+                'Import' => $import,
+                'Export' => true === (bool)ag($server, 'export.enabled') ? 'Enabled' : 'Disabled',
+                'LastImportDate' => ($importLastRun instanceof DateTimeInterface) ? $importLastRun->format(
+                    'Y-m-d H:i:s T'
+                ) : $importLastRun,
+                'LastExportDate' => ($exportLastRun instanceof DateTimeInterface) ? $exportLastRun->format(
+                    'Y-m-d H:i:s T'
+                ) : $exportLastRun,
             ];
-
-            if ($x < $count) {
-                $list[] = new TableSeparator();
-            }
         }
 
-        $table->setStyle('box')->setRows($list)->render();
+        $this->displayContent($list, $output, $input->getOption('output'));
 
         return self::SUCCESS;
     }
