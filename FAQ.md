@@ -1,6 +1,6 @@
 # FAQ
 
-### Q: How to update play state for newly added media backend without overwriting my current play state?
+### Q: How to sync play state to a new backend without overwriting current play state?
 
 Add the backend and when asked, answer `no` for allow import. when you finish, then run the following command:
 
@@ -15,23 +15,19 @@ successful you can then enable the import feature if you want.
 
 ### Q: Is there support for Multi-user setup?
 
-No, The tool is designed to work for single user. However, It's possible to run container for each user.
+No, The tool is designed to work for single user. However, It's possible to run container for each user. You can use
+single container for all users, however it's not really easy refer
+to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
 
-Note: for Plex managed users run the following command to extract each managed user access token.
+#### Note
+
+Note: for Plex home/managed users run the following command to extract each managed user access token.
 
 ```bash
 $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
 ```
 
-For Jellyfin/Emby, you can use same api token and just replace the user id.
-
----
-
-### Q: Sometimes newly added episodes or movies don't make it to webhook endpoint?
-
-As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
-complement webhooks, its good idea enable the scheduled tasks of import/export and let them run once in a while to
-remap the data.
+For Jellyfin/Emby, you can just generate new API tokens.
 
 ----
 
@@ -90,7 +86,7 @@ mods to fix their db entries.
 
 ----
 
-### Q: I keep on seeing "Ignoring 'XXX'. No valid/supported external ids." in logs?
+### Q: I keep on seeing "No valid/supported external ids." in logs?
 
 This most likely means that the item is not matched in your media backend
 
@@ -98,24 +94,16 @@ This most likely means that the item is not matched in your media backend
 * For plex click the (...), and click Fix match. after that refresh metadata.
 
 For episodes, we support both external ids like movies and relative unique ids, To make episodes sync work at least one
-of the following conditions has to be met:
+of the following conditions has to be true:
 
 * The episode should have external ids.
-* The series should have external ids, to make relative unique id works.
+* The parent show should have external ids, to make relative unique id works.
 
 ---
 
 ### Q: Does this tool require webhooks to work?
 
-No, You can use the task scheduler or on demand sync if you want. However, we recommend the webhook method as it's the
-most efficient method to update play state.
-
---- 
-
-### Q: When i use jellyfin, i sometimes see double events?
-
-This most likely a bug in the plugin [jf-webhook #113](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/113),
-Just reload the page make sure there is only one added watchstate endpoint.
+No, You can use the task scheduler or on demand sync if you want.
 
 ---
 
@@ -147,7 +135,7 @@ entirely by running the following command
 $ docker exec -ti watchstate console servers:edit --delete --key options.ignore -- [SERVER_NAME] 
 ```
 
-##### Notice
+##### Note
 
 While this feature works for manual/task scheduler for all supported backends, Jellyfin/Emby does not report library id
 on webhook event. So, this feature will not work for them in webhook context and the items will be processed.
@@ -211,15 +199,15 @@ where `[QUERY_STRING]` is the keyword that you want to search for
 
 ---
 
-### Q: How to the metadata about specific item?
+### Q: How to get metadata about specific item id?
 
 Use the following command:
 
 ```bash
-$ docker exec -ti console server backend:search:id [BACKEND_NAME] [ITEM_ID]
+$ docker exec -ti console server backend:search:id [BACKEND_NAME] [BACKEND_ITEM_ID]
 ```
 
-where `[ITEM_ID]` refers to backend item id
+where `[BACKEND_ITEM_ID]` refers to backend item id
 
 ### Optional flags
 
@@ -243,12 +231,12 @@ where `[LIBRARY_ID]` refers to backend library id
 * `[-p, --percentage]` How much in percentage the title has to be in path to be marked as matched item. Default
   to `50.0%`.
 * `[-o, --output]` Set output mode, it can be `yaml`, `json` or `table`. Default to `table`.
-* `[-m, --method]` Which algorithm to use, it can be `similarity`, or `levenshtein`. Default to `similarity`.
+* `[-m, --method]` Which method to use, it can be `similarity`, or `levenshtein`. Default to `similarity`.
 * `[--include-raw-response]` Will include backend response in main response body with `raw` key.
 
 ---
 
-### Q: Is it possible to look for unmatched items?
+### Q: How to look for unmatched items?
 
 Use the `backend:library:unmatched` command. For example,
 
@@ -315,3 +303,191 @@ it's slower than `MemoryMapper`.
 | Memory Usage   | (✗) Higher    | (✓) Lower       |
 | Matching Speed | (✓) Faster    | (✗) Slower      |
 | DB Operations  | (✓) Faster    | (✗) Slower      |
+
+---
+
+### Q: What environment variables supported?
+
+| Key                   | Type   | Description                                                                     | Default                            |
+|-----------------------|--------|---------------------------------------------------------------------------------|------------------------------------|
+| WS_DATA_PATH          | string | Where key data stored (config, db).                                             | `${BASE_PATH}/var`                 |
+| WS_TMP_DIR            | string | Where temp data stored. (logs, cache).                                          | `${WS_DATA_PATH}`                  |
+| WS_TZ                 | string | Set timezone.                                                                   | `UTC`                              |
+| WS_CRON_IMPORT        | bool   | Enable import scheduled task. Value casted to bool.                             | `false`                            |
+| WS_CRON_IMPORT_AT     | string | When to run import scheduled task. Valid Cron Expression Expected.              | `0 */1 * * *` (Every 1h)           |
+| WS_CRON_IMPORT_ARGS   | string | Flags to pass to the import command.                                            | `-v`                               |
+| WS_CRON_EXPORT        | bool   | Enable export scheduled task. Value casted to bool.                             | `false`                            |
+| WS_CRON_EXPORT_AT     | string | When to run export scheduled task. Valid Cron Expression Expected.              | `30 */1 * * *` (Every 1h 30m)      |
+| WS_CRON_EXPORT_ARGS   | string | Flags to pass to the export command.                                            | `-v`                               |
+| WS_CRON_PUSH          | bool   | Enable push scheduled task. Value casted to bool.                               | `false`                            |
+| WS_CRON_PUSH_AT       | string | When to run push scheduled task. Valid Cron Expression Expected.                | `*/10 * * * *` (Every 10m)         |
+| WS_CRON_PUSH_ARGS     | string | Flags to pass to the push command.                                              | `-v`                               |
+| WS_LOGS_PRUNE_AFTER   | string | Delete logs older than specified time. Set to `disable` to disable the pruning. | `-3 DAYS`                          |
+| WS_LOGS_CONTEXT       | bool   | Add context to console output messages.                                         | `false`                            |
+| WS_LOGGER_FILE_ENABLE | bool   | Save logs to file.                                                              | `true`                             |
+| WS_LOGGER_FILE        | string | Full path to log file.                                                          | `${WS_TMP_DIR}/logs/app.(Ymd).log` |
+| WS_LOGGER_FILE_LEVEL  | string | File Logger Level.                                                              | `ERROR`                            |
+| WS_WEBHOOK_DEBUG      | bool   | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters.   | `false`                            |
+
+#### Container specific environment variables.
+
+| Key              | Type    | Description                                                          | Default |
+|------------------|---------|----------------------------------------------------------------------|---------|
+| WS_DISABLE_CHOWN | integer | Do not change ownership for needed directories inside the container. | `0`     |
+| WS_DISABLE_HTTP  | integer | Disable included HTTP Server.                                        | `0`     |
+| WS_DISABLE_CRON  | integer | Disable included Task Scheduler.                                     | `0`     |
+| WS_DISABLE_CACHE | integer | Disable included Cache Server.                                       | `0`     |
+| WS_UID           | integer | Set container user id.                                               | `1000`  |
+| WS_GID           | integer | Set container group id.                                              | `1000`  |
+
+---
+
+### Q: How to add webhooks?
+
+To add webhook for your server the URL will be dependent on how you exposed webhook frontend, but typically it will be
+like this:
+
+Directly to container: `http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
+
+Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
+
+If your media backend support sending headers then remove query parameter `?apikey=[WEBHOOK_TOKEN]`, and add this header
+
+```http request
+X-apikey: [WEBHOOK_TOKEN]
+```
+
+where `[WEBHOOK_TOKEN]` Should match the backend specific `webhook.token` value. to see the token for each server run
+
+```bash
+$ docker exec -ti watchstate console servers:view --servers-filter [SERVER_NAME] -- webhook.token
+```
+
+If you see 'Not configured, or invalid key.' or empty value. run the following command
+
+```bash
+$ docker exec -ti watchstate console servers:edit --regenerate-webhook-token -- [SERVER_NAME] 
+```
+
+#### Emby (you need "Emby Premiere" to use webhooks).
+
+Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
+
+##### Webhook Url:
+
+`http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
+
+##### Webhook Events
+
+Select the following events
+
+* Playback events
+* User events
+
+Click `Add Webhook`
+
+#### Plex (you need "PlexPass" to use webhooks)
+
+Go to your plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK)
+
+##### URL:
+
+`http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
+
+Click `Save Changes`
+
+#### Note:
+
+If you have multiple plex backends and use the same PlexPass account for all of them, you have to unify the API key, by
+running the following command:
+
+```bash
+$ docker exec -ti watchstate console servers:unify plex 
+Plex global webhook API key is: [random_string]
+```
+
+The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
+identify the backends, The unify command will do the necessary adjustments to handle multi plex server setup. for more
+information run.
+
+```bash
+$ docker exec -ti watchstate console help servers:unify 
+```
+
+#### Jellyfin (Free)
+
+go to your jellyfin dashboard > plugins > Catalog > install: Notifications > Webhook, restart your jellyfin. After that
+go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
+
+##### Webhook Name:
+
+Choose whatever name you want. For example, `Watchstate-Webhook`
+
+##### Webhook Url:
+
+`http://localhost:8081`
+
+##### Notification Type:
+
+Select the following events
+
+* Item Added
+* User Data Saved
+* Playback Start
+* Playback Stop
+
+##### User Filter:
+
+* Select your user.
+
+##### Item Type:
+
+* Movies
+* Episodes
+
+### Send All Properties (ignores template)
+
+Toggle this checkbox.
+
+### Add Request Header
+
+Key: `x-apikey`
+
+Value: `[WEBHOOK_TOKEN]`
+
+Click `save`
+
+---
+
+### Q: What are the webhook limitations?
+
+Those are some Webhook limitations we discovered for the following media backends.
+
+#### Plex
+
+* Plex does not send webhooks events for "marked as Played/Unplayed".
+* Sometimes does not send events if you add more than one item at time.
+* If you have multi-user setup, Plex will still report the admin account user id as `1`.
+* When you mark items as unwatched, Plex reset the date on the object.
+
+#### Emby
+
+* Emby does not send webhooks events for newly added
+  items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)
+* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
+  played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
+
+#### Jellyfin
+
+* If you don't select a user id, the Plugin will send `itemAdd` event without user data, and will fail the check if
+  you happen to enable `webhook.match.user` for jellyfin.
+* Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
+* Even if you select user id, sometimes `itemAdd` event will fire without user data.
+
+---
+
+### Q: Sometimes newly added episodes or movies don't make it to webhook endpoint?
+
+As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
+complement webhooks, you should enable import/export tasks by settings their respective environment variables in
+your `docker-compose.yaml` file.
