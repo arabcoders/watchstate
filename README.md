@@ -55,7 +55,7 @@ To import your current play state from backends that have import enabled, run th
 $ docker exec -ti watchstate console state:import -v
 ```
 
-This command will pull your play state from all your backends compare them. To selectively import specific backends use
+This command will pull your play state from all your backends. To import from specific backends use
 the `[-s, --servers-filter]` flag which accept comma seperated list of backend names. For example,
 
 ```bash
@@ -74,8 +74,8 @@ please refer to [Environment variables list](FAQ.md#q-what-environment-variables
 
 ### Note:
 
-Even if you use webhooks import method, you should still have import task scheduler enabled to keep healthy
-relationship. and pick up any missed events.
+Even if you use webhooks import method, you should still have import task enabled to keep healthy relationship. and pick
+up any missed events.
 
 ---
 
@@ -87,8 +87,8 @@ To export your current play state to backends that have export enabled, run the 
 $ docker exec -ti watchstate console state:export -v
 ```
 
-This command will export your current play state. To selectively export to specific backends use
-the `[-s, --servers-filter]` flag which accept comma seperated list of server names. For example,
+This command will export your current play state. To export to specific backends use the `[-s, --servers-filter]` flag
+which accept comma seperated list of backend names. For example,
 
 ```bash
 $ docker exec -ti watchstate console state:export -v --servers-filter 'home_plex,home_jellyfin' 
