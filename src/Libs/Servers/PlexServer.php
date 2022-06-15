@@ -8,10 +8,11 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\InspectRequest;
+use App\Backends\Plex\PlexActionTrait;
+use App\Backends\Plex\PlexGuid;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
@@ -41,39 +42,9 @@ use Throwable;
 
 class PlexServer implements ServerInterface
 {
+    use PlexActionTrait;
+
     public const NAME = 'PlexBackend';
-
-    protected const GUID_MAPPER = [
-        'imdb' => Guid::GUID_IMDB,
-        'tmdb' => Guid::GUID_TMDB,
-        'tvdb' => Guid::GUID_TVDB,
-        'tvmaze' => Guid::GUID_TVMAZE,
-        'tvrage' => Guid::GUID_TVRAGE,
-        'anidb' => Guid::GUID_ANIDB,
-    ];
-
-    protected const SUPPORTED_LEGACY_AGENTS = [
-        'com.plexapp.agents.imdb',
-        'com.plexapp.agents.tmdb',
-        'com.plexapp.agents.themoviedb',
-        'com.plexapp.agents.xbmcnfo',
-        'com.plexapp.agents.xbmcnfotv',
-        'com.plexapp.agents.thetvdb',
-        'com.plexapp.agents.hama',
-    ];
-
-    protected const GUID_PLEX_LOCAL = [
-        'plex://',
-        'local://',
-        'com.plexapp.agents.none://',
-    ];
-
-    protected const GUID_AGENT_REPLACER = [
-        'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
-        'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.imdb://',
-        'com.plexapp.agents.thetvdb://' => 'com.plexapp.agents.tvdb://',
-        'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
-    ];
 
     protected const WEBHOOK_ALLOWED_TYPES = [
         'movie',
@@ -97,11 +68,6 @@ class PlexServer implements ServerInterface
         'media.pause',
     ];
 
-    /**
-     * Parse hama agent guid.
-     */
-    private const HAMA_REGEX = '/(?P<source>(anidb|tvdb|tmdb|tsdb|imdb))\d?-(?P<id>[^\[\]]*)/';
-
     protected bool $initialized = false;
     protected UriInterface|null $url = null;
     protected string|null $token = null;
@@ -118,7 +84,8 @@ class PlexServer implements ServerInterface
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cacheIO
+        protected CacheInterface $cacheIO,
+        protected PlexGuid $guid,
     ) {
     }
 
@@ -163,6 +130,8 @@ class PlexServer implements ServerInterface
             trace:          true === ag($options, Options::DEBUG_TRACE),
             options:        $this->options
         );
+
+        $cloned->guid = $this->guid->withContext($cloned->context);
 
         return $cloned;
     }
@@ -346,7 +315,7 @@ class PlexServer implements ServerInterface
 
             $obj = ag($this->getMetadata(id: $id), 'MediaContainer.Metadata.0', []);
 
-            $guids = $this->getGuids(ag($item, 'Guid', []), context: [
+            $guids = $this->guid->get(ag($item, 'Guid', []), context: [
                 'item' => [
                     'id' => ag($item, 'ratingKey'),
                     'type' => ag($item, 'type'),
@@ -375,9 +344,10 @@ class PlexServer implements ServerInterface
             }
 
             $entity = $this->createEntity(
-                item: $obj,
-                type: $type,
-                opts: ['override' => $fields],
+                context: $this->context,
+                guid:    $this->guid,
+                item:    $obj,
+                opts:    ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
             $this->logger->error('Unhandled exception was thrown during [%(backend)] webhook event parsing.', [
@@ -749,7 +719,7 @@ class PlexServer implements ServerInterface
 
                 $itemGuid = ag($item, 'guid');
 
-                if (null !== $itemGuid && false === $this->isLocalPlexId($itemGuid)) {
+                if (null !== $itemGuid && false === $this->guid->isLocal($itemGuid)) {
                     $metadata['guids'][] = $itemGuid;
                 }
 
@@ -1790,18 +1760,19 @@ class PlexServer implements ServerInterface
             }
 
             $entity = $this->createEntity(
-                item: $item,
-                type: $type,
-                opts: $opts + [
-                          'override' => [
-                              iFace::COLUMN_EXTRA => [
-                                  $this->getName() => [
-                                      iFace::COLUMN_EXTRA_EVENT => 'task.import',
-                                      iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                                  ],
-                              ],
-                          ],
-                      ]
+                context: $this->context,
+                guid:    $this->guid,
+                item:    $item,
+                opts:    $opts + [
+                             'override' => [
+                                 iFace::COLUMN_EXTRA => [
+                                     $this->getName() => [
+                                         iFace::COLUMN_EXTRA_EVENT => 'task.import',
+                                         iFace::COLUMN_EXTRA_DATE => makeDate('now'),
+                                     ],
+                                 ],
+                             ],
+                         ]
             );
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
@@ -1825,7 +1796,7 @@ class PlexServer implements ServerInterface
                     $item['Guid'] = [];
                 }
 
-                if (null !== ($itemGuid = ag($item, 'guid')) && false === $this->isLocalPlexId($itemGuid)) {
+                if (null !== ($itemGuid = ag($item, 'guid')) && false === $this->guid->isLocal($itemGuid)) {
                     $item['Guid'][] = $itemGuid;
                 }
 
@@ -1926,7 +1897,12 @@ class PlexServer implements ServerInterface
                 return;
             }
 
-            $rItem = $this->createEntity(item: $item, type: $type, opts: $opts);
+            $rItem = $this->createEntity(
+                context: $this->context,
+                guid:    $this->guid,
+                item:    $item,
+                opts:    $opts
+            );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
                 $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
@@ -1935,7 +1911,7 @@ class PlexServer implements ServerInterface
                     $item['Guid'] = [];
                 }
 
-                if (null !== ($itemGuid = ag($item, 'guid')) && false === $this->isLocalPlexId($itemGuid)) {
+                if (null !== ($itemGuid = ag($item, 'guid')) && false === $this->guid->isLocal($itemGuid)) {
                     $item['Guid'][] = $itemGuid;
                 }
 
@@ -2097,12 +2073,12 @@ class PlexServer implements ServerInterface
             ]);
         }
 
-        if (!$this->hasSupportedGuids(guids: $item['Guid'])) {
+        if (!$this->guid->has(guids: $item['Guid'])) {
             if (null === ($item['Guid'] ?? null)) {
                 $item['Guid'] = [];
             }
 
-            if (null !== ($item['guid'] ?? null) && false === $this->isLocalPlexId($item['guid'])) {
+            if (null !== ($item['guid'] ?? null) && false === $this->guid->isLocal($item['guid'])) {
                 $item['Guid'][] = ['id' => $item['guid']];
             }
 
@@ -2129,194 +2105,9 @@ class PlexServer implements ServerInterface
             str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none'
         );
         $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray(
-            payload: $this->getGuids($item['Guid'], context: [...$gContext]),
+            payload: $this->guid->get($item['Guid'], context: [...$gContext]),
             context: ['backend' => $this->getName(), ...$context,]
         )->getAll();
-    }
-
-    protected function parseGuids(array $guids): array
-    {
-        $guid = [];
-
-        $ids = array_column($guids, 'id');
-
-        foreach ($ids as $val) {
-            try {
-                if (empty($val)) {
-                    continue;
-                }
-
-                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                    // -- DO NOT accept plex relative unique ids, we generate our own.
-                    if (substr_count($val, '/') >= 3) {
-                        continue;
-                    }
-                    $val = $this->parseLegacyAgent($val);
-                }
-
-                if (false === str_contains($val, '://')) {
-                    continue;
-                }
-
-                [$key, $value] = explode('://', $val);
-                $key = strtolower($key);
-
-                $guid[$key] = $value;
-            } catch (Throwable) {
-                continue;
-            }
-        }
-
-        ksort($guid);
-
-        return $guid;
-    }
-
-    protected function getGuids(array $guids, array $context = []): array
-    {
-        $guid = [];
-
-        $ids = array_column($guids, 'id');
-
-        foreach ($ids as $val) {
-            try {
-                if (empty($val)) {
-                    continue;
-                }
-
-                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                    // -- DO NOT accept plex relative unique ids, we generate our own.
-                    if (substr_count($val, '/') >= 3) {
-                        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
-                            $this->logger->warning('Parsing [%(backend)] [%(agent)] identifier is not supported.', [
-                                'backend' => $this->getName(),
-                                'agent' => $val,
-                                ...$context
-                            ]);
-                        }
-                        continue;
-                    }
-                    $val = $this->parseLegacyAgent($val);
-                }
-
-                if (false === str_contains($val, '://')) {
-                    $this->logger->info(
-                        'Parsing [%(backend)] [%(agent)] identifier impossible. Probably alternative version of movie?',
-                        [
-                            'backend' => $this->getName(),
-                            'agent' => $val ?? null,
-                            ...$context
-                        ]
-                    );
-                    continue;
-                }
-
-                [$key, $value] = explode('://', $val);
-                $key = strtolower($key);
-
-                if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
-                    continue;
-                }
-
-                // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
-                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
-                    $this->logger->info(
-                        '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
-                        [
-                            'key' => $key,
-                            'backend' => $this->getName(),
-                            'ids' => sprintf('%s, %s', $guid[self::GUID_MAPPER[$key]], $value),
-                            ...$context
-                        ]
-                    );
-
-                    if (false === ctype_digit($val)) {
-                        continue;
-                    }
-
-                    if ((int)$guid[self::GUID_MAPPER[$key]] < (int)$val) {
-                        continue;
-                    }
-                }
-
-                $guid[self::GUID_MAPPER[$key]] = $value;
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
-                    [
-                        'backend' => $this->getName(),
-                        'agent' => $val ?? null,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-                continue;
-            }
-        }
-
-        ksort($guid);
-
-        return $guid;
-    }
-
-    protected function hasSupportedGuids(array $guids, array $context = []): bool
-    {
-        foreach ($guids as $_id) {
-            try {
-                $val = is_object($_id) ? $_id->id : $_id['id'];
-
-                if (empty($val)) {
-                    continue;
-                }
-
-                if (true === str_starts_with($val, 'com.plexapp.agents.')) {
-                    // -- DO NOT accept plex relative unique ids, we generate our own.
-                    if (substr_count($val, '/') >= 3) {
-                        if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
-                            $this->logger->warning('Parsing [%(backend)] [%(agent)] identifier is not supported.', [
-                                'backend' => $this->getName(),
-                                'agent' => $val,
-                                ...$context
-                            ]);
-                        }
-                        continue;
-                    }
-                    $val = $this->parseLegacyAgent($val);
-                }
-
-                if (false === str_contains($val, '://')) {
-                    continue;
-                }
-
-                [$key, $value] = explode('://', $val);
-                $key = strtolower($key);
-
-                if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
-                    return true;
-                }
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
-                    [
-                        'backend' => $this->getName(),
-                        'agent' => $val ?? null,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-                continue;
-            }
-        }
-
-        return false;
     }
 
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
@@ -2328,125 +2119,6 @@ class PlexServer implements ServerInterface
         if (true === $checkToken && null === $this->token) {
             throw new RuntimeException(static::NAME . ': No token was set.');
         }
-    }
-
-    protected function createEntity(array $item, string $type, array $opts = []): StateEntity
-    {
-        // -- Handle watched/updated column in a special way to support mark as unplayed.
-        if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
-            $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
-            $date = $opts['override'][iFace::COLUMN_UPDATED] ?? ag($item, 'addedAt');
-        } else {
-            $isPlayed = (bool)ag($item, 'viewCount', false);
-            $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
-        }
-
-        if (null === $date) {
-            throw new RuntimeException('No date was set on object.');
-        }
-
-        if (null === ag($item, 'Guid')) {
-            $item['Guid'] = [['id' => ag($item, 'guid')]];
-        } else {
-            $item['Guid'][] = ['id' => ag($item, 'guid')];
-        }
-
-        $context = [
-            'item' => [
-                'id' => ag($item, 'ratingKey'),
-                'type' => ag($item, 'type'),
-                'title' => match ($type) {
-                    iFace::TYPE_MOVIE, 'show' => sprintf(
-                        '%s (%s)',
-                        ag($item, ['title', 'originalTitle'], '??'),
-                        ag($item, 'year', '0000')
-                    ),
-                    iFace::TYPE_EPISODE => sprintf(
-                        '%s - (%sx%s)',
-                        ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                    ),
-                },
-                'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
-                'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
-            ],
-        ];
-        $guids = $this->getGuids(ag($item, 'Guid', []), context: $context);
-
-        $guids += Guid::makeVirtualGuid($this->getName(), (string)ag($item, 'ratingKey'));
-
-        $builder = [
-            iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => (int)$date,
-            iFace::COLUMN_WATCHED => (int)$isPlayed,
-            iFace::COLUMN_VIA => $this->getName(),
-            iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $guids,
-            iFace::COLUMN_META_DATA => [
-                $this->getName() => [
-                    iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
-                    iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    iFace::COLUMN_VIA => $this->getName(),
-                    iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-                    iFace::COLUMN_GUIDS => $this->parseGuids(ag($item, 'Guid', [])),
-                    iFace::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
-                ],
-            ],
-            iFace::COLUMN_EXTRA => [],
-        ];
-
-        $metadata = &$builder[iFace::COLUMN_META_DATA][$this->getName()];
-        $metadataExtra = &$metadata[iFace::COLUMN_META_DATA_EXTRA];
-
-        if (null !== ($library = ag($item, 'librarySectionID', $opts['library'] ?? null))) {
-            $metadata[iFace::COLUMN_META_LIBRARY] = (string)$library;
-        }
-
-        if (iFace::TYPE_EPISODE === $type) {
-            $builder[iFace::COLUMN_SEASON] = (int)ag($item, 'parentIndex', 0);
-            $builder[iFace::COLUMN_EPISODE] = (int)ag($item, 'index', 0);
-
-            $metadata[iFace::COLUMN_META_SHOW] = (string)ag($item, ['grandparentRatingKey', 'parentRatingKey'], '??');
-
-            $metadata[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
-            $metadata[iFace::COLUMN_SEASON] = (string)$builder[iFace::COLUMN_SEASON];
-            $metadata[iFace::COLUMN_EPISODE] = (string)$builder[iFace::COLUMN_EPISODE];
-
-            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iFace::COLUMN_TITLE];
-            $builder[iFace::COLUMN_TITLE] = $metadata[iFace::COLUMN_TITLE];
-
-            if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey']))) {
-                $builder[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
-                $metadata[iFace::COLUMN_PARENT] = $builder[iFace::COLUMN_PARENT];
-            }
-        }
-
-        if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year'])) && !empty($mediaYear)) {
-            $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
-            $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
-        }
-
-        if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
-            $metadata[iFace::COLUMN_META_PATH] = (string)$mediaPath;
-        }
-
-        if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {
-            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
-        }
-
-        if (true === $isPlayed) {
-            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
-        }
-
-        unset($metadata, $metadataExtra);
-
-        if (null !== ($opts['override'] ?? null)) {
-            $builder = array_replace_recursive($builder, $opts['override'] ?? []);
-        }
-
-        return Container::get(iFace::class)::fromArray($builder);
     }
 
     protected function getEpisodeParent(int|string $id, array $context = []): array
@@ -2475,7 +2147,7 @@ class PlexServer implements ServerInterface
                 $json['Guid'][] = ['id' => $json['guid']];
             }
 
-            if (!$this->hasSupportedGuids(guids: $json['Guid'])) {
+            if (!$this->guid->has(guids: $json['Guid'])) {
                 $this->cache['shows'][$id] = [];
                 return [];
             }
@@ -2487,7 +2159,7 @@ class PlexServer implements ServerInterface
             );
 
             $this->cache['shows'][$id] = Guid::fromArray(
-                payload: $this->getGuids($json['Guid'], context: [...$gContext]),
+                payload: $this->guid->get($json['Guid'], context: [...$gContext]),
                 context: ['backend' => $this->getName(), ...$context]
             )->getAll();
 
@@ -2505,79 +2177,6 @@ class PlexServer implements ServerInterface
             ]);
             return [];
         }
-    }
-
-    /**
-     * Parse legacy plex agents.
-     *
-     * @param string $agent
-     *
-     * @return string
-     * @see https://github.com/ZeroQI/Hama.bundle/issues/510
-     */
-    protected function parseLegacyAgent(string $agent): string
-    {
-        try {
-            if (false === in_array(before($agent, '://'), self::SUPPORTED_LEGACY_AGENTS)) {
-                return $agent;
-            }
-
-            // -- Handle hama plex agent. This is multi source agent.
-            if (true === str_starts_with($agent, 'com.plexapp.agents.hama')) {
-                $guid = after($agent, '://');
-
-                if (1 !== preg_match(self::HAMA_REGEX, $guid, $matches)) {
-                    return $agent;
-                }
-
-                if (null === ($source = ag($matches, 'source')) || null === ($sourceId = ag($matches, 'id'))) {
-                    return $agent;
-                }
-
-                return str_replace('tsdb', 'tmdb', $source) . '://' . before($sourceId, '?');
-            }
-
-            $agent = strtr($agent, self::GUID_AGENT_REPLACER);
-
-            $agentGuid = explode('://', after($agent, 'agents.'));
-
-            return $agentGuid[0] . '://' . before($agentGuid[1], '?');
-        } catch (Throwable $e) {
-            $this->logger->error(
-                'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
-                [
-                    'backend' => $this->getName(),
-                    'agent' => $agent,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ],
-                ]
-            );
-            return $agent;
-        }
-    }
-
-    /**
-     * Is Given id a local plex id?
-     *
-     * @param string $id
-     *
-     * @return bool
-     */
-    protected function isLocalPlexId(string $id): bool
-    {
-        $id = strtolower($id);
-
-        foreach (self::GUID_PLEX_LOCAL as $guid) {
-            if (true === str_starts_with($id, $guid)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     protected function getUserToken(int|string $userId): int|string|null

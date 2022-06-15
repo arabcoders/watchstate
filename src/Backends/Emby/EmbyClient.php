@@ -15,6 +15,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class EmbyClient
 {
+    public const TYPE_MOVIE = 'Movie';
+    public const TYPE_SHOW = 'Series';
+    public const TYPE_EPISODE = 'Episode';
+
     private Context|null $context = null;
 
     public function __construct(

@@ -55,7 +55,6 @@ class EmbyServer extends JellyfinServer
         return $response->isSuccessful() ? $response->response : $request;
     }
 
-
     public function getServerUUID(bool $forceRefresh = false): int|string|null
     {
         if (false === $forceRefresh && null !== $this->uuid) {

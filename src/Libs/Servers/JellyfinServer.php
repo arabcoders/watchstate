@@ -8,10 +8,12 @@ use App\Backends\Common\Context;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\GetIdentifier;
+use App\Backends\Jellyfin\JellyfinActionTrait;
+use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Data;
-use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\HttpException;
@@ -41,29 +43,12 @@ use Throwable;
 
 class JellyfinServer implements ServerInterface
 {
+    use JellyfinActionTrait;
+
     public const NAME = 'JellyfinBackend';
-
-    protected const TYPE_MOVIE = 'Movie';
-    protected const TYPE_SHOW = 'Series';
-    protected const TYPE_EPISODE = 'Episode';
-
-    protected const TYPE_MAPPER = [
-        self::TYPE_SHOW => iFace::TYPE_SHOW,
-        self::TYPE_MOVIE => iFace::TYPE_MOVIE,
-        self::TYPE_EPISODE => iFace::TYPE_EPISODE,
-    ];
 
     protected const COLLECTION_TYPE_SHOWS = 'tvshows';
     protected const COLLECTION_TYPE_MOVIES = 'movies';
-
-    protected const GUID_MAPPER = [
-        'imdb' => Guid::GUID_IMDB,
-        'tmdb' => Guid::GUID_TMDB,
-        'tvdb' => Guid::GUID_TVDB,
-        'tvmaze' => Guid::GUID_TVMAZE,
-        'tvrage' => Guid::GUID_TVRAGE,
-        'anidb' => Guid::GUID_ANIDB,
-    ];
 
     protected const WEBHOOK_ALLOWED_TYPES = [
         'Movie',
@@ -112,7 +97,8 @@ class JellyfinServer implements ServerInterface
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cacheIO
+        protected CacheInterface $cacheIO,
+        protected JellyfinGuid $guid,
     ) {
     }
 
@@ -168,6 +154,8 @@ class JellyfinServer implements ServerInterface
             options:        $this->options
         );
 
+        $cloned->guid = $this->guid->withContext($cloned->context);
+
         return $cloned;
     }
 
@@ -196,7 +184,7 @@ class JellyfinServer implements ServerInterface
             throw new RuntimeException(
                 sprintf(
                     'Request for [%s] users list returned with unexpected [%s] status code.',
-                    $this->getName(),
+                    $this->context->backendName,
                     $response->getStatusCode(),
                 )
             );
@@ -279,21 +267,22 @@ class JellyfinServer implements ServerInterface
 
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             throw new HttpException(
-                sprintf('%s: Webhook content type [%s] is not supported.', $this->getName(), $type), 200
+                sprintf('%s: Webhook content type [%s] is not supported.', $this->context->backendName, $type), 200
             );
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             throw new HttpException(
-                sprintf('%s: Webhook event type [%s] is not supported.', $this->getName(), $event), 200
+                sprintf('%s: Webhook event type [%s] is not supported.', $this->context->backendName, $event), 200
             );
         }
 
         if (null === $id) {
-            throw new HttpException(sprintf('%s: No item id was found in webhook body.', $this->getName()), 400);
+            throw new HttpException(
+                sprintf('%s: No item id was found in webhook body.', $this->context->backendName),
+                400
+            );
         }
-
-        $type = strtolower($type);
 
         try {
             $isPlayed = (bool)ag($json, 'Played');
@@ -302,12 +291,12 @@ class JellyfinServer implements ServerInterface
             $fields = [
                 iFace::COLUMN_WATCHED => (int)$isPlayed,
                 iFace::COLUMN_META_DATA => [
-                    $this->getName() => [
+                    $this->context->backendName => [
                         iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     ]
                 ],
                 iFace::COLUMN_EXTRA => [
-                    $this->getName() => [
+                    $this->context->backendName => [
                         iFace::COLUMN_EXTRA_EVENT => $event,
                         iFace::COLUMN_EXTRA_DATE => makeDate('now'),
                     ],
@@ -319,7 +308,7 @@ class JellyfinServer implements ServerInterface
                 $fields = array_replace_recursive($fields, [
                     iFace::COLUMN_UPDATED => $lastPlayedAt,
                     iFace::COLUMN_META_DATA => [
-                        $this->getName() => [
+                        $this->context->backendName => [
                             iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
                         ]
                     ],
@@ -335,20 +324,21 @@ class JellyfinServer implements ServerInterface
                 $providersId[after($key, 'Provider_')] = $val;
             }
 
-            if (null !== ($guids = $this->getGuids($providersId)) && false === empty($guids)) {
-                $guids += Guid::makeVirtualGuid($this->getName(), (string)$id);
+            if (null !== ($guids = $this->guid->get($providersId)) && false === empty($guids)) {
+                $guids += Guid::makeVirtualGuid($this->context->backendName, (string)$id);
                 $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$this->getName()][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+                $fields[iFace::COLUMN_META_DATA][$this->context->backendName][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
             }
 
             $entity = $this->createEntity(
-                item: $this->getMetadata(id: $id),
-                type: $type,
-                opts: ['override' => $fields],
+                context: $this->context,
+                guid:    $this->guid,
+                item:    $this->getMetadata(id: $id),
+                opts:    ['override' => $fields],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
         } catch (Throwable $e) {
             $this->logger->error('Unhandled exception was thrown during [%(backend)] webhook event parsing.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -362,7 +352,7 @@ class JellyfinServer implements ServerInterface
             ]);
 
             throw new HttpException(
-                sprintf('%s: Failed to handle webhook payload check logs.', $this->getName()), 200
+                sprintf('%s: Failed to handle webhook payload check logs.', $this->context->backendName), 200
             );
         }
 
@@ -379,7 +369,7 @@ class JellyfinServer implements ServerInterface
             ]);
 
             throw new HttpException(
-                sprintf('%s: Import ignored. No valid/supported external ids.', $this->getName()),
+                sprintf('%s: Import ignored. No valid/supported external ids.', $this->context->backendName),
                 200
             );
         }
@@ -410,7 +400,7 @@ class JellyfinServer implements ServerInterface
             );
 
             $this->logger->debug('Searching for [%(query)] in [%(backend)].', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'query' => $query,
                 'url' => $url
             ]);
@@ -426,7 +416,7 @@ class JellyfinServer implements ServerInterface
                     sprintf(
                         'Search request for [%s] in [%s] responded with unexpected [%s] status code.',
                         $query,
-                        $this->getName(),
+                        $this->context->backendName,
                         $response->getStatusCode(),
                     )
                 );
@@ -571,7 +561,7 @@ class JellyfinServer implements ServerInterface
         );
 
         $this->logger->debug('Requesting [%(backend)] libraries.', [
-            'backend' => $this->getName(),
+            'backend' => $this->context->backendName,
             'url' => $url
         ]);
 
@@ -581,7 +571,7 @@ class JellyfinServer implements ServerInterface
             throw new RuntimeException(
                 sprintf(
                     'Request for [%s] libraries returned with unexpected [%s] status code.',
-                    $this->getName(),
+                    $this->context->backendName,
                     $response->getStatusCode(),
                 )
             );
@@ -613,7 +603,11 @@ class JellyfinServer implements ServerInterface
 
         if (false === $found) {
             throw new RuntimeException(
-                sprintf('The response from [%s] does not contain library with id of [%s].', $this->getName(), $id)
+                sprintf(
+                    'The response from [%s] does not contain library with id of [%s].',
+                    $this->context->backendName,
+                    $id
+                )
             );
         }
 
@@ -621,7 +615,7 @@ class JellyfinServer implements ServerInterface
             throw new RuntimeException(
                 sprintf(
                     'The requested [%s] library [%s] is of [%s] type. Which is not supported type.',
-                    $this->getName(),
+                    $this->context->backendName,
                     ag($context, 'library.title', $id),
                     ag($context, 'library.type')
                 )
@@ -644,7 +638,7 @@ class JellyfinServer implements ServerInterface
         $context['library']['url'] = (string)$url;
 
         $this->logger->debug('Requesting [%(backend)] library [%(library.title)] content.', [
-            'backend' => $this->getName(),
+            'backend' => $this->context->backendName,
             ...$context,
         ]);
 
@@ -654,7 +648,7 @@ class JellyfinServer implements ServerInterface
             throw new RuntimeException(
                 sprintf(
                     'Request for [%s] library [%s] content returned with unexpected [%s] status code.',
-                    $this->getName(),
+                    $this->context->backendName,
                     ag($context, 'library.title', $id),
                     $response->getStatusCode(),
                 )
@@ -666,7 +660,7 @@ class JellyfinServer implements ServerInterface
                 $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
 
                 $data = [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                 ];
 
@@ -748,7 +742,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->warning(
                     'Failed to decode one item of [%(backend)] library [%(library.title)] content.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'error' => [
                             'message' => $entity->getErrorMessage(),
@@ -791,7 +785,7 @@ class JellyfinServer implements ServerInterface
             );
 
             $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'url' => $url
             ]);
 
@@ -801,7 +795,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->error(
                     'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         'status_code' => $response->getStatusCode(),
                     ]
                 );
@@ -818,7 +812,7 @@ class JellyfinServer implements ServerInterface
 
             if (empty($listDirs)) {
                 $this->logger->warning('Request for [%(backend)] libraries returned empty list.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     'context' => [
                         'body' => $json,
                     ]
@@ -827,7 +821,7 @@ class JellyfinServer implements ServerInterface
             }
         } catch (ExceptionInterface $e) {
             $this->logger->error('Request for [%(backend)] libraries has failed.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -892,7 +886,7 @@ class JellyfinServer implements ServerInterface
                 }
             }
 
-            $metadata = $entity->getMetadata($this->getName());
+            $metadata = $entity->getMetadata($this->context->backendName);
 
             $context = [
                 'item' => [
@@ -906,7 +900,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->warning(
                     'Ignoring [%(item.title)] for [%(backend)] no backend metadata was found.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                     ]
                 );
@@ -930,7 +924,7 @@ class JellyfinServer implements ServerInterface
                 $context['remote']['url'] = (string)$url;
 
                 $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title)] play state.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                 ]);
 
@@ -948,7 +942,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->error(
                     'Unhandled exception was thrown during requesting of [%(backend)] %(item.type) [%(item.title)].',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -969,7 +963,7 @@ class JellyfinServer implements ServerInterface
             try {
                 if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
                     $this->logger->error('Unable to get entity object id.', [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                     ]);
                     continue;
@@ -986,7 +980,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->warning(
                             'Request for [%(backend)] %(item.type) [%(item.title)] returned with 404 (Not Found) status code.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 ...$context
                             ]
                         );
@@ -995,7 +989,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'Request for [%(backend)] %(item.type) [%(item.title)] returned with unexpected [%(status_code)] status code.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 'status_code' => $response->getStatusCode(),
                                 ...$context
                             ]
@@ -1015,7 +1009,7 @@ class JellyfinServer implements ServerInterface
                     $this->logger->error(
                         'Ignoring [%(backend)] %(item.type) [%(item.title)]. responded with empty metadata.',
                         [
-                            'backend' => $this->getName(),
+                            'backend' => $this->context->backendName,
                             ...$context,
                             'response' => [
                                 'body' => $body,
@@ -1031,7 +1025,7 @@ class JellyfinServer implements ServerInterface
                     $this->logger->info(
                         'Ignoring [%(backend)] %(item.type) [%(item.title)]. Play state is identical.',
                         [
-                            'backend' => $this->getName(),
+                            'backend' => $this->context->backendName,
                             ...$context,
                         ]
                     );
@@ -1046,7 +1040,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'Ignoring [%(backend)] %(item.type) [%(item.title)]. No %(date_key) is set on backend object.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 'date_key' => $dateKey,
                                 ...$context,
                                 'response' => [
@@ -1065,7 +1059,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->notice(
                             'Ignoring [%(backend)] %(item.type) [%(item.title)]. Storage date is older than backend date.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 ...$context,
                                 'comparison' => [
                                     'storage' => makeDate($entity->updated),
@@ -1088,7 +1082,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->debug(
                     'Queuing request to change [%(backend)] %(item.type) [%(item.title)] play state to [%(play_state)].',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                         ...$context,
                     ]
@@ -1102,7 +1096,7 @@ class JellyfinServer implements ServerInterface
                             array_replace_recursive($this->getHeaders(), [
                                 'user_data' => [
                                     'context' => $context + [
-                                            'backend' => $this->getName(),
+                                            'backend' => $this->context->backendName,
                                             'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                         ],
                                 ],
@@ -1114,7 +1108,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->error(
                     'Unhandled exception was thrown during handling of [%(backend)] %(item.type) [%(item.title)].',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -1141,7 +1135,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'Request for [%(backend)] [%(library.title)] content returned with unexpected [%(status_code)] status code.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 'status_code' => $response->getStatusCode(),
                                 ...$context,
                             ]
@@ -1151,7 +1145,7 @@ class JellyfinServer implements ServerInterface
 
                     $start = makeDate();
                     $this->logger->info('Parsing [%(backend)] library [%(library.title)] response.', [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'time' => [
                             'start' => $start,
@@ -1177,7 +1171,7 @@ class JellyfinServer implements ServerInterface
                                 $this->logger->warning(
                                     'Failed to decode one item of [%(backend)] [%(library.title)] content.',
                                     [
-                                        'backend' => $this->getName(),
+                                        'backend' => $this->context->backendName,
                                         ...$context,
                                         'error' => [
                                             'message' => $entity->getErrorMessage(),
@@ -1199,7 +1193,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'No Items were found in [%(backend)] library [%(library.title)] response.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 ...$context,
                                 'exception' => [
                                     'file' => $e->getFile(),
@@ -1213,7 +1207,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'Unhandled exception was thrown in parsing [%(backend)] library [%(library.title)] response.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 ...$context,
                                 'exception' => [
                                     'file' => $e->getFile(),
@@ -1227,7 +1221,7 @@ class JellyfinServer implements ServerInterface
 
                     $end = makeDate();
                     $this->logger->info('Parsing [%(backend)] library [%(library.title)] response is complete.', [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'time' => [
                             'start' => $start,
@@ -1241,7 +1235,7 @@ class JellyfinServer implements ServerInterface
                 return fn(Throwable $e) => $this->logger->error(
                     'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -1265,7 +1259,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'Request for [%(backend)] [%(library.title)] content responded with unexpected [%(status_code)] status code.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 'status_code' => $response->getStatusCode(),
                                 ...$context,
                             ]
@@ -1275,7 +1269,7 @@ class JellyfinServer implements ServerInterface
 
                     $start = makeDate();
                     $this->logger->info('Parsing [%(backend)] library [%(library.title)] response.', [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'time' => [
                             'start' => $start,
@@ -1301,7 +1295,7 @@ class JellyfinServer implements ServerInterface
                                 $this->logger->warning(
                                     'Failed to decode one item of [%(backend)] [%(library.title)] content.',
                                     [
-                                        'backend' => $this->getName(),
+                                        'backend' => $this->context->backendName,
                                         ...$context,
                                         'error' => [
                                             'message' => $entity->getErrorMessage(),
@@ -1324,7 +1318,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'No Items were found in [%(backend)] library [%(library.title)] response.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 ...$context,
                                 'exception' => [
                                     'file' => $e->getFile(),
@@ -1338,7 +1332,7 @@ class JellyfinServer implements ServerInterface
                         $this->logger->error(
                             'Unhandled exception was thrown in parsing [%(backend)] library [%(library.title)] response.',
                             [
-                                'backend' => $this->getName(),
+                                'backend' => $this->context->backendName,
                                 ...$context,
                                 'exception' => [
                                     'file' => $e->getFile(),
@@ -1352,7 +1346,7 @@ class JellyfinServer implements ServerInterface
 
                     $end = makeDate();
                     $this->logger->info('Parsing [%(backend)] library [%(library.title)] response is complete.', [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'time' => [
                             'start' => $start,
@@ -1366,7 +1360,7 @@ class JellyfinServer implements ServerInterface
                 return fn(Throwable $e) => $this->logger->error(
                     'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -1424,7 +1418,7 @@ class JellyfinServer implements ServerInterface
             );
 
             $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'url' => $url
             ]);
 
@@ -1434,11 +1428,11 @@ class JellyfinServer implements ServerInterface
                 $this->logger->error(
                     'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         'status_code' => $response->getStatusCode(),
                     ]
                 );
-                Data::add($this->getName(), 'no_import_update', true);
+                Data::add($this->context->backendName, 'no_import_update', true);
                 return [];
             }
 
@@ -1452,17 +1446,17 @@ class JellyfinServer implements ServerInterface
 
             if (empty($listDirs)) {
                 $this->logger->warning('Request for [%(backend)] libraries returned empty list.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     'context' => [
                         'body' => $json,
                     ]
                 ]);
-                Data::add($this->getName(), 'no_import_update', true);
+                Data::add($this->context->backendName, 'no_import_update', true);
                 return [];
             }
         } catch (ExceptionInterface $e) {
             $this->logger->error('Request for [%(backend)] libraries has failed.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -1470,7 +1464,7 @@ class JellyfinServer implements ServerInterface
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($this->getName(), 'no_import_update', true);
+            Data::add($this->context->backendName, 'no_import_update', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
@@ -1480,7 +1474,7 @@ class JellyfinServer implements ServerInterface
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($this->getName(), 'no_import_update', true);
+            Data::add($this->context->backendName, 'no_import_update', true);
             return [];
         }
 
@@ -1525,7 +1519,7 @@ class JellyfinServer implements ServerInterface
                 $context['library']['url'] = (string)$url;
 
                 $this->logger->debug('Requesting [%(backend)] [%(library.title)] series external ids.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                 ]);
 
@@ -1544,7 +1538,7 @@ class JellyfinServer implements ServerInterface
                     $this->logger->error(
                         'Request for [%(backend)] [%(library.title)] series external ids has failed.',
                         [
-                            'backend' => $this->getName(),
+                            'backend' => $this->context->backendName,
                             ...$context,
                             'exception' => [
                                 'file' => $e->getFile(),
@@ -1571,7 +1565,7 @@ class JellyfinServer implements ServerInterface
             if (null !== $ignoreIds && true === in_array(ag($context, 'library.id'), $ignoreIds)) {
                 $ignored++;
                 $this->logger->info('Ignoring [%(backend)] [%(library.title)]. Requested by user config.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                 ]);
                 continue;
@@ -1582,7 +1576,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->info(
                     'Ignoring [%(backend)] [%(library.title)]. Library type [%(library.type)] is not supported.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                     ]
                 );
@@ -1606,7 +1600,7 @@ class JellyfinServer implements ServerInterface
             $context['library']['url'] = (string)$url;
 
             $this->logger->debug('Requesting [%(backend)] [%(library.title)] content list.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 ...$context,
             ]);
 
@@ -1623,7 +1617,7 @@ class JellyfinServer implements ServerInterface
                 );
             } catch (ExceptionInterface $e) {
                 $this->logger->error('Requesting for [%(backend)] [%(library.title)] content list has failed.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'exception' => [
                         'file' => $e->getFile(),
@@ -1638,14 +1632,14 @@ class JellyfinServer implements ServerInterface
 
         if (0 === count($promises)) {
             $this->logger->warning('No requests for [%(backend)] libraries were queued.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 'context' => [
                     'total' => count($listDirs),
                     'ignored' => $ignored,
                     'unsupported' => $unsupported,
                 ],
             ]);
-            Data::add($this->getName(), 'no_import_update', true);
+            Data::add($this->context->backendName, 'no_import_update', true);
             return [];
         }
 
@@ -1655,14 +1649,14 @@ class JellyfinServer implements ServerInterface
     protected function processImport(ImportInterface $mapper, array $item, array $context = [], array $opts = []): void
     {
         try {
-            if (self::TYPE_SHOW === ($type = ag($item, 'Type'))) {
+            if (JellyfinClient::TYPE_SHOW === ($type = ag($item, 'Type'))) {
                 $this->processShow(item: $item, context: $context);
                 return;
             }
 
-            $type = self::TYPE_MAPPER[$type];
+            $type = $this->typeMapper[$type];
 
-            Data::increment($this->getName(), $type . '_total');
+            Data::increment($this->context->backendName, $type . '_total');
 
             $context['item'] = [
                 'id' => ag($item, 'Id'),
@@ -1686,7 +1680,7 @@ class JellyfinServer implements ServerInterface
 
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'response' => [
                         'body' => $item
@@ -1699,7 +1693,7 @@ class JellyfinServer implements ServerInterface
 
             if (null === ag($item, $dateKey)) {
                 $this->logger->debug('Ignoring [%(backend)] %(item.type) [%(item.title)]. No Date is set on object.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     'date_key' => $dateKey,
                     ...$context,
                     'response' => [
@@ -1707,29 +1701,33 @@ class JellyfinServer implements ServerInterface
                     ],
                 ]);
 
-                Data::increment($this->getName(), $type . '_ignored_no_date_is_set');
+                Data::increment($this->context->backendName, $type . '_ignored_no_date_is_set');
                 return;
             }
 
             $entity = $this->createEntity(
-                item: $item,
-                type: $type,
-                opts: $opts + [
-                          'library' => ag($context, 'library.id'),
-                          'override' => [
-                              iFace::COLUMN_EXTRA => [
-                                  $this->getName() => [
-                                      iFace::COLUMN_EXTRA_EVENT => 'task.import',
-                                      iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                                  ],
-                              ],
-                          ]
-                      ],
+                context: $this->context,
+                guid:    $this->guid,
+                item:    $item,
+                opts:    $opts + [
+                             'library' => ag($context, 'library.id'),
+                             'override' => [
+                                 iFace::COLUMN_EXTRA => [
+                                     $this->context->backendName => [
+                                         iFace::COLUMN_EXTRA_EVENT => 'task.import',
+                                         iFace::COLUMN_EXTRA_DATE => makeDate('now'),
+                                     ],
+                                 ],
+                             ]
+                         ],
             );
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 if (true === (bool)Config::get('debug.import')) {
-                    $name = Config::get('tmpDir') . '/debug/' . $this->getName() . '.' . ag($item, 'Id') . '.json';
+                    $name = Config::get('tmpDir') . '/debug/' . $this->context->backendName . '.' . ag(
+                            $item,
+                            'Id'
+                        ) . '.json';
 
                     if (!file_exists($name)) {
                         file_put_contents(
@@ -1751,14 +1749,14 @@ class JellyfinServer implements ServerInterface
                 }
 
                 $this->logger->info($message, [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'context' => [
                         'guids' => !empty($providerIds) ? $providerIds : 'None'
                     ],
                 ]);
 
-                Data::increment($this->getName(), $type . '_ignored_no_supported_guid');
+                Data::increment($this->context->backendName, $type . '_ignored_no_supported_guid');
                 return;
             }
 
@@ -1770,7 +1768,7 @@ class JellyfinServer implements ServerInterface
             $this->logger->error(
                 'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] import.',
                 [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'exception' => [
                         'file' => $e->getFile(),
@@ -1791,15 +1789,15 @@ class JellyfinServer implements ServerInterface
         array $opts = [],
     ): void {
         try {
-            if (self::TYPE_SHOW === ($type = ag($item, 'Type'))) {
+            if (JellyfinClient::TYPE_SHOW === ($type = ag($item, 'Type'))) {
                 $this->processShow(item: $item, context: $context);
                 return;
             }
 
             $after = ag($opts, 'after');
-            $type = self::TYPE_MAPPER[$type];
+            $type = $this->typeMapper[$type];
 
-            Data::increment($this->getName(), $type . '_total');
+            Data::increment($this->context->backendName, $type . '_total');
 
             $context['item'] = [
                 'id' => ag($item, 'Id'),
@@ -1823,7 +1821,7 @@ class JellyfinServer implements ServerInterface
 
             if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'response' => [
                         'body' => $item
@@ -1836,7 +1834,7 @@ class JellyfinServer implements ServerInterface
 
             if (null === ag($item, $dateKey)) {
                 $this->logger->debug('Ignoring [%(backend)] %(item.type) [%(item.title)]. No Date is set on object.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     'date_key' => $dateKey,
                     ...$context,
                     'response' => [
@@ -1844,14 +1842,15 @@ class JellyfinServer implements ServerInterface
                     ],
                 ]);
 
-                Data::increment($this->getName(), $type . '_ignored_no_date_is_set');
+                Data::increment($this->context->backendName, $type . '_ignored_no_date_is_set');
                 return;
             }
 
             $rItem = $this->createEntity(
-                item: $item,
-                type: $type,
-                opts: array_replace_recursive($opts, ['library' => ag($context, 'library.id')])
+                context: $this->context,
+                guid:    $this->guid,
+                item:    $item,
+                opts:    array_replace_recursive($opts, ['library' => ag($context, 'library.id')])
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
@@ -1864,14 +1863,14 @@ class JellyfinServer implements ServerInterface
                 }
 
                 $this->logger->info($message, [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'context' => [
                         'guids' => !empty($providerIds) ? $providerIds : 'None'
                     ],
                 ]);
 
-                Data::increment($this->getName(), $type . '_ignored_no_supported_guid');
+                Data::increment($this->context->backendName, $type . '_ignored_no_supported_guid');
                 return;
             }
 
@@ -1880,7 +1879,7 @@ class JellyfinServer implements ServerInterface
                     $this->logger->debug(
                         'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than last sync date.',
                         [
-                            'backend' => $this->getName(),
+                            'backend' => $this->context->backendName,
                             ...$context,
                             'comparison' => [
                                 'lastSync' => makeDate($after),
@@ -1889,17 +1888,17 @@ class JellyfinServer implements ServerInterface
                         ]
                     );
 
-                    Data::increment($this->getName(), $type . '_ignored_date_is_equal_or_higher');
+                    Data::increment($this->context->backendName, $type . '_ignored_date_is_equal_or_higher');
                     return;
                 }
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
                 $this->logger->warning('Ignoring [%(backend)] [%(item.title)]. %(item.type) Is not imported yet.', [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                 ]);
-                Data::increment($this->getName(), $type . '_ignored_not_found_in_db');
+                Data::increment($this->context->backendName, $type . '_ignored_not_found_in_db');
                 return;
             }
 
@@ -1908,7 +1907,7 @@ class JellyfinServer implements ServerInterface
                     $this->logger->debug(
                         'Ignoring [%(backend)] [%(item.title)]. %(item.type) play state is identical.',
                         [
-                            'backend' => $this->getName(),
+                            'backend' => $this->context->backendName,
                             ...$context,
                             'comparison' => [
                                 'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
@@ -1918,7 +1917,7 @@ class JellyfinServer implements ServerInterface
                     );
                 }
 
-                Data::increment($this->getName(), $type . '_ignored_state_unchanged');
+                Data::increment($this->context->backendName, $type . '_ignored_state_unchanged');
                 return;
             }
 
@@ -1926,7 +1925,7 @@ class JellyfinServer implements ServerInterface
                 $this->logger->debug(
                     'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
                     [
-                        'backend' => $this->getName(),
+                        'backend' => $this->context->backendName,
                         ...$context,
                         'comparison' => [
                             'storage' => makeDate($entity->updated),
@@ -1935,7 +1934,7 @@ class JellyfinServer implements ServerInterface
                     ]
                 );
 
-                Data::increment($this->getName(), $type . '_ignored_date_is_newer');
+                Data::increment($this->context->backendName, $type . '_ignored_date_is_newer');
                 return;
             }
 
@@ -1946,7 +1945,7 @@ class JellyfinServer implements ServerInterface
             $this->logger->debug(
                 'Queuing Request to change [%(backend)] [%(item.title)] play state to [%(play_state)].',
                 [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                     ...$context,
                 ]
@@ -1960,7 +1959,7 @@ class JellyfinServer implements ServerInterface
                         array_replace_recursive($this->getHeaders(), [
                             'user_data' => [
                                 'context' => $context + [
-                                        'backend' => $this->getName(),
+                                        'backend' => $this->context->backendName,
                                         'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                     ],
                             ],
@@ -1972,7 +1971,7 @@ class JellyfinServer implements ServerInterface
             $this->logger->error(
                 'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] export.',
                 [
-                    'backend' => $this->getName(),
+                    'backend' => $this->context->backendName,
                     ...$context,
                     'exception' => [
                         'file' => $e->getFile(),
@@ -1996,7 +1995,7 @@ class JellyfinServer implements ServerInterface
 
         if (true === (bool)ag($this->options, Options::DEBUG_TRACE)) {
             $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] payload.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 ...$context,
                 'response' => [
                     'body' => $item,
@@ -2006,7 +2005,7 @@ class JellyfinServer implements ServerInterface
 
         $providersId = (array)ag($item, 'ProviderIds', []);
 
-        if (!$this->hasSupportedIds($providersId)) {
+        if (!$this->guid->has($providersId)) {
             $message = 'Ignoring [%(backend)] [%(item.title)]. %(item.type) has no valid/supported external ids.';
 
             if (empty($providersId)) {
@@ -2014,7 +2013,7 @@ class JellyfinServer implements ServerInterface
             }
 
             $this->logger->info($message, [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 ...$context,
                 'data' => [
                     'guids' => !empty($providersId) ? $providersId : 'None'
@@ -2024,44 +2023,10 @@ class JellyfinServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->getGuids($providersId), context: [
-            'backend' => $this->getName(),
+        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->guid->get($providersId), context: [
+            'backend' => $this->context->backendName,
             ...$context,
         ])->getAll();
-    }
-
-    protected function getGuids(array $ids): array
-    {
-        $guid = [];
-
-        foreach (array_change_key_case($ids, CASE_LOWER) as $key => $value) {
-            if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
-                continue;
-            }
-
-            if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null) && ctype_digit($value)) {
-                if ((int)$guid[self::GUID_MAPPER[$key]] > (int)$value) {
-                    continue;
-                }
-            }
-
-            $guid[self::GUID_MAPPER[$key]] = $value;
-        }
-
-        ksort($guid);
-
-        return $guid;
-    }
-
-    protected function hasSupportedIds(array $ids): bool
-    {
-        foreach (array_change_key_case($ids, CASE_LOWER) as $key => $value) {
-            if (null !== (self::GUID_MAPPER[$key] ?? null) && !empty($value)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true, bool $checkUser = true): void
@@ -2077,100 +2042,6 @@ class JellyfinServer implements ServerInterface
         if (true === $checkUser && null === $this->user) {
             throw new RuntimeException(static::NAME . ': No User was set.');
         }
-    }
-
-    protected function createEntity(array $item, string $type, array $opts = []): StateEntity
-    {
-        // -- Handle watched/updated column in a special way to support mark as unplayed.
-        if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
-            $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
-            $date = $opts['override'][iFace::COLUMN_UPDATED] ?? ag($item, 'DateCreated');
-        } else {
-            $isPlayed = (bool)ag($item, 'UserData.Played', false);
-            $date = ag($item, true === $isPlayed ? ['UserData.LastPlayedDate', 'DateCreated'] : 'DateCreated');
-        }
-
-        if (null === $date) {
-            throw new RuntimeException('No date was set on object.');
-        }
-
-        $guids = $this->getGuids(ag($item, 'ProviderIds', []));
-        $guids += Guid::makeVirtualGuid($this->getName(), (string)ag($item, 'Id'));
-
-        $builder = [
-            iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
-            iFace::COLUMN_WATCHED => (int)$isPlayed,
-            iFace::COLUMN_VIA => $this->getName(),
-            iFace::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $guids,
-            iFace::COLUMN_META_DATA => [
-                $this->getName() => [
-                    iFace::COLUMN_ID => (string)ag($item, 'Id'),
-                    iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    iFace::COLUMN_VIA => $this->getName(),
-                    iFace::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
-                    iFace::COLUMN_GUIDS => array_change_key_case((array)ag($item, 'ProviderIds', []), CASE_LOWER),
-                    iFace::COLUMN_META_DATA_ADDED_AT => (string)makeDate(ag($item, 'DateCreated'))->getTimestamp(),
-                ],
-            ],
-            iFace::COLUMN_EXTRA => [],
-        ];
-
-        $metadata = &$builder[iFace::COLUMN_META_DATA][$this->getName()];
-        $metadataExtra = &$metadata[iFace::COLUMN_META_DATA_EXTRA];
-
-        // -- jellyfin/emby API does not provide library ID.
-        if (null !== ($library = $opts['library'] ?? null)) {
-            $metadata[iFace::COLUMN_META_LIBRARY] = (string)$library;
-        }
-
-        if (iFace::TYPE_EPISODE === $type) {
-            $builder[iFace::COLUMN_SEASON] = ag($item, 'ParentIndexNumber', 0);
-            $builder[iFace::COLUMN_EPISODE] = ag($item, 'IndexNumber', 0);
-
-            if (null !== ($parentId = ag($item, 'SeriesId'))) {
-                $metadata[iFace::COLUMN_META_SHOW] = (string)$parentId;
-            }
-
-            $metadata[iFace::COLUMN_TITLE] = ag($item, 'SeriesName', '??');
-            $metadata[iFace::COLUMN_SEASON] = (string)$builder[iFace::COLUMN_SEASON];
-            $metadata[iFace::COLUMN_EPISODE] = (string)$builder[iFace::COLUMN_EPISODE];
-
-            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iFace::COLUMN_TITLE];
-            $builder[iFace::COLUMN_TITLE] = $metadata[iFace::COLUMN_TITLE];
-
-            if (null !== $parentId) {
-                $builder[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
-                $metadata[iFace::COLUMN_PARENT] = $builder[iFace::COLUMN_PARENT];
-            }
-        }
-
-        if (!empty($metadata) && null !== ($mediaYear = ag($item, 'ProductionYear'))) {
-            $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
-            $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
-        }
-
-        if (null !== ($mediaPath = ag($item, 'Path')) && !empty($mediaPath)) {
-            $metadata[iFace::COLUMN_META_PATH] = (string)$mediaPath;
-        }
-
-        if (null !== ($PremieredAt = ag($item, 'PremiereDate'))) {
-            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
-        }
-
-        if (true === $isPlayed) {
-            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($date)->getTimestamp();
-        }
-
-        unset($metadata, $metadataExtra);
-
-        if (null !== ($opts['override'] ?? null)) {
-            $builder = array_replace_recursive($builder, $opts['override'] ?? []);
-        }
-
-        return Container::get(iFace::class)::fromArray($builder);
     }
 
     protected function getEpisodeParent(int|string $id, array $context = []): array
@@ -2215,20 +2086,20 @@ class JellyfinServer implements ServerInterface
 
             $providersId = (array)ag($json, 'ProviderIds', []);
 
-            if (!$this->hasSupportedIds($providersId)) {
+            if (!$this->guid->has($providersId)) {
                 $this->cache['shows'][$id] = [];
                 return [];
             }
 
-            $this->cache['shows'][$id] = Guid::fromArray($this->getGuids($providersId), context: [
-                'backend' => $this->getName(),
+            $this->cache['shows'][$id] = Guid::fromArray($this->guid->get($providersId), context: [
+                'backend' => $this->context->backendName,
                 ...$context,
             ])->getAll();
 
             return $this->cache['shows'][$id];
         } catch (Throwable $e) {
             $this->logger->error('Unhandled exception was thrown during getEpisodeParent.', [
-                'backend' => $this->getName(),
+                'backend' => $this->context->backendName,
                 ...$context,
                 'exception' => [
                     'file' => $e->getFile(),
