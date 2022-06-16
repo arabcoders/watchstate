@@ -295,8 +295,8 @@ class PlexServer implements ServerInterface
 
                 foreach (ag($leaf, 'Metadata', []) as $item) {
                     $watchedAt = ag($item, 'lastViewedAt');
-                    $year = (int)ag($item, 'year', 0);
 
+                    $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
                     if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
                         $year = (int)makeDate($airDate)->format('Y');
                     }
@@ -338,10 +338,9 @@ class PlexServer implements ServerInterface
         $metadata = ag($item, 'MediaContainer.Metadata.0', []);
 
         $type = ag($metadata, 'type');
-
         $watchedAt = ag($metadata, 'lastViewedAt');
-        $year = (int)ag($metadata, ['year', 'parentYear', 'grandparentYear'], 0);
 
+        $year = (int)ag($metadata, ['grandParentYear', 'parentYear', 'year'], 0);
         if (0 === $year && null !== ($airDate = ag($metadata, 'originallyAvailableAt'))) {
             $year = (int)makeDate($airDate)->format('Y');
         }
@@ -482,6 +481,11 @@ class PlexServer implements ServerInterface
                     ...$context,
                 ];
 
+                $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+                if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
+                    $year = (int)makeDate($airDate)->format('Y');
+                }
+
                 if (true === ag($this->options, Options::DEBUG_TRACE)) {
                     $data['trace'] = $item;
                 }
@@ -493,7 +497,7 @@ class PlexServer implements ServerInterface
                     'type' => ucfirst(ag($item, 'type', 'unknown')),
                     'url' => (string)$url,
                     'title' => ag($item, $possibleTitlesList, '??'),
-                    'year' => ag($item, 'year'),
+                    'year' => $year,
                     'guids' => [],
                     'match' => [
                         'titles' => [],
@@ -602,10 +606,15 @@ class PlexServer implements ServerInterface
                 continue;
             }
 
+            $year = (int)ag($entity, ['grandParentYear', 'parentYear', 'year'], 0);
+            if (0 === $year && null !== ($airDate = ag($entity, 'originallyAvailableAt'))) {
+                $year = (int)makeDate($airDate)->format('Y');
+            }
+
             $context['item'] = [
                 'id' => ag($entity, 'ratingKey'),
                 'title' => ag($entity, ['title', 'originalTitle'], '??'),
-                'year' => ag($entity, 'year', '0000'),
+                'year' => $year,
                 'type' => ag($entity, 'type'),
                 'url' => (string)$url,
             ];
@@ -1545,13 +1554,18 @@ class PlexServer implements ServerInterface
             Data::increment($this->getName(), $library . '_total');
             Data::increment($this->getName(), $type . '_total');
 
+            $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+            if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
+                $year = (int)makeDate($airDate)->format('Y');
+            }
+
             $context['item'] = [
                 'id' => ag($item, 'ratingKey'),
                 'title' => match ($type) {
                     iFace::TYPE_MOVIE => sprintf(
                         '%s (%s)',
                         ag($item, ['title', 'originalTitle'], '??'),
-                        ag($item, 'year', '0000')
+                        0 === $year ? '0000' : $year,
                     ),
                     iFace::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
@@ -1683,13 +1697,18 @@ class PlexServer implements ServerInterface
             Data::increment($this->getName(), $library . '_total');
             Data::increment($this->getName(), $type . '_total');
 
+            $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+            if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
+                $year = (int)makeDate($airDate)->format('Y');
+            }
+
             $context['item'] = [
                 'id' => ag($item, 'ratingKey'),
                 'title' => match ($type) {
                     iFace::TYPE_MOVIE => sprintf(
                         '%s (%s)',
                         ag($item, ['title', 'originalTitle'], '??'),
-                        ag($item, 'year', '0000')
+                        0 === $year ? '0000' : $year,
                     ),
                     iFace::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
@@ -1882,10 +1901,19 @@ class PlexServer implements ServerInterface
             $item['Guid'][] = ['id' => $item['guid']];
         }
 
+        $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+        if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
+            $year = (int)makeDate($airDate)->format('Y');
+        }
+
         $context['item'] = [
             'id' => ag($item, 'ratingKey'),
-            'title' => sprintf('%s (%s)', ag($item, ['title', 'originalTitle'], '??'), ag($item, 'year', '0000')),
-            'year' => ag($item, 'year', '0000'),
+            'title' => sprintf(
+                '%s (%s)',
+                ag($item, ['title', 'originalTitle'], '??'),
+                0 === $year ? '0000' : $year,
+            ),
+            'year' => 0 === $year ? '0000' : $year,
             'type' => ag($item, 'type', 'unknown'),
         ];
 

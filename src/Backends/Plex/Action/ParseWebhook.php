@@ -139,6 +139,11 @@ final class ParseWebhook
 
             $obj = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
 
+            $year = (int)ag($obj, ['grandParentYear', 'parentYear', 'year'], 0);
+            if (0 === $year && null !== ($airDate = ag($obj, 'originallyAvailableAt'))) {
+                $year = (int)makeDate($airDate)->format('Y');
+            }
+
             $guids = $guid->get(ag($item, 'Guid', []), context: [
                 'item' => [
                     'id' => ag($item, 'ratingKey'),
@@ -147,7 +152,7 @@ final class ParseWebhook
                         iFace::TYPE_MOVIE => sprintf(
                             '%s (%s)',
                             ag($item, ['title', 'originalTitle'], '??'),
-                            ag($item, 'year', '0000')
+                            0 === $year ? '0000' : $year,
                         ),
                         iFace::TYPE_EPISODE => sprintf(
                             '%s - (%sx%s)',
@@ -156,7 +161,7 @@ final class ParseWebhook
                             str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ),
                     },
-                    'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
+                    'year' => 0 === $year ? '0000' : $year,
                     'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
                 ],
             ]);
