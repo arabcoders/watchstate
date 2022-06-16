@@ -12,6 +12,7 @@ class Context
         public readonly string $clientName,
         public readonly string $backendName,
         public readonly UriInterface $backendUrl,
+        public readonly Cache $cache,
         public readonly string|int|null $backendId = null,
         public readonly string|int|null $backendToken = null,
         public readonly string|int|null $backendUser = null,

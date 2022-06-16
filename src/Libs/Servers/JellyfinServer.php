@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
-use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\GetIdentifier;
+use App\Backends\Jellyfin\Action\ParseWebhook;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinGuid;
@@ -21,7 +22,6 @@ use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use Closure;
-use DateInterval;
 use DateTimeInterface;
 use Generator;
 use JsonException;
@@ -33,7 +33,6 @@ use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -49,23 +48,6 @@ class JellyfinServer implements ServerInterface
 
     protected const COLLECTION_TYPE_SHOWS = 'tvshows';
     protected const COLLECTION_TYPE_MOVIES = 'movies';
-
-    protected const WEBHOOK_ALLOWED_TYPES = [
-        'Movie',
-        'Episode',
-    ];
-
-    protected const WEBHOOK_ALLOWED_EVENTS = [
-        'ItemAdded',
-        'UserDataSaved',
-        'PlaybackStart',
-        'PlaybackStop',
-    ];
-
-    protected const WEBHOOK_TAINTED_EVENTS = [
-        'PlaybackStart',
-        'PlaybackStop',
-    ];
 
     public const FIELDS = [
         'ProviderIds',
@@ -87,9 +69,6 @@ class JellyfinServer implements ServerInterface
     protected bool $isEmby = false;
     protected array $persist = [];
 
-    protected string $cacheKey = '';
-    protected array $cache = [];
-
     protected string|int|null $uuid = null;
 
     protected Context|null $context = null;
@@ -97,14 +76,11 @@ class JellyfinServer implements ServerInterface
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cacheIO,
+        protected Cache $cache,
         protected JellyfinGuid $guid,
     ) {
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function setUp(
         string $name,
         UriInterface $url,
@@ -129,13 +105,6 @@ class JellyfinServer implements ServerInterface
         $cloned->isEmby = (bool)($options['emby'] ?? false);
         $cloned->initialized = true;
 
-        $cloned->cache = [];
-        $cloned->cacheKey = $cloned::NAME . '_' . $name;
-
-        if ($cloned->cacheIO->has($cloned->cacheKey)) {
-            $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
-        }
-
         if (null !== ($options['emby'] ?? null)) {
             unset($options['emby']);
         }
@@ -146,6 +115,7 @@ class JellyfinServer implements ServerInterface
             clientName:     static::NAME,
             backendName:    $name,
             backendUrl:     $url,
+            cache:          $this->cache->withData($cloned::NAME . '_' . $name, $options),
             backendId:      $uuid,
             backendToken:   $token,
             backendUser:    $userId,
@@ -249,132 +219,32 @@ class JellyfinServer implements ServerInterface
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        $response = (new InspectRequest())(context: $this->context, request: $request);
-
+        $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
 
         return $response->isSuccessful() ? $response->response : $request;
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
-        if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', static::NAME), 400);
-        }
+        $response = Container::get(ParseWebhook::class)(
+            context: $this->context,
+            guid:    $this->guid,
+            request: $request,
+            opts:    $this->options
+        );
 
-        $event = ag($json, 'NotificationType', 'unknown');
-        $type = ag($json, 'ItemType', 'not_found');
-        $id = ag($json, 'ItemId');
-
-        if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(
-                sprintf('%s: Webhook content type [%s] is not supported.', $this->context->backendName, $type), 200
-            );
-        }
-
-        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(
-                sprintf('%s: Webhook event type [%s] is not supported.', $this->context->backendName, $event), 200
-            );
-        }
-
-        if (null === $id) {
-            throw new HttpException(
-                sprintf('%s: No item id was found in webhook body.', $this->context->backendName),
-                400
-            );
-        }
-
-        try {
-            $isPlayed = (bool)ag($json, 'Played');
-            $lastPlayedAt = true === $isPlayed ? ag($json, 'LastPlayedDate') : null;
-
-            $fields = [
-                iFace::COLUMN_WATCHED => (int)$isPlayed,
-                iFace::COLUMN_META_DATA => [
-                    $this->context->backendName => [
-                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    ]
-                ],
-                iFace::COLUMN_EXTRA => [
-                    $this->context->backendName => [
-                        iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                    ],
-                ],
-            ];
-
-            if (true === $isPlayed && null !== $lastPlayedAt) {
-                $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
-                $fields = array_replace_recursive($fields, [
-                    iFace::COLUMN_UPDATED => $lastPlayedAt,
-                    iFace::COLUMN_META_DATA => [
-                        $this->context->backendName => [
-                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
-                        ]
-                    ],
-                ]);
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
-            $providersId = [];
-
-            foreach ($json as $key => $val) {
-                if (false === str_starts_with($key, 'Provider_')) {
-                    continue;
-                }
-                $providersId[after($key, 'Provider_')] = $val;
-            }
-
-            if (null !== ($guids = $this->guid->get($providersId)) && false === empty($guids)) {
-                $guids += Guid::makeVirtualGuid($this->context->backendName, (string)$id);
-                $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$this->context->backendName][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
-            }
-
-            $entity = $this->createEntity(
-                context: $this->context,
-                guid:    $this->guid,
-                item:    $this->getMetadata(id: $id),
-                opts:    ['override' => $fields],
-            )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
-        } catch (Throwable $e) {
-            $this->logger->error('Unhandled exception was thrown during [%(backend)] webhook event parsing.', [
-                'backend' => $this->context->backendName,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-                'context' => [
-                    'attributes' => $request->getAttributes(),
-                    'payload' => $request->getParsedBody(),
-                ],
-            ]);
-
             throw new HttpException(
-                sprintf('%s: Failed to handle webhook payload check logs.', $this->context->backendName), 200
+                ag($response->extra, 'message', fn() => $response->error->format()),
+                ag($response->extra, 'http_code', 400),
             );
         }
 
-
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->error('Ignoring [%(backend)] [%(title)] webhook event. No valid/supported external ids.', [
-                'backend' => $id,
-                'title' => $entity->getName(),
-                'context' => [
-                    'attributes' => $request->getAttributes(),
-                    'parsed' => $entity->getAll(),
-                    'payload' => $request->getParsedBody(),
-                ],
-            ]);
-
-            throw new HttpException(
-                sprintf('%s: Import ignored. No valid/supported external ids.', $this->context->backendName),
-                200
-            );
-        }
-
-        return $entity;
+        return $response->response;
     }
 
     public function search(string $query, int $limit = 25, array $opts = []): array
@@ -533,13 +403,7 @@ class JellyfinServer implements ServerInterface
      */
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
-
-        if ($response->isSuccessful()) {
-            return $response->response;
-        }
-
-        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+        return $this->getItemDetails(context: $this->context, id: $id, opts: $opts);
     }
 
     /**
@@ -1371,22 +1235,8 @@ class JellyfinServer implements ServerInterface
                     ]
                 );
             },
-            includeParent: false === count(ag($this->cache, 'shows', [])) > 1,
+            includeParent: false === count($this->context->cache->get(JellyfinClient::TYPE_SHOW, [])) > 1,
         );
-    }
-
-    public function __destruct()
-    {
-        if (true === (bool)ag($this->options, Options::DRY_RUN)) {
-            return;
-        }
-
-        if (!empty($this->cacheKey) && !empty($this->cache) && true === $this->initialized) {
-            try {
-                $this->cacheIO->set($this->cacheKey, $this->cache, new DateInterval('P3D'));
-            } catch (InvalidArgumentException) {
-            }
-        }
     }
 
     protected function getHeaders(): array
@@ -1988,7 +1838,11 @@ class JellyfinServer implements ServerInterface
     {
         $context['item'] = [
             'id' => ag($item, 'Id'),
-            'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
+            'title' => sprintf(
+                '%s (%s)',
+                ag($item, ['Name', 'OriginalTitle'], '??'),
+                ag($item, 'ProductionYear', '0000')
+            ),
             'year' => ag($item, 'ProductionYear', null),
             'type' => ag($item, 'Type'),
         ];
@@ -2023,10 +1877,13 @@ class JellyfinServer implements ServerInterface
             return;
         }
 
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray($this->guid->get($providersId), context: [
-            'backend' => $this->context->backendName,
-            ...$context,
-        ])->getAll();
+        $this->context->cache->set(
+            JellyfinClient::TYPE_SHOW . '.' . ag($context, 'item.id'),
+            Guid::fromArray($this->guid->get($providersId), context: [
+                'backend' => $this->context->backendName,
+                ...$context,
+            ])->getAll()
+        );
     }
 
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true, bool $checkUser = true): void
@@ -2041,74 +1898,6 @@ class JellyfinServer implements ServerInterface
 
         if (true === $checkUser && null === $this->user) {
             throw new RuntimeException(static::NAME . ': No User was set.');
-        }
-    }
-
-    protected function getEpisodeParent(int|string $id, array $context = []): array
-    {
-        if (array_key_exists($id, $this->cache['shows'] ?? [])) {
-            return $this->cache['shows'][$id];
-        }
-
-        try {
-            $url = (string)$this->url->withPath(sprintf('/Users/%s/items/' . $id, $this->user))->withQuery(
-                http_build_query(
-                    [
-                        'fields' => implode(',', self::FIELDS),
-                    ]
-                )
-            );
-
-            $response = $this->http->request('GET', $url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                $this->cache['shows'][$id] = [];
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $context['item'] = [
-                'id' => ag($json, 'Id'),
-                'title' => ag($json, ['Name', 'OriginalTitle'], '??'),
-                'year' => ag($json, 'ProductionYear', null),
-                'type' => ag($json, 'Type'),
-            ];
-
-            if (null === ($itemType = ag($json, 'Type')) || 'Series' !== $itemType) {
-                $this->cache['shows'][$id] = [];
-                return [];
-            }
-
-            $providersId = (array)ag($json, 'ProviderIds', []);
-
-            if (!$this->guid->has($providersId)) {
-                $this->cache['shows'][$id] = [];
-                return [];
-            }
-
-            $this->cache['shows'][$id] = Guid::fromArray($this->guid->get($providersId), context: [
-                'backend' => $this->context->backendName,
-                ...$context,
-            ])->getAll();
-
-            return $this->cache['shows'][$id];
-        } catch (Throwable $e) {
-            $this->logger->error('Unhandled exception was thrown during getEpisodeParent.', [
-                'backend' => $this->context->backendName,
-                ...$context,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
         }
     }
 }

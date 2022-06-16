@@ -5,20 +5,38 @@ declare(strict_types=1);
 namespace App\Backends\Plex;
 
 use App\Backends\Common\Context;
+use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Plex\Action\GetMetaData;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use RuntimeException;
 
 trait PlexActionTrait
 {
-    protected function createEntity(Context $context, PlexGuid $guid, array $item, array $opts = []): StateEntity
+    private array $typeMapper = [
+        PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
+        PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
+        PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
+    ];
+
+    /**
+     * Create {@see StateEntity} Object based on given data.
+     *
+     * @param Context $context
+     * @param iGuid $guid
+     * @param array $item Plex API item.
+     * @param array $opts options
+     *
+     * @return iState Return object on successful creation.
+     */
+    protected function createEntity(Context $context, iGuid $guid, array $item, array $opts = []): iState
     {
         // -- Handle watched/updated column in a special way to support mark as unplayed.
-        if (null !== ($opts['override'][iFace::COLUMN_WATCHED] ?? null)) {
-            $isPlayed = (bool)$opts['override'][iFace::COLUMN_WATCHED];
-            $date = $opts['override'][iFace::COLUMN_UPDATED] ?? ag($item, 'addedAt');
+        if (null !== ($opts['override'][iState::COLUMN_WATCHED] ?? null)) {
+            $isPlayed = (bool)$opts['override'][iState::COLUMN_WATCHED];
+            $date = $opts['override'][iState::COLUMN_UPDATED] ?? ag($item, 'addedAt');
         } else {
             $isPlayed = (bool)ag($item, 'viewCount', false);
             $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
@@ -34,19 +52,19 @@ trait PlexActionTrait
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
-        $type = ag($item, 'type');
+        $type = $this->typeMapper[ag($item, 'type')] ?? ag($item, 'type');
 
         $guids = $guid->get(ag($item, 'Guid', []), context: [
             'item' => [
                 'id' => ag($item, 'ratingKey'),
                 'type' => ag($item, 'type'),
-                'title' => match ($type) {
-                    iFace::TYPE_MOVIE => sprintf(
+                'title' => match (ag($item, 'type')) {
+                    PlexClient::TYPE_MOVIE => sprintf(
                         '%s (%s)',
                         ag($item, ['title', 'originalTitle'], '??'),
                         ag($item, 'year', '0000')
                     ),
-                    iFace::TYPE_EPISODE => sprintf(
+                    PlexClient::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
                         ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
                         str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
@@ -61,67 +79,71 @@ trait PlexActionTrait
         $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'ratingKey'));
 
         $builder = [
-            iFace::COLUMN_TYPE => $type,
-            iFace::COLUMN_UPDATED => (int)$date,
-            iFace::COLUMN_WATCHED => (int)$isPlayed,
-            iFace::COLUMN_VIA => $context->backendName,
-            iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-            iFace::COLUMN_GUIDS => $guids,
-            iFace::COLUMN_META_DATA => [
+            iState::COLUMN_TYPE => $type,
+            iState::COLUMN_UPDATED => (int)$date,
+            iState::COLUMN_WATCHED => (int)$isPlayed,
+            iState::COLUMN_VIA => $context->backendName,
+            iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+            iState::COLUMN_GUIDS => $guids,
+            iState::COLUMN_META_DATA => [
                 $context->backendName => [
-                    iFace::COLUMN_ID => (string)ag($item, 'ratingKey'),
-                    iFace::COLUMN_TYPE => $type,
-                    iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    iFace::COLUMN_VIA => $context->backendName,
-                    iFace::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-                    iFace::COLUMN_GUIDS => $guid->parse(ag($item, 'Guid', [])),
-                    iFace::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
+                    iState::COLUMN_ID => (string)ag($item, 'ratingKey'),
+                    iState::COLUMN_TYPE => $type,
+                    iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
+                    iState::COLUMN_VIA => $context->backendName,
+                    iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
+                    iState::COLUMN_GUIDS => $guid->parse(ag($item, 'Guid', [])),
+                    iState::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
                 ],
             ],
-            iFace::COLUMN_EXTRA => [],
+            iState::COLUMN_EXTRA => [],
         ];
 
-        $metadata = &$builder[iFace::COLUMN_META_DATA][$context->backendName];
-        $metadataExtra = &$metadata[iFace::COLUMN_META_DATA_EXTRA];
+        $metadata = &$builder[iState::COLUMN_META_DATA][$context->backendName];
+        $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
         if (null !== ($library = ag($item, 'librarySectionID', $opts['library'] ?? null))) {
-            $metadata[iFace::COLUMN_META_LIBRARY] = (string)$library;
+            $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
         }
 
-        if (iFace::TYPE_EPISODE === $type) {
-            $builder[iFace::COLUMN_SEASON] = (int)ag($item, 'parentIndex', 0);
-            $builder[iFace::COLUMN_EPISODE] = (int)ag($item, 'index', 0);
+        if (iState::TYPE_EPISODE === $type) {
+            $builder[iState::COLUMN_SEASON] = (int)ag($item, 'parentIndex', 0);
+            $builder[iState::COLUMN_EPISODE] = (int)ag($item, 'index', 0);
 
-            $metadata[iFace::COLUMN_META_SHOW] = (string)ag($item, ['grandparentRatingKey', 'parentRatingKey'], '??');
+            $metadata[iState::COLUMN_META_SHOW] = (string)ag($item, ['grandparentRatingKey', 'parentRatingKey'], '??');
 
-            $metadata[iFace::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
-            $metadata[iFace::COLUMN_SEASON] = (string)$builder[iFace::COLUMN_SEASON];
-            $metadata[iFace::COLUMN_EPISODE] = (string)$builder[iFace::COLUMN_EPISODE];
+            $metadata[iState::COLUMN_TITLE] = ag($item, 'grandparentTitle', '??');
+            $metadata[iState::COLUMN_SEASON] = (string)$builder[iState::COLUMN_SEASON];
+            $metadata[iState::COLUMN_EPISODE] = (string)$builder[iState::COLUMN_EPISODE];
 
-            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iFace::COLUMN_TITLE];
-            $builder[iFace::COLUMN_TITLE] = $metadata[iFace::COLUMN_TITLE];
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_TITLE] = $builder[iState::COLUMN_TITLE];
+            $builder[iState::COLUMN_TITLE] = $metadata[iState::COLUMN_TITLE];
 
             if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey']))) {
-                $builder[iFace::COLUMN_PARENT] = $this->getEpisodeParent($parentId);
-                $metadata[iFace::COLUMN_PARENT] = $builder[iFace::COLUMN_PARENT];
+                $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
+                    context: $context,
+                    guid:    $guid,
+                    id:      $parentId
+                );
+                $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
             }
         }
 
         if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year'])) && !empty($mediaYear)) {
-            $builder[iFace::COLUMN_YEAR] = (int)$mediaYear;
-            $metadata[iFace::COLUMN_YEAR] = (string)$mediaYear;
+            $builder[iState::COLUMN_YEAR] = (int)$mediaYear;
+            $metadata[iState::COLUMN_YEAR] = (string)$mediaYear;
         }
 
         if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
-            $metadata[iFace::COLUMN_META_PATH] = (string)$mediaPath;
+            $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
         }
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {
-            $metadataExtra[iFace::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
+            $metadataExtra[iState::COLUMN_META_DATA_EXTRA_DATE] = makeDate($PremieredAt)->format('Y-m-d');
         }
 
         if (true === $isPlayed) {
-            $metadata[iFace::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
+            $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
         }
 
         unset($metadata, $metadataExtra);
@@ -130,6 +152,88 @@ trait PlexActionTrait
             $builder = array_replace_recursive($builder, $opts['override'] ?? []);
         }
 
-        return Container::get(iFace::class)::fromArray($builder);
+        return Container::get(iState::class)::fromArray($builder);
+    }
+
+    /**
+     * Get item details.
+     *
+     * @param Context $context
+     * @param string|int $id
+     * @param array $opts
+     * @return array
+     */
+    protected function getItemDetails(Context $context, string|int $id, array $opts = []): array
+    {
+        $response = Container::get(GetMetaData::class)(context: $context, id: $id, opts: $opts);
+
+        if ($response->isSuccessful()) {
+            return $response->response;
+        }
+
+        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+    }
+
+    /**
+     * Get episode parent external ids.
+     *
+     * @param Context $context
+     * @param iGuid $guid
+     * @param int|string $id
+     * @param array $logContext
+     *
+     * @return array
+     */
+    protected function getEpisodeParent(Context $context, iGuid $guid, int|string $id, array $logContext = []): array
+    {
+        $cacheKey = PlexClient::TYPE_SHOW . '.' . $id;
+
+        if (true === $context->cache->has($cacheKey)) {
+            return $context->cache->get($cacheKey);
+        }
+
+        $json = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
+
+        $logContext['item'] = [
+            'id' => ag($json, 'ratingKey'),
+            'title' => sprintf(
+                '%s (%s)',
+                ag($json, ['title', 'originalTitle'], '??'),
+                ag($json, 'year', '0000')
+            ),
+            'year' => ag($json, ['grandParentYear', 'parentYear', 'year'], '0000'),
+            'type' => ag($json, 'type', 'unknown'),
+        ];
+
+        if (null === ($type = ag($json, 'type')) || PlexClient::TYPE_SHOW !== $type) {
+            return [];
+        }
+
+        if (null === ($json['Guid'] ?? null)) {
+            $json['Guid'] = [['id' => $json['guid']]];
+        } else {
+            $json['Guid'][] = ['id' => $json['guid']];
+        }
+
+        if (false === $guid->has(guids: $json['Guid'])) {
+            $context->cache->set($cacheKey, []);
+            return [];
+        }
+
+        $gContext = ag_set(
+            $logContext,
+            'item.plex_id',
+            str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none'
+        );
+
+        $context->cache->set(
+            $cacheKey,
+            Guid::fromArray(
+                payload: $guid->get($json['Guid'], context: [...$gContext]),
+                context: ['backend' => $context->backendName, ...$logContext]
+            )->getAll()
+        );
+
+        return $context->cache->get($cacheKey);
     }
 }

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Libs\Servers;
 
+use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
-use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\InspectRequest;
+use App\Backends\Plex\Action\ParseWebhook;
 use App\Backends\Plex\PlexActionTrait;
+use App\Backends\Plex\PlexClient;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -20,7 +22,6 @@ use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use Closure;
-use DateInterval;
 use DateTimeInterface;
 use Generator;
 use JsonException;
@@ -32,8 +33,6 @@ use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -46,36 +45,11 @@ class PlexServer implements ServerInterface
 
     public const NAME = 'PlexBackend';
 
-    protected const WEBHOOK_ALLOWED_TYPES = [
-        'movie',
-        'episode',
-    ];
-
-    protected const WEBHOOK_ALLOWED_EVENTS = [
-        'library.new',
-        'library.on.deck',
-        'media.play',
-        'media.stop',
-        'media.resume',
-        'media.pause',
-        'media.scrobble',
-    ];
-
-    protected const WEBHOOK_TAINTED_EVENTS = [
-        'media.play',
-        'media.stop',
-        'media.resume',
-        'media.pause',
-    ];
-
-    protected bool $initialized = false;
     protected UriInterface|null $url = null;
     protected string|null $token = null;
     protected array $options = [];
     protected string $name = '';
     protected array $persist = [];
-    protected string $cacheKey = '';
-    protected array $cache = [];
 
     protected string|int|null $uuid = null;
     protected string|int|null $user = null;
@@ -84,14 +58,11 @@ class PlexServer implements ServerInterface
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
-        protected CacheInterface $cacheIO,
+        protected Cache $cache,
         protected PlexGuid $guid,
     ) {
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function setUp(
         string $name,
         UriInterface $url,
@@ -110,19 +81,12 @@ class PlexServer implements ServerInterface
         $cloned->uuid = $uuid;
         $cloned->options = $options;
         $cloned->persist = $persist;
-        $cloned->initialized = true;
-
-        $cloned->cache = [];
-        $cloned->cacheKey = $cloned::NAME . '_' . $name;
-
-        if ($cloned->cacheIO->has($cloned->cacheKey)) {
-            $cloned->cache = $cloned->cacheIO->get($cloned->cacheKey);
-        }
 
         $cloned->context = new Context(
             clientName:     static::NAME,
             backendName:    $name,
             backendUrl:     $url,
+            cache:          $this->cache->withData($cloned::NAME . '_' . $name, $this->options),
             backendId:      $uuid,
             backendToken:   $token,
             backendUser:    $userId,
@@ -243,150 +207,32 @@ class PlexServer implements ServerInterface
 
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
-        $response = (new InspectRequest())(context: $this->context, request: $request);
+        $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
 
         return $response->isSuccessful() ? $response->response : $request;
     }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
-        if (null === ($json = $request->getParsedBody())) {
-            throw new HttpException(sprintf('%s: No payload.', static::NAME), 400);
-        }
+        $response = Container::get(ParseWebhook::class)(
+            context: $this->context,
+            guid:    $this->guid,
+            request: $request,
+            opts:    $this->options
+        );
 
-        $item = ag($json, 'Metadata', []);
-        $type = ag($json, 'Metadata.type');
-        $event = ag($json, 'event', null);
-        $id = ag($item, 'ratingKey');
-
-        if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
-            throw new HttpException(
-                sprintf('%s: Webhook content type [%s] is not supported.', $this->getName(), $type), 200
-            );
-        }
-
-        if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
-            throw new HttpException(
-                sprintf('%s: Webhook event type [%s] is not supported.', $this->getName(), $event), 200
-            );
-        }
-
-        if (null === $id) {
-            throw new HttpException(sprintf('%s: No item id was found in webhook body.', $this->getName()), 400);
-        }
-
-        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
-        }
-
-        if (null !== $ignoreIds && in_array(ag($item, 'librarySectionID', '???'), $ignoreIds)) {
-            throw new HttpException(sprintf('%s: library is ignored by user config.', $this->getName()), 200);
-        }
-
-        try {
-            $isPlayed = (bool)ag($item, 'viewCount', false);
-            $lastPlayedAt = true === $isPlayed ? ag($item, 'lastViewedAt') : null;
-
-            $fields = [
-                iFace::COLUMN_WATCHED => (int)$isPlayed,
-                iFace::COLUMN_META_DATA => [
-                    $this->getName() => [
-                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    ]
-                ],
-                iFace::COLUMN_EXTRA => [
-                    $this->getName() => [
-                        iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                    ],
-                ],
-            ];
-
-            if (true === $isPlayed && null !== $lastPlayedAt) {
-                $fields = array_replace_recursive($fields, [
-                    iFace::COLUMN_UPDATED => (int)$lastPlayedAt,
-                    iFace::COLUMN_META_DATA => [
-                        $this->getName() => [
-                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
-                        ]
-                    ],
-                ]);
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
-            $obj = ag($this->getMetadata(id: $id), 'MediaContainer.Metadata.0', []);
-
-            $guids = $this->guid->get(ag($item, 'Guid', []), context: [
-                'item' => [
-                    'id' => ag($item, 'ratingKey'),
-                    'type' => ag($item, 'type'),
-                    'title' => match ($type) {
-                        iFace::TYPE_MOVIE => sprintf(
-                            '%s (%s)',
-                            ag($item, ['title', 'originalTitle'], '??'),
-                            ag($item, 'year', '0000')
-                        ),
-                        iFace::TYPE_EPISODE => sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                        ),
-                    },
-                    'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
-                    'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
-                ],
-            ]);
-
-            if (false === empty($guids)) {
-                $guids += Guid::makeVirtualGuid($this->getName(), (string)$id);
-                $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$this->getName()][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
-            }
-
-            $entity = $this->createEntity(
-                context: $this->context,
-                guid:    $this->guid,
-                item:    $obj,
-                opts:    ['override' => $fields],
-            )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
-        } catch (Throwable $e) {
-            $this->logger->error('Unhandled exception was thrown during [%(backend)] webhook event parsing.', [
-                'backend' => $this->getName(),
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-                'context' => [
-                    'attributes' => $request->getAttributes(),
-                    'payload' => $request->getParsedBody(),
-                ],
-            ]);
-
             throw new HttpException(
-                sprintf('%s: Failed to handle webhook payload check logs.', $this->getName()), 200
+                ag($response->extra, 'message', fn() => $response->error->format()),
+                ag($response->extra, 'http_code', 400),
             );
         }
 
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->error('Ignoring [%(backend)] [%(title)] webhook event. No valid/supported external ids.', [
-                'backend' => $id,
-                'title' => $entity->getName(),
-                'context' => [
-                    'attributes' => $request->getAttributes(),
-                    'parsed' => $entity->getAll(),
-                    'payload' => $request->getParsedBody(),
-                ],
-            ]);
-
-            throw new HttpException(
-                sprintf('%s: Import ignored. No valid/supported external ids.', $this->getName()),
-                200
-            );
-        }
-
-        return $entity;
+        return $response->response;
     }
 
     public function search(string $query, int $limit = 25, array $opts = []): array
@@ -526,13 +372,7 @@ class PlexServer implements ServerInterface
 
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $response = Container::get(GetMetaData::class)(context: $this->context, id: $id, opts: $opts);
-
-        if ($response->isSuccessful()) {
-            return $response->response;
-        }
-
-        throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+        return $this->getItemDetails(context: $this->context, id: $id, opts: $opts);
     }
 
     /**
@@ -1436,22 +1276,8 @@ class PlexServer implements ServerInterface
                     ]
                 );
             },
-            includeParent: false === count(ag($this->cache, 'shows', [])) > 1,
+            includeParent: false === count($this->context->cache->get(PlexClient::TYPE_SHOW, [])) > 1,
         );
-    }
-
-    public function __destruct()
-    {
-        if (true === (bool)ag($this->options, Options::DRY_RUN)) {
-            return;
-        }
-
-        if (!empty($this->cacheKey) && !empty($this->cache) && true === $this->initialized) {
-            try {
-                $this->cacheIO->set($this->cacheKey, $this->cache, new DateInterval('P3D'));
-            } catch (InvalidArgumentException) {
-            }
-        }
     }
 
     protected function getHeaders(): array
@@ -2104,10 +1930,14 @@ class PlexServer implements ServerInterface
             'item.plex_id',
             str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none'
         );
-        $this->cache['shows'][ag($context, 'item.id')] = Guid::fromArray(
-            payload: $this->guid->get($item['Guid'], context: [...$gContext]),
-            context: ['backend' => $this->getName(), ...$context,]
-        )->getAll();
+
+        $this->context->cache->set(
+            PlexClient::TYPE_SHOW . '.' . ag($context, 'item.id'),
+            Guid::fromArray(
+                payload: $this->guid->get($item['Guid'], context: [...$gContext]),
+                context: ['backend' => $this->getName(), ...$context,]
+            )->getAll()
+        );
     }
 
     protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
@@ -2118,64 +1948,6 @@ class PlexServer implements ServerInterface
 
         if (true === $checkToken && null === $this->token) {
             throw new RuntimeException(static::NAME . ': No token was set.');
-        }
-    }
-
-    protected function getEpisodeParent(int|string $id, array $context = []): array
-    {
-        if (array_key_exists($id, $this->cache['shows'] ?? [])) {
-            return $this->cache['shows'][$id];
-        }
-
-        try {
-            $json = ag($this->getMetadata($id), 'MediaContainer.Metadata.0', []);
-
-            $context['item'] = [
-                'id' => ag($json, 'ratingKey'),
-                'title' => sprintf('%s (%s)', ag($json, ['title', 'originalTitle'], '??'), ag($json, 'year', '0000')),
-                'year' => ag($json, ['grandParentYear', 'parentYear', 'year'], '0000'),
-                'type' => ag($json, 'type', 'unknown'),
-            ];
-
-            if (null === ($type = ag($json, 'type')) || 'show' !== $type) {
-                return [];
-            }
-
-            if (null === ($json['Guid'] ?? null)) {
-                $json['Guid'] = [['id' => $json['guid']]];
-            } else {
-                $json['Guid'][] = ['id' => $json['guid']];
-            }
-
-            if (!$this->guid->has(guids: $json['Guid'])) {
-                $this->cache['shows'][$id] = [];
-                return [];
-            }
-
-            $gContext = ag_set(
-                $context,
-                'item.plex_id',
-                str_starts_with(ag($json, 'guid', ''), 'plex://') ? ag($json, 'guid') : 'none'
-            );
-
-            $this->cache['shows'][$id] = Guid::fromArray(
-                payload: $this->guid->get($json['Guid'], context: [...$gContext]),
-                context: ['backend' => $this->getName(), ...$context]
-            )->getAll();
-
-            return $this->cache['shows'][$id];
-        } catch (RuntimeException $e) {
-            $this->logger->error('Unhandled exception was thrown during getEpisodeParent.', [
-                'backend' => $this->getName(),
-                ...$context,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
         }
     }
 

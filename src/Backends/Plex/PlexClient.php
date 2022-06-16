@@ -15,6 +15,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class PlexClient
 {
+    public const TYPE_SHOW = 'show';
+    public const TYPE_MOVIE = 'movie';
+    public const TYPE_EPISODE = 'episode';
+
     private Context|null $context = null;
 
     public function __construct(
