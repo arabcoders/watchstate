@@ -205,7 +205,7 @@ final class ListCommand extends Command
                 );
             }
 
-            $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value";
+            $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
             $params['jf_metadata_value'] = $sValue;
         }
 
@@ -218,7 +218,7 @@ final class ListCommand extends Command
                 );
             }
 
-            $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
+            $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
             $params['jf_extra_value'] = $sValue;
         }
 
