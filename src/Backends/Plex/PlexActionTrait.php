@@ -46,6 +46,11 @@ trait PlexActionTrait
             throw new RuntimeException('No date was set on object.');
         }
 
+        $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
+        if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
+            $year = (int)makeDate($airDate)->format('Y');
+        }
+
         if (null === ag($item, 'Guid')) {
             $item['Guid'] = [['id' => ag($item, 'guid')]];
         } else {
@@ -62,7 +67,7 @@ trait PlexActionTrait
                     PlexClient::TYPE_MOVIE => sprintf(
                         '%s (%s)',
                         ag($item, ['title', 'originalTitle'], '??'),
-                        ag($item, 'year', '0000')
+                        0 === $year ? '0000' : $year,
                     ),
                     PlexClient::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
@@ -71,7 +76,7 @@ trait PlexActionTrait
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
                 },
-                'year' => ag($item, ['grandParentYear', 'parentYear', 'year']),
+                'year' => 0 === $year ? '0000' : $year,
                 'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
             ],
         ]);
@@ -129,9 +134,9 @@ trait PlexActionTrait
             }
         }
 
-        if (null !== ($mediaYear = ag($item, ['grandParentYear', 'parentYear', 'year'])) && !empty($mediaYear)) {
-            $builder[iState::COLUMN_YEAR] = (int)$mediaYear;
-            $metadata[iState::COLUMN_YEAR] = (string)$mediaYear;
+        if (0 !== $year) {
+            $builder[iState::COLUMN_YEAR] = (int)$year;
+            $metadata[iState::COLUMN_YEAR] = (string)$year;
         }
 
         if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
@@ -194,14 +199,19 @@ trait PlexActionTrait
 
         $json = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
 
+        $year = (int)ag($json, ['grandParentYear', 'parentYear', 'year'], 0);
+        if (0 === $year && null !== ($airDate = ag($json, 'originallyAvailableAt'))) {
+            $year = (int)makeDate($airDate)->format('Y');
+        }
+
         $logContext['item'] = [
             'id' => ag($json, 'ratingKey'),
             'title' => sprintf(
                 '%s (%s)',
                 ag($json, ['title', 'originalTitle'], '??'),
-                ag($json, 'year', '0000')
+                0 === $year ? '0000' : $year,
             ),
-            'year' => ag($json, ['grandParentYear', 'parentYear', 'year'], '0000'),
+            'year' => 0 === $year ? '0000' : $year,
             'type' => ag($json, 'type', 'unknown'),
         ];
 
