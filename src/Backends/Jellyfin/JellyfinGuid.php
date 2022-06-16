@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\GuidInterface;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Libs\Guid;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-class JellyfinGuid implements GuidInterface
+class JellyfinGuid implements iGuid
 {
     private const GUID_MAPPER = [
         'imdb' => Guid::GUID_IMDB,

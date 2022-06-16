@@ -42,7 +42,7 @@ final class GetMetaData
                 if (true === (bool)ag($opts, Options::NO_CACHE, false)) {
                     $cacheKey = null;
                 } else {
-                    $cacheKey = $context->backendName . '_' . $id . '_metadata';
+                    $cacheKey = $context->clientName . '_' . $context->backendName . '_' . $id . '_metadata';
                 }
 
                 $url = $context->backendUrl->withPath('/library/metadata/' . $id)
