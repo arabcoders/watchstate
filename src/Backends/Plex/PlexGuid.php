@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Backends\Plex;
 
 use App\Backends\Common\Context;
+use App\Backends\Common\GuidInterface;
 use App\Libs\Guid;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class PlexGuid
+final class PlexGuid implements GuidInterface
 {
     private const GUID_MAPPER = [
         'imdb' => Guid::GUID_IMDB,
@@ -57,12 +58,6 @@ final class PlexGuid
     {
     }
 
-    /**
-     * Set working context.
-     *
-     * @param Context $context
-     * @return $this a cloned version of the class will be returned.
-     */
     public function withContext(Context $context): self
     {
         $cloned = clone $this;
@@ -71,39 +66,16 @@ final class PlexGuid
         return $cloned;
     }
 
-    /**
-     * Parse external ids from given list in safe way.
-     *
-     * *DO NOT THROW OR LOG ANYTHING.*
-     *
-     * @param array $guids
-     *
-     * @return array
-     */
     public function parse(array $guids): array
     {
         return $this->ListExternalIds(guids: $guids, log: false);
     }
 
-    /**
-     * Parse supported external ids from given list.
-     *
-     * @param array $guids
-     * @param array $context
-     * @return array
-     */
     public function get(array $guids, array $context = []): array
     {
         return $this->ListExternalIds(guids: $guids, context: $context, log: true);
     }
 
-    /**
-     * Does the given list contain supported external ids?
-     *
-     * @param array $guids
-     * @param array $context
-     * @return bool
-     */
     public function has(array $guids, array $context = []): bool
     {
         return count($this->ListExternalIds(guids: $guids, context: $context, log: false)) >= 1;
@@ -118,7 +90,7 @@ final class PlexGuid
      */
     public function isLocal(string $guid): bool
     {
-        return in_array(before(strtolower($guid), '://'), self::GUID_LOCAL);
+        return true === in_array(before(strtolower($guid), '://'), self::GUID_LOCAL);
     }
 
     /**
