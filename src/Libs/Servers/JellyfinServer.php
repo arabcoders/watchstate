@@ -10,6 +10,8 @@ use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Backends\Jellyfin\Action\ParseWebhook;
+use App\Backends\Jellyfin\Action\SearchId;
+use App\Backends\Jellyfin\Action\SearchQuery;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinGuid;
@@ -50,16 +52,7 @@ class JellyfinServer implements ServerInterface
     protected const COLLECTION_TYPE_SHOWS = 'tvshows';
     protected const COLLECTION_TYPE_MOVIES = 'movies';
 
-    public const FIELDS = [
-        'ProviderIds',
-        'DateCreated',
-        'OriginalTitle',
-        'SeasonUserData',
-        'DateLastSaved',
-        'PremiereDate',
-        'ProductionYear',
-        'Path',
-    ];
+    public const FIELDS = JellyfinClient::EXTRA_FIELDS;
 
     protected UriInterface|null $url = null;
     protected string|null $token = null;
@@ -192,18 +185,13 @@ class JellyfinServer implements ServerInterface
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
-        $response = Container::get(ParseWebhook::class)(
-            context: $this->context,
-            guid:    $this->guid,
-            request: $request,
-            opts:    $this->options
-        );
+        $response = Container::get(ParseWebhook::class)(context: $this->context, guid: $this->guid, request: $request);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
 
         if (false === $response->isSuccessful()) {
-            if ($response->hasError()) {
-                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
-            }
-
             throw new HttpException(
                 ag($response->extra, 'message', fn() => $response->error->format()),
                 ag($response->extra, 'http_code', 400),
@@ -215,93 +203,22 @@ class JellyfinServer implements ServerInterface
 
     public function search(string $query, int $limit = 25, array $opts = []): array
     {
-        $this->checkConfig(true);
+        $response = Container::get(SearchQuery::class)(
+            context: $this->context,
+            query:   $query,
+            limit:   $limit,
+            opts:    $opts
+        );
 
-        try {
-            $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
-                http_build_query(
-                    array_replace_recursive(
-                        [
-                            'searchTerm' => $query,
-                            'limit' => $limit,
-                            'recursive' => 'true',
-                            'fields' => implode(',', self::FIELDS),
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                            'includeItemTypes' => 'Episode,Movie,Series',
-                        ],
-                        $opts['query'] ?? []
-                    )
-                )
-            );
-
-            $this->logger->debug('Searching for [%(query)] in [%(backend)].', [
-                'backend' => $this->context->backendName,
-                'query' => $query,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive($this->getHeaders(), $opts['headers'] ?? [])
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Search request for [%s] in [%s] responded with unexpected [%s] status code.',
-                        $query,
-                        $this->context->backendName,
-                        $response->getStatusCode(),
-                    )
-                );
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $list = [];
-
-            foreach (ag($json, 'Items', []) as $item) {
-                $watchedAt = ag($item, 'UserData.LastPlayedDate');
-                $year = (int)ag($item, 'Year', 0);
-
-                if (0 === $year && null !== ($airDate = ag($item, 'PremiereDate'))) {
-                    $year = (int)makeDate($airDate)->format('Y');
-                }
-
-                $type = strtolower(ag($item, 'Type'));
-
-                $episodeNumber = ('episode' === $type) ? sprintf(
-                    '%sx%s - ',
-                    str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
-                    str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
-                ) : null;
-
-                $builder = [
-                    'id' => ag($item, 'Id'),
-                    'type' => ucfirst($type),
-                    'title' => $episodeNumber . mb_substr(ag($item, ['Name', 'OriginalTitle'], '??'), 0, 50),
-                    'year' => $year,
-                    'addedAt' => makeDate(ag($item, 'DateCreated', 'now'))->format('Y-m-d H:i:s T'),
-                    'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
-                ];
-
-                if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                    $builder['raw'] = $item;
-                }
-
-                $list[] = $builder;
-            }
-
-            return $list;
-        } catch (ExceptionInterface|JsonException $e) {
-            throw new RuntimeException(get_class($e) . ': ' . $e->getMessage(), $e->getCode(), $e);
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
+
+        if (false === $response->isSuccessful()) {
+            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
     }
 
     /**
@@ -309,59 +226,21 @@ class JellyfinServer implements ServerInterface
      */
     public function searchId(string|int $id, array $opts = []): array
     {
-        $item = $this->getMetadata($id, $opts);
+        $response = Container::get(SearchId::class)(
+            context: $this->context,
+            id:      $id,
+            opts:    $opts
+        );
 
-        $year = (int)ag($item, 'Year', 0);
-
-        if (0 === $year && null !== ($airDate = ag($item, 'PremiereDate'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        $type = strtolower(ag($item, 'Type'));
-
-        $episodeNumber = ('episode' === $type) ? sprintf(
-            '%sx%s - ',
-            str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
-            str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
-        ) : null;
-
-        $builder = [
-            'id' => ag($item, 'Id'),
-            'type' => ucfirst($type),
-            'title' => $episodeNumber . mb_substr(ag($item, ['Name', 'OriginalTitle'], '??'), 0, 50),
-            'year' => $year,
-            'addedAt' => makeDate(ag($item, 'DateCreated', 'now'))->format('Y-m-d H:i:s T'),
-        ];
-
-        if (null !== ($watchedAt = ag($item, 'UserData.LastPlayedDate'))) {
-            $builder['watchedAt'] = makeDate($watchedAt)->format('Y-m-d H:i:s T');
+        if (false === $response->isSuccessful()) {
+            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        if (null !== ($endDate = ag($item, 'EndDate'))) {
-            $builder['EndedAt'] = makeDate($endDate)->format('Y-m-d H:i:s T');
-        }
-
-        if (('movie' === $type || 'series' === $type) && null !== ($premiereDate = ag($item, 'PremiereDate'))) {
-            $builder['premieredAt'] = makeDate($premiereDate)->format('Y-m-d H:i:s T');
-        }
-
-        if (null !== $watchedAt) {
-            $builder['watchedAt'] = makeDate($watchedAt)->format('Y-m-d H:i:s T');
-        }
-
-        if (('episode' === $type || 'movie' === $type) && null !== ($duration = ag($item, 'RunTimeTicks'))) {
-            $builder['duration'] = formatDuration($duration / 10000);
-        }
-
-        if (null !== ($status = ag($item, 'Status'))) {
-            $builder['status'] = $status;
-        }
-
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-            $builder['raw'] = $item;
-        }
-
-        return $builder;
+        return $response->response;
     }
 
     /**

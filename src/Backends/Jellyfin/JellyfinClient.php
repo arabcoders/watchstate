@@ -19,6 +19,17 @@ class JellyfinClient
     public const TYPE_SHOW = 'Series';
     public const TYPE_EPISODE = 'Episode';
 
+    public const EXTRA_FIELDS = [
+        'ProviderIds',
+        'DateCreated',
+        'OriginalTitle',
+        'SeasonUserData',
+        'DateLastSaved',
+        'PremiereDate',
+        'ProductionYear',
+        'Path',
+    ];
+
     private Context|null $context = null;
 
     public function __construct(

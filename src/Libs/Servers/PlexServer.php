@@ -10,6 +10,8 @@ use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
+use App\Backends\Plex\Action\SearchId;
+use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
 use App\Backends\Plex\PlexGuid;
@@ -158,6 +160,10 @@ class PlexServer implements ServerInterface
     {
         $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
 
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
         return $response->isSuccessful() ? $response->response : $request;
     }
 
@@ -166,15 +172,14 @@ class PlexServer implements ServerInterface
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,
             guid:    $this->guid,
-            request: $request,
-            opts:    $this->options
+            request: $request
         );
 
-        if (false === $response->isSuccessful()) {
-            if ($response->hasError()) {
-                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
-            }
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
 
+        if (false === $response->isSuccessful()) {
             throw new HttpException(
                 ag($response->extra, 'message', fn() => $response->error->format()),
                 ag($response->extra, 'http_code', 400),
@@ -186,136 +191,37 @@ class PlexServer implements ServerInterface
 
     public function search(string $query, int $limit = 25, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(SearchQuery::class)(
+            context: $this->context,
+            query:   $query,
+            limit:   $limit,
+            opts:    $opts
+        );
 
-        try {
-            $url = $this->url->withPath('/hubs/search')->withQuery(
-                http_build_query(
-                    array_replace_recursive(
-                        [
-                            'query' => $query,
-                            'limit' => $limit,
-                            'includeGuids' => 1,
-                            'includeExternalMedia' => 0,
-                            'includeCollections' => 0,
-                        ],
-                        $opts['query'] ?? []
-                    )
-                )
-            );
-
-            $this->logger->debug('Searching for [%(query)] in [%(backend)].', [
-                'backend' => $this->getName(),
-                'query' => $query,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request(
-                'GET',
-                (string)$url,
-                array_replace_recursive($this->getHeaders(), $opts['headers'] ?? [])
-            );
-
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Search request for [%s] in [%s] responded with unexpected [%s] status code.',
-                        $query,
-                        $this->getName(),
-                        $response->getStatusCode(),
-                    )
-                );
-            }
-
-            $list = [];
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            foreach (ag($json, 'MediaContainer.Hub', []) as $leaf) {
-                $type = ag($leaf, 'type');
-
-                if ('show' !== $type && 'movie' !== $type && 'episode' !== $type) {
-                    continue;
-                }
-
-                foreach (ag($leaf, 'Metadata', []) as $item) {
-                    $watchedAt = ag($item, 'lastViewedAt');
-
-                    $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
-                    if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                        $year = (int)makeDate($airDate)->format('Y');
-                    }
-
-                    $episodeNumber = ('episode' === $type) ? sprintf(
-                        '%sx%s - ',
-                        str_pad((string)(ag($item, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)(ag($item, 'index', 0)), 3, '0', STR_PAD_LEFT),
-                    ) : null;
-
-                    $builder = [
-                        'id' => (int)ag($item, 'ratingKey'),
-                        'type' => ucfirst(ag($item, 'type', '??')),
-                        'library' => ag($item, 'librarySectionTitle', '??'),
-                        'title' => $episodeNumber . mb_substr(ag($item, ['title', 'originalTitle'], '??'), 0, 50),
-                        'year' => $year,
-                        'addedAt' => makeDate(ag($item, 'addedAt'))->format('Y-m-d H:i:s T'),
-                        'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
-                    ];
-
-                    if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                        $builder['raw'] = $item;
-                    }
-
-                    $list[] = $builder;
-                }
-            }
-
-            return $list;
-        } catch (ExceptionInterface|JsonException $e) {
-            throw new RuntimeException(sprintf('%s: %s', $this->getName(), $e->getMessage()), previous: $e);
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
+
+        if (false === $response->isSuccessful()) {
+            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
     }
 
     public function searchId(string|int $id, array $opts = []): array
     {
-        $item = $this->getMetadata($id, $opts);
+        $response = Container::get(SearchId::class)(context: $this->context, id: $id, opts: $opts);
 
-        $metadata = ag($item, 'MediaContainer.Metadata.0', []);
-
-        $type = ag($metadata, 'type');
-        $watchedAt = ag($metadata, 'lastViewedAt');
-
-        $year = (int)ag($metadata, ['grandParentYear', 'parentYear', 'year'], 0);
-        if (0 === $year && null !== ($airDate = ag($metadata, 'originallyAvailableAt'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        $episodeNumber = ('episode' === $type) ? sprintf(
-            '%sx%s - ',
-            str_pad((string)(ag($metadata, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
-            str_pad((string)(ag($metadata, 'index', 0)), 3, '0', STR_PAD_LEFT),
-        ) : null;
-
-        $builder = [
-            'id' => (int)ag($metadata, 'ratingKey'),
-            'type' => ucfirst(ag($metadata, 'type', '??')),
-            'library' => ag($metadata, 'librarySectionTitle', '??'),
-            'title' => $episodeNumber . mb_substr(ag($metadata, ['title', 'originalTitle'], '??'), 0, 50),
-            'year' => $year,
-            'addedAt' => makeDate(ag($metadata, 'addedAt'))->format('Y-m-d H:i:s T'),
-            'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
-            'duration' => ag($metadata, 'duration') ? formatDuration(ag($metadata, 'duration')) : 'None',
-        ];
-
-        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-            $builder['raw'] = $item;
+        if (false === $response->isSuccessful()) {
+            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        return $builder;
+        return $response->response;
     }
 
     public function getMetadata(string|int $id, array $opts = []): array

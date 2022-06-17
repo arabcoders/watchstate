@@ -49,16 +49,12 @@ final class ParseWebhook
      * @param Context $context
      * @param iGuid $guid
      * @param iRequest $request
-     * @param array $opts optional options.
      *
      * @return Response
      */
-    public function __invoke(Context $context, iGuid $guid, iRequest $request, array $opts = []): Response
+    public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
-        return $this->tryResponse(
-            context: $context,
-            fn: fn() => $this->parse($context, $guid, $request),
-        );
+        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
     }
 
     private function parse(Context $context, iGuid $guid, iRequest $request): Response

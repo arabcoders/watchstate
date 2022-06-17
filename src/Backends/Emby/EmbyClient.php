@@ -7,6 +7,7 @@ namespace App\Backends\Emby;
 use App\Backends\Common\Context;
 use App\Backends\Emby\Action\GetMetaData;
 use App\Backends\Emby\Action\GetIdentifier;
+use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Container;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -18,6 +19,8 @@ class EmbyClient
     public const TYPE_MOVIE = 'Movie';
     public const TYPE_SHOW = 'Series';
     public const TYPE_EPISODE = 'Episode';
+
+    public const EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
 
     private Context|null $context = null;
 
