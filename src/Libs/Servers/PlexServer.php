@@ -7,6 +7,7 @@ namespace App\Libs\Servers;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
+use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
 use App\Backends\Plex\PlexActionTrait;
@@ -115,71 +116,19 @@ class PlexServer implements ServerInterface
 
     public function getUsersList(array $opts = []): array
     {
-        $this->checkConfig(checkUrl: false);
+        $response = Container::get(GetUsersList::class)($this->context, $opts);
 
-        $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
-            ->withPath('/api/v2/home/users/');
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
 
-        $response = $this->http->request('GET', (string)$url, [
-            'headers' => [
-                'Accept' => 'application/json',
-                'X-Plex-Token' => $this->token,
-                'X-Plex-Client-Identifier' => $this->getServerUUID(),
-            ],
-        ]);
-
-        if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
-                sprintf(
-                    'Request for [%s] users list returned with unexpected [%s] status code.',
-                    $this->getName(),
-                    $response->getStatusCode(),
-                )
+                ag($response->extra, 'message', fn() => $response->error->format())
             );
         }
 
-        $json = json_decode(
-            json:        $response->getContent(),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $list = [];
-
-        $adminsCount = 0;
-
-        $users = ag($json, 'users', []);
-
-        foreach ($users as $user) {
-            if (true === (bool)ag($user, 'admin')) {
-                $adminsCount++;
-            }
-        }
-
-        foreach ($users as $user) {
-            $data = [
-                'id' => ag($user, 'admin') && $adminsCount <= 1 ? 1 : ag($user, 'id'),
-                'name' => $user['username'] ?? $user['title'] ?? $user['friendlyName'] ?? $user['email'] ?? '??',
-                'admin' => (bool)ag($user, 'admin'),
-                'guest' => (bool)ag($user, 'guest'),
-                'restricted' => (bool)ag($user, 'restricted'),
-                'updatedAt' => isset($user['updatedAt']) ? makeDate($user['updatedAt']) : 'Never',
-            ];
-
-            if (true === ($opts['tokens'] ?? false)) {
-                $data['token'] = $this->getUserToken($user['uuid']);
-            }
-
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $data['raw'] = $user;
-            }
-
-            $list[] = $data;
-        }
-
-        unset($json, $users);
-
-        return $list;
+        return $response->response;
     }
 
     public function getPersist(): array
@@ -1976,107 +1925,6 @@ class PlexServer implements ServerInterface
 
         if (true === $checkToken && null === $this->token) {
             throw new RuntimeException(static::NAME . ': No token was set.');
-        }
-    }
-
-    protected function getUserToken(int|string $userId): int|string|null
-    {
-        try {
-            $uuid = $this->getServerUUID();
-
-            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost(
-                'plex.tv'
-            )->withPath(sprintf('/api/v2/home/users/%s/switch', $userId));
-
-            $this->logger->debug('Requesting temporary token for [%(backend)] user id [%(user_id)].', [
-                'backend' => $this->getName(),
-                'user_id' => $userId,
-                'url' => (string)$url,
-            ]);
-
-            $response = $this->http->request('POST', (string)$url, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'X-Plex-Token' => $this->token,
-                    'X-Plex-Client-Identifier' => $uuid,
-                ],
-            ]);
-
-            if (201 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    'Request for [%(backend)] [%(user_id)] temporary token responded with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->getName(),
-                        'user_id' => $userId,
-                        'status_code' => $response->getStatusCode(),
-                    ]
-                );
-                return null;
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $tempToken = ag($json, 'authToken', null);
-
-            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
-                ->withPath('/api/v2/resources')->withQuery(
-                    http_build_query(
-                        [
-                            'includeIPv6' => 1,
-                            'includeHttps' => 1,
-                            'includeRelay' => 1
-                        ]
-                    )
-                );
-
-            $this->logger->debug('Requesting permanent token for [%(backend)] user id [%(user_id)].', [
-                'backend' => $this->getName(),
-                'user_id' => $userId,
-                'url' => (string)$url,
-            ]);
-
-            $response = $this->http->request('GET', (string)$url, [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'X-Plex-Token' => $tempToken,
-                    'X-Plex-Client-Identifier' => $uuid,
-                ],
-            ]);
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            foreach ($json ?? [] as $server) {
-                if (ag($server, 'clientIdentifier') !== $uuid) {
-                    continue;
-                }
-                return ag($server, 'accessToken');
-            }
-
-            return null;
-        } catch (Throwable $e) {
-            $this->logger->error(
-                'Unhandled exception was thrown during request for [%(backend)] [%(user_id)] access token.',
-                [
-                    'backend' => $this->getName(),
-                    'user_id' => $userId,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ],
-                ]
-            );
-
-            return null;
         }
     }
 }

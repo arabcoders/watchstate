@@ -6,6 +6,7 @@ use App\Libs\Config;
 use DateTimeInterface;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Logger;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class ConsoleHandler extends AbstractProcessingHandler
@@ -70,7 +71,9 @@ class ConsoleHandler extends AbstractProcessingHandler
             $message .= ' { ' . arrayToString($record['context']) . ' }';
         }
 
-        $this->output->writeln($message, $this->output->getVerbosity());
+        $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;
+
+        $errOutput?->writeln($message, $this->output->getVerbosity());
     }
 
     /**

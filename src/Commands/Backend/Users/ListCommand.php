@@ -46,7 +46,7 @@ final class ListCommand extends Command
         }
 
         try {
-            $opts = [];
+            $opts = $backendOpts = [];
 
             if ($input->getOption('with-tokens')) {
                 $opts['tokens'] = true;
@@ -56,7 +56,11 @@ final class ListCommand extends Command
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            $libraries = $this->getBackend($backend)->getUsersList(opts: $opts);
+            if ($input->getOption('trace')) {
+                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+            }
+
+            $libraries = $this->getBackend($backend, $backendOpts)->getUsersList(opts: $opts);
 
             if (count($libraries) < 1) {
                 $arr = [

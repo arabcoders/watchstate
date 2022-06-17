@@ -386,7 +386,7 @@ final class Initializer
                         status:  200,
                         body:    $local->getAll(),
                         headers: $responseHeaders + [
-                                     'X-Status' => sprintf('%s Marked as unplayed.', ucfirst($entity->type))
+                                     'X-Status' => sprintf('%s Marked as [Unplayed].', ucfirst($entity->type))
                                  ]
                     );
                 }

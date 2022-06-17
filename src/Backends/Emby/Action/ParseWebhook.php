@@ -32,14 +32,15 @@ final class ParseWebhook
         'item.markunplayed',
         'playback.scrobble',
         'playback.pause',
+        'playback.unpause',
         'playback.start',
         'playback.stop',
     ];
 
     protected const WEBHOOK_TAINTED_EVENTS = [
         'playback.pause',
+        'playback.unpause',
         'playback.start',
-        'playback.stop',
     ];
 
     /**
@@ -56,7 +57,7 @@ final class ParseWebhook
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->parse($context, $guid, $request, $opts),
+            fn: fn() => $this->parse($context, $guid, $request),
         );
     }
 
@@ -95,16 +96,26 @@ final class ParseWebhook
         }
 
         try {
-            $lastPlayedAt = null;
-
             if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
-                $lastPlayedAt = time();
                 $isPlayed = 1;
+                $lastPlayedAt = time();
             } elseif ('item.markunplayed' === $event) {
                 $isPlayed = 0;
+                $lastPlayedAt = makeDate(ag($json, 'Item.DateCreated'))->getTimestamp();
             } else {
-                $isPlayed = (int)(bool)ag($json, ['Item.Played', 'Item.PlayedToCompletion'], false);
+                $isPlayed = (int)(bool)ag(
+                    $json,
+                    [
+                        'Item.Played',
+                        'Item.PlayedToCompletion',
+                        'PlaybackInfo.PlayedToCompletion',
+                    ],
+                    false
+                );
+
+                $lastPlayedAt = (0 === $isPlayed) ? makeDate(ag($json, 'Item.DateCreated'))->getTimestamp() : time();
             }
+
             $fields = [
                 iFace::COLUMN_EXTRA => [
                     $context->backendName => [
@@ -114,13 +125,13 @@ final class ParseWebhook
                 ],
             ];
 
-            if (null !== $lastPlayedAt && 1 === $isPlayed) {
+            if (false === in_array($event, self::WEBHOOK_TAINTED_EVENTS)) {
                 $fields += [
-                    iFace::COLUMN_UPDATED => $lastPlayedAt,
                     iFace::COLUMN_WATCHED => $isPlayed,
+                    iFace::COLUMN_UPDATED => $lastPlayedAt,
                     iFace::COLUMN_META_DATA => [
                         $context->backendName => [
-                            iFace::COLUMN_WATCHED => (string)(int)(bool)$isPlayed,
+                            iFace::COLUMN_WATCHED => (string)$isPlayed,
                             iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
                         ]
                     ],

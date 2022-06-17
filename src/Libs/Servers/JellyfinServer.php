@@ -6,6 +6,7 @@ namespace App\Libs\Servers;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
+use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Backends\Jellyfin\Action\ParseWebhook;
@@ -144,54 +145,19 @@ class JellyfinServer implements ServerInterface
 
     public function getUsersList(array $opts = []): array
     {
-        $this->checkConfig(checkUser: false);
+        $response = Container::get(GetUsersList::class)($this->context, $opts);
 
-        $url = $this->url->withPath('/Users/');
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
 
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
-                sprintf(
-                    'Request for [%s] users list returned with unexpected [%s] status code.',
-                    $this->context->backendName,
-                    $response->getStatusCode(),
-                )
+                ag($response->extra, 'message', fn() => $response->error->format())
             );
         }
 
-        $json = json_decode(
-            json:        $response->getContent(),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $list = [];
-
-        foreach ($json ?? [] as $user) {
-            $date = ag($user, ['LastActivityDate', 'LastLoginDate'], null);
-
-            $data = [
-                'id' => ag($user, 'Id'),
-                'name' => ag($user, 'Name'),
-                'admin' => (bool)ag($user, 'Policy.IsAdministrator'),
-                'Hidden' => (bool)ag($user, 'Policy.IsHidden'),
-                'disabled' => (bool)ag($user, 'Policy.IsDisabled'),
-                'updatedAt' => null !== $date ? makeDate($date) : 'Never',
-            ];
-
-            if (true === ag($opts, 'tokens', false)) {
-                $data['token'] = $this->token;
-            }
-
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $data['raw'] = $user;
-            }
-
-            $list[] = $data;
-        }
-
-        return $list;
+        return $response->response;
     }
 
     public function getPersist(): array

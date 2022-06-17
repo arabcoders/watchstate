@@ -18,7 +18,13 @@ trait CommonTrait
     protected function tryResponse(Context $context, callable $fn, string|null $action = null): Response
     {
         try {
-            return $fn();
+            $response = $fn();
+
+            if (false === ($response instanceof Response)) {
+                return new Response(status: true, response: $response);
+            }
+
+            return $response;
         } catch (\Throwable $e) {
             return new Response(
                 status: false,
