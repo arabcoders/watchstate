@@ -93,7 +93,7 @@ if (!function_exists('ag')) {
             return getValue($default);
         }
 
-        if (array_key_exists($path, $array)) {
+        if (null !== ($array[$path] ?? null)) {
             return $array[$path];
         }
 
