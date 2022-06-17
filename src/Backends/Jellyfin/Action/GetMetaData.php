@@ -8,8 +8,8 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Response;
+use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Options;
-use App\Libs\Servers\JellyfinServer;
 use DateInterval;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -51,7 +51,7 @@ class GetMetaData
                         array_merge_recursive(
                             [
                                 'recursive' => 'false',
-                                'fields' => implode(',', JellyfinServer::FIELDS),
+                                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
                                 'enableUserData' => 'true',
                                 'enableImages' => 'false',
                                 'includeItemTypes' => 'Episode,Movie,Series',

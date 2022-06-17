@@ -32,18 +32,13 @@ class EmbyServer extends JellyfinServer
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {
-        $response = Container::get(ParseWebhook::class)(
-            context: $this->context,
-            guid:    $this->guid,
-            request: $request,
-            opts:    $this->options
-        );
+        $response = Container::get(ParseWebhook::class)(context: $this->context, guid: $this->guid, request: $request);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
 
         if (false === $response->isSuccessful()) {
-            if ($response->hasError()) {
-                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
-            }
-
             throw new HttpException(
                 ag($response->extra, 'message', fn() => $response->error->format()),
                 ag($response->extra, 'http_code', 400),

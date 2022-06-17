@@ -46,13 +46,17 @@ final class QueryCommand extends Command
         }
 
         try {
-            $backend = $this->getBackend($input->getArgument('backend'));
-
-            $opts = [];
+            $opts = $backendOpts = [];
 
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
             }
+
+            if ($input->getOption('trace')) {
+                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+            }
+
+            $backend = $this->getBackend($input->getArgument('backend'), $backendOpts);
 
             $results = $backend->search(
                 query: $query,
