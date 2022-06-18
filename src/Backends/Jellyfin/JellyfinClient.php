@@ -19,6 +19,9 @@ class JellyfinClient
     public const TYPE_SHOW = 'Series';
     public const TYPE_EPISODE = 'Episode';
 
+    public const COLLECTION_TYPE_SHOWS = 'tvshows';
+    public const COLLECTION_TYPE_MOVIES = 'movies';
+
     public const EXTRA_FIELDS = [
         'ProviderIds',
         'DateCreated',

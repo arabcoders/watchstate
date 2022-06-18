@@ -8,7 +8,6 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
-use Generator;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -144,9 +143,9 @@ interface ServerInterface
      * @param string|int $id
      * @param array $opts
      *
-     * @return Generator
+     * @return array
      */
-    public function getLibrary(string|int $id, array $opts = []): Generator;
+    public function getLibrary(string|int $id, array $opts = []): array;
 
     /**
      * Get all persistent data.

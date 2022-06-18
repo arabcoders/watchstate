@@ -44,13 +44,17 @@ final class ListCommand extends Command
         }
 
         try {
-            $opts = [];
+            $opts = $backendOpts = [];
 
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            $libraries = $this->getBackend($backend)->listLibraries(opts: $opts);
+            if ($input->getOption('trace')) {
+                $backendOpts = ag_set($backendOpts, 'options.' . Options::DEBUG_TRACE, true);
+            }
+
+            $libraries = $this->getBackend($backend, $backendOpts)->listLibraries(opts: $opts);
 
             if (count($libraries) < 1) {
                 $arr = [

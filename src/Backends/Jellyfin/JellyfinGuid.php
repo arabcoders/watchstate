@@ -55,6 +55,11 @@ class JellyfinGuid implements iGuid
         return count($this->ListExternalIds(guids: $guids, context: $context, log: false)) >= 1;
     }
 
+    public function isLocal(string $guid): bool
+    {
+        return false;
+    }
+
     /**
      * Get All Supported external ids.
      *

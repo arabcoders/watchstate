@@ -7,9 +7,12 @@ namespace App\Libs\Servers;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
+use App\Backends\Plex\Action\GetLibrariesList;
+use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
+use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexActionTrait;
@@ -26,7 +29,6 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use Closure;
 use DateTimeInterface;
-use Generator;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -95,7 +97,7 @@ class PlexServer implements ServerInterface
             backendUser:    $userId,
             backendHeaders: $cloned->getHeaders(),
             trace:          true === ag($options, Options::DEBUG_TRACE),
-            options:        $this->options
+            options:        $cloned->options
         );
 
         $cloned->guid = $this->guid->withContext($cloned->context);
@@ -203,7 +205,7 @@ class PlexServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return $response->response;
@@ -218,7 +220,7 @@ class PlexServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return $response->response;
@@ -229,668 +231,52 @@ class PlexServer implements ServerInterface
         return $this->getItemDetails(context: $this->context, id: $id, opts: $opts);
     }
 
-    /**
-     * @throws Throwable
-     */
-    public function getLibrary(string|int $id, array $opts = []): Generator
+    public function getLibrary(string|int $id, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetLibrary::class)(context: $this->context, guid: $this->guid, id: $id, opts: $opts);
 
-        $url = $this->url->withPath('/library/sections/');
-
-        $this->logger->debug('Requesting [%(backend)] libraries.', [
-            'backend' => $this->getName(),
-            'url' => $url
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            throw new RuntimeException(
-                sprintf(
-                    'Request for [%s] libraries returned with unexpected [%s] status code.',
-                    $this->getName(),
-                    $response->getStatusCode(),
-                )
-            );
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        $json = json_decode(
-            json:        $response->getContent(),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $context = [];
-        $found = false;
-
-        foreach (ag($json, 'MediaContainer.Directory', []) as $section) {
-            if ((int)ag($section, 'key') !== (int)$id) {
-                continue;
-            }
-            $found = true;
-            $context = [
-                'library' => [
-                    'id' => ag($section, 'key'),
-                    'type' => ag($section, 'type', 'unknown'),
-                    'title' => ag($section, 'title', '??'),
-                ],
-            ];
-            break;
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        if (false === $found) {
-            throw new RuntimeException(
-                sprintf('The response from [%s] does not contain library with id of [%s].', $this->getName(), $id)
-            );
-        }
-
-        if (true !== in_array(ag($context, 'library.type'), [iFace::TYPE_MOVIE, 'show'])) {
-            throw new RuntimeException(
-                sprintf(
-                    'The requested [%s] library [%s] is of [%s] type. Which is not supported type.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id),
-                    ag($context, 'library.type')
-                )
-            );
-        }
-
-        $query = [
-            'sort' => 'addedAt:asc',
-            'includeGuids' => 1,
-        ];
-
-        if (iFace::TYPE_MOVIE === ag($context, 'library.type')) {
-            $query['type'] = 1;
-        }
-
-        $url = $this->url->withPath(sprintf('/library/sections/%d/all', $id))->withQuery(http_build_query($query));
-
-        $context['library']['url'] = (string)$url;
-
-        $this->logger->debug('Requesting [%(backend)] library [%(library.title)] content.', [
-            'backend' => $this->getName(),
-            ...$context,
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            throw new RuntimeException(
-                sprintf(
-                    'Request for [%s] library [%s] content returned with unexpected [%s] status code.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id),
-                    $response->getStatusCode(),
-                )
-            );
-        }
-
-        $handleRequest = $opts['handler'] ?? function (array $item, array $context = []) use ($opts): array {
-                $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
-                $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
-
-                $data = [
-                    'backend' => $this->getName(),
-                    ...$context,
-                ];
-
-                $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
-                if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                    $year = (int)makeDate($airDate)->format('Y');
-                }
-
-                if (true === ag($this->options, Options::DEBUG_TRACE)) {
-                    $data['trace'] = $item;
-                }
-
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', $data);
-
-                $metadata = [
-                    'id' => (int)ag($item, 'ratingKey'),
-                    'type' => ucfirst(ag($item, 'type', 'unknown')),
-                    'url' => (string)$url,
-                    'title' => ag($item, $possibleTitlesList, '??'),
-                    'year' => $year,
-                    'guids' => [],
-                    'match' => [
-                        'titles' => [],
-                        'paths' => [],
-                    ],
-                ];
-
-                foreach ($possibleTitlesList as $title) {
-                    if (null === ($title = ag($item, $title))) {
-                        continue;
-                    }
-
-                    $isASCII = mb_detect_encoding($title, 'ASCII', true);
-                    $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
-
-                    if (true === in_array($title, $metadata['match']['titles'])) {
-                        continue;
-                    }
-
-                    $metadata['match']['titles'][] = $title;
-                }
-
-                switch (ag($item, 'type')) {
-                    case 'show':
-                        foreach (ag($item, 'Location', []) as $path) {
-                            $path = ag($path, 'path');
-                            $metadata['match']['paths'][] = [
-                                'full' => $path,
-                                'short' => basename($path),
-                            ];
-                        }
-                        break;
-                    case iFace::TYPE_MOVIE:
-                        foreach (ag($item, 'Media', []) as $leaf) {
-                            foreach (ag($leaf, 'Part', []) as $path) {
-                                $path = ag($path, 'file');
-                                $dir = dirname($path);
-
-                                $metadata['match']['paths'][] = [
-                                    'full' => $path,
-                                    'short' => basename($path),
-                                ];
-
-                                if (false === str_starts_with(basename($path), basename($dir))) {
-                                    $metadata['match']['paths'][] = [
-                                        'full' => $path,
-                                        'short' => basename($dir),
-                                    ];
-                                }
-                            }
-                        }
-                        break;
-                    default:
-                        throw new RuntimeException(
-                            sprintf(
-                                'While parsing [%s] library [%s] items, we encountered unexpected item [%s] type.',
-                                $this->getName(),
-                                ag($context, 'library.title', '??'),
-                                ag($item, 'type')
-                            )
-                        );
-                }
-
-                $itemGuid = ag($item, 'guid');
-
-                if (null !== $itemGuid && false === $this->guid->isLocal($itemGuid)) {
-                    $metadata['guids'][] = $itemGuid;
-                }
-
-                foreach (ag($item, 'Guid', []) as $guid) {
-                    $metadata['guids'][] = ag($guid, 'id');
-                }
-
-                if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                    $metadata['raw'] = $item;
-                }
-
-                return $metadata;
-            };
-
-        $it = Items::fromIterable(
-            iterable: httpClientChunks(stream: $this->http->stream($response)),
-            options:  [
-                          'pointer' => '/MediaContainer/Metadata',
-                          'decoder' => new ErrorWrappingDecoder(
-                              innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                          )
-                      ]
-        );
-
-        $requests = [];
-
-        foreach ($it as $entity) {
-            if ($entity instanceof DecodingError) {
-                $this->logger->warning(
-                    'Failed to decode one item of [%(backend)] library id [%(library.title)] content.',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'error' => [
-                            'message' => $entity->getErrorMessage(),
-                            'body' => $entity->getMalformedJson(),
-                        ],
-                    ]
-                );
-                continue;
-            }
-
-            $year = (int)ag($entity, ['grandParentYear', 'parentYear', 'year'], 0);
-            if (0 === $year && null !== ($airDate = ag($entity, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
-            }
-
-            $context['item'] = [
-                'id' => ag($entity, 'ratingKey'),
-                'title' => ag($entity, ['title', 'originalTitle'], '??'),
-                'year' => $year,
-                'type' => ag($entity, 'type'),
-                'url' => (string)$url,
-            ];
-
-            if (iFace::TYPE_MOVIE === ag($context, 'item.type')) {
-                yield $handleRequest(item: $entity, context: $context);
-            } else {
-                $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($entity, 'ratingKey')));
-
-                $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title) (%(item.year))] metadata.', [
-                    'backend' => $this->getName(),
-                    ...$context,
-                ]);
-
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'context' => $context
-                        ]
-                    ])
-                );
-            }
-        }
-
-        if (empty($requests) && iFace::TYPE_MOVIE !== ag($context, 'library.type')) {
-            throw new RuntimeException(
-                sprintf(
-                    'No requests were made [%s] library [%s] is empty.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id)
-                )
-            );
-        }
-
-        if (!empty($requests)) {
-            $this->logger->info(
-                'Requesting [%(total)] items metadata from [%(backend)] library [%(library.title)].',
-                [
-                    'backend' => $this->getName(),
-                    'total' => number_format(count($requests)),
-                    'library' => ag($context, 'library', []),
-                ]
-            );
-        }
-
-        foreach ($requests as $response) {
-            $requestContext = ag($response->getInfo('user_data'), 'context', []);
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->warning(
-                    'Request for [%(backend)] %(item.type) [%(item.title)] metadata returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->getName(),
-                        'status_code' => $response->getStatusCode(),
-                        ...$requestContext
-                    ]
-                );
-
-                continue;
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            yield $handleRequest(
-                item:    ag($json, 'MediaContainer.Metadata.0', []),
-                context: $requestContext
-            );
-        }
+        return $response->response;
     }
 
     public function listLibraries(array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
 
-        try {
-            $url = $this->url->withPath('/library/sections');
-
-            $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->getName(),
-                'url' => $url
-            ]);
-
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->getName(),
-                        'status_code' => $response->getStatusCode(),
-                    ]
-                );
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $listDirs = ag($json, 'MediaContainer.Directory', []);
-
-            if (empty($listDirs)) {
-                $this->logger->warning('Request for [%(backend)] libraries returned empty list.', [
-                    'backend' => $this->getName(),
-                    'context' => [
-                        'body' => $json,
-                    ]
-                ]);
-                return [];
-            }
-        } catch (ExceptionInterface $e) {
-            $this->logger->error('Request for [%(backend)] libraries has failed.', [
-                'backend' => $this->getName(),
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        $list = [];
-
-        foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
-            $type = ag($section, 'type', 'unknown');
-
-            $builder = [
-                'id' => $key,
-                'title' => ag($section, 'title', '???'),
-                'type' => $type,
-                'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
-                'supported' => 'movie' === $type || 'show' === $type,
-                'agent' => ag($section, 'agent'),
-                'scanner' => ag($section, 'scanner'),
-            ];
-
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $builder['raw'] = $section;
-            }
-
-            $list[] = $builder;
-        }
-
-        return $list;
+        return $response->response;
     }
 
     public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
-        $this->checkConfig();
+        $response = Container::get(Push::class)(
+            context:  $this->context,
+            entities: $entities,
+            queue:    $queue,
+            after:    $after
+        );
 
-        $requests = [];
-
-        foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof iFace)) {
-                continue;
-            }
-
-            if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                if (null !== $after && $after->getTimestamp() > $entity->updated) {
-                    continue;
-                }
-            }
-
-            $metadata = $entity->getMetadata($this->getName());
-
-            $context = [
-                'item' => [
-                    'id' => $entity->id,
-                    'type' => $entity->type,
-                    'title' => $entity->getName(),
-                ],
-            ];
-
-            if (null === ag($metadata, iFace::COLUMN_ID)) {
-                $this->logger->warning(
-                    'Ignoring [%(item.title)] for [%(backend)] no backend metadata was found.',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                    ]
-                );
-                continue;
-            }
-
-            $context['remote']['id'] = ag($metadata, iFace::COLUMN_ID);
-
-            try {
-                $url = $this->url->withPath('/library/metadata/' . ag($metadata, iFace::COLUMN_ID));
-
-                $context['remote']['url'] = (string)$url;
-
-                $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title)] play state.', [
-                    'backend' => $this->getName(),
-                    ...$context,
-                ]);
-
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'id' => $key,
-                            'context' => $context,
-                        ]
-                    ])
-                );
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown during requesting of [%(backend)] %(item.type) [%(item.title)].',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-            }
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        $context = null;
-
-        foreach ($requests as $response) {
-            $context = ag($response->getInfo('user_data'), 'context', []);
-
-            try {
-                if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
-                    $this->logger->error('Unable to get entity object id.', [
-                        'backend' => $this->getName(),
-                        ...$context,
-                    ]);
-                    continue;
-                }
-
-                $entity = $entities[$id];
-
-                assert($entity instanceof iFace);
-
-                switch ($response->getStatusCode()) {
-                    case 200:
-                        break;
-                    case 404:
-                        $this->logger->warning(
-                            'Request for [%(backend)] %(item.type) [%(item.title)] returned with 404 (Not Found) status code.',
-                            [
-                                'backend' => $this->getName(),
-                                ...$context
-                            ]
-                        );
-                        continue 2;
-                    default:
-                        $this->logger->error(
-                            'Request for [%(backend)] %(item.type) [%(item.title)] returned with unexpected [%(status_code)] status code.',
-                            [
-                                'backend' => $this->getName(),
-                                'status_code' => $response->getStatusCode(),
-                                ...$context
-                            ]
-                        );
-                        continue 2;
-                }
-
-                $body = json_decode(
-                    json:        $response->getContent(false),
-                    associative: true,
-                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-                );
-
-                $json = ag($body, 'MediaContainer.Metadata.0', []);
-
-                if (empty($json)) {
-                    $this->logger->error(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)]. responded with empty metadata.',
-                        [
-                            'backend' => $this->getName(),
-                            ...$context,
-                            'response' => [
-                                'body' => $body,
-                            ],
-                        ]
-                    );
-                    continue;
-                }
-
-                $isWatched = 0 === (int)ag($json, 'viewCount', 0) ? 0 : 1;
-
-                if ($entity->watched === $isWatched) {
-                    $this->logger->info(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)]. Play state is identical.',
-                        [
-                            'backend' => $this->getName(),
-                            ...$context,
-                        ]
-                    );
-                    continue;
-                }
-
-                if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                    $dateKey = 1 === $isWatched ? 'lastViewedAt' : 'addedAt';
-                    $date = ag($json, $dateKey);
-
-                    if (null === $date) {
-                        $this->logger->error(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. No %(date_key) is set on backend object.',
-                            [
-                                'backend' => $this->getName(),
-                                'date_key' => $dateKey,
-                                ...$context,
-                                'response' => [
-                                    'body' => $body,
-                                ],
-                            ]
-                        );
-                        continue;
-                    }
-
-                    $date = makeDate($date);
-
-                    $timeExtra = (int)(ag($this->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
-
-                    if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
-                        $this->logger->notice(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Storage date is older than backend date.',
-                            [
-                                'backend' => $this->getName(),
-                                ...$context,
-                                'comparison' => [
-                                    'storage' => makeDate($entity->updated),
-                                    'backend' => $date,
-                                    'difference' => $date->getTimestamp() - $entity->updated,
-                                    'extra_margin' => [
-                                        Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra,
-                                    ],
-                                ],
-                            ]
-                        );
-                        continue;
-                    }
-                }
-
-                $url = $this->url->withPath($entity->isWatched() ? '/:/scrobble' : '/:/unscrobble')->withQuery(
-                    http_build_query(
-                        [
-                            'identifier' => 'com.plexapp.plugins.library',
-                            'key' => ag($json, 'ratingKey'),
-                        ]
-                    )
-                );
-
-                $context['remote']['url'] = $url;
-
-                $this->logger->debug(
-                    'Queuing request to change [%(backend)] %(item.type) [%(item.title)] play state to [%(play_state)].',
-                    [
-                        'backend' => $this->getName(),
-                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                        ...$context,
-                    ]
-                );
-
-                if (false === (bool)ag($this->options, Options::DRY_RUN)) {
-                    $queue->add(
-                        $this->http->request(
-                            'GET',
-                            (string)$url,
-                            array_replace_recursive($this->getHeaders(), [
-                                'user_data' => [
-                                    'context' => $context + [
-                                            'backend' => $this->getName(),
-                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                        ],
-                                ]
-                            ])
-                        )
-                    );
-                }
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown during handling of [%(backend)] %(item.type) [%(item.title)].',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-            }
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
-
-        unset($requests);
 
         return [];
     }
@@ -1158,8 +544,6 @@ class PlexServer implements ServerInterface
 
     protected function getLibraries(Closure $ok, Closure $error, bool $includeParent = false): array
     {
-        $this->checkConfig();
-
         try {
             $url = $this->url->withPath('/library/sections');
 
@@ -1821,16 +1205,5 @@ class PlexServer implements ServerInterface
                 context: ['backend' => $this->getName(), ...$context,]
             )->getAll()
         );
-    }
-
-    protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
-    {
-        if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(static::NAME . ': No host was set.');
-        }
-
-        if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(static::NAME . ': No token was set.');
-        }
     }
 }

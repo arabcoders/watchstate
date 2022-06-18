@@ -152,6 +152,10 @@ class PushCommand extends Command
                 $opts[Options::DRY_RUN] = true;
             }
 
+            if ($input->getOption('trace')) {
+                $opts[Options::DEBUG_TRACE] = true;
+            }
+
             $server['options'] = $opts;
             $server['class'] = makeServer(server: $server, name: $name);
 
