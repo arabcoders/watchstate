@@ -45,7 +45,7 @@ class GetMetaData
             }
 
             $url = $context->backendUrl
-                ->withPath(sprintf('/Users/%s/items/' . $id, $context->backendUser))
+                ->withPath(sprintf('/Users/%s/items/%s', $context->backendUser, $id))
                 ->withQuery(
                     http_build_query(
                         array_merge_recursive(

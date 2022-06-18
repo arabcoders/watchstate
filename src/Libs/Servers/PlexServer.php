@@ -10,6 +10,7 @@ use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
+use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexActionTrait;
@@ -642,255 +643,20 @@ class PlexServer implements ServerInterface
 
     public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
-        $this->checkConfig();
+        $response = Container::get(Push::class)(
+            context:  $this->context,
+            entities: $entities,
+            queue:    $queue,
+            after:    $after
+        );
 
-        $requests = [];
-
-        foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof iFace)) {
-                continue;
-            }
-
-            if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                if (null !== $after && $after->getTimestamp() > $entity->updated) {
-                    continue;
-                }
-            }
-
-            $metadata = $entity->getMetadata($this->getName());
-
-            $context = [
-                'item' => [
-                    'id' => $entity->id,
-                    'type' => $entity->type,
-                    'title' => $entity->getName(),
-                ],
-            ];
-
-            if (null === ag($metadata, iFace::COLUMN_ID)) {
-                $this->logger->warning(
-                    'Ignoring [%(item.title)] for [%(backend)] no backend metadata was found.',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                    ]
-                );
-                continue;
-            }
-
-            $context['remote']['id'] = ag($metadata, iFace::COLUMN_ID);
-
-            try {
-                $url = $this->url->withPath('/library/metadata/' . ag($metadata, iFace::COLUMN_ID));
-
-                $context['remote']['url'] = (string)$url;
-
-                $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title)] play state.', [
-                    'backend' => $this->getName(),
-                    ...$context,
-                ]);
-
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'id' => $key,
-                            'context' => $context,
-                        ]
-                    ])
-                );
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown during requesting of [%(backend)] %(item.type) [%(item.title)].',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-            }
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        $context = null;
-
-        foreach ($requests as $response) {
-            $context = ag($response->getInfo('user_data'), 'context', []);
-
-            try {
-                if (null === ($id = ag($response->getInfo('user_data'), 'id'))) {
-                    $this->logger->error('Unable to get entity object id.', [
-                        'backend' => $this->getName(),
-                        ...$context,
-                    ]);
-                    continue;
-                }
-
-                $entity = $entities[$id];
-
-                assert($entity instanceof iFace);
-
-                switch ($response->getStatusCode()) {
-                    case 200:
-                        break;
-                    case 404:
-                        $this->logger->warning(
-                            'Request for [%(backend)] %(item.type) [%(item.title)] returned with 404 (Not Found) status code.',
-                            [
-                                'backend' => $this->getName(),
-                                ...$context
-                            ]
-                        );
-                        continue 2;
-                    default:
-                        $this->logger->error(
-                            'Request for [%(backend)] %(item.type) [%(item.title)] returned with unexpected [%(status_code)] status code.',
-                            [
-                                'backend' => $this->getName(),
-                                'status_code' => $response->getStatusCode(),
-                                ...$context
-                            ]
-                        );
-                        continue 2;
-                }
-
-                $body = json_decode(
-                    json:        $response->getContent(false),
-                    associative: true,
-                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-                );
-
-                $json = ag($body, 'MediaContainer.Metadata.0', []);
-
-                if (empty($json)) {
-                    $this->logger->error(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)]. responded with empty metadata.',
-                        [
-                            'backend' => $this->getName(),
-                            ...$context,
-                            'response' => [
-                                'body' => $body,
-                            ],
-                        ]
-                    );
-                    continue;
-                }
-
-                $isWatched = 0 === (int)ag($json, 'viewCount', 0) ? 0 : 1;
-
-                if ($entity->watched === $isWatched) {
-                    $this->logger->info(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)]. Play state is identical.',
-                        [
-                            'backend' => $this->getName(),
-                            ...$context,
-                        ]
-                    );
-                    continue;
-                }
-
-                if (false === (bool)ag($this->options, Options::IGNORE_DATE, false)) {
-                    $dateKey = 1 === $isWatched ? 'lastViewedAt' : 'addedAt';
-                    $date = ag($json, $dateKey);
-
-                    if (null === $date) {
-                        $this->logger->error(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. No %(date_key) is set on backend object.',
-                            [
-                                'backend' => $this->getName(),
-                                'date_key' => $dateKey,
-                                ...$context,
-                                'response' => [
-                                    'body' => $body,
-                                ],
-                            ]
-                        );
-                        continue;
-                    }
-
-                    $date = makeDate($date);
-
-                    $timeExtra = (int)(ag($this->options, Options::EXPORT_ALLOWED_TIME_DIFF, 10));
-
-                    if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
-                        $this->logger->notice(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Storage date is older than backend date.',
-                            [
-                                'backend' => $this->getName(),
-                                ...$context,
-                                'comparison' => [
-                                    'storage' => makeDate($entity->updated),
-                                    'backend' => $date,
-                                    'difference' => $date->getTimestamp() - $entity->updated,
-                                    'extra_margin' => [
-                                        Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra,
-                                    ],
-                                ],
-                            ]
-                        );
-                        continue;
-                    }
-                }
-
-                $url = $this->url->withPath($entity->isWatched() ? '/:/scrobble' : '/:/unscrobble')->withQuery(
-                    http_build_query(
-                        [
-                            'identifier' => 'com.plexapp.plugins.library',
-                            'key' => ag($json, 'ratingKey'),
-                        ]
-                    )
-                );
-
-                $context['remote']['url'] = $url;
-
-                $this->logger->debug(
-                    'Queuing request to change [%(backend)] %(item.type) [%(item.title)] play state to [%(play_state)].',
-                    [
-                        'backend' => $this->getName(),
-                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                        ...$context,
-                    ]
-                );
-
-                if (false === (bool)ag($this->options, Options::DRY_RUN)) {
-                    $queue->add(
-                        $this->http->request(
-                            'GET',
-                            (string)$url,
-                            array_replace_recursive($this->getHeaders(), [
-                                'user_data' => [
-                                    'context' => $context + [
-                                            'backend' => $this->getName(),
-                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                        ],
-                                ]
-                            ])
-                        )
-                    );
-                }
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown during handling of [%(backend)] %(item.type) [%(item.title)].',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                    ]
-                );
-            }
+        if (false === $response->isSuccessful()) {
+            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
-
-        unset($requests);
 
         return [];
     }
