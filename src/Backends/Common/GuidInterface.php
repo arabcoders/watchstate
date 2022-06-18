@@ -43,4 +43,13 @@ interface GuidInterface
      * @return bool
      */
     public function has(array $guids, array $context = []): bool;
+
+    /**
+     * Is the given identifier a local id?
+     *
+     * @param string $guid
+     *
+     * @return bool
+     */
+    public function isLocal(string $guid): bool;
 }
