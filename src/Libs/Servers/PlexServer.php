@@ -8,6 +8,7 @@ use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetLibrariesList;
+use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
@@ -28,7 +29,6 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use Closure;
 use DateTimeInterface;
-use Generator;
 use JsonException;
 use JsonMachine\Exception\PathNotFoundException;
 use JsonMachine\Items;
@@ -231,321 +231,19 @@ class PlexServer implements ServerInterface
         return $this->getItemDetails(context: $this->context, id: $id, opts: $opts);
     }
 
-    /**
-     * @throws Throwable
-     */
-    public function getLibrary(string|int $id, array $opts = []): Generator
+    public function getLibrary(string|int $id, array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetLibrary::class)(context: $this->context, guid: $this->guid, id: $id, opts: $opts);
 
-        $url = $this->url->withPath('/library/sections/');
-
-        $this->logger->debug('Requesting [%(backend)] libraries.', [
-            'backend' => $this->getName(),
-            'url' => $url
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            throw new RuntimeException(
-                sprintf(
-                    'Request for [%s] libraries returned with unexpected [%s] status code.',
-                    $this->getName(),
-                    $response->getStatusCode(),
-                )
-            );
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        $json = json_decode(
-            json:        $response->getContent(),
-            associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        $context = [];
-        $found = false;
-
-        foreach (ag($json, 'MediaContainer.Directory', []) as $section) {
-            if ((int)ag($section, 'key') !== (int)$id) {
-                continue;
-            }
-            $found = true;
-            $context = [
-                'library' => [
-                    'id' => ag($section, 'key'),
-                    'type' => ag($section, 'type', 'unknown'),
-                    'title' => ag($section, 'title', '??'),
-                ],
-            ];
-            break;
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        if (false === $found) {
-            throw new RuntimeException(
-                sprintf('The response from [%s] does not contain library with id of [%s].', $this->getName(), $id)
-            );
-        }
-
-        if (true !== in_array(ag($context, 'library.type'), [iFace::TYPE_MOVIE, 'show'])) {
-            throw new RuntimeException(
-                sprintf(
-                    'The requested [%s] library [%s] is of [%s] type. Which is not supported type.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id),
-                    ag($context, 'library.type')
-                )
-            );
-        }
-
-        $query = [
-            'sort' => 'addedAt:asc',
-            'includeGuids' => 1,
-        ];
-
-        if (iFace::TYPE_MOVIE === ag($context, 'library.type')) {
-            $query['type'] = 1;
-        }
-
-        $url = $this->url->withPath(sprintf('/library/sections/%d/all', $id))->withQuery(http_build_query($query));
-
-        $context['library']['url'] = (string)$url;
-
-        $this->logger->debug('Requesting [%(backend)] library [%(library.title)] content.', [
-            'backend' => $this->getName(),
-            ...$context,
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-        if (200 !== $response->getStatusCode()) {
-            throw new RuntimeException(
-                sprintf(
-                    'Request for [%s] library [%s] content returned with unexpected [%s] status code.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id),
-                    $response->getStatusCode(),
-                )
-            );
-        }
-
-        $handleRequest = $opts['handler'] ?? function (array $item, array $context = []) use ($opts): array {
-                $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
-                $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
-
-                $data = [
-                    'backend' => $this->getName(),
-                    ...$context,
-                ];
-
-                $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
-                if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                    $year = (int)makeDate($airDate)->format('Y');
-                }
-
-                if (true === ag($this->options, Options::DEBUG_TRACE)) {
-                    $data['trace'] = $item;
-                }
-
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', $data);
-
-                $metadata = [
-                    'id' => (int)ag($item, 'ratingKey'),
-                    'type' => ucfirst(ag($item, 'type', 'unknown')),
-                    'url' => (string)$url,
-                    'title' => ag($item, $possibleTitlesList, '??'),
-                    'year' => $year,
-                    'guids' => [],
-                    'match' => [
-                        'titles' => [],
-                        'paths' => [],
-                    ],
-                ];
-
-                foreach ($possibleTitlesList as $title) {
-                    if (null === ($title = ag($item, $title))) {
-                        continue;
-                    }
-
-                    $isASCII = mb_detect_encoding($title, 'ASCII', true);
-                    $title = trim($isASCII ? strtolower($title) : mb_strtolower($title));
-
-                    if (true === in_array($title, $metadata['match']['titles'])) {
-                        continue;
-                    }
-
-                    $metadata['match']['titles'][] = $title;
-                }
-
-                switch (ag($item, 'type')) {
-                    case 'show':
-                        foreach (ag($item, 'Location', []) as $path) {
-                            $path = ag($path, 'path');
-                            $metadata['match']['paths'][] = [
-                                'full' => $path,
-                                'short' => basename($path),
-                            ];
-                        }
-                        break;
-                    case iFace::TYPE_MOVIE:
-                        foreach (ag($item, 'Media', []) as $leaf) {
-                            foreach (ag($leaf, 'Part', []) as $path) {
-                                $path = ag($path, 'file');
-                                $dir = dirname($path);
-
-                                $metadata['match']['paths'][] = [
-                                    'full' => $path,
-                                    'short' => basename($path),
-                                ];
-
-                                if (false === str_starts_with(basename($path), basename($dir))) {
-                                    $metadata['match']['paths'][] = [
-                                        'full' => $path,
-                                        'short' => basename($dir),
-                                    ];
-                                }
-                            }
-                        }
-                        break;
-                    default:
-                        throw new RuntimeException(
-                            sprintf(
-                                'While parsing [%s] library [%s] items, we encountered unexpected item [%s] type.',
-                                $this->getName(),
-                                ag($context, 'library.title', '??'),
-                                ag($item, 'type')
-                            )
-                        );
-                }
-
-                $itemGuid = ag($item, 'guid');
-
-                if (null !== $itemGuid && false === $this->guid->isLocal($itemGuid)) {
-                    $metadata['guids'][] = $itemGuid;
-                }
-
-                foreach (ag($item, 'Guid', []) as $guid) {
-                    $metadata['guids'][] = ag($guid, 'id');
-                }
-
-                if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                    $metadata['raw'] = $item;
-                }
-
-                return $metadata;
-            };
-
-        $it = Items::fromIterable(
-            iterable: httpClientChunks(stream: $this->http->stream($response)),
-            options:  [
-                          'pointer' => '/MediaContainer/Metadata',
-                          'decoder' => new ErrorWrappingDecoder(
-                              innerDecoder: new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                          )
-                      ]
-        );
-
-        $requests = [];
-
-        foreach ($it as $entity) {
-            if ($entity instanceof DecodingError) {
-                $this->logger->warning(
-                    'Failed to decode one item of [%(backend)] library id [%(library.title)] content.',
-                    [
-                        'backend' => $this->getName(),
-                        ...$context,
-                        'error' => [
-                            'message' => $entity->getErrorMessage(),
-                            'body' => $entity->getMalformedJson(),
-                        ],
-                    ]
-                );
-                continue;
-            }
-
-            $year = (int)ag($entity, ['grandParentYear', 'parentYear', 'year'], 0);
-            if (0 === $year && null !== ($airDate = ag($entity, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
-            }
-
-            $context['item'] = [
-                'id' => ag($entity, 'ratingKey'),
-                'title' => ag($entity, ['title', 'originalTitle'], '??'),
-                'year' => $year,
-                'type' => ag($entity, 'type'),
-                'url' => (string)$url,
-            ];
-
-            if (iFace::TYPE_MOVIE === ag($context, 'item.type')) {
-                yield $handleRequest(item: $entity, context: $context);
-            } else {
-                $url = $this->url->withPath(sprintf('/library/metadata/%d', ag($entity, 'ratingKey')));
-
-                $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title) (%(item.year))] metadata.', [
-                    'backend' => $this->getName(),
-                    ...$context,
-                ]);
-
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($this->getHeaders(), [
-                        'user_data' => [
-                            'context' => $context
-                        ]
-                    ])
-                );
-            }
-        }
-
-        if (empty($requests) && iFace::TYPE_MOVIE !== ag($context, 'library.type')) {
-            throw new RuntimeException(
-                sprintf(
-                    'No requests were made [%s] library [%s] is empty.',
-                    $this->getName(),
-                    ag($context, 'library.title', $id)
-                )
-            );
-        }
-
-        if (!empty($requests)) {
-            $this->logger->info(
-                'Requesting [%(total)] items metadata from [%(backend)] library [%(library.title)].',
-                [
-                    'backend' => $this->getName(),
-                    'total' => number_format(count($requests)),
-                    'library' => ag($context, 'library', []),
-                ]
-            );
-        }
-
-        foreach ($requests as $response) {
-            $requestContext = ag($response->getInfo('user_data'), 'context', []);
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->warning(
-                    'Request for [%(backend)] %(item.type) [%(item.title)] metadata returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->getName(),
-                        'status_code' => $response->getStatusCode(),
-                        ...$requestContext
-                    ]
-                );
-
-                continue;
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            yield $handleRequest(
-                item:    ag($json, 'MediaContainer.Metadata.0', []),
-                context: $requestContext
-            );
-        }
+        return $response->response;
     }
 
     public function listLibraries(array $opts = []): array
@@ -846,8 +544,6 @@ class PlexServer implements ServerInterface
 
     protected function getLibraries(Closure $ok, Closure $error, bool $includeParent = false): array
     {
-        $this->checkConfig();
-
         try {
             $url = $this->url->withPath('/library/sections');
 
@@ -1509,16 +1205,5 @@ class PlexServer implements ServerInterface
                 context: ['backend' => $this->getName(), ...$context,]
             )->getAll()
         );
-    }
-
-    protected function checkConfig(bool $checkUrl = true, bool $checkToken = true): void
-    {
-        if (true === $checkUrl && !($this->url instanceof UriInterface)) {
-            throw new RuntimeException(static::NAME . ': No host was set.');
-        }
-
-        if (true === $checkToken && null === $this->token) {
-            throw new RuntimeException(static::NAME . ': No token was set.');
-        }
     }
 }

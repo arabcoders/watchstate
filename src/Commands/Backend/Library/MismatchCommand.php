@@ -30,6 +30,7 @@ final class MismatchCommand extends Command
             ->setDescription(
                 'Find possible mis-identified item in a library. This only works for Media that follow Plex naming format.'
             )
+            ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of status.')
             ->addOption('percentage', 'p', InputOption::VALUE_OPTIONAL, 'Acceptable percentage.', 50.0)
             ->addOption(
                 'method',
@@ -54,6 +55,7 @@ final class MismatchCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
+        $showAll = $input->getOption('show-all');
         $percentage = $input->getOption('percentage');
         $backend = $input->getArgument('backend');
         $id = $input->getArgument('id');
@@ -86,10 +88,12 @@ final class MismatchCommand extends Command
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
+            $opts[Options::MISMATCH_DEEP_SCAN] = true;
+
             foreach ($this->getBackend($backend, $backendOpts)->getLibrary(id: $id, opts: $opts) as $item) {
                 $processed = $this->compare(item: $item, method: $input->getOption('method'));
 
-                if (empty($processed) || $processed['percent'] >= (float)$percentage) {
+                if (!$showAll && (empty($processed) || $processed['percent'] >= (float)$percentage)) {
                     continue;
                 }
 

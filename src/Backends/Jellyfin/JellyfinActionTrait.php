@@ -6,11 +6,13 @@ namespace App\Backends\Jellyfin;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Options;
 use RuntimeException;
 
 trait JellyfinActionTrait
@@ -211,5 +213,27 @@ trait JellyfinActionTrait
         );
 
         return $context->cache->get($cacheKey);
+    }
+
+    /**
+     * Get Backend Libraries details.
+     */
+    protected function getBackendLibraries(Context $context, array $opts = []): array
+    {
+        $opts = ag_set($opts, Options::RAW_RESPONSE, true);
+
+        $response = Container::get(GetLibrariesList::class)(context: $context, opts: $opts);
+
+        if (!$response->isSuccessful()) {
+            throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+        }
+
+        $arr = [];
+
+        foreach ($response->response as $item) {
+            $arr[$item['id']] = $item['raw'];
+        }
+
+        return $arr;
     }
 }
