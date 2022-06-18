@@ -7,6 +7,7 @@ namespace App\Libs\Servers;
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
+use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
@@ -96,7 +97,7 @@ class PlexServer implements ServerInterface
             backendUser:    $userId,
             backendHeaders: $cloned->getHeaders(),
             trace:          true === ag($options, Options::DEBUG_TRACE),
-            options:        $this->options
+            options:        $cloned->options
         );
 
         $cloned->guid = $this->guid->withContext($cloned->context);
@@ -204,7 +205,7 @@ class PlexServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return $response->response;
@@ -219,7 +220,7 @@ class PlexServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return $response->response;
@@ -549,96 +550,17 @@ class PlexServer implements ServerInterface
 
     public function listLibraries(array $opts = []): array
     {
-        $this->checkConfig();
+        $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
 
-        try {
-            $url = $this->url->withPath('/library/sections');
-
-            $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->getName(),
-                'url' => $url
-            ]);
-
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->getName(),
-                        'status_code' => $response->getStatusCode(),
-                    ]
-                );
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $listDirs = ag($json, 'MediaContainer.Directory', []);
-
-            if (empty($listDirs)) {
-                $this->logger->warning('Request for [%(backend)] libraries returned empty list.', [
-                    'backend' => $this->getName(),
-                    'context' => [
-                        'body' => $json,
-                    ]
-                ]);
-                return [];
-            }
-        } catch (ExceptionInterface $e) {
-            $this->logger->error('Request for [%(backend)] libraries has failed.', [
-                'backend' => $this->getName(),
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        $list = [];
-
-        foreach ($listDirs as $section) {
-            $key = (int)ag($section, 'key');
-            $type = ag($section, 'type', 'unknown');
-
-            $builder = [
-                'id' => $key,
-                'title' => ag($section, 'title', '???'),
-                'type' => $type,
-                'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
-                'supported' => 'movie' === $type || 'show' === $type,
-                'agent' => ag($section, 'agent'),
-                'scanner' => ag($section, 'scanner'),
-            ];
-
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $builder['raw'] = $section;
-            }
-
-            $list[] = $builder;
-        }
-
-        return $list;
+        return $response->response;
     }
 
     public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
@@ -655,7 +577,7 @@ class PlexServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return [];

@@ -6,6 +6,7 @@ namespace App\Libs\Servers;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
+use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\GetIdentifier;
@@ -49,9 +50,6 @@ class JellyfinServer implements ServerInterface
     use JellyfinActionTrait;
 
     public const NAME = 'JellyfinBackend';
-
-    protected const COLLECTION_TYPE_SHOWS = 'tvshows';
-    protected const COLLECTION_TYPE_MOVIES = 'movies';
 
     public const FIELDS = JellyfinClient::EXTRA_FIELDS;
 
@@ -116,7 +114,7 @@ class JellyfinServer implements ServerInterface
             backendUser:    $userId,
             backendHeaders: $cloned->getHeaders(),
             trace:          true === ag($options, Options::DEBUG_TRACE),
-            options:        $this->options
+            options:        $cloned->options
         );
 
         $cloned->guid = $this->guid->withContext($cloned->context);
@@ -216,7 +214,7 @@ class JellyfinServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return $response->response;
@@ -238,7 +236,7 @@ class JellyfinServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return $response->response;
@@ -477,103 +475,17 @@ class JellyfinServer implements ServerInterface
 
     public function listLibraries(array $opts = []): array
     {
-        $this->checkConfig(true);
+        $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
 
-        try {
-            $url = $this->url->withPath(sprintf('/Users/%s/items/', $this->user))->withQuery(
-                http_build_query(
-                    [
-                        'recursive' => 'false',
-                        'fields' => implode(',', self::FIELDS),
-                        'enableUserData' => 'true',
-                        'enableImages' => 'false',
-                    ]
-                )
-            );
-
-            $this->logger->debug('Requesting [%(backend)] libraries.', [
-                'backend' => $this->context->backendName,
-                'url' => $url
-            ]);
-
-            $response = $this->http->request('GET', (string)$url, $this->getHeaders());
-
-            if (200 !== $response->getStatusCode()) {
-                $this->logger->error(
-                    'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $this->context->backendName,
-                        'status_code' => $response->getStatusCode(),
-                    ]
-                );
-                return [];
-            }
-
-            $json = json_decode(
-                json:        $response->getContent(),
-                associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-            );
-
-            $listDirs = ag($json, 'Items', []);
-
-            if (empty($listDirs)) {
-                $this->logger->warning('Request for [%(backend)] libraries returned empty list.', [
-                    'backend' => $this->context->backendName,
-                    'context' => [
-                        'body' => $json,
-                    ]
-                ]);
-                return [];
-            }
-        } catch (ExceptionInterface $e) {
-            $this->logger->error('Request for [%(backend)] libraries has failed.', [
-                'backend' => $this->context->backendName,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
-        } catch (JsonException $e) {
-            $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'message' => $e->getMessage(),
-                ],
-            ]);
-            return [];
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
-        if (null !== ($ignoreIds = ag($this->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
-        $list = [];
-
-        foreach ($listDirs as $section) {
-            $key = (string)ag($section, 'Id');
-            $type = ag($section, 'CollectionType', 'unknown');
-
-            $builder = [
-                'id' => $key,
-                'title' => ag($section, 'Name', '???'),
-                'type' => $type,
-                'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
-                'supported' => in_array($type, [self::COLLECTION_TYPE_MOVIES, self::COLLECTION_TYPE_SHOWS]),
-            ];
-
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $builder['raw'] = $section;
-            }
-
-            $list[] = $builder;
-        }
-
-        return $list;
+        return $response->response;
     }
 
     public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
@@ -590,7 +502,7 @@ class JellyfinServer implements ServerInterface
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(ag($response->extra, 'message', fn() => $response->error->format()));
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
         }
 
         return [];
@@ -951,7 +863,7 @@ class JellyfinServer implements ServerInterface
                     ],
                 ];
 
-                if (self::COLLECTION_TYPE_SHOWS !== ag($context, 'library.type')) {
+                if (JellyfinClient::COLLECTION_TYPE_SHOWS !== ag($context, 'library.type')) {
                     continue;
                 }
 

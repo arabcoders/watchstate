@@ -16,9 +16,12 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class EmbyClient
 {
-    public const TYPE_MOVIE = 'Movie';
-    public const TYPE_SHOW = 'Series';
-    public const TYPE_EPISODE = 'Episode';
+    public const TYPE_MOVIE = JellyfinClient::TYPE_MOVIE;
+    public const TYPE_SHOW = JellyfinClient::TYPE_SHOW;
+    public const TYPE_EPISODE = JellyfinClient::TYPE_EPISODE;
+
+    public const COLLECTION_TYPE_SHOWS = JellyfinClient::COLLECTION_TYPE_SHOWS;
+    public const COLLECTION_TYPE_MOVIES = JellyfinClient::COLLECTION_TYPE_MOVIES;
 
     public const EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
 
