@@ -8,6 +8,7 @@ use App\Backends\Common\Context;
 use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Libs\Container;
+use App\Libs\Entity\StateInterface as iState;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
@@ -31,6 +32,12 @@ class JellyfinClient
         'PremiereDate',
         'ProductionYear',
         'Path',
+    ];
+
+    public const TYPE_MAPPER = [
+        JellyfinClient::TYPE_SHOW => iState::TYPE_SHOW,
+        JellyfinClient::TYPE_MOVIE => iState::TYPE_MOVIE,
+        JellyfinClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
 
     private Context|null $context = null;

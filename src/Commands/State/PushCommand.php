@@ -221,14 +221,6 @@ class PushCommand extends Command
         }
 
         if (false === $input->getOption('dry-run')) {
-            foreach ($list as $server) {
-                if (null === ($name = ag($server, 'name'))) {
-                    continue;
-                }
-
-                Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
-            }
-
             $config = Config::get('path') . '/config/servers.yaml';
 
             if (is_writable(dirname($config))) {

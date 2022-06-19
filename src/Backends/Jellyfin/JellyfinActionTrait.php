@@ -9,7 +9,6 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Libs\Container;
-use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Options;
@@ -17,14 +16,8 @@ use RuntimeException;
 
 trait JellyfinActionTrait
 {
-    private array $typeMapper = [
-        JellyfinClient::TYPE_SHOW => iState::TYPE_SHOW,
-        JellyfinClient::TYPE_MOVIE => iState::TYPE_MOVIE,
-        JellyfinClient::TYPE_EPISODE => iState::TYPE_EPISODE,
-    ];
-
     /**
-     * Create {@see StateEntity} Object based on given data.
+     * Create {@see iState} Object based on given data.
      *
      * @param Context $context
      * @param iGuid $guid
@@ -48,7 +41,7 @@ trait JellyfinActionTrait
             throw new RuntimeException('No date was set on object.');
         }
 
-        $type = $this->typeMapper[ag($item, 'Type')] ?? ag($item, 'Type');
+        $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
 
         $guids = $guid->get(ag($item, 'ProviderIds', []), context: [
             'item' => [

@@ -382,7 +382,7 @@ if (!function_exists('after')) {
 
 if (!function_exists('makeServer')) {
     /**
-     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, persist:array, options:array} $server
+     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $server
      * @param string|null $name server name.
      * @return ServerInterface
      *
@@ -414,7 +414,6 @@ if (!function_exists('makeServer')) {
             token:   ag($server, 'token', null),
             userId:  ag($server, 'user', null),
             uuid:    ag($server, 'uuid', null),
-            persist: ag($server, 'persist', []),
             options: ag($server, 'options', []),
         );
     }

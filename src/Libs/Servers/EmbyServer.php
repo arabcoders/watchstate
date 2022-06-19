@@ -10,25 +10,10 @@ use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\HttpException;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\UriInterface;
 
 class EmbyServer extends JellyfinServer
 {
     public const NAME = 'EmbyBackend';
-
-    public function setUp(
-        string $name,
-        UriInterface $url,
-        string|int|null $token = null,
-        string|int|null $userId = null,
-        string|int|null $uuid = null,
-        array $persist = [],
-        array $options = []
-    ): ServerInterface {
-        $options['emby'] = true;
-
-        return parent::setUp($name, $url, $token, $userId, $uuid, $persist, $options);
-    }
 
     public function parseWebhook(ServerRequestInterface $request): iFace
     {

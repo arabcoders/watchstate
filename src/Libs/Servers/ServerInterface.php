@@ -25,7 +25,6 @@ interface ServerInterface
      * @param null|int|string $token Server Token
      * @param null|int|string $userId Server user Id
      * @param string|int|null $uuid
-     * @param array $persist persistent data saved by server.
      * @param array $options array of options.
      *
      * @return self
@@ -36,7 +35,6 @@ interface ServerInterface
         null|string|int $token = null,
         null|string|int $userId = null,
         null|string|int $uuid = null,
-        array $persist = [],
         array $options = []
     ): self;
 
@@ -146,22 +144,6 @@ interface ServerInterface
      * @return array
      */
     public function getLibrary(string|int $id, array $opts = []): array;
-
-    /**
-     * Get all persistent data.
-     *
-     * @return array
-     */
-    public function getPersist(): array;
-
-    /**
-     * Add persistent data to config.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return ServerInterface
-     */
-    public function addPersist(string $key, mixed $value): ServerInterface;
 
     /**
      * Get Server Unique ID.
