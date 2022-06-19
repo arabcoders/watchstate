@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Backends\Plex\Action;
+namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
-use App\Backends\Plex\PlexClient;
+use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Data;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -16,7 +17,7 @@ use DateTimeInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
-final class Export extends Import
+class Export extends Import
 {
     /**
      * @param Context $context
@@ -48,7 +49,7 @@ final class Export extends Import
                     logContext: $logContext,
                     opts:       ['after' => $after],
                 ),
-                logContext: $logContext,
+                logContext: $logContext
             ),
             error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
                 'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
@@ -75,37 +76,32 @@ final class Export extends Import
         array $logContext = [],
         array $opts = [],
     ): void {
-        $after = ag($opts, 'after', null);
-        $library = ag($logContext, 'library.id');
-        $type = ag($item, 'type');
-
-        if (PlexClient::TYPE_SHOW === $type) {
-            $this->processShow($context, $guid, $item, $logContext);
+        if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
+            $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
             return;
         }
 
         try {
-            Data::increment($context->backendName, $library . '_total');
+            $after = ag($opts, 'after');
+            $type = JFC::TYPE_MAPPER[$type];
+
             Data::increment($context->backendName, $type . '_total');
 
-            $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
-            if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                $year = (int)makeDate($airDate)->format('Y');
-            }
-
             $logContext['item'] = [
-                'id' => ag($item, 'ratingKey'),
+                'id' => ag($item, 'Id'),
                 'title' => match ($type) {
-                    PlexClient::TYPE_MOVIE => sprintf(
-                        '%s (%s)',
-                        ag($item, ['title', 'originalTitle'], '??'),
-                        0 === $year ? '0000' : $year,
+                    iFace::TYPE_MOVIE => sprintf(
+                        '%s (%d)',
+                        ag($item, ['Name', 'OriginalTitle'], '??'),
+                        ag($item, 'ProductionYear', 0000)
                     ),
-                    PlexClient::TYPE_EPISODE => sprintf(
-                        '%s - (%sx%s)',
-                        ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                    iFace::TYPE_EPISODE => trim(
+                        sprintf(
+                            '%s - (%sx%s)',
+                            ag($item, 'SeriesName', '??'),
+                            str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                        )
                     ),
                 },
                 'type' => $type,
@@ -115,14 +111,19 @@ final class Export extends Import
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'payload' => $item,
+                    'response' => [
+                        'body' => $item
+                    ],
                 ]);
             }
 
-            if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
-                $this->logger->debug('Ignoring [%(backend)] [%(item.title)]. No Date is set on object.', [
+            $isPlayed = true === (bool)ag($item, 'UserData.Played');
+            $dateKey = true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated';
+
+            if (null === ag($item, $dateKey)) {
+                $this->logger->debug('Ignoring [%(backend)] %(item.type) [%(item.title)]. No Date is set on object.', [
                     'backend' => $context->backendName,
-                    'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
+                    'date_key' => $dateKey,
                     ...$logContext,
                     'response' => [
                         'body' => $item,
@@ -137,21 +138,15 @@ final class Export extends Import
                 context: $context,
                 guid:    $guid,
                 item:    $item,
-                opts:    $opts
+                opts:    $opts + ['library' => ag($logContext, 'library.id')]
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
+                $providerIds = (array)ag($item, 'ProviderIds', []);
+
                 $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
 
-                if (null === ($item['Guid'] ?? null)) {
-                    $item['Guid'] = [];
-                }
-
-                if (null !== ($itemGuid = ag($item, 'guid')) && false === $guid->isLocal($itemGuid)) {
-                    $item['Guid'][] = $itemGuid;
-                }
-
-                if (empty($item['Guid'])) {
+                if (empty($providerIds)) {
                     $message .= ' Most likely unmatched %(item.type).';
                 }
 
@@ -159,7 +154,7 @@ final class Export extends Import
                     'backend' => $context->backendName,
                     ...$logContext,
                     'context' => [
-                        'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
+                        'guids' => !empty($providerIds) ? $providerIds : 'None'
                     ],
                 ]);
 
@@ -232,14 +227,7 @@ final class Export extends Import
             }
 
             $url = $context->backendUrl->withPath(
-                '/:' . ($entity->isWatched() ? '/scrobble' : '/unscrobble')
-            )->withQuery(
-                http_build_query(
-                    [
-                        'identifier' => 'com.plexapp.plugins.library',
-                        'key' => $item['ratingKey'],
-                    ]
-                )
+                sprintf('/Users/%s/PlayedItems/%s', $context->backendUser, ag($item, 'Id'))
             );
 
             $logContext['item']['url'] = $url;
@@ -256,16 +244,16 @@ final class Export extends Import
             if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                 $queue->add(
                     $this->http->request(
-                        'GET',
+                        $entity->isWatched() ? 'POST' : 'DELETE',
                         (string)$url,
-                        array_replace_recursive($context->backendHeaders, [
+                        $context->backendHeaders + [
                             'user_data' => [
                                 'context' => $logContext + [
                                         'backend' => $context->backendName,
                                         'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                                     ],
-                            ]
-                        ])
+                            ],
+                        ]
                     )
                 );
             }

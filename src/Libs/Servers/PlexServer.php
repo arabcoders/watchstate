@@ -59,7 +59,6 @@ class PlexServer implements ServerInterface
         array $options = []
     ): ServerInterface {
         $cloned = clone $this;
-        $cloned->persist = $persist;
         $cloned->context = new Context(
             clientName:     static::NAME,
             backendName:    $name,
@@ -287,9 +286,7 @@ class PlexServer implements ServerInterface
             guid:    $this->guid,
             mapper:  $mapper,
             after:   $after,
-            opts:    [
-                         'queue' => $queue
-                     ],
+            opts:    ['queue' => $queue],
         );
 
         if ($response->hasError()) {
