@@ -331,14 +331,6 @@ class ImportCommand extends Command
         (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
 
         if (false === $input->getOption('dry-run')) {
-            foreach ($list as $server) {
-                if (null === ($name = ag($server, 'name'))) {
-                    continue;
-                }
-
-                Config::save(sprintf('servers.%s.persist', $name), $server['class']->getPersist());
-            }
-
             if (false === $custom && is_writable(dirname($config))) {
                 copy($config, $config . '.bak');
             }

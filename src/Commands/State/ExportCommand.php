@@ -335,7 +335,6 @@ class ExportCommand extends Command
                     );
                 } else {
                     Config::save(sprintf('servers.%s.export.lastSync', $name), time());
-                    Config::save(sprintf('servers.%s.persist', $name), $backend['class']->getPersist());
                 }
             }
 

@@ -38,7 +38,6 @@ class PlexServer implements ServerInterface
 
     public const NAME = 'PlexBackend';
 
-    protected array $persist = [];
     protected Context|null $context = null;
 
     public function __construct(
@@ -55,7 +54,6 @@ class PlexServer implements ServerInterface
         string|int|null $token = null,
         string|int|null $userId = null,
         string|int|null $uuid = null,
-        array $persist = [],
         array $options = []
     ): ServerInterface {
         $cloned = clone $this;
@@ -111,17 +109,6 @@ class PlexServer implements ServerInterface
         }
 
         return $response->response;
-    }
-
-    public function getPersist(): array
-    {
-        return $this->persist;
-    }
-
-    public function addPersist(string $key, mixed $value): ServerInterface
-    {
-        $this->persist = ag_set($this->persist, $key, $value);
-        return $this;
     }
 
     public function setLogger(LoggerInterface $logger): ServerInterface
