@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
-use App\Backends\Common\Response;
 use App\Backends\Common\Context;
+use App\Backends\Common\Response;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class InspectRequest
@@ -27,9 +27,9 @@ final class InspectRequest
                 $payload = ag($request->getParsedBody() ?? [], 'payload', null);
 
                 $json = json_decode(
-                    json:        $payload,
+                    json: $payload,
                     associative: true,
-                    flags:       JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
+                    flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
                 );
 
                 $alteredRequest = $request->withParsedBody($json);
@@ -38,7 +38,8 @@ final class InspectRequest
                     'ITEM_ID' => ag($json, 'Metadata.ratingKey', ''),
                     'SERVER_ID' => ag($json, 'Server.uuid', ''),
                     'SERVER_NAME' => ag($json, 'Server.title', ''),
-                    'SERVER_VERSION' => afterLast($userAgent, '/'),
+                    'SERVER_CLIENT' => before($userAgent, '/'),
+                    'SERVER_VERSION' => ag($json, 'Server.version', fn() => afterLast($userAgent, '/')),
                     'USER_ID' => ag($json, 'Account.id', ''),
                     'USER_NAME' => ag($json, 'Account.title', ''),
                     'WH_EVENT' => ag($json, 'event', 'not_set'),

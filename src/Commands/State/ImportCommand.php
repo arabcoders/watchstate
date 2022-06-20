@@ -65,7 +65,8 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'import metadata changes only. Works when there are records in storage.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.');
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->setAliases(['import', 'pull']);
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

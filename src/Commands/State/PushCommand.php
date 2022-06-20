@@ -47,7 +47,8 @@ class PushCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Ignore date comparison. Push storage state to the backends regardless of date.'
-            );
+            )
+            ->setAliases(['push']);
     }
 
     /**

@@ -34,7 +34,7 @@ return (function () {
         ],
     ];
 
-    $config['logs']['affix'] = makeDate()->format('Ymd');
+    $logDateFormat = makeDate()->format('Ymd');
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
 
@@ -55,8 +55,9 @@ return (function () {
     ];
 
     $config['webhook'] = [
+        'logfile' => ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log',
         'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
-        'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
+        'tokenLength' => 16,
     ];
 
     $config['mapper'] = [
@@ -83,7 +84,6 @@ return (function () {
     ];
 
     $config['debug'] = [
-        'import' => (bool)env('WS_DEBUG_IMPORT', false),
         'profiler' => [
             'options' => [
                 'save.handler' => 'file',
@@ -106,10 +106,7 @@ return (function () {
             'type' => 'stream',
             'enabled' => (bool)env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
-            'filename' => env(
-                'WS_LOGGER_FILE',
-                fn() => ag($config, 'tmpDir') . '/logs/app.' . ag($config, 'logs.affix') . '.log'
-            ),
+            'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
         ],
         'stderr' => [
             'type' => 'stream',
@@ -129,7 +126,7 @@ return (function () {
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
             'enabled' => (bool)env('WS_LOGGER_SYSLOG_ENABLED', !env('IN_DOCKER')),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
-            'name' => env('WS_LOGGER_SYSLOG_NAME', ag($config, 'name')),
+            'name' => ag($config, 'name'),
         ],
     ];
 
@@ -177,7 +174,7 @@ return (function () {
     ];
 
     $config['tasks'] = [
-        'logfile' => ag($config, 'tmpDir') . '/logs/tasks/task.' . ag($config, 'logs.affix') . '.log',
+        'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.log',
         'commands' => [
             ImportCommand::TASK_NAME => [
                 Task::NAME => ImportCommand::TASK_NAME,

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
-use App\Backends\Common\Response;
 use App\Backends\Common\Context;
+use App\Backends\Common\Response;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class InspectRequest
@@ -38,6 +38,7 @@ final class InspectRequest
                     'ITEM_ID' => ag($json, 'ItemId', ''),
                     'SERVER_ID' => ag($json, 'ServerId', ''),
                     'SERVER_NAME' => ag($json, 'ServerName', ''),
+                    'SERVER_CLIENT' => before($userAgent, '/'),
                     'SERVER_VERSION' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
                     'USER_ID' => ag($json, 'UserId', ''),
                     'USER_NAME' => ag($json, 'NotificationUsername', ''),
