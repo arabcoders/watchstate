@@ -350,7 +350,7 @@ final class Initializer
         $cloned = clone $local;
 
         if (true === $metadataOnly || true === $entity->isTainted()) {
-            $flag = true === $metadataOnly ? '[M]' : '[T]';
+            $flag = true === $metadataOnly ? 'M' : 'T';
             $keys = true === $metadataOnly ? [iFace::COLUMN_META_DATA] : iFace::ENTITY_FORCE_UPDATE_FIELDS;
 
             if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
