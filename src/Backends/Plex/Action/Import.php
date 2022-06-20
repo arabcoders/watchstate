@@ -10,7 +10,6 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
-use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
@@ -574,22 +573,6 @@ class Import
             );
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                if (true === (bool)Config::get('debug.import')) {
-                    $name = Config::get(
-                            'tmpDir'
-                        ) . '/debug/' . $context->backendName . '.' . $item['ratingKey'] . '.json';
-
-                    if (!file_exists($name)) {
-                        file_put_contents(
-                            $name,
-                            json_encode(
-                                $item,
-                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE
-                            )
-                        );
-                    }
-                }
-
                 $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
 
                 if (null === ($item['Guid'] ?? null)) {

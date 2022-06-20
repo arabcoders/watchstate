@@ -10,7 +10,6 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
-use App\Libs\Config;
 use App\Libs\Data;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
@@ -528,24 +527,6 @@ class Import
             );
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-                if (true === (bool)Config::get('debug.import')) {
-                    $name = sprintf(
-                        Config::get('tmpDir') . '/debug/%s.%s.json',
-                        $context->backendName,
-                        ag($item, 'Id')
-                    );
-
-                    if (!file_exists($name)) {
-                        file_put_contents(
-                            $name,
-                            json_encode(
-                                $item,
-                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE
-                            )
-                        );
-                    }
-                }
-
                 $providerIds = (array)ag($item, 'ProviderIds', []);
 
                 $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
