@@ -106,7 +106,7 @@ return (function () {
             'type' => 'stream',
             'enabled' => (bool)env('WS_LOGGER_FILE_ENABLE', true),
             'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
-            'filename' => ag($config, 'tmpDir') . '/logs/log.' . $logDateFormat . '.log',
+            'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
         ],
         'stderr' => [
             'type' => 'stream',
