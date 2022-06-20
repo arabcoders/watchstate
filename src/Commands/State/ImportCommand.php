@@ -248,7 +248,7 @@ class ImportCommand extends Command
 
             $inDryMode = $this->mapper->inDryRunMode() || ag($server, 'options.' . Options::DRY_RUN);
 
-            if (false === Data::get(sprintf('%s.no_import_update', $name)) && false === $inDryMode) {
+            if (false === Data::get(sprintf('%s.has_errors', $name)) && false === $inDryMode) {
                 Config::save(sprintf('servers.%s.import.lastSync', $name), time());
             }
         }

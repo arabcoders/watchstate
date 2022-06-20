@@ -106,7 +106,7 @@ class Import
                     ]
                 );
 
-                Data::add($context->backendName, 'no_import_update', true);
+                Data::add($context->backendName, 'has_errors', true);
                 return [];
             }
 
@@ -123,7 +123,7 @@ class Import
                     'backend' => $context->backendName,
                     'body' => $json,
                 ]);
-                Data::add($context->backendName, 'no_import_update', true);
+                Data::add($context->backendName, 'has_errors', true);
                 return [];
             }
         } catch (ExceptionInterface $e) {
@@ -136,7 +136,7 @@ class Import
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($context->backendName, 'no_import_update', true);
+            Data::add($context->backendName, 'has_errors', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
@@ -146,7 +146,7 @@ class Import
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($context->backendName, 'no_import_update', true);
+            Data::add($context->backendName, 'has_errors', true);
             return [];
         }
 
@@ -331,7 +331,7 @@ class Import
                 ],
             ]);
 
-            Data::add($context->backendName, 'no_import_update', true);
+            Data::add($context->backendName, 'has_errors', true);
             return [];
         }
 
