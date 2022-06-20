@@ -5,97 +5,46 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\GuidInterface as iGuid;
-use App\Backends\Common\Response;
-use App\Backends\Jellyfin\JellyfinClient as JFC;
+use App\Backends\Common\GuidInterface;
+use App\Backends\Jellyfin\JellyfinClient;
+use App\Libs\Container;
 use App\Libs\Data;
-use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 class Export extends Import
 {
-    /**
-     * @param Context $context
-     * @param iGuid $guid
-     * @param ImportInterface $mapper
-     * @param DateTimeInterface|null $after
-     * @param array $opts
-     *
-     * @return Response
-     */
-    public function __invoke(
+    protected function process(
         Context $context,
-        iGuid $guid,
-        ImportInterface $mapper,
-        DateTimeInterface|null $after = null,
-        array $opts = []
-    ): Response {
-        return $this->tryResponse($context, fn() => $this->getLibraries(
-            context: $context,
-            handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
-                context:    $context,
-                response:   $response,
-                callback: fn(array $item, array $logContext = []) => $this->export(
-                    context:    $context,
-                    guid:       $guid,
-                    queue:      $opts['queue'],
-                    mapper:     $mapper,
-                    item:       $item,
-                    logContext: $logContext,
-                    opts:       ['after' => $after],
-                ),
-                logContext: $logContext
-            ),
-            error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
-                [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ],
-                ]
-            ),
-        ));
-    }
-
-    private function export(
-        Context $context,
-        iGuid $guid,
-        QueueRequests $queue,
+        GuidInterface $guid,
         ImportInterface $mapper,
         array $item,
         array $logContext = [],
         array $opts = [],
     ): void {
-        if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
+        if (JellyfinClient::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
             return;
         }
 
         try {
-            $after = ag($opts, 'after');
-            $type = JFC::TYPE_MAPPER[$type];
+            $queue = ag($opts, 'queue', fn() => Container::get(QueueRequests::class));
+            $after = ag($opts, 'after', null);
 
             Data::increment($context->backendName, $type . '_total');
 
             $logContext['item'] = [
                 'id' => ag($item, 'Id'),
                 'title' => match ($type) {
-                    iFace::TYPE_MOVIE => sprintf(
+                    JellyfinClient::TYPE_MOVIE => sprintf(
                         '%s (%d)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
-                        ag($item, 'ProductionYear', 0000)
+                        ag($item, 'ProductionYear', '0000')
                     ),
-                    iFace::TYPE_EPISODE => trim(
+                    JellyfinClient::TYPE_EPISODE => trim(
                         sprintf(
                             '%s - (%sx%s)',
                             ag($item, 'SeriesName', '??'),
@@ -241,22 +190,24 @@ class Export extends Import
                 ]
             );
 
-            if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
-                $queue->add(
-                    $this->http->request(
-                        $entity->isWatched() ? 'POST' : 'DELETE',
-                        (string)$url,
-                        $context->backendHeaders + [
-                            'user_data' => [
-                                'context' => $logContext + [
-                                        'backend' => $context->backendName,
-                                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                    ],
-                            ],
-                        ]
-                    )
-                );
+            if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                return;
             }
+            
+            $queue->add(
+                $this->http->request(
+                    $entity->isWatched() ? 'POST' : 'DELETE',
+                    (string)$url,
+                    $context->backendHeaders + [
+                        'user_data' => [
+                            'context' => $logContext + [
+                                    'backend' => $context->backendName,
+                                    'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                ],
+                        ],
+                    ]
+                )
+            );
         } catch (Throwable $e) {
             $this->logger->error(
                 'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] export.',

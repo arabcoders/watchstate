@@ -59,13 +59,13 @@ class Import
             handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
                 context:    $context,
                 response:   $response,
-                callback: fn(array $item, array $logContext = []) => $this->import(
+                callback: fn(array $item, array $logContext = []) => $this->process(
                     context:    $context,
                     guid:       $guid,
                     mapper:     $mapper,
                     item:       $item,
                     logContext: $logContext,
-                    opts:       ['after' => $after],
+                    opts:       $opts + ['after' => $after],
                 ),
                 logContext: $logContext
             ),
@@ -106,7 +106,7 @@ class Import
                     ]
                 );
 
-                Data::add($context->backendName, 'no_import_update', true);
+                Data::add($context->backendName, 'has_errors', true);
                 return [];
             }
 
@@ -121,11 +121,9 @@ class Import
             if (empty($listDirs)) {
                 $this->logger->warning('Request for [%(backend)] libraries returned with empty list.', [
                     'backend' => $context->backendName,
-                    'context' => [
-                        'body' => $json,
-                    ]
+                    'body' => $json,
                 ]);
-                Data::add($context->backendName, 'no_import_update', true);
+                Data::add($context->backendName, 'has_errors', true);
                 return [];
             }
         } catch (ExceptionInterface $e) {
@@ -138,7 +136,7 @@ class Import
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($context->backendName, 'no_import_update', true);
+            Data::add($context->backendName, 'has_errors', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
@@ -148,7 +146,7 @@ class Import
                     'message' => $e->getMessage(),
                 ],
             ]);
-            Data::add($context->backendName, 'no_import_update', true);
+            Data::add($context->backendName, 'has_errors', true);
             return [];
         }
 
@@ -333,7 +331,7 @@ class Import
                 ],
             ]);
 
-            Data::add($context->backendName, 'no_import_update', true);
+            Data::add($context->backendName, 'has_errors', true);
             return [];
         }
 
@@ -428,10 +426,14 @@ class Import
 
     protected function processShow(Context $context, iGuid $guid, array $item, array $logContext = []): void
     {
-        if (null === ($item['Guid'] ?? null)) {
-            $item['Guid'] = [['id' => $item['guid']]];
-        } else {
-            $item['Guid'][] = ['id' => $item['guid']];
+        $guids = [];
+
+        if (null !== ($item['Guid'] ?? null)) {
+            $guids = $item['Guid'];
+        }
+
+        if (null !== ($itemGuid = ag($item, 'guid')) && false === $guid->isLocal($itemGuid)) {
+            $guids[] = ['id' => $itemGuid];
         }
 
         $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
@@ -454,22 +456,14 @@ class Import
             $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', [
                 'backend' => $context->backendName,
                 ...$logContext,
-                'trace' => $item,
+                'body' => $item,
             ]);
         }
 
-        if (!$guid->has($item['Guid'])) {
-            if (null === ($item['Guid'] ?? null)) {
-                $item['Guid'] = [];
-            }
-
-            if (null !== ($item['guid'] ?? null) && false === $guid->isLocal($item['guid'])) {
-                $item['Guid'][] = ['id' => $item['guid']];
-            }
-
+        if (!$guid->has($guids)) {
             $message = 'Ignoring [%(backend)] [%(item.title)]. %(item.type) has no valid/supported external ids.';
 
-            if (empty($item['Guid'] ?? [])) {
+            if (empty($guids)) {
                 $message .= ' Most likely unmatched %(item.type).';
             }
 
@@ -487,19 +481,19 @@ class Import
         $gContext = ag_set(
             $logContext,
             'item.plex_id',
-            str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none'
+            str_starts_with($itemGuid ?? 'None', 'plex://') ? ag($item, 'guid') : 'none'
         );
 
         $context->cache->set(
             PlexClient::TYPE_SHOW . '.' . ag($logContext, 'item.id'),
             Guid::fromArray(
-                payload: $guid->get($item['Guid'], context: [...$gContext]),
-                context: ['backend' => $context->backendName, ...$logContext,]
+                payload: $guid->get($guids, context: [...$gContext]),
+                context: ['backend' => $context->backendName, ...$logContext]
             )->getAll()
         );
     }
 
-    private function import(
+    protected function process(
         Context $context,
         iGuid $guid,
         ImportInterface $mapper,
@@ -547,7 +541,7 @@ class Import
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)]', [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'payload' => $item,
+                    'body' => $item,
                 ]);
             }
 
@@ -556,9 +550,7 @@ class Import
                     'backend' => $context->backendName,
                     'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
                     ...$logContext,
-                    'response' => [
-                        'body' => $item,
-                    ],
+                    'body' => $item,
                 ]);
 
                 Data::increment($context->backendName, $type . '_ignored_no_date_is_set');
@@ -615,9 +607,7 @@ class Import
                 $this->logger->info($message, [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'context' => [
-                        'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
-                    ],
+                    'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
                 ]);
 
                 Data::increment($context->backendName, $type . '_ignored_no_supported_guid');

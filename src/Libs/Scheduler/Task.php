@@ -316,15 +316,15 @@ final class Task
         $stdout = $this->process->getOutput();
         $stderr = $this->process->getErrorOutput();
 
-        if (!empty($stdout)) {
-            $this->output .= $stdout;
+        if (!empty($stderr)) {
+            $this->output .= $stderr;
         }
 
-        if (!empty($stderr)) {
-            if (!empty($this->output)) {
+        if (!empty($stdout)) {
+            if (!empty($stderr)) {
                 $this->output .= PHP_EOL;
             }
-            $this->output .= $stderr;
+            $this->output .= $stdout;
         }
 
         $this->process = null;

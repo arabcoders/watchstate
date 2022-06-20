@@ -5,76 +5,27 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\GuidInterface as iGuid;
-use App\Backends\Common\Response;
+use App\Backends\Common\GuidInterface;
 use App\Backends\Plex\PlexClient;
+use App\Libs\Container;
 use App\Libs\Data;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 final class Export extends Import
 {
-    /**
-     * @param Context $context
-     * @param iGuid $guid
-     * @param ImportInterface $mapper
-     * @param DateTimeInterface|null $after
-     * @param array $opts
-     *
-     * @return Response
-     */
-    public function __invoke(
+    protected function process(
         Context $context,
-        iGuid $guid,
-        ImportInterface $mapper,
-        DateTimeInterface|null $after = null,
-        array $opts = []
-    ): Response {
-        return $this->tryResponse($context, fn() => $this->getLibraries(
-            context: $context,
-            handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
-                context:    $context,
-                response:   $response,
-                callback: fn(array $item, array $logContext = []) => $this->export(
-                    context:    $context,
-                    guid:       $guid,
-                    queue:      $opts['queue'],
-                    mapper:     $mapper,
-                    item:       $item,
-                    logContext: $logContext,
-                    opts:       ['after' => $after],
-                ),
-                logContext: $logContext,
-            ),
-            error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
-                [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ],
-                ]
-            ),
-        ));
-    }
-
-    private function export(
-        Context $context,
-        iGuid $guid,
-        QueueRequests $queue,
+        GuidInterface $guid,
         ImportInterface $mapper,
         array $item,
         array $logContext = [],
         array $opts = [],
     ): void {
+        $queue = ag($opts, 'queue', fn() => Container::get(QueueRequests::class));
         $after = ag($opts, 'after', null);
         $library = ag($logContext, 'library.id');
         $type = ag($item, 'type');
@@ -253,22 +204,24 @@ final class Export extends Import
                 ]
             );
 
-            if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
-                $queue->add(
-                    $this->http->request(
-                        'GET',
-                        (string)$url,
-                        array_replace_recursive($context->backendHeaders, [
-                            'user_data' => [
-                                'context' => $logContext + [
-                                        'backend' => $context->backendName,
-                                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                    ],
-                            ]
-                        ])
-                    )
-                );
+            if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                return;
             }
+            
+            $queue->add(
+                $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($context->backendHeaders, [
+                        'user_data' => [
+                            'context' => $logContext + [
+                                    'backend' => $context->backendName,
+                                    'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                ],
+                        ]
+                    ])
+                )
+            );
         } catch (Throwable $e) {
             $this->logger->error(
                 'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] export.',

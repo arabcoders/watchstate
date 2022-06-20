@@ -329,7 +329,7 @@ class ExportCommand extends Command
                     continue;
                 }
 
-                if (true === (bool)Data::get(sprintf('%s.no_export_update', $name))) {
+                if (true === (bool)Data::get(sprintf('%s.has_errors', $name))) {
                     $this->logger->notice(
                         sprintf('%s: Not updating last export date. Backend reported an error.', $name)
                     );
@@ -444,7 +444,7 @@ class ExportCommand extends Command
             array_push($requests, ...$backend['class']->export($this->mapper, $this->queue, $after));
 
             if (false === $input->getOption('dry-run')) {
-                if (true === (bool)Data::get(sprintf('%s.no_export_update', $name))) {
+                if (true === (bool)Data::get(sprintf('%s.has_errors', $name))) {
                     $this->logger->notice('Not updating last export date. [%(backend)] report an error.', [
                         'backend' => $name,
                     ]);

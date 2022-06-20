@@ -79,7 +79,7 @@ final class RunCommand extends Command
 
         if (0 === $count) {
             $this->write(
-                sprintf('[%s] <info>No Tasks Scheduled to run at this time.</info>', makeDate()),
+                sprintf('[%s] No Tasks Scheduled to run at this time.', makeDate()),
                 $input,
                 $output,
                 OutputInterface::VERBOSITY_VERY_VERBOSE
@@ -101,7 +101,7 @@ final class RunCommand extends Command
                 $this->write('Command: ' . $task->getCommand() . ' ' . $task->getArgs(), $input, $output);
                 $this->write('Date: ' . makeDate(), $input, $output);
                 $this->write('--------------------------', $input, $output);
-                $this->write(sprintf('Task %s Output.', $task->getName()), $input, $output);
+                $this->write(sprintf('Task [%s] Output.', $task->getName()), $input, $output);
                 $this->write('--------------------------', $input, $output);
                 $this->write('', $input, $output);
             }
