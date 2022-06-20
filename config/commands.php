@@ -16,6 +16,11 @@ return [
     'state:import' => App\Commands\State\ImportCommand::class,
     'state:export' => App\Commands\State\ExportCommand::class,
     'state:push' => App\Commands\State\PushCommand::class,
+    'pull' => App\Commands\State\ImportCommand::class,
+    'import' => App\Commands\State\ImportCommand::class,
+    'export' => App\Commands\State\ExportCommand::class,
+    'push' => App\Commands\State\PushCommand::class,
+
     // -- storage:
     'storage:maintenance' => App\Commands\Storage\MaintenanceCommand::class,
     'storage:migrations' => App\Commands\Storage\MigrationsCommand::class,

@@ -52,6 +52,7 @@ class ExportCommand extends Command
                 'Always update the locally stored metadata from backend.'
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->setAliases(['export'])
             // -- @RELEASE remove force-* options
             ->addOption('force-export-mode', null, InputOption::VALUE_NONE, 'Force export mode. [NO LONGER USED].')
             ->addOption('force-push-mode', null, InputOption::VALUE_NONE, 'Force push mode. [NO LONGER USED].');
