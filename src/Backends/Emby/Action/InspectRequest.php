@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Backends\Emby\Action;
 
 use App\Backends\Common\CommonTrait;
-use App\Backends\Common\Response;
 use App\Backends\Common\Context;
+use App\Backends\Common\Response;
 use Psr\Http\Message\ServerRequestInterface;
 
 class InspectRequest
@@ -27,9 +27,9 @@ class InspectRequest
                 $payload = (string)ag($request->getParsedBody() ?? [], 'data', null);
 
                 $json = json_decode(
-                    json:        $payload,
+                    json: $payload,
                     associative: true,
-                    flags:       JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
+                    flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
                 );
 
                 $alteredRequest = $request->withParsedBody($json);
@@ -38,7 +38,8 @@ class InspectRequest
                     'ITEM_ID' => ag($json, 'Item.Id', ''),
                     'SERVER_ID' => ag($json, 'Server.Id', ''),
                     'SERVER_NAME' => ag($json, 'Server.Name', ''),
-                    'SERVER_VERSION' => afterLast($userAgent, '/'),
+                    'SERVER_CLIENT' => before($userAgent, '/'),
+                    'SERVER_VERSION' => ag($json, 'Server.Version', fn() => afterLast($userAgent, '/')),
                     'USER_ID' => ag($json, 'User.Id', ''),
                     'USER_NAME' => ag($json, 'User.Name', ''),
                     'WH_EVENT' => ag($json, 'Event', 'not_set'),
