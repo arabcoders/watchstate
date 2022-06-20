@@ -59,13 +59,13 @@ class Import
             handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
                 context:    $context,
                 response:   $response,
-                callback: fn(array $item, array $logContext = []) => $this->import(
+                callback: fn(array $item, array $logContext = []) => $this->process(
                     context:    $context,
                     guid:       $guid,
                     mapper:     $mapper,
                     item:       $item,
                     logContext: $logContext,
-                    opts:       ['after' => $after],
+                    opts:       $opts + ['after' => $after],
                 ),
                 logContext: $logContext
             ),
@@ -120,9 +120,7 @@ class Import
             if (empty($listDirs)) {
                 $this->logger->warning('Request for [%(backend)] libraries returned with empty list.', [
                     'backend' => $context->backendName,
-                    'context' => [
-                        'body' => $json,
-                    ]
+                    'body' => $json,
                 ]);
                 Data::add($context->backendName, 'no_import_update', true);
                 return [];
@@ -421,7 +419,7 @@ class Import
             $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] payload.', [
                 'backend' => $context->backendName,
                 ...$logContext,
-                'trace' => $item,
+                'body' => $item,
             ]);
         }
 
@@ -437,9 +435,7 @@ class Import
             $this->logger->info($message, [
                 'backend' => $context->backendName,
                 ...$logContext,
-                'data' => [
-                    'guids' => !empty($providersId) ? $providersId : 'None'
-                ],
+                'guids' => !empty($providersId) ? $providersId : 'None'
             ]);
 
             return;
@@ -454,7 +450,7 @@ class Import
         );
     }
 
-    private function import(
+    protected function process(
         Context $context,
         iGuid $guid,
         ImportInterface $mapper,
@@ -495,9 +491,7 @@ class Import
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'response' => [
-                        'body' => $item
-                    ],
+                    'body' => $item
                 ]);
             }
 
@@ -509,9 +503,7 @@ class Import
                     'backend' => $context->backendName,
                     'date_key' => $dateKey,
                     ...$logContext,
-                    'response' => [
-                        'body' => $item,
-                    ],
+                    'body' => $item,
                 ]);
 
                 Data::increment($context->backendName, $type . '_ignored_no_date_is_set');
@@ -565,9 +557,7 @@ class Import
                 $this->logger->info($message, [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'context' => [
-                        'guids' => !empty($providerIds) ? $providerIds : 'None'
-                    ],
+                    'guids' => !empty($providerIds) ? $providerIds : 'None'
                 ]);
 
                 Data::increment($context->backendName, $type . '_ignored_no_supported_guid');
