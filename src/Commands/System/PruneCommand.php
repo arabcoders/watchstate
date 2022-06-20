@@ -57,8 +57,10 @@ final class PruneCommand extends Command
                 'filter' => '*.log',
             ],
             [
+                // -- @RELEASE - remove path.
                 'path' => Config::get('tmpDir') . '/logs/tasks',
                 'filter' => '*.log',
+                'report' => false,
             ],
             [
                 'path' => Config::get('tmpDir') . '/webhooks',
@@ -80,9 +82,11 @@ final class PruneCommand extends Command
             $path = ag($item, 'path');
 
             if (null === $path || !is_dir($path)) {
-                $this->logger->warning('Path [%(path)] not found or inaccessible.', [
-                    'path' => $path
-                ]);
+                if (true === (bool)ag($item, 'report', true)) {
+                    $this->logger->warning('Path [%(path)] not found or inaccessible.', [
+                        'path' => $path
+                    ]);
+                }
                 continue;
             }
 
