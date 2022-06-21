@@ -35,15 +35,23 @@ final class InspectRequest
                 $alteredRequest = $request->withParsedBody($json);
 
                 $attributes = [
-                    'ITEM_ID' => ag($json, 'ItemId', ''),
-                    'SERVER_ID' => ag($json, 'ServerId', ''),
-                    'SERVER_NAME' => ag($json, 'ServerName', ''),
-                    'SERVER_CLIENT' => before($userAgent, '/'),
-                    'SERVER_VERSION' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
-                    'USER_ID' => ag($json, 'UserId', ''),
-                    'USER_NAME' => ag($json, 'NotificationUsername', ''),
-                    'WH_EVENT' => ag($json, 'NotificationType', 'not_set'),
-                    'WH_TYPE' => ag($json, 'ItemType', 'not_set'),
+                    'backend' => [
+                        'id' => ag($json, 'ServerId', ''),
+                        'name' => ag($json, 'ServerName'),
+                        'client' => before($userAgent, '/'),
+                        'version' => ag($json, 'ServerVersion', fn() => afterLast($userAgent, '/')),
+                    ],
+                    'user' => [
+                        'id' => ag($json, 'UserId', ''),
+                        'name' => ag($json, 'NotificationUsername'),
+                    ],
+                    'item' => [
+                        'id' => ag($json, 'ItemId'),
+                        'type' => ag($json, 'ItemType'),
+                    ],
+                    'webhook' => [
+                        'event' => ag($json, 'NotificationType'),
+                    ],
                 ];
 
                 foreach ($attributes as $key => $val) {

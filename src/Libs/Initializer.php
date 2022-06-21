@@ -206,9 +206,10 @@ final class Initializer
             }
 
             $request = $class->processRequest(clone $realRequest);
+            $attr = $request->getAttributes();
 
             if (null !== ($userId = ag($info, 'user', null)) && true === (bool)ag($info, 'webhook.match.user')) {
-                if (null === ($requestUser = $request->getAttribute('USER_ID', null))) {
+                if (null === ($requestUser = ag($attr, 'user.id'))) {
                     $validUser = false;
                     $server = $class = null;
                     $log[] = 'Request user is not set';
@@ -230,7 +231,7 @@ final class Initializer
             }
 
             if (null !== ($uuid = ag($info, 'uuid', null)) && true === (bool)ag($info, 'webhook.match.uuid')) {
-                if (null === ($requestBackendId = $request->getAttribute('SERVER_ID', null))) {
+                if (null === ($requestBackendId = ag($attr, 'backend.id'))) {
                     $validUUid = false;
                     $server = $class = null;
                     $log[] = 'backend unique id is not set';
