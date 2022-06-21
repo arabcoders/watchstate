@@ -35,15 +35,23 @@ final class InspectRequest
                 $alteredRequest = $request->withParsedBody($json);
 
                 $attributes = [
-                    'ITEM_ID' => ag($json, 'Metadata.ratingKey', ''),
-                    'SERVER_ID' => ag($json, 'Server.uuid', ''),
-                    'SERVER_NAME' => ag($json, 'Server.title', ''),
-                    'SERVER_CLIENT' => before($userAgent, '/'),
-                    'SERVER_VERSION' => ag($json, 'Server.version', fn() => afterLast($userAgent, '/')),
-                    'USER_ID' => ag($json, 'Account.id', ''),
-                    'USER_NAME' => ag($json, 'Account.title', ''),
-                    'WH_EVENT' => ag($json, 'event', 'not_set'),
-                    'WH_TYPE' => ag($json, 'Metadata.type', 'not_set'),
+                    'backend' => [
+                        'id' => ag($json, 'Server.uuid', ''),
+                        'name' => ag($json, 'Server.title'),
+                        'client' => before($userAgent, '/'),
+                        'version' => ag($json, 'Server.version', fn() => afterLast($userAgent, '/')),
+                    ],
+                    'user' => [
+                        'id' => ag($json, 'Account.id', ''),
+                        'name' => ag($json, 'Account.title'),
+                    ],
+                    'item' => [
+                        'id' => ag($json, 'Metadata.ratingKey'),
+                        'type' => ag($json, 'Metadata.type'),
+                    ],
+                    'webhook' => [
+                        'event' => ag($json, 'event'),
+                    ],
                 ];
 
                 foreach ($attributes as $key => $val) {
