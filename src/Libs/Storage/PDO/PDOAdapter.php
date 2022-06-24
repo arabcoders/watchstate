@@ -465,15 +465,6 @@ final class PDOAdapter implements StorageInterface
             'type' => $entity->type,
         ];
 
-        foreach ($entity->getGuids() as $key => $val) {
-            if (empty($val)) {
-                continue;
-            }
-
-            $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
-            $cond['g_' . $key] = $val;
-        }
-
         $sqlEpisode = '';
 
         if (true === $entity->isEpisode()) {
@@ -490,6 +481,15 @@ final class PDOAdapter implements StorageInterface
                 $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_PARENT . ",'$.{$key}') = :p_{$key}";
                 $cond['p_' . $key] = $val;
             }
+        }
+
+        foreach ($entity->getGuids() as $key => $val) {
+            if (empty($val)) {
+                continue;
+            }
+
+            $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
+            $cond['g_' . $key] = $val;
         }
 
         if (empty($guids)) {
