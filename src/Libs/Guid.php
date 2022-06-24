@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 final class Guid
 {
@@ -180,6 +182,51 @@ final class Guid
     public static function fromArray(array $payload, bool $includeVirtual = true, array $context = []): self
     {
         return new self(guids: $payload, includeVirtual: $includeVirtual, context: $context);
+    }
+
+    /**
+     * Validate id value against expected format.
+     *
+     * @param string $db guid source
+     * @param string|int $id guid source id.
+     *
+     * @return bool
+     *
+     * @throws RuntimeException When source db not supported.
+     * @throws InvalidArgumentException When id validation fails.
+     */
+    public static function validate(string $db, string|int $id): bool
+    {
+        $db = after($db, 'guid_');
+
+        $lookup = 'guid_' . $db;
+
+        if (false === array_key_exists($lookup, self::SUPPORTED)) {
+            throw new RuntimeException(
+                sprintf(
+                    'Invalid db \'%s\' source was given. Expecting \'%s\'.',
+                    $db,
+                    implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::SUPPORTED)))
+                )
+            );
+        }
+
+        if (null === (self::VALIDATE_GUID[$lookup] ?? null)) {
+            return true;
+        }
+
+        if (1 !== preg_match(self::VALIDATE_GUID[$lookup]['pattern'], $id)) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'Invalid value id for db source \'%s\'. Expecting \'%s\' but got \'%s\'.',
+                    $db,
+                    self::VALIDATE_GUID[$lookup]['example'],
+                    $id
+                )
+            );
+        }
+
+        return true;
     }
 
     /**

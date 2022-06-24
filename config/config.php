@@ -32,6 +32,7 @@ return (function () {
             // -- Trigger full export mode if changes exceed X number.
             'threshold' => env('WS_EXPORT_THRESHOLD', 1000),
         ],
+        'ignore' => [],
     ];
 
     $logDateFormat = makeDate()->format('Ymd');

@@ -35,6 +35,8 @@ return [
     'servers:unify' => App\Commands\Servers\UnifyCommand::class,
     'servers:view' => App\Commands\Servers\ViewCommand::class,
     'servers:edit' => App\Commands\Servers\EditCommand::class,
+    'servers:ignore' => \App\Commands\Servers\IgnoreCommand::class,
+
     // -- db:
     'db:list' => App\Commands\Database\ListCommand::class,
     'db:queue' => App\Commands\Database\QueueCommand::class,
