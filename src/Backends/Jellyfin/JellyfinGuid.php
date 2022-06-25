@@ -124,21 +124,23 @@ class JellyfinGuid implements iGuid
 
                 $guid[self::GUID_MAPPER[$key]] = $value;
             } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
-                    [
-                        'backend' => $this->context->backendName,
-                        'agent' => $value,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                        ],
-                        'trace' => $this->context->trace ? $e->getTrace() : [],
-                        ...$context,
-                    ]
-                );
+                if (true === $log) {
+                    $this->logger->error(
+                        'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
+                        [
+                            'backend' => $this->context->backendName,
+                            'agent' => $value,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                            ],
+                            'trace' => $this->context->trace ? $e->getTrace() : [],
+                            ...$context,
+                        ]
+                    );
+                }
                 continue;
             }
         }

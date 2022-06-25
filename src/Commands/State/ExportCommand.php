@@ -150,6 +150,10 @@ class ExportCommand extends Command
                 $opts[Options::IGNORE_DATE] = true;
             }
 
+            if ($input->getOption('trace')) {
+                $opts[Options::DEBUG_TRACE] = true;
+            }
+
             if ($input->getOption('dry-run')) {
                 $opts[Options::DRY_RUN] = true;
             }

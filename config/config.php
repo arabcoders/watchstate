@@ -32,6 +32,11 @@ return (function () {
             // -- Trigger full export mode if changes exceed X number.
             'threshold' => env('WS_EXPORT_THRESHOLD', 1000),
         ],
+        'episodes' => [
+            'disable' => [
+                'guid' => (bool)env('WS_EPISODES_DISABLE_GUID', false),
+            ]
+        ],
         'ignore' => [],
     ];
 

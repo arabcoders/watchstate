@@ -18,6 +18,7 @@ final class Options
     public const MAPPER_DISABLE_AUTOCOMMIT = 'DISABLE_AUTOCOMMIT';
     public const IMPORT_METADATA_ONLY = 'IMPORT_METADATA_ONLY';
     public const MISMATCH_DEEP_SCAN = 'MISMATCH_DEEP_SCAN';
+    public const DISABLE_GUID = 'DISABLE_GUID';
 
     private function __construct()
     {

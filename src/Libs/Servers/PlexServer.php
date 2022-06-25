@@ -19,6 +19,7 @@ use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexGuid;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\HttpException;
@@ -252,7 +253,10 @@ class PlexServer implements ServerInterface
             context: $this->context,
             guid:    $this->guid,
             mapper:  $mapper,
-            after:   $after
+            after:   $after,
+            opts:    [
+                         Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                     ]
         );
 
         if ($response->hasError()) {
@@ -273,7 +277,10 @@ class PlexServer implements ServerInterface
             guid:    $this->guid,
             mapper:  $mapper,
             after:   $after,
-            opts:    ['queue' => $queue],
+            opts:    [
+                         'queue' => $queue,
+                         Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                     ],
         );
 
         if ($response->hasError()) {
