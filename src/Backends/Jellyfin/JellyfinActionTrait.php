@@ -43,7 +43,7 @@ trait JellyfinActionTrait
 
         $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
 
-        $guids = $guid->get(ag($item, 'ProviderIds', []), context: [
+        $logContext = [
             'item' => [
                 'id' => (string)ag($item, 'Id'),
                 'type' => ag($item, 'Type'),
@@ -62,8 +62,9 @@ trait JellyfinActionTrait
                 },
                 'year' => (string)ag($item, 'ProductionYear', '0000'),
             ],
-        ]);
+        ];
 
+        $guids = $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext);
         $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'Id'));
 
         $builder = [
@@ -80,7 +81,10 @@ trait JellyfinActionTrait
                     iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iState::COLUMN_VIA => $context->backendName,
                     iState::COLUMN_TITLE => ag($item, ['Name', 'OriginalTitle'], '??'),
-                    iState::COLUMN_GUIDS => $guid->parse((array)ag($item, 'ProviderIds', [])),
+                    iState::COLUMN_GUIDS => $guid->parse(
+                        guids: (array)ag($item, 'ProviderIds', []),
+                        context: $logContext
+                    ),
                     iState::COLUMN_META_DATA_ADDED_AT => (string)makeDate(ag($item, 'DateCreated'))->getTimestamp(),
                 ],
             ],
@@ -192,17 +196,20 @@ trait JellyfinActionTrait
 
         $providersId = (array)ag($json, 'ProviderIds', []);
 
-        if (false === $guid->has($providersId)) {
+        if (false === $guid->has(guids: $providersId, context: $logContext)) {
             $context->cache->set($cacheKey, []);
             return [];
         }
 
         $context->cache->set(
             $cacheKey,
-            Guid::fromArray($guid->get($providersId), context: [
-                'backend' => $context->backendName,
-                ...$logContext,
-            ])->getAll()
+            Guid::fromArray(
+                payload: $guid->get(guids: $providersId, context: $logContext),
+                context: [
+                             'backend' => $context->backendName,
+                             ...$logContext,
+                         ]
+            )->getAll()
         );
 
         return $context->cache->get($cacheKey);

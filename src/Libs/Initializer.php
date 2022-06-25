@@ -76,6 +76,12 @@ final class Initializer
             if (file_exists($path)) {
                 Config::save('servers', Yaml::parseFile($path));
             }
+
+            $path = Config::get('path') . '/config/ignore.yaml';
+
+            if (file_exists($path)) {
+                Config::save('ignore', Yaml::parseFile($path));
+            }
         })();
 
         date_default_timezone_set(Config::get('tz', 'UTC'));

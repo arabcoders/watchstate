@@ -527,7 +527,19 @@ final class DirectMapper implements ImportInterface
             return $entity->id;
         }
 
-        foreach ([...$entity->getRelativePointers(), ...$entity->getPointers()] as $key) {
+        // -- Prioritize relative ids for episodes, External ids are often incorrect for episodes.
+        if (true === $entity->isEpisode()) {
+            foreach ($entity->getRelativePointers() as $key) {
+                $lookup = $key . '/' . $entity->type;
+                if (null !== ($this->pointers[$lookup] ?? null)) {
+                    return $this->pointers[$lookup];
+                }
+            }
+        }
+
+        // -- look up movies based on guid.
+        // -- if episode didn't have any match using relative id then fallback to external ids.
+        foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
                 return $this->pointers[$lookup];

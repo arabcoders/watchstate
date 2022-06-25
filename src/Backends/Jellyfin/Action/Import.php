@@ -133,6 +133,7 @@ class Import
                     'kind' => get_class($e),
                     'message' => $e->getMessage(),
                 ],
+                'trace' => $context->trace ? $e->getTrace() : [],
             ]);
             Data::add($context->backendName, 'has_errors', true);
             return [];
@@ -142,6 +143,7 @@ class Import
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'message' => $e->getMessage(),
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ],
             ]);
             Data::add($context->backendName, 'has_errors', true);
@@ -216,6 +218,7 @@ class Import
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -294,6 +297,7 @@ class Import
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
                     ],
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]);
                 continue;
             }
@@ -385,6 +389,7 @@ class Import
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
                     ],
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }
@@ -424,7 +429,7 @@ class Import
 
         $providersId = (array)ag($item, 'ProviderIds', []);
 
-        if (false === $guid->has($providersId)) {
+        if (false === $guid->has(guids: $providersId, context: $logContext)) {
             $message = 'Ignoring [%(backend)] [%(item.title)]. %(item.type) has no valid/supported external ids.';
 
             if (empty($providersId)) {
@@ -442,10 +447,13 @@ class Import
 
         $context->cache->set(
             JFC::TYPE_SHOW . '.' . ag($logContext, 'item.id'),
-            Guid::fromArray($guid->get($providersId), context: [
-                'backend' => $context->backendName,
-                ...$logContext,
-            ])->getAll()
+            Guid::fromArray(
+                payload: $guid->get(guids: $providersId, context: $logContext),
+                context: [
+                             'backend' => $context->backendName,
+                             ...$logContext,
+                         ]
+            )->getAll()
         );
     }
 
@@ -561,6 +569,7 @@ class Import
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
                     ],
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }

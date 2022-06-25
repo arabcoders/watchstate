@@ -10,6 +10,12 @@ interface StateInterface
     public const TYPE_EPISODE = 'episode';
     public const TYPE_SHOW = 'show';
 
+    public const TYPES_LIST = [
+        self::TYPE_MOVIE,
+        self::TYPE_SHOW,
+        self::TYPE_EPISODE,
+    ];
+
     /**
      * If you must reference field directly, use those constants.
      */

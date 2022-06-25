@@ -40,9 +40,9 @@ class JellyfinGuid implements iGuid
         return $cloned;
     }
 
-    public function parse(array $guids): array
+    public function parse(array $guids, array $context = []): array
     {
-        return $this->ListExternalIds(guids: $guids, log: false);
+        return $this->ListExternalIds(guids: $guids, context: $context, log: false);
     }
 
     public function get(array $guids, array $context = []): array
@@ -79,6 +79,27 @@ class JellyfinGuid implements iGuid
             }
 
             try {
+                $type = ag($context, 'item.type', '??');
+                $type = JellyfinClient::TYPE_MAPPER[$type] ?? $type;
+
+                if (true === isIgnoredId($this->context->backendName, $type, $key, $value)) {
+                    if (true === $log) {
+                        $this->logger->info(
+                            'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
+                            [
+                                'backend' => $this->context->backendName,
+                                'source' => $key . '://' . $value,
+                                'guid' => [
+                                    'source' => $key,
+                                    'value' => $value,
+                                ],
+                                ...$context
+                            ]
+                        );
+                    }
+                    continue;
+                }
+
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
                     if (true === $log) {
                         $this->logger->info(
@@ -103,22 +124,21 @@ class JellyfinGuid implements iGuid
 
                 $guid[self::GUID_MAPPER[$key]] = $value;
             } catch (Throwable $e) {
-                if (true === $log) {
-                    $this->logger->error(
-                        'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
-                        [
-                            'backend' => $this->context->backendName,
-                            'agent' => $value,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                            ],
-                            ...$context,
-                        ]
-                    );
-                }
+                $this->logger->error(
+                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
+                    [
+                        'backend' => $this->context->backendName,
+                        'agent' => $value,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
+                        'trace' => $this->context->trace ? $e->getTrace() : [],
+                        ...$context,
+                    ]
+                );
                 continue;
             }
         }

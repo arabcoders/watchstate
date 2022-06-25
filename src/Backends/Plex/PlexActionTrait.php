@@ -61,7 +61,7 @@ trait PlexActionTrait
 
         $type = $this->typeMapper[ag($item, 'type')] ?? ag($item, 'type');
 
-        $guids = $guid->get(ag($item, 'Guid', []), context: [
+        $logContext = [
             'item' => [
                 'id' => ag($item, 'ratingKey'),
                 'type' => ag($item, 'type'),
@@ -81,8 +81,9 @@ trait PlexActionTrait
                 'year' => 0 === $year ? '0000' : $year,
                 'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
             ],
-        ]);
+        ];
 
+        $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
         $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'ratingKey'));
 
         $builder = [
@@ -99,7 +100,10 @@ trait PlexActionTrait
                     iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iState::COLUMN_VIA => $context->backendName,
                     iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-                    iState::COLUMN_GUIDS => $guid->parse(ag($item, 'Guid', [])),
+                    iState::COLUMN_GUIDS => $guid->parse(
+                        guids: ag($item, 'Guid', []),
+                        context: $logContext
+                    ),
                     iState::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
                 ],
             ],
@@ -227,7 +231,7 @@ trait PlexActionTrait
             $json['Guid'][] = ['id' => $json['guid']];
         }
 
-        if (false === $guid->has(guids: $json['Guid'])) {
+        if (false === $guid->has(guids: $json['Guid'], context: $logContext)) {
             $context->cache->set($cacheKey, []);
             return [];
         }
@@ -241,7 +245,7 @@ trait PlexActionTrait
         $context->cache->set(
             $cacheKey,
             Guid::fromArray(
-                payload: $guid->get($json['Guid'], context: [...$gContext]),
+                payload: $guid->get(guids: $json['Guid'], context: [...$gContext]),
                 context: ['backend' => $context->backendName, ...$logContext]
             )->getAll()
         );

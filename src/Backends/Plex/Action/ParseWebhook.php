@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Entity\StateInterface as iFace;
@@ -140,7 +140,7 @@ final class ParseWebhook
                 $year = (int)makeDate($airDate)->format('Y');
             }
 
-            $guids = $guid->get(ag($item, 'Guid', []), context: [
+            $guids = $guid->get(guids: ag($item, 'Guid', []), context: [
                 'item' => [
                     'id' => ag($item, 'ratingKey'),
                     'type' => ag($item, 'type'),
@@ -216,6 +216,7 @@ final class ParseWebhook
                                              'attributes' => $request->getAttributes(),
                                              'payload' => $request->getParsedBody(),
                                          ],
+                                         'trace' => $context->trace ? $e->getTrace() : [],
                                      ],
                             level:   Levels::ERROR
                         ),
