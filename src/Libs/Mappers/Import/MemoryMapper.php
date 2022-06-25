@@ -90,9 +90,8 @@ final class MemoryMapper implements ImportInterface
          * if getPointer return false, it means most likely the item is not found in storage.
          */
         if (false === ($pointer = $this->getPointer($entity))) {
-            Data::increment($entity->via, $entity->type . '_failed');
-
             if (true === $metadataOnly) {
+                Data::increment($entity->via, $entity->type . '_failed');
                 $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
@@ -140,7 +139,6 @@ final class MemoryMapper implements ImportInterface
             return $this;
         }
 
-        $local = &$this->objects[$pointer];
         $keys = [iFace::COLUMN_META_DATA];
 
         /**
@@ -163,15 +161,18 @@ final class MemoryMapper implements ImportInterface
                     ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                 );
 
-                $local = $local->apply(entity: $entity, fields: array_merge($localFields, [iFace::COLUMN_EXTRA]));
+                $this->objects[$pointer] = $this->objects[$pointer]->apply(
+                    entity: $entity,
+                    fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
+                );
 
-                $this->removePointers($cloned)->addPointers($local, $pointer);
+                $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
                 $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
-                    'changes' => $local->diff(fields: $localFields)
+                    'changes' => $this->objects[$pointer]->diff(fields: $localFields)
                 ]);
 
                 return $this;
@@ -196,7 +197,7 @@ final class MemoryMapper implements ImportInterface
                     $this->changed[$pointer] = $pointer;
                     Data::increment($entity->via, $entity->type . '_updated');
 
-                    $local = $local->apply(
+                    $this->objects[$pointer] = $this->objects[$pointer]->apply(
                         entity: $entity,
                         fields: array_merge($keys, [iFace::COLUMN_EXTRA])
                     )->markAsUnplayed(backend: $entity);
@@ -205,7 +206,9 @@ final class MemoryMapper implements ImportInterface
                         'id' => $cloned->id,
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
-                        'changes' => $local->diff(array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])),
+                        'changes' => $this->objects[$pointer]->diff(
+                            array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])
+                        ),
                     ]);
 
                     return $this;
@@ -226,16 +229,18 @@ final class MemoryMapper implements ImportInterface
                             ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
                         );
 
-                        $local = $local->apply(
+                        $this->objects[$pointer] = $this->objects[$pointer]->apply(
                             entity: $entity,
                             fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
                         );
+
+                        $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
                         $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
-                            'changes' => $local::fromArray($cloned->getAll())->apply(
+                            'changes' => $cloned::fromArray($cloned->getAll())->apply(
                                 entity: $entity,
                                 fields: $localFields
                             )->diff(fields: $keys),
@@ -263,14 +268,20 @@ final class MemoryMapper implements ImportInterface
             $this->changed[$pointer] = $pointer;
             Data::increment($entity->via, $entity->type . '_updated');
 
-            $local = $local->apply(entity: $entity, fields: array_merge($keys, [iFace::COLUMN_EXTRA]));
-            $this->removePointers($cloned)->addPointers($local, $pointer);
+            $this->objects[$pointer] = $this->objects[$pointer]->apply(
+                entity: $entity,
+                fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+            );
+            $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
             $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
                 'id' => $cloned->id,
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
-                'changes' => $local::fromArray($cloned->getAll())->apply(entity: $entity, fields: $keys)->diff(
+                'changes' => $cloned::fromArray($cloned->getAll())->apply(
+                    entity: $entity,
+                    fields: $keys
+                )->diff(
                     fields: $keys
                 ),
                 'fields' => implode(', ', $keys),
@@ -431,7 +442,11 @@ final class MemoryMapper implements ImportInterface
 
     protected function addPointers(iFace $entity, string|int $pointer): ImportInterface
     {
-        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+        foreach ($entity->getRelativePointers() as $key) {
+            $this->pointers[$key] = $pointer;
+        }
+
+        foreach ($entity->getPointers() as $key) {
             $this->pointers[$key . '/' . $entity->type] = $pointer;
         }
 
@@ -452,17 +467,13 @@ final class MemoryMapper implements ImportInterface
         }
 
         // -- Prioritize relative ids for episodes, External ids are often incorrect for episodes.
-        if (true === $entity->isEpisode()) {
-            foreach ($entity->getRelativePointers() as $key) {
-                $lookup = $key . '/' . $entity->type;
-                if (null !== ($this->pointers[$lookup] ?? null)) {
-                    return $this->pointers[$lookup];
-                }
+        foreach ($entity->getRelativePointers() as $key) {
+            if (null !== ($this->pointers[$key] ?? null)) {
+                return $this->pointers[$key];
             }
         }
 
-        // -- look up movies based on guid.
-        // -- if episode didn't have any match using relative id then fallback to external ids.
+        // -- fallback to guids for movies and episode in case there was no relative id match.
         foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
@@ -483,10 +494,16 @@ final class MemoryMapper implements ImportInterface
 
     protected function removePointers(iFace $entity): ImportInterface
     {
-        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+        foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
                 unset($this->pointers[$lookup]);
+            }
+        }
+
+        foreach ($entity->getRelativePointers() as $key) {
+            if (null !== ($this->pointers[$key] ?? null)) {
+                unset($this->pointers[$key]);
             }
         }
 
