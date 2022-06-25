@@ -90,9 +90,8 @@ final class MemoryMapper implements ImportInterface
          * if getPointer return false, it means most likely the item is not found in storage.
          */
         if (false === ($pointer = $this->getPointer($entity))) {
-            Data::increment($entity->via, $entity->type . '_failed');
-
             if (true === $metadataOnly) {
+                Data::increment($entity->via, $entity->type . '_failed');
                 $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
@@ -230,6 +229,8 @@ final class MemoryMapper implements ImportInterface
                             entity: $entity,
                             fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
                         );
+
+                        $this->removePointers($cloned)->addPointers($local, $pointer);
 
                         $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                             'id' => $cloned->id,
