@@ -19,6 +19,7 @@ use App\Backends\Jellyfin\Action\SearchId;
 use App\Backends\Jellyfin\Action\SearchQuery;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinGuid;
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\HttpException;
@@ -260,7 +261,10 @@ class JellyfinServer implements ServerInterface
             context: $this->context,
             guid:    $this->guid,
             mapper:  $mapper,
-            after:   $after
+            after:   $after,
+            opts:    [
+                         Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                     ]
         );
 
         if ($response->hasError()) {
@@ -281,7 +285,10 @@ class JellyfinServer implements ServerInterface
             guid:    $this->guid,
             mapper:  $mapper,
             after:   $after,
-            opts:    ['queue' => $queue]
+            opts:    [
+                         'queue' => $queue,
+                         Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                     ]
         );
 
         if ($response->hasError()) {

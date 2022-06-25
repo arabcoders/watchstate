@@ -13,8 +13,10 @@ use App\Backends\Common\Response;
 use App\Backends\Emby\EmbyActionTrait;
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinActionTrait;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Config;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
@@ -92,6 +94,8 @@ final class ParseWebhook
         }
 
         try {
+            $obj = $this->getItemDetails(context: $context, id: $id);
+
             if ('item.markplayed' === $event || 'playback.scrobble' === $event) {
                 $isPlayed = 1;
                 $lastPlayedAt = time();
@@ -112,31 +116,7 @@ final class ParseWebhook
                 $lastPlayedAt = (0 === $isPlayed) ? makeDate(ag($json, 'Item.DateCreated'))->getTimestamp() : time();
             }
 
-            $fields = [
-                iFace::COLUMN_EXTRA => [
-                    $context->backendName => [
-                        iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                    ],
-                ],
-            ];
-
-            if (false === in_array($event, self::WEBHOOK_TAINTED_EVENTS)) {
-                $fields += [
-                    iFace::COLUMN_WATCHED => $isPlayed,
-                    iFace::COLUMN_UPDATED => $lastPlayedAt,
-                    iFace::COLUMN_META_DATA => [
-                        $context->backendName => [
-                            iFace::COLUMN_WATCHED => (string)$isPlayed,
-                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
-                        ]
-                    ],
-                ];
-            }
-
-            $obj = $this->getItemDetails(context: $context, id: $id);
-
-            $guids = $guid->get(guids: ag($json, 'Item.ProviderIds', []), context: [
+            $logContext = [
                 'item' => [
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
@@ -157,19 +137,54 @@ final class ParseWebhook
                     },
                     'year' => ag($obj, 'ProductionYear'),
                 ],
-            ]);
+            ];
 
-            if (count($guids) >= 1) {
-                $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
-                $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$context->backendName][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+            $disableGuid = (bool)Config::get('episodes.disable.guid');
+
+            if (EmbyClient::TYPE_EPISODE === $type && true === $disableGuid) {
+                $guids = [];
+            } else {
+                $guids = $guid->get(guids: ag($json, 'Item.ProviderIds', []), context: $logContext);
+            }
+
+            $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
+
+            $fields = [
+                iState::COLUMN_GUIDS => $guids,
+                iState::COLUMN_META_DATA => [
+                    $context->backendName => [
+                        iState::COLUMN_GUIDS => $guid->parse(
+                            guids:   ag($json, 'Item.ProviderIds', []),
+                            context: $logContext
+                        ),
+                    ]
+                ],
+                iState::COLUMN_EXTRA => [
+                    $context->backendName => [
+                        iState::COLUMN_EXTRA_EVENT => $event,
+                        iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                    ],
+                ],
+            ];
+
+            if (false === in_array($event, self::WEBHOOK_TAINTED_EVENTS)) {
+                $fields = array_replace_recursive($fields, [
+                    iState::COLUMN_WATCHED => $isPlayed,
+                    iState::COLUMN_UPDATED => $lastPlayedAt,
+                    iState::COLUMN_META_DATA => [
+                        $context->backendName => [
+                            iState::COLUMN_WATCHED => (string)$isPlayed,
+                            iState::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ]);
             }
 
             $entity = $this->createEntity(
                 context: $context,
                 guid:    $guid,
                 item:    $obj,
-                opts:    ['override' => $fields],
+                opts:    ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use InvalidArgumentException;
+use JsonSerializable;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Stringable;
 
-final class Guid
+final class Guid implements JsonSerializable, Stringable
 {
     public const GUID_IMDB = 'guid_imdb';
     public const GUID_TVDB = 'guid_tvdb';
@@ -267,5 +269,15 @@ final class Guid
         }
 
         return self::$logger;
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return $this->getAll();
+    }
+
+    public function __toString(): string
+    {
+        return json_encode($this->getAll());
     }
 }

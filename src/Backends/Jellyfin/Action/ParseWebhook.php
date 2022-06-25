@@ -11,9 +11,11 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
-use App\Backends\Jellyfin\JellyfinClient;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Backends\Jellyfin\JellyfinClient as JFC;
+use App\Libs\Config;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
@@ -22,8 +24,8 @@ final class ParseWebhook
     use CommonTrait, JellyfinActionTrait;
 
     protected const WEBHOOK_ALLOWED_TYPES = [
-        JellyfinClient::TYPE_MOVIE,
-        JellyfinClient::TYPE_EPISODE,
+        JFC::TYPE_MOVIE,
+        JFC::TYPE_EPISODE,
     ];
 
     protected const WEBHOOK_ALLOWED_EVENTS = [
@@ -87,58 +89,22 @@ final class ParseWebhook
         }
 
         try {
+            $obj = $this->getItemDetails(context: $context, id: $id);
+
             $isPlayed = (bool)ag($json, 'Played');
             $lastPlayedAt = true === $isPlayed ? ag($json, 'LastPlayedDate') : null;
 
-            $fields = [
-                iFace::COLUMN_WATCHED => (int)$isPlayed,
-                iFace::COLUMN_META_DATA => [
-                    $context->backendName => [
-                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    ]
-                ],
-                iFace::COLUMN_EXTRA => [
-                    $context->backendName => [
-                        iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                    ],
-                ],
-            ];
-
-            if (true === $isPlayed && null !== $lastPlayedAt) {
-                $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
-                $fields = array_replace_recursive($fields, [
-                    iFace::COLUMN_UPDATED => $lastPlayedAt,
-                    iFace::COLUMN_META_DATA => [
-                        $context->backendName => [
-                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
-                        ]
-                    ],
-                ]);
-            }
-
-            $obj = $this->getItemDetails(context: $context, id: $id);
-
-            $providersId = [];
-
-            foreach (array_change_key_case($json, CASE_LOWER) as $key => $val) {
-                if (false === str_starts_with($key, 'provider_')) {
-                    continue;
-                }
-                $providersId[after($key, 'provider_')] = $val;
-            }
-
-            $guids = $guid->get(guids: $providersId, context: [
+            $logContext = [
                 'item' => [
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
                     'title' => match (ag($obj, 'Type')) {
-                        JellyfinClient::TYPE_MOVIE => sprintf(
+                        JFC::TYPE_MOVIE => sprintf(
                             '%s (%s)',
                             ag($obj, ['Name', 'OriginalTitle'], '??'),
                             ag($obj, 'ProductionYear', '0000')
                         ),
-                        JellyfinClient::TYPE_EPISODE => trim(
+                        JFC::TYPE_EPISODE => trim(
                             sprintf(
                                 '%s - (%sx%s)',
                                 ag($obj, 'SeriesName', '??'),
@@ -149,19 +115,64 @@ final class ParseWebhook
                     },
                     'year' => ag($obj, 'ProductionYear'),
                 ],
-            ]);
+            ];
 
-            if (count($guids) >= 1) {
-                $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
-                $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$context->backendName][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+            $disableGuid = (bool)Config::get('episodes.disable.guid');
+
+            $providersId = [];
+
+            foreach (array_change_key_case($json, CASE_LOWER) as $key => $val) {
+                if (false === str_starts_with($key, 'provider_')) {
+                    continue;
+                }
+                $providersId[after($key, 'provider_')] = $val;
+            }
+
+            if (JFC::TYPE_EPISODE === $type && true === $disableGuid) {
+                $guids = [];
+            } else {
+                $guids = $guid->get(guids: $providersId, context: $logContext);
+            }
+
+            $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
+
+            $fields = [
+                iState::COLUMN_WATCHED => (int)$isPlayed,
+                iState::COLUMN_GUIDS => $guids,
+                iState::COLUMN_META_DATA => [
+                    $context->backendName => [
+                        iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
+                        iState::COLUMN_GUIDS => $guid->parse(
+                            guids:   $providersId,
+                            context: $logContext
+                        ),
+                    ]
+                ],
+                iState::COLUMN_EXTRA => [
+                    $context->backendName => [
+                        iState::COLUMN_EXTRA_EVENT => $event,
+                        iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                    ],
+                ],
+            ];
+
+            if (true === $isPlayed && null !== $lastPlayedAt) {
+                $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
+                $fields = array_replace_recursive($fields, [
+                    iState::COLUMN_UPDATED => $lastPlayedAt,
+                    iState::COLUMN_META_DATA => [
+                        $context->backendName => [
+                            iState::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ]);
             }
 
             $entity = $this->createEntity(
                 context: $context,
                 guid:    $guid,
                 item:    $obj,
-                opts:    ['override' => $fields],
+                opts:    ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

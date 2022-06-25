@@ -44,6 +44,7 @@ trait JellyfinActionTrait
         $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
 
         $logContext = [
+            'backend' => $context->backendName,
             'item' => [
                 'id' => (string)ag($item, 'Id'),
                 'type' => ag($item, 'Type'),
@@ -64,7 +65,12 @@ trait JellyfinActionTrait
             ],
         ];
 
-        $guids = $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext);
+        if (iState::TYPE_EPISODE === $type && true === (bool)ag($opts, Options::DISABLE_GUID, false)) {
+            $guids = [];
+        } else {
+            $guids = $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext);
+        }
+
         $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'Id'));
 
         $builder = [
@@ -145,6 +151,13 @@ trait JellyfinActionTrait
 
         if (null !== ($opts['override'] ?? null)) {
             $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        }
+
+        if (true === is_array($builder[iState::COLUMN_GUIDS] ?? false)) {
+            $builder[iState::COLUMN_GUIDS] = Guid::fromArray(
+                payload: $builder[iState::COLUMN_GUIDS],
+                context: $logContext,
+            )->getAll();
         }
 
         return Container::get(iState::class)::fromArray($builder);

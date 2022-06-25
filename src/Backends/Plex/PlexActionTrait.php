@@ -62,6 +62,7 @@ trait PlexActionTrait
         $type = $this->typeMapper[ag($item, 'type')] ?? ag($item, 'type');
 
         $logContext = [
+            'backend' => $context->backendName,
             'item' => [
                 'id' => ag($item, 'ratingKey'),
                 'type' => ag($item, 'type'),
@@ -83,7 +84,12 @@ trait PlexActionTrait
             ],
         ];
 
-        $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
+        if (iState::TYPE_EPISODE === $type && true === (bool)ag($opts, Options::DISABLE_GUID, false)) {
+            $guids = [];
+        } else {
+            $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
+        }
+
         $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'ratingKey'));
 
         $builder = [
@@ -161,6 +167,13 @@ trait PlexActionTrait
 
         if (null !== ($opts['override'] ?? null)) {
             $builder = array_replace_recursive($builder, $opts['override'] ?? []);
+        }
+
+        if (true === is_array($builder[iState::COLUMN_GUIDS] ?? false)) {
+            $builder[iState::COLUMN_GUIDS] = Guid::fromArray(
+                payload: $builder[iState::COLUMN_GUIDS],
+                context: $logContext,
+            )->getAll();
         }
 
         return Container::get(iState::class)::fromArray($builder);

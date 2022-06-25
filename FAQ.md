@@ -308,25 +308,26 @@ it's slower than `MemoryMapper`.
 
 ### Q: What environment variables supported?
 
-| Key                   | Type   | Description                                                                     | Default                       |
-|-----------------------|--------|---------------------------------------------------------------------------------|-------------------------------|
-| WS_DATA_PATH          | string | Where to store main data. (config, db).                                         | `${BASE_PATH}/var`            |
-| WS_TMP_DIR            | string | Where to store temp data. (logs, cache)                                         | `${WS_DATA_PATH}`             |
-| WS_TZ                 | string | Set timezone.                                                                   | `UTC`                         |
-| WS_CRON_IMPORT        | bool   | Enable import scheduled task. Value casted to bool.                             | `false`                       |
-| WS_CRON_IMPORT_AT     | string | When to run import scheduled task. Valid Cron Expression Expected.              | `0 */1 * * *` (Every 1h)      |
-| WS_CRON_IMPORT_ARGS   | string | Flags to pass to the import command.                                            | `-v`                          |
-| WS_CRON_EXPORT        | bool   | Enable export scheduled task. Value casted to bool.                             | `false`                       |
-| WS_CRON_EXPORT_AT     | string | When to run export scheduled task. Valid Cron Expression Expected.              | `30 */1 * * *` (Every 1h 30m) |
-| WS_CRON_EXPORT_ARGS   | string | Flags to pass to the export command.                                            | `-v`                          |
-| WS_CRON_PUSH          | bool   | Enable push scheduled task. Value casted to bool.                               | `false`                       |
-| WS_CRON_PUSH_AT       | string | When to run push scheduled task. Valid Cron Expression Expected.                | `*/10 * * * *` (Every 10m)    |
-| WS_CRON_PUSH_ARGS     | string | Flags to pass to the push command.                                              | `-v`                          |
-| WS_LOGS_PRUNE_AFTER   | string | Delete logs older than specified time. Set to `disable` to disable the pruning. | `-3 DAYS`                     |
-| WS_LOGS_CONTEXT       | bool   | Add context to console output messages.                                         | `false`                       |
-| WS_LOGGER_FILE_ENABLE | bool   | Save logs to file.                                                              | `true`                        |
-| WS_LOGGER_FILE_LEVEL  | string | File Logger Level.                                                              | `ERROR`                       |
-| WS_WEBHOOK_DEBUG      | bool   | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters.   | `false`                       |
+| Key                      | Type   | Description                                                                     | Default                       |
+|--------------------------|--------|---------------------------------------------------------------------------------|-------------------------------|
+| WS_DATA_PATH             | string | Where to store main data. (config, db).                                         | `${BASE_PATH}/var`            |
+| WS_TMP_DIR               | string | Where to store temp data. (logs, cache)                                         | `${WS_DATA_PATH}`             |
+| WS_TZ                    | string | Set timezone.                                                                   | `UTC`                         |
+| WS_CRON_IMPORT           | bool   | Enable import scheduled task. Value casted to bool.                             | `false`                       |
+| WS_CRON_IMPORT_AT        | string | When to run import scheduled task. Valid Cron Expression Expected.              | `0 */1 * * *` (Every 1h)      |
+| WS_CRON_IMPORT_ARGS      | string | Flags to pass to the import command.                                            | `-v`                          |
+| WS_CRON_EXPORT           | bool   | Enable export scheduled task. Value casted to bool.                             | `false`                       |
+| WS_CRON_EXPORT_AT        | string | When to run export scheduled task. Valid Cron Expression Expected.              | `30 */1 * * *` (Every 1h 30m) |
+| WS_CRON_EXPORT_ARGS      | string | Flags to pass to the export command.                                            | `-v`                          |
+| WS_CRON_PUSH             | bool   | Enable push scheduled task. Value casted to bool.                               | `false`                       |
+| WS_CRON_PUSH_AT          | string | When to run push scheduled task. Valid Cron Expression Expected.                | `*/10 * * * *` (Every 10m)    |
+| WS_CRON_PUSH_ARGS        | string | Flags to pass to the push command.                                              | `-v`                          |
+| WS_LOGS_PRUNE_AFTER      | string | Delete logs older than specified time. Set to `disable` to disable the pruning. | `-3 DAYS`                     |
+| WS_LOGS_CONTEXT          | bool   | Add context to console output messages.                                         | `false`                       |
+| WS_LOGGER_FILE_ENABLE    | bool   | Save logs to file.                                                              | `true`                        |
+| WS_LOGGER_FILE_LEVEL     | string | File Logger Level.                                                              | `ERROR`                       |
+| WS_WEBHOOK_DEBUG         | bool   | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters.   | `false`                       |
+| WS_EPISODES_DISABLE_GUID | bool   | Disable external id parsing for episodes and rely on relative ids.              | `false`                       |
 
 #### Container specific environment variables.
 

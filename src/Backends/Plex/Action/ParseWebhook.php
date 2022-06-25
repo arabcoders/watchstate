@@ -12,8 +12,10 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Config;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
@@ -104,53 +106,27 @@ final class ParseWebhook
         }
 
         try {
+            $obj = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
+
             $isPlayed = (bool)ag($item, 'viewCount', false);
             $lastPlayedAt = true === $isPlayed ? ag($item, 'lastViewedAt') : null;
-
-            $fields = [
-                iFace::COLUMN_WATCHED => (int)$isPlayed,
-                iFace::COLUMN_META_DATA => [
-                    $context->backendName => [
-                        iFace::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
-                    ]
-                ],
-                iFace::COLUMN_EXTRA => [
-                    $context->backendName => [
-                        iFace::COLUMN_EXTRA_EVENT => $event,
-                        iFace::COLUMN_EXTRA_DATE => makeDate('now'),
-                    ],
-                ],
-            ];
-
-            if (true === $isPlayed && null !== $lastPlayedAt) {
-                $fields = array_replace_recursive($fields, [
-                    iFace::COLUMN_UPDATED => (int)$lastPlayedAt,
-                    iFace::COLUMN_META_DATA => [
-                        $context->backendName => [
-                            iFace::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
-                        ]
-                    ],
-                ]);
-            }
-
-            $obj = ag($this->getItemDetails(context: $context, id: $id), 'MediaContainer.Metadata.0', []);
 
             $year = (int)ag($obj, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($obj, 'originallyAvailableAt'))) {
                 $year = (int)makeDate($airDate)->format('Y');
             }
 
-            $guids = $guid->get(guids: ag($item, 'Guid', []), context: [
+            $logContext = [
                 'item' => [
                     'id' => ag($item, 'ratingKey'),
                     'type' => ag($item, 'type'),
                     'title' => match ($type) {
-                        iFace::TYPE_MOVIE => sprintf(
+                        iState::TYPE_MOVIE => sprintf(
                             '%s (%s)',
                             ag($item, ['title', 'originalTitle'], '??'),
                             0 === $year ? '0000' : $year,
                         ),
-                        iFace::TYPE_EPISODE => sprintf(
+                        iState::TYPE_EPISODE => sprintf(
                             '%s - (%sx%s)',
                             ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
                             str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
@@ -160,19 +136,54 @@ final class ParseWebhook
                     'year' => 0 === $year ? '0000' : $year,
                     'plex_id' => str_starts_with(ag($item, 'guid', ''), 'plex://') ? ag($item, 'guid') : 'none',
                 ],
-            ]);
+            ];
 
-            if (count($guids) >= 1) {
-                $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
-                $fields[iFace::COLUMN_GUIDS] = $guids;
-                $fields[iFace::COLUMN_META_DATA][$context->backendName][iFace::COLUMN_GUIDS] = $fields[iFace::COLUMN_GUIDS];
+            $disableGuid = (bool)Config::get('episodes.disable.guid');
+
+            if (PlexClient::TYPE_EPISODE === $type && true === $disableGuid) {
+                $guids = [];
+            } else {
+                $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
+            }
+
+            $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
+
+            $fields = [
+                iState::COLUMN_WATCHED => (int)$isPlayed,
+                iState::COLUMN_GUIDS => $guids,
+                iState::COLUMN_META_DATA => [
+                    $context->backendName => [
+                        iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
+                        iState::COLUMN_GUIDS => $guid->parse(
+                            guids:   ag($item, 'Guid', []),
+                            context: $logContext
+                        ),
+                    ]
+                ],
+                iState::COLUMN_EXTRA => [
+                    $context->backendName => [
+                        iState::COLUMN_EXTRA_EVENT => $event,
+                        iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                    ],
+                ],
+            ];
+
+            if (true === $isPlayed && null !== $lastPlayedAt) {
+                $fields = array_replace_recursive($fields, [
+                    iState::COLUMN_UPDATED => (int)$lastPlayedAt,
+                    iState::COLUMN_META_DATA => [
+                        $context->backendName => [
+                            iState::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
+                        ]
+                    ],
+                ]);
             }
 
             $entity = $this->createEntity(
                 context: $context,
                 guid:    $guid,
                 item:    $obj,
-                opts:    ['override' => $fields],
+                opts:    ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
