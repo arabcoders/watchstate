@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\Date;
 use App\Libs\Servers\ServerInterface;
 use Nyholm\Psr7\Response;
@@ -245,7 +245,7 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(StateInterface $entity, ServerRequestInterface $request): void
+    function saveWebhookPayload(iFace $entity, ServerRequestInterface $request): void
     {
         $content = [
             'request' => [
@@ -325,7 +325,7 @@ if (!function_exists('httpClientChunks')) {
 }
 
 if (!function_exists('queuePush')) {
-    function queuePush(StateInterface $entity, bool $remove = false): void
+    function queuePush(iFace $entity, bool $remove = false): void
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             return;
@@ -564,5 +564,19 @@ if (false === function_exists('getPeakMemoryUsage')) {
     function getPeakMemoryUsage(): string
     {
         return fsize(memory_get_peak_usage() - BASE_PEAK_MEMORY);
+    }
+}
+
+if (false === function_exists('isIgnoredId')) {
+    function isIgnoredId(string $backend, string $type, string $db, string|int $id): bool
+    {
+        if (false === in_array($type, iFace::TYPES_LIST)) {
+            throw new RuntimeException(sprintf('Invalid context type \'%s\' was given.', $type));
+        }
+
+        return ag_exists(
+            Config::get('ignore', []),
+            sprintf('%s://%s:%s@%s', $type, $db, $id, $backend)
+        );
     }
 }

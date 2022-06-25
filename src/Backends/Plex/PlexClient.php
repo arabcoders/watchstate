@@ -8,6 +8,7 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetIdentifier;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Libs\Container;
+use App\Libs\Entity\StateInterface as iState;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
@@ -18,6 +19,12 @@ class PlexClient
     public const TYPE_SHOW = 'show';
     public const TYPE_MOVIE = 'movie';
     public const TYPE_EPISODE = 'episode';
+
+    public const TYPE_MAPPER = [
+        PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
+        PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
+        PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
+    ];
 
     private Context|null $context = null;
 

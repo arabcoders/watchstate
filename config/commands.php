@@ -35,7 +35,6 @@ return [
     'servers:unify' => App\Commands\Servers\UnifyCommand::class,
     'servers:view' => App\Commands\Servers\ViewCommand::class,
     'servers:edit' => App\Commands\Servers\EditCommand::class,
-    'servers:ignore' => \App\Commands\Servers\IgnoreCommand::class,
 
     // -- db:
     'db:list' => App\Commands\Database\ListCommand::class,
@@ -49,4 +48,7 @@ return [
     'backend:search:id' => App\Commands\Backend\Search\IdCommand::class,
     // -- backend:users:
     'backend:users:list' => App\Commands\Backend\Users\ListCommand::class,
+    // -- backend:ignore:
+    'backend:ignore:list' => \App\Commands\Backend\Ignore\ListCommand::class,
+    'backend:ignore:manage' => \App\Commands\Backend\Ignore\ManageCommand::class,
 ];

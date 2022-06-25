@@ -66,9 +66,9 @@ final class PlexGuid implements GuidInterface
         return $cloned;
     }
 
-    public function parse(array $guids): array
+    public function parse(array $guids, array $context = []): array
     {
-        return $this->ListExternalIds(guids: $guids, log: false);
+        return $this->ListExternalIds(guids: $guids, context: $context, log: false);
     }
 
     public function get(array $guids, array $context = []): array
@@ -140,6 +140,27 @@ final class PlexGuid implements GuidInterface
                     continue;
                 }
 
+                $type = ag($context, 'item.type', '??');
+                $type = PlexClient::TYPE_MAPPER[$type] ?? $type;
+
+                if (true === isIgnoredId($this->context->backendName, $type, $key, $value)) {
+                    if (true === $log) {
+                        $this->logger->info(
+                            'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
+                            [
+                                'backend' => $this->context->backendName,
+                                'source' => $val,
+                                'guid' => [
+                                    'source' => $key,
+                                    'value' => $value,
+                                ],
+                                ...$context
+                            ]
+                        );
+                    }
+                    continue;
+                }
+
                 // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
                     if (true === $log) {
@@ -154,33 +175,32 @@ final class PlexGuid implements GuidInterface
                         );
                     }
 
-                    if (false === ctype_digit($val)) {
+                    if (false === ctype_digit($value)) {
                         continue;
                     }
 
-                    if ((int)$guid[self::GUID_MAPPER[$key]] < (int)$val) {
+                    if ((int)$guid[self::GUID_MAPPER[$key]] < (int)$value) {
                         continue;
                     }
                 }
 
                 $guid[self::GUID_MAPPER[$key]] = $value;
             } catch (Throwable $e) {
-                if (true === $log) {
-                    $this->logger->error(
-                        'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
-                        [
-                            'backend' => $this->context->backendName,
-                            'agent' => $val ?? null,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                            ],
-                            ...$context,
-                        ]
-                    );
-                }
+                $this->logger->error(
+                    'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
+                    [
+                        'backend' => $this->context->backendName,
+                        'agent' => $val ?? null,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
+                        'trace' => $this->context->trace ? $e->getTrace() : [],
+                        ...$context,
+                    ]
+                );
                 continue;
             }
         }
@@ -240,6 +260,7 @@ final class PlexGuid implements GuidInterface
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
+                        'trace' => $this->context->trace ? $e->getTrace() : [],
                         ...$context,
                     ]
                 );

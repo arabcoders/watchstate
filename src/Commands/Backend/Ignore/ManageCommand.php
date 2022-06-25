@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Backend\Ignore;
 
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
+use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,43 +16,54 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-final class IgnoreCommand extends Command
+final class ManageCommand extends Command
 {
-    private const ID_FORMAT = '(type)://(db):(id)@(backend)';
-
     protected function configure(): void
     {
-        $this->setName('servers:ignore')
-            ->setDescription('Ignore external id for specific backend.')
+        $cmdContext = trim(commandContext());
+        $ignoreListFile = Config::get('path') . '/config/ignore.yaml';
+
+        $this->setName('backend:ignore:manage')
+            ->setDescription('Add/Remove external id from ignore list.')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove id from ignore list.')
-            ->addArgument('id', InputArgument::REQUIRED, 'Specify the id in this format ' . self::ID_FORMAT)
+            ->addArgument('id', InputArgument::REQUIRED, 'Id to ignore. Id format: type://db:id@backend_name')
             ->setHelp(
                 <<<HELP
+
 This command allow you to ignore specific external id from backend.
 This helps when there is a conflict between your media servers provided external ids.
 Generally this should only be used as last resort. You should try to fix the source of the problem.
 
 The <info>id</info> format is: <info>type</info>://<info>db</info>:<info>id</info>@<info>backend_name</info>
 
-For example, To ignore <info>tvdb</info> id <info>320234</info> from <info>my_home</info> backend you would do something like
+-----------------------------
+<comment>How to Add id to ignore list.</comment>
+-----------------------------
+
+To ignore <info>tvdb</info> id <info>320234</info> from <info>plex_home</info> backend you would do something like
 
 For <comment>shows</comment>:
-docker exec -ti watchstate console servers:ignore <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_home</info>
+{$cmdContext} servers:ignore <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
 
 For <comment>movies</comment>:
-docker exec -ti watchstate console servers:ignore <comment>movie</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_home</info>
+{$cmdContext} servers:ignore <comment>movie</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
 
 For <comment>episodes</comment>:
-docker exec -ti watchstate console servers:ignore <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_home</info>
+{$cmdContext} servers:ignore <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
 
-<comment>
-------------------------------------
-** WARNING **
-------------------------------------
-</comment><info>
-This feature is incomplete.
-Only core functionality to add/remove ids from ignore list are implemented.
-</info><comment>Checking ignore list against ids from backends is not implemented yet.</comment>
+----------------------------------
+<comment>How to Remove id from ignore list.</comment>
+----------------------------------
+
+To Remove an id from ignore list just append <info>[-r, --remove]</info> to the command. For example,
+
+{$cmdContext} servers:ignore --remove <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
+
+-------------------------
+<comment>Where the list is stored.</comment>
+-------------------------
+
+{$ignoreListFile}
 
 HELP
             );
@@ -66,6 +78,11 @@ HELP
         }
 
         $id = $input->getArgument('id');
+
+        if (empty($id)) {
+            throw new InvalidArgumentException('Not enough arguments (missing: "id").');
+        }
+
         $list = Config::get('ignore', []);
 
         if ($input->getOption('remove')) {
@@ -104,7 +121,7 @@ HELP
         $urlParts = parse_url($guid);
 
         if (null === ($db = ag($urlParts, 'user'))) {
-            throw new RuntimeException('Invalid db. Expected format is ' . self::ID_FORMAT);
+            throw new RuntimeException('No db source was given.');
         }
 
         $sources = array_keys(Guid::getSupported(includeVirtual: false));
@@ -120,7 +137,7 @@ HELP
         }
 
         if (null === ($id = ag($urlParts, 'pass'))) {
-            throw new RuntimeException('Invalid Id. Expected format is ' . self::ID_FORMAT);
+            throw new RuntimeException('No external id was given.');
         }
 
         if (false === Guid::validate($db, $id)) {
@@ -128,23 +145,21 @@ HELP
         }
 
         if (null === ($type = ag($urlParts, 'scheme'))) {
-            throw new RuntimeException('Invalid type. Expected format is ' . self::ID_FORMAT);
+            throw new RuntimeException('No type was given.');
         }
 
-        $types = [iFace::TYPE_MOVIE, iFace::TYPE_SHOW, iFace::TYPE_EPISODE];
-
-        if (false === in_array($type, $types)) {
+        if (false === in_array($type, iFace::TYPES_LIST)) {
             throw new RuntimeException(
                 sprintf(
                     'Invalid type \'%s\' was given. Expected values are \'%s\'.',
                     $type,
-                    implode(', ', $types)
+                    implode(', ', iFace::TYPES_LIST)
                 )
             );
         }
 
         if (null === ($backend = ag($urlParts, 'host'))) {
-            throw new RuntimeException('Invalid backend. Expected format is ' . self::ID_FORMAT);
+            throw new RuntimeException('No backend was given.');
         }
 
         $backends = array_keys(Config::get('servers', []));

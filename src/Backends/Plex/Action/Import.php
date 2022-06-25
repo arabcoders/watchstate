@@ -134,6 +134,7 @@ class Import
                     'kind' => get_class($e),
                     'message' => $e->getMessage(),
                 ],
+                'trace' => $context->trace ? $e->getTrace() : [],
             ]);
             Data::add($context->backendName, 'has_errors', true);
             return [];
@@ -144,6 +145,7 @@ class Import
                     'line' => $e->getLine(),
                     'message' => $e->getMessage(),
                 ],
+                'trace' => $context->trace ? $e->getTrace() : [],
             ]);
             Data::add($context->backendName, 'has_errors', true);
             return [];
@@ -209,6 +211,7 @@ class Import
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -224,6 +227,7 @@ class Import
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -300,6 +304,7 @@ class Import
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
                     ],
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]);
                 continue;
             } catch (Throwable $e) {
@@ -314,6 +319,7 @@ class Import
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                         ],
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -407,6 +413,7 @@ class Import
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
                     ],
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }
@@ -459,7 +466,7 @@ class Import
             ]);
         }
 
-        if (!$guid->has($guids)) {
+        if (!$guid->has(guids: $guids, context: $logContext)) {
             $message = 'Ignoring [%(backend)] [%(item.title)]. %(item.type) has no valid/supported external ids.';
 
             if (empty($guids)) {
@@ -486,7 +493,7 @@ class Import
         $context->cache->set(
             PlexClient::TYPE_SHOW . '.' . ag($logContext, 'item.id'),
             Guid::fromArray(
-                payload: $guid->get($guids, context: [...$gContext]),
+                payload: $guid->get(guids: $guids, context: [...$gContext]),
                 context: ['backend' => $context->backendName, ...$logContext]
             )->getAll()
         );
@@ -613,6 +620,7 @@ class Import
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
                     ],
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }

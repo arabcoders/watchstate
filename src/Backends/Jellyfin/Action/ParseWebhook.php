@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Entity\StateInterface as iFace;
@@ -128,7 +128,7 @@ final class ParseWebhook
                 $providersId[after($key, 'provider_')] = $val;
             }
 
-            $guids = $guid->get($providersId, context: [
+            $guids = $guid->get(guids: $providersId, context: [
                 'item' => [
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
@@ -205,6 +205,7 @@ final class ParseWebhook
                                              'attributes' => $request->getAttributes(),
                                              'payload' => $request->getParsedBody(),
                                          ],
+                                         'trace' => $context->trace ? $e->getTrace() : [],
                                      ],
                             level:   Levels::ERROR
                         ),

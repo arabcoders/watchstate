@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Emby\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Emby\EmbyActionTrait;
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinActionTrait;
@@ -136,7 +136,7 @@ final class ParseWebhook
 
             $obj = $this->getItemDetails(context: $context, id: $id);
 
-            $guids = $guid->get(ag($json, 'Item.ProviderIds', []), context: [
+            $guids = $guid->get(guids: ag($json, 'Item.ProviderIds', []), context: [
                 'item' => [
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
@@ -213,6 +213,7 @@ final class ParseWebhook
                                              'attributes' => $request->getAttributes(),
                                              'payload' => $request->getParsedBody(),
                                          ],
+                                         'trace' => $context->trace ? $e->getTrace() : [],
                                      ],
                             level:   Levels::ERROR
                         ),

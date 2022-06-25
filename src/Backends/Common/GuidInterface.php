@@ -21,10 +21,11 @@ interface GuidInterface
      * *DO NOT THROW OR LOG ANYTHING.*
      *
      * @param array $guids
+     * @param array $context
      *
      * @return array
      */
-    public function parse(array $guids): array;
+    public function parse(array $guids, array $context = []): array;
 
     /**
      * Parse supported external ids from given list.
