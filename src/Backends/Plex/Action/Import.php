@@ -133,8 +133,8 @@ class Import
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
                     'message' => $e->getMessage(),
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ],
-                'trace' => $context->trace ? $e->getTrace() : [],
             ]);
             Data::add($context->backendName, 'has_errors', true);
             return [];
@@ -144,8 +144,8 @@ class Import
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'message' => $e->getMessage(),
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ],
-                'trace' => $context->trace ? $e->getTrace() : [],
             ]);
             Data::add($context->backendName, 'has_errors', true);
             return [];
@@ -210,8 +210,8 @@ class Import
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
                         ],
-                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -226,8 +226,8 @@ class Import
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
                         ],
-                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -303,8 +303,8 @@ class Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
-                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]);
                 continue;
             } catch (Throwable $e) {
@@ -318,8 +318,8 @@ class Import
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
                         ],
-                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -412,8 +412,8 @@ class Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
-                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }
@@ -619,8 +619,8 @@ class Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
-                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }

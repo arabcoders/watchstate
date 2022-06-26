@@ -222,12 +222,12 @@ final class ParseWebhook
                                              'line' => $e->getLine(),
                                              'kind' => get_class($e),
                                              'message' => $e->getMessage(),
+                                             'trace' => $context->trace ? $e->getTrace() : [],
                                          ],
                                          'context' => [
                                              'attributes' => $request->getAttributes(),
                                              'payload' => $request->getParsedBody(),
                                          ],
-                                         'trace' => $context->trace ? $e->getTrace() : [],
                                      ],
                             level:   Levels::ERROR
                         ),

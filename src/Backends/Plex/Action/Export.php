@@ -207,7 +207,7 @@ final class Export extends Import
             if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
                 return;
             }
-            
+
             $queue->add(
                 $this->http->request(
                     'GET',
@@ -233,6 +233,7 @@ final class Export extends Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
                 ]
             );
