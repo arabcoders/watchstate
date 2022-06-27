@@ -466,14 +466,12 @@ final class MemoryMapper implements ImportInterface
             return self::GUID . $entity->id;
         }
 
-        // -- Prioritize relative ids for episodes, External ids are often incorrect for episodes.
         foreach ($entity->getRelativePointers() as $key) {
             if (null !== ($this->pointers[$key] ?? null)) {
                 return $this->pointers[$key];
             }
         }
 
-        // -- fallback to guids for movies and episode in case there was no relative id match.
         foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
