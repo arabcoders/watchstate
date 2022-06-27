@@ -334,12 +334,15 @@ class ExportCommand extends Command
                     continue;
                 }
 
-                if (true === (bool)Data::get(sprintf('%s.has_errors', $name))) {
-                    $this->logger->notice(
-                        sprintf('%s: Not updating last export date. Backend reported an error.', $name)
-                    );
-                } else {
+                if (false === (bool)Data::get("{$name}.has_errors", false)) {
                     Config::save(sprintf('servers.%s.export.lastSync', $name), time());
+                } else {
+                    $this->logger->warning(
+                        'SYSTEM: Not updating last export date for [%(backend)]. Backend reported an error.',
+                        [
+                            'backend' => $name,
+                        ]
+                    );
                 }
             }
 
