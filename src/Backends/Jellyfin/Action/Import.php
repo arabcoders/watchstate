@@ -139,6 +139,7 @@ class Import
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
+                'backend' => $context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),

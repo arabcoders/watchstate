@@ -199,6 +199,7 @@ class PushCommand extends Command
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
                             ],
                         ]
                     );
