@@ -202,14 +202,18 @@ final class MemoryMapper implements ImportInterface
                         fields: array_merge($keys, [iFace::COLUMN_EXTRA])
                     )->markAsUnplayed(backend: $entity);
 
-                    $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                        'changes' => $this->objects[$pointer]->diff(
-                            array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])
-                        ),
-                    ]);
+                    $changes = $this->objects[$pointer]->diff(
+                        array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])
+                    );
+
+                    if (count($changes) >= 1) {
+                        $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'changes' => $changes,
+                        ]);
+                    }
 
                     return $this;
                 }
@@ -236,16 +240,20 @@ final class MemoryMapper implements ImportInterface
 
                         $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
-                        $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'title' => $cloned->getName(),
-                            'changes' => $cloned::fromArray($cloned->getAll())->apply(
-                                entity: $entity,
-                                fields: $localFields
-                            )->diff(fields: $keys),
-                            'fields' => implode(',', $localFields),
-                        ]);
+                        $changes = $cloned::fromArray($cloned->getAll())->apply(
+                            entity: $entity,
+                            fields: $localFields
+                        )->diff(fields: $keys);
+
+                        if (count($changes) >= 1) {
+                            $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                                'id' => $cloned->id,
+                                'backend' => $entity->via,
+                                'title' => $cloned->getName(),
+                                'changes' => $changes,
+                                'fields' => implode(',', $localFields),
+                            ]);
+                        }
 
                         return $this;
                     }
@@ -274,18 +282,19 @@ final class MemoryMapper implements ImportInterface
             );
             $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
-            $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
-                'id' => $cloned->id,
-                'backend' => $entity->via,
-                'title' => $cloned->getName(),
-                'changes' => $cloned::fromArray($cloned->getAll())->apply(
-                    entity: $entity,
-                    fields: $keys
-                )->diff(
-                    fields: $keys
-                ),
-                'fields' => implode(', ', $keys),
-            ]);
+            $changes = $cloned::fromArray($cloned->getAll())->apply(entity: $entity, fields: $keys)->diff(
+                fields: $keys
+            );
+
+            if (count($changes) >= 1) {
+                $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'changes' => $changes,
+                    'fields' => implode(', ', $keys),
+                ]);
+            }
 
             return $this;
         }
