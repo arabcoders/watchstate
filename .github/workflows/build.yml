@@ -3,8 +3,7 @@ name: Build Container Images
 on:
   push:
     branches:
-      - 'master'
-      - 'dev'
+      - '*'
     tags-ignore:
       - 'v0*'
     paths-ignore:
@@ -12,6 +11,7 @@ on:
   pull_request:
     branches:
       - 'master'
+      - 'v1.0'
     paths-ignore:
       - '**.md'
 
