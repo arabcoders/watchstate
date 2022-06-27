@@ -11,7 +11,6 @@ on:
   pull_request:
     branches:
       - 'master'
-      - 'v1.0'
     paths-ignore:
       - '**.md'
 
