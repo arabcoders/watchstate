@@ -249,8 +249,15 @@ class ImportCommand extends Command
 
             $inDryMode = $this->mapper->inDryRunMode() || ag($server, 'options.' . Options::DRY_RUN);
 
-            if (false === Data::get(sprintf('%s.has_errors', $name)) && false === $inDryMode) {
+            if (false === (bool)Data::get("{$name}.has_errors", false) && false === $inDryMode) {
                 Config::save(sprintf('servers.%s.import.lastSync', $name), time());
+            } else {
+                $this->logger->warning(
+                    'SYSTEM: Not updating last import date for [%(backend)]. Backend reported an error.',
+                    [
+                        'backend' => $name,
+                    ]
+                );
             }
         }
 
