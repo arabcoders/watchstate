@@ -132,13 +132,14 @@ class Import
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
                     'message' => $e->getMessage(),
+                    'trace' => $context->trace ? $e->getTrace() : [],
                 ],
-                'trace' => $context->trace ? $e->getTrace() : [],
             ]);
             Data::add($context->backendName, 'has_errors', true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
+                'backend' => $context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -217,8 +218,8 @@ class Import
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
                         ],
-                        'trace' => $context->trace ? $e->getTrace() : [],
                     ]
                 );
                 continue;
@@ -296,8 +297,8 @@ class Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
-                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]);
                 continue;
             }
@@ -388,8 +389,8 @@ class Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
-                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }
@@ -568,8 +569,8 @@ class Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
                     ],
-                    'trace' => $context->trace ? $e->getTrace() : [],
                 ]
             );
         }

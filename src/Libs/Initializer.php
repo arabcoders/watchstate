@@ -157,6 +157,7 @@ final class Initializer
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'trace' => $e->getTrace(),
                 ]
             );
             $response = new Response(500);
@@ -206,6 +207,7 @@ final class Initializer
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $e->getTrace(),
                     ]
                 ]);
                 continue;

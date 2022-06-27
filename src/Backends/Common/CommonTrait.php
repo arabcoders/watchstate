@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
+use Throwable;
+
 trait CommonTrait
 {
     /**
@@ -25,7 +27,7 @@ trait CommonTrait
             }
 
             return $response;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return new Response(
                 status: false,
                 error:  new Error(
@@ -40,6 +42,7 @@ trait CommonTrait
                                               'line' => $e->getLine(),
                                               'kind' => get_class($e),
                                               'message' => $e->getMessage(),
+                                              'trace' => $context->trace ? $e->getTrace() : [],
                                           ]
                                       ],
                             level:    Levels::WARNING,

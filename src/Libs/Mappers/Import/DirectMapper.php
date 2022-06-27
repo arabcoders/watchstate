@@ -507,7 +507,11 @@ final class DirectMapper implements ImportInterface
 
     protected function addPointers(iFace $entity, string|int $pointer): ImportInterface
     {
-        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+        foreach ($entity->getRelativePointers() as $key) {
+            $this->pointers[$key] = $pointer;
+        }
+
+        foreach ($entity->getPointers() as $key) {
             $this->pointers[$key . '/' . $entity->type] = $pointer;
         }
 
@@ -527,18 +531,12 @@ final class DirectMapper implements ImportInterface
             return $entity->id;
         }
 
-        // -- Prioritize relative ids for episodes, External ids are often incorrect for episodes.
-        if (true === $entity->isEpisode()) {
-            foreach ($entity->getRelativePointers() as $key) {
-                $lookup = $key . '/' . $entity->type;
-                if (null !== ($this->pointers[$lookup] ?? null)) {
-                    return $this->pointers[$lookup];
-                }
+        foreach ($entity->getRelativePointers() as $key) {
+            if (null !== ($this->pointers[$key] ?? null)) {
+                return $this->pointers[$key];
             }
         }
 
-        // -- look up movies based on guid.
-        // -- if episode didn't have any match using relative id then fallback to external ids.
         foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
@@ -559,12 +557,19 @@ final class DirectMapper implements ImportInterface
 
     protected function removePointers(iFace $entity): ImportInterface
     {
-        foreach ([...$entity->getPointers(), ...$entity->getRelativePointers()] as $key) {
+        foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;
             if (null !== ($this->pointers[$lookup] ?? null)) {
                 unset($this->pointers[$lookup]);
             }
         }
+
+        foreach ($entity->getRelativePointers() as $key) {
+            if (null !== ($this->pointers[$key] ?? null)) {
+                unset($this->pointers[$key]);
+            }
+        }
+
         return $this;
     }
 }

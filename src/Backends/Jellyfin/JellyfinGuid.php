@@ -135,8 +135,8 @@ class JellyfinGuid implements iGuid
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
+                                'trace' => $this->context->trace ? $e->getTrace() : [],
                             ],
-                            'trace' => $this->context->trace ? $e->getTrace() : [],
                             ...$context,
                         ]
                     );
