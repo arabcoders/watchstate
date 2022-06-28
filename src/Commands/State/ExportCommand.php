@@ -6,6 +6,7 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
 use App\Libs\Options;
@@ -224,11 +225,35 @@ class ExportCommand extends Command
                     foreach ($backends as $backend) {
                         $name = ag($backend, 'name');
 
-                        if (null === ag($backend, 'export.lastSync', null)) {
+                        if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
                             continue;
                         }
 
                         if (false === ag_exists($entity->getMetadata(), $name)) {
+                            $addedDate = ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_ADDED_AT);
+                            $extraMargin = (int)Config::get('export.not_found');
+
+                            if (null !== $addedDate && $lastSync > ($addedDate + $extraMargin)) {
+                                $this->logger->info(
+                                    'SYSTEM: Ignoring [%(item.title)] for [%(backend)] waiting period for metadata expired.',
+                                    [
+                                        'backend' => $name,
+                                        'item' => [
+                                            'id' => $entity->id,
+                                            'title' => $entity->getName(),
+                                        ],
+                                        'wait_period' => [
+                                            'added_at' => makeDate($addedDate),
+                                            'extra_margin' => $extraMargin,
+                                            'last_sync_at' => makeDate($lastSync),
+                                            'diff' => $lastSync - ($addedDate + $extraMargin),
+                                        ],
+                                    ]
+                                );
+
+                                continue;
+                            }
+
                             if (true === ag_exists($push, $name)) {
                                 unset($push[$name]);
                             }
@@ -240,6 +265,12 @@ class ExportCommand extends Command
                                     'item' => [
                                         'id' => $entity->id,
                                         'title' => $entity->getName(),
+                                    ],
+                                    'wait_period' => [
+                                        'added_at' => makeDate($addedDate),
+                                        'extra_margin' => $extraMargin,
+                                        'last_sync_at' => makeDate($lastSync),
+                                        'diff' => $lastSync - ($addedDate + $extraMargin),
                                     ],
                                 ]
                             );
