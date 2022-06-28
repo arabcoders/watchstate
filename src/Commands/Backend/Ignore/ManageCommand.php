@@ -133,7 +133,7 @@ HELP
                 return self::FAILURE;
             }
 
-            $list = ag_set($list, (string)$id, makeDate());
+            $list = ag_set($list, (string)$id, time());
             $output->writeln(sprintf('<info>Added: id \'%s\' to ignore list.</info>', $id));
         }
 
