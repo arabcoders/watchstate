@@ -10,13 +10,13 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
-use App\Libs\Data;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
-use App\Libs\Mappers\ImportInterface;
+use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Message;
 use App\Libs\Options;
 use Closure;
-use DateTimeInterface;
+use DateTimeInterface as iDate;
 use JsonException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
@@ -40,8 +40,8 @@ class Import
     /**
      * @param Context $context
      * @param iGuid $guid
-     * @param ImportInterface $mapper
-     * @param DateTimeInterface|null $after
+     * @param iImport $mapper
+     * @param iDate|null $after
      * @param array $opts
      *
      * @return Response
@@ -49,8 +49,8 @@ class Import
     public function __invoke(
         Context $context,
         iGuid $guid,
-        ImportInterface $mapper,
-        DateTimeInterface|null $after = null,
+        iImport $mapper,
+        iDate|null $after = null,
         array $opts = []
     ): Response {
         return $this->tryResponse($context, fn() => $this->getLibraries(
@@ -105,7 +105,7 @@ class Import
                     ]
                 );
 
-                Data::add($context->backendName, 'has_errors', true);
+                Message::add("{$context->backendName}.has_errors", true);
                 return [];
             }
 
@@ -122,7 +122,7 @@ class Import
                     'backend' => $context->backendName,
                     'body' => $json,
                 ]);
-                Data::add($context->backendName, 'has_errors', true);
+                Message::add("{$context->backendName}.has_errors", true);
                 return [];
             }
         } catch (ExceptionInterface $e) {
@@ -136,7 +136,7 @@ class Import
                     'trace' => $context->trace ? $e->getTrace() : [],
                 ],
             ]);
-            Data::add($context->backendName, 'has_errors', true);
+            Message::add("{$context->backendName}.has_errors", true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
@@ -148,7 +148,7 @@ class Import
                     'trace' => $context->trace ? $e->getTrace() : [],
                 ],
             ]);
-            Data::add($context->backendName, 'has_errors', true);
+            Message::add("{$context->backendName}.has_errors", true);
             return [];
         }
 
@@ -337,7 +337,7 @@ class Import
                 ],
             ]);
 
-            Data::add($context->backendName, 'has_errors', true);
+            Message::add("{$context->backendName}.has_errors", true);
             return [];
         }
 
@@ -360,6 +360,7 @@ class Import
             );
             return;
         }
+
 
         $start = makeDate();
         $this->logger->info('Parsing [%(backend)] library [%(library.title)] response.', [
@@ -429,6 +430,8 @@ class Import
                 'duration' => number_format($end->getTimestamp() - $start->getTimestamp()),
             ],
         ]);
+
+        Message::increment('response.size', (int)$response->getInfo('size_download'));
     }
 
     protected function processShow(Context $context, iGuid $guid, array $item, array $logContext = []): void
@@ -503,23 +506,20 @@ class Import
     protected function process(
         Context $context,
         iGuid $guid,
-        ImportInterface $mapper,
+        iImport $mapper,
         array $item,
         array $logContext = [],
         array $opts = []
     ): void {
-        $after = ag($opts, 'after', null);
-        $library = ag($logContext, 'library.id');
-        $type = ag($item, 'type');
+        if (PlexClient::TYPE_SHOW === ($type = ag($item, 'type'))) {
+            $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
+            return;
+        }
+
+        $mappedType = PlexClient::TYPE_MAPPER[$type] ?? $type;
 
         try {
-            if (PlexClient::TYPE_SHOW === $type) {
-                $this->processShow($context, $guid, $item, $logContext);
-                return;
-            }
-
-            Data::increment($context->backendName, $library . '_total');
-            Data::increment($context->backendName, $type . '_total');
+            Message::increment("{$context->backendName}.{$mappedType}.total");
 
             $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
@@ -560,7 +560,7 @@ class Import
                     'body' => $item,
                 ]);
 
-                Data::increment($context->backendName, $type . '_ignored_no_date_is_set');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
                 return;
             }
 
@@ -570,10 +570,10 @@ class Import
                 item:    $item,
                 opts:    $opts + [
                              'override' => [
-                                 iFace::COLUMN_EXTRA => [
+                                 iState::COLUMN_EXTRA => [
                                      $context->backendName => [
-                                         iFace::COLUMN_EXTRA_EVENT => 'task.import',
-                                         iFace::COLUMN_EXTRA_DATE => makeDate('now'),
+                                         iState::COLUMN_EXTRA_EVENT => 'task.import',
+                                         iState::COLUMN_EXTRA_DATE => makeDate('now'),
                                      ],
                                  ],
                              ],
@@ -601,12 +601,12 @@ class Import
                     'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
                 ]);
 
-                Data::increment($context->backendName, $type . '_ignored_no_supported_guid');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_no_supported_guid");
                 return;
             }
 
             $mapper->add(entity: $entity, opts: [
-                'after' => $after,
+                'after' => ag($opts, 'after', null),
                 Options::IMPORT_METADATA_ONLY => true === (bool)ag($context->options, Options::IMPORT_METADATA_ONLY),
             ]);
         } catch (Throwable $e) {
