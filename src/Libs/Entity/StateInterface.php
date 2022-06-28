@@ -199,9 +199,11 @@ interface StateInterface
     /**
      * Get constructed name.
      *
+     * @param bool $asMovie Return episode title as movie format.
+     *
      * @return string
      */
-    public function getName(): string;
+    public function getName(bool $asMovie = false): string;
 
     /**
      * Get external ids Pointers.
