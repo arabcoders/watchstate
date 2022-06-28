@@ -6,8 +6,8 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Data;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Storage\StorageInterface;
@@ -141,8 +141,6 @@ class ExportCommand extends Command
             if (null === ($name = ag($backend, 'name'))) {
                 continue;
             }
-
-            Data::addBucket($name);
 
             $opts = ag($backend, 'options', []);
 
@@ -334,7 +332,7 @@ class ExportCommand extends Command
                     continue;
                 }
 
-                if (false === (bool)Data::get("{$name}.has_errors", false)) {
+                if (false === (bool)Message::get("{$name}.has_errors", false)) {
                     Config::save(sprintf('servers.%s.export.lastSync', $name), time());
                 } else {
                     $this->logger->warning(
@@ -452,12 +450,12 @@ class ExportCommand extends Command
             array_push($requests, ...$backend['class']->export($this->mapper, $this->queue, $after));
 
             if (false === $input->getOption('dry-run')) {
-                if (true === (bool)Data::get(sprintf('%s.has_errors', $name))) {
-                    $this->logger->notice('Not updating last export date. [%(backend)] report an error.', [
+                if (true === (bool)Message::get("{$name}.has_errors")) {
+                    $this->logger->warning('SYSTEM: Not updating last export date. [%(backend)] report an error.', [
                         'backend' => $name,
                     ]);
                 } else {
-                    Config::save(sprintf('servers.%s.export.lastSync', $name), time());
+                    Config::save("servers.{$name}.export.lastSync", time());
                 }
             }
         }

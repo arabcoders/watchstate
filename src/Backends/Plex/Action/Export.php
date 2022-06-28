@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\GuidInterface;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Container;
-use App\Libs\Data;
-use App\Libs\Mappers\ImportInterface;
+use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -19,8 +19,8 @@ final class Export extends Import
 {
     protected function process(
         Context $context,
-        GuidInterface $guid,
-        ImportInterface $mapper,
+        iGuid $guid,
+        iImport $mapper,
         array $item,
         array $logContext = [],
         array $opts = [],
@@ -35,9 +35,11 @@ final class Export extends Import
             return;
         }
 
+        $mappedType = PlexClient::TYPE_MAPPER[$type] ?? $type;
+
         try {
-            Data::increment($context->backendName, $library . '_total');
-            Data::increment($context->backendName, $type . '_total');
+            Message::increment("{$context->backendName}.{$library}.total");
+            Message::increment("{$context->backendName}.{$mappedType}.total");
 
             $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
@@ -80,7 +82,7 @@ final class Export extends Import
                     ],
                 ]);
 
-                Data::increment($context->backendName, $type . '_ignored_no_date_is_set');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
                 return;
             }
 
@@ -114,7 +116,7 @@ final class Export extends Import
                     ],
                 ]);
 
-                Data::increment($context->backendName, $type . '_ignored_no_supported_guid');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_no_supported_guid");
                 return;
             }
 
@@ -132,7 +134,7 @@ final class Export extends Import
                         ]
                     );
 
-                    Data::increment($context->backendName, $type . '_ignored_date_is_equal_or_higher');
+                    Message::increment("{$context->backendName}.{$mappedType}.ignored_date_is_equal_or_higher");
                     return;
                 }
             }
@@ -142,7 +144,7 @@ final class Export extends Import
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
-                Data::increment($context->backendName, $type . '_ignored_not_found_in_db');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_not_found_in_db");
                 return;
             }
 
@@ -161,7 +163,7 @@ final class Export extends Import
                     );
                 }
 
-                Data::increment($context->backendName, $type . '_ignored_state_unchanged');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_state_unchanged");
                 return;
             }
 
@@ -178,7 +180,7 @@ final class Export extends Import
                     ]
                 );
 
-                Data::increment($context->backendName, $type . '_ignored_date_is_newer');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_date_is_newer");
                 return;
             }
 

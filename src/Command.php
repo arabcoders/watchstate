@@ -255,7 +255,7 @@ class Command extends BaseCommand
 
             $suggest = [];
 
-            foreach (self::DISPLAY_OUTPUT as $name) {
+            foreach (static::DISPLAY_OUTPUT as $name) {
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Import;
 
-use App\Libs\Data;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
@@ -19,7 +19,7 @@ final class MemoryMapper implements ImportInterface
     protected const GUID = 'local_db://';
 
     /**
-     * @var array<int,iFace> Entities table.
+     * @var array<int,iState> Entities table.
      */
     protected array $objects = [];
 
@@ -71,7 +71,7 @@ final class MemoryMapper implements ImportInterface
         return $this;
     }
 
-    public function add(iFace $entity, array $opts = []): self
+    public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
             $this->logger->warning('MAPPER: Ignoring [%(backend)] [%(title)] no valid/supported external ids.', [
@@ -79,7 +79,7 @@ final class MemoryMapper implements ImportInterface
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
             ]);
-            Data::increment($entity->via, $entity->type . '_failed_no_guid');
+            Message::increment("{$entity->via}.{$entity->type}.failed_no_guid");
             return $this;
         }
 
@@ -91,7 +91,7 @@ final class MemoryMapper implements ImportInterface
          */
         if (false === ($pointer = $this->getPointer($entity))) {
             if (true === $metadataOnly) {
-                Data::increment($entity->via, $entity->type . '_failed');
+                Message::increment("{$entity->via}.{$entity->type}.failed");
                 $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
@@ -106,25 +106,25 @@ final class MemoryMapper implements ImportInterface
 
             $this->changed[$pointer] = $pointer;
 
-            Data::increment($entity->via, $entity->type . '_added');
+            Message::increment("{$entity->via}.{$entity->type}.added");
             $this->addPointers($this->objects[$pointer], $pointer);
 
             if (true === $this->inTraceMode()) {
                 $data = $entity->getAll();
                 unset($data['id']);
-                $data[iFace::COLUMN_UPDATED] = makeDate($data[iFace::COLUMN_UPDATED]);
-                $data[iFace::COLUMN_WATCHED] = 0 === $data[iFace::COLUMN_WATCHED] ? 'No' : 'Yes';
+                $data[iState::COLUMN_UPDATED] = makeDate($data[iState::COLUMN_UPDATED]);
+                $data[iState::COLUMN_WATCHED] = 0 === $data[iState::COLUMN_WATCHED] ? 'No' : 'Yes';
                 if ($entity->isMovie()) {
-                    unset($data[iFace::COLUMN_SEASON], $data[iFace::COLUMN_EPISODE], $data[iFace::COLUMN_PARENT]);
+                    unset($data[iState::COLUMN_SEASON], $data[iState::COLUMN_EPISODE], $data[iState::COLUMN_PARENT]);
                 }
             } else {
                 $data = [
-                    iFace::COLUMN_META_DATA => [
+                    iState::COLUMN_META_DATA => [
                         $entity->via => [
-                            iFace::COLUMN_ID => ag($entity->getMetadata($entity->via), iFace::COLUMN_ID),
-                            iFace::COLUMN_UPDATED => makeDate($entity->updated),
-                            iFace::COLUMN_GUIDS => $entity->getGuids(),
-                            iFace::COLUMN_PARENT => $entity->getParentGuids(),
+                            iState::COLUMN_ID => ag($entity->getMetadata($entity->via), iState::COLUMN_ID),
+                            iState::COLUMN_UPDATED => makeDate($entity->updated),
+                            iState::COLUMN_GUIDS => $entity->getGuids(),
+                            iState::COLUMN_PARENT => $entity->getParentGuids(),
                         ]
                     ],
                 ];
@@ -139,7 +139,7 @@ final class MemoryMapper implements ImportInterface
             return $this;
         }
 
-        $keys = [iFace::COLUMN_META_DATA];
+        $keys = [iState::COLUMN_META_DATA];
 
         /**
          * DO NOT operate directly on this object it should be cloned.
@@ -152,18 +152,18 @@ final class MemoryMapper implements ImportInterface
          */
         if (true === $metadataOnly) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                $localFields = array_merge($keys, [iFace::COLUMN_GUIDS]);
+                $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
                 $this->changed[$pointer] = $pointer;
-                Data::increment($entity->via, $entity->type . '_updated');
+                Message::increment("{$entity->via}.{$entity->type}.updated");
 
                 $entity->guids = Guid::makeVirtualGuid(
                     $entity->via,
-                    ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
+                    ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
                 );
 
                 $this->objects[$pointer] = $this->objects[$pointer]->apply(
                     entity: $entity,
-                    fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
+                    fields: array_merge($localFields, [iState::COLUMN_EXTRA])
                 );
 
                 $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
@@ -195,15 +195,15 @@ final class MemoryMapper implements ImportInterface
                 // -- Handle mark as unplayed logic.
                 if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
                     $this->changed[$pointer] = $pointer;
-                    Data::increment($entity->via, $entity->type . '_updated');
+                    Message::increment("{$entity->via}.{$entity->type}.updated");
 
                     $this->objects[$pointer] = $this->objects[$pointer]->apply(
                         entity: $entity,
-                        fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+                        fields: array_merge($keys, [iState::COLUMN_EXTRA])
                     )->markAsUnplayed(backend: $entity);
 
                     $changes = $this->objects[$pointer]->diff(
-                        array_merge($keys, [iFace::COLUMN_WATCHED, iFace::COLUMN_UPDATED])
+                        array_merge($keys, [iState::COLUMN_WATCHED, iState::COLUMN_UPDATED])
                     );
 
                     if (count($changes) >= 1) {
@@ -224,18 +224,18 @@ final class MemoryMapper implements ImportInterface
                  */
                 if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                        $localFields = array_merge($keys, [iFace::COLUMN_GUIDS]);
+                        $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
                         $this->changed[$pointer] = $pointer;
-                        Data::increment($entity->via, $entity->type . '_updated');
+                        Message::increment("{$entity->via}.{$entity->type}.updated");
 
                         $entity->guids = Guid::makeVirtualGuid(
                             $entity->via,
-                            ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
+                            ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
                         );
 
                         $this->objects[$pointer] = $this->objects[$pointer]->apply(
                             entity: $entity,
-                            fields: array_merge($localFields, [iFace::COLUMN_EXTRA])
+                            fields: array_merge($localFields, [iState::COLUMN_EXTRA])
                         );
 
                         $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
@@ -259,26 +259,26 @@ final class MemoryMapper implements ImportInterface
                     }
                 }
 
-                Data::increment($entity->via, $entity->type . '_ignored_not_played_since_last_sync');
+                Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
                 return $this;
             }
         }
 
         $keys = $opts['diff_keys'] ?? array_flip(
                 array_keys_diff(
-                    base: array_flip(iFace::ENTITY_KEYS),
-                    list: iFace::ENTITY_IGNORE_DIFF_CHANGES,
+                    base: array_flip(iState::ENTITY_KEYS),
+                    list: iState::ENTITY_IGNORE_DIFF_CHANGES,
                     has:  false
                 )
             );
 
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             $this->changed[$pointer] = $pointer;
-            Data::increment($entity->via, $entity->type . '_updated');
+            Message::increment("{$entity->via}.{$entity->type}.updated");
 
             $this->objects[$pointer] = $this->objects[$pointer]->apply(
                 entity: $entity,
-                fields: array_merge($keys, [iFace::COLUMN_EXTRA])
+                fields: array_merge($keys, [iState::COLUMN_EXTRA])
             );
             $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
@@ -311,17 +311,17 @@ final class MemoryMapper implements ImportInterface
             ]);
         }
 
-        Data::increment($entity->via, $entity->type . '_ignored_no_change');
+        Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
         return $this;
     }
 
-    public function get(iFace $entity): null|iFace
+    public function get(iState $entity): null|iState
     {
         return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
     }
 
-    public function remove(iFace $entity): bool
+    public function remove(iState $entity): bool
     {
         if (false === ($pointer = $this->getPointer($entity))) {
             return false;
@@ -344,8 +344,8 @@ final class MemoryMapper implements ImportInterface
     {
         $state = $this->storage->transactional(function (StorageInterface $storage) {
             $list = [
-                iFace::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
             ];
 
             $count = count($this->changed);
@@ -391,7 +391,7 @@ final class MemoryMapper implements ImportInterface
         return $state;
     }
 
-    public function has(iFace $entity): bool
+    public function has(iState $entity): bool
     {
         return null !== $this->get($entity);
     }
@@ -449,7 +449,7 @@ final class MemoryMapper implements ImportInterface
         return true === (bool)ag($this->options, Options::DEBUG_TRACE, false);
     }
 
-    protected function addPointers(iFace $entity, string|int $pointer): ImportInterface
+    protected function addPointers(iState $entity, string|int $pointer): ImportInterface
     {
         foreach ($entity->getRelativePointers() as $key) {
             $this->pointers[$key] = $pointer;
@@ -465,11 +465,11 @@ final class MemoryMapper implements ImportInterface
     /**
      * Is the object already mapped?
      *
-     * @param iFace $entity
+     * @param iState $entity
      *
      * @return int|string|bool int pointer for the object, Or false if not registered.
      */
-    protected function getPointer(iFace $entity): int|string|bool
+    protected function getPointer(iState $entity): int|string|bool
     {
         if (null !== $entity->id && null !== ($this->objects[self::GUID . $entity->id] ?? null)) {
             return self::GUID . $entity->id;
@@ -499,7 +499,7 @@ final class MemoryMapper implements ImportInterface
         return false;
     }
 
-    protected function removePointers(iFace $entity): ImportInterface
+    protected function removePointers(iState $entity): ImportInterface
     {
         foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;

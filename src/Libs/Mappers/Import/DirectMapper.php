@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Libs\Mappers\Import;
 
 use App\Libs\Container;
-use App\Libs\Data;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
 use DateTimeInterface;
@@ -97,7 +97,7 @@ final class DirectMapper implements ImportInterface
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
             ]);
-            Data::increment($entity->via, $entity->type . '_failed_no_guid');
+            Message::increment("{$entity->via}.{$entity->type}.failed_no_guid");
             return $this;
         }
 
@@ -110,7 +110,7 @@ final class DirectMapper implements ImportInterface
         if (null === ($local = $this->get($entity))) {
             if (true === $metadataOnly) {
                 $this->actions[$entity->type]['failed']++;
-                Data::increment($entity->via, $entity->type . '_failed');
+                Message::increment("{$entity->via}.{$entity->type}.failed");
 
                 $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
                     'metaOnly' => true,
@@ -161,13 +161,13 @@ final class DirectMapper implements ImportInterface
 
                 if (null === ($this->changed[$entity->id] ?? null)) {
                     $this->actions[$entity->type]['added']++;
-                    Data::increment($entity->via, $entity->type . '_added');
+                    Message::increment("{$entity->via}.{$entity->type}.added");
                 }
 
                 $this->changed[$entity->id] = $this->objects[$entity->id] = $entity->id;
             } catch (PDOException|Exception $e) {
                 $this->actions[$entity->type]['failed']++;
-                Data::increment($entity->via, $entity->type . '_failed');
+                Message::increment("{$entity->via}.{$entity->type}.failed");
                 $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -210,13 +210,13 @@ final class DirectMapper implements ImportInterface
 
                     if (null === ($this->changed[$local->id] ?? null)) {
                         $this->actions[$local->type]['updated']++;
-                        Data::increment($entity->via, $local->type . '_updated');
+                        Message::increment("{$entity->via}.{$local->type}.updated");
                     }
 
                     $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
                 } catch (PDOException $e) {
                     $this->actions[$local->type]['failed']++;
-                    Data::increment($entity->via, $local->type . '_failed');
+                    Message::increment("{$entity->via}.{$local->type}.failed");
                     $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                         'id' => $cloned->id,
                         'backend' => $entity->via,
@@ -266,13 +266,13 @@ final class DirectMapper implements ImportInterface
 
                         if (null === ($this->changed[$local->id] ?? null)) {
                             $this->actions[$local->type]['updated']++;
-                            Data::increment($entity->via, $local->type . '_updated');
+                            Message::increment("{$entity->via}.{$local->type}.updated");
                         }
 
                         $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
                     } catch (PDOException $e) {
                         $this->actions[$local->type]['failed']++;
-                        Data::increment($entity->via, $local->type . '_failed');
+                        Message::increment("{$entity->via}.{$local->type}.failed");
                         $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
@@ -319,13 +319,13 @@ final class DirectMapper implements ImportInterface
 
                             if (null === ($this->changed[$local->id] ?? null)) {
                                 $this->actions[$local->type]['updated']++;
-                                Data::increment($entity->via, $local->type . '_updated');
+                                Message::increment("{$entity->via}.{$local->type}.updated");
                             }
 
                             $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
                         } catch (PDOException $e) {
                             $this->actions[$local->type]['failed']++;
-                            Data::increment($entity->via, $local->type . '_failed');
+                            Message::increment("{$entity->via}.{$local->type}.failed");
                             $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                                 'id' => $cloned->id,
                                 'title' => $cloned->getName(),
@@ -340,7 +340,7 @@ final class DirectMapper implements ImportInterface
                     }
                 }
 
-                Data::increment($entity->via, $entity->type . '_ignored_not_played_since_last_sync');
+                Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
                 return $this;
             }
         }
@@ -370,13 +370,13 @@ final class DirectMapper implements ImportInterface
 
                 if (null === ($this->changed[$local->id] ?? null)) {
                     $this->actions[$local->type]['updated']++;
-                    Data::increment($entity->via, $entity->type . '_updated');
+                    Message::increment("{$entity->via}.{$entity->type}.updated");
                 }
 
                 $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
             } catch (PDOException $e) {
                 $this->actions[$local->type]['failed']++;
-                Data::increment($entity->via, $local->type . '_failed');
+                Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -403,7 +403,7 @@ final class DirectMapper implements ImportInterface
             ]);
         }
 
-        Data::increment($entity->via, $entity->type . '_ignored_no_change');
+        Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
         return $this;
     }
