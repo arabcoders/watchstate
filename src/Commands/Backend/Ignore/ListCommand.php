@@ -48,6 +48,12 @@ HELP
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        $path = Config::get('path') . '/config/ignore.yaml';
+
+        if (false === file_exists($path)) {
+            touch($path);
+        }
+
         $list = [];
 
         $fBackend = $input->getOption('backend');
@@ -64,6 +70,7 @@ HELP
             $type = ag($urlParts, 'scheme');
             $db = ag($urlParts, 'user');
             $id = ag($urlParts, 'pass');
+            $scope = ag($urlParts, 'query');
 
             if (null !== $fBackend && $backend !== $fBackend) {
                 continue;
@@ -81,13 +88,24 @@ HELP
                 continue;
             }
 
-            $list[] = [
+            $builder = [
                 'backend' => $backend,
                 'type' => $type,
                 'db' => $db,
                 'id' => $id,
+                'Scoped' => null === $scope ? 'No' : 'Yes',
                 'created' => makeDate($date),
             ];
+
+            if ('table' !== $input->getOption('output')) {
+                $builder = ['rule' => (string)makeIgnoreId($guid)] + $builder;
+                $builder['scope'] = [];
+                if (null !== $scope) {
+                    parse_str($scope, $builder['scope']);
+                }
+            }
+
+            $list[] = $builder;
         }
 
         if (empty($list)) {

@@ -78,9 +78,14 @@ final class Initializer
             }
 
             $path = Config::get('path') . '/config/ignore.yaml';
-
             if (file_exists($path)) {
-                Config::save('ignore', Yaml::parseFile($path));
+                if (($yaml = Yaml::parseFile($path)) && is_array($yaml)) {
+                    $list = [];
+                    foreach ($yaml as $key => $val) {
+                        $list[(string)makeIgnoreId($key)] = $val;
+                    }
+                    Config::save('ignore', $list);
+                }
             }
         })();
 
