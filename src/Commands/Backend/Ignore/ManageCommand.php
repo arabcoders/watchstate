@@ -34,7 +34,7 @@ This command allow you to ignore specific external id from backend.
 This helps when there is a conflict between your media servers provided external ids.
 Generally this should only be used as last resort. You should try to fix the source of the problem.
 
-The <info>id</info> format is: <info>type</info>://<info>db</info>:<info>id</info>@<info>backend_name</info>
+The <info>id</info> format is: <info>type</info>://<info>db</info>:<info>id</info>@<info>backend_name</info>[<info>?id=backend_id</info>]
 
 -----------------------------
 <comment>How to Add id to ignore list.</comment>
@@ -50,6 +50,14 @@ For <comment>movies</comment>:
 
 For <comment>episodes</comment>:
 {$cmdContext} servers:ignore <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
+
+To scope ignore rule to specfic item from backend, You can do the same as and add [<info>?id=backend_id</info>].
+
+<comment>[backend_id]:</comment>
+
+Refers to the item id from backend. To ignore a specfic guid for item id <info>1212111</info> you can do something like this:
+
+{$cmdContext} servers:ignore <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>?id=<info>1212111</info>
 
 ----------------------------------
 <comment>How to Remove id from ignore list.</comment>
@@ -95,18 +103,37 @@ HELP
             $output->writeln(sprintf('<info>Removed: id \'%s\' from ignore list.</info>', $id));
         } else {
             $this->checkGuid($id);
-            if (true === ag_exists($list, $id)) {
+
+            $id = makeIgnoreId($id);
+
+            if (true === ag_exists($list, (string)$id)) {
                 $output->writeln(
-                    sprintf(
-                        '<comment>Id \'%s\' already exists in the ignore list. added at \'%s\'.</comment>',
-                        $id,
-                        makeDate(ag($list, $id))->format('Y-m-d H:i:s T')
+                    replacer(
+                        '<comment>ERROR: Cannot add [{id}] as it\'s already exists. added at [{date}].</comment>',
+                        [
+                            'id' => $id,
+                            'date' => makeDate(ag($list, (string)$id))->format('Y-m-d H:i:s T'),
+                        ],
                     )
                 );
                 return self::FAILURE;
             }
 
-            $list = ag_set($list, $id, makeDate());
+            if (true === ag_exists($list, (string)$id->withQuery(''))) {
+                $output->writeln(
+                    replacer(
+                        '<comment>ERROR: Cannot add [{id}] as [{global}] already exists. added at [{date}].</comment>',
+                        [
+                            'id' => (string)$id,
+                            'global' => (string)$id->withQuery(''),
+                            'date' => makeDate(ag($list, (string)$id->withQuery('')))->format('Y-m-d H:i:s T')
+                        ]
+                    )
+                );
+                return self::FAILURE;
+            }
+
+            $list = ag_set($list, (string)$id, time());
             $output->writeln(sprintf('<info>Added: id \'%s\' to ignore list.</info>', $id));
         }
 

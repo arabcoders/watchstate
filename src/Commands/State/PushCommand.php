@@ -7,8 +7,7 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Data;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Storage\StorageInterface;
@@ -75,7 +74,7 @@ class PushCommand extends Command
         $entities = $items = [];
 
         foreach ($this->cache->get('queue', []) as $item) {
-            $items[] = Container::get(StateInterface::class)::fromArray($item);
+            $items[] = Container::get(iState::class)::fromArray($item);
         }
 
         if (!empty($items)) {
@@ -142,7 +141,6 @@ class PushCommand extends Command
         }
 
         foreach ($list as $name => &$server) {
-            Data::addBucket((string)$name);
             $opts = ag($server, 'options', []);
 
             if ($input->getOption('ignore-date')) {
@@ -199,6 +197,7 @@ class PushCommand extends Command
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
                             ],
                         ]
                     );

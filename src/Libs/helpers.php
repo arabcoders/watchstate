@@ -11,6 +11,7 @@ use Nyholm\Psr7\Response;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -567,16 +568,106 @@ if (false === function_exists('getPeakMemoryUsage')) {
     }
 }
 
-if (false === function_exists('isIgnoredId')) {
-    function isIgnoredId(string $backend, string $type, string $db, string|int $id): bool
+if (false === function_exists('makeIgnoreId')) {
+    function makeIgnoreId(string $url): UriInterface
     {
+        static $filterQuery = null;
+
+        if (null === $filterQuery) {
+            $filterQuery = function (string $query): string {
+                $list = $final = [];
+                $allowed = ['id'];
+
+                parse_str($query, $list);
+
+                foreach ($list as $key => $val) {
+                    if (false === in_array($key, $allowed) || empty($val)) {
+                        continue;
+                    }
+
+                    $final[$key] = $val;
+                }
+
+                return http_build_query($final);
+            };
+        }
+
+        $id = (new Uri($url))->withPath('')->withFragment('')->withPort(null);
+        return $id->withQuery($filterQuery($id->getQuery()));
+    }
+}
+
+if (false === function_exists('isIgnoredId')) {
+    function isIgnoredId(
+        string $backend,
+        string $type,
+        string $db,
+        string|int $id,
+        string|int|null $backendId = null
+    ): bool {
         if (false === in_array($type, iFace::TYPES_LIST)) {
             throw new RuntimeException(sprintf('Invalid context type \'%s\' was given.', $type));
         }
 
-        return ag_exists(
-            Config::get('ignore', []),
-            sprintf('%s://%s:%s@%s', $type, $db, $id, $backend)
-        );
+        $list = Config::get('ignore', []);
+
+        $key = makeIgnoreId(sprintf('%s://%s:%s@%s?id=%s', $type, $db, $id, $backend, $backendId));
+
+        if (null !== ($list[(string)$key->withQuery('')] ?? null)) {
+            return true;
+        }
+
+        if (null === $backendId) {
+            return false;
+        }
+
+        return null !== ($list[(string)$key] ?? null);
+    }
+}
+
+if (false === function_exists('replacer')) {
+    function replacer(string $text, array $context = []): string
+    {
+        if (false === str_contains($text, '{') || false === str_contains($text, '}')) {
+            return $text;
+        }
+
+        $pattern = '#' . preg_quote('{', '#') . '([\w\d_.]+)' . preg_quote('}', '#') . '#is';
+
+        $status = preg_match_all($pattern, $text, $matches);
+
+        if (false === $status || $status < 1) {
+            return $text;
+        }
+
+        $replacements = [];
+
+        foreach ($matches[1] as $key) {
+            $placeholder = '{' . $key . '}';
+
+            if (false === str_contains($text, $placeholder)) {
+                continue;
+            }
+
+            if (false === ag_exists($context, $key)) {
+                continue;
+            }
+
+            $val = ag($context, $key);
+
+            $context = ag_delete($context, $key);
+
+            if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
+                $replacements[$placeholder] = $val;
+            } elseif (is_object($val)) {
+                $replacements[$placeholder] = implode(',', get_object_vars($val));
+            } elseif (is_array($val)) {
+                $replacements[$placeholder] = implode(',', $val);
+            } else {
+                $replacements[$placeholder] = '[' . gettype($val) . ']';
+            }
+        }
+
+        return strtr($text, $replacements);
     }
 }

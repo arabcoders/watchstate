@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\GuidInterface;
-use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Container;
-use App\Libs\Data;
-use App\Libs\Mappers\ImportInterface;
+use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -19,32 +19,34 @@ class Export extends Import
 {
     protected function process(
         Context $context,
-        GuidInterface $guid,
-        ImportInterface $mapper,
+        iGuid $guid,
+        iImport $mapper,
         array $item,
         array $logContext = [],
         array $opts = [],
     ): void {
-        if (JellyfinClient::TYPE_SHOW === ($type = ag($item, 'Type'))) {
+        if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
             return;
         }
+
+        $mappedType = JFC::TYPE_MAPPER[$type] ?? $type;
 
         try {
             $queue = ag($opts, 'queue', fn() => Container::get(QueueRequests::class));
             $after = ag($opts, 'after', null);
 
-            Data::increment($context->backendName, $type . '_total');
+            Message::increment("{$context->backendName}.{$mappedType}.total");
 
             $logContext['item'] = [
                 'id' => ag($item, 'Id'),
                 'title' => match ($type) {
-                    JellyfinClient::TYPE_MOVIE => sprintf(
+                    JFC::TYPE_MOVIE => sprintf(
                         '%s (%d)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
                         ag($item, 'ProductionYear', '0000')
                     ),
-                    JellyfinClient::TYPE_EPISODE => trim(
+                    JFC::TYPE_EPISODE => trim(
                         sprintf(
                             '%s - (%sx%s)',
                             ag($item, 'SeriesName', '??'),
@@ -79,7 +81,7 @@ class Export extends Import
                     ],
                 ]);
 
-                Data::increment($context->backendName, $type . '_ignored_no_date_is_set');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
                 return;
             }
 
@@ -107,7 +109,7 @@ class Export extends Import
                     ],
                 ]);
 
-                Data::increment($context->backendName, $type . '_ignored_no_supported_guid');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_no_supported_guid");
                 return;
             }
 
@@ -125,7 +127,7 @@ class Export extends Import
                         ]
                     );
 
-                    Data::increment($context->backendName, $type . '_ignored_date_is_equal_or_higher');
+                    Message::increment("{$context->backendName}.{$mappedType}.ignored_date_is_equal_or_higher");
                     return;
                 }
             }
@@ -135,7 +137,7 @@ class Export extends Import
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
-                Data::increment($context->backendName, $type . '_ignored_not_found_in_db');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_not_found_in_db");
                 return;
             }
 
@@ -154,7 +156,7 @@ class Export extends Import
                     );
                 }
 
-                Data::increment($context->backendName, $type . '_ignored_state_unchanged');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_state_unchanged");
                 return;
             }
 
@@ -171,7 +173,7 @@ class Export extends Import
                     ]
                 );
 
-                Data::increment($context->backendName, $type . '_ignored_date_is_newer');
+                Message::increment("{$context->backendName}.{$mappedType}.ignored_date_is_newer");
                 return;
             }
 

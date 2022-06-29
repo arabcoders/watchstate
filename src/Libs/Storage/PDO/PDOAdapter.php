@@ -95,7 +95,15 @@ final class PDOAdapter implements StorageInterface
         } catch (PDOException $e) {
             $this->stmt['insert'] = null;
             if (false === $this->viaTransaction && false === $this->singleTransaction) {
-                $this->logger->error($e->getMessage(), $entity->getAll());
+                $this->logger->error($e->getMessage(), [
+                    'entity' => $entity->getAll(),
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'trace' => $e->getTrace(),
+                    ],
+                ]);
                 return $entity;
             }
             throw $e;
@@ -241,7 +249,15 @@ final class PDOAdapter implements StorageInterface
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
             if (false === $this->viaTransaction && false === $this->singleTransaction) {
-                $this->logger->error($e->getMessage(), $entity->getAll());
+                $this->logger->error($e->getMessage(), [
+                    'entity' => $entity->getAll(),
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'trace' => $e->getTrace(),
+                    ]
+                ]);
                 return $entity;
             }
             throw $e;
@@ -268,7 +284,15 @@ final class PDOAdapter implements StorageInterface
 
             $this->query(sprintf('DELETE FROM state WHERE %s = %d', iFace::COLUMN_ID, (int)$id));
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage());
+            $this->logger->error($e->getMessage(), [
+                'entity' => $entity->getAll(),
+                'exception' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTrace(),
+                ],
+            ]);
             return false;
         }
 
@@ -295,7 +319,15 @@ final class PDOAdapter implements StorageInterface
                     }
                 } catch (PDOException $e) {
                     $actions['failed']++;
-                    $this->logger->error($e->getMessage(), $entity->getAll());
+                    $this->logger->error($e->getMessage(), [
+                        'entity' => $entity->getAll(),
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
+                    ]);
                 }
             }
 
@@ -519,7 +551,7 @@ final class PDOAdapter implements StorageInterface
             try {
                 return $stmt->execute($cond);
             } catch (PDOException $e) {
-                if (false !== stripos($e->getMessage(), 'database is locked')) {
+                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                     if ($i >= self::LOCK_RETRY) {
                         throw $e;
                     }
@@ -545,7 +577,7 @@ final class PDOAdapter implements StorageInterface
             try {
                 return $this->pdo->query($sql);
             } catch (PDOException $e) {
-                if (false !== stripos($e->getMessage(), 'database is locked')) {
+                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                     if ($i >= self::LOCK_RETRY) {
                         throw $e;
                     }

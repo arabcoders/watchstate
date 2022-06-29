@@ -6,8 +6,9 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Data;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Storage\StorageInterface;
@@ -142,8 +143,6 @@ class ExportCommand extends Command
                 continue;
             }
 
-            Data::addBucket($name);
-
             $opts = ag($backend, 'options', []);
 
             if ($input->getOption('ignore-date')) {
@@ -226,11 +225,35 @@ class ExportCommand extends Command
                     foreach ($backends as $backend) {
                         $name = ag($backend, 'name');
 
-                        if (null === ag($backend, 'export.lastSync', null)) {
+                        if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
                             continue;
                         }
 
                         if (false === ag_exists($entity->getMetadata(), $name)) {
+                            $addedDate = ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_ADDED_AT);
+                            $extraMargin = (int)Config::get('export.not_found');
+
+                            if (null !== $addedDate && $lastSync > ($addedDate + $extraMargin)) {
+                                $this->logger->info(
+                                    'SYSTEM: Ignoring [%(item.title)] for [%(backend)] waiting period for metadata expired.',
+                                    [
+                                        'backend' => $name,
+                                        'item' => [
+                                            'id' => $entity->id,
+                                            'title' => $entity->getName(),
+                                        ],
+                                        'wait_period' => [
+                                            'added_at' => makeDate($addedDate),
+                                            'extra_margin' => $extraMargin,
+                                            'last_sync_at' => makeDate($lastSync),
+                                            'diff' => $lastSync - ($addedDate + $extraMargin),
+                                        ],
+                                    ]
+                                );
+
+                                continue;
+                            }
+
                             if (true === ag_exists($push, $name)) {
                                 unset($push[$name]);
                             }
@@ -242,6 +265,12 @@ class ExportCommand extends Command
                                     'item' => [
                                         'id' => $entity->id,
                                         'title' => $entity->getName(),
+                                    ],
+                                    'wait_period' => [
+                                        'added_at' => makeDate($addedDate),
+                                        'extra_margin' => $extraMargin,
+                                        'last_sync_at' => makeDate($lastSync),
+                                        'diff' => $lastSync - ($addedDate + $extraMargin),
                                     ],
                                 ]
                             );
@@ -334,12 +363,15 @@ class ExportCommand extends Command
                     continue;
                 }
 
-                if (true === (bool)Data::get(sprintf('%s.has_errors', $name))) {
-                    $this->logger->notice(
-                        sprintf('%s: Not updating last export date. Backend reported an error.', $name)
-                    );
-                } else {
+                if (false === (bool)Message::get("{$name}.has_errors", false)) {
                     Config::save(sprintf('servers.%s.export.lastSync', $name), time());
+                } else {
+                    $this->logger->warning(
+                        'SYSTEM: Not updating last export date for [%(backend)]. Backend reported an error.',
+                        [
+                            'backend' => $name,
+                        ]
+                    );
                 }
             }
 
@@ -449,12 +481,12 @@ class ExportCommand extends Command
             array_push($requests, ...$backend['class']->export($this->mapper, $this->queue, $after));
 
             if (false === $input->getOption('dry-run')) {
-                if (true === (bool)Data::get(sprintf('%s.has_errors', $name))) {
-                    $this->logger->notice('Not updating last export date. [%(backend)] report an error.', [
+                if (true === (bool)Message::get("{$name}.has_errors")) {
+                    $this->logger->warning('SYSTEM: Not updating last export date. [%(backend)] report an error.', [
                         'backend' => $name,
                     ]);
                 } else {
-                    Config::save(sprintf('servers.%s.export.lastSync', $name), time());
+                    Config::save("servers.{$name}.export.lastSync", time());
                 }
             }
         }

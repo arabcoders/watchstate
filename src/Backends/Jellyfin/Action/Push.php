@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
-use App\Backends\Common\Response;
 use App\Backends\Common\Context;
+use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
-use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -52,7 +51,7 @@ class Push
         $requests = [];
 
         foreach ($entities as $key => $entity) {
-            if (true !== ($entity instanceof iFace)) {
+            if (true !== ($entity instanceof iState)) {
                 continue;
             }
 
@@ -72,7 +71,7 @@ class Push
                 ],
             ];
 
-            if (null === ag($metadata, iFace::COLUMN_ID, null)) {
+            if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
                     'Ignoring [%(item.title)] for [%(backend)]. No metadata was found.',
                     [
@@ -83,11 +82,11 @@ class Push
                 continue;
             }
 
-            $logContext['remote']['id'] = ag($metadata, iFace::COLUMN_ID);
+            $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
 
             try {
                 $url = $context->backendUrl->withPath(
-                    sprintf('/Users/%s/items/%s', $context->backendUser, ag($metadata, iFace::COLUMN_ID))
+                    sprintf('/Users/%s/items/%s', $context->backendUser, ag($metadata, iState::COLUMN_ID))
                 )->withQuery(
                     http_build_query(
                         [
@@ -149,7 +148,7 @@ class Push
 
                 $entity = $entities[$id];
 
-                assert($entity instanceof iFace);
+                assert($entity instanceof iState);
 
                 if (200 !== $response->getStatusCode()) {
                     if (404 === $response->getStatusCode()) {

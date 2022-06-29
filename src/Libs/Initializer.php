@@ -78,9 +78,14 @@ final class Initializer
             }
 
             $path = Config::get('path') . '/config/ignore.yaml';
-
             if (file_exists($path)) {
-                Config::save('ignore', Yaml::parseFile($path));
+                if (($yaml = Yaml::parseFile($path)) && is_array($yaml)) {
+                    $list = [];
+                    foreach ($yaml as $key => $val) {
+                        $list[(string)makeIgnoreId($key)] = $val;
+                    }
+                    Config::save('ignore', $list);
+                }
             }
         })();
 
@@ -157,6 +162,7 @@ final class Initializer
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'kind' => get_class($e),
+                    'trace' => $e->getTrace(),
                 ]
             );
             $response = new Response(500);
@@ -206,6 +212,7 @@ final class Initializer
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
+                        'trace' => $e->getTrace(),
                     ]
                 ]);
                 continue;

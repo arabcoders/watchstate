@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
-use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Message;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Monolog\Handler\TestHandler;
@@ -47,7 +47,7 @@ class DirectMapperTest extends TestCase
         $this->mapper = new DirectMapper($logger, $this->storage);
         $this->mapper->setOptions(options: ['class' => new StateEntity([])]);
 
-        Data::reset();
+        Message::reset();
     }
 
     public function test_add_conditions(): void

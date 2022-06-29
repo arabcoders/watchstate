@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
-use App\Libs\Data;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Message;
 use App\Libs\Storage\PDO\PDOAdapter;
 use App\Libs\Storage\StorageInterface;
 use Monolog\Handler\TestHandler;
@@ -46,7 +46,7 @@ class MemoryMapperTest extends TestCase
         $this->mapper = new MemoryMapper($logger, $this->storage);
         $this->mapper->setOptions(options: ['class' => new StateEntity([])]);
 
-        Data::reset();
+        Message::reset();
     }
 
     public function test_loadData_null_date_conditions(): void
@@ -68,7 +68,7 @@ class MemoryMapperTest extends TestCase
     {
         $time = time();
 
-        $this->testEpisode[iFace::COLUMN_UPDATED] = $time;
+        $this->testEpisode[iState::COLUMN_UPDATED] = $time;
 
         $testMovie = new StateEntity($this->testMovie);
         $testEpisode = new StateEntity($this->testEpisode);
@@ -97,8 +97,8 @@ class MemoryMapperTest extends TestCase
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
             $this->mapper->commit()
         );
@@ -106,7 +106,7 @@ class MemoryMapperTest extends TestCase
         // -- assert 0 as we have committed the changes to the db, and the state should have been reset.
         $this->assertCount(0, $this->mapper);
 
-        $testEpisode->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
+        $testEpisode->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
 
         $this->mapper->add($testEpisode);
 
@@ -114,8 +114,8 @@ class MemoryMapperTest extends TestCase
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
             $this->mapper->commit()
         );
@@ -128,7 +128,7 @@ class MemoryMapperTest extends TestCase
         $movie = $this->testMovie;
         $episode = $this->testEpisode;
 
-        foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
+        foreach (iState::ENTITY_ARRAY_KEYS as $key) {
             if (null !== ($movie[$key] ?? null)) {
                 ksort($movie[$key]);
             }
@@ -170,7 +170,7 @@ class MemoryMapperTest extends TestCase
         $this->assertNull($this->mapper->get($testEpisode));
 
         $this->mapper->loadData(makeDate($time - 1));
-        $this->assertInstanceOf(iFace::class, $this->mapper->get($testEpisode));
+        $this->assertInstanceOf(iState::class, $this->mapper->get($testEpisode));
     }
 
     public function test_commit_conditions(): void
@@ -185,25 +185,25 @@ class MemoryMapperTest extends TestCase
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
             $insert
         );
 
-        $testMovie->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
-        $testEpisode->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
+        $testMovie->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
+        $testEpisode->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
 
         $this->mapper
-            ->add($testMovie, ['diff_keys' => iFace::ENTITY_KEYS])
-            ->add($testEpisode, ['diff_keys' => iFace::ENTITY_KEYS]);
+            ->add($testMovie, ['diff_keys' => iState::ENTITY_KEYS])
+            ->add($testEpisode, ['diff_keys' => iState::ENTITY_KEYS]);
 
         $updated = $this->mapper->commit();
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
             $updated
         );

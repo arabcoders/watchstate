@@ -31,6 +31,8 @@ return (function () {
         'export' => [
             // -- Trigger full export mode if changes exceed X number.
             'threshold' => env('WS_EXPORT_THRESHOLD', 1000),
+            // -- Extra margin for marking item not found for backend in export mode. Default 3 days.
+            'not_found' => env('WS_EXPORT_NOT_FOUND', 259_200),
         ],
         'episodes' => [
             'disable' => [

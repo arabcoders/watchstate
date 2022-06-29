@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs\Entity;
 
+use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use RuntimeException;
-use App\Libs\Entity\StateInterface as iFace;
 
 final class StateEntity implements iFace
 {
@@ -100,12 +100,12 @@ final class StateEntity implements iFace
         return $changed;
     }
 
-    public function getName(): string
+    public function getName(bool $asMovie = false): string
     {
         $title = ag($this->data, iFace::COLUMN_TITLE, $this->title);
         $year = ag($this->data, iFace::COLUMN_YEAR, $this->year);
 
-        if ($this->isMovie()) {
+        if ($this->isMovie() || true === $asMovie) {
             return sprintf('%s (%s)', $title, $year ?? '0000');
         }
 

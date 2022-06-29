@@ -6,10 +6,10 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Data;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
+use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
@@ -65,6 +65,7 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'import metadata changes only. Works when there are records in storage.'
             )
+            ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->setAliases(['import', 'pull']);
     }
@@ -204,7 +205,6 @@ class ImportCommand extends Command
         $this->storage->singleTransaction();
 
         foreach ($list as $name => &$server) {
-            Data::addBucket($name);
             $metadata = false;
             $opts = ag($server, 'options', []);
 
@@ -249,8 +249,14 @@ class ImportCommand extends Command
 
             $inDryMode = $this->mapper->inDryRunMode() || ag($server, 'options.' . Options::DRY_RUN);
 
-            if (false === Data::get(sprintf('%s.has_errors', $name)) && false === $inDryMode) {
-                Config::save(sprintf('servers.%s.import.lastSync', $name), time());
+            if (false === $inDryMode) {
+                if (true === (bool)Message::get("{$name}.has_errors")) {
+                    $this->logger->warning('SYSTEM: Not updating last import date. [%(backend)] reported an error.', [
+                        'backend' => $name,
+                    ]);
+                } else {
+                    Config::save("servers.{$name}.import.lastSync", time());
+                }
             }
         }
 
@@ -295,6 +301,9 @@ class ImportCommand extends Command
                 'now' => getMemoryUsage(),
                 'peak' => getPeakMemoryUsage(),
             ],
+            'responses' => [
+                'size' => fsize((int)Message::get('response.size', 0)),
+            ],
         ]);
 
         $queue = $requestData = null;
@@ -315,17 +324,17 @@ class ImportCommand extends Command
 
         $a = [
             [
-                'Type' => ucfirst(StateInterface::TYPE_MOVIE),
-                'Added' => $operations[StateInterface::TYPE_MOVIE]['added'] ?? '-',
-                'Updated' => $operations[StateInterface::TYPE_MOVIE]['updated'] ?? '-',
-                'Failed' => $operations[StateInterface::TYPE_MOVIE]['failed'] ?? '-',
+                'Type' => ucfirst(iState::TYPE_MOVIE),
+                'Added' => $operations[iState::TYPE_MOVIE]['added'] ?? '-',
+                'Updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? '-',
+                'Failed' => $operations[iState::TYPE_MOVIE]['failed'] ?? '-',
             ],
             new TableSeparator(),
             [
-                'Type' => ucfirst(StateInterface::TYPE_EPISODE),
-                'Added' => $operations[StateInterface::TYPE_EPISODE]['added'] ?? '-',
-                'Updated' => $operations[StateInterface::TYPE_EPISODE]['updated'] ?? '-',
-                'Failed' => $operations[StateInterface::TYPE_EPISODE]['failed'] ?? '-',
+                'Type' => ucfirst(iState::TYPE_EPISODE),
+                'Added' => $operations[iState::TYPE_EPISODE]['added'] ?? '-',
+                'Updated' => $operations[iState::TYPE_EPISODE]['updated'] ?? '-',
+                'Failed' => $operations[iState::TYPE_EPISODE]['failed'] ?? '-',
             ],
         ];
 
@@ -337,6 +346,10 @@ class ImportCommand extends Command
             }
 
             file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
+        }
+
+        if ($input->getOption('show-messages')) {
+            $this->displayContent(Message::getAll(), $output, $input->getOption('output') === 'json' ? 'json' : 'yaml');
         }
 
         return self::SUCCESS;
