@@ -146,7 +146,7 @@ final class PlexGuid implements GuidInterface
 
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
-                        $this->logger->notice(
+                        $this->logger->info(
                             'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
                             [
                                 'backend' => $this->context->backendName,
