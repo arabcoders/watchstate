@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
+use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Scheduler\Task;
@@ -211,6 +212,12 @@ return (function () {
                 Task::RUN_AT => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
                 Task::COMMAND => '@system:prune',
                 Task::ARGS => env('WS_CRON_PRUNE_ARGS', '-v'),
+            ],
+            IndexCommand::TASK_NAME => [
+                Task::NAME => IndexCommand::TASK_NAME,
+                Task::ENABLED => true,
+                Task::RUN_AT => '0 3 * * 3',
+                Task::COMMAND => '@system:index',
             ],
         ],
     ];

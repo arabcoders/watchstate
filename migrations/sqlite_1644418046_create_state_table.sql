@@ -17,19 +17,6 @@ CREATE TABLE "state"
     "extra"    text    NULL
 );
 
-CREATE INDEX "state_type" ON "state" ("type");
-CREATE INDEX "state_updated" ON "state" ("updated");
-CREATE INDEX "state_watched" ON "state" ("watched");
-CREATE INDEX "state_via" ON "state" ("via");
-CREATE INDEX "state_title" ON "state" ("title");
-CREATE INDEX "state_year" ON "state" ("year");
-CREATE INDEX "state_season" ON "state" ("season");
-CREATE INDEX "state_episode" ON "state" ("episode");
-CREATE INDEX "state_parent" ON "state" ("parent");
-CREATE INDEX "state_guids" ON "state" ("guids");
-CREATE INDEX "state_metadata" ON "state" ("metadata");
-CREATE INDEX "state_extra" ON "state" ("extra");
-
 -- # migrate_down
 
 DROP TABLE IF EXISTS "state";

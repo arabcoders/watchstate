@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Commands\Servers;
 
 use App\Command;
+use App\Commands\System\IndexCommand;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
 use Exception;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -509,6 +511,30 @@ final class ManageCommand extends Command
 
         file_put_contents($config, Yaml::dump($servers, 8, 2));
 
+        $output->writeln('<info>Config updated.</info>');
+
+        if ($input->getOption('add')) {
+            $helper = $this->getHelper('question');
+            $text =
+                <<<TEXT
+                Create Database indexes now? <comment>[Y|N] [Default: Yes]</comment>
+                -----------------
+                <info>
+                This is necessary action to ensure speedy operations on database,
+                If not run now, you have to manually run the system:index command, or restart the container
+                which will trigger index check to make sure your database data is fully indexed.
+                </info>
+                -----------------
+                <comment>P.S: this could take few minutes to execute depending on your disk speed.</comment>
+                TEXT;
+
+            $question = new ConfirmationQuestion($text . PHP_EOL . '> ', true);
+
+            if (true === $helper->ask($input, $output, $question)) {
+                return $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
+            }
+        }
+        
         return self::SUCCESS;
     }
 }
