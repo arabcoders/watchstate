@@ -9,6 +9,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use PDO;
 use Psr\Http\Message\UriInterface;
@@ -20,8 +21,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
+    public const ROUTE = 'backend:ignore:list';
+
     private const CACHE_KEY = 'ignorelist_titles';
 
     private array $cache = [];
@@ -49,7 +53,7 @@ final class ListCommand extends Command
     {
         $cmdContext = trim(commandContext());
 
-        $this->setName('backend:ignore:list')
+        $this->setName(self::ROUTE)
             ->addOption('type', null, InputOption::VALUE_REQUIRED, 'Filter based on type.')
             ->addOption('backend', null, InputOption::VALUE_REQUIRED, 'Filter based on backend.')
             ->addOption('db', null, InputOption::VALUE_REQUIRED, 'Filter based on db.')
@@ -144,7 +148,7 @@ HELP
             }
             $list[] = $builder;
         }
-        
+
         if (empty($list)) {
             $hasIds = count($ids) >= 1;
 

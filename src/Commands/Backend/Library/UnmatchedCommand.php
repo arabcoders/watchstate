@@ -7,6 +7,7 @@ namespace App\Commands\Backend\Library;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
+use App\Libs\Routable;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,11 +16,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+#[Routable(command: self::ROUTE)]
 final class UnmatchedCommand extends Command
 {
+    public const ROUTE = 'backend:library:unmatched';
+
     protected function configure(): void
     {
-        $this->setName('backend:library:unmatched')
+        $this->setName(self::ROUTE)
             ->setDescription('Find top level Items in library that has no external ids.')
             ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of the match status.')
             ->addOption(

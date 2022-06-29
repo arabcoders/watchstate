@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Commands\Storage;
 
 use App\Command;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class MigrationsCommand extends Command
 {
+    public const ROUTE = 'storage:migrations';
+
     public function __construct(private StorageInterface $storage)
     {
         parent::__construct();
@@ -20,7 +24,7 @@ final class MigrationsCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('storage:migrations')
+        $this->setName(self::ROUTE)
             ->setDescription('Migrate storage schema.')
             ->addOption('fresh', 'f', InputOption::VALUE_NONE, 'Start migrations from start.')
             ->addArgument('direction', InputArgument::OPTIONAL, 'Migrations path (up/down).', 'up');

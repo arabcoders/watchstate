@@ -6,14 +6,18 @@ namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Routable;
 use Psr\Log\LoggerInterface;
 use SplFileInfo;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class PruneCommand extends Command
 {
+    public const ROUTE = 'system:prune';
+
     public const TASK_NAME = 'prune';
 
     public function __construct(private LoggerInterface $logger)
@@ -23,7 +27,7 @@ final class PruneCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('system:prune')
+        $this->setName(self::ROUTE)
             ->addOption(
                 'older-than',
                 null,

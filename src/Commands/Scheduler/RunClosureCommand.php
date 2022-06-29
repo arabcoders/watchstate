@@ -6,6 +6,7 @@ namespace App\Commands\Scheduler;
 
 use App\Command;
 use App\Libs\Container;
+use App\Libs\Routable;
 use App\Libs\Scheduler\Task;
 use Closure;
 use League\Container\ReflectionContainer;
@@ -16,8 +17,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
+#[Routable(command: self::ROUTE)]
 final class RunClosureCommand extends Command
 {
+    public const ROUTE = 'scheduler:closure';
+
     public function __construct(private LoggerInterface $logger)
     {
         parent::__construct();
@@ -25,7 +29,7 @@ final class RunClosureCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('scheduler:closure')
+        $this->setName(self::ROUTE)
             ->addArgument('task', InputArgument::REQUIRED, 'Run task closure.', null)
             ->setDescription('Run task closure.');
     }

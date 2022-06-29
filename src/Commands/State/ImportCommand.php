@@ -11,6 +11,7 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Message;
 use App\Libs\Options;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -23,8 +24,11 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
+#[Routable(command: self::ROUTE), Routable(command: 'import'), Routable(command: 'pull')]
 class ImportCommand extends Command
 {
+    public const ROUTE = 'state:import';
+
     public const TASK_NAME = 'import';
 
     public function __construct(
@@ -40,7 +44,7 @@ class ImportCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('state:import')
+        $this->setName(self::ROUTE)
             ->setDescription('Import play state and metadata from backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
@@ -146,7 +150,7 @@ class ImportCommand extends Command
                 $metadata = true;
             }
 
-            if (true !== (bool)ag($server, 'import.enabled') && true !== $metadata) {
+            if (true !== $metadata && true !== (bool)ag($server, 'import.enabled')) {
                 $this->logger->info('SYSTEM: Ignoring [%(backend)] imports are disabled for this backend.', [
                     'backend' => $serverName,
                 ]);

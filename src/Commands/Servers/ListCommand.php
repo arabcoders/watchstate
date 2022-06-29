@@ -7,6 +7,7 @@ namespace App\Commands\Servers;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
+use App\Libs\Routable;
 use DateTimeInterface;
 use Exception;
 use RuntimeException;
@@ -15,11 +16,14 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+#[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
+    public const ROUTE = 'servers:list';
+
     protected function configure(): void
     {
-        $this->setName('servers:list')
+        $this->setName(self::ROUTE)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->setDescription('List Added backends.');
     }

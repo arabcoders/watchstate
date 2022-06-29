@@ -6,6 +6,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\Date;
+use App\Libs\Router;
 use App\Libs\Servers\ServerInterface;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\Uri;
@@ -581,7 +582,7 @@ if (false === function_exists('makeIgnoreId')) {
                 parse_str($query, $list);
 
                 foreach ($list as $key => $val) {
-                    if (false === in_array($key, $allowed) || empty($val)) {
+                    if (empty($val) || false === in_array($key, $allowed)) {
                         continue;
                     }
 
@@ -669,5 +670,23 @@ if (false === function_exists('replacer')) {
         }
 
         return strtr($text, $replacements);
+    }
+}
+
+if (false === function_exists('generateRoutes')) {
+    function generateRoutes(): array
+    {
+        $routes = (new Router([__DIR__ . '/../Commands']))->generate();
+
+        try {
+            Container::get(CacheInterface::class)->set(
+                'routes',
+                $routes,
+                new DateInterval('PT1H')
+            );
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+        }
+
+        return $routes;
     }
 }

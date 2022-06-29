@@ -7,7 +7,7 @@ namespace App\Libs;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
-final class Route
+final class Routable
 {
     public function __construct(public readonly string $command)
     {

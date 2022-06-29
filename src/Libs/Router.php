@@ -73,7 +73,7 @@ final class Router
     {
         $routes = [];
 
-        $attributes = $class->getAttributes(Route::class, ReflectionAttribute::IS_INSTANCEOF);
+        $attributes = $class->getAttributes(Routable::class, ReflectionAttribute::IS_INSTANCEOF);
 
         foreach ($attributes as $attribute) {
             try {
@@ -82,7 +82,7 @@ final class Router
                 continue;
             }
 
-            if (!$attributeClass instanceof Route) {
+            if (!$attributeClass instanceof Routable) {
                 continue;
             }
 

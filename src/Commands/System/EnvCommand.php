@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class EnvCommand extends Command
 {
+    public const ROUTE = 'system:env';
+
     protected function configure(): void
     {
-        $this->setName('system:env')
+        $this->setName(self::ROUTE)
             ->setDescription('Dump loaded environment variables.');
     }
 

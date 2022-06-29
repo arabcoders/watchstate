@@ -2,33 +2,27 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Storage;
+namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[Routable(command: self::ROUTE)]
-final class MaintenanceCommand extends Command
+final class RoutesCommand extends Command
 {
-    public const ROUTE = 'storage:maintenance';
-
-    public function __construct(private StorageInterface $storage)
-    {
-        parent::__construct();
-    }
+    public const ROUTE = 'system:routes';
 
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Run maintenance tasks on storage.');
+            ->setDescription('Generate commands routes.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $this->storage->maintenance();
+        generateRoutes();
 
         return self::SUCCESS;
     }

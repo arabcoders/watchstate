@@ -7,6 +7,7 @@ namespace App\Commands\Scheduler;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Routable;
 use App\Libs\Scheduler\Scheduler;
 use App\Libs\Scheduler\Task;
 use App\Libs\Scheduler\TaskTimer;
@@ -21,8 +22,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class RunCommand extends Command
 {
+    public const ROUTE = 'scheduler:run';
     private Scheduler $scheduler;
     private array $registered = [];
     private array $logs = [];
@@ -36,7 +39,7 @@ final class RunCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('scheduler:run')
+        $this->setName(self::ROUTE)
             ->addOption('no-headers', 'g', InputOption::VALUE_NONE, 'Do not prefix output with headers.')
             ->addOption('save-log', null, InputOption::VALUE_NONE, 'Save Tasks Output to file.')
             ->addArgument('task_name', InputArgument::OPTIONAL, 'Run specific task.', null)

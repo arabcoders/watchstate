@@ -7,6 +7,7 @@ namespace App\Commands\Backend\Users;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
+use App\Libs\Routable;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,11 +16,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+#[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
+    public const ROUTE = 'backend:users:list';
+
     protected function configure(): void
     {
-        $this->setName('backend:users:list')
+        $this->setName(self::ROUTE)
             ->setDescription('Get backend users list.')
             ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')

@@ -7,6 +7,7 @@ namespace App\Commands\Servers;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
+use App\Libs\Routable;
 use Exception;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,11 +19,14 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+#[Routable(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
+    public const ROUTE = 'servers:manage';
+
     protected function configure(): void
     {
-        $this->setName('servers:manage')
+        $this->setName(self::ROUTE)
             ->setDescription('Manage backend settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')

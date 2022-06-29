@@ -10,6 +10,7 @@ use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -19,8 +20,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+#[Routable(command: self::ROUTE), Routable(command: 'push')]
 class PushCommand extends Command
 {
+    public const ROUTE = 'state:push';
+
     public const TASK_NAME = 'push';
 
     public function __construct(
@@ -37,7 +41,7 @@ class PushCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('state:push')
+        $this->setName(self::ROUTE)
             ->setDescription('Push webhook queued events.')
             ->addOption('keep', 'k', InputOption::VALUE_NONE, 'Do not expunge queue after run is complete.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends. Will keep queue.')
