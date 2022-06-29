@@ -7,6 +7,7 @@ namespace App\Commands\Database;
 use App\Command;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -16,8 +17,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 class QueueCommand extends Command
 {
+    public const ROUTE = 'db:queue';
+
     public function __construct(
         private CacheInterface $cache,
         private StorageInterface $storage,
@@ -30,7 +34,7 @@ class QueueCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('db:queue')
+        $this->setName(self::ROUTE)
             ->addOption('add', 'a', InputOption::VALUE_REQUIRED, 'Add record id to push queue.')
             ->addOption('remove', 'r', InputOption::VALUE_REQUIRED, 'Remove record id from push queue.')
             ->setDescription('Show webhook queued events.');

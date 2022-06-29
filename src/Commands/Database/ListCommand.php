@@ -9,6 +9,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
@@ -22,8 +23,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+#[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
+    public const ROUTE = 'db:list';
+
     private const COLUMNS_CHANGEABLE = [
         iFace::COLUMN_WATCHED,
         iFace::COLUMN_VIA,
@@ -57,7 +61,7 @@ final class ListCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('db:list')
+        $this->setName(self::ROUTE)
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit results to this number', 20)
             ->addOption(
                 'via',

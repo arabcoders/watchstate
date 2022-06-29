@@ -7,6 +7,7 @@ namespace App\Commands\Backend\Library;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
+use App\Libs\Routable;
 use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -17,8 +18,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+#[Routable(command: self::ROUTE)]
 final class MismatchCommand extends Command
 {
+    public const ROUTE = 'backend:library:mismatch';
+
     protected array $methods = [
         'similarity',
         'levenshtein',
@@ -26,7 +30,7 @@ final class MismatchCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('backend:library:mismatch')
+        $this->setName(self::ROUTE)
             ->setDescription(
                 'Find possible mis-identified item in a library. This only works for Media that follow Plex naming format.'
             )

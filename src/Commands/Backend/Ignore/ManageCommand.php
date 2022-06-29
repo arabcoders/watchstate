@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
+use App\Libs\Routable;
 use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
@@ -16,14 +17,17 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+#[Routable(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
+    public const ROUTE = 'backend:ignore:manage';
+
     protected function configure(): void
     {
         $cmdContext = trim(commandContext());
         $ignoreListFile = Config::get('path') . '/config/ignore.yaml';
 
-        $this->setName('backend:ignore:manage')
+        $this->setName(self::ROUTE)
             ->setDescription('Add/Remove external id from ignore list.')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove id from ignore list.')
             ->addArgument('id', InputArgument::REQUIRED, 'Id to ignore. Id format: type://db:id@backend_name')

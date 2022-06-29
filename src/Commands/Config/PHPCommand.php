@@ -6,15 +6,19 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class PHPCommand extends Command
 {
+    public const ROUTE = 'config:php';
+
     protected function configure(): void
     {
-        $this->setName('config:php')
+        $this->setName(self::ROUTE)
             ->setDescription('Generate php config.')
             ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate php-fpm config.');
     }

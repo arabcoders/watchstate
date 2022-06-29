@@ -6,6 +6,7 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Routable;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,11 +16,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+#[Routable(command: self::ROUTE)]
 final class EditCommand extends Command
 {
+    public const ROUTE = 'servers:edit';
+
     protected function configure(): void
     {
-        $this->setName('servers:edit')
+        $this->setName(self::ROUTE)
             ->setDescription('Edit backend settings inline.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')

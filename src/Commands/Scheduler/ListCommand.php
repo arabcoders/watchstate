@@ -6,6 +6,7 @@ namespace App\Commands\Scheduler;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Routable;
 use App\Libs\Scheduler\Task;
 use App\Libs\Scheduler\TaskTimer;
 use Closure;
@@ -19,11 +20,14 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+#[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
+    public const ROUTE = 'scheduler:list';
+
     protected function configure(): void
     {
-        $this->setName('scheduler:list')
+        $this->setName(self::ROUTE)
             ->addOption('timezone', 't', InputOption::VALUE_REQUIRED, 'Set Timezone.', Config::get('tz', 'UTC'))
             ->setDescription('List Scheduled Tasks.');
     }

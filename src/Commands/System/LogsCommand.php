@@ -6,6 +6,7 @@ namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Routable;
 use Exception;
 use LimitIterator;
 use SplFileObject;
@@ -16,8 +17,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
+#[Routable(command: self::ROUTE)]
 final class LogsCommand extends Command
 {
+    public const ROUTE = 'system:logs';
+
     private const LOG_FILES = [
         'app',
         'access',
@@ -28,7 +32,7 @@ final class LogsCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('system:logs')
+        $this->setName(self::ROUTE)
             ->addOption(
                 'type',
                 null,

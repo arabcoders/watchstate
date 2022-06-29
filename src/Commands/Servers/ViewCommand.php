@@ -6,6 +6,7 @@ namespace App\Commands\Servers;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Routable;
 use Exception;
 use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -18,11 +19,14 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+#[Routable(command: self::ROUTE)]
 final class ViewCommand extends Command
 {
+    public const ROUTE = 'servers:view';
+
     protected function configure(): void
     {
-        $this->setName('servers:view')
+        $this->setName(self::ROUTE)
             ->setDescription('View Backends settings.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
@@ -56,7 +60,6 @@ final class ViewCommand extends Command
         $filter = $input->getArgument('filter');
 
         foreach (Config::get('servers', []) as $serverName => $server) {
-
             if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
                 $output->writeln(
                     sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $serverName),

@@ -22,6 +22,7 @@ use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
 use Symfony\Component\Dotenv\Dotenv;
@@ -120,11 +121,16 @@ final class Initializer
         try {
             $this->cli->setCatchExceptions(false);
 
+            $cache = Container::get(CacheInterface::class);
+
+            if (!$cache->has('routes')) {
+                $routes = generateRoutes();
+            } else {
+                $routes = $cache->get('routes', []);
+            }
+
             $this->cli->setCommandLoader(
-                new ContainerCommandLoader(
-                    Container::getContainer(),
-                    require __DIR__ . '/../../config/commands.php'
-                )
+                new ContainerCommandLoader(Container::getContainer(), $routes)
             );
 
             $this->cli->run(output: $this->cliOutput);

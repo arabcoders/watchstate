@@ -7,6 +7,7 @@ namespace App\Commands\Backend\Search;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
+use App\Libs\Routable;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -14,11 +15,14 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+#[Routable(command: self::ROUTE)]
 final class IdCommand extends Command
 {
+    public const ROUTE = 'backend:search:id';
+
     protected function configure(): void
     {
-        $this->setName('backend:search:id')
+        $this->setName(self::ROUTE)
             ->setDescription('Get backend metadata related to specific id.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('no-cache', null, InputOption::VALUE_NONE, 'Request new response from backend.')

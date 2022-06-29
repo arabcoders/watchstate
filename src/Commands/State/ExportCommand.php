@@ -11,6 +11,7 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -20,8 +21,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+#[Routable(command: self::ROUTE), Routable(command: 'export')]
 class ExportCommand extends Command
 {
+    public const ROUTE = 'state:export';
+
     public const TASK_NAME = 'export';
 
     public function __construct(
@@ -38,7 +42,7 @@ class ExportCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName('state:export')
+        $this->setName(self::ROUTE)
             ->setDescription('Export play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')

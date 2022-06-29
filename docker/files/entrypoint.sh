@@ -44,6 +44,7 @@ fi
 /usr/bin/console config:php --fpm >"${PHP_INI_DIR}/../php-fpm.d/zzz-app-pool-settings.conf"
 /usr/bin/console storage:migrations
 /usr/bin/console storage:maintenance
+/usr/bin/console system:routes
 
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   echo "[${TIME_DATE}] Starting HTTP Server."
