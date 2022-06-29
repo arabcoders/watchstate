@@ -13,8 +13,6 @@ use App\Libs\Routable;
 use App\Libs\Storage\StorageInterface;
 use PDO;
 use Psr\Http\Message\UriInterface;
-use Psr\SimpleCache\CacheInterface;
-use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
@@ -26,25 +24,13 @@ final class ListCommand extends Command
 {
     public const ROUTE = 'backend:ignore:list';
 
-    private const CACHE_KEY = 'ignorelist_titles';
-
     private array $cache = [];
 
     private PDO $db;
-    private CacheInterface $cacheIO;
 
-    public function __construct(StorageInterface $storage, CacheInterface $cacheIO)
+    public function __construct(StorageInterface $storage)
     {
-        $this->cacheIO = $cacheIO;
         $this->db = $storage->getPdo();
-
-        try {
-            if ($this->cacheIO->has(self::CACHE_KEY)) {
-                $this->cache = $this->cacheIO->get(self::CACHE_KEY);
-            }
-        } catch (InvalidArgumentException) {
-            $this->cache = [];
-        }
 
         parent::__construct();
     }
@@ -129,12 +115,9 @@ HELP
                 'backend' => $backend,
                 'db' => $db,
                 'id' => $id,
+                'title' => null !== $scope ? ($this->getinfo($rule) ?? 'Unknown') : '** Global Rule **',
                 'Scoped' => null === $scope ? 'No' : 'Yes',
             ];
-
-            if (!empty($this->cache) || $input->getOption('with-title')) {
-                $builder['title'] = null !== $scope ? ($this->getinfo($rule) ?? 'Unknown') : '** Global Rule **';
-            }
 
             if ('table' !== $input->getOption('output')) {
                 $builder = ['rule' => (string)$rule] + $builder;
@@ -146,6 +129,7 @@ HELP
             } else {
                 $builder['created'] = makeDate($date)->format('Y-m-d H:i:s T');
             }
+
             $list[] = $builder;
         }
 
@@ -203,18 +187,6 @@ HELP
         return $this->cache[$key];
     }
 
-    public function __destruct()
-    {
-        if (empty($this->cache)) {
-            return;
-        }
-
-        try {
-            $this->cacheIO->set(self::CACHE_KEY, $this->cache, new \DateInterval('P3D'));
-        } catch (InvalidArgumentException) {
-        }
-    }
-
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         if ($input->mustSuggestOptionValuesFor('backend')) {
@@ -230,6 +202,7 @@ HELP
 
             $suggestions->suggestValues($suggest);
         }
+
         if ($input->mustSuggestOptionValuesFor('type')) {
             $currentValue = $input->getCompletionValue();
 
@@ -243,6 +216,7 @@ HELP
 
             $suggestions->suggestValues($suggest);
         }
+
         if ($input->mustSuggestOptionValuesFor('db')) {
             $currentValue = $input->getCompletionValue();
 

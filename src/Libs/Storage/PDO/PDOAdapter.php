@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Storage\PDO;
 
 use App\Libs\Container;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\Storage\StorageException;
 use App\Libs\Storage\StorageInterface;
@@ -53,7 +53,7 @@ final class PDOAdapter implements StorageInterface
         return $this;
     }
 
-    public function insert(iFace $entity): iFace
+    public function insert(iState $entity): iState
     {
         try {
             if (null !== ($entity->id ?? null)) {
@@ -63,20 +63,20 @@ final class PDOAdapter implements StorageInterface
             }
 
             $data = $entity->getAll();
-            unset($data[iFace::COLUMN_ID]);
+            unset($data[iState::COLUMN_ID]);
 
             // -- @TODO i dont like this section, And this should not happen here.
             if (false === $entity->isWatched()) {
-                foreach ($data[iFace::COLUMN_META_DATA] ?? [] as $via => $metadata) {
-                    $data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_WATCHED] = '0';
-                    if (null === ($metadata[iFace::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
+                foreach ($data[iState::COLUMN_META_DATA] ?? [] as $via => $metadata) {
+                    $data[iState::COLUMN_META_DATA][$via][iState::COLUMN_WATCHED] = '0';
+                    if (null === ($metadata[iState::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
                         continue;
                     }
-                    unset($data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_META_DATA_PLAYED_AT]);
+                    unset($data[iState::COLUMN_META_DATA][$via][iState::COLUMN_META_DATA_PLAYED_AT]);
                 }
             }
 
-            foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
+            foreach (iState::ENTITY_ARRAY_KEYS as $key) {
                 if (null !== ($data[$key] ?? null) && true === is_array($data[$key])) {
                     ksort($data[$key]);
                     $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -85,7 +85,7 @@ final class PDOAdapter implements StorageInterface
 
             if (null === ($this->stmt['insert'] ?? null)) {
                 $this->stmt['insert'] = $this->pdo->prepare(
-                    $this->pdoInsert('state', iFace::ENTITY_KEYS)
+                    $this->pdoInsert('state', iState::ENTITY_KEYS)
                 );
             }
 
@@ -112,7 +112,7 @@ final class PDOAdapter implements StorageInterface
         return $entity->updateOriginal();
     }
 
-    public function get(iFace $entity): iFace|null
+    public function get(iState $entity): iState|null
     {
         $inTraceMode = true === (bool)($this->options[Options::DEBUG_TRACE] ?? false);
 
@@ -124,7 +124,7 @@ final class PDOAdapter implements StorageInterface
             $stmt = $this->query(
                 sprintf(
                     'SELECT * FROM state WHERE %s = %d',
-                    iFace::COLUMN_ID,
+                    iState::COLUMN_ID,
                     (int)$entity->id
                 )
             );
@@ -134,7 +134,7 @@ final class PDOAdapter implements StorageInterface
 
                 if ($inTraceMode) {
                     $this->logger->debug(sprintf('STORAGE: Found \'%s\' using direct id match.', $item->getName()), [
-                        iFace::COLUMN_ID => $entity->id
+                        iState::COLUMN_ID => $entity->id
                     ]);
                 }
                 return $item;
@@ -144,7 +144,7 @@ final class PDOAdapter implements StorageInterface
         if (null !== ($item = $this->findByExternalId($entity))) {
             if ($inTraceMode) {
                 $this->logger->debug(sprintf('STORAGE: Found \'%s\' using external id match.', $item->getName()), [
-                    iFace::COLUMN_GUIDS => $entity->getGuids(),
+                    iState::COLUMN_GUIDS => $entity->getGuids(),
                 ]);
             }
             return $item;
@@ -170,11 +170,11 @@ final class PDOAdapter implements StorageInterface
         $sql = "SELECT {$fields} FROM state";
 
         if (null !== $date) {
-            $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
+            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
         }
 
-        if (null === ($opts['class'] ?? null) || false === ($opts['class'] instanceof iFace)) {
-            $class = Container::get(iFace::class);
+        if (null === ($opts['class'] ?? null) || false === ($opts['class'] instanceof iState)) {
+            $class = Container::get(iState::class);
         } else {
             $class = $opts['class'];
         }
@@ -191,13 +191,13 @@ final class PDOAdapter implements StorageInterface
         $sql = 'SELECT COUNT(id) AS total FROM state';
 
         if (null !== $date) {
-            $sql .= ' WHERE ' . iFace::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
+            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
         }
 
         return (int)$this->query($sql)->fetchColumn();
     }
 
-    public function find(iFace ...$items): array
+    public function find(iState ...$items): array
     {
         $list = [];
 
@@ -212,7 +212,7 @@ final class PDOAdapter implements StorageInterface
         return $list;
     }
 
-    public function update(iFace $entity): iFace
+    public function update(iState $entity): iState
     {
         try {
             if (null === ($entity->id ?? null)) {
@@ -223,16 +223,16 @@ final class PDOAdapter implements StorageInterface
 
             // -- @TODO i dont like this section, And this should not happen here.
             if (false === $entity->isWatched()) {
-                foreach ($data[iFace::COLUMN_META_DATA] ?? [] as $via => $metadata) {
-                    $data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_WATCHED] = '0';
-                    if (null === ($metadata[iFace::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
+                foreach ($data[iState::COLUMN_META_DATA] ?? [] as $via => $metadata) {
+                    $data[iState::COLUMN_META_DATA][$via][iState::COLUMN_WATCHED] = '0';
+                    if (null === ($metadata[iState::COLUMN_META_DATA_PLAYED_AT] ?? null)) {
                         continue;
                     }
-                    unset($data[iFace::COLUMN_META_DATA][$via][iFace::COLUMN_META_DATA_PLAYED_AT]);
+                    unset($data[iState::COLUMN_META_DATA][$via][iState::COLUMN_META_DATA_PLAYED_AT]);
                 }
             }
 
-            foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
+            foreach (iState::ENTITY_ARRAY_KEYS as $key) {
                 if (null !== ($data[$key] ?? null) && true === is_array($data[$key])) {
                     ksort($data[$key]);
                     $data[$key] = json_encode($data[$key], flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -241,7 +241,7 @@ final class PDOAdapter implements StorageInterface
 
             if (null === ($this->stmt['update'] ?? null)) {
                 $this->stmt['update'] = $this->pdo->prepare(
-                    $this->pdoUpdate('state', iFace::ENTITY_KEYS)
+                    $this->pdoUpdate('state', iState::ENTITY_KEYS)
                 );
             }
 
@@ -266,7 +266,7 @@ final class PDOAdapter implements StorageInterface
         return $entity->updateOriginal();
     }
 
-    public function remove(iFace $entity): bool
+    public function remove(iState $entity): bool
     {
         if (null === $entity->id && !$entity->hasGuids() && $entity->hasRelativeGuid()) {
             return false;
@@ -282,7 +282,7 @@ final class PDOAdapter implements StorageInterface
                 $id = $entity->id;
             }
 
-            $this->query(sprintf('DELETE FROM state WHERE %s = %d', iFace::COLUMN_ID, (int)$id));
+            $this->query(sprintf('DELETE FROM state WHERE %s = %d', iState::COLUMN_ID, (int)$id));
         } catch (PDOException $e) {
             $this->logger->error($e->getMessage(), [
                 'entity' => $entity->getAll(),
@@ -334,7 +334,7 @@ final class PDOAdapter implements StorageInterface
             return $actions;
         });
     }
-
+    
     public function migrations(string $dir, array $opts = []): mixed
     {
         $class = new PDOMigrations($this->pdo, $this->logger);
@@ -442,7 +442,7 @@ final class PDOAdapter implements StorageInterface
         $sql_columns = $sql_placeholder = [];
 
         foreach ($columns as $column) {
-            if (iFace::COLUMN_ID === $column) {
+            if (iState::COLUMN_ID === $column) {
                 continue;
             }
 
@@ -469,12 +469,12 @@ final class PDOAdapter implements StorageInterface
     private function pdoUpdate(string $table, array $columns): string
     {
         /** @noinspection SqlWithoutWhere */
-        $queryString = "UPDATE {$table} SET %(place) = %(holder) WHERE " . iFace::COLUMN_ID . " = :id";
+        $queryString = "UPDATE {$table} SET %(place) = %(holder) WHERE " . iState::COLUMN_ID . " = :id";
 
         $placeholders = [];
 
         foreach ($columns as $column) {
-            if (iFace::COLUMN_ID === $column) {
+            if (iState::COLUMN_ID === $column) {
                 continue;
             }
             $placeholders[] = sprintf('%1$s = :%1$s', $column);
@@ -487,10 +487,10 @@ final class PDOAdapter implements StorageInterface
      * Find db entity using External ID.
      * External ID format is: (db_name)://(id)
      *
-     * @param iFace $entity
-     * @return iFace|null
+     * @param iState $entity
+     * @return iState|null
      */
-    private function findByExternalId(iFace $entity): iFace|null
+    private function findByExternalId(iState $entity): iState|null
     {
         $guids = [];
         $cond = [
@@ -500,7 +500,7 @@ final class PDOAdapter implements StorageInterface
         $sqlEpisode = '';
 
         if (true === $entity->isEpisode()) {
-            $sqlEpisode = ' AND ' . iFace::COLUMN_SEASON . ' = :season AND ' . iFace::COLUMN_EPISODE . ' = :episode ';
+            $sqlEpisode = ' AND ' . iState::COLUMN_SEASON . ' = :season AND ' . iState::COLUMN_EPISODE . ' = :episode ';
 
             $cond['season'] = $entity->season;
             $cond['episode'] = $entity->episode;
@@ -510,7 +510,7 @@ final class PDOAdapter implements StorageInterface
                     continue;
                 }
 
-                $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_PARENT . ",'$.{$key}') = :p_{$key}";
+                $guids[] = "JSON_EXTRACT(" . iState::COLUMN_PARENT . ",'$.{$key}') = :p_{$key}";
                 $cond['p_' . $key] = $val;
             }
         }
@@ -520,7 +520,7 @@ final class PDOAdapter implements StorageInterface
                 continue;
             }
 
-            $guids[] = "JSON_EXTRACT(" . iFace::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
+            $guids[] = "JSON_EXTRACT(" . iState::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
             $cond['g_' . $key] = $val;
         }
 
@@ -530,7 +530,7 @@ final class PDOAdapter implements StorageInterface
 
         $sqlGuids = ' AND ( ' . implode(' OR ', $guids) . ' ) ';
 
-        $sql = "SELECT * FROM state WHERE " . iFace::COLUMN_TYPE . " = :type {$sqlEpisode} {$sqlGuids} LIMIT 1";
+        $sql = "SELECT * FROM state WHERE " . iState::COLUMN_TYPE . " = :type {$sqlEpisode} {$sqlGuids} LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
 

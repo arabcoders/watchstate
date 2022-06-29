@@ -627,13 +627,13 @@ if (false === function_exists('isIgnoredId')) {
 }
 
 if (false === function_exists('replacer')) {
-    function replacer(string $text, array $context = []): string
+    function replacer(string $text, array $context = [], string $tagLeft = '{', string $tagRight = '}'): string
     {
-        if (false === str_contains($text, '{') || false === str_contains($text, '}')) {
+        if (false === str_contains($text, $tagLeft) || false === str_contains($text, $tagRight)) {
             return $text;
         }
 
-        $pattern = '#' . preg_quote('{', '#') . '([\w\d_.]+)' . preg_quote('}', '#') . '#is';
+        $pattern = '#' . preg_quote($tagLeft, '#') . '([\w\d_.]+)' . preg_quote($tagRight, '#') . '#is';
 
         $status = preg_match_all($pattern, $text, $matches);
 
@@ -644,7 +644,7 @@ if (false === function_exists('replacer')) {
         $replacements = [];
 
         foreach ($matches[1] as $key) {
-            $placeholder = '{' . $key . '}';
+            $placeholder = $tagLeft . $key . $tagRight;
 
             if (false === str_contains($text, $placeholder)) {
                 continue;
