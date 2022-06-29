@@ -3,7 +3,8 @@ name: Build Container Images
 on:
   push:
     branches:
-      - '*'
+      - 'master'
+      - 'dev'
     tags-ignore:
       - 'v0*'
     paths-ignore:
