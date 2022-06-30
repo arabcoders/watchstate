@@ -28,55 +28,60 @@ final class PruneCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
+            // -- @RELEASE remove option.
             ->addOption(
                 'older-than',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Delete logs older than.',
+                'Unused option. Will be removed at release.',
                 Config::get('logs.prune.after', '-3 DAYS')
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not take any action.')
-            ->setDescription('Delete old logs files.');
+            ->setDescription('Remove automatically generated files.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $time = $input->getOption('older-than');
-
-        if ('disable' === $time) {
-            $this->logger->notice('Pruning is disabled.');
-            return self::SUCCESS;
-        }
-
-        if (false === ($expiresAt = strtotime($time, time()))) {
-            $this->logger->error('Invalid older than date was given.', [
-                'date' => $time,
-            ]);
-            return self::FAILURE;
-        }
+        $time = time();
 
         $directories = [
             [
                 'path' => Config::get('tmpDir') . '/logs',
+                'base' => Config::get('tmpDir'),
                 'filter' => '*.log',
+                'time' => strtotime('-7 DAYS', $time)
             ],
             [
                 // -- @RELEASE - remove path.
                 'path' => Config::get('tmpDir') . '/logs/tasks',
+                'base' => Config::get('tmpDir'),
                 'filter' => '*.log',
                 'report' => false,
+                'time' => strtotime('-7 DAYS', $time)
             ],
             [
                 'path' => Config::get('tmpDir') . '/webhooks',
+                'base' => Config::get('tmpDir'),
                 'filter' => '*.json',
+                'time' => strtotime('-3 DAYS', $time)
             ],
             [
                 'path' => Config::get('tmpDir') . '/profiler',
+                'base' => Config::get('tmpDir'),
                 'filter' => '*.json',
+                'time' => strtotime('-3 DAYS', $time)
             ],
             [
                 'path' => Config::get('tmpDir') . '/debug',
+                'base' => Config::get('tmpDir'),
                 'filter' => '*.json',
+                'time' => strtotime('-3 DAYS', $time)
+            ],
+            [
+                'path' => Config::get('path') . '/backup',
+                'base' => Config::get('path'),
+                'filter' => '*.*.json',
+                'time' => strtotime('-9 DAYS', $time)
             ],
         ];
 
@@ -84,6 +89,13 @@ final class PruneCommand extends Command
 
         foreach ($directories as $item) {
             $path = ag($item, 'path');
+
+            if (null === ($expiresAt = ag($item, 'time'))) {
+                $this->logger->warning('Error No expected time to live was found for [%(path)].', [
+                    'path' => $path
+                ]);
+                continue;
+            }
 
             if (null === $path || !is_dir($path)) {
                 if (true === (bool)ag($item, 'report', true)) {
@@ -108,14 +120,14 @@ final class PruneCommand extends Command
 
                 if ($file->getMTime() > $expiresAt) {
                     $this->logger->debug('File [%(file)] Not yet expired. %(ttl) left seconds.', [
-                        'file' => after($file->getRealPath(), Config::get('tmpDir') . '/'),
+                        'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
                         'ttl' => number_format($file->getMTime() - $expiresAt),
                     ]);
                     continue;
                 }
 
                 $this->logger->notice('Removing [%(file)].', [
-                    'file' => after($file->getRealPath(), Config::get('tmpDir'))
+                    'file' => after($file->getRealPath(), ag($item, 'base') . '/')
                 ]);
 
                 if (false === $inDryRunMode) {

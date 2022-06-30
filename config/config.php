@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
@@ -189,35 +190,42 @@ return (function () {
                 Task::NAME => ImportCommand::TASK_NAME,
                 Task::ENABLED => (bool)env('WS_CRON_IMPORT', false),
                 Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
-                Task::COMMAND => '@state:import',
+                Task::COMMAND => '@' . ImportCommand::ROUTE,
                 Task::ARGS => env('WS_CRON_IMPORT_ARGS', '-v'),
             ],
             ExportCommand::TASK_NAME => [
                 Task::NAME => ExportCommand::TASK_NAME,
                 Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
                 Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
-                Task::COMMAND => '@state:export',
+                Task::COMMAND => '@' . ExportCommand::ROUTE,
                 Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
             ],
             PushCommand::TASK_NAME => [
                 Task::NAME => PushCommand::TASK_NAME,
                 Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
                 Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
-                Task::COMMAND => '@state:push',
+                Task::COMMAND => '@' . PushCommand::ROUTE,
                 Task::ARGS => env('WS_CRON_PUSH_ARGS', '-v'),
             ],
             PruneCommand::TASK_NAME => [
                 Task::NAME => PruneCommand::TASK_NAME,
-                Task::ENABLED => 'disable' !== ag($config, 'logs.prune.after'),
+                Task::ENABLED => (bool)env('WS_CRON_PRUNE', true),
                 Task::RUN_AT => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
-                Task::COMMAND => '@system:prune',
-                Task::ARGS => env('WS_CRON_PRUNE_ARGS', '-v'),
+                Task::COMMAND => '@' . PruneCommand::ROUTE,
+                Task::ARGS => '-v',
             ],
             IndexCommand::TASK_NAME => [
                 Task::NAME => IndexCommand::TASK_NAME,
                 Task::ENABLED => true,
                 Task::RUN_AT => '0 3 * * 3',
-                Task::COMMAND => '@system:index',
+                Task::COMMAND => '@' . IndexCommand::ROUTE,
+            ],
+            BackupCommand::TASK_NAME => [
+                Task::NAME => BackupCommand::TASK_NAME,
+                Task::ENABLED => (bool)env('WS_CRON_BACKUP', false),
+                Task::RUN_AT => (string)env('WS_CRON_BACKUP_AT', '0 0 */3 * *'),
+                Task::COMMAND => '@' . BackupCommand::ROUTE,
+                Task::ARGS => '-v',
             ],
         ],
     ];

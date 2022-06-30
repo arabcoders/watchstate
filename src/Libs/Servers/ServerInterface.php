@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Libs\Servers;
 
 use App\Libs\Entity\StateInterface;
-use App\Libs\Mappers\ImportInterface;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
-use DateTimeInterface;
+use DateTimeInterface as iDate;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use SplFileObject;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -75,34 +76,43 @@ interface ServerInterface
     /**
      * Import watch state.
      *
-     * @param ImportInterface $mapper
-     * @param DateTimeInterface|null $after
+     * @param iImport $mapper
+     * @param iDate|null $after
      *
      * @return array<array-key,ResponseInterface>
      */
-    public function pull(ImportInterface $mapper, DateTimeInterface|null $after = null): array;
+    public function pull(iImport $mapper, iDate|null $after = null): array;
+
+    /**
+     * Backup watch state.
+     *
+     * @param iImport $mapper
+     *
+     * @return array<array-key,ResponseInterface>
+     */
+    public function backup(iImport $mapper, SplFileObject $writer, array $opts = []): array;
 
     /**
      * Export watch state to server.
      *
-     * @param ImportInterface $mapper
+     * @param iImport $mapper
      * @param QueueRequests $queue
-     * @param DateTimeInterface|null $after
+     * @param iDate|null $after
      *
      * @return array<array-key,ResponseInterface>
      */
-    public function export(ImportInterface $mapper, QueueRequests $queue, DateTimeInterface|null $after = null): array;
+    public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
      * Push webhook queued states.
      *
      * @param array<StateInterface> $entities
      * @param QueueRequests $queue
-     * @param DateTimeInterface|null $after
+     * @param iDate|null $after
      *
      * @return array
      */
-    public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array;
+    public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
      * Search server libraries.

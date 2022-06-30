@@ -68,7 +68,7 @@ final class Export extends Import
                 $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'payload' => $item,
+                    'body' => $item,
                 ]);
             }
 

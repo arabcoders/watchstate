@@ -463,7 +463,7 @@ class Import
         ];
 
         if ($context->trace) {
-            $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', [
+            $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] payload.', [
                 'backend' => $context->backendName,
                 ...$logContext,
                 'body' => $item,
@@ -545,7 +545,7 @@ class Import
             ];
 
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)]', [
+                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item,
