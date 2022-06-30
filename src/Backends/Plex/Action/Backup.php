@@ -43,6 +43,7 @@ final class Backup extends Import
             }
 
             $logContext['item'] = [
+                'backend' => $context->backendName,
                 'id' => ag($item, 'ratingKey'),
                 'title' => match ($type) {
                     PlexClient::TYPE_MOVIE => sprintf(
@@ -101,7 +102,7 @@ final class Backup extends Import
 
             $guids = [];
 
-            foreach (Guid::fromArray($entity->getGuids(), false)->getAll() as $db => $val) {
+            foreach (Guid::fromArray($entity->getGuids(), false, $logContext)->getAll() as $db => $val) {
                 $guids[after($db, 'guid_')] = $val;
             }
 
@@ -110,7 +111,7 @@ final class Backup extends Import
 
             if ($entity->isEpisode()) {
                 $parents = [];
-                foreach (Guid::fromArray($entity->getParentGuids(), false)->getAll() as $db => $val) {
+                foreach (Guid::fromArray($entity->getParentGuids(), false, $logContext)->getAll() as $db => $val) {
                     $parents[after($db, 'guid_')] = $val;
                 }
                 $arr[iState::COLUMN_PARENT] = $parents;

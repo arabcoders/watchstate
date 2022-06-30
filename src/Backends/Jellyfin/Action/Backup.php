@@ -38,6 +38,7 @@ class Backup extends Import
 
         try {
             $logContext['item'] = [
+                'backend' => $context->backendName,
                 'id' => ag($item, 'Id'),
                 'title' => match ($type) {
                     JFC::TYPE_MOVIE => sprintf(
@@ -98,7 +99,7 @@ class Backup extends Import
 
             $guids = [];
 
-            foreach (Guid::fromArray($entity->getGuids(), false)->getAll() as $db => $val) {
+            foreach (Guid::fromArray($entity->getGuids(), false, $logContext)->getAll() as $db => $val) {
                 $guids[after($db, 'guid_')] = $val;
             }
 
@@ -107,7 +108,7 @@ class Backup extends Import
 
             if ($entity->isEpisode()) {
                 $parents = [];
-                foreach (Guid::fromArray($entity->getParentGuids(), false)->getAll() as $db => $val) {
+                foreach (Guid::fromArray($entity->getParentGuids(), false, $logContext)->getAll() as $db => $val) {
                     $parents[after($db, 'guid_')] = $val;
                 }
                 $arr[iState::COLUMN_PARENT] = $parents;
