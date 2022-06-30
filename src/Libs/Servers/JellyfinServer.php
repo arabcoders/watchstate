@@ -6,6 +6,7 @@ namespace App\Libs\Servers;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
+use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
@@ -32,6 +33,7 @@ use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
+use SplFileObject;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
@@ -265,6 +267,26 @@ class JellyfinServer implements ServerInterface
             opts:    [
                          Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
                      ]
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function backup(ImportInterface $mapper, SplFileObject $writer, array $opts = []): array
+    {
+        $response = Container::get(Backup::class)(
+            context: $this->context,
+            guid:    $this->guid,
+            mapper:  $mapper,
+            opts:    $opts + ['writer' => $writer]
         );
 
         if ($response->hasError()) {
