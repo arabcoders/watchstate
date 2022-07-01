@@ -223,9 +223,9 @@ return (function () {
             BackupCommand::TASK_NAME => [
                 Task::NAME => BackupCommand::TASK_NAME,
                 Task::ENABLED => (bool)env('WS_CRON_BACKUP', false),
-                Task::RUN_AT => (string)env('WS_CRON_BACKUP_AT', '0 0 */3 * *'),
+                Task::RUN_AT => (string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'),
                 Task::COMMAND => '@' . BackupCommand::ROUTE,
-                Task::ARGS => '-v',
+                Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
             ],
         ],
     ];

@@ -52,12 +52,26 @@ class BackupCommand extends Command
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
             ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
+            ->addOption(
+                'no-enhance',
+                null,
+                InputOption::VALUE_NONE,
+                'Do not enhance the backup data using local db info.'
+            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption(
+                'file',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Full path backup file. Will only be used if backup list is 1'
+            )
             ->setHelp(
                 <<<HELP
 Generate <info>portable</info> backup of your backends play state that can be used to restore any supported backend type.
 
-<comment>[IMPORTANT INFO]</comment>
+------------------
+<comment>[ Important info ]</comment>
+------------------
 
 The command will only work on backends that has import enabled.
 
@@ -71,11 +85,28 @@ will be named [<info>{backend}.{date}.json</info>]
 
 <comment>If a backup already exists using the same filename, it will be overwritten.</comment>
 
-------------------
-<comment>Backups Directory:</comment>
-------------------
+-------
+<comment>[ FAQ ]</comment>
+-------
 
-{$backupDir}
+<comment># Where are my backups stored?</comment>
+
+By defualt we store backups at {$backupDir}
+
+<comment># Why the externals ids are not exactly the same from backend?</comment>
+
+By defualt we enhance the data from the backend to allow the backup to be usuable by all if your backends,
+The expanded externals ids make the data more portable, However, if you do not wish to have this enabled. You can
+Disable it via the flag <info>[--no-enhance].</info> We recommand to enhanced data.
+
+<comment># I want different file name for my backup?</comment>
+
+Backup names are something tricky, however it's possible to choose the backup filename if the total number
+of backed up backends are 1. So, in essence you have to combine two flags <info>[-s, --servers-filter]</info> and <info>[--file]</info>.
+
+For example, to backup [<info>my_plex</info>] backend data to [<info>/tmp/myplex.json</info>] do the following:
+
+{$cmdContext} state:backup <info>--servers-filter</info> my_plex <info>--file</info> /tmp/myplex.json
 
 HELP
             );
@@ -158,6 +189,26 @@ HELP
             return self::FAILURE;
         }
 
+        if (true !== $input->getOption('no-enhance')) {
+            $this->logger->notice('SYSTEM: Preloading %(mapper) data.', [
+                'mapper' => afterLast($this->mapper::class, '\\'),
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
+
+            $this->mapper->loadData();
+
+            $this->logger->notice('SYSTEM: Preloading %(mapper) data is complete.', [
+                'mapper' => afterLast($this->mapper::class, '\\'),
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+            ]);
+        }
+
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
@@ -185,10 +236,16 @@ HELP
                 'backend' => $name,
             ]);
 
-            $fileName = Config::get('path') . '/backup/{backend}.{date}.json';
+            if (null === ($fileName = $input->getOption('file'))) {
+                $fileName = Config::get('path') . '/backup/{backend}.{date}.json';
+            }
 
             if ($input->getOption('keep')) {
                 $fileName = Config::get('path') . '/backup/{backend}.json';
+            }
+
+            if (count($list) <= 1 && null === ($file = $input->getOption('file'))) {
+                $fileName = $file;
             }
 
             $fileName = replacer($fileName, [
@@ -204,7 +261,12 @@ HELP
 
             $server['fp']->fwrite('[');
 
-            array_push($queue, ...$server['class']->backup($this->mapper, $server['fp'], []));
+            array_push(
+                   $queue,
+                ...$server['class']->backup($this->mapper, $server['fp'], [
+                'no_enhance' => true === $input->getOption('no-enhance')
+            ])
+            );
         }
 
         unset($server);
