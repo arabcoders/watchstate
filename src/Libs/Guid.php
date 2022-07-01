@@ -64,7 +64,7 @@ final class Guid implements JsonSerializable, Stringable
             }
 
             if (false === is_string($key)) {
-                $this->getLogger()->warning(
+                $this->getLogger()->info(
                     'Ignoring [%(backend)] %(item.type) [%(item.title)] external id. Unexpected key type [%(given)] was given.',
                     [
                         'key' => (string)$key,
@@ -76,7 +76,7 @@ final class Guid implements JsonSerializable, Stringable
             }
 
             if (null === ($supported[$key] ?? null)) {
-                $this->getLogger()->warning(
+                $this->getLogger()->info(
                     'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Not supported.',
                     [
                         'key' => $key,
@@ -87,7 +87,7 @@ final class Guid implements JsonSerializable, Stringable
             }
 
             if ($supported[$key] !== ($valueType = get_debug_type($value))) {
-                $this->getLogger()->warning(
+                $this->getLogger()->info(
                     'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value type.',
                     [
                         'key' => $key,
@@ -103,7 +103,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
-                    $this->getLogger()->warning(
+                    $this->getLogger()->info(
                         'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value expecting [%(expected)] but got [%(given)].',
                         [
                             'key' => $key,
