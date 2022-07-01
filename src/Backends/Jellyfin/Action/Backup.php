@@ -8,7 +8,6 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use SplFileObject;
 use Throwable;
@@ -38,6 +37,7 @@ class Backup extends Import
 
         try {
             $logContext['item'] = [
+                'backend' => $context->backendName,
                 'id' => ag($item, 'Id'),
                 'title' => match ($type) {
                     JFC::TYPE_MOVIE => sprintf(
@@ -71,11 +71,10 @@ class Backup extends Import
                 item:    $item,
                 opts:    $opts + ['library' => ag($logContext, 'library.id')]
             );
-
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,
-                iState::COLUMN_WATCHED => $entity->isWatched(),
-                iState::COLUMN_UPDATED => makeDate($entity->updated),
+                iState::COLUMN_WATCHED => (int)$entity->isWatched(),
+                iState::COLUMN_UPDATED => makeDate($entity->updated)->getTimestamp(),
                 iState::COLUMN_META_SHOW => '',
                 iState::COLUMN_TITLE => trim($entity->title),
             ];
@@ -96,21 +95,41 @@ class Backup extends Import
                 unset($arr[iState::COLUMN_META_SHOW]);
             }
 
-            $guids = [];
+            $arr[iState::COLUMN_YEAR] = $entity->year;
 
-            foreach (Guid::fromArray($entity->getGuids(), false)->getAll() as $db => $val) {
-                $guids[after($db, 'guid_')] = $val;
+
+            $arr[iState::COLUMN_GUIDS] = array_filter(
+                $entity->getGuids(),
+                fn($key) => str_contains($key, 'guid_'),
+                ARRAY_FILTER_USE_KEY
+            );
+            if ($entity->isEpisode()) {
+                $arr[iState::COLUMN_PARENT] = array_filter(
+                    $entity->getParentGuids(),
+                    fn($key) => str_contains($key, 'guid_'),
+                    ARRAY_FILTER_USE_KEY
+                );
             }
 
-            $arr[iState::COLUMN_YEAR] = $entity->year;
-            $arr[iState::COLUMN_GUIDS] = $guids;
-
-            if ($entity->isEpisode()) {
-                $parents = [];
-                foreach (Guid::fromArray($entity->getParentGuids(), false)->getAll() as $db => $val) {
-                    $parents[after($db, 'guid_')] = $val;
+            if (true !== (bool)ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
+                $arr[iState::COLUMN_GUIDS] = array_replace_recursive(
+                    array_filter(
+                        $fromDb->getGuids(),
+                        fn($key) => str_contains($key, 'guid_'),
+                        ARRAY_FILTER_USE_KEY
+                    ),
+                    $arr[iState::COLUMN_GUIDS]
+                );
+                if ($entity->isEpisode()) {
+                    $arr[iState::COLUMN_PARENT] = array_replace_recursive(
+                        array_filter(
+                            $fromDb->getParentGuids(),
+                            fn($key) => str_contains($key, 'guid_'),
+                            ARRAY_FILTER_USE_KEY
+                        ),
+                        $arr[iState::COLUMN_PARENT]
+                    );
                 }
-                $arr[iState::COLUMN_PARENT] = $parents;
             }
 
             $writer->fwrite(
