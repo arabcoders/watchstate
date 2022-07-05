@@ -216,7 +216,7 @@ HELP
         if ($input->getOption('save-log') && count($this->logs) >= 1) {
             file_put_contents(
                 Config::get('tasks.logfile'),
-                preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)),
+                preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL,
                 FILE_APPEND
             );
         }
