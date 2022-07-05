@@ -169,7 +169,7 @@ HELP
 
             $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
 
-            $started = makeDate()->format('Y-m-d H:i:s T');
+            $started = makeDate()->format('D, H:i:s T');
 
             $process->start(function ($std, $out) use ($input, $output) {
                 assert($output instanceof ConsoleOutputInterface);
@@ -195,15 +195,28 @@ HELP
                 continue;
             }
 
-            $ended = makeDate()->format('Y-m-d H:i:s T');
+            $ended = makeDate()->format('D, H:i:s T');
 
             $this->write('--------------------------', $input, $output);
-            $this->write(replacer('Task: {name}', ['name' => $task['name']]), $input, $output);
-            $this->write(replacer('Started At: {datetime}', ['datetime' => $started]), $input, $output);
+            $this->write(
+                replacer('Task: {name} (Started: {startDate})', [
+                    'name' => $task['name'],
+                    'startDate' => $started,
+                ]),
+                $input,
+                $output
+            );
             $this->write(replacer('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-            $this->write(replacer('Exit Code: {code}', ['code' => $process->getExitCode()]), $input, $output);
-            $this->write(replacer('Ended At: {datetime}', ['datetime' => $ended]), $input, $output);
-            $this->write('--------------------------' . PHP_EOL, $input, $output);
+            $this->write(
+                replacer('Exit Code: {code} (Ended: {endDate})', [
+                    'code' => $process->getExitCode(),
+                    'endDate' => $ended,
+                ]),
+                $input,
+                $output
+            );
+            $this->write('--------------------------', $input, $output);
+            $this->write(' ' . PHP_EOL, $input, $output);
 
             foreach ($this->taskOutput as $line) {
                 $this->write($line, $input, $output);
@@ -212,13 +225,11 @@ HELP
             $this->taskOutput = [];
         }
 
-
         if ($input->getOption('save-log') && count($this->logs) >= 1) {
-            file_put_contents(
-                Config::get('tasks.logfile'),
-                preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL,
-                FILE_APPEND
-            );
+            if (false !== ($fp = @fopen(Config::get('tasks.logfile'), 'a'))) {
+                fwrite($fp, preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
+                fclose($fp);
+            }
         }
 
         return self::SUCCESS;
