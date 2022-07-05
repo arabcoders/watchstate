@@ -169,6 +169,8 @@ HELP
 
             $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
 
+            $started = makeDate()->format('Y-m-d H:i:s T');
+
             $process->start(function ($std, $out) use ($input, $output) {
                 assert($output instanceof ConsoleOutputInterface);
 
@@ -193,15 +195,14 @@ HELP
                 continue;
             }
 
+            $ended = makeDate()->format('Y-m-d H:i:s T');
+
             $this->write('--------------------------', $input, $output);
             $this->write(replacer('Task: {name}', ['name' => $task['name']]), $input, $output);
-            $this->write(
-                replacer('Date: {datetime}', ['datetime' => makeDate()->format('Y-m-d H:i:s T')]),
-                $input,
-                $output
-            );
+            $this->write(replacer('Started At: {datetime}', ['datetime' => $started]), $input, $output);
             $this->write(replacer('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
             $this->write(replacer('Exit Code: {code}', ['code' => $process->getExitCode()]), $input, $output);
+            $this->write(replacer('Ended At: {datetime}', ['datetime' => $ended]), $input, $output);
             $this->write('--------------------------' . PHP_EOL, $input, $output);
 
             foreach ($this->taskOutput as $line) {
