@@ -9,7 +9,6 @@ use App\Commands\State\PushCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
-use App\Libs\Scheduler\Task;
 use App\Libs\Servers\EmbyServer;
 use App\Libs\Servers\JellyfinServer;
 use App\Libs\Servers\PlexServer;
@@ -185,47 +184,54 @@ return (function () {
 
     $config['tasks'] = [
         'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.log',
-        'commands' => [
+        'list' => [
             ImportCommand::TASK_NAME => [
-                Task::NAME => ImportCommand::TASK_NAME,
-                Task::ENABLED => (bool)env('WS_CRON_IMPORT', false),
-                Task::RUN_AT => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
-                Task::COMMAND => '@' . ImportCommand::ROUTE,
-                Task::ARGS => env('WS_CRON_IMPORT_ARGS', '-v'),
+                'command' => ImportCommand::ROUTE,
+                'name' => ImportCommand::TASK_NAME,
+                'info' => 'Import play state and metadata from backends.',
+                'enabled' => (bool)env('WS_CRON_IMPORT', false),
+                'timer' => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
+                'args' => env('WS_CRON_IMPORT_ARGS', '-v'),
             ],
             ExportCommand::TASK_NAME => [
-                Task::NAME => ExportCommand::TASK_NAME,
-                Task::ENABLED => (bool)env('WS_CRON_EXPORT', false),
-                Task::RUN_AT => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
-                Task::COMMAND => '@' . ExportCommand::ROUTE,
-                Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
+                'command' => ExportCommand::ROUTE,
+                'name' => ExportCommand::TASK_NAME,
+                'info' => 'Export play state to backends.',
+                'enabled' => (bool)env('WS_CRON_EXPORT', false),
+                'timer' => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
+                'args' => env('WS_CRON_EXPORT_ARGS', '-v'),
             ],
             PushCommand::TASK_NAME => [
-                Task::NAME => PushCommand::TASK_NAME,
-                Task::ENABLED => (bool)env('WS_CRON_PUSH', false),
-                Task::RUN_AT => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
-                Task::COMMAND => '@' . PushCommand::ROUTE,
-                Task::ARGS => env('WS_CRON_PUSH_ARGS', '-v'),
-            ],
-            PruneCommand::TASK_NAME => [
-                Task::NAME => PruneCommand::TASK_NAME,
-                Task::ENABLED => (bool)env('WS_CRON_PRUNE', true),
-                Task::RUN_AT => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
-                Task::COMMAND => '@' . PruneCommand::ROUTE,
-                Task::ARGS => '-v',
-            ],
-            IndexCommand::TASK_NAME => [
-                Task::NAME => IndexCommand::TASK_NAME,
-                Task::ENABLED => true,
-                Task::RUN_AT => '0 3 * * 3',
-                Task::COMMAND => '@' . IndexCommand::ROUTE,
+                'command' => PushCommand::ROUTE,
+                'name' => PushCommand::TASK_NAME,
+                'info' => 'Push Webhook play states to backends.',
+                'enabled' => (bool)env('WS_CRON_PUSH', false),
+                'timer' => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
+                'args' => env('WS_CRON_PUSH_ARGS', '-v'),
             ],
             BackupCommand::TASK_NAME => [
-                Task::NAME => BackupCommand::TASK_NAME,
-                Task::ENABLED => (bool)env('WS_CRON_BACKUP', false),
-                Task::RUN_AT => (string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'),
-                Task::COMMAND => '@' . BackupCommand::ROUTE,
-                Task::ARGS => env('WS_CRON_EXPORT_ARGS', '-v'),
+                'command' => BackupCommand::ROUTE,
+                'name' => BackupCommand::TASK_NAME,
+                'info' => 'Backup backends play states.',
+                'enabled' => (bool)env('WS_CRON_BACKUP', false),
+                'timer' => (string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'),
+                'args' => env('WS_CRON_BACKUP_ARGS', '-v'),
+            ],
+            PruneCommand::TASK_NAME => [
+                'command' => PruneCommand::ROUTE,
+                'name' => PruneCommand::TASK_NAME,
+                'info' => 'Delete old logs and backups.',
+                'enabled' => (bool)env('WS_CRON_PRUNE', true),
+                'timer' => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
+                'args' => env('WS_CRON_PRUNE_ARGS', '-v'),
+            ],
+            IndexCommand::TASK_NAME => [
+                'command' => IndexCommand::ROUTE,
+                'name' => IndexCommand::TASK_NAME,
+                'info' => 'Check database for optimal indexes.',
+                'enabled' => (bool)env('WS_CRON_INDEXES', true),
+                'timer' => (string)env('WS_CRON_INDEXES_AT', '0 3 * * 3'),
+                'args' => env('WS_CRON_INDEXES_ARGS', '-v'),
             ],
         ],
     ];

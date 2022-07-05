@@ -1,10 +1,9 @@
 #!/usr/bin/env sh
 
 UID=$(id -u)
-WS_CRON_DEBUG=${WS_CRON_DEBUG:-v}
 
 if [ 0 == "${UID}" ]; then
-  runuser -u www-data -- /usr/bin/console scheduler:run --save-log -${WS_CRON_DEBUG}
+  runuser -u www-data -- /usr/bin/console system:tasks --run --save-log
 else
-  /usr/bin/console scheduler:run --save-log -${WS_CRON_DEBUG}
+  /usr/bin/console system:tasks --run --save-log
 fi
