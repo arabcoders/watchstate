@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Libs\Mappers\Import;
 
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
-use App\Libs\Storage\StorageInterface as iStorage;
 use DateTimeInterface as iDate;
 use Exception;
 use PDOException;
@@ -45,7 +45,7 @@ final class DirectMapper implements iImport
 
     protected bool $fullyLoaded = false;
 
-    public function __construct(protected iLogger $logger, protected iStorage $storage)
+    public function __construct(protected iLogger $logger, protected iDB $db)
     {
     }
 
@@ -70,7 +70,7 @@ final class DirectMapper implements iImport
             ],
         ];
 
-        foreach ($this->storage->getAll($date, opts: $opts) as $entity) {
+        foreach ($this->db->getAll($date, opts: $opts) as $entity) {
             $pointer = $entity->id;
 
             if (null !== ($this->objects[$pointer] ?? null)) {
@@ -112,7 +112,7 @@ final class DirectMapper implements iImport
                 $this->actions[$entity->type]['failed']++;
                 Message::increment("{$entity->via}.{$entity->type}.failed");
 
-                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
+                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in database.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -147,7 +147,7 @@ final class DirectMapper implements iImport
                 if (true === $inDryRunMode) {
                     $entity->id = random_int((int)(PHP_INT_MAX / 2), PHP_INT_MAX);
                 } else {
-                    $entity = $this->storage->insert($entity);
+                    $entity = $this->db->insert($entity);
                 }
 
                 $this->logger->notice('MAPPER: [%(backend)] added [%(title)] as new item.', [
@@ -211,7 +211,7 @@ final class DirectMapper implements iImport
                     ]);
 
                     if (false === $inDryRunMode) {
-                        $this->storage->update($local);
+                        $this->db->update($local);
                     }
 
                     if (null === ($this->changed[$local->id] ?? null)) {
@@ -228,7 +228,7 @@ final class DirectMapper implements iImport
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
                         'state' => [
-                            'storage' => $cloned->getAll(),
+                            'database' => $cloned->getAll(),
                             'backend' => $entity->getAll()
                         ],
                     ]);
@@ -260,7 +260,7 @@ final class DirectMapper implements iImport
                         )->markAsUnplayed($entity);
 
                         if (false === $inDryRunMode) {
-                            $this->storage->update($local);
+                            $this->db->update($local);
                         }
 
                         $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
@@ -284,7 +284,7 @@ final class DirectMapper implements iImport
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
                             'state' => [
-                                'storage' => $cloned->getAll(),
+                                'database' => $cloned->getAll(),
                                 'backend' => $entity->getAll()
                             ],
                         ]);
@@ -326,7 +326,7 @@ final class DirectMapper implements iImport
                             }
 
                             if (false === $inDryRunMode) {
-                                $this->storage->update($local);
+                                $this->db->update($local);
                             }
 
                             if (null === ($this->changed[$local->id] ?? null)) {
@@ -342,7 +342,7 @@ final class DirectMapper implements iImport
                                 'id' => $cloned->id,
                                 'title' => $cloned->getName(),
                                 'state' => [
-                                    'storage' => $cloned->getAll(),
+                                    'database' => $cloned->getAll(),
                                     'backend' => $entity->getAll()
                                 ],
                             ]);
@@ -386,7 +386,7 @@ final class DirectMapper implements iImport
                 }
 
                 if (false === $inDryRunMode) {
-                    $this->storage->update($local);
+                    $this->db->update($local);
                 }
 
                 if (null === ($this->changed[$local->id] ?? null)) {
@@ -403,7 +403,7 @@ final class DirectMapper implements iImport
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
                     'state' => [
-                        'storage' => $cloned->getAll(),
+                        'database' => $cloned->getAll(),
                         'backend' => $entity->getAll()
                     ],
                 ]);
@@ -418,7 +418,7 @@ final class DirectMapper implements iImport
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
                 'state' => [
-                    'storage' => $cloned->getAll(),
+                    'database' => $cloned->getAll(),
                     'backend' => $entity->getAll(),
                 ],
             ]);
@@ -441,7 +441,7 @@ final class DirectMapper implements iImport
 
         $entity->id = $pointer;
 
-        return $this->storage->get($entity);
+        return $this->db->get($entity);
     }
 
     public function remove(iState $entity): bool
@@ -456,7 +456,7 @@ final class DirectMapper implements iImport
             unset($this->changed[$entity->id]);
         }
 
-        return $this->storage->remove($entity);
+        return $this->db->remove($entity);
     }
 
     public function commit(): mixed
@@ -500,7 +500,7 @@ final class DirectMapper implements iImport
             return [];
         }
 
-        return $this->storage->find(...$list);
+        return $this->db->find(...$list);
     }
 
     public function getObjectsCount(): int
@@ -516,13 +516,13 @@ final class DirectMapper implements iImport
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
-        $this->storage->setLogger($logger);
+        $this->db->setLogger($logger);
         return $this;
     }
 
-    public function setStorage(iStorage $storage): self
+    public function setDatabase(iDB $db): self
     {
-        $this->storage = $storage;
+        $this->db = $db;
         return $this;
     }
 
@@ -585,7 +585,7 @@ final class DirectMapper implements iImport
             }
         }
 
-        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->db->get($entity))) {
             $this->objects[$lazyEntity->id] = $lazyEntity->id;
 
             $this->addPointers($lazyEntity, $lazyEntity->id);

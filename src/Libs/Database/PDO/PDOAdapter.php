@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Libs\Storage\PDO;
+namespace App\Libs\Database\PDO;
 
 use App\Libs\Container;
+use App\Libs\Database\DatabaseException as DBException;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
-use App\Libs\Storage\StorageException;
-use App\Libs\Storage\StorageInterface;
 use Closure;
 use DateTimeInterface;
 use PDO;
@@ -16,7 +16,7 @@ use PDOException;
 use PDOStatement;
 use Psr\Log\LoggerInterface;
 
-final class PDOAdapter implements StorageInterface
+final class PDOAdapter implements iDB
 {
     private const LOCK_RETRY = 4;
 
@@ -57,7 +57,7 @@ final class PDOAdapter implements StorageInterface
     {
         try {
             if (null !== ($entity->id ?? null)) {
-                throw new StorageException(
+                throw new DBException(
                     sprintf('Unable to insert item that has primary key. \'%s\'.', $entity->id), 21
                 );
             }
@@ -117,7 +117,7 @@ final class PDOAdapter implements StorageInterface
         $inTraceMode = true === (bool)($this->options[Options::DEBUG_TRACE] ?? false);
 
         if ($inTraceMode) {
-            $this->logger->debug(sprintf('STORAGE: Looking for \'%s\'.', $entity->getName()));
+            $this->logger->debug(sprintf('DATABASE: Looking for \'%s\'.', $entity->getName()));
         }
 
         if (null !== $entity->id) {
@@ -133,7 +133,7 @@ final class PDOAdapter implements StorageInterface
                 $item = $entity::fromArray($item);
 
                 if ($inTraceMode) {
-                    $this->logger->debug(sprintf('STORAGE: Found \'%s\' using direct id match.', $item->getName()), [
+                    $this->logger->debug(sprintf('DATABASE: Found \'%s\' using direct id match.', $item->getName()), [
                         iState::COLUMN_ID => $entity->id
                     ]);
                 }
@@ -143,7 +143,7 @@ final class PDOAdapter implements StorageInterface
 
         if (null !== ($item = $this->findByExternalId($entity))) {
             if ($inTraceMode) {
-                $this->logger->debug(sprintf('STORAGE: Found \'%s\' using external id match.', $item->getName()), [
+                $this->logger->debug(sprintf('DATABASE: Found \'%s\' using external id match.', $item->getName()), [
                     iState::COLUMN_GUIDS => $entity->getGuids(),
                 ]);
             }
@@ -164,7 +164,7 @@ final class PDOAdapter implements StorageInterface
         }
 
         if (true === (bool)($this->options[Options::DEBUG_TRACE] ?? false)) {
-            $this->logger->info('STORAGE: Selecting fields', $opts['fields'] ?? ['all']);
+            $this->logger->info('DATABASE: Selecting fields', $opts['fields'] ?? ['all']);
         }
 
         $sql = "SELECT {$fields} FROM state";
@@ -216,7 +216,7 @@ final class PDOAdapter implements StorageInterface
     {
         try {
             if (null === ($entity->id ?? null)) {
-                throw new StorageException('Unable to update item without primary key.', 51);
+                throw new DBException('Unable to update item with out primary key.', 51);
             }
 
             $data = $entity->getAll();
@@ -334,15 +334,15 @@ final class PDOAdapter implements StorageInterface
             return $actions;
         });
     }
-    
+
     public function migrations(string $dir, array $opts = []): mixed
     {
         $class = new PDOMigrations($this->pdo, $this->logger);
 
         return match (strtolower($dir)) {
-            StorageInterface::MIGRATE_UP => $class->up(),
-            StorageInterface::MIGRATE_DOWN => $class->down(),
-            default => throw new StorageException(sprintf('Unknown direction \'%s\' was given.', $dir), 91),
+            iDB::MIGRATE_UP => $class->up(),
+            iDB::MIGRATE_DOWN => $class->down(),
+            default => throw new DBException(sprintf('Unknown direction \'%s\' was given.', $dir), 91),
         };
     }
 
@@ -366,7 +366,7 @@ final class PDOAdapter implements StorageInterface
         return (new PDOMigrations($this->pdo, $this->logger))->runMaintenance();
     }
 
-    public function setLogger(LoggerInterface $logger): StorageInterface
+    public function setLogger(LoggerInterface $logger): iDB
     {
         $this->logger = $logger;
 
@@ -535,7 +535,7 @@ final class PDOAdapter implements StorageInterface
         $stmt = $this->pdo->prepare($sql);
 
         if (false === $this->execute($stmt, $cond)) {
-            throw new StorageException('Failed to execute sql query.', 61);
+            throw new DBException('Failed to execute sql query.', 61);
         }
 
         if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {

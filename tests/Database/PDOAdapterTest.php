@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Tests\Storage;
+namespace Tests\Database;
 
+use App\Libs\Database\DatabaseException as DBException;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
-use App\Libs\Storage\PDO\PDOAdapter;
-use App\Libs\Storage\StorageException;
-use App\Libs\Storage\StorageInterface;
 use DateTimeImmutable;
 use Error;
 use Monolog\Handler\TestHandler;
@@ -24,7 +24,7 @@ class PDOAdapterTest extends TestCase
     private array $testMovie = [];
     private array $testEpisode = [];
 
-    private StorageInterface|null $storage = null;
+    private iDB|null $db = null;
     protected TestHandler|null $handler = null;
 
     public function setUp(): void
@@ -40,22 +40,22 @@ class PDOAdapterTest extends TestCase
         $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
-        $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
-        $this->storage->migrations('up');
+        $this->db = new PDOAdapter($logger, new PDO('sqlite::memory:'));
+        $this->db->migrations('up');
     }
 
     public function test_insert_throw_exception_if_has_id(): void
     {
-        $this->expectException(StorageException::class);
+        $this->expectException(DBException::class);
         $this->expectExceptionCode(21);
         $item = new StateEntity($this->testEpisode);
-        $this->storage->insert($item);
-        $this->storage->insert($item);
+        $this->db->insert($item);
+        $this->db->insert($item);
     }
 
     public function test_insert_successful(): void
     {
-        $item = $this->storage->insert(new StateEntity($this->testEpisode));
+        $item = $this->db->insert(new StateEntity($this->testEpisode));
         $this->assertSame(1, $item->id);
     }
 
@@ -73,45 +73,45 @@ class PDOAdapterTest extends TestCase
         $item = new StateEntity($test);
 
         // -- db should be empty at this stage. as such we expect null.
-        $this->assertNull($this->storage->get($item));
+        $this->assertNull($this->db->get($item));
 
         // -- insert and return object and assert it's the same
-        $modified = $this->storage->insert(clone $item);
+        $modified = $this->db->insert(clone $item);
 
-        $this->assertSame($modified->getAll(), $this->storage->get($item)->getAll());
+        $this->assertSame($modified->getAll(), $this->db->get($item)->getAll());
 
         // -- look up based on id
-        $this->assertSame($modified->getAll(), $this->storage->get($modified)->getAll());
+        $this->assertSame($modified->getAll(), $this->db->get($modified)->getAll());
     }
 
     public function test_getAll_call_without_initialized_container(): void
     {
         $this->expectException(Error::class);
         $this->expectExceptionMessage('Call to a member function');
-        $this->storage->getAll();
+        $this->db->getAll();
     }
 
     public function test_getAll_conditions(): void
     {
         $item = new StateEntity($this->testEpisode);
 
-        $this->assertSame([], $this->storage->getAll(opts: ['class' => $item]));
+        $this->assertSame([], $this->db->getAll(opts: ['class' => $item]));
 
-        $this->storage->insert($item);
+        $this->db->insert($item);
 
-        $this->assertCount(1, $this->storage->getAll(opts: ['class' => $item]));
+        $this->assertCount(1, $this->db->getAll(opts: ['class' => $item]));
 
         // -- future date should be 0.
-        $this->assertCount(0, $this->storage->getAll(date: new DateTimeImmutable('now'), opts: ['class' => $item]));
+        $this->assertCount(0, $this->db->getAll(date: new DateTimeImmutable('now'), opts: ['class' => $item]));
     }
 
     public function test_update_call_without_id_exception(): void
     {
-        $this->expectException(StorageException::class);
+        $this->expectException(DBException::class);
         $this->expectExceptionCode(51);
         $item = new StateEntity($this->testEpisode);
 
-        $this->storage->update($item);
+        $this->db->update($item);
     }
 
     public function test_update_conditions(): void
@@ -125,13 +125,13 @@ class PDOAdapterTest extends TestCase
             ksort($test[$key]);
         }
 
-        $item = $this->storage->insert(new StateEntity($test));
+        $item = $this->db->insert(new StateEntity($test));
         $item->guids[Guid::GUID_IMDB] = '6101';
 
-        $updatedItem = $this->storage->update($item);
+        $updatedItem = $this->db->update($item);
 
         $this->assertSame($item, $updatedItem);
-        $this->assertSame($updatedItem->getAll(), $this->storage->get($item)->getAll());
+        $this->assertSame($updatedItem->getAll(), $this->db->get($item)->getAll());
     }
 
     public function test_remove_conditions(): void
@@ -140,17 +140,17 @@ class PDOAdapterTest extends TestCase
         $item2 = new StateEntity($this->testMovie);
         $item3 = new StateEntity([]);
 
-        $this->assertFalse($this->storage->remove($item1));
+        $this->assertFalse($this->db->remove($item1));
 
-        $item1 = $this->storage->insert($item1);
-        $this->storage->insert($item2);
+        $item1 = $this->db->insert($item1);
+        $this->db->insert($item2);
 
-        $this->assertTrue($this->storage->remove($item1));
-        $this->assertInstanceOf(StateInterface::class, $this->storage->get($item2));
+        $this->assertTrue($this->db->remove($item1));
+        $this->assertInstanceOf(StateInterface::class, $this->db->get($item2));
 
         // -- remove without id pointer.
-        $this->assertTrue($this->storage->remove($item2));
-        $this->assertFalse($this->storage->remove($item3));
+        $this->assertTrue($this->db->remove($item2));
+        $this->assertFalse($this->db->remove($item3));
     }
 
     public function test_commit_conditions(): void
@@ -160,7 +160,7 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame(
             ['added' => 2, 'updated' => 0, 'failed' => 0],
-            $this->storage->commit([$item1, $item2])
+            $this->db->commit([$item1, $item2])
         );
 
         $item1->guids['guid_anidb'] = StateInterface::TYPE_EPISODE . '/1';
@@ -168,14 +168,14 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame(
             ['added' => 0, 'updated' => 2, 'failed' => 0],
-            $this->storage->commit([$item1, $item2])
+            $this->db->commit([$item1, $item2])
         );
     }
 
     public function test_migrations_call_with_wrong_direction_exception(): void
     {
-        $this->expectException(StorageException::class);
+        $this->expectException(DBException::class);
         $this->expectExceptionCode(91);
-        $this->storage->migrations('not_dd');
+        $this->db->migrations('not_dd');
     }
 }

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\Import\MemoryMapper;
-use App\Libs\Mappers\ImportInterface;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
-use App\Libs\Storage\PDO\PDOAdapter;
-use App\Libs\Storage\StorageInterface;
 use Monolog\Logger;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
@@ -22,9 +22,9 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Cache\Psr16Cache;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
 return (function (): array {
     return [
@@ -113,9 +113,9 @@ return (function (): array {
 
         PDO::class => [
             'class' => function (): PDO {
-                $pdo = new PDO(dsn: Config::get('storage.dsn'), options: Config::get('storage.options', []));
+                $pdo = new PDO(dsn: Config::get('database.dsn'), options: Config::get('database.options', []));
 
-                foreach (Config::get('storage.exec', []) as $cmd) {
+                foreach (Config::get('database.exec', []) as $cmd) {
                     $pdo->exec($cmd);
                 }
 
@@ -123,14 +123,14 @@ return (function (): array {
             },
         ],
 
-        StorageInterface::class => [
-            'class' => function (LoggerInterface $logger, PDO $pdo): StorageInterface {
+        iDB::class => [
+            'class' => function (LoggerInterface $logger, PDO $pdo): iDB {
                 $adapter = new PDOAdapter($logger, $pdo);
 
                 if (true !== $adapter->isMigrated()) {
-                    $adapter->migrations(StorageInterface::MIGRATE_UP);
+                    $adapter->migrations(iDB::MIGRATE_UP);
                     $adapter->migrateData(
-                        Config::get('storage.version'),
+                        Config::get('database.version'),
                         Container::get(LoggerInterface::class)
                     );
                 }
@@ -144,18 +144,18 @@ return (function (): array {
         ],
 
         MemoryMapper::class => [
-            'class' => function (LoggerInterface $logger, StorageInterface $storage): ImportInterface {
-                return (new MemoryMapper(logger: $logger, storage: $storage))
+            'class' => function (LoggerInterface $logger, iDB $db): iImport {
+                return (new MemoryMapper(logger: $logger, db: $db))
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
                 LoggerInterface::class,
-                StorageInterface::class,
+                iDB::class,
             ],
         ],
 
-        ImportInterface::class => [
-            'class' => function (ImportInterface $mapper): ImportInterface {
+        iImport::class => [
+            'class' => function (iImport $mapper): iImport {
                 return $mapper;
             },
             'args' => [

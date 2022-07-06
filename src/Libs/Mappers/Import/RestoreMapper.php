@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Import;
 
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
-use App\Libs\Storage\StorageInterface as iStorage;
 use DateTimeInterface as iDate;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
@@ -141,7 +141,7 @@ final class RestoreMapper implements iImport
         return $this;
     }
 
-    public function setStorage(iStorage $storage): self
+    public function setDatabase(iDB $db): self
     {
         return $this;
     }

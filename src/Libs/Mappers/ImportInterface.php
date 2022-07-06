@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers;
 
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Storage\StorageInterface;
 use Countable;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
@@ -22,7 +22,7 @@ interface ImportInterface extends Countable
     public function setOptions(array $options = []): self;
 
     /**
-     * Preload data from storage as usable entity.
+     * Preload data from db.
      *
      * @param DateTimeInterface|null $date
      *
@@ -60,7 +60,7 @@ interface ImportInterface extends Countable
     public function remove(StateInterface $entity): bool;
 
     /**
-     * Commit Entities to storage backend.
+     * Commit changed items to db.
      *
      * @return mixed
      */
@@ -108,13 +108,13 @@ interface ImportInterface extends Countable
     public function setLogger(LoggerInterface $logger): self;
 
     /**
-     * Inject Storage.
+     * Inject db handler.
      *
-     * @param StorageInterface $storage
+     * @param iDB $db
      *
      * @return self
      */
-    public function SetStorage(StorageInterface $storage): self;
+    public function setDatabase(iDB $db): self;
 
     /**
      * Are we in dry run mode?

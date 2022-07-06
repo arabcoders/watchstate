@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Libs\Storage\PDO;
+namespace App\Libs\Database\PDO;
 
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iFace;
@@ -19,8 +19,8 @@ final class PDODataMigration
 
     public function __construct(private PDO $pdo, private LoggerInterface $logger)
     {
-        $this->version = Config::get('storage.version');
-        $this->dbPath = dirname(after(Config::get('storage.dsn'), 'sqlite:'));
+        $this->version = Config::get('database.version');
+        $this->dbPath = dirname(after(Config::get('database.dsn'), 'sqlite:'));
     }
 
     public function setLogger(LoggerInterface $logger): self

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Message;
-use App\Libs\Storage\PDO\PDOAdapter;
-use App\Libs\Storage\StorageInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
@@ -24,7 +24,7 @@ class MemoryMapperTest extends TestCase
     private array $testEpisode = [];
 
     private MemoryMapper|null $mapper = null;
-    private StorageInterface|null $storage = null;
+    private iDB|null $db = null;
     protected TestHandler|null $handler = null;
 
     public function setUp(): void
@@ -40,10 +40,10 @@ class MemoryMapperTest extends TestCase
         $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
-        $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
-        $this->storage->migrations('up');
+        $this->db = new PDOAdapter($logger, new PDO('sqlite::memory:'));
+        $this->db->migrations('up');
 
-        $this->mapper = new MemoryMapper($logger, $this->storage);
+        $this->mapper = new MemoryMapper($logger, $this->db);
         $this->mapper->setOptions(options: ['class' => new StateEntity([])]);
 
         Message::reset();
@@ -57,7 +57,7 @@ class MemoryMapperTest extends TestCase
         // -- expect 0 as we have not modified or added new item yet.
         $this->assertSame(0, $this->mapper->getObjectsCount());
 
-        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->db->commit([$testEpisode, $testMovie]);
 
         $this->mapper->loadData();
 
@@ -76,7 +76,7 @@ class MemoryMapperTest extends TestCase
         // -- expect 0 as we have not modified or added new item yet.
         $this->assertSame(0, $this->mapper->getObjectsCount());
 
-        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->db->commit([$testEpisode, $testMovie]);
 
         $this->mapper->loadData(makeDate($time - 1));
 
@@ -143,7 +143,7 @@ class MemoryMapperTest extends TestCase
         // -- expect null as we haven't added anything to db yet.
         $this->assertNull($this->mapper->get($testEpisode));
 
-        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->db->commit([$testEpisode, $testMovie]);
 
         clone $testMovie2 = $testMovie;
         clone $testEpisode2 = $testEpisode;
@@ -164,7 +164,7 @@ class MemoryMapperTest extends TestCase
 
         $this->mapper->loadData();
 
-        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->db->commit([$testEpisode, $testMovie]);
 
         $this->assertNull($this->mapper->get($testMovie));
         $this->assertNull($this->mapper->get($testEpisode));
@@ -223,7 +223,7 @@ class MemoryMapperTest extends TestCase
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $this->assertFalse($this->mapper->has($testEpisode));
-        $this->storage->commit([$testEpisode]);
+        $this->db->commit([$testEpisode]);
         $this->assertTrue($this->mapper->has($testEpisode));
     }
 
@@ -236,7 +236,7 @@ class MemoryMapperTest extends TestCase
         $testEpisode->updated = $time;
 
         $this->mapper->loadData();
-        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->db->commit([$testEpisode, $testMovie]);
         $this->assertFalse($this->mapper->has($testEpisode));
         $this->mapper->loadData(makeDate($time - 1));
         $this->assertTrue($this->mapper->has($testEpisode));
@@ -261,7 +261,7 @@ class MemoryMapperTest extends TestCase
 
         $this->assertCount(0, $this->mapper->getObjects());
 
-        $this->storage->commit([$testMovie, $testEpisode]);
+        $this->db->commit([$testMovie, $testEpisode]);
 
         $this->mapper->loadData();
 

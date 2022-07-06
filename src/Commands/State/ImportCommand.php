@@ -6,14 +6,14 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Mappers\ImportInterface;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
@@ -31,11 +31,8 @@ class ImportCommand extends Command
 
     public const TASK_NAME = 'import';
 
-    public function __construct(
-        private StorageInterface $storage,
-        private ImportInterface $mapper,
-        private LoggerInterface $logger
-    ) {
+    public function __construct(private iDB $db, private iImport $mapper, private iLogger $logger)
+    {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -67,7 +64,7 @@ class ImportCommand extends Command
                 'metadata-only',
                 null,
                 InputOption::VALUE_NONE,
-                'import metadata changes only. Works when there are records in storage.'
+                'import metadata changes only. Works when there are records in database.'
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
@@ -109,7 +106,7 @@ class ImportCommand extends Command
 
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
-            $this->storage->setOptions(options: [Options::DEBUG_TRACE => true]);
+            $this->db->setOptions(options: [Options::DEBUG_TRACE => true]);
         }
 
         if ($input->getOption('always-update-metadata')) {
@@ -117,7 +114,7 @@ class ImportCommand extends Command
         }
 
         if ($input->getOption('direct-mapper')) {
-            $this->mapper = new DirectMapper(logger: $this->logger, storage: $this->storage);
+            $this->mapper = new DirectMapper(logger: $this->logger, db: $this->db);
         }
 
         if (!empty($mapperOpts)) {
@@ -206,7 +203,7 @@ class ImportCommand extends Command
             ],
         ]);
 
-        $this->storage->singleTransaction();
+        $this->db->singleTransaction();
 
         foreach ($list as $name => &$server) {
             $metadata = false;

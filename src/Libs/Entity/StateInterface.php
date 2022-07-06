@@ -289,8 +289,8 @@ interface StateInterface
      * so to mark items as unplayed the following conditions **MUST** be met<br><br>
      *
      * 1- Backend item **MUST** be marked as unplayed.<br>
-     * 2- Storage item **MUST** be marked as played.<br>
-     * 3- Storage metadata **MUST** contain {@see iFace::COLUMN_META_DATA_PLAYED_AT} and {@see iFace::COLUMN_META_DATA_ADDED_AT} columns.<br>
+     * 2- db item **MUST** be marked as played.<br>
+     * 3- db metadata **MUST** contain {@see iFace::COLUMN_META_DATA_PLAYED_AT} and {@see iFace::COLUMN_META_DATA_ADDED_AT} columns.<br>
      * 4- backend {@see iFace::COLUMN_UPDATED} **MUST** be equal to database metadata {@see iFace::COLUMN_META_DATA_ADDED_AT}<br><br>
      *
      * @param StateInterface $backend Backend object.

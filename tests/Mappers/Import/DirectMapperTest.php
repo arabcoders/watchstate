@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Mappers\Import;
 
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
-use App\Libs\Storage\PDO\PDOAdapter;
-use App\Libs\Storage\StorageInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
@@ -24,7 +24,7 @@ class DirectMapperTest extends TestCase
     private array $testEpisode = [];
 
     protected DirectMapper|null $mapper = null;
-    protected StorageInterface|null $storage = null;
+    protected iDB|null $db = null;
     protected TestHandler|null $handler = null;
 
     public function setUp(): void
@@ -40,11 +40,11 @@ class DirectMapperTest extends TestCase
         $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
-        $this->storage = new PDOAdapter($logger, new PDO('sqlite::memory:'));
-        $this->storage->migrations('up');
+        $this->db = new PDOAdapter($logger, new PDO('sqlite::memory:'));
+        $this->db->migrations('up');
 
 
-        $this->mapper = new DirectMapper($logger, $this->storage);
+        $this->mapper = new DirectMapper($logger, $this->db);
         $this->mapper->setOptions(options: ['class' => new StateEntity([])]);
 
         Message::reset();
@@ -110,7 +110,7 @@ class DirectMapperTest extends TestCase
         // -- expect null as we haven't added anything to db yet.
         $this->assertNull($this->mapper->get($testEpisode));
 
-        $this->storage->commit([$testEpisode, $testMovie]);
+        $this->db->commit([$testEpisode, $testMovie]);
 
         clone $testMovie2 = $testMovie;
         clone $testEpisode2 = $testEpisode;
@@ -171,7 +171,7 @@ class DirectMapperTest extends TestCase
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $this->assertFalse($this->mapper->has($testEpisode));
-        $this->storage->commit([$testEpisode]);
+        $this->db->commit([$testEpisode]);
         $this->assertTrue($this->mapper->has($testEpisode));
     }
 

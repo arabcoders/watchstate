@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Libs\Storage;
+namespace App\Libs\Database;
 
 use App\Libs\Entity\StateInterface;
 use Closure;
@@ -12,19 +12,19 @@ use PDOException;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-interface StorageInterface
+interface DatabaseInterface
 {
     public const MIGRATE_UP = 'up';
 
     public const MIGRATE_DOWN = 'down';
 
     /**
-     * Set storage driver options.
+     * Set db driver options.
      *
      * @param array $options
-     * @return StorageInterface
+     * @return self
      */
-    public function setOptions(array $options): StorageInterface;
+    public function setOptions(array $options): self;
 
     /**
      * Insert Entity immediately.
@@ -101,7 +101,7 @@ interface StorageInterface
     public function commit(array $entities, array $opts = []): array;
 
     /**
-     * Migrate Backend Storage Schema.
+     * Run database migrations.
      *
      * @param string $dir direction {@see MIGRATE_UP}, {@see MIGRATE_DOWN}
      * @param array $opts
@@ -111,7 +111,7 @@ interface StorageInterface
     public function migrations(string $dir, array $opts = []): mixed;
 
     /**
-     * Migrate Backend storage data from old version.
+     * Migrate data from old database version.
      *
      * @param string $version represent the new version.
      * @param LoggerInterface|null $logger
@@ -121,14 +121,14 @@ interface StorageInterface
     public function migrateData(string $version, LoggerInterface|null $logger = null): mixed;
 
     /**
-     * Does the backend storage need to run migrations?
+     * Is the database up to date with migrations?
      *
      * @return bool
      */
     public function isMigrated(): bool;
 
     /**
-     * Run Maintenance on backend storage.
+     * Run Maintenance tasks on database.
      *
      * @param array $opts
      * @return mixed
@@ -172,7 +172,7 @@ interface StorageInterface
     /**
      * Wrap Queries into single transaction.
      *
-     * @param Closure(StorageInterface): mixed $callback
+     * @param Closure(DatabaseInterface): mixed $callback
      *
      * @return mixed
      * @throws PDOException

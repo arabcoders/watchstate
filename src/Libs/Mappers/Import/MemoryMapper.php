@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Import;
 
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
-use App\Libs\Storage\StorageInterface as iStorage;
 use DateTimeInterface as iDate;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -37,7 +37,7 @@ final class MemoryMapper implements iImport
 
     protected bool $fullyLoaded = false;
 
-    public function __construct(protected iLogger $logger, protected iStorage $storage)
+    public function __construct(protected iLogger $logger, protected iDB $db)
     {
     }
 
@@ -52,7 +52,7 @@ final class MemoryMapper implements iImport
     {
         $this->fullyLoaded = null === $date;
 
-        foreach ($this->storage->getAll($date, opts: ['class' => $this->options['class'] ?? null]) as $entity) {
+        foreach ($this->db->getAll($date, opts: ['class' => $this->options['class'] ?? null]) as $entity) {
             $pointer = self::GUID . $entity->id;
 
             if (null !== ($this->objects[$pointer] ?? null)) {
@@ -91,7 +91,7 @@ final class MemoryMapper implements iImport
         if (false === ($pointer = $this->getPointer($entity))) {
             if (true === $metadataOnly) {
                 Message::increment("{$entity->via}.{$entity->type}.failed");
-                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in storage.', [
+                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in database.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -300,7 +300,7 @@ final class MemoryMapper implements iImport
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
                 'state' => [
-                    'storage' => $cloned->getAll(),
+                    'database' => $cloned->getAll(),
                     'backend' => $entity->getAll(),
                 ],
             ]);
@@ -324,7 +324,7 @@ final class MemoryMapper implements iImport
 
         $this->removePointers($this->objects[$pointer]);
 
-        $this->storage->remove($this->objects[$pointer]);
+        $this->db->remove($this->objects[$pointer]);
 
         if (null !== ($this->objects[$pointer] ?? null)) {
             unset($this->objects[$pointer]);
@@ -339,7 +339,7 @@ final class MemoryMapper implements iImport
 
     public function commit(): mixed
     {
-        $state = $this->storage->transactional(function (iStorage $storage) {
+        $state = $this->db->transactional(function (iDB $db) {
             $list = [
                 iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
                 iState::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
@@ -365,12 +365,12 @@ final class MemoryMapper implements iImport
 
                     if (null === $entity->id) {
                         if (false === $inDryRunMode) {
-                            $storage->insert($entity);
+                            $db->insert($entity);
                         }
                         $list[$entity->type]['added']++;
                     } else {
                         if (false === $inDryRunMode) {
-                            $storage->update($entity);
+                            $db->update($entity);
                         }
                         $list[$entity->type]['updated']++;
                     }
@@ -419,13 +419,13 @@ final class MemoryMapper implements iImport
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
-        $this->storage->setLogger($logger);
+        $this->db->setLogger($logger);
         return $this;
     }
 
-    public function setStorage(iStorage $storage): self
+    public function setDatabase(iDB $db): self
     {
-        $this->storage = $storage;
+        $this->db = $db;
         return $this;
     }
 
@@ -495,7 +495,7 @@ final class MemoryMapper implements iImport
             }
         }
 
-        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->storage->get($entity))) {
+        if (false === $this->fullyLoaded && null !== ($lazyEntity = $this->db->get($entity))) {
             $this->objects[self::GUID . $entity->id] = $lazyEntity;
 
             $this->addPointers($this->objects[self::GUID . $entity->id], self::GUID . $entity->id);

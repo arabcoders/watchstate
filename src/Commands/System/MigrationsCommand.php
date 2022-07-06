@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -16,7 +16,7 @@ final class MigrationsCommand extends Command
 {
     public const ROUTE = 'system:db:migrations';
 
-    public function __construct(private StorageInterface $storage)
+    public function __construct(private iDB $db)
     {
         parent::__construct();
     }
@@ -36,6 +36,6 @@ final class MigrationsCommand extends Command
             $opts['fresh'] = true;
         }
 
-        return $this->storage->migrations(StorageInterface::MIGRATE_UP, $opts);
+        return $this->db->migrations(iDB::MIGRATE_UP, $opts);
     }
 }
