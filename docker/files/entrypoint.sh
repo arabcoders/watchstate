@@ -43,18 +43,6 @@ fi
 /usr/bin/console config:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
 /usr/bin/console config:php --fpm >"${PHP_INI_DIR}/../php-fpm.d/zzz-app-pool-settings.conf"
 
-echo "[${TIME_DATE}] Doing database migrations."
-/usr/bin/console storage:migrations
-
-echo "[${TIME_DATE}] Running database maintenance tasks."
-/usr/bin/console storage:maintenance
-
-echo "[${TIME_DATE}] Caching tool Routes."
-/usr/bin/console system:routes
-
-echo "[${TIME_DATE}] Ensuring State table has correct indexes."
-/usr/bin/console system:index
-
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   echo "[${TIME_DATE}] Starting HTTP Server."
   nginx
@@ -69,6 +57,18 @@ if [ 0 = "${WS_DISABLE_CACHE}" ]; then
   echo "[${TIME_DATE}] Starting Cache Server."
   runuser -u www-data -- redis-server "/etc/redis.conf"
 fi
+
+echo "[${TIME_DATE}] Caching tool Routes."
+/usr/bin/console system:routes
+
+echo "[${TIME_DATE}] Running database migrations."
+/usr/bin/console system:db:migrations
+
+echo "[${TIME_DATE}] Running database maintenance tasks."
+/usr/bin/console system:db:maintenance
+
+echo "[${TIME_DATE}] Ensuring State table has correct indexes."
+/usr/bin/console system:index
 
 echo "[${TIME_DATE}] Running - $(/usr/bin/console --version)"
 
