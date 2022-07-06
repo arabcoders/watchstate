@@ -282,7 +282,7 @@ where `[LIBRARY_ID]` refers to backend library id
 
 ### Q: What does mapper mean?
 
-A Mapper is class that have list of all external ids that point to record in storage. think of it as dictionary that
+A Mapper is class that have list of all external ids that point to record in database. think of it as dictionary that
 reference to specific item.
 
 #### Memory Mapper (Default)

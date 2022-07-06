@@ -7,7 +7,6 @@ WS_DISABLE_CHOWN=${WS_DISABLE_CHOWN:-0}
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
 WS_DISABLE_CRON=${WS_DISABLE_CRON:-0}
 WS_DISABLE_CACHE=${WS_DISABLE_CACHE:-0}
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 
 set -u
 
@@ -43,33 +42,41 @@ fi
 /usr/bin/console config:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
 /usr/bin/console config:php --fpm >"${PHP_INI_DIR}/../php-fpm.d/zzz-app-pool-settings.conf"
 
-echo "[${TIME_DATE}] Doing database migrations."
-/usr/bin/console storage:migrations
-
-echo "[${TIME_DATE}] Running database maintenance tasks."
-/usr/bin/console storage:maintenance
-
-echo "[${TIME_DATE}] Caching tool Routes."
-/usr/bin/console system:routes
-
-echo "[${TIME_DATE}] Ensuring State table has correct indexes."
-/usr/bin/console system:index
-
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
+  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting HTTP Server."
   nginx
 fi
 
 if [ 0 = "${WS_DISABLE_CRON}" ]; then
+  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting Task Scheduler."
   /usr/sbin/crond -b -l 2
 fi
 
 if [ 0 = "${WS_DISABLE_CACHE}" ]; then
+  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting Cache Server."
   runuser -u www-data -- redis-server "/etc/redis.conf"
 fi
 
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+echo "[${TIME_DATE}] Caching tool Routes."
+/usr/bin/console system:routes
+
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+echo "[${TIME_DATE}] Running database migrations."
+/usr/bin/console system:db:migrations
+
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+echo "[${TIME_DATE}] Running database maintenance tasks."
+/usr/bin/console system:db:maintenance
+
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+echo "[${TIME_DATE}] Ensuring State table has correct indexes."
+/usr/bin/console system:index
+
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Running - $(/usr/bin/console --version)"
 
 # first arg is `-f` or `--some-option`

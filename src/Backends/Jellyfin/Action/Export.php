@@ -160,12 +160,12 @@ class Export extends Import
 
             if ($rItem->updated >= $entity->updated && false === ag($context->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
-                    'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than storage date.',
+                    'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than database date.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
                         'comparison' => [
-                            'storage' => makeDate($entity->updated),
+                            'database' => makeDate($entity->updated),
                             'backend' => makeDate($rItem->updated),
                         ],
                     ]

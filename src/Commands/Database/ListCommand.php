@@ -7,10 +7,10 @@ namespace App\Commands\Database;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
 use Exception;
 use PDO;
 use RuntimeException;
@@ -52,9 +52,9 @@ final class ListCommand extends Command
 
     private PDO $pdo;
 
-    public function __construct(private StorageInterface $storage)
+    public function __construct(private iDB $db)
     {
-        $this->pdo = $this->storage->getPdo();
+        $this->pdo = $this->db->getPdo();
 
         parent::__construct();
     }
@@ -134,7 +134,7 @@ final class ListCommand extends Command
     {
         $limit = (int)$input->getOption('limit');
 
-        $es = fn(string $val) => $this->storage->identifier($val);
+        $es = fn(string $val) => $this->db->identifier($val);
 
         $params = [
             'limit' => $limit <= 0 ? 20 : $limit,
@@ -262,7 +262,7 @@ final class ListCommand extends Command
             $arr = [
                 'query' => $sql,
                 'parameters' => $params,
-                'raw' => $this->storage->getRawSQLString($sql, $params),
+                'raw' => $this->db->getRawSQLString($sql, $params),
             ];
 
             if ('table' === $input->getOption('output')) {

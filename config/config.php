@@ -26,7 +26,7 @@ return (function () {
                 'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
             ],
         ],
-        'storage' => [
+        'database' => [
             'version' => 'v01',
         ],
         'export' => [
@@ -47,8 +47,8 @@ return (function () {
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
 
-    $config['storage'] += [
-        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_' . ag($config, 'storage.version') . '.db',
+    $config['database'] += [
+        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_' . ag($config, 'database.version') . '.db',
         'username' => null,
         'password' => null,
         'options' => [

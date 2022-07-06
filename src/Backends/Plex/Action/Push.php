@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
-use App\Backends\Common\Response;
 use App\Backends\Common\Context;
+use App\Backends\Common\Response;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -234,12 +234,12 @@ final class Push
 
                     if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
                         $this->logger->notice(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Storage date is older than backend date.',
+                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Database date is older than backend date.',
                             [
                                 'backend' => $context->backendName,
                                 ...$logContext,
                                 'comparison' => [
-                                    'storage' => makeDate($entity->updated),
+                                    'database' => makeDate($entity->updated),
                                     'backend' => $date,
                                     'difference' => $date->getTimestamp() - $entity->updated,
                                     'extra_margin' => [

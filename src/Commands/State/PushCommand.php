@@ -7,13 +7,13 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -28,10 +28,10 @@ class PushCommand extends Command
     public const TASK_NAME = 'push';
 
     public function __construct(
-        private LoggerInterface $logger,
-        private CacheInterface $cache,
-        private StorageInterface $storage,
-        private QueueRequests $queue,
+        private iLogger $logger,
+        private iCache $cache,
+        private iDB $db,
+        private QueueRequests $queue
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -49,7 +49,7 @@ class PushCommand extends Command
                 'ignore-date',
                 null,
                 InputOption::VALUE_NONE,
-                'Ignore date comparison. Push storage state to the backends regardless of date.'
+                'Force sync database item state to the backends regardless of date comparison.'
             )
             ->setAliases(['push']);
     }
@@ -82,7 +82,7 @@ class PushCommand extends Command
         }
 
         if (!empty($items)) {
-            foreach ($this->storage->find(...$items) as $item) {
+            foreach ($this->db->find(...$items) as $item) {
                 $entities[$item->id] = $item;
             }
         }

@@ -6,10 +6,10 @@ namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
 use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface;
@@ -39,9 +39,9 @@ final class IndexCommand extends Command
 
     private PDO $db;
 
-    public function __construct(StorageInterface $storage, private iLogger $logger)
+    public function __construct(iDB $db, private iLogger $logger)
     {
-        $this->db = $storage->getPdo();
+        $this->db = $db->getPdo();
 
         parent::__construct();
     }

@@ -6,9 +6,9 @@ namespace App\Commands\Database;
 
 use App\Command;
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Helper\Table;
@@ -22,10 +22,8 @@ class QueueCommand extends Command
 {
     public const ROUTE = 'db:queue';
 
-    public function __construct(
-        private CacheInterface $cache,
-        private StorageInterface $storage,
-    ) {
+    public function __construct(private CacheInterface $cache, private iDB $db)
+    {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -51,7 +49,7 @@ class QueueCommand extends Command
         if (null !== ($id = $input->getOption('add'))) {
             $item = Container::get(StateInterface::class)::fromArray(['id' => $id]);
 
-            if (null === ($item = $this->storage->get($item))) {
+            if (null === ($item = $this->db->get($item))) {
                 $output->writeln(sprintf('<error>Record id \'%d\' does not exists.</error>', $id));
                 return self::FAILURE;
             }
@@ -85,7 +83,7 @@ class QueueCommand extends Command
         }
 
         if (!empty($items)) {
-            foreach ($this->storage->find(...$items) as $item) {
+            foreach ($this->db->find(...$items) as $item) {
                 $entities[$item->id] = $item;
             }
         }

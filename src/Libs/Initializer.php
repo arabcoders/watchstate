@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use App\Cli;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
-use App\Libs\Storage\StorageInterface;
 use Closure;
 use ErrorException;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
@@ -330,9 +330,9 @@ final class Initializer
             return new Response(304);
         }
 
-        $storage = Container::get(StorageInterface::class);
+        $db = Container::get(iDB::class);
 
-        if (null === ($local = $storage->get($entity))) {
+        if (null === ($local = $db->get($entity))) {
             if (true === $metadataOnly) {
                 $this->write(
                     $request, Logger::INFO,
@@ -349,7 +349,7 @@ final class Initializer
                 return new Response(204);
             }
 
-            $entity = $storage->insert($entity);
+            $entity = $db->insert($entity);
 
             if (true === $entity->isWatched()) {
                 queuePush($entity);
@@ -382,7 +382,7 @@ final class Initializer
                     $keys = array_merge($keys, [iFace::COLUMN_GUIDS, iFace::COLUMN_EXTRA]);
                 }
 
-                $local = $storage->update(
+                $local = $db->update(
                     $local->apply(
                         entity: $entity,
                         fields: array_merge($keys, [iFace::COLUMN_EXTRA])
@@ -428,7 +428,7 @@ final class Initializer
 
             // -- Handle mark as unplayed logic.
             if (false === $entity->isWatched() && true === $local->shouldMarkAsUnplayed($entity)) {
-                $local = $storage->update(
+                $local = $db->update(
                     $local->apply(entity: $entity, fields: [iFace::COLUMN_META_DATA])->markAsUnplayed($entity)
                 );
 
@@ -450,7 +450,7 @@ final class Initializer
             }
 
             if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                $local = $storage->update(
+                $local = $db->update(
                     $local->apply(
                         entity: $entity,
                         fields: array_merge($keys, [iFace::COLUMN_EXTRA])
@@ -490,7 +490,7 @@ final class Initializer
         }
 
         if ((clone $cloned)->apply($entity)->isChanged()) {
-            $local = $storage->update($local->apply($entity));
+            $local = $db->update($local->apply($entity));
             $stateChanged = $cloned->isWatched() !== $local->isWatched();
 
             $this->write(

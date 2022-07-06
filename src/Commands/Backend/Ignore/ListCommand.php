@@ -7,10 +7,10 @@ namespace App\Commands\Backend\Ignore;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
 use PDO;
 use Psr\Http\Message\UriInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -28,9 +28,9 @@ final class ListCommand extends Command
 
     private PDO $db;
 
-    public function __construct(StorageInterface $storage)
+    public function __construct(iDB $db)
     {
-        $this->db = $storage->getPdo();
+        $this->db = $db->getPdo();
 
         parent::__construct();
     }

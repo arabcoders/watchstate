@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Libs\Storage\PDO;
+namespace App\Libs\Database\PDO;
 
-use App\Libs\Storage\StorageInterface;
+use App\Libs\Database\DatabaseInterface as iDB;
 use PDO;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -56,7 +56,7 @@ final class PDOMigrations
                 continue;
             }
 
-            if (null === ag($migrate, StorageInterface::MIGRATE_UP, null)) {
+            if (null === ag($migrate, iDB::MIGRATE_UP, null)) {
                 $this->logger->debug(
                     sprintf(
                         'Migration #%d - %s has no up path, Skipping.',
@@ -71,7 +71,7 @@ final class PDOMigrations
 
             $this->logger->info(sprintf('Applying Migration #%d - %s', ag($migrate, 'id'), ag($migrate, 'name')));
 
-            $this->pdo->exec((string)ag($migrate, StorageInterface::MIGRATE_UP));
+            $this->pdo->exec((string)ag($migrate, iDB::MIGRATE_UP));
             $this->setVersion(ag($migrate, 'id'));
         }
 
@@ -186,8 +186,8 @@ final class PDOMigrations
                 'type' => $type,
                 'id' => $id,
                 'name' => $name,
-                StorageInterface::MIGRATE_UP => $up,
-                StorageInterface::MIGRATE_DOWN => $down,
+                iDB::MIGRATE_UP => $up,
+                iDB::MIGRATE_DOWN => $down,
             ];
         }
 

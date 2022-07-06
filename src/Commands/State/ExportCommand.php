@@ -6,14 +6,14 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Routable;
-use App\Libs\Storage\StorageInterface;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -29,10 +29,10 @@ class ExportCommand extends Command
     public const TASK_NAME = 'export';
 
     public function __construct(
-        private StorageInterface $storage,
+        private iDB $db,
         private DirectMapper $mapper,
         private QueueRequests $queue,
-        private LoggerInterface $logger
+        private iLogger $logger
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -194,14 +194,14 @@ class ExportCommand extends Command
 
             $lastSync = makeDate($minDate);
 
-            $this->logger->notice('STORAGE: Loading changed items since [%(date)].', [
+            $this->logger->notice('DATABASE: Loading changed items since [%(date)].', [
                 'date' => $lastSync->format('Y-m-d H:i:s T')
             ]);
 
-            $entities = $this->storage->getAll($lastSync);
+            $entities = $this->db->getAll($lastSync);
 
             if (count($entities) < 1 && count($export) < 1) {
-                $this->logger->notice('STORAGE: No play state change detected since [%(date)].', [
+                $this->logger->notice('DATABASE: No play state change detected since [%(date)].', [
                     'date' => $lastSync->format('Y-m-d H:i:s T')
                 ]);
                 return self::SUCCESS;
@@ -459,7 +459,7 @@ class ExportCommand extends Command
             ],
         ]);
 
-        $this->storage->singleTransaction();
+        $this->db->singleTransaction();
 
         $requests = [];
 
