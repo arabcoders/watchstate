@@ -128,4 +128,18 @@ interface ImportInterface extends Countable
      * @return bool
      */
     public function inTraceMode(): bool;
+
+    /**
+     * Get List Of registered pointers.
+     *
+     * @return array
+     */
+    public function getPointersList(): array;
+
+    /**
+     * Get List of changed items that changed.
+     *
+     * @return array
+     */
+    public function getChangedList(): array;
 }

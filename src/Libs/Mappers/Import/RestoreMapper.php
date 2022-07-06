@@ -9,7 +9,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Storage\StorageInterface as iStorage;
-use DateTimeInterface;
+use DateTimeInterface as iDate;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -44,7 +44,7 @@ final class RestoreMapper implements iImport
     /**
      * @throws \JsonMachine\Exception\InvalidArgumentException
      */
-    public function loadData(DateTimeInterface|null $date = null): self
+    public function loadData(iDate|null $date = null): self
     {
         $it = Items::fromFile($this->file, [
             'decoder' => new ErrorWrappingDecoder(new ExtJsonDecoder(true, JSON_INVALID_UTF8_IGNORE))
@@ -185,5 +185,15 @@ final class RestoreMapper implements iImport
         }
 
         return false;
+    }
+
+    public function getPointersList(): array
+    {
+        return $this->pointers;
+    }
+
+    public function getChangedList(): array
+    {
+        return [];
     }
 }
