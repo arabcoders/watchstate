@@ -296,57 +296,59 @@ final class DirectMapper implements iImport
                 }
 
                 // -- this sometimes leads to never ending updates as data from backends conflicts.
-                if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                    try {
-                        $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
+                if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+                    if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                        try {
+                            $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
 
-                        $entity->guids = Guid::makeVirtualGuid(
-                            $entity->via,
-                            ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                        );
+                            $entity->guids = Guid::makeVirtualGuid(
+                                $entity->via,
+                                ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
+                            );
 
-                        $local = $local->apply(
-                            entity: $entity,
-                            fields: array_merge($localFields, [iState::COLUMN_EXTRA])
-                        );
+                            $local = $local->apply(
+                                entity: $entity,
+                                fields: array_merge($localFields, [iState::COLUMN_EXTRA])
+                            );
 
-                        $this->removePointers($cloned)->addPointers($local, $local->id);
+                            $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                        $changes = $local->diff(fields: $localFields);
+                            $changes = $local->diff(fields: $localFields);
 
-                        if (count($changes) >= 1) {
-                            $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                            if (count($changes) >= 1) {
+                                $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                                    'id' => $cloned->id,
+                                    'backend' => $entity->via,
+                                    'title' => $cloned->getName(),
+                                    'changes' => $local->diff(fields: $localFields),
+                                ]);
+                            }
+
+                            if (false === $inDryRunMode) {
+                                $this->db->update($local);
+                            }
+
+                            if (null === ($this->changed[$local->id] ?? null)) {
+                                $this->actions[$local->type]['updated']++;
+                                Message::increment("{$entity->via}.{$local->type}.updated");
+                            }
+
+                            $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
+                        } catch (PDOException $e) {
+                            $this->actions[$local->type]['failed']++;
+                            Message::increment("{$entity->via}.{$local->type}.failed");
+                            $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
                                 'id' => $cloned->id,
-                                'backend' => $entity->via,
                                 'title' => $cloned->getName(),
-                                'changes' => $local->diff(fields: $localFields),
+                                'state' => [
+                                    'database' => $cloned->getAll(),
+                                    'backend' => $entity->getAll()
+                                ],
                             ]);
                         }
 
-                        if (false === $inDryRunMode) {
-                            $this->db->update($local);
-                        }
-
-                        if (null === ($this->changed[$local->id] ?? null)) {
-                            $this->actions[$local->type]['updated']++;
-                            Message::increment("{$entity->via}.{$local->type}.updated");
-                        }
-
-                        $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
-                    } catch (PDOException $e) {
-                        $this->actions[$local->type]['failed']++;
-                        Message::increment("{$entity->via}.{$local->type}.failed");
-                        $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                            'id' => $cloned->id,
-                            'title' => $cloned->getName(),
-                            'state' => [
-                                'database' => $cloned->getAll(),
-                                'backend' => $entity->getAll()
-                            ],
-                        ]);
+                        return $this;
                     }
-
-                    return $this;
                 }
 
                 if ($this->inTraceMode()) {

@@ -60,6 +60,12 @@ class ImportCommand extends Command
                 InputOption::VALUE_NONE,
                 'import metadata changes only. Works when there are records in database.'
             )
+            ->addOption(
+                'always-update-metadata',
+                null,
+                InputOption::VALUE_NONE,
+                'Mapper option. Always update the locally stored metadata from backend.'
+            )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
@@ -115,6 +121,10 @@ class ImportCommand extends Command
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
             $this->db->setOptions(options: [Options::DEBUG_TRACE => true]);
+        }
+
+        if ($input->getOption('always-update-metadata')) {
+            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
         if ($input->getOption('direct-mapper')) {

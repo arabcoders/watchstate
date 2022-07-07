@@ -218,36 +218,38 @@ final class MemoryMapper implements iImport
                 }
 
                 // -- this sometimes leads to never ending updates as data from backends conflicts.
-                if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                    $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
-                    $this->changed[$pointer] = $pointer;
-                    Message::increment("{$entity->via}.{$entity->type}.updated");
+                if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+                    if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                        $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
+                        $this->changed[$pointer] = $pointer;
+                        Message::increment("{$entity->via}.{$entity->type}.updated");
 
-                    $entity->guids = Guid::makeVirtualGuid(
-                        $entity->via,
-                        ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                    );
+                        $entity->guids = Guid::makeVirtualGuid(
+                            $entity->via,
+                            ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
+                        );
 
-                    $this->objects[$pointer] = $this->objects[$pointer]->apply(
-                        entity: $entity,
-                        fields: array_merge($localFields, [iState::COLUMN_EXTRA])
-                    );
+                        $this->objects[$pointer] = $this->objects[$pointer]->apply(
+                            entity: $entity,
+                            fields: array_merge($localFields, [iState::COLUMN_EXTRA])
+                        );
 
-                    $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
+                        $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
-                    $changes = $this->objects[$pointer]->diff(fields: $keys);
+                        $changes = $this->objects[$pointer]->diff(fields: $keys);
 
-                    if (count($changes) >= 1) {
-                        $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'title' => $cloned->getName(),
-                            'changes' => $changes,
-                            'fields' => implode(',', $localFields),
-                        ]);
+                        if (count($changes) >= 1) {
+                            $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                                'id' => $cloned->id,
+                                'backend' => $entity->via,
+                                'title' => $cloned->getName(),
+                                'changes' => $changes,
+                                'fields' => implode(',', $localFields),
+                            ]);
+                        }
+
+                        return $this;
                     }
-
-                    return $this;
                 }
 
                 if ($this->inTraceMode()) {
