@@ -67,6 +67,8 @@ final class DirectMapper implements iImport
                 iState::COLUMN_TYPE,
                 iState::COLUMN_PARENT,
                 iState::COLUMN_GUIDS,
+                iState::COLUMN_SEASON,
+                iState::COLUMN_EPISODE,
             ],
         ];
 
