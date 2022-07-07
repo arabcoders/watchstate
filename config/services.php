@@ -35,9 +35,9 @@ return (function (): array {
         HttpClientInterface::class => [
             'class' => function (): HttpClientInterface {
                 return new CurlHttpClient(
-                    defaultOptions:     Config::get('http.default.options', []),
+                    defaultOptions: Config::get('http.default.options', []),
                     maxHostConnections: Config::get('http.default.maxHostConnections', 25),
-                    maxPendingPushes:   Config::get('http.default.maxPendingPushes', 50),
+                    maxPendingPushes: Config::get('http.default.maxPendingPushes', 50),
                 );
             }
         ],
@@ -87,7 +87,7 @@ return (function (): array {
                     }
 
                     $backend = new RedisAdapter(
-                        redis:     $redis,
+                        redis: $redis,
                         namespace: $ns,
                     );
                 } catch (Throwable) {
@@ -129,6 +129,7 @@ return (function (): array {
 
                 if (true !== $adapter->isMigrated()) {
                     $adapter->migrations(iDB::MIGRATE_UP);
+                    $adapter->ensureIndex();
                     $adapter->migrateData(
                         Config::get('database.version'),
                         Container::get(LoggerInterface::class)

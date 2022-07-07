@@ -111,6 +111,15 @@ interface DatabaseInterface
     public function migrations(string $dir, array $opts = []): mixed;
 
     /**
+     * Check Indexes.
+     *
+     * @param array $opts
+     *
+     * @return mixed
+     */
+    public function ensureIndex(array $opts = []): mixed;
+
+    /**
      * Migrate data from old database version.
      *
      * @param string $version represent the new version.
