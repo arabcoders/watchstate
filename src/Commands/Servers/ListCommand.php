@@ -36,7 +36,7 @@ final class ListCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
@@ -45,25 +45,25 @@ final class ListCommand extends Command
 
         $list = [];
 
-        foreach (Config::get('servers', []) as $name => $server) {
+        foreach (Config::get('servers', []) as $name => $backend) {
             $import = 'Disabled';
 
-            if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+            if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $import = 'Metadata only';
             }
 
-            if (true === (bool)ag($server, 'import.enabled')) {
+            if (true === (bool)ag($backend, 'import.enabled')) {
                 $import = 'Play state & Metadata';
             }
 
-            $importLastRun = ($date = ag($server, 'import.lastSync')) ? makeDate($date) : 'No record';
-            $exportLastRun = ($date = ag($server, 'export.lastSync')) ? makeDate($date) : 'No record';
+            $importLastRun = ($date = ag($backend, 'import.lastSync')) ? makeDate($date) : 'No record';
+            $exportLastRun = ($date = ag($backend, 'export.lastSync')) ? makeDate($date) : 'No record';
 
             $list[] = [
                 'Name' => $name,
-                'Type' => ucfirst(ag($server, 'type')),
+                'Type' => ucfirst(ag($backend, 'type')),
                 'Import' => $import,
-                'Export' => true === (bool)ag($server, 'export.enabled') ? 'Enabled' : 'Disabled',
+                'Export' => true === (bool)ag($backend, 'export.enabled') ? 'Enabled' : 'Disabled',
                 'LastImportDate' => ($importLastRun instanceof DateTimeInterface) ? $importLastRun->format(
                     'Y-m-d H:i:s T'
                 ) : $importLastRun,

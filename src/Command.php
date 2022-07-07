@@ -120,14 +120,14 @@ class Command extends BaseCommand
     }
 
     /**
-     * Check Given servers config.
+     * Check Given backends file.
      *
      * @param string $config custom servers.yaml file.
      * @return string
      *
      * @throws RuntimeException if there is problem with given config.
      */
-    protected function checkCustomServersFile(string $config): string
+    protected function checkCustomBackendsFile(string $config): string
     {
         if (!file_exists($config) || !is_file($config)) {
             throw new RuntimeException(
@@ -165,7 +165,7 @@ class Command extends BaseCommand
         $default = Config::get("servers.{$name}");
         $default['name'] = $name;
 
-        return makeServer(array_merge_recursive($default, $config), $name);
+        return makeBackend(array_merge_recursive($default, $config), $name);
     }
 
     protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void
@@ -229,9 +229,7 @@ class Command extends BaseCommand
             $suggestions->suggestValues($suggest);
         }
 
-        if ($input->mustSuggestOptionValuesFor('servers-filter') ||
-            $input->mustSuggestArgumentValuesFor('server') ||
-            $input->mustSuggestArgumentValuesFor('backend')) {
+        if ($input->mustSuggestOptionValuesFor('select-backends') || $input->mustSuggestArgumentValuesFor('backend')) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];

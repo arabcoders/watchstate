@@ -24,7 +24,7 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
-#[Routable(command: self::ROUTE), Routable(command: 'import'), Routable(command: 'pull')]
+#[Routable(command: self::ROUTE)]
 class ImportCommand extends Command
 {
     public const ROUTE = 'state:import';
@@ -46,14 +46,8 @@ class ImportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
-            ->addOption(
-                'always-update-metadata',
-                null,
-                InputOption::VALUE_NONE,
-                'Mapper option. Always update the locally stored metadata from backend.'
-            )
+            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption(
                 'direct-mapper',
                 null,
@@ -68,7 +62,7 @@ class ImportCommand extends Command
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->setAliases(['import', 'pull']);
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -80,20 +74,34 @@ class ImportCommand extends Command
     {
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
-            if (!is_string($config) || !is_file($config) || !is_readable($config)) {
-                throw new RuntimeException('Unable to read data given config.');
+            try {
+                $custom = true;
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
+            } catch (RuntimeException $e) {
+                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                return self::FAILURE;
             }
-            Config::save('servers', Yaml::parseFile($config));
-            $custom = true;
         } else {
             $custom = false;
             $config = Config::get('path') . '/config/servers.yaml';
         }
 
         $list = [];
+
+        $selectBackends = (string)$input->getOption('select-backends');
         $serversFilter = (string)$input->getOption('servers-filter');
-        $selected = explode(',', $serversFilter);
-        $isCustom = !empty($serversFilter) && count($selected) >= 1;
+
+        if (!empty($serversFilter)) {
+            $this->logger->warning(
+                'The [--servers-filter] flag is deprecated and will be removed in v1.0, please use [--select-backends].'
+            );
+            if (empty($selectBackends)) {
+                $selectBackends = $serversFilter;
+            }
+        }
+
+        $selected = explode(',', $selectBackends);
+        $isCustom = !empty($selectBackends) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
@@ -109,10 +117,6 @@ class ImportCommand extends Command
             $this->db->setOptions(options: [Options::DEBUG_TRACE => true]);
         }
 
-        if ($input->getOption('always-update-metadata')) {
-            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
-        }
-
         if ($input->getOption('direct-mapper')) {
             $this->mapper = new DirectMapper(logger: $this->logger, db: $this->db);
         }
@@ -121,25 +125,25 @@ class ImportCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        foreach (Config::get('servers', []) as $serverName => $server) {
-            $type = strtolower(ag($server, 'type', 'unknown'));
+        foreach (Config::get('servers', []) as $backendName => $backend) {
+            $type = strtolower(ag($backend, 'type', 'unknown'));
             $metadata = false;
 
-            if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
-                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by servers filter flag.', [
-                    'backend' => $serverName,
+            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
+                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by [-s, --select-backends] flag.', [
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
 
             // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-            if (true === (bool)ag($server, 'import.enabled')) {
-                if (true === ag_exists($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                    $server = ag_delete($server, 'options.' . Options::IMPORT_METADATA_ONLY);
+            if (true === (bool)ag($backend, 'import.enabled')) {
+                if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                    $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
                 }
             }
 
-            if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+            if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $metadata = true;
             }
 
@@ -147,9 +151,9 @@ class ImportCommand extends Command
                 $metadata = true;
             }
 
-            if (true !== $metadata && true !== (bool)ag($server, 'import.enabled')) {
+            if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
                 $this->logger->info('SYSTEM: Ignoring [%(backend)] imports are disabled for this backend.', [
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -157,21 +161,21 @@ class ImportCommand extends Command
             if (!isset($supported[$type])) {
                 $this->logger->error('SYSTEM: Ignoring [%(backend)] because of the unexpected type [%(type)].', [
                     'type' => $type,
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
 
-            if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
+            if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
                 $this->logger->error('SYSTEM: Ignoring [%(backend)] because of invalid URL.', [
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                     'url' => $url ?? 'None',
                 ]);
                 continue;
             }
 
-            $server['name'] = $serverName;
-            $list[$serverName] = $server;
+            $backend['name'] = $backendName;
+            $list[$backendName] = $backend;
         }
 
         if (empty($list)) {
@@ -205,11 +209,11 @@ class ImportCommand extends Command
 
         $this->db->singleTransaction();
 
-        foreach ($list as $name => &$server) {
+        foreach ($list as $name => &$backend) {
             $metadata = false;
-            $opts = ag($server, 'options', []);
+            $opts = ag($backend, 'options', []);
 
-            if (true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+            if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $opts[Options::IMPORT_METADATA_ONLY] = true;
                 $metadata = true;
             }
@@ -227,10 +231,10 @@ class ImportCommand extends Command
                 $opts['client']['timeout'] = (float)$input->getOption('timeout');
             }
 
-            $server['options'] = $opts;
-            $server['class'] = makeServer($server, $name);
+            $backend['options'] = $opts;
+            $backend['class'] = makeBackend($backend, $name);
 
-            $after = ag($server, 'import.lastSync', null);
+            $after = ag($backend, 'import.lastSync', null);
 
             if (true === (bool)ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
                 $after = null;
@@ -246,9 +250,9 @@ class ImportCommand extends Command
                 'since' => null === $after ? 'Beginning' : $after->format('Y-m-d H:i:s T'),
             ]);
 
-            array_push($queue, ...$server['class']->pull($this->mapper, $after));
+            array_push($queue, ...$backend['class']->pull($this->mapper, $after));
 
-            $inDryMode = $this->mapper->inDryRunMode() || ag($server, 'options.' . Options::DRY_RUN);
+            $inDryMode = $this->mapper->inDryRunMode() || ag($backend, 'options.' . Options::DRY_RUN);
 
             if (false === $inDryMode) {
                 if (true === (bool)Message::get("{$name}.has_errors")) {
@@ -261,7 +265,7 @@ class ImportCommand extends Command
             }
         }
 
-        unset($server);
+        unset($backend);
 
         $start = makeDate();
         $this->logger->notice('SYSTEM: Waiting on [%(total)] requests.', [

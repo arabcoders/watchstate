@@ -24,39 +24,33 @@ final class UnifyCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Unify [ServerType] webhook API key.')
-            ->addOption(
-                'servers-filter',
-                's',
-                InputOption::VALUE_OPTIONAL,
-                'Only Unify selected servers, comma seperated. \'s1,s2\'.',
-                ''
-            )
+            ->setDescription('Unify [backendType] webhook API key.')
+            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument(
                 'type',
                 InputArgument::REQUIRED,
                 sprintf(
-                    'Server type to unify. Expecting one of [%s]',
+                    'Backend type to unify. Expecting one of [%s]',
                     implode('|', array_keys(Config::get('supported', [])))
                 ),
-            );
+            )
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
-        $custom = false;
         if (($config = $input->getOption('config'))) {
             try {
-                $this->checkCustomServersFile($config);
                 $custom = true;
-                Config::save('servers', Yaml::parseFile($config));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
         } else {
+            $custom = false;
             $config = Config::get('path') . '/config/servers.yaml';
             if (!file_exists($config)) {
                 touch($config);
@@ -76,44 +70,55 @@ final class UnifyCommand extends Command
             return self::FAILURE;
         }
 
+        $selectBackends = (string)$input->getOption('select-backends');
         $serversFilter = (string)$input->getOption('servers-filter');
-        $selected = explode(',', $serversFilter);
+
+        if (!empty($serversFilter)) {
+            $output->writeln(
+                '<comment>The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].</comment>'
+            );
+            if (empty($selectBackends)) {
+                $selectBackends = $serversFilter;
+            }
+        }
+
+        $selected = explode(',', $selectBackends);
         $selected = array_map('trim', $selected);
-        $isCustom = !empty($serversFilter) && count($selected) >= 1;
+        $isCustom = !empty($selectBackends) && count($selected) >= 1;
 
         $list = $keys = [];
 
-        foreach (Config::get('servers', []) as $serverName => $server) {
-            if (ag($server, 'type') !== $type) {
+        foreach (Config::get('servers', []) as $backendName => $backend) {
+            if (ag($backend, 'type') !== $type) {
                 $output->writeln(
                     sprintf(
-                        '<comment>Ignoring \'%s\' not %s server type. (type: %s).</comment>',
-                        $serverName,
+                        '<comment>Ignoring \'%s\' backend, not of %s type. (type: %s).</comment>',
+                        $backendName,
                         $type,
-                        ag($server, 'type')
+                        ag($backend, 'type')
                     ),
                     OutputInterface::VERBOSITY_DEBUG
                 );
                 continue;
             }
 
-            if ($isCustom && !in_array($serverName, $selected, true)) {
+            if ($isCustom && !in_array($backendName, $selected, true)) {
                 $output->writeln(
                     sprintf(
-                        '<comment>Ignoring \'%s\' as requested by [-s, --servers-filter] filter.</comment>',
-                        $serverName
+                        '<comment>Ignoring \'%s\' as requested by [-s, --select-backends] filter.</comment>',
+                        $backendName
                     ),
                     OutputInterface::VERBOSITY_DEBUG
                 );
                 continue;
             }
 
-            $server['name'] = $serverName;
-            $server['ref'] = "servers.{$serverName}";
+            $backend['name'] = $backendName;
+            $backend['ref'] = "servers.{$backendName}";
 
-            $list[$serverName] = $server;
+            $list[$backendName] = $backend;
 
-            if (null === ($apiToken = ag($server, 'webhook.token', null))) {
+            if (null === ($apiToken = ag($backend, 'webhook.token', null))) {
                 try {
                     $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
                 } catch (Throwable $e) {
@@ -129,7 +134,7 @@ final class UnifyCommand extends Command
 
         if (0 === $count) {
             $message = sprintf(
-                $isCustom ? '--servers-filter/-s did not return any %s server.' : 'No %s servers were found.',
+                $isCustom ? '[-s, --select-backends] did not return any %s backends.' : 'No %s backends were found.',
                 $type
             );
             $output->writeln(sprintf('<error>%s</error>', $message));
@@ -137,7 +142,7 @@ final class UnifyCommand extends Command
         }
 
         if (1 === $count) {
-            $output->writeln(sprintf('<info>We found only one %s server, therefore, no need to unify.</info>', $type));
+            $output->writeln(sprintf('<info>We found only one %s backend, therefore, no need to unify.</info>', $type));
             return self::SUCCESS;
         }
 
@@ -147,16 +152,16 @@ final class UnifyCommand extends Command
         }
 
         // -- check for server unique identifier before unifying.
-        foreach ($list as $serverName => $server) {
-            $ref = ag($server, 'ref');
+        foreach ($list as $backendName => $backend) {
+            $ref = ag($backend, 'ref');
 
             if (null !== Config::get("{$ref}.uuid", null)) {
                 continue;
             }
 
-            $output->writeln(sprintf('<error>ERROR %s: does not have server unique id set.</error>', $serverName));
-            $output->writeln('<comment>Please run this command to update server info.</comment>');
-            $output->writeln(sprintf(commandContext() . 'servers:manage \'%s\' ', $serverName));
+            $output->writeln(sprintf('<error>ERROR %s: does not have backend unique id set.</error>', $backendName));
+            $output->writeln('<comment>Please run this command to update backend info.</comment>');
+            $output->writeln(sprintf(commandContext() . 'servers:manage \'%s\' ', $backendName));
             return self::FAILURE;
         }
 
@@ -167,8 +172,8 @@ final class UnifyCommand extends Command
             return self::FAILURE;
         }
 
-        foreach ($list as $server) {
-            $ref = ag($server, 'ref');
+        foreach ($list as $backend) {
+            $ref = ag($backend, 'ref');
             Config::save("{$ref}.webhook.token", $apiToken);
         }
 
@@ -178,7 +183,7 @@ final class UnifyCommand extends Command
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
-        $output->writeln(sprintf('<comment>Unified the API key of %d %s servers.</comment>', count($list), $type));
+        $output->writeln(sprintf('<comment>Unified the API key of %d %s backends.</comment>', count($list), $type));
         $output->writeln(sprintf('<info>%s global webhook API key is: %s</info>', ucfirst($type), $apiToken));
         return self::SUCCESS;
     }

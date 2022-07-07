@@ -30,32 +30,30 @@ final class EditCommand extends Command
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
-            ->addArgument('server', InputArgument::REQUIRED, 'Backend name');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        $custom = false;
-
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                $this->checkCustomServersFile($config);
                 $custom = true;
-                $servers = (array)Yaml::parseFile($config);
+                $backends = Yaml::parseFile($this->checkCustomBackendsFile($config));
             } catch (\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
         } else {
+            $custom = false;
             $config = Config::get('path') . '/config/servers.yaml';
             if (!file_exists($config)) {
                 touch($config);
             }
-            $servers = (array)Config::get('servers', []);
+            $backends = (array)Config::get('servers', []);
         }
 
-        $name = $input->getArgument('server');
+        $name = $input->getArgument('backend');
 
         if (!isValidName($name)) {
             $output->writeln(
@@ -67,8 +65,8 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if (null === ($server = ag($servers, $name, null))) {
-            $output->writeln(sprintf('<error>ERROR: Server \'%s\' not found.</error>', $name));
+        if (null === ($backend = ag($backends, $name, null))) {
+            $output->writeln(sprintf('<error>ERROR: Backend \'%s\' not found.</error>', $name));
             return self::FAILURE;
         }
 
@@ -80,7 +78,7 @@ final class EditCommand extends Command
                     sprintf('<info>The API key for \'%s\' webhook endpoint is: \'%s\'.</info>', $name, $apiToken)
                 );
 
-                $server = ag_set($server, 'webhook.token', $apiToken);
+                $backend = ag_set($backend, 'webhook.token', $apiToken);
             } catch (Throwable $e) {
                 $output->writeln(sprintf('<error>ERROR: %s</error>', $e->getMessage()));
                 return self::FAILURE;
@@ -102,7 +100,7 @@ final class EditCommand extends Command
             }
 
             if (null === $value && !$input->getOption('delete')) {
-                $output->writeln(ag($server, $key));
+                $output->writeln(ag($backend, $key));
                 return self::SUCCESS;
             }
 
@@ -117,12 +115,12 @@ final class EditCommand extends Command
                     $value = (string)$value;
                 }
 
-                if ($value === ag($server, $key, null)) {
+                if ($value === ag($backend, $key, null)) {
                     $output->writeln('<comment>Not updating. Value already matches.</comment>');
                     return self::SUCCESS;
                 }
 
-                $server = ag_set($server, $key, $value);
+                $backend = ag_set($backend, $key, $value);
 
                 $output->writeln(
                     sprintf(
@@ -135,12 +133,12 @@ final class EditCommand extends Command
             }
 
             if ($input->getOption('delete')) {
-                if (false === ag_exists($server, $key)) {
+                if (false === ag_exists($backend, $key)) {
                     $output->writeln(sprintf('<error>%s: \'%s\' key does not exists.</error>', $name, $key));
                     return self::FAILURE;
                 }
 
-                $server = ag_delete($server, $key);
+                $backend = ag_delete($backend, $key);
                 $output->writeln(sprintf('<info>%s: Removed \'%s\' key.</info>', $name, $key));
             }
         }
@@ -149,9 +147,7 @@ final class EditCommand extends Command
             copy($config, $config . '.bak');
         }
 
-        $servers = ag_set($servers, $name, $server);
-
-        file_put_contents($config, Yaml::dump($servers, 8, 2));
+        file_put_contents($config, Yaml::dump(ag_set($backends, $name, $backend), 8, 2));
 
         return self::SUCCESS;
     }

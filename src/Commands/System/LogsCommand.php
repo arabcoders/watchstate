@@ -225,7 +225,7 @@ final class LogsCommand extends Command
                 '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
             );
             $output->writeln(
-                '<comment>For example: docker exec -ti watchstate console servers:manage my_home_server</comment>'
+                '<comment>For example: docker exec -ti watchstate console servers:manage my_plex</comment>'
             );
             return self::FAILURE;
         }

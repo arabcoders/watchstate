@@ -295,63 +295,66 @@ final class DirectMapper implements iImport
                     return $this;
                 }
 
-                /**
-                 * this sometimes leads to never ending updates as data from backends conflicts.
-                 * as such we have it disabled by default.
-                 */
-                if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
-                    if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                        try {
-                            $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
+                // -- this sometimes leads to never ending updates as data from backends conflicts.
+                if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                    try {
+                        $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
 
-                            $entity->guids = Guid::makeVirtualGuid(
-                                $entity->via,
-                                ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                            );
+                        $entity->guids = Guid::makeVirtualGuid(
+                            $entity->via,
+                            ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
+                        );
 
-                            $local = $local->apply(
-                                entity: $entity,
-                                fields: array_merge($localFields, [iState::COLUMN_EXTRA])
-                            );
+                        $local = $local->apply(
+                            entity: $entity,
+                            fields: array_merge($localFields, [iState::COLUMN_EXTRA])
+                        );
 
-                            $this->removePointers($cloned)->addPointers($local, $local->id);
+                        $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                            $changes = $local->diff(fields: $localFields);
+                        $changes = $local->diff(fields: $localFields);
 
-                            if (count($changes) >= 1) {
-                                $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
-                                    'id' => $cloned->id,
-                                    'backend' => $entity->via,
-                                    'title' => $cloned->getName(),
-                                    'changes' => $local->diff(fields: $localFields),
-                                ]);
-                            }
-
-                            if (false === $inDryRunMode) {
-                                $this->db->update($local);
-                            }
-
-                            if (null === ($this->changed[$local->id] ?? null)) {
-                                $this->actions[$local->type]['updated']++;
-                                Message::increment("{$entity->via}.{$local->type}.updated");
-                            }
-
-                            $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
-                        } catch (PDOException $e) {
-                            $this->actions[$local->type]['failed']++;
-                            Message::increment("{$entity->via}.{$local->type}.failed");
-                            $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
+                        if (count($changes) >= 1) {
+                            $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                                 'id' => $cloned->id,
+                                'backend' => $entity->via,
                                 'title' => $cloned->getName(),
-                                'state' => [
-                                    'database' => $cloned->getAll(),
-                                    'backend' => $entity->getAll()
-                                ],
+                                'changes' => $local->diff(fields: $localFields),
                             ]);
                         }
 
-                        return $this;
+                        if (false === $inDryRunMode) {
+                            $this->db->update($local);
+                        }
+
+                        if (null === ($this->changed[$local->id] ?? null)) {
+                            $this->actions[$local->type]['updated']++;
+                            Message::increment("{$entity->via}.{$local->type}.updated");
+                        }
+
+                        $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
+                    } catch (PDOException $e) {
+                        $this->actions[$local->type]['failed']++;
+                        Message::increment("{$entity->via}.{$local->type}.failed");
+                        $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
+                            'id' => $cloned->id,
+                            'title' => $cloned->getName(),
+                            'state' => [
+                                'database' => $cloned->getAll(),
+                                'backend' => $entity->getAll()
+                            ],
+                        ]);
                     }
+
+                    return $this;
+                }
+
+                if ($this->inTraceMode()) {
+                    $this->logger->debug('MAPPER: Ignoring [%(backend)] [%(title)]. No changes detected.', [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                    ]);
                 }
 
                 Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
@@ -363,7 +366,7 @@ final class DirectMapper implements iImport
                 array_keys_diff(
                     base: array_flip(iState::ENTITY_KEYS),
                     list: iState::ENTITY_IGNORE_DIFF_CHANGES,
-                    has:  false
+                    has: false
                 )
             );
 

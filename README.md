@@ -56,10 +56,10 @@ $ docker exec -ti watchstate console state:import -v
 ```
 
 This command will pull your play state from all your backends. To import from specific backends use
-the `[-s, --servers-filter]` flag which accept comma seperated list of backend names. For example,
+the `[-s, --select-backends]` flag which accept comma seperated list of backend names. For example,
 
 ```bash
-$ docker exec -ti watchstate console state:import -v --servers-filter 'home_plex,home_jellyfin' 
+$ docker exec -ti watchstate console state:import -v --select-backends 'home_plex,home_jellyfin' 
 ```
 
 Now that you have imported your current play state enable the import task by adding the following environment variables
@@ -87,11 +87,12 @@ To export your current play state to backends that have export enabled, run the 
 $ docker exec -ti watchstate console state:export -v
 ```
 
-This command will export your current play state. To export to specific backends use the `[-s, --servers-filter]` flag
-which accept comma seperated list of backend names. For example,
+This command will export your current play state to all of your export enabled backends. To export to
+specific backends use the `[-s, --select-backends]` flag which accept comma seperated list of backend names. For
+example,
 
 ```bash
-$ docker exec -ti watchstate console state:export -v --servers-filter 'home_plex,home_jellyfin' 
+$ docker exec -ti watchstate console state:export -v --select-backends 'home_plex,home_jellyfin' 
 ```
 
 Now that you have exported your current play state, enable the export task by adding the following environment variables

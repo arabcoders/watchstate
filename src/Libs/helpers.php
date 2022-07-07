@@ -299,12 +299,12 @@ if (!function_exists('jsonResponse')) {
         $headers['Content-Type'] = 'application/json';
 
         return new Response(
-            status:  $status,
+            status: $status,
             headers: $headers,
-            body:    json_encode(
-                         $body,
-                         JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-                     )
+            body: json_encode(
+                $body,
+                JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
+            )
         );
     }
 }
@@ -382,41 +382,41 @@ if (!function_exists('after')) {
     }
 }
 
-if (!function_exists('makeServer')) {
+if (!function_exists('makeBackend')) {
     /**
-     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $server
+     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $backend
      * @param string|null $name server name.
      * @return ServerInterface
      *
      * @throws RuntimeException if configuration is wrong.
      */
-    function makeServer(array $server, string|null $name = null): ServerInterface
+    function makeBackend(array $backend, string|null $name = null): ServerInterface
     {
-        if (null === ($serverType = ag($server, 'type'))) {
-            throw new RuntimeException('No server type was selected.');
+        if (null === ($backendType = ag($backend, 'type'))) {
+            throw new RuntimeException('No backend type was set.');
         }
 
-        if (null === ag($server, 'url')) {
-            throw new RuntimeException('No url was set for server.');
+        if (null === ag($backend, 'url')) {
+            throw new RuntimeException('No Backend url was set.');
         }
 
-        if (null === ($class = Config::get("supported.{$serverType}", null))) {
+        if (null === ($class = Config::get("supported.{$backendType}", null))) {
             throw new RuntimeException(
                 sprintf(
-                    'Unexpected server type was given. Was expecting [%s] but got \'%s\' instead.',
-                    $serverType,
+                    'Unexpected backend type was given. Expecting [%s] but got \'%s\' instead.',
+                    $backendType,
                     implode('|', Config::get("supported", []))
                 )
             );
         }
 
         return Container::getNew($class)->setUp(
-            name:    $name ?? ag($server, 'name', fn() => md5(ag($server, 'url'))),
-            url:     new Uri(ag($server, 'url')),
-            token:   ag($server, 'token', null),
-            userId:  ag($server, 'user', null),
-            uuid:    ag($server, 'uuid', null),
-            options: ag($server, 'options', []),
+            name: $name ?? ag($backend, 'name', fn() => md5(ag($backend, 'url'))),
+            url: new Uri(ag($backend, 'url')),
+            token: ag($backend, 'token', null),
+            userId: ag($backend, 'user', null),
+            uuid: ag($backend, 'uuid', null),
+            options: ag($backend, 'options', []),
         );
     }
 }

@@ -28,14 +28,15 @@ final class ViewCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('View Backends settings.')
-            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
+            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,
-                'Can be any key from servers.yaml, use dot notion to access sub keys, for example "webhook.token"'
-            );
+                'Can be any key from servers.yaml, use dot notion to access sub keys, for example [webhook.token]'
+            )
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
     }
 
     /**
@@ -46,34 +47,45 @@ final class ViewCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
         }
 
-        $list = [];
+        $selectBackends = (string)$input->getOption('select-backends');
         $serversFilter = (string)$input->getOption('servers-filter');
-        $selected = array_map('trim', explode(',', $serversFilter));
-        $isCustom = !empty($serversFilter) && count($selected) >= 1;
+
+        if (!empty($serversFilter)) {
+            $output->writeln(
+                '<comment>The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].</comment>'
+            );
+            if (empty($selectBackends)) {
+                $selectBackends = $serversFilter;
+            }
+        }
+
+        $list = [];
+        $selected = array_map('trim', explode(',', $selectBackends));
+        $isCustom = !empty($selectBackends) && count($selected) >= 1;
         $filter = $input->getArgument('filter');
 
-        foreach (Config::get('servers', []) as $serverName => $server) {
-            if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
+        foreach (Config::get('servers', []) as $backendName => $backend) {
+            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
                 $output->writeln(
-                    sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $serverName),
+                    sprintf('%s: Ignoring backend as requested by [-s, --select-backends].', $backendName),
                     OutputInterface::VERBOSITY_VERY_VERBOSE
                 );
                 continue;
             }
 
-            $list[$serverName] = ['name' => $serverName, ...$server];
+            $list[$backendName] = ['name' => $backendName, ...$backend];
         }
 
         if (empty($list)) {
             throw new RuntimeException(
-                $isCustom ? '--servers-filter/-s did not return any backend.' : 'No backends were found.'
+                $isCustom ? '[-s, --select-backends] did not return any backend.' : 'No backends were found.'
             );
         }
 
@@ -81,11 +93,11 @@ final class ViewCommand extends Command
         $count = count($list);
 
         $rows = [];
-        foreach ($list as $serverName => $server) {
+        foreach ($list as $backendName => $backend) {
             $x++;
             $rows[] = [
-                $serverName,
-                trim(Yaml::dump(ag($server, $filter, 'Not configured, or invalid key.'), 8, 2))
+                $backendName,
+                trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2))
             ];
 
             if ($x < $count) {

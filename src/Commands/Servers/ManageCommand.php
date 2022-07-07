@@ -62,9 +62,9 @@ final class ManageCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                $this->checkCustomServersFile($config);
+                $this->checkCustomBackendsFile($config);
                 $custom = true;
-                $servers = (array)Yaml::parseFile($config);
+                $backends = (array)Yaml::parseFile($config);
             } catch (\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
@@ -74,7 +74,7 @@ final class ManageCommand extends Command
             if (!file_exists($config)) {
                 touch($config);
             }
-            $servers = (array)Config::get('servers', []);
+            $backends = (array)Config::get('servers', []);
         }
 
         $add = $input->getOption('add');
@@ -90,7 +90,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        if (false === $add && null === ag($servers, "{$name}.type", null)) {
+        if (false === $add && null === ag($backends, "{$name}.type", null)) {
             $output->writeln(
                 sprintf(
                     '<error>ERROR: Backend \'%s\' not found. To add new backend append --add flag to the command.</error>',
@@ -100,7 +100,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        if (true === $add && null !== ag($servers, "{$name}.type", null)) {
+        if (true === $add && null !== ag($backends, "{$name}.type", null)) {
             $output->writeln(
                 sprintf(
                     '<error>ERROR: Backend name \'%s\' already exists in \'%s\' omit the --add flag if you want to edit the config.</error>',
@@ -111,7 +111,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        $u = $rerun ?? ag($servers, $name, []);
+        $u = $rerun ?? ag($backends, $name, []);
 
         // -- $name.type
         (function () use ($input, $output, &$u, $name) {
@@ -209,8 +209,8 @@ final class ManageCommand extends Command
                     '<info>Getting backend unique identifier. Please wait...</info>'
                 );
 
-                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
-                $chosen = ag($u, 'uuid', fn() => makeServer($server, $name)->getServerUUID(true));
+                $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
+                $chosen = ag($u, 'uuid', fn() => makeBackend($backend, $name)->getServerUUID(true));
             } catch (Throwable $e) {
                 $output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $output->writeln(
@@ -264,8 +264,8 @@ final class ManageCommand extends Command
                 );
 
                 $list = $map = $ids = [];
-                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
-                $users = makeServer($server, $name)->getUsersList();
+                $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
+                $users = makeBackend($backend, $name)->getUsersList();
 
                 if (empty($users)) {
                     throw new \RuntimeException('Backend returned empty list of users.');
@@ -507,9 +507,9 @@ final class ManageCommand extends Command
             copy($config, $config . '.bak');
         }
 
-        $servers = ag_set($servers, $name, $u);
+        $backends = ag_set($backends, $name, $u);
 
-        file_put_contents($config, Yaml::dump($servers, 8, 2));
+        file_put_contents($config, Yaml::dump($backends, 8, 2));
 
         $output->writeln('<info>Config updated.</info>');
 
@@ -534,7 +534,7 @@ final class ManageCommand extends Command
                 return $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
             }
         }
-        
+
         return self::SUCCESS;
     }
 }
