@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Backends;
 
 use App\Command;
 use App\Commands\System\IndexCommand;
@@ -21,18 +21,19 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE)]
+#[Routable(command: self::ROUTE), Routable(command: 'servers:manage')]
 final class ManageCommand extends Command
 {
-    public const ROUTE = 'servers:manage';
+    public const ROUTE = 'backends:manage';
 
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Manage backend settings.')
+            ->setDescription('Add/Edit backend settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->setAliases(['servers:manage']);
     }
 
     /**
@@ -52,7 +53,7 @@ final class ManageCommand extends Command
                 '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
             );
             $output->writeln(
-                '<comment>For example: docker exec -ti watchstate console servers:manage my_home_server</comment>'
+                '<comment>For example: docker exec -ti watchstate console backends:manage my_home_server</comment>'
             );
             return self::FAILURE;
         }

@@ -38,7 +38,7 @@ $ docker-compose pull && docker-compose up -d
 after starting the container for the first time you need to add your backends, and to do so run the following command:
 
 ```bash
-$ docker exec -ti watchstate console servers:manage --add -- [BACKEND_NAME]
+$ docker exec -ti watchstate console backends:manage --add -- [BACKEND_NAME]
 ```
 
 This command is interactive and will ask you for some questions to add your backend, if you want to edit the backend

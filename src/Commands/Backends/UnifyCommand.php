@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Backends;
 
 use App\Command;
 use App\Libs\Config;
@@ -16,10 +16,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE)]
+#[Routable(command: self::ROUTE), Routable(command: 'servers:unify')]
 final class UnifyCommand extends Command
 {
-    public const ROUTE = 'servers:unify';
+    public const ROUTE = 'backends:unify';
 
     protected function configure(): void
     {
@@ -35,6 +35,7 @@ final class UnifyCommand extends Command
                     implode('|', array_keys(Config::get('supported', [])))
                 ),
             )
+            ->setAliases(['servers:unify'])
             ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
     }
 
@@ -161,7 +162,7 @@ final class UnifyCommand extends Command
 
             $output->writeln(sprintf('<error>ERROR %s: does not have backend unique id set.</error>', $backendName));
             $output->writeln('<comment>Please run this command to update backend info.</comment>');
-            $output->writeln(sprintf(commandContext() . 'servers:manage \'%s\' ', $backendName));
+            $output->writeln(sprintf(commandContext() . 'backends:manage \'%s\' ', $backendName));
             return self::FAILURE;
         }
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Backends;
 
 use App\Command;
 use App\Libs\Config;
@@ -19,10 +19,10 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-#[Routable(command: self::ROUTE)]
+#[Routable(command: self::ROUTE), Routable(command: 'servers:view')]
 final class ViewCommand extends Command
 {
-    public const ROUTE = 'servers:view';
+    public const ROUTE = 'backends:view';
 
     protected function configure(): void
     {
@@ -36,6 +36,7 @@ final class ViewCommand extends Command
                 InputArgument::OPTIONAL,
                 'Can be any key from servers.yaml, use dot notion to access sub keys, for example [webhook.token]'
             )
+            ->setAliases(['servers:view'])
             ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
     }
 

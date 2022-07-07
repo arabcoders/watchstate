@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Backends;
 
 use App\Command;
 use App\Libs\Config;
@@ -16,10 +16,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE)]
+#[Routable(command: self::ROUTE), Routable(command: 'servers:edit')]
 final class EditCommand extends Command
 {
-    public const ROUTE = 'servers:edit';
+    public const ROUTE = 'backends:edit';
 
     protected function configure(): void
     {
@@ -30,7 +30,8 @@ final class EditCommand extends Command
             ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name')
+            ->setAliases(['servers:edit']);
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int

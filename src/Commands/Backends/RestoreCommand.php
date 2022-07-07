@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backend;
+namespace App\Commands\Backends;
 
 use App\Command;
 use App\Libs\Config;
@@ -26,7 +26,7 @@ use Throwable;
 #[Routable(command: self::ROUTE)]
 class RestoreCommand extends Command
 {
-    public const ROUTE = 'backend:restore';
+    public const ROUTE = 'backends:restore';
 
     public const TASK_NAME = 'export';
 

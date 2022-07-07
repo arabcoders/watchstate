@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Backends;
 
 use App\Command;
 use App\Libs\Config;
@@ -16,16 +16,17 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-#[Routable(command: self::ROUTE)]
+#[Routable(command: self::ROUTE), Routable(command: 'servers:list')]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'servers:list';
+    public const ROUTE = 'backends:list';
 
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->setDescription('List Added backends.');
+            ->setDescription('List Added backends.')
+            ->setAliases(['servers:list']);
     }
 
     /**
