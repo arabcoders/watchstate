@@ -16,7 +16,7 @@ services:
         image: ghcr.io/arabcoders/watchstate:latest
         container_name: watchstate
         restart: unless-stopped
-        # For information about supported environment variables head to FAQ.md page.
+        # For information about supported environment variables visit FAQ page.
         # works for both global and container specific environment variables. 
         environment:
             - WS_UID=${UID:-1000} # Set container user id.
@@ -38,7 +38,7 @@ $ docker-compose pull && docker-compose up -d
 after starting the container for the first time you need to add your backends, and to do so run the following command:
 
 ```bash
-$ docker exec -ti watchstate console backends:manage --add -- [BACKEND_NAME]
+$ docker exec -ti watchstate console config:add [BACKEND_NAME]
 ```
 
 This command is interactive and will ask you for some questions to add your backend, if you want to edit the backend

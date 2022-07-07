@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backends;
+namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
@@ -19,7 +19,7 @@ use Throwable;
 #[Routable(command: self::ROUTE), Routable(command: 'servers:unify')]
 final class UnifyCommand extends Command
 {
-    public const ROUTE = 'backends:unify';
+    public const ROUTE = 'config:unify';
 
     protected function configure(): void
     {
@@ -162,7 +162,7 @@ final class UnifyCommand extends Command
 
             $output->writeln(sprintf('<error>ERROR %s: does not have backend unique id set.</error>', $backendName));
             $output->writeln('<comment>Please run this command to update backend info.</comment>');
-            $output->writeln(sprintf(commandContext() . 'backends:manage \'%s\' ', $backendName));
+            $output->writeln(sprintf(commandContext() . 'config:manage \'%s\' ', $backendName));
             return self::FAILURE;
         }
 

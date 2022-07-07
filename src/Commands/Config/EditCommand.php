@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backends;
+namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
@@ -19,7 +19,7 @@ use Throwable;
 #[Routable(command: self::ROUTE), Routable(command: 'servers:edit')]
 final class EditCommand extends Command
 {
-    public const ROUTE = 'backends:edit';
+    public const ROUTE = 'config:edit';
 
     protected function configure(): void
     {

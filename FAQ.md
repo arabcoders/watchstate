@@ -123,7 +123,7 @@ can run the same command with `[-h, --help]` to see more options to extend the l
 Run the following command:
 
 ```bash
-$ docker exec -ti watchstate console backends:edit --key options.ignore --set 'id1,id2,id3' -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.ignore --set 'id1,id2,id3' -- [BACKEND_NAME] 
 ```
 
 where `id1,id2,id3` refers to backend library id
@@ -132,7 +132,7 @@ If you ignored a library by mistake you can run the same command again and omit 
 entirely by running the following command
 
 ```bash
-$ docker exec -ti watchstate console backends:edit --delete --key options.ignore -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --delete --key options.ignore -- [BACKEND_NAME] 
 ```
 
 ##### Note
@@ -161,7 +161,7 @@ after that you can do `./ws command` for example, `./ws db:list`
 Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
 
 ```bash
-$ docker exec -ti watchstate console backends:edit --key options.client.http_version --set 1.0 -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.client.http_version --set 1.0 -- [BACKEND_NAME] 
 ```
 
 This will force set the internal http client to use http v1 if it does not fix your problem, please open bug report
@@ -174,7 +174,7 @@ about it.
 If you want to increase the timeout for specific backend you can run the following command:
 
 ```bash
-$ docker exec -ti watchstate console backends:edit --key options.client.timeout --set 600 -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.client.timeout --set 600 -- [BACKEND_NAME] 
 ```
 
 where `600` is the number of secs before the timeout handler kill the request.
@@ -361,13 +361,13 @@ X-apikey: [WEBHOOK_TOKEN]
 where `[WEBHOOK_TOKEN]` Should match the backend specific `webhook.token` value. to see the token for each backend run
 
 ```bash
-$ docker exec -ti watchstate console backends:view --select-backends [BACKEND_NAME] -- webhook.token
+$ docker exec -ti watchstate console config:view --select-backends [BACKEND_NAME] -- webhook.token
 ```
 
 If you see 'Not configured, or invalid key.' or empty value. run the following command
 
 ```bash
-$ docker exec -ti watchstate console backends:edit --regenerate-webhook-token -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --regenerate-webhook-token -- [BACKEND_NAME] 
 ```
 
 #### Emby (you need "Emby Premiere" to use webhooks).
@@ -403,7 +403,7 @@ If you have multiple plex backends and use the same PlexPass account for all of 
 running the following command:
 
 ```bash
-$ docker exec -ti watchstate console backends:unify plex 
+$ docker exec -ti watchstate console config:unify plex 
 Plex global webhook API key is: [random_string]
 ```
 
@@ -412,7 +412,7 @@ identify the backends, The unify command will do the necessary adjustments to ha
 information run.
 
 ```bash
-$ docker exec -ti watchstate console help backends:unify 
+$ docker exec -ti watchstate console help config:unify 
 ```
 
 #### Jellyfin (Free)

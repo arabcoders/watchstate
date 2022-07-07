@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backends;
+namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
@@ -22,7 +22,7 @@ use Symfony\Component\Yaml\Yaml;
 #[Routable(command: self::ROUTE), Routable(command: 'servers:view')]
 final class ViewCommand extends Command
 {
-    public const ROUTE = 'backends:view';
+    public const ROUTE = 'config:view';
 
     protected function configure(): void
     {

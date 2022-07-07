@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backends;
+namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
@@ -19,7 +19,7 @@ use Symfony\Component\Yaml\Yaml;
 #[Routable(command: self::ROUTE), Routable(command: 'servers:list')]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'backends:list';
+    public const ROUTE = 'config:list';
 
     protected function configure(): void
     {

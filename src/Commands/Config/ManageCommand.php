@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Backends;
+namespace App\Commands\Config;
 
 use App\Command;
+use App\Commands\State\ImportCommand;
 use App\Commands\System\IndexCommand;
 use App\Libs\Config;
 use App\Libs\Options;
@@ -24,12 +25,12 @@ use Throwable;
 #[Routable(command: self::ROUTE), Routable(command: 'servers:manage')]
 final class ManageCommand extends Command
 {
-    public const ROUTE = 'backends:manage';
+    public const ROUTE = 'config:manage';
 
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Add/Edit backend settings.')
+            ->setDescription('Manage backend settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
@@ -53,7 +54,7 @@ final class ManageCommand extends Command
                 '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
             );
             $output->writeln(
-                '<comment>For example: docker exec -ti watchstate console backends:manage my_home_server</comment>'
+                '<comment>For example: docker exec -ti watchstate console config:manage my_server</comment>'
             );
             return self::FAILURE;
         }
@@ -514,25 +515,60 @@ final class ManageCommand extends Command
 
         $output->writeln('<info>Config updated.</info>');
 
-        if ($input->getOption('add')) {
+        if (false === $custom && $input->getOption('add')) {
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
+
                 Create Database indexes now? <comment>[Y|N] [Default: Yes]</comment>
                 -----------------
-                <info>
-                This is necessary action to ensure speedy operations on database,
+                <info>This is necessary action to ensure speedy operations on database,
                 If not run now, you have to manually run the system:index command, or restart the container
-                which will trigger index check to make sure your database data is fully indexed.
-                </info>
-                -----------------
+                which will trigger index check to make sure your database data is fully indexed.</info>
                 <comment>P.S: this could take few minutes to execute depending on your disk speed.</comment>
+                -----------------
+
                 TEXT;
 
             $question = new ConfirmationQuestion($text . PHP_EOL . '> ', true);
 
             if (true === $helper->ask($input, $output, $question)) {
-                return $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
+                $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
+            }
+
+            $importEnabled = (bool)ag($u, 'import.enabled');
+            $metaEnabled = (bool)ag($u, 'options.' . Options::IMPORT_METADATA_ONLY);
+
+            if (true === $importEnabled || true === $metaEnabled) {
+                $importType = $importEnabled ? 'play state & metadata' : 'metadata only.';
+
+                $helper = $this->getHelper('question');
+                $text =
+                    <<<TEXT
+
+                Would you like to import <info>{type}</info> from the backend now? <comment>[Y|N] [Default: No]</comment>
+                -----------------
+                <comment>P.S: this could take few minutes to execute.</comment>
+                -----------------
+
+                TEXT;
+
+                $text = replacer($text, ['type' => $importType]);
+
+                $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
+
+                if (true === $helper->ask($input, $output, $question)) {
+                    $output->writeln(
+                        replacer('<info>Importing {type} from {name}</info>', [
+                            'name' => $name,
+                            'type' => $importType
+                        ])
+                    );
+                    $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
+                    $cmd->run(new ArrayInput(['--quiet', '--select-backends' => $name]), $output);
+                }
+
+                $output->writeln('<info>Import complete</info>');
             }
         }
 
