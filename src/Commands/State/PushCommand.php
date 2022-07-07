@@ -20,7 +20,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-#[Routable(command: self::ROUTE), Routable(command: 'push')]
+#[Routable(command: self::ROUTE)]
 class PushCommand extends Command
 {
     public const ROUTE = 'state:push';
@@ -50,8 +50,7 @@ class PushCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Force sync database item state to the backends regardless of date comparison.'
-            )
-            ->setAliases(['push']);
+            );
     }
 
     /**
