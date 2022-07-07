@@ -321,7 +321,7 @@ it's slower than `MemoryMapper`.
 | WS_LOGGER_FILE_ENABLE    | bool   | Save logs to file.                                                            | `true`             |
 | WS_LOGGER_FILE_LEVEL     | string | File Logger Level.                                                            | `ERROR`            |
 | WS_WEBHOOK_DEBUG         | bool   | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters. | `false`            |
-| WS_EPISODES_DISABLE_GUID | bool   | Disable external id parsing for episodes and rely on relative ids.            | `false`            |
+| WS_EPISODES_DISABLE_GUID | bool   | Disable external id parsing for episodes and rely on relative ids.            | `true`             |
 
 Note for environment variables that has `{TASK}` you should replace it with one
 of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`. To see tasks active settings run
