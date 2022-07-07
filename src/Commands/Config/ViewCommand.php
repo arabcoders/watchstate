@@ -98,7 +98,7 @@ final class ViewCommand extends Command
             $x++;
             $rows[] = [
                 $backendName,
-                trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2))
+                $this->filterData($backend, $filter)
             ];
 
             if ($x < $count) {
@@ -131,5 +131,21 @@ final class ViewCommand extends Command
 
             $suggestions->suggestValues($suggest);
         }
+    }
+
+    private function filterData(array $backend, string|null $filter = null): string
+    {
+        if (null === $filter || false === str_contains($filter, ',')) {
+            return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
+        }
+
+        $filters = array_map(fn($val) => trim($val), explode(',', $filter));
+        $list = [];
+
+        foreach ($filters as $fil) {
+            $list[$fil] = ag($backend, $fil, 'Not configured, or invalid key.');
+        }
+
+        return trim(Yaml::dump($list, 8, 2));
     }
 }
