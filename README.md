@@ -1,7 +1,7 @@
 # WatchState
 
 WatchState is a tool that can sync your play state cross your media backends, without relying on 3rd party services,
-this tool support `Jellyfin`, `Plex Media Server`and `Emby`. It's also come with some features, like
+this tool support `Jellyfin`, `Plex Media Server` and `Emby`. It's also come with some features, like
 finding `mis-identified` or `unmatched` items, and the ability to
 `search` your backend for specific `item id` or `title`.
 
@@ -33,19 +33,23 @@ After creating your docker compose file, start the container.
 $ docker-compose pull && docker-compose up -d
 ```
 
-# Adding backends
+# Adding backend
 
-after starting the container for the first time you need to add your backends, and to do so run the following command:
+After starting the container you should start adding your backends and to do so run the following command:
 
 ```bash
 $ docker exec -ti watchstate console config:add [BACKEND_NAME]
 ```
 
-This command is interactive and will ask you for some questions to add your backend, if you want to edit the backend
-config again or if you made mistake just run the same command without `--add` flag. After adding your backends, You
-should import your current play state.
+This command is interactive and will ask you for some questions to add your backend.
 
----
+# Managing backend
+
+To edit backend settings run
+
+```bash
+$ docker exec -ti watchstate console config:manage [BACKEND_NAME]
+```
 
 # Importing play state.
 
