@@ -161,15 +161,15 @@ final class StateEntity implements iFace
                 $this->guids,
                 Guid::getSupported(includeVirtual: true)
             ), context: [
-                'backend' => $this->via,
-                'backend_id' => ag($this->getMetadata($this->via) ?? [], 'id'),
-                'item' => [
-                    'id' => $this->id,
-                    'type' => $this->type,
-                    'year' => $this->year,
-                    'title' => $this->getName()
-                ]
+            'backend' => $this->via,
+            'backend_id' => ag($this->getMetadata($this->via) ?? [], 'id'),
+            'item' => [
+                'id' => $this->id,
+                'type' => $this->type,
+                'year' => $this->year,
+                'title' => $this->getName()
             ]
+        ]
         )->getPointers();
     }
 

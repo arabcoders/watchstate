@@ -155,7 +155,7 @@ final class ParseWebhook
                     $context->backendName => [
                         iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                         iState::COLUMN_GUIDS => $guid->parse(
-                            guids:   ag($item, 'Guid', []),
+                            guids: ag($item, 'Guid', []),
                             context: $logContext
                         ),
                     ]
@@ -181,31 +181,31 @@ final class ParseWebhook
 
             $entity = $this->createEntity(
                 context: $context,
-                guid:    $guid,
-                item:    $obj,
-                opts:    ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
+                guid: $guid,
+                item: $obj,
+                opts: ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(
                     status: false,
-                    error:  new Error(
-                                message: 'Ignoring [%(backend)] [%(title)] webhook event. No valid/supported external ids.',
-                                context: [
-                                             'backend' => $context->backendName,
-                                             'title' => $entity->getName(),
-                                             'context' => [
-                                                 'attributes' => $request->getAttributes(),
-                                                 'parsed' => $entity->getAll(),
-                                                 'payload' => $request->getParsedBody(),
-                                             ],
-                                         ],
-                                level:   Levels::ERROR
-                            ),
-                    extra:  [
-                                'http_code' => 200,
-                                'message' => $context->backendName . ': Import ignored. No valid/supported external ids.'
+                    error: new Error(
+                        message: 'Ignoring [%(backend)] [%(title)] webhook event. No valid/supported external ids.',
+                        context: [
+                            'backend' => $context->backendName,
+                            'title' => $entity->getName(),
+                            'context' => [
+                                'attributes' => $request->getAttributes(),
+                                'parsed' => $entity->getAll(),
+                                'payload' => $request->getParsedBody(),
                             ],
+                        ],
+                        level: Levels::ERROR
+                    ),
+                    extra: [
+                        'http_code' => 200,
+                        'message' => $context->backendName . ': Import ignored. No valid/supported external ids.'
+                    ],
                 );
             }
 
@@ -213,28 +213,28 @@ final class ParseWebhook
         } catch (Throwable $e) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Unhandled exception was thrown during [%(backend)] webhook event parsing.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'exception' => [
-                                             'file' => $e->getFile(),
-                                             'line' => $e->getLine(),
-                                             'kind' => get_class($e),
-                                             'message' => $e->getMessage(),
-                                             'trace' => $context->trace ? $e->getTrace() : [],
-                                         ],
-                                         'context' => [
-                                             'attributes' => $request->getAttributes(),
-                                             'payload' => $request->getParsedBody(),
-                                         ],
-                                     ],
-                            level:   Levels::ERROR
-                        ),
-                extra:  [
-                            'http_code' => 200,
-                            'message' => $context->backendName . ': Failed to handle payload. Check logs.'
+                error: new Error(
+                    message: 'Unhandled exception was thrown during [%(backend)] webhook event parsing.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
                         ],
+                        'context' => [
+                            'attributes' => $request->getAttributes(),
+                            'payload' => $request->getParsedBody(),
+                        ],
+                    ],
+                    level: Levels::ERROR
+                ),
+                extra: [
+                    'http_code' => 200,
+                    'message' => $context->backendName . ': Failed to handle payload. Check logs.'
+                ],
             );
         }
     }

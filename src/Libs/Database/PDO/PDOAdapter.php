@@ -346,6 +346,11 @@ final class PDOAdapter implements iDB
         };
     }
 
+    public function ensureIndex(array $opts = []): mixed
+    {
+        return (new PDOIndexer($this->pdo, $this->logger))->ensureIndex($opts);
+    }
+
     public function migrateData(string $version, LoggerInterface|null $logger = null): mixed
     {
         return (new PDODataMigration($this->pdo, $logger ?? $this->logger))->automatic();

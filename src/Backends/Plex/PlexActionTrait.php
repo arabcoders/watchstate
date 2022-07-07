@@ -139,8 +139,8 @@ trait PlexActionTrait
             if (null !== ($parentId = ag($item, ['grandparentRatingKey', 'parentRatingKey']))) {
                 $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
                     context: $context,
-                    guid:    $guid,
-                    id:      $parentId
+                    guid: $guid,
+                    id: $parentId
                 );
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
             }

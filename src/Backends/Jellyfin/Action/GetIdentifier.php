@@ -56,23 +56,23 @@ class GetIdentifier
                 if (200 !== $response->getStatusCode()) {
                     return new Response(
                         status: false,
-                        error:  new Error(
-                                    message: 'Request for [%(backend)] %(action) returned with unexpected [%(status_code)] status code.',
-                                    context: [
-                                                 'action' => $this->action,
-                                                 'client' => $context->clientName,
-                                                 'backend' => $context->backendName,
-                                                 'status_code' => $response->getStatusCode(),
-                                             ],
-                                    level:   Levels::WARNING
-                                )
+                        error: new Error(
+                            message: 'Request for [%(backend)] %(action) returned with unexpected [%(status_code)] status code.',
+                            context: [
+                                'action' => $this->action,
+                                'client' => $context->clientName,
+                                'backend' => $context->backendName,
+                                'status_code' => $response->getStatusCode(),
+                            ],
+                            level: Levels::WARNING
+                        )
                     );
                 }
 
                 $item = json_decode(
-                    json:        $response->getContent(),
+                    json: $response->getContent(),
                     associative: true,
-                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
 
                 if (true === $context->trace) {
@@ -85,11 +85,11 @@ class GetIdentifier
                 }
 
                 return new Response(
-                    status:   true,
+                    status: true,
                     response: ag($item, 'Id', null)
                 );
             },
-            action:  $this->action,
+            action: $this->action,
         );
     }
 }

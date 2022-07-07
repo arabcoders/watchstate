@@ -179,7 +179,7 @@ final class Initializer
 
     private function defaultHttpServer(ServerRequestInterface $realRequest): ResponseInterface
     {
-        $log = $server = [];
+        $log = $backend = [];
         $class = null;
 
         $request = $realRequest;
@@ -209,7 +209,7 @@ final class Initializer
             }
 
             try {
-                $class = makeServer($info, $name);
+                $class = makeBackend($info, $name);
             } catch (RuntimeException $e) {
                 $this->write($request, Logger::ERROR, 'An exception was thrown in [%(backend)] instance creation.', [
                     'backend' => $name,
@@ -230,14 +230,14 @@ final class Initializer
             if (null !== ($userId = ag($info, 'user', null)) && true === (bool)ag($info, 'webhook.match.user')) {
                 if (null === ($requestUser = ag($attr, 'user.id'))) {
                     $validUser = false;
-                    $server = $class = null;
+                    $backend = $class = null;
                     $log[] = 'Request user is not set';
                     continue;
                 }
 
                 if (false === hash_equals((string)$userId, (string)$requestUser)) {
                     $validUser = false;
-                    $server = $class = null;
+                    $backend = $class = null;
                     $log[] = sprintf(
                         'Request user id [%s] does not match configured value [%s]',
                         $requestUser ?? 'NOT SET',
@@ -252,14 +252,14 @@ final class Initializer
             if (null !== ($uuid = ag($info, 'uuid', null)) && true === (bool)ag($info, 'webhook.match.uuid')) {
                 if (null === ($requestBackendId = ag($attr, 'backend.id'))) {
                     $validUUid = false;
-                    $server = $class = null;
+                    $backend = $class = null;
                     $log[] = 'backend unique id is not set';
                     continue;
                 }
 
                 if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
                     $validUUid = false;
-                    $server = $class = null;
+                    $backend = $class = null;
                     $log[] = sprintf(
                         'Request backend unique id [%s] does not match configured value [%s]',
                         $requestBackendId ?? 'NOT SET',
@@ -271,11 +271,11 @@ final class Initializer
                 $validUUid = true;
             }
 
-            $server = array_replace_recursive(['name' => $name], $info);
+            $backend = array_replace_recursive(['name' => $name], $info);
             break;
         }
 
-        if (empty($server) || null === $class) {
+        if (empty($backend) || null === $class) {
             if (false === $validUser) {
                 $message = 'token is valid, User matching failed.';
             } elseif (false === $validUUid) {
@@ -290,16 +290,16 @@ final class Initializer
 
         // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
         // -- @RELEASE remove 'webhook.import'
-        if (true === (bool)ag($server, ['import.enabled', 'webhook.import'])) {
-            if (true === ag_exists($server, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                $server = ag_delete($server, 'options.' . Options::IMPORT_METADATA_ONLY);
+        if (true === (bool)ag($backend, ['import.enabled', 'webhook.import'])) {
+            if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
             }
         }
 
-        $metadataOnly = true === (bool)ag($server, 'options.' . Options::IMPORT_METADATA_ONLY);
+        $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         // -- @RELEASE remove 'webhook.import'
-        if (true !== $metadataOnly && true !== (bool)ag($server, ['import.enabled', 'webhook.import'])) {
+        if (true !== $metadataOnly && true !== (bool)ag($backend, ['import.enabled', 'webhook.import'])) {
             $this->write($request, Logger::ERROR, 'Import are disabled for [%(backend)].', [
                 'backend' => $class->getName()
             ]);

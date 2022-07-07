@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Servers;
+namespace App\Commands\Config;
 
 use App\Command;
+use App\Commands\State\ImportCommand;
 use App\Commands\System\IndexCommand;
 use App\Libs\Config;
 use App\Libs\Options;
@@ -21,10 +22,10 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE)]
+#[Routable(command: self::ROUTE), Routable(command: 'servers:manage')]
 final class ManageCommand extends Command
 {
-    public const ROUTE = 'servers:manage';
+    public const ROUTE = 'config:manage';
 
     protected function configure(): void
     {
@@ -32,7 +33,8 @@ final class ManageCommand extends Command
             ->setDescription('Manage backend settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->setAliases(['servers:manage']);
     }
 
     /**
@@ -52,7 +54,7 @@ final class ManageCommand extends Command
                 '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
             );
             $output->writeln(
-                '<comment>For example: docker exec -ti watchstate console servers:manage my_home_server</comment>'
+                '<comment>For example: docker exec -ti watchstate console config:manage my_server</comment>'
             );
             return self::FAILURE;
         }
@@ -62,9 +64,9 @@ final class ManageCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                $this->checkCustomServersFile($config);
+                $this->checkCustomBackendsFile($config);
                 $custom = true;
-                $servers = (array)Yaml::parseFile($config);
+                $backends = (array)Yaml::parseFile($config);
             } catch (\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
@@ -74,7 +76,7 @@ final class ManageCommand extends Command
             if (!file_exists($config)) {
                 touch($config);
             }
-            $servers = (array)Config::get('servers', []);
+            $backends = (array)Config::get('servers', []);
         }
 
         $add = $input->getOption('add');
@@ -90,7 +92,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        if (false === $add && null === ag($servers, "{$name}.type", null)) {
+        if (false === $add && null === ag($backends, "{$name}.type", null)) {
             $output->writeln(
                 sprintf(
                     '<error>ERROR: Backend \'%s\' not found. To add new backend append --add flag to the command.</error>',
@@ -100,7 +102,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        if (true === $add && null !== ag($servers, "{$name}.type", null)) {
+        if (true === $add && null !== ag($backends, "{$name}.type", null)) {
             $output->writeln(
                 sprintf(
                     '<error>ERROR: Backend name \'%s\' already exists in \'%s\' omit the --add flag if you want to edit the config.</error>',
@@ -111,7 +113,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        $u = $rerun ?? ag($servers, $name, []);
+        $u = $rerun ?? ag($backends, $name, []);
 
         // -- $name.type
         (function () use ($input, $output, &$u, $name) {
@@ -209,8 +211,8 @@ final class ManageCommand extends Command
                     '<info>Getting backend unique identifier. Please wait...</info>'
                 );
 
-                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
-                $chosen = ag($u, 'uuid', fn() => makeServer($server, $name)->getServerUUID(true));
+                $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
+                $chosen = ag($u, 'uuid', fn() => makeBackend($backend, $name)->getServerUUID(true));
             } catch (Throwable $e) {
                 $output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $output->writeln(
@@ -264,8 +266,8 @@ final class ManageCommand extends Command
                 );
 
                 $list = $map = $ids = [];
-                $server = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
-                $users = makeServer($server, $name)->getUsersList();
+                $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
+                $users = makeBackend($backend, $name)->getUsersList();
 
                 if (empty($users)) {
                     throw new \RuntimeException('Backend returned empty list of users.');
@@ -507,34 +509,69 @@ final class ManageCommand extends Command
             copy($config, $config . '.bak');
         }
 
-        $servers = ag_set($servers, $name, $u);
+        $backends = ag_set($backends, $name, $u);
 
-        file_put_contents($config, Yaml::dump($servers, 8, 2));
+        file_put_contents($config, Yaml::dump($backends, 8, 2));
 
         $output->writeln('<info>Config updated.</info>');
 
-        if ($input->getOption('add')) {
+        if (false === $custom && $input->getOption('add')) {
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
+
                 Create Database indexes now? <comment>[Y|N] [Default: Yes]</comment>
                 -----------------
-                <info>
-                This is necessary action to ensure speedy operations on database,
+                <info>This is necessary action to ensure speedy operations on database,
                 If not run now, you have to manually run the system:index command, or restart the container
-                which will trigger index check to make sure your database data is fully indexed.
-                </info>
-                -----------------
+                which will trigger index check to make sure your database data is fully indexed.</info>
                 <comment>P.S: this could take few minutes to execute depending on your disk speed.</comment>
+                -----------------
+
                 TEXT;
 
             $question = new ConfirmationQuestion($text . PHP_EOL . '> ', true);
 
             if (true === $helper->ask($input, $output, $question)) {
-                return $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
+                $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
+            }
+
+            $importEnabled = (bool)ag($u, 'import.enabled');
+            $metaEnabled = (bool)ag($u, 'options.' . Options::IMPORT_METADATA_ONLY);
+
+            if (true === $importEnabled || true === $metaEnabled) {
+                $importType = $importEnabled ? 'play state & metadata' : 'metadata only.';
+
+                $helper = $this->getHelper('question');
+                $text =
+                    <<<TEXT
+
+                Would you like to import <info>{type}</info> from the backend now? <comment>[Y|N] [Default: No]</comment>
+                -----------------
+                <comment>P.S: this could take few minutes to execute.</comment>
+                -----------------
+
+                TEXT;
+
+                $text = replacer($text, ['type' => $importType]);
+
+                $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
+
+                if (true === $helper->ask($input, $output, $question)) {
+                    $output->writeln(
+                        replacer('<info>Importing {type} from {name}</info>', [
+                            'name' => $name,
+                            'type' => $importType
+                        ])
+                    );
+                    $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
+                    $cmd->run(new ArrayInput(['--quiet', '--select-backends' => $name]), $output);
+                }
+
+                $output->writeln('<info>Import complete</info>');
             }
         }
-        
+
         return self::SUCCESS;
     }
 }

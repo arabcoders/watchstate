@@ -39,9 +39,6 @@ if [ 0 = "${WS_DISABLE_CHOWN}" ]; then
   chown -R www-data:www-data /app /config /var/lib/nginx/ /etc/redis.conf
 fi
 
-/usr/bin/console config:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
-/usr/bin/console config:php --fpm >"${PHP_INI_DIR}/../php-fpm.d/zzz-app-pool-settings.conf"
-
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting HTTP Server."
@@ -78,6 +75,9 @@ echo "[${TIME_DATE}] Ensuring State table has correct indexes."
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Running - $(/usr/bin/console --version)"
+
+/usr/bin/console system:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
+/usr/bin/console system:php --fpm >"${PHP_INI_DIR}/../php-fpm.d/zzz-app-pool-settings.conf"
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then

@@ -39,7 +39,7 @@ final class QueryCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
                 $arr = [
                     'error' => $e->getMessage()
@@ -65,7 +65,7 @@ final class QueryCommand extends Command
             $results = $backend->search(
                 query: $query,
                 limit: (int)$input->getOption('limit'),
-                opts:  $opts,
+                opts: $opts,
             );
 
             if (count($results) < 1) {

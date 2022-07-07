@@ -49,7 +49,7 @@ final class UnmatchedCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
                 $arr = [
                     'error' => $e->getMessage()

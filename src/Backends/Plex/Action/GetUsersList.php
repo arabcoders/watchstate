@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Libs\Container;
 use App\Libs\Options;
 use JsonException;
@@ -66,21 +66,21 @@ final class GetUsersList
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Request for [%(backend)] users list returned with unexpected [%(status_code)] status code.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'status_code' => $response->getStatusCode(),
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'Request for [%(backend)] users list returned with unexpected [%(status_code)] status code.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'status_code' => $response->getStatusCode(),
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         }
 
         $json = json_decode(
-            json:        $response->getContent(),
+            json: $response->getContent(),
             associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
 
         if ($context->trace) {
@@ -115,8 +115,8 @@ final class GetUsersList
 
             if (true === (bool)ag($opts, 'tokens')) {
                 $tokenRequest = $this->getUserToken(
-                    context:  $context,
-                    userId:   ag($user, 'uuid'),
+                    context: $context,
+                    userId: ag($user, 'uuid'),
                     username: ag($data, 'name'),
                 );
 
@@ -175,23 +175,23 @@ final class GetUsersList
             if (201 !== $response->getStatusCode()) {
                 return new Response(
                     status: false,
-                    error:  new Error(
-                                message: 'Request for [%(backend)] user [%(username)] temporary access token responded with unexpected [%(status_code)] status code.',
-                                context: [
-                                             'backend' => $context->backendName,
-                                             'username' => $username,
-                                             'user_id' => $userId,
-                                             'status_code' => $response->getStatusCode(),
-                                         ],
-                                level:   Levels::ERROR
-                            ),
+                    error: new Error(
+                        message: 'Request for [%(backend)] user [%(username)] temporary access token responded with unexpected [%(status_code)] status code.',
+                        context: [
+                            'backend' => $context->backendName,
+                            'username' => $username,
+                            'user_id' => $userId,
+                            'status_code' => $response->getStatusCode(),
+                        ],
+                        level: Levels::ERROR
+                    ),
                 );
             }
 
             $json = json_decode(
-                json:        $response->getContent(),
+                json: $response->getContent(),
                 associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
             if ($context->trace) {
@@ -233,9 +233,9 @@ final class GetUsersList
             ]);
 
             $json = json_decode(
-                json:        $response->getContent(),
+                json: $response->getContent(),
                 associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
             if ($context->trace) {
@@ -257,35 +257,35 @@ final class GetUsersList
 
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'No permanent access token found in [%(backend)] user [%(username)] response.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'username' => $username,
-                                         'user_id' => $userId,
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'No permanent access token found in [%(backend)] user [%(username)] response.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'username' => $username,
+                        'user_id' => $userId,
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         } catch (Throwable $e) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Unhandled exception was thrown during request for [%(backend)] [%(username)] access token.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'username' => $username,
-                                         'user_id' => $userId,
-                                         'exception' => [
-                                             'file' => after($e->getFile(), ROOT_PATH),
-                                             'line' => $e->getLine(),
-                                             'kind' => get_class($e),
-                                             'message' => $e->getMessage(),
-                                             'trace' => $context->trace ? $e->getTrace() : [],
-                                         ],
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'Unhandled exception was thrown during request for [%(backend)] [%(username)] access token.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'username' => $username,
+                        'user_id' => $userId,
+                        'exception' => [
+                            'file' => after($e->getFile(), ROOT_PATH),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ],
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         }
     }

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Options;
 use JsonException;
@@ -55,14 +55,14 @@ final class GetLibrariesList
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'status_code' => $response->getStatusCode(),
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'status_code' => $response->getStatusCode(),
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         }
 
@@ -87,16 +87,16 @@ final class GetLibrariesList
         if (empty($listDirs)) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Request for [%(backend)] libraries returned empty list.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'response' => [
-                                             'body' => $json
-                                         ],
-                                     ],
-                            level:   Levels::WARNING
-                        ),
+                error: new Error(
+                    message: 'Request for [%(backend)] libraries returned empty list.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'response' => [
+                            'body' => $json
+                        ],
+                    ],
+                    level: Levels::WARNING
+                ),
             );
         }
 

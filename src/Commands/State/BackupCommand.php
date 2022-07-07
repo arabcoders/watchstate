@@ -50,8 +50,8 @@ class BackupCommand extends Command
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'No actions will be committed.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic.')
+            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption(
                 'no-enhance',
                 null,
@@ -65,6 +65,7 @@ class BackupCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Full path backup file. Will only be used if backup list is 1'
             )
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
             ->setHelp(
                 <<<HELP
 Generate <info>portable</info> backup of your backends play state that can be used to restore any supported backend type.
@@ -78,7 +79,7 @@ The command will only work on backends that has import enabled.
 Backups generated without <info>[-k, --keep]</info> flag are subject to be <info>REMOVED</info> during system:prune run.
 To keep permanent copy of your backups you can use the <info>[-k, --keep]</info> flag. For example:
 
-{$cmdContext} state:backup <info>--keep</info> [--servers-filter <info>my_home</info>]
+{$cmdContext} state:backup <info>--keep</info> [--select-backends <info>my_backend</info>]
 
 Backups generated with --keep flag will not contain a date and will be named [<info>{backend}.json</info>] where automated backups
 will be named [<info>{backend}.{date}.json</info>]
@@ -97,16 +98,16 @@ By defualt we store backups at {$backupDir}
 
 By defualt we enhance the data from the backend to allow the backup to be usuable by all if your backends,
 The expanded externals ids make the data more portable, However, if you do not wish to have this enabled. You can
-Disable it via the flag <info>[--no-enhance].</info> We recommand to enhanced data.
+Disable it via the flag <info>[--no-enhance].</info> We recommand to keep this option enabled.
 
 <comment># I want different file name for my backup?</comment>
 
 Backup names are something tricky, however it's possible to choose the backup filename if the total number
-of backed up backends are 1. So, in essence you have to combine two flags <info>[-s, --servers-filter]</info> and <info>[--file]</info>.
+of backed up backends are 1. So, in essence you have to combine two flags <info>[-s, --select-backends]</info> and <info>[--file]</info>.
 
-For example, to backup [<info>my_plex</info>] backend data to [<info>/tmp/myplex.json</info>] do the following:
+For example, to backup [<info>my_backend</info>] backend data to [<info>/tmp/my_backend.json</info>] do the following:
 
-{$cmdContext} state:backup <info>--servers-filter</info> my_plex <info>--file</info> /tmp/myplex.json
+{$cmdContext} state:backup <info>--select-backends</info> my_backend <info>--file</info> /tmp/my_backend.json
 
 HELP
             );
@@ -121,13 +122,24 @@ HELP
     {
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
-            Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+            Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
+        }
+
+        $selectBackends = (string)$input->getOption('select-backends');
+        $serversFilter = (string)$input->getOption('servers-filter');
+
+        if (!empty($serversFilter)) {
+            $this->logger->warning(
+                'The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].'
+            );
+            if (empty($selectBackends)) {
+                $selectBackends = $serversFilter;
+            }
         }
 
         $list = [];
-        $serversFilter = (string)$input->getOption('servers-filter');
-        $selected = explode(',', $serversFilter);
-        $isCustom = !empty($serversFilter) && count($selected) >= 1;
+        $selected = explode(',', $selectBackends);
+        $isCustom = !empty($selectBackends) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
@@ -146,19 +158,19 @@ HELP
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        foreach (Config::get('servers', []) as $serverName => $server) {
-            $type = strtolower(ag($server, 'type', 'unknown'));
+        foreach (Config::get('servers', []) as $backendName => $backend) {
+            $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if ($isCustom && $input->getOption('exclude') === in_array($serverName, $selected)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
                 $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by servers filter flag.', [
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
 
-            if (true !== (bool)ag($server, 'import.enabled')) {
+            if (true !== (bool)ag($backend, 'import.enabled')) {
                 $this->logger->info('SYSTEM: Ignoring [%(backend)] imports are disabled for this backend.', [
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -166,21 +178,21 @@ HELP
             if (!isset($supported[$type])) {
                 $this->logger->error('SYSTEM: Ignoring [%(backend)] because of the unexpected type [%(type)].', [
                     'type' => $type,
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
 
-            if (null === ($url = ag($server, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
+            if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
                 $this->logger->error('SYSTEM: Ignoring [%(backend)] because of invalid URL.', [
-                    'backend' => $serverName,
+                    'backend' => $backendName,
                     'url' => $url ?? 'None',
                 ]);
                 continue;
             }
 
-            $server['name'] = $serverName;
-            $list[$serverName] = $server;
+            $backend['name'] = $backendName;
+            $list[$backendName] = $backend;
         }
 
         if (empty($list)) {
@@ -214,8 +226,8 @@ HELP
 
         $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
 
-        foreach ($list as $name => &$server) {
-            $opts = ag($server, 'options', []);
+        foreach ($list as $name => &$backend) {
+            $opts = ag($backend, 'options', []);
 
             if ($input->getOption('trace')) {
                 $opts[Options::DEBUG_TRACE] = true;
@@ -229,8 +241,8 @@ HELP
                 $opts['client']['timeout'] = (float)$input->getOption('timeout');
             }
 
-            $server['options'] = $opts;
-            $server['class'] = makeServer($server, $name);
+            $backend['options'] = $opts;
+            $backend['class'] = makeBackend($backend, $name);
 
             $this->logger->notice('SYSTEM: Backing up [%(backend)] play state.', [
                 'backend' => $name,
@@ -249,7 +261,7 @@ HELP
             }
 
             $fileName = replacer($fileName, [
-                'backend' => ag($server, 'name'),
+                'backend' => ag($backend, 'name'),
                 'date' => makeDate()->format('Ymd'),
             ]);
 
@@ -257,19 +269,19 @@ HELP
                 touch($fileName);
             }
 
-            $server['fp'] = new SplFileObject($fileName, 'wb+');
+            $backend['fp'] = new SplFileObject($fileName, 'wb+');
 
-            $server['fp']->fwrite('[');
+            $backend['fp']->fwrite('[');
 
             array_push(
-                   $queue,
-                ...$server['class']->backup($this->mapper, $server['fp'], [
+                $queue,
+                ...$backend['class']->backup($this->mapper, $backend['fp'], [
                 'no_enhance' => true === $input->getOption('no-enhance')
             ])
             );
         }
 
-        unset($server);
+        unset($backend);
 
         $start = makeDate();
         $this->logger->notice('SYSTEM: Waiting on [%(total)] requests.', [
@@ -297,14 +309,14 @@ HELP
             gc_collect_cycles();
         }
 
-        foreach ($list as $server) {
-            if (null === ($server['fp'] ?? null)) {
+        foreach ($list as $backend) {
+            if (null === ($backend['fp'] ?? null)) {
                 continue;
             }
 
-            if (true === ($server['fp'] instanceof SplFileObject)) {
-                $server['fp']->fseek(-1, SEEK_END);
-                $server['fp']->fwrite(PHP_EOL . ']');
+            if (true === ($backend['fp'] instanceof SplFileObject)) {
+                $backend['fp']->fseek(-1, SEEK_END);
+                $backend['fp']->fwrite(PHP_EOL . ']');
             }
         }
 

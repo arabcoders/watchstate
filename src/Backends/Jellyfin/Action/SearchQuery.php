@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Options;
 use JsonException;
@@ -79,22 +79,22 @@ class SearchQuery
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Search request for [%(query)] in [%(backend)] returned with unexpected [%(status_code)] status code.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'query' => $query,
-                                         'status_code' => $response->getStatusCode(),
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'Search request for [%(query)] in [%(backend)] returned with unexpected [%(status_code)] status code.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'query' => $query,
+                        'status_code' => $response->getStatusCode(),
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         }
 
         $json = json_decode(
-            json:        $response->getContent(),
+            json: $response->getContent(),
             associative: true,
-            flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
 
         if ($context->trace) {

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Options;
@@ -59,17 +59,17 @@ final class GetLibrary
         if (null === ($section = ag($libraries, $id))) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'No Library with id [%(id)] found in [%(backend)] response.',
-                            context: [
-                                         'id' => $id,
-                                         'backend' => $context->backendName,
-                                         'response' => [
-                                             'body' => $libraries
-                                         ],
-                                     ],
-                            level:   Levels::WARNING
-                        ),
+                error: new Error(
+                    message: 'No Library with id [%(id)] found in [%(backend)] response.',
+                    context: [
+                        'id' => $id,
+                        'backend' => $context->backendName,
+                        'response' => [
+                            'body' => $libraries
+                        ],
+                    ],
+                    level: Levels::WARNING
+                ),
             );
         }
 
@@ -86,14 +86,14 @@ final class GetLibrary
         if (true !== in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'The Requested [%(backend)] Library [%(library.title)] returned with unsupported type [%(library.type)].',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         ...$logContext,
-                                     ],
-                            level:   Levels::WARNING
-                        ),
+                error: new Error(
+                    message: 'The Requested [%(backend)] Library [%(library.title)] returned with unsupported type [%(library.type)].',
+                    context: [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ],
+                    level: Levels::WARNING
+                ),
             );
         }
 
@@ -118,31 +118,31 @@ final class GetLibrary
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Request for [%(backend)] library [%(library.title)] returned with unexpected [%(status_code)] status code.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'status_code' => $response->getStatusCode(),
-                                         ...$logContext,
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'Request for [%(backend)] library [%(library.title)] returned with unexpected [%(status_code)] status code.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'status_code' => $response->getStatusCode(),
+                        ...$logContext,
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         }
 
         $it = Items::fromIterable(
             iterable: httpClientChunks(
-                          stream: $this->http->stream($response)
-                      ),
-            options:  [
-                          'pointer' => '/MediaContainer/Metadata',
-                          'decoder' => new ErrorWrappingDecoder(
-                              innerDecoder: new ExtJsonDecoder(
-                                                assoc:   true,
-                                                options: JSON_INVALID_UTF8_IGNORE
-                                            )
-                          )
-                      ]
+                stream: $this->http->stream($response)
+            ),
+            options: [
+                'pointer' => '/MediaContainer/Metadata',
+                'decoder' => new ErrorWrappingDecoder(
+                    innerDecoder: new ExtJsonDecoder(
+                        assoc: true,
+                        options: JSON_INVALID_UTF8_IGNORE
+                    )
+                )
+            ]
         );
 
         $list = $requests = [];
@@ -220,9 +220,9 @@ final class GetLibrary
                 }
 
                 $json = json_decode(
-                    json:        $response->getContent(),
+                    json: $response->getContent(),
                     associative: true,
-                    flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                    flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                 );
 
                 $list[] = $this->process(
@@ -235,22 +235,22 @@ final class GetLibrary
             } catch (JsonException|HttpExceptionInterface $e) {
                 return new Response(
                     status: false,
-                    error:  new Error(
-                                message:  'Unhandled exception was thrown during request for [%(backend)] %(item.type) [%(item.title)] metadata.',
-                                context:  [
-                                              'backend' => $context->backendName,
-                                              'exception' => [
-                                                  'file' => $e->getFile(),
-                                                  'line' => $e->getLine(),
-                                                  'kind' => get_class($e),
-                                                  'message' => $e->getMessage(),
-                                                  'trace' => $context->trace ? $e->getTrace() : [],
-                                              ],
-                                              ...$requestContext,
-                                          ],
-                                level:    Levels::WARNING,
-                                previous: $e
-                            )
+                    error: new Error(
+                        message: 'Unhandled exception was thrown during request for [%(backend)] %(item.type) [%(item.title)] metadata.',
+                        context: [
+                            'backend' => $context->backendName,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $context->trace ? $e->getTrace() : [],
+                            ],
+                            ...$requestContext,
+                        ],
+                        level: Levels::WARNING,
+                        previous: $e
+                    )
                 );
             }
         }

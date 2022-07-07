@@ -97,9 +97,9 @@ final class PDODataMigration
 
         foreach ($stmt as $row) {
             $row['meta'] = json_decode(
-                json:        $row['meta'] ?? '[]',
+                json: $row['meta'] ?? '[]',
                 associative: true,
-                flags:       JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE
             );
 
             $extra = [
@@ -146,10 +146,10 @@ final class PDODataMigration
                     iFace::COLUMN_EPISODE => ag($row['meta'], iFace::COLUMN_EPISODE, null),
                     iFace::COLUMN_PARENT => json_encode(
                         value: array_intersect_key(
-                                   $row,
-                                   ag($row['meta'], iFace::COLUMN_PARENT, []),
-                                   Guid::getSupported(includeVirtual: false)
-                               ),
+                            $row,
+                            ag($row['meta'], iFace::COLUMN_PARENT, []),
+                            Guid::getSupported(includeVirtual: false)
+                        ),
                         flags: $this->jFlags
                     ),
                     iFace::COLUMN_GUIDS => json_encode(
@@ -158,32 +158,32 @@ final class PDODataMigration
                     ),
                     iFace::COLUMN_META_DATA => json_encode(
                         value: (function () use ($metadata): array {
-                                 $list = [];
+                            $list = [];
 
-                                 foreach (Config::get('servers', []) as $name => $info) {
-                                     if (true !== (bool)ag($info, 'import.enabled', false)) {
-                                         continue;
-                                     }
-                                     $list[$name] = $metadata;
-                                 }
+                            foreach (Config::get('servers', []) as $name => $info) {
+                                if (true !== (bool)ag($info, 'import.enabled', false)) {
+                                    continue;
+                                }
+                                $list[$name] = $metadata;
+                            }
 
-                                 return $list;
-                             })(),
+                            return $list;
+                        })(),
                         flags: $this->jFlags
                     ),
                     iFace::COLUMN_EXTRA => json_encode(
                         value: (function () use ($extra): array {
-                                 $list = [];
+                            $list = [];
 
-                                 foreach (Config::get('servers', []) as $name => $info) {
-                                     if (true !== (bool)ag($info, 'import.enabled', false)) {
-                                         continue;
-                                     }
-                                     $list[$name] = $extra;
-                                 }
+                            foreach (Config::get('servers', []) as $name => $info) {
+                                if (true !== (bool)ag($info, 'import.enabled', false)) {
+                                    continue;
+                                }
+                                $list[$name] = $extra;
+                            }
 
-                                 return $list;
-                             })(),
+                            return $list;
+                        })(),
                         flags: $this->jFlags
                     ),
                 ]
@@ -262,27 +262,27 @@ final class PDODataMigration
 
         foreach ($oldDB->query("SELECT * FROM state") as $row) {
             $row[iFace::COLUMN_EXTRA] = json_decode(
-                json:        $row[iFace::COLUMN_EXTRA] ?? '[]',
+                json: $row[iFace::COLUMN_EXTRA] ?? '[]',
                 associative: true,
-                flags:       JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE
             );
 
             $row[iFace::COLUMN_GUIDS] = json_decode(
-                json:        $row[iFace::COLUMN_GUIDS] ?? '[]',
+                json: $row[iFace::COLUMN_GUIDS] ?? '[]',
                 associative: true,
-                flags:       JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE
             );
 
             $row[iFace::COLUMN_PARENT] = json_decode(
-                json:        $row[iFace::COLUMN_PARENT] ?? '[]',
+                json: $row[iFace::COLUMN_PARENT] ?? '[]',
                 associative: true,
-                flags:       JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE
             );
 
             $row['suids'] = json_decode(
-                json:        $row['suids'] ?? '[]',
+                json: $row['suids'] ?? '[]',
                 associative: true,
-                flags:       JSON_INVALID_UTF8_IGNORE
+                flags: JSON_INVALID_UTF8_IGNORE
             );
 
             $extra = [
@@ -330,9 +330,9 @@ final class PDODataMigration
                 iFace::COLUMN_EPISODE => $row[iFace::COLUMN_EPISODE] ?? null,
                 iFace::COLUMN_PARENT => json_encode(
                     value: array_intersect_key(
-                               $row[iFace::COLUMN_PARENT] ?? [],
-                               Guid::getSupported(includeVirtual: false)
-                           ),
+                        $row[iFace::COLUMN_PARENT] ?? [],
+                        Guid::getSupported(includeVirtual: false)
+                    ),
                     flags: $this->jFlags
                 ),
                 iFace::COLUMN_GUIDS => json_encode(
@@ -341,37 +341,37 @@ final class PDODataMigration
                 ),
                 iFace::COLUMN_META_DATA => json_encode(
                     value: (function () use ($row, $metadata): array {
-                             $list = [];
+                        $list = [];
 
-                             foreach (Config::get('servers', []) as $name => $info) {
-                                 $list[$name] = [];
-                                 if (null !== ($row['suids'][$name] ?? null)) {
-                                     $list[$name][iFace::COLUMN_ID] = $row['suids'][$name];
-                                 }
+                        foreach (Config::get('servers', []) as $name => $info) {
+                            $list[$name] = [];
+                            if (null !== ($row['suids'][$name] ?? null)) {
+                                $list[$name][iFace::COLUMN_ID] = $row['suids'][$name];
+                            }
 
-                                 $list[$name] += $metadata;
-                             }
+                            $list[$name] += $metadata;
+                        }
 
-                             return $list;
-                         })(),
+                        return $list;
+                    })(),
                     flags: $this->jFlags
                 ),
                 iFace::COLUMN_EXTRA => json_encode(
                     value: (function () use ($row, $extra): array {
-                             $list = [];
+                        $list = [];
 
-                             foreach (Config::get('servers', []) as $name => $info) {
-                                 $list[$name] = [];
+                        foreach (Config::get('servers', []) as $name => $info) {
+                            $list[$name] = [];
 
-                                 if (null !== ($row['suids'][$name] ?? null)) {
-                                     continue;
-                                 }
+                            if (null !== ($row['suids'][$name] ?? null)) {
+                                continue;
+                            }
 
-                                 $list[$name] += $extra;
-                             }
+                            $list[$name] += $extra;
+                        }
 
-                             return $list;
-                         })(),
+                        return $list;
+                    })(),
                     flags: $this->jFlags
                 ),
             ];

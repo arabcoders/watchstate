@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands\Config;
+namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Routable(command: self::ROUTE)]
 final class PHPCommand extends Command
 {
-    public const ROUTE = 'config:php';
+    public const ROUTE = 'system:php';
 
     protected function configure(): void
     {

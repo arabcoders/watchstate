@@ -140,24 +140,24 @@ HELP
 
         if (($config = $input->getOption('config'))) {
             try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomServersFile($config)));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
         }
 
-        if (null === ($server = ag(Config::get('servers', []), $name, null))) {
+        if (null === ($backend = ag(Config::get('servers', []), $name, null))) {
             $output->writeln(sprintf('<error>ERROR: Backend \'%s\' not found.</error>', $name));
             return self::FAILURE;
         }
 
-        if (false === (bool)ag($server, 'export.enabled')) {
+        if (false === (bool)ag($backend, 'export.enabled')) {
             $output->writeln(sprintf('<error>ERROR: Export to \'%s\' are disabled.</error>', $name));
             return self::FAILURE;
         }
 
-        if (true === (bool)ag($server, 'import.enabled') && false === $input->getOption('assume-yes')) {
+        if (true === (bool)ag($backend, 'import.enabled') && false === $input->getOption('assume-yes')) {
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT

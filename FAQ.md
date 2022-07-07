@@ -5,7 +5,7 @@
 Add the backend and when asked, answer `no` for allow import. when you finish, then run the following command:
 
 ```bash
-$ docker exec -ti watchstate console state:export -vv --ignore-date --force-full --servers-filter [SERVER_NAME]
+$ docker exec -ti watchstate console state:export -vv --ignore-date --force-full --select-backends [BACKEND_NAME]
 ```
 
 this command will force export your current local play state to the selected media backend. If the operation is
@@ -36,7 +36,7 @@ For Jellyfin/Emby, you can just generate new API tokens.
 Run the following command to get list of backend libraries.
 
 ```bash
-$ docker exec -ti watchstate console backend:library:list [SERVER_NAME] 
+$ docker exec -ti watchstate console backend:library:list [BACKEND_NAME] 
 ```
 
 it should display something like
@@ -123,7 +123,7 @@ can run the same command with `[-h, --help]` to see more options to extend the l
 Run the following command:
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --key options.ignore --set 'id1,id2,id3' -- [SERVER_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.ignore --set 'id1,id2,id3' -- [BACKEND_NAME] 
 ```
 
 where `id1,id2,id3` refers to backend library id
@@ -132,7 +132,7 @@ If you ignored a library by mistake you can run the same command again and omit 
 entirely by running the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --delete --key options.ignore -- [SERVER_NAME] 
+$ docker exec -ti watchstate console config:edit --delete --key options.ignore -- [BACKEND_NAME] 
 ```
 
 ##### Note
@@ -161,7 +161,7 @@ after that you can do `./ws command` for example, `./ws db:list`
 Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --key options.client.http_version --set 1.0 -- [SERVER_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.client.http_version --set 1.0 -- [BACKEND_NAME] 
 ```
 
 This will force set the internal http client to use http v1 if it does not fix your problem, please open bug report
@@ -174,7 +174,7 @@ about it.
 If you want to increase the timeout for specific backend you can run the following command:
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --key options.client.timeout --set 600 -- [SERVER_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.client.timeout --set 600 -- [BACKEND_NAME] 
 ```
 
 where `600` is the number of secs before the timeout handler kill the request.
@@ -204,7 +204,7 @@ where `[QUERY_STRING]` is the keyword that you want to search for
 Use the following command:
 
 ```bash
-$ docker exec -ti console server backend:search:id [BACKEND_NAME] [BACKEND_ITEM_ID]
+$ docker exec -ti watchstate console backend:search:id [BACKEND_NAME] [BACKEND_ITEM_ID]
 ```
 
 where `[BACKEND_ITEM_ID]` refers to backend item id
@@ -221,7 +221,7 @@ where `[BACKEND_ITEM_ID]` refers to backend item id
 Use the `backend:library:mismatch` command. For example,
 
 ```bash
-$ docker exec -ti console server backend:library:mismatch [BACKEND_NAME] [LIBRARY_ID]
+$ docker exec -ti watchstate console backend:library:mismatch [BACKEND_NAME] [LIBRARY_ID]
 ```
 
 where `[LIBRARY_ID]` refers to backend library id
@@ -241,7 +241,7 @@ where `[LIBRARY_ID]` refers to backend library id
 Use the `backend:library:unmatched` command. For example,
 
 ```bash
-$ docker exec -ti console server backend:library:unmatched [BACKEND_NAME] [LIBRARY_ID]
+$ docker exec -ti watchstate console backend:library:unmatched [BACKEND_NAME] [LIBRARY_ID]
 ```
 
 where `[LIBRARY_ID]` refers to backend library id
@@ -345,7 +345,7 @@ it's slower than `MemoryMapper`.
 
 ### Q: How to add webhooks?
 
-To add webhook for your server the URL will be dependent on how you exposed webhook frontend, but typically it will be
+To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be
 like this:
 
 Directly to container: `http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
@@ -358,16 +358,16 @@ If your media backend support sending headers then remove query parameter `?apik
 X-apikey: [WEBHOOK_TOKEN]
 ```
 
-where `[WEBHOOK_TOKEN]` Should match the backend specific `webhook.token` value. to see the token for each server run
+where `[WEBHOOK_TOKEN]` Should match the backend specific `webhook.token` value. to see the token for each backend run
 
 ```bash
-$ docker exec -ti watchstate console servers:view --servers-filter [SERVER_NAME] -- webhook.token
+$ docker exec -ti watchstate console config:view --select-backends [BACKEND_NAME] -- webhook.token
 ```
 
 If you see 'Not configured, or invalid key.' or empty value. run the following command
 
 ```bash
-$ docker exec -ti watchstate console servers:edit --regenerate-webhook-token -- [SERVER_NAME] 
+$ docker exec -ti watchstate console config:edit --regenerate-webhook-token -- [BACKEND_NAME] 
 ```
 
 #### Emby (you need "Emby Premiere" to use webhooks).
@@ -403,16 +403,16 @@ If you have multiple plex backends and use the same PlexPass account for all of 
 running the following command:
 
 ```bash
-$ docker exec -ti watchstate console servers:unify plex 
+$ docker exec -ti watchstate console config:unify plex 
 Plex global webhook API key is: [random_string]
 ```
 
-The reason is due to the way plex handle webhooks, And to know which webhook request belong to which server we have to
-identify the backends, The unify command will do the necessary adjustments to handle multi plex server setup. for more
+The reason is due to the way plex handle webhooks, And to know which webhook request belong to which backend we have to
+identify the backends, The unify command will do the necessary adjustments to handle multi plex backend setup. for more
 information run.
 
 ```bash
-$ docker exec -ti watchstate console help servers:unify 
+$ docker exec -ti watchstate console help config:unify 
 ```
 
 #### Jellyfin (Free)

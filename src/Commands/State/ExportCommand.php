@@ -21,7 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE), Routable(command: 'export')]
+#[Routable(command: self::ROUTE)]
 class ExportCommand extends Command
 {
     public const ROUTE = 'state:export';
@@ -47,20 +47,13 @@ class ExportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('servers-filter', 's', InputOption::VALUE_OPTIONAL, 'Select backends. Comma (,) seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --servers-filter logic to exclude.')
+            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
-            ->addOption(
-                'always-update-metadata',
-                null,
-                InputOption::VALUE_NONE,
-                'Always update the locally stored metadata from backend.'
-            )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->setAliases(['export'])
-            // -- @RELEASE remove force-* options
-            ->addOption('force-export-mode', null, InputOption::VALUE_NONE, 'Force export mode. [NO LONGER USED].')
-            ->addOption('force-push-mode', null, InputOption::VALUE_NONE, 'Force push mode. [NO LONGER USED].');
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
+            ->addOption('force-export-mode', null, InputOption::VALUE_NONE, '[DEPRECATED] Force export mode.')
+            ->addOption('force-push-mode', null, InputOption::VALUE_NONE, '[DEPRECATED] Force push mode.');
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -73,9 +66,8 @@ class ExportCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                $this->checkCustomServersFile($config);
                 $custom = true;
-                Config::save('servers', Yaml::parseFile($config));
+                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
@@ -85,10 +77,21 @@ class ExportCommand extends Command
             $config = Config::get('path') . '/config/servers.yaml';
         }
 
+        $selectBackends = (string)$input->getOption('select-backends');
+        $serversFilter = (string)$input->getOption('servers-filter');
+
+        if (!empty($serversFilter)) {
+            $this->logger->warning(
+                'The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].'
+            );
+            if (empty($selectBackends)) {
+                $selectBackends = $serversFilter;
+            }
+        }
+
         $backends = [];
-        $backendsFilter = (string)$input->getOption('servers-filter');
-        $selected = explode(',', $backendsFilter);
-        $isCustom = !empty($backendsFilter) && count($selected) >= 1;
+        $selected = explode(',', $selectBackends);
+        $isCustom = !empty($selectBackends) && count($selected) >= 1;
         $supported = Config::get('supported', []);
         $export = $push = $entities = [];
 
@@ -96,18 +99,18 @@ class ExportCommand extends Command
             $output->writeln('<info>Dry run mode. No changes will be committed to backends.</info>');
         }
 
-        foreach (Config::get('servers', []) as $name => $backend) {
+        foreach (Config::get('servers', []) as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if ($isCustom && $input->getOption('exclude') === in_array($name, $selected)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
                 $this->logger->info(
-                    sprintf('%s: Ignoring backend as requested by [-s, --servers-filter].', $name)
+                    sprintf('%s: Ignoring backend as requested by [-s, --select-backends].', $backendName)
                 );
                 continue;
             }
 
             if (true !== ag($backend, 'export.enabled')) {
-                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $name));
+                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $backendName));
                 continue;
             }
 
@@ -115,7 +118,7 @@ class ExportCommand extends Command
                 $this->logger->error(
                     sprintf(
                         '%s: Unexpected type. Expecting \'%s\' but got \'%s\'.',
-                        $name,
+                        $backendName,
                         implode(', ', array_keys($supported)),
                         $type
                     )
@@ -124,19 +127,22 @@ class ExportCommand extends Command
             }
 
             if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error(sprintf('%s: Backend does not have valid url.', $name), ['url' => $url ?? 'None']);
+                $this->logger->error(
+                    sprintf('%s: Backend does not have valid url.', $backendName),
+                    ['url' => $url ?? 'None']
+                );
                 continue;
             }
 
-            $backend['name'] = $name;
-            $backends[$name] = $backend;
+            $backend['name'] = $backendName;
+            $backends[$backendName] = $backend;
         }
 
         if (empty($backends)) {
             $output->writeln(
                 sprintf(
                     '<error>%s</error>',
-                    $isCustom ? '[-s, --servers-filter] Filter did not match any backend.' : 'No backends were found.'
+                    $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
                 )
             );
             return self::FAILURE;
@@ -166,7 +172,7 @@ class ExportCommand extends Command
             }
 
             $backend['options'] = $opts;
-            $backend['class'] = makeServer($backend, $name)->setLogger($this->logger);
+            $backend['class'] = makeBackend($backend, $name)->setLogger($this->logger);
         }
 
         unset($backend);
@@ -178,6 +184,18 @@ class ExportCommand extends Command
                 if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
                     $this->logger->info(
                         'SYSTEM: Using export mode for [%(backend)] as the backend did have last export date.',
+                        [
+                            'backend' => ag($backend, 'name'),
+                        ]
+                    );
+
+                    $export[ag($backends, 'name')] = $backend;
+                    continue;
+                }
+
+                if (null === ag($backend, 'import.lastSync', null)) {
+                    $this->logger->warning(
+                        'SYSTEM: Using export mode for [%(backend)]. server data is not yet imported. please run state:import',
                         [
                             'backend' => ag($backend, 'name'),
                         ]
@@ -399,8 +417,8 @@ class ExportCommand extends Command
         foreach ($backends as $backend) {
             $backend['class']->push(
                 entities: $entities,
-                queue:    $this->queue,
-                after:    makeDate(ag($backend, 'export.lastSync'))
+                queue: $this->queue,
+                after: makeDate(ag($backend, 'export.lastSync'))
             );
         }
 
@@ -431,10 +449,6 @@ class ExportCommand extends Command
 
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
-        }
-
-        if ($input->getOption('always-update-metadata')) {
-            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
         if (!empty($mapperOpts)) {
@@ -494,8 +508,6 @@ class ExportCommand extends Command
                 }
             }
         }
-
-        unset($server);
 
         $this->logger->notice('SYSTEM: Sending [%(total)] play state comparison requests.', [
             'total' => count($requests),

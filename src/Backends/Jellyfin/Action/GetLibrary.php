@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Options;
@@ -54,17 +54,17 @@ class GetLibrary
         if (null === ($section = ag($libraries, $id))) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'No Library with id [%(id)] found in [%(backend)] response.',
-                            context: [
-                                         'id' => $id,
-                                         'backend' => $context->backendName,
-                                         'response' => [
-                                             'body' => $libraries
-                                         ],
-                                     ],
-                            level:   Levels::WARNING
-                        ),
+                error: new Error(
+                    message: 'No Library with id [%(id)] found in [%(backend)] response.',
+                    context: [
+                        'id' => $id,
+                        'backend' => $context->backendName,
+                        'response' => [
+                            'body' => $libraries
+                        ],
+                    ],
+                    level: Levels::WARNING
+                ),
             );
         }
 
@@ -84,14 +84,14 @@ class GetLibrary
             )) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'The Requested [%(backend)] Library [%(library.id): %(library.title)] returned with unsupported type [%(library.type)].',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         ...$logContext,
-                                     ],
-                            level:   Levels::WARNING
-                        ),
+                error: new Error(
+                    message: 'The Requested [%(backend)] Library [%(library.id): %(library.title)] returned with unsupported type [%(library.type)].',
+                    context: [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ],
+                    level: Levels::WARNING
+                ),
             );
         }
 
@@ -120,26 +120,26 @@ class GetLibrary
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message: 'Request for [%(backend)] library [%(library.title)] returned with unexpected [%(status_code)] status code.',
-                            context: [
-                                         'backend' => $context->backendName,
-                                         'status_code' => $response->getStatusCode(),
-                                         ...$logContext,
-                                     ],
-                            level:   Levels::ERROR
-                        ),
+                error: new Error(
+                    message: 'Request for [%(backend)] library [%(library.title)] returned with unexpected [%(status_code)] status code.',
+                    context: [
+                        'backend' => $context->backendName,
+                        'status_code' => $response->getStatusCode(),
+                        ...$logContext,
+                    ],
+                    level: Levels::ERROR
+                ),
             );
         }
 
         $it = Items::fromIterable(
             iterable: httpClientChunks($this->http->stream($response)),
-            options:  [
-                          'pointer' => '/Items',
-                          'decoder' => new ErrorWrappingDecoder(
-                              new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
-                          )
-                      ]
+            options: [
+                'pointer' => '/Items',
+                'decoder' => new ErrorWrappingDecoder(
+                    new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
+                )
+            ]
         );
 
         $list = [];

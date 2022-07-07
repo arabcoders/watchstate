@@ -67,6 +67,8 @@ final class DirectMapper implements iImport
                 iState::COLUMN_TYPE,
                 iState::COLUMN_PARENT,
                 iState::COLUMN_GUIDS,
+                iState::COLUMN_SEASON,
+                iState::COLUMN_EPISODE,
             ],
         ];
 
@@ -293,10 +295,7 @@ final class DirectMapper implements iImport
                     return $this;
                 }
 
-                /**
-                 * this sometimes leads to never ending updates as data from backends conflicts.
-                 * as such we have it disabled by default.
-                 */
+                // -- this sometimes leads to never ending updates as data from backends conflicts.
                 if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                         try {
@@ -352,6 +351,14 @@ final class DirectMapper implements iImport
                     }
                 }
 
+                if ($this->inTraceMode()) {
+                    $this->logger->debug('MAPPER: Ignoring [%(backend)] [%(title)]. No changes detected.', [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                    ]);
+                }
+
                 Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
                 return $this;
             }
@@ -361,7 +368,7 @@ final class DirectMapper implements iImport
                 array_keys_diff(
                     base: array_flip(iState::ENTITY_KEYS),
                     list: iState::ENTITY_IGNORE_DIFF_CHANGES,
-                    has:  false
+                    has: false
                 )
             );
 
