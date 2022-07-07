@@ -44,25 +44,26 @@ final class ListCommand extends Command
             ->addOption('backend', null, InputOption::VALUE_REQUIRED, 'Filter based on backend.')
             ->addOption('db', null, InputOption::VALUE_REQUIRED, 'Filter based on db.')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Filter based on id.')
-            ->addOption('with-title', null, InputOption::VALUE_NONE, 'Include entity title in response. Slow operation')
             ->setDescription('List Ignored external ids.')
             ->setHelp(
                 <<<HELP
 
-This command display list of ignored external ids.
+This command display list of ignored external ids. You can filter the list by
+using one or more of the provided options like [<info>--type</info>, <info>--backend</info>, <info>--db</info>, <info>--id</info>].
 
-You can filter the results by using one or more of the provided options like <info>--type</info>, <info>--backend</info>, <info>--db</info>
+------------
+<comment>[ Examples ]</comment>
+------------
 
-For example, To list all ids that are being ignored for specific <info>backend</info>, You can do something like
+<comment># List all ignore rules that reletes to specific backend.</comment>
 
-{$cmdContext} backend:ignore:list --backend plex_home
+{$cmdContext} backend:ignore:list <info>--backend</info> <comment>my_backend</comment>
 
-You can append more filters to narrow down the list. For example, to filter on both <info>backend</info> and <info>db</info>:
+<comment># Appending more filters to narrow down list</comment>
 
-{$cmdContext} backend:ignore:list --backend plex_home --db tvdb
+{$cmdContext} backend:ignore:list <info>--backend</info> <comment>my_backend</comment> <info>--db</info> <comment>tvdb</comment>
 
 HELP
-
             );
     }
 

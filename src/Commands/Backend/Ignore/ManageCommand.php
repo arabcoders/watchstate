@@ -45,7 +45,7 @@ final class ManageCommand extends Command
         $this->setName($cmdRoute)
             ->setDescription('Add/Remove external id from ignore list.')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove id from ignore list.')
-            ->addArgument('id', InputArgument::REQUIRED, 'Id to ignore. Id format: type://db:id@backend_name')
+            ->addArgument('id', InputArgument::REQUIRED, 'Id to ignore.')
             ->setHelp(
                 <<<HELP
 
@@ -69,36 +69,27 @@ The <info>id</info> format is: <info>type</info>://<info>db</info>:<info>id</inf
 
 <comment># Adding exteranl id to ignore list</comment>
 
-To ignore <info>tvdb</info> id <info>320234</info> from <info>plex_home</info> backend you would do something like
+To ignore <info>tvdb</info> id <info>320234</info> from <info>my_backend</info> backend you would do something like
 
-For <comment>shows</comment> external id:
-{$cmdContext} {$cmdRoute} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
+{$cmdContext} {$cmdRoute} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
 
-For <comment>movies</comment> external id:
-{$cmdContext} {$cmdRoute} <comment>movie</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
+If you want to limit this rule to specfic item id you would add [<info>?id=</info><comment>backend_id</comment>] to the rule, for example
 
-For <comment>episodes</comment> external id:
-{$cmdContext} {$cmdRoute} <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
+{$cmdContext} {$cmdRoute} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>?id=<info>1212111</info>
 
-To scope ignore rule to specfic item from backend, You can do the same as before and add [<info>?id=backend_id</info>].
+This will ignore [<info>tvdb://320234</info>] id only when the context id = [<info>1212111</info>]
 
-<comment>[backend_id]:</comment>
-
-Refers to the item id from backend. To ignore a specfic guid for item id <info>1212111</info> you can do something like this:
-
-{$cmdContext} {$cmdRoute} <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>?id=<info>1212111</info>
-
-<comment># Removing exteranl id from ignore list ?</comment>
+<comment># Removing exteranl id from ignore list</comment>
 
 To Remove an external id from ignore list just append <info>[-r, --remove]</info> to the command. For example,
 
-{$cmdContext} {$cmdRoute} --remove <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>plex_home</info>
+{$cmdContext} {$cmdRoute} --remove <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
 
-The id should match what what entered.
+The <info>id</info> should match what was added exactly.
 
-<comment># Where the list is stored?</comment>
+<comment># ignore.yaml file location</comment>
 
-By defualt we store the list at {$ignoreListFile}
+By defualt it should be at {$ignoreListFile}
 
 HELP
             );
