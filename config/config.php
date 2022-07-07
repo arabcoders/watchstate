@@ -37,7 +37,7 @@ return (function () {
         ],
         'episodes' => [
             'disable' => [
-                'guid' => (bool)env('WS_EPISODES_DISABLE_GUID', false),
+                'guid' => (bool)env('WS_EPISODES_DISABLE_GUID', true),
             ]
         ],
         'ignore' => [],
