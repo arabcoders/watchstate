@@ -193,6 +193,18 @@ class ExportCommand extends Command
                     continue;
                 }
 
+                if (null === ag($backend, 'import.lastSync', null)) {
+                    $this->logger->warning(
+                        'SYSTEM: Using export mode for [%(backend)]. server data is not yet imported. please run state:import',
+                        [
+                            'backend' => ag($backend, 'name'),
+                        ]
+                    );
+
+                    $export[ag($backends, 'name')] = $backend;
+                    continue;
+                }
+
                 if ($minDate > $lastSync) {
                     $minDate = $lastSync;
                 }
