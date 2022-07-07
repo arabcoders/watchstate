@@ -34,15 +34,30 @@ class Cli extends Application
         }
 
         $definition->addOption(
-            new InputOption('context', null, InputOption::VALUE_NEGATABLE, 'Add context to output messages.')
+            new InputOption(
+                'context',
+                null,
+                InputOption::VALUE_NEGATABLE,
+                'Add context to output messages. <comment>Not all commands support this option.</comment>'
+            )
         );
 
-        $definition->addOption(new InputOption('trace', null, InputOption::VALUE_NONE, 'Enable tracing mode.'));
+        $definition->addOption(
+            new InputOption(
+                'trace',
+                null,
+                InputOption::VALUE_NONE,
+                'Enable tracing mode. <comment>Not all commands support this option.</comment>'
+            )
+        );
 
         $definition->addOption(
             new InputOption(
                 'output', 'o', InputOption::VALUE_REQUIRED,
-                sprintf('Output mode. Can be [%s].', implode(', ', Command::DISPLAY_OUTPUT)),
+                sprintf(
+                    'Change output display mode. Can be [%s]. <comment>Not all commands support this option.</comment>',
+                    '<info>' . implode('</info>,<info> ', Command::DISPLAY_OUTPUT) . '</info>'
+                ),
                 Command::DISPLAY_OUTPUT[0]
             )
         );

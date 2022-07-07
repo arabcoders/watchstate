@@ -75,16 +75,16 @@ final class ListCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Limit results to this specified type can be [movie or episode].'
             )
-            ->addOption('title', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified tv show.')
-            ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number')
-            ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number')
+            ->addOption('title', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified title.')
+            ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number.')
+            ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number.')
             ->addOption('year', null, InputOption::VALUE_REQUIRED, 'Select year.')
-            ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number')
+            ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Select db record number.')
             ->addOption(
                 'sort',
                 null,
                 InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
-                'Set sort by columns. for example, <comment>--sort season:asc --sort episode:desc</comment>',
+                'Set sort by columns. for example, <comment>--sort season:asc --sort episode:desc</comment>.',
             )
             ->addOption(
                 'metadata-as',
@@ -100,7 +100,7 @@ final class ListCommand extends Command
                 $guid,
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Search Using ' . ucfirst($guid) . ' external id.'
+                'Search Using <info>' . $guid . '</info> external id.'
             );
         }
 

@@ -18,7 +18,6 @@ use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 #[Routable(command: self::ROUTE)]
 class PushCommand extends Command
@@ -44,13 +43,8 @@ class PushCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Push webhook queued events.')
             ->addOption('keep', 'k', InputOption::VALUE_NONE, 'Do not expunge queue after run is complete.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends. Will keep queue.')
-            ->addOption(
-                'ignore-date',
-                null,
-                InputOption::VALUE_NONE,
-                'Force sync database item state to the backends regardless of date comparison.'
-            );
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
+            ->addOption('ignore-date', null, InputOption::VALUE_NONE, 'Ignore date comparison.');
     }
 
     /**
@@ -102,34 +96,28 @@ class PushCommand extends Command
 
             // -- @RELEASE remove 'webhook.push'
             if (true !== (bool)ag($backend, ['export.enabled', 'webhook.push'])) {
-                $this->logger->info('Export to this backend is disabled by user choice.', [
-                    'context' => [
-                        'backend' => $backendName,
-                    ],
+                $this->logger->info('SYSTEM: Export to [%(backend)] is disabled by user.', [
+                    'backend' => $backendName,
                 ]);
 
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('Unexpected backend type.', [
-                    'context' => [
-                        'backend' => $backendName,
-                        'condition' => [
-                            'expected' => implode(', ', array_keys($supported)),
-                            'given' => $type,
-                        ],
+                $this->logger->error('SYSTEM: [%(backend)] Invalid type.', [
+                    'backend' => $backendName,
+                    'condition' => [
+                        'expected' => implode(', ', array_keys($supported)),
+                        'given' => $type,
                     ],
                 ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error('Invalid backend API URL.', [
-                    'context' => [
-                        'backend' => $backendName,
-                        'url' => $url ?? 'None',
-                    ]
+                $this->logger->error('SYSTEM: [%(backend)] Invalid url.', [
+                    'backend' => $backendName,
+                    'url' => $url ?? 'None',
                 ]);
                 continue;
             }
@@ -139,7 +127,7 @@ class PushCommand extends Command
         }
 
         if (empty($list)) {
-            $this->logger->warning('There are no backends with export enabled.');
+            $this->logger->warning('SYSTEM: There are no backends with export enabled.');
             return self::FAILURE;
         }
 
@@ -183,16 +171,16 @@ class PushCommand extends Command
                 try {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
-                            'Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
+                            'SYSTEM: Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
                             $context
                         );
                         continue;
                     }
 
-                    $this->logger->notice('Marked [%(backend)] [%(item.title)] as [%(play_state)].', $context);
+                    $this->logger->notice('SYSTEM: Marked [%(backend)] [%(item.title)] as [%(play_state)].', $context);
                 } catch (\Throwable $e) {
                     $this->logger->error(
-                        'Unhandled exception thrown during request to change play state of [%(backend)] %(item.type) [%(item.title)].',
+                        'SYSTEM: Unhandled exception thrown during request to change play state of [%(backend)] %(item.type) [%(item.title)].',
                         [
                             ...$context,
                             'exception' => [
@@ -221,16 +209,6 @@ class PushCommand extends Command
             $this->logger->notice(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');
-        }
-
-        if (false === $input->getOption('dry-run')) {
-            $config = Config::get('path') . '/config/servers.yaml';
-
-            if (is_writable(dirname($config))) {
-                copy($config, $config . '.bak');
-            }
-
-            file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
         }
 
         if (false === $input->getOption('keep') && false === $input->getOption('dry-run')) {

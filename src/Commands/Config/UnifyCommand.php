@@ -148,7 +148,7 @@ final class UnifyCommand extends Command
         }
 
         if (count($keys) <= 1) {
-            $output->writeln(sprintf('<info>%s Webhook API keys is already unified.</info>', ucfirst($type)));
+            $output->writeln(sprintf('<info>[%s] Webhook tokens are already unified.</info>', ucfirst($type)));
             return self::SUCCESS;
         }
 

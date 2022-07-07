@@ -79,7 +79,7 @@ The command will only work on backends that has import enabled.
 Backups generated without <info>[-k, --keep]</info> flag are subject to be <info>REMOVED</info> during system:prune run.
 To keep permanent copy of your backups you can use the <info>[-k, --keep]</info> flag. For example:
 
-{$cmdContext} state:backup <info>--keep</info> [--select-backends <info>my_home</info>]
+{$cmdContext} state:backup <info>--keep</info> [--select-backends <info>my_backend</info>]
 
 Backups generated with --keep flag will not contain a date and will be named [<info>{backend}.json</info>] where automated backups
 will be named [<info>{backend}.{date}.json</info>]
@@ -98,16 +98,16 @@ By defualt we store backups at {$backupDir}
 
 By defualt we enhance the data from the backend to allow the backup to be usuable by all if your backends,
 The expanded externals ids make the data more portable, However, if you do not wish to have this enabled. You can
-Disable it via the flag <info>[--no-enhance].</info> We recommand to enhanced data.
+Disable it via the flag <info>[--no-enhance].</info> We recommand to keep this option enabled.
 
 <comment># I want different file name for my backup?</comment>
 
 Backup names are something tricky, however it's possible to choose the backup filename if the total number
 of backed up backends are 1. So, in essence you have to combine two flags <info>[-s, --select-backends]</info> and <info>[--file]</info>.
 
-For example, to backup [<info>my_plex</info>] backend data to [<info>/tmp/myplex.json</info>] do the following:
+For example, to backup [<info>my_backend</info>] backend data to [<info>/tmp/my_backend.json</info>] do the following:
 
-{$cmdContext} state:backup <info>--select-backends</info> my_plex <info>--file</info> /tmp/myplex.json
+{$cmdContext} state:backup <info>--select-backends</info> my_backend <info>--file</info> /tmp/my_backend.json
 
 HELP
             );
