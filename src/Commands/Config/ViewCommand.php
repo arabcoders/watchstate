@@ -123,7 +123,7 @@ final class ViewCommand extends Command
 
             $suggest = [];
 
-            foreach (require __DIR__ . '/../../../config/servers.spec.php' as $name) {
+            foreach (require __DIR__ . '/../../../config/backend.spec.php' as $name) {
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }
