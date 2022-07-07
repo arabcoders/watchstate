@@ -73,13 +73,13 @@ final class EditCommand extends Command
 
         if ($input->getOption('regenerate-webhook-token')) {
             try {
-                $apiToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
+                $webhookToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 
                 $output->writeln(
-                    sprintf('<info>The API key for \'%s\' webhook endpoint is: \'%s\'.</info>', $name, $apiToken)
+                    sprintf('<info>The webhook token for \'%s\' is: \'%s\'.</info>', $name, $webhookToken)
                 );
 
-                $backend = ag_set($backend, 'webhook.token', $apiToken);
+                $backend = ag_set($backend, 'webhook.token', $webhookToken);
             } catch (Throwable $e) {
                 $output->writeln(sprintf('<error>ERROR: %s</error>', $e->getMessage()));
                 return self::FAILURE;

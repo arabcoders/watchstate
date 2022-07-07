@@ -252,17 +252,20 @@ HELP
     {
         $list = [];
 
+        $mode = $input->getOption('output');
+
         foreach ($this->getTasks() as $task) {
             $list[] = [
                 'name' => $task['name'],
                 'command' => $task['command'],
-                'Options' => $task['args'] ?? '',
+                'options' => $task['args'] ?? '',
+                'timer' => $task['timer']->getExpression(),
                 'description' => $task['description'] ?? '',
                 'NextRun' => $task['next'],
             ];
         }
 
-        $this->displayContent($list, $output, $input->getOption('output'));
+        $this->displayContent($list, $output, $mode);
     }
 
     private function getTasks(): array
