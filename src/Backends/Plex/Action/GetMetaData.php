@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Backends\Plex\Action;
 
 use App\Backends\Common\CommonTrait;
+use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Response;
-use App\Backends\Common\Context;
 use App\Libs\Options;
 use DateInterval;
 use Psr\Log\LoggerInterface;
@@ -68,31 +68,31 @@ final class GetMetaData
                     if (200 !== $response->getStatusCode()) {
                         return new Response(
                             status: false,
-                            error:  new Error(
-                                        message: 'Request for [%(backend)] item [%(id)] returned with unexpected [%(status_code)] status code.',
-                                        context: [
-                                                     'id' => $id,
-                                                     'client' => $context->clientName,
-                                                     'backend' => $context->backendName,
-                                                     'status_code' => $response->getStatusCode(),
-                                                 ]
-                                    )
+                            error: new Error(
+                                message: 'Request for [%(backend)] item [%(id)] returned with unexpected [%(status_code)] status code.',
+                                context: [
+                                    'id' => $id,
+                                    'client' => $context->clientName,
+                                    'backend' => $context->backendName,
+                                    'status_code' => $response->getStatusCode(),
+                                ]
+                            )
                         );
                     }
 
                     $content = $response->getContent();
 
                     $item = json_decode(
-                        json:        $content,
+                        json: $content,
                         associative: true,
-                        flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                        flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
                     );
 
                     if (null !== $cacheKey) {
                         $this->cache->set(
-                            key:   $cacheKey,
+                            key: $cacheKey,
                             value: $item,
-                            ttl:   $opts[Options::CACHE_TTL] ?? new DateInterval('PT5M')
+                            ttl: $opts[Options::CACHE_TTL] ?? new DateInterval('PT5M')
                         );
                     }
 

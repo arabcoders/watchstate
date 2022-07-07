@@ -22,18 +22,19 @@ use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 class Import
 {
-    use CommonTrait, JellyfinActionTrait;
+    use CommonTrait;
+    use JellyfinActionTrait;
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    public function __construct(protected iHttp $http, protected iLogger $logger)
     {
     }
 
@@ -56,15 +57,15 @@ class Import
         return $this->tryResponse($context, fn() => $this->getLibraries(
             context: $context,
             handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
-                context:    $context,
-                response:   $response,
+                context: $context,
+                response: $response,
                 callback: fn(array $item, array $logContext = []) => $this->process(
-                    context:    $context,
-                    guid:       $guid,
-                    mapper:     $mapper,
-                    item:       $item,
+                    context: $context,
+                    guid: $guid,
+                    mapper: $mapper,
+                    item: $item,
                     logContext: $logContext,
-                    opts:       $opts + ['after' => $after],
+                    opts: $opts + ['after' => $after],
                 ),
                 logContext: $logContext
             ),
@@ -109,9 +110,9 @@ class Import
             }
 
             $json = json_decode(
-                json:        $response->getContent(),
+                json: $response->getContent(),
                 associative: true,
-                flags:       JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+                flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
 
             $listDirs = ag($json, 'Items', []);
@@ -349,15 +350,15 @@ class Import
         try {
             $it = Items::fromIterable(
                 iterable: httpClientChunks($this->http->stream($response)),
-                options:  [
-                              'pointer' => '/Items',
-                              'decoder' => new ErrorWrappingDecoder(
-                                  innerDecoder: new ExtJsonDecoder(
-                                                    assoc:   true,
-                                                    options: JSON_INVALID_UTF8_IGNORE
-                                                )
-                              )
-                          ]
+                options: [
+                    'pointer' => '/Items',
+                    'decoder' => new ErrorWrappingDecoder(
+                        innerDecoder: new ExtJsonDecoder(
+                            assoc: true,
+                            options: JSON_INVALID_UTF8_IGNORE
+                        )
+                    )
+                ]
             );
 
             foreach ($it as $entity) {
@@ -453,9 +454,9 @@ class Import
             Guid::fromArray(
                 payload: $guid->get(guids: $providersId, context: $logContext),
                 context: [
-                             'backend' => $context->backendName,
-                             ...$logContext,
-                         ]
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                ]
             )->getAll()
         );
     }
@@ -524,19 +525,19 @@ class Import
 
             $entity = $this->createEntity(
                 context: $context,
-                guid:    $guid,
-                item:    $item,
-                opts:    $opts + [
-                             'library' => ag($logContext, 'library.id'),
-                             'override' => [
-                                 iState::COLUMN_EXTRA => [
-                                     $context->backendName => [
-                                         iState::COLUMN_EXTRA_EVENT => 'task.import',
-                                         iState::COLUMN_EXTRA_DATE => makeDate('now'),
-                                     ],
-                                 ],
-                             ]
-                         ],
+                guid: $guid,
+                item: $item,
+                opts: $opts + [
+                    'library' => ag($logContext, 'library.id'),
+                    'override' => [
+                        iState::COLUMN_EXTRA => [
+                            $context->backendName => [
+                                iState::COLUMN_EXTRA_EVENT => 'task.import',
+                                iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                            ],
+                        ],
+                    ]
+                ],
             );
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

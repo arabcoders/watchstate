@@ -88,9 +88,9 @@ final class Export extends Import
 
             $rItem = $this->createEntity(
                 context: $context,
-                guid:    $guid,
-                item:    $item,
-                opts:    $opts
+                guid: $guid,
+                item: $item,
+                opts: $opts
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {

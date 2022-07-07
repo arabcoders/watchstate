@@ -30,24 +30,24 @@ trait CommonTrait
         } catch (Throwable $e) {
             return new Response(
                 status: false,
-                error:  new Error(
-                            message:  'Unhandled exception was thrown in [%(client): %(backend)] %(action). %(message)',
-                            context:  [
-                                          'action' => $action ?? 'context',
-                                          'backend' => $context->backendName,
-                                          'client' => $context->clientName,
-                                          'message' => $e->getMessage(),
-                                          'exception' => [
-                                              'file' => $e->getFile(),
-                                              'line' => $e->getLine(),
-                                              'kind' => get_class($e),
-                                              'message' => $e->getMessage(),
-                                              'trace' => $context->trace ? $e->getTrace() : [],
-                                          ]
-                                      ],
-                            level:    Levels::WARNING,
-                            previous: $e
-                        )
+                error: new Error(
+                    message: 'Unhandled exception was thrown in [%(client): %(backend)] %(action). %(message)',
+                    context: [
+                        'action' => $action ?? 'context',
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'message' => $e->getMessage(),
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ]
+                    ],
+                    level: Levels::WARNING,
+                    previous: $e
+                )
             );
         }
     }

@@ -123,8 +123,8 @@ trait JellyfinActionTrait
             if (null !== $parentId) {
                 $builder[iState::COLUMN_PARENT] = $this->getEpisodeParent(
                     context: $context,
-                    guid:    $guid,
-                    id:      $parentId
+                    guid: $guid,
+                    id: $parentId
                 );
                 $metadata[iState::COLUMN_PARENT] = $builder[iState::COLUMN_PARENT];
             }
@@ -219,9 +219,9 @@ trait JellyfinActionTrait
             Guid::fromArray(
                 payload: $guid->get(guids: $providersId, context: $logContext),
                 context: [
-                             'backend' => $context->backendName,
-                             ...$logContext,
-                         ]
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                ]
             )->getAll()
         );
 

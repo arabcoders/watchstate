@@ -67,9 +67,9 @@ class Backup extends Import
 
             $entity = $this->createEntity(
                 context: $context,
-                guid:    $guid,
-                item:    $item,
-                opts:    $opts + ['library' => ag($logContext, 'library.id')]
+                guid: $guid,
+                item: $item,
+                opts: $opts + ['library' => ag($logContext, 'library.id')]
             );
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,

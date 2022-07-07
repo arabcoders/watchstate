@@ -61,24 +61,24 @@ class PlexServer implements ServerInterface
     ): ServerInterface {
         $cloned = clone $this;
         $cloned->context = new Context(
-            clientName:     static::NAME,
-            backendName:    $name,
-            backendUrl:     $url,
-            cache:          $this->cache->withData(static::NAME . '_' . $name, $options),
-            backendId:      $uuid,
-            backendToken:   $token,
-            backendUser:    $userId,
+            clientName: static::NAME,
+            backendName: $name,
+            backendUrl: $url,
+            cache: $this->cache->withData(static::NAME . '_' . $name, $options),
+            backendId: $uuid,
+            backendToken: $token,
+            backendUser: $userId,
             backendHeaders: array_replace_recursive(
-                                [
-                                    'headers' => [
-                                        'Accept' => 'application/json',
-                                        'X-Plex-Token' => $token,
-                                    ],
-                                ],
-                                $options['client'] ?? []
-                            ),
-            trace:          true === ag($options, Options::DEBUG_TRACE),
-            options:        $options
+                [
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'X-Plex-Token' => $token,
+                    ],
+                ],
+                $options['client'] ?? []
+            ),
+            trace: true === ag($options, Options::DEBUG_TRACE),
+            options: $options
         );
 
         $cloned->guid = $this->guid->withContext($cloned->context);
@@ -141,7 +141,7 @@ class PlexServer implements ServerInterface
     {
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,
-            guid:    $this->guid,
+            guid: $this->guid,
             request: $request
         );
 
@@ -163,9 +163,9 @@ class PlexServer implements ServerInterface
     {
         $response = Container::get(SearchQuery::class)(
             context: $this->context,
-            query:   $query,
-            limit:   $limit,
-            opts:    $opts
+            query: $query,
+            limit: $limit,
+            opts: $opts
         );
 
         if ($response->hasError()) {
@@ -232,10 +232,10 @@ class PlexServer implements ServerInterface
     public function push(array $entities, QueueRequests $queue, DateTimeInterface|null $after = null): array
     {
         $response = Container::get(Push::class)(
-            context:  $this->context,
+            context: $this->context,
             entities: $entities,
-            queue:    $queue,
-            after:    $after
+            queue: $queue,
+            after: $after
         );
 
         if ($response->hasError()) {
@@ -253,12 +253,12 @@ class PlexServer implements ServerInterface
     {
         $response = Container::get(Import::class)(
             context: $this->context,
-            guid:    $this->guid,
-            mapper:  $mapper,
-            after:   $after,
-            opts:    [
-                         Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-                     ]
+            guid: $this->guid,
+            mapper: $mapper,
+            after: $after,
+            opts: [
+                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+            ]
         );
 
         if ($response->hasError()) {
@@ -276,9 +276,9 @@ class PlexServer implements ServerInterface
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
-            guid:    $this->guid,
-            mapper:  $mapper,
-            opts:    $opts + ['writer' => $writer]
+            guid: $this->guid,
+            mapper: $mapper,
+            opts: $opts + ['writer' => $writer]
         );
 
         if ($response->hasError()) {
@@ -296,13 +296,13 @@ class PlexServer implements ServerInterface
     {
         $response = Container::get(Export::class)(
             context: $this->context,
-            guid:    $this->guid,
-            mapper:  $mapper,
-            after:   $after,
-            opts:    [
-                         'queue' => $queue,
-                         Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-                     ],
+            guid: $this->guid,
+            mapper: $mapper,
+            after: $after,
+            opts: [
+                'queue' => $queue,
+                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+            ],
         );
 
         if ($response->hasError()) {
