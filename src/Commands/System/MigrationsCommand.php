@@ -25,14 +25,22 @@ final class MigrationsCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Run database migrations.')
-            ->addOption('fresh', 'f', InputOption::VALUE_NONE, 'Start migrations from start.');
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Start migrations from start.')
+            ->setHelp(
+                <<<HELP
+
+This command runs database schema migrations to make sure you database is up to date.
+You do not need to run this command unless told by the team. This is done automatically on container startup.
+
+HELP
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $opts = [];
 
-        if ($input->getOption('fresh')) {
+        if ($input->getOption('force')) {
             $opts['fresh'] = true;
         }
 

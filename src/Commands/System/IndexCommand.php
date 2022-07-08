@@ -26,18 +26,25 @@ final class IndexCommand extends Command
 
     protected function configure(): void
     {
+        $cmdContext = trim(commandContext());
+
         $this->setName(self::ROUTE)
             ->setDescription('Ensure database has correct indexes.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes.')
             ->addOption('force-reindex', 'f', InputOption::VALUE_NONE, 'Drop existing indexes, and re-create them.')
             ->setHelp(
-                <<<HELP
+                replacer(
+                    <<<HELP
 
-This command ensure that your database has the correct indexes to speed up lookups,
-If you notice slowness in responses or sync, try running this command in [-f, --force-reindex]
-to re-create your Indexes.
+This command check the status of your database indexes, and update any missed index.
 
-HELP
+To recreate your database indexes run the following command
+
+{cmd} {route} --force-reindex -vvv
+
+HELP,
+                    ['cmd' => $cmdContext, 'route' => self::ROUTE]
+                )
             );
     }
 

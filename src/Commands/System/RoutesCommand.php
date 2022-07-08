@@ -17,7 +17,14 @@ final class RoutesCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Generate commands routes.');
+            ->setDescription('Generate commands routes.')->setHelp(
+                <<<HELP
+
+This command generate the force regenerate command routes.
+You do not need to run this command unless told by the team. This is done automatically on container startup.
+
+HELP
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
