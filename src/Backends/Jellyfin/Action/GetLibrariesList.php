@@ -101,7 +101,7 @@ class GetLibrariesList
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
-            $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
+            $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
         $list = [];
