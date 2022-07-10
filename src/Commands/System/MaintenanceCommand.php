@@ -23,7 +23,15 @@ final class MaintenanceCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Run maintenance tasks on database.');
+            ->setDescription('Run maintenance tasks on database.')
+            ->setHelp(
+                <<<HELP
+
+This command runs maintenance tasks on database to make sure the database is in optimal state.
+You do not need to run this command unless told by the team. This is done automatically on container startup.
+
+HELP
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

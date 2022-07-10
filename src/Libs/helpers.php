@@ -626,8 +626,18 @@ if (false === function_exists('isIgnoredId')) {
     }
 }
 
-if (false === function_exists('replacer')) {
-    function replacer(string $text, array $context = [], string $tagLeft = '{', string $tagRight = '}'): string
+if (false === function_exists('r')) {
+    /**
+     * Substitute words enclosed in special tags for values from context.
+     *
+     * @param string $text text that contains tokens.
+     * @param array $context A key/value pairs list.
+     * @param string $tagLeft left tag bracket. Default '{'.
+     * @param string $tagRight right tag bracket. Default '}'.
+     *
+     * @return string
+     */
+    function r(string $text, array $context = [], string $tagLeft = '{', string $tagRight = '}'): string
     {
         if (false === str_contains($text, $tagLeft) || false === str_contains($text, $tagRight)) {
             return $text;

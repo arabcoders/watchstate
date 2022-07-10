@@ -28,16 +28,25 @@ final class PruneCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            // -- @RELEASE remove option.
-            ->addOption(
-                'older-than',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Unused option. Will be removed at release.',
-                Config::get('logs.prune.after', '-3 DAYS')
-            )
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not take any action.')
-            ->setDescription('Remove automatically generated files.');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not perform any actions on files.')
+            ->setDescription('Remove automatically generated files.')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command remove automatically generated files. like logs and backups.
+
+to see what files will be removed without actually removing them. run the following command.
+
+{cmd} {route} --dry-run -vvv
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

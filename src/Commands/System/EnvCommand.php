@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Config;
 use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -16,8 +17,55 @@ final class EnvCommand extends Command
 
     protected function configure(): void
     {
+        $configPath = after(Config::get('path') . '/config/', ROOT_PATH);
+
         $this->setName(self::ROUTE)
-            ->setDescription('Dump loaded environment variables.');
+            ->setDescription('Show loaded environment variables.')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command display the environment variables that was loaded during the run of the tool.
+You can load environment variables in many ways. However, the recommended methods are:
+
+<comment># Docker compose file</comment>
+
+You can load environment variables via [<comment>docker-compose.yaml</comment>] file by adding them under the [<comment>environment</comment>] key.
+
+<comment>## [ Example ]</comment>
+
+To enable import task, do the following:
+
+-------------------------------
+version: '3.3'
+services:
+  watchstate:
+    image: ghcr.io/arabcoders/watchstate:latest
+    restart: unless-stopped
+    container_name: watchstate
+    <comment>environment:</comment>
+      <info>- WS_CRON_IMPORT=1</info>
+-------------------------------
+
+<comment># .env file</comment>
+
+We automatically look for [<comment>.env</comment>] in this path [<info>{path}</info>]. The file usually
+does not exist unless you have created it.
+
+The file format is simple <info>[KEY<comment>=</comment>VALUE]</info> pair per line.
+
+<comment>## [ Example ]</comment>
+
+To enable import task add the following line to [<comment>.env</comment>] file
+
+-------------------------------
+<info>WS_CRON_IMPORT<comment>=</comment>1</info>
+-------------------------------
+
+HELP,
+                    ['path' => $configPath]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

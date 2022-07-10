@@ -20,7 +20,24 @@ final class PHPCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Generate php config.')
-            ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate php-fpm config.');
+            ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate php-fpm config.')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command generate expected values for [<info>php.ini</info>] and [<info>fpm</info>] pool.
+
+To generate fpm values run:
+
+{cmd} {route} <info>--fpm</info>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

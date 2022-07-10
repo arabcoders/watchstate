@@ -260,7 +260,7 @@ HELP
                 $fileName = $file;
             }
 
-            $fileName = replacer($fileName, [
+            $fileName = r($fileName, [
                 'backend' => ag($backend, 'name'),
                 'date' => makeDate()->format('Ymd'),
             ]);

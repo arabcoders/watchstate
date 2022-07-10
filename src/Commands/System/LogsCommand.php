@@ -32,20 +32,22 @@ final class LogsCommand extends Command
 
     protected function configure(): void
     {
+        $defaultDate = makeDate()->format('Ymd');
+
         $this->setName(self::ROUTE)
             ->addOption(
                 'type',
-                null,
+                't',
                 InputOption::VALUE_REQUIRED,
                 sprintf('Log type, can be [%s].', implode(', ', self::LOG_FILES)),
                 self::LOG_FILES[0]
             )
             ->addOption(
                 'date',
-                null,
+                'd',
                 InputOption::VALUE_REQUIRED,
                 'Which log date to open. Format is [YYYYMMDD].',
-                makeDate()->format('Ymd'),
+                $defaultDate,
             )
             ->addOption('list', null, InputOption::VALUE_NONE, 'List All log files.')
             ->addOption(
@@ -55,10 +57,68 @@ final class LogsCommand extends Command
                 'Show last X number of log lines.',
                 self::DEFAULT_LIMIT
             )
-            ->addOption('tail', 't', InputOption::VALUE_NONE, 'Tail logfile.')
+            ->addOption('follow', 'f', InputOption::VALUE_NONE, 'Follow log file.')
             ->addOption('clear', null, InputOption::VALUE_NONE, 'Clear log file')
             ->setAliases(['logs'])
-            ->setDescription('View current logs.');
+            ->setDescription('View current logs.')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command allow you to access all recorded logs by the tool.
+
+-------------------
+<comment>[ Expected Values ]</comment>
+-------------------
+
+<info>type</info>  expects the value to be [{files}], By Default [<comment>{defaultLog}</comment>].
+<info>date</info>  expects the value to be [<comment>(number){8}</comment>]. By Default [<comment>{defaultDate}</comment>].
+<info>limit</info> expects the value to be [<comment>(number)</comment>]. By Default [<comment>{defaultLimit}</comment>].
+
+-------
+<comment>[ FAQ ]</comment>
+-------
+
+<comment># How to see all log files?</comment>
+
+{cmd} {route} <info>--list</info>
+
+<comment># How to follow log file?</comment>
+
+{cmd} {route} <info>--follow</info>
+
+<comment># How to clear log file?</comment>
+
+You can clear log file by running this command, However clearing log file require interactive confirmation.
+
+{cmd} {route} --type {defaultLog} --date {defaultDate} <info>--clear</info>
+
+<comment># How to increase/decrease the returned log lines?</comment>
+
+By default, we return the last [<comment>{defaultLimit}</comment>] log lines. However, you can increase/decrease
+the limit however you like by using [<info>-l, --limit</info>] flag. For example,
+
+{cmd} {route} <info>--limit</info> <comment>100</comment>
+
+<comment># Where log files stored?</comment>
+
+By default, We store logs at [<info>{logsPath}</info>]
+
+HELP,
+                    [
+                        'files' => implode(
+                            ' or ',
+                            array_map(fn($val) => '<comment>' . $val . '</comment>', self::LOG_FILES)
+                        ),
+                        'defaultLog' => self::LOG_FILES[0],
+                        'defaultDate' => $defaultDate,
+                        'defaultLimit' => self::DEFAULT_LIMIT,
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'logsPath' => Config::get('tmpDir') . '/logs',
+                    ]
+                )
+            );
     }
 
     /**
@@ -104,7 +164,7 @@ final class LogsCommand extends Command
             return $this->handleClearLog($file, $input, $output);
         }
 
-        if ($input->getOption('tail')) {
+        if ($input->getOption('follow')) {
             $p = $file->getRealPath();
             $lastPos = 0;
 
@@ -176,19 +236,20 @@ final class LogsCommand extends Command
         $isTable = $input->getOption('output') === 'table';
 
         foreach (glob($path . '/*.*.log') as $file) {
-            preg_match('/(\w+)\.(\d+)\.log/i', basename($file), $matches);
+            preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
 
             $size = filesize($file);
 
             $builder = [
-                'type' => $matches[1],
-                'date' => $matches[2],
+                'type' => $matches[1] ?? '??',
+                'tag' => $matches[2] ?? '??',
                 'size' => $isTable ? fsize($size) : $size,
                 'modified' => makeDate(filemtime($file))->format('Y-m-d H:i:s T'),
             ];
 
             if (!$isTable) {
                 $builder['file'] = $file;
+                $builder['modified'] = makeDate(filemtime($file));
             }
 
             $list[] = $builder;

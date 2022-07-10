@@ -553,13 +553,13 @@ final class ManageCommand extends Command
 
                 TEXT;
 
-                $text = replacer($text, ['type' => $importType]);
+                $text = r($text, ['type' => $importType]);
 
                 $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
 
                 if (true === $helper->ask($input, $output, $question)) {
                     $output->writeln(
-                        replacer('<info>Importing {type} from {name}</info>', [
+                        r('<info>Importing {type} from {name}</info>', [
                             'name' => $name,
                             'type' => $importType
                         ])

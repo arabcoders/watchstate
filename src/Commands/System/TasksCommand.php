@@ -36,7 +36,6 @@ final class TasksCommand extends Command
 
     protected function configure(): void
     {
-        $cmdContext = trim(commandContext()) . ' ' . self::ROUTE;
         $tasksName = implode(
             ', ',
             array_map(fn($val) => '<comment>' . strtoupper($val) . '</comment>',
@@ -50,55 +49,62 @@ final class TasksCommand extends Command
             ->addOption('live', null, InputOption::VALUE_NONE, 'See output in real time.')
             ->setDescription('List & Run scheduled tasks.')
             ->setHelp(
-                <<<HELP
+                r(
+                    <<<HELP
 
---------------------------
+This command automates the runs of scheduled tasks.
+
+-------
+<comment>[ FAQ ]</comment>
+-------
+
 <comment># How run scheduled tasks?</comment>
---------------------------
 
 To run scheduled tasks, Do the following
 
-{$cmdContext} --run
+{cmd} {route} <info>--run</info>
 
----------------------------------
 <comment># How to force run specific task?</comment>
----------------------------------
 
-You have to combine both <info>[--run]</info> and <info>[--task task_name]</info>, For example:
+You have to combine both <info>[--run]</info> and <info>[--task <comment>task_name</comment>]</info>, For example:
 
-{$cmdContext} <info>--run --task</info> <comment>import</comment>
+{cmd} {route} <info>--task</info> <comment>import</comment> <info>--run</info>
 
 Running task in force mode, bypass the task enabled check.
 
--------------------------
 <comment># How to configure tasks?</comment>
--------------------------
 
-All Prebuilt tasks have 3 environment variables assoicated with them.
+All Prebuilt tasks have 3 environment variables associated with them.
 
 ## <info>WS_CRON_<comment>{TASK}</comment>:</info>
 
 This environment variable control whether the task is enabled or not, it auto cast the value to bool. For example,
-to enable <comment>import</comment> task simply add new environment varaible called <info>WS_CRON_</info><comment>IMPORT</comment> with value of <info>true</info> or <info>1</info>.
+to enable <comment>import</comment> task simply add new environment variable called [<info>WS_CRON_</info><comment>IMPORT</comment>] with value of [<info>true</info>] or [<info>1</info>].
 
 ## <info>WS_CRON_<comment>{TASK}</comment>_AT:</info>
 
 This environment variable control when the task should run, it accepts valid cron expression timer. For example,
-to run <comment>import</comment> every two hours add new environment variable called <info>WS_CRON_<comment>IMPORT</comment>_AT</info> with value of <info>0 */2 * * *</info>.
+to run <comment>import</comment> every two hours add new environment variable called [<info>WS_CRON_<comment>IMPORT</comment>_AT</info>] with value of [<info>0 */2 * * *</info>].
 
 
 ## <info>WS_CRON_<comment>{TASK}</comment>_ARGS</info>:
 
 This environment variable control the options passed to the executed command, For example to expand the information
-logged during <comment>import</comment> run, add new environment variable called <info>WS_CRON_<comment>IMPORT</comment>_ARGS</info> with value of <info>-vvv --context --trace</info>.
-Simply put, run help on the assoicated command, and you can use any <comment>Options</comment> listed there in this variable.
+logged during <comment>import</comment> run, add new environment variable called [<info>WS_CRON_<comment>IMPORT</comment>_ARGS</info>] with value of [<info>-vvv --context</info>].
+Simply put, run help on the associated command, and you can use any <comment>Options</comment> listed there in this variable.
 
--------------------------------------
+## <comment>{TASK}</comment>
 
-Replace <comment>{TASK}</comment> which one of the following [ $tasksName ]
-environment variables are in ALL CAPITAL LETTERS
+Replace <comment>{TASK}</comment> tag in environment variables which one of the following [ {tasksList} ]
+environment variables are in <comment>ALL CAPITAL LETTERS</comment>.
 
-HELP
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'tasksList' => $tasksName,
+                    ]
+                )
             );
     }
 
@@ -125,7 +131,7 @@ HELP
 
             if (false === ag_exists($tasks, $task)) {
                 $output->writeln(
-                    replacer('<error>There are no task named [{task}].</error>', [
+                    r('<error>There are no task named [{task}].</error>', [
                         'task' => $task
                     ])
                 );
@@ -150,7 +156,7 @@ HELP
 
         if (count($run) < 1) {
             $output->writeln(
-                replacer('<info>[{datetime}] No task scheduled to run at this time.</info>', [
+                r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
                     'datetime' => makeDate(),
                 ]),
                 iOutput::VERBOSITY_VERBOSE
@@ -199,16 +205,16 @@ HELP
 
             $this->write('--------------------------', $input, $output);
             $this->write(
-                replacer('Task: {name} (Started: {startDate})', [
+                r('Task: {name} (Started: {startDate})', [
                     'name' => $task['name'],
                     'startDate' => $started,
                 ]),
                 $input,
                 $output
             );
-            $this->write(replacer('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
+            $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
             $this->write(
-                replacer('Exit Code: {code} (Ended: {endDate})', [
+                r('Exit Code: {code} (Ended: {endDate})', [
                     'code' => $process->getExitCode(),
                     'endDate' => $ended,
                 ]),
