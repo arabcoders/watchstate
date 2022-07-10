@@ -626,8 +626,8 @@ if (false === function_exists('isIgnoredId')) {
     }
 }
 
-if (false === function_exists('replacer')) {
-    function replacer(string $text, array $context = [], string $tagLeft = '{', string $tagRight = '}'): string
+if (false === function_exists('r')) {
+    function r(string $text, array $context = [], string $tagLeft = '{', string $tagRight = '}'): string
     {
         if (false === str_contains($text, $tagLeft) || false === str_contains($text, $tagRight)) {
             return $text;

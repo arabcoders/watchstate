@@ -62,7 +62,7 @@ final class LogsCommand extends Command
             ->setAliases(['logs'])
             ->setDescription('View current logs.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command allow you to access all recorded logs by the tool.

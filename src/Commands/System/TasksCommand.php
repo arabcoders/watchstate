@@ -49,7 +49,7 @@ final class TasksCommand extends Command
             ->addOption('live', null, InputOption::VALUE_NONE, 'See output in real time.')
             ->setDescription('List & Run scheduled tasks.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command automates the runs of scheduled tasks.
@@ -131,7 +131,7 @@ HELP,
 
             if (false === ag_exists($tasks, $task)) {
                 $output->writeln(
-                    replacer('<error>There are no task named [{task}].</error>', [
+                    r('<error>There are no task named [{task}].</error>', [
                         'task' => $task
                     ])
                 );
@@ -156,7 +156,7 @@ HELP,
 
         if (count($run) < 1) {
             $output->writeln(
-                replacer('<info>[{datetime}] No task scheduled to run at this time.</info>', [
+                r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
                     'datetime' => makeDate(),
                 ]),
                 iOutput::VERBOSITY_VERBOSE
@@ -205,16 +205,16 @@ HELP,
 
             $this->write('--------------------------', $input, $output);
             $this->write(
-                replacer('Task: {name} (Started: {startDate})', [
+                r('Task: {name} (Started: {startDate})', [
                     'name' => $task['name'],
                     'startDate' => $started,
                 ]),
                 $input,
                 $output
             );
-            $this->write(replacer('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
+            $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
             $this->write(
-                replacer('Exit Code: {code} (Ended: {endDate})', [
+                r('Exit Code: {code} (Ended: {endDate})', [
                     'code' => $process->getExitCode(),
                     'endDate' => $ended,
                 ]),

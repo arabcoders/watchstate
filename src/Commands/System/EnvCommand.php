@@ -22,7 +22,7 @@ final class EnvCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Show loaded environment variables.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command display the environment variables that was loaded during the run of the tool.

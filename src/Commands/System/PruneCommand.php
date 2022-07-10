@@ -31,7 +31,7 @@ final class PruneCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not perform any actions on files.')
             ->setDescription('Remove automatically generated files.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command remove automatically generated files. like logs and backups.

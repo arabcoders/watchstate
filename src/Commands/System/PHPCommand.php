@@ -22,7 +22,7 @@ final class PHPCommand extends Command
             ->setDescription('Generate php config.')
             ->addOption('fpm', null, InputOption::VALUE_NONE, 'Generate php-fpm config.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command generate expected values for [<info>php.ini</info>] and [<info>fpm</info>] pool.

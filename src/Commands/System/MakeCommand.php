@@ -27,7 +27,7 @@ final class MakeCommand extends Command
             ->setDescription('Create database schema migration file.')
             ->addArgument('filename', InputArgument::REQUIRED, 'Migration name.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command creates a migration file for database schema.

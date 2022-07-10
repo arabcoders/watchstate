@@ -33,7 +33,7 @@ final class IndexCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes.')
             ->addOption('force-reindex', 'f', InputOption::VALUE_NONE, 'Drop existing indexes, and re-create them.')
             ->setHelp(
-                replacer(
+                r(
                     <<<HELP
 
 This command check the status of your database indexes, and update any missed index.

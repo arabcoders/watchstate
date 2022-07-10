@@ -126,7 +126,7 @@ HELP
 
             if (true === ag_exists($list, (string)$id)) {
                 $output->writeln(
-                    replacer(
+                    r(
                         '<comment>ERROR: Cannot add [{id}] as it\'s already exists. added at [{date}].</comment>',
                         [
                             'id' => $id,
@@ -139,7 +139,7 @@ HELP
 
             if (true === ag_exists($list, (string)$id->withQuery(''))) {
                 $output->writeln(
-                    replacer(
+                    r(
                         '<comment>ERROR: Cannot add [{id}] as [{global}] already exists. added at [{date}].</comment>',
                         [
                             'id' => (string)$id,
