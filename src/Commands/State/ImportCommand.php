@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Commands\Backend\Library\UnmatchedCommand;
+use App\Commands\Config\EditCommand;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
@@ -68,7 +70,107 @@ class ImportCommand extends Command
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command sync metadata and the play state of items from backends. This step is necessary to have working tool.
+Without metadata syncing will be impossible. So for each backend that you add you need to import at miniuim the metadata
+of that backend.
+
+-------
+<comment>[ FAQ ]</comment>
+-------
+
+<comment># Import from specific backend?</comment>
+
+{cmd} {route} <info>--select-backend</info> [BACKEND_NAME]
+
+<comment># How to Import the metadata only?</comment>
+
+{cmd} {route} <info>--metadata-only</info>
+
+<comment># Import is failing due to timeout?</comment>
+
+If you want to permanently increase the <info>timeout</info> for specific backend, you can do the following
+
+{cmd} {config_edit} --key <comment>options.client.timeout</comment> --set <info>600.0</info> -- [BACKEND_NAME]
+
+Alternatively, you can also do that using append add the <info>--timeout</info> flag to the command it will increase the timeout
+for all backends during this specific run.
+
+{cmd} {route} <info>--timeout</info> 600.0
+
+<comment># Import is failing due to memory constraint?</comment>
+
+This is a tricky situation, the default mapper we use is a memory mapper that load the entire state into memory, However
+This may not be possible for memory constraint systems, You can use the alternative mapper implementation, it's less
+memory hungry. However, it is slower than the default mapper. to use alternative mapper you can do the following:
+
+{cmd} {route} <info>--direct-mapper</info>
+
+<comment># Run import to see changes without altering the database?</comment>
+
+Most important commands have [<info>--dry-run</info>] flag. This flag signal that the changes will not be committed if the flag is used.
+To see the changes that will happen during an import run you could for example run the following command
+
+{cmd} {route} <info>--dry-run</info> -vvv
+
+<comment># Import does not show any output?</comment>
+
+By default commands only show log level <comment>WARNING</comment> and higher, to see more verbose output
+You can use the [<info>-v|-vv|-vvv</info>] flag to signal that you want more output. And you can enable
+even more info by using [<info>--trace</info>] [<info>--context</info>] flags. Be warned the output using all those flags
+is quite excessive and shouldn't be used unless told by the team.
+
+{cmd} {route} <info>-vvv --trace --context</info>
+
+<comment># The Import operation keep updating some items repeatedly even when play state did not change?</comment>
+
+This most likely means your media backends have conflicting external ids for the reported items, and thus triggering an
+Update as the importer see different external ids on each item from backends. you could diagnose the problem by
+viewing each item and comparing the external ids being reported. This less likely to happen if you have parsing
+external guids for episodes disabled by using the environment variable [<info>WS_EPISODES_DISABLE_GUID=1</info>].
+
+<comment># "No valid/supported external ids." in logs?</comment>
+
+This most likely means that the item is not matched in your media backend
+
+For [<comment>Movies</comment>] check the following:
+
+[<info>jellyfin/emby</info>]: Go to the movie, click edit metadata and make sure there are external ids listed.
+[<info>Plex</info>]: Go to the movie, click the (...), and click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
+
+For [<comment>Series</comment>] check the following:
+
+[<info>jellyfin/emby</info>]: Go to the series, click edit metadata and make sure there are external ids listed.
+[<info>Plex</info>]: Go to the series, click the (...), then click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
+
+or you could use the built-in unmatched checker.
+
+{cmd} {unmatched_route} [BACKEND_NAME] [BACKEND_LIBRARY_ID]
+
+If you don't have any unmatched items, this likely means you are using unsupported external id.
+
+<comment># I removed the database, The import command is not importing the metadata again?</comment>
+
+This is caused by the key [<comment>import.lastSync</comment>] found in [<comment>servers.yaml</comment>]. You have to bypass it
+by using [<info>-f, --force-full</info>] flag. This flag will cause the importer to not consider the last import date
+and instead import all the items.
+
+{cmd} {route} <info>-force-full</info>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'config_edit' => EditCommand::ROUTE,
+                        'unmatched_route' => UnmatchedCommand::ROUTE,
+                    ]
+                )
+
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
