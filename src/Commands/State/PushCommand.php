@@ -44,7 +44,25 @@ class PushCommand extends Command
             ->setDescription('Push webhook queued events.')
             ->addOption('keep', 'k', InputOption::VALUE_NONE, 'Do not expunge queue after run is complete.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
-            ->addOption('ignore-date', null, InputOption::VALUE_NONE, 'Ignore date comparison.');
+            ->addOption('ignore-date', null, InputOption::VALUE_NONE, 'Ignore date comparison.')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command push the play state of the items that are updated by webhooks. This approach is a faster way of syncing
+the state back to the export.enabled backends. This approach is more efficient than the traditional export method.
+
+This approach require items metadata to be already available in database to actually do the necessary work. As we require
+backend id to do play state comparison. However, if the metadata for the items not available, then it will ignore that item for that backend.
+
+If the item ignored, it will then be picked up by the next state:export run and will try to match the item if possible.
+
+You should not run this manually and instead rely on scheduled task to run this command. For more information read the <info>FAQ.md</info>
+
+HELP,
+                    []
+                )
+            );
     }
 
     /**
