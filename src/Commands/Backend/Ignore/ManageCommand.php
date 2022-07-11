@@ -24,30 +24,13 @@ final class ManageCommand extends Command
 
     protected function configure(): void
     {
-        $cmdContext = trim(commandContext());
-        $cmdRoute = self::ROUTE;
-        $ignoreListFile = Config::get('path') . '/config/ignore.yaml';
-        $supportedGuids = implode(
-            ', ',
-            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>',
-                array_keys(Guid::getSupported(includeVirtual: false)))
-        );
-        $listOfTypes = implode(
-            ', ',
-            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>', iState::TYPES_LIST)
-        );
-        $listOfBackends = implode(
-            ', ',
-            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>',
-                array_keys(Config::get('servers', [])))
-        );
-
-        $this->setName($cmdRoute)
+        $this->setName(self::ROUTE)
             ->setDescription('Add/Remove external id from ignore list.')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove id from ignore list.')
             ->addArgument('id', InputArgument::REQUIRED, 'Id to ignore.')
             ->setHelp(
-                <<<HELP
+                r(
+                    <<<HELP
 
 This command allow you to ignore specific external id from backend.
 This helps when there is a conflict between your media servers provided external ids.
@@ -59,39 +42,59 @@ The <info>id</info> format is: <info>type</info>://<info>db</info>:<info>id</inf
 <comment>[ Expected Values ]</comment>
 -------------------
 
-<info>type</info>      expects the value to be one of [{$listOfTypes}]
-<info>db</info>        expects the value to be one of [{$supportedGuids}]
-<info>backend</info>   expects the value to be one of [{$listOfBackends}]
+<info>type</info>      expects the value to be one of [{listOfTypes}]
+<info>db</info>        expects the value to be one of [{supportedGuids}]
+<info>backend</info>   expects the value to be one of [{listOfBackends}]
 
 -------
 <comment>[ FAQ ]</comment>
 -------
 
-<comment># Adding exteranl id to ignore list</comment>
+<comment># Adding external id to ignore list</comment>
 
 To ignore <info>tvdb</info> id <info>320234</info> from <info>my_backend</info> backend you would do something like
 
-{$cmdContext} {$cmdRoute} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
+{cmd} {route} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
 
-If you want to limit this rule to specfic item id you would add [<info>?id=</info><comment>backend_id</comment>] to the rule, for example
+If you want to limit this rule to specific item id you would add [<info>?id=</info><comment>backend_id</comment>] to the rule, for example
 
-{$cmdContext} {$cmdRoute} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>?id=<info>1212111</info>
+{cmd} {route} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>?id=<info>1212111</info>
 
 This will ignore [<info>tvdb://320234</info>] id only when the context id = [<info>1212111</info>]
 
-<comment># Removing exteranl id from ignore list</comment>
+<comment># Removing external id from ignore list</comment>
 
 To Remove an external id from ignore list just append <info>[-r, --remove]</info> to the command. For example,
 
-{$cmdContext} {$cmdRoute} --remove <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
+{cmd} {route} <info>--remove</info> <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
 
 The <info>id</info> should match what was added exactly.
 
 <comment># ignore.yaml file location</comment>
 
-By defualt it should be at {$ignoreListFile}
+By default, it should be at [<info>{ignoreListFile}</info>]
 
-HELP
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'ignoreListFile' => Config::get('path') . '/config/ignore.yaml',
+                        'supportedGuids' => implode(
+                            ', ',
+                            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>',
+                                array_keys(Guid::getSupported(includeVirtual: false)))
+                        ),
+                        'listOfTypes' => implode(
+                            ', ',
+                            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>', iState::TYPES_LIST)
+                        ),
+                        'listOfBackends' => implode(
+                            ', ',
+                            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>',
+                                array_keys(Config::get('servers', [])))
+                        ),
+                    ]
+                )
             );
     }
 

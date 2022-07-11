@@ -37,8 +37,6 @@ final class ListCommand extends Command
 
     protected function configure(): void
     {
-        $cmdContext = trim(commandContext());
-
         $this->setName(self::ROUTE)
             ->addOption('type', null, InputOption::VALUE_REQUIRED, 'Filter based on type.')
             ->addOption('backend', null, InputOption::VALUE_REQUIRED, 'Filter based on backend.')
@@ -46,7 +44,8 @@ final class ListCommand extends Command
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Filter based on id.')
             ->setDescription('List Ignored external ids.')
             ->setHelp(
-                <<<HELP
+                r(
+                    <<<HELP
 
 This command display list of ignored external ids. You can filter the list by
 using one or more of the provided options like [<info>--type</info>, <info>--backend</info>, <info>--db</info>, <info>--id</info>].
@@ -55,15 +54,20 @@ using one or more of the provided options like [<info>--type</info>, <info>--bac
 <comment>[ Examples ]</comment>
 ------------
 
-<comment># List all ignore rules that reletes to specific backend.</comment>
+<comment># List all ignore rules that relate to specific backend.</comment>
 
-{$cmdContext} backend:ignore:list <info>--backend</info> <comment>my_backend</comment>
+{cmd} {route} <info>--backend</info> <comment>my_backend</comment>
 
 <comment># Appending more filters to narrow down list</comment>
 
-{$cmdContext} backend:ignore:list <info>--backend</info> <comment>my_backend</comment> <info>--db</info> <comment>tvdb</comment>
+{cmd} {route} <info>--backend</info> <comment>my_backend</comment> <info>--db</info> <comment>tvdb</comment>
 
-HELP
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
             );
     }
 
