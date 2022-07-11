@@ -85,7 +85,7 @@ of that backend.
 
 <comment># Import from specific backend?</comment>
 
-{cmd} {route} <info>--select-backend</info> [BACKEND_NAME]
+{cmd} {route} <info>--select-backends</info> [BACKEND_NAME]
 
 <comment># How to Import the metadata only?</comment>
 
@@ -97,8 +97,8 @@ If you want to permanently increase the <info>timeout</info> for specific backen
 
 {cmd} {config_edit} --key <comment>options.client.timeout</comment> --set <info>600.0</info> -- [BACKEND_NAME]
 
-Alternatively, you can also do that using append add the <info>--timeout</info> flag to the command it will increase the timeout
-for all backends during this specific run.
+<info>600.0</info> seconds is equal to 10 minutes before the timeout handler kicks in. Alternatively, you can also increase the
+timeout temporarily by using the <info>--timeout</info> flag. It will increase the timeout for all backends during this run.
 
 {cmd} {route} <info>--timeout</info> 600.0
 
@@ -121,7 +121,7 @@ To see the changes that will happen during an import run you could for example r
 
 By default commands only show log level <comment>WARNING</comment> and higher, to see more verbose output
 You can use the [<info>-v|-vv|-vvv</info>] flag to signal that you want more output. And you can enable
-even more info by using [<info>--trace</info>] [<info>--context</info>] flags. Be warned the output using all those flags
+even more info by using [<info>--trace</info>] and [<info>--context</info>] flags. Be warned the output using all those flags
 is quite excessive and shouldn't be used unless told by the team.
 
 {cmd} {route} <info>-vvv --trace --context</info>
