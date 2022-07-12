@@ -48,19 +48,19 @@ final class ListCommand extends Command
                     <<<HELP
 
 This command display list of ignored external ids. You can filter the list by
-using one or more of the provided options like [<info>--type</info>, <info>--backend</info>, <info>--db</info>, <info>--id</info>].
+using one or more of the provided options like [<flag>--type</flag>, <flag>--backend</flag>, <flag>--db</flag>, <flag>--id</flag>].
 
-------------
-<comment>[ Examples ]</comment>
-------------
+-------
+<notice>[ FAQ ]</notice>
+-------
 
-<comment># List all ignore rules that relate to specific backend.</comment>
+<question># List all ignore rules that relate to specific backend.</question>
 
-{cmd} {route} <info>--backend</info> <comment>my_backend</comment>
+{cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>BACKEND_NAME</value>
 
-<comment># Appending more filters to narrow down list</comment>
+<question># Appending more filters to narrow down list</question>
 
-{cmd} {route} <info>--backend</info> <comment>my_backend</comment> <info>--db</info> <comment>tvdb</comment>
+{cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>BACKEND_NAME</value> <flag>--db</flag> <value>tvdb</value>
 
 HELP,
                     [

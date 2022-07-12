@@ -21,22 +21,54 @@ final class UnmatchedCommand extends Command
 {
     public const ROUTE = 'backend:library:unmatched';
 
+    private const CUTOFF = 30;
+
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Find top level Items in library that has no external ids.')
+            ->setDescription('Find Item in backend library that does not have external ids.')
             ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of the match status.')
             ->addOption(
                 'timeout',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'Request timeout in seconds.',
+                'Increase request timeout.',
                 Config::get('http.default.options.timeout')
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
+            ->addOption('cutoff', null, InputOption::VALUE_REQUIRED, 'Increase title cutoff', self::CUTOFF)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('id', null, InputOption::VALUE_REQUIRED, 'backend Library id.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
-            ->addArgument('id', InputArgument::REQUIRED, 'Library id.');
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command help find unmatched items in your libraries.
+
+-------
+<notice>[ FAQ ]</notice>
+-------
+
+<question># I want to check specific library id?</question>
+
+You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
+id you get from [<cmd>{library_list}</cmd>] command.
+
+{cmd} <cmd>{route}</cmd> <flag>--id</flag> '<value>backend_library_id</value>' <value>BACKEND_NAME</value>
+
+<question># I want to show all items regardless of the status?</question>
+
+{cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <value>BACKEND_NAME</value>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'library_list' => ListCommand::ROUTE,
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -44,7 +76,8 @@ final class UnmatchedCommand extends Command
         $mode = $input->getOption('output');
         $showAll = $input->getOption('show-all');
         $backend = $input->getArgument('backend');
-        $id = $input->getArgument('id');
+        $id = $input->getOption('id');
+        $cutoff = (int)$input->getOption('cutoff');
 
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
@@ -74,13 +107,29 @@ final class UnmatchedCommand extends Command
                 $opts[Options::RAW_RESPONSE] = true;
             }
 
-            foreach ($this->getBackend($backend, $backendOpts)->getLibrary(id: $id, opts: $opts) as $item) {
-                if (true === $showAll) {
-                    $list[] = $item;
-                    continue;
+            $client = $this->getBackend($backend, $backendOpts);
+
+            $ids = [];
+            if (null !== $id) {
+                $ids[] = $id;
+            } else {
+                foreach ($client->listLibraries() as $library) {
+                    if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
+                        continue;
+                    }
+                    $ids[] = ag($library, 'id');
                 }
-                if (null === ($externals = ag($item, 'guids', null)) || empty($externals)) {
-                    $list[] = $item;
+            }
+
+            foreach ($ids as $libraryId) {
+                foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
+                    if (true === $showAll) {
+                        $list[] = $item;
+                        continue;
+                    }
+                    if (null === ($externals = ag($item, 'guids', null)) || empty($externals)) {
+                        $list[] = $item;
+                    }
                 }
             }
         } catch (Throwable $e) {
@@ -107,11 +156,7 @@ final class UnmatchedCommand extends Command
 
         if (empty($list)) {
             $arr = [
-                'info' => sprintf(
-                    'No un-unmatched items were found in [%s] library [%s] given library.',
-                    $backend,
-                    $id
-                ),
+                'info' => 'No un-unmatched items were found',
             ];
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
@@ -124,10 +169,21 @@ final class UnmatchedCommand extends Command
             foreach ($list as $item) {
                 $leaf = [
                     'id' => ag($item, 'id'),
-                    'type' => ag($item, 'type'),
-                    'title' => ag($item, 'title'),
-                    'year' => ag($item, 'year'),
                 ];
+
+                if (!$id) {
+                    $leaf['type'] = ag($item, 'type');
+                    $leaf['library'] = ag($item, 'library');
+                }
+
+                $title = ag($item, 'title');
+
+                if (mb_strlen($title) > $cutoff) {
+                    $title = mb_substr($title, 0, $cutoff) . '..';
+                }
+
+                $leaf['title'] = $title;
+                $leaf['year'] = ag($item, 'year');
 
                 if ($showAll) {
                     $leaf['guids'] = implode(', ', $item['guids'] ?? []);

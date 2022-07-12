@@ -28,7 +28,33 @@ final class IdCommand extends Command
             ->addOption('no-cache', null, InputOption::VALUE_NONE, 'Request new response from backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
-            ->addArgument('id', InputArgument::REQUIRED, 'Item id.');
+            ->addArgument('id', InputArgument::REQUIRED, 'Backend item id.')
+            ->setHelp(
+                r(
+                    <<<HELP
+This command allow you to get metadata about specific <notice>item id</notice> from backend.
+
+The default mode display minimal information. To get more information you have to switch the output
+mode to [<value>json</value> or <value>yaml</value>] and use the [<flag>--include-raw-response</flag>] flag. For example,
+
+{cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_item_id</value>
+
+-------
+<notice>[ FAQ ]</notice>
+-------
+
+<question># Why the response is not being updated?</question>
+
+We <notice>cache</notice> the responses from the API to speed up the lookups, if however this is undesirable,
+You can bypass the cache by using [<flag>--no-cache</flag>] flag.
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

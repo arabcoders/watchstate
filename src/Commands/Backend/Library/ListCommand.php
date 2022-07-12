@@ -26,7 +26,15 @@ final class ListCommand extends Command
             ->setDescription('Get Backend libraries list.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->setHelp(
+                <<<HELP
+
+This command list the backend libraries. This help you to know which library are supported.
+This command also show the <notice>backend library id</notice>.
+
+HELP
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

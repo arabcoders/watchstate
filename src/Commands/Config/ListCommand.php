@@ -26,7 +26,15 @@ final class ListCommand extends Command
         $this->setName(self::ROUTE)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->setDescription('List Added backends.')
-            ->setAliases(['servers:list']);
+            ->setAliases(['servers:list'])
+            ->setHelp(
+                <<<HELP
+
+This command list your configured backends.
+
+HELP
+
+            );
     }
 
     /**

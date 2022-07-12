@@ -22,7 +22,26 @@ final class AddCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Add new backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command allow you to add new backend to your [<value>servers.yaml</value>] config.
+This command require <notice>interaction</notice> to work.
+
+This command is purely shortcut for running the following command:
+
+{cmd} <cmd>{manage_route}</cmd> --add -- <value>backend_name</value>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'manage_route' => ManageCommand::ROUTE,
+                    ]
+                )
+            );
     }
 
     /**
@@ -38,7 +57,7 @@ final class AddCommand extends Command
             $opts['--config'] = $input->getOption('config');
         }
 
-        $opts['backend'] = $input->getArgument('backend');
+        $opts['backend'] = strtolower($input->getArgument('backend'));
 
         return $this->getApplication()?->find(ManageCommand::ROUTE)->run(new ArrayInput($opts), $output);
     }

@@ -18,16 +18,17 @@ use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class GetLibrary
 {
-    use CommonTrait, PlexActionTrait;
+    use CommonTrait;
+    use PlexActionTrait;
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    public function __construct(protected iHttp $http, protected iLogger $logger)
     {
     }
 
@@ -282,6 +283,7 @@ final class GetLibrary
         $metadata = [
             'id' => (int)ag($item, 'ratingKey'),
             'type' => ucfirst(ag($item, 'type', 'unknown')),
+            'library' => ag($log, 'library.title'),
             'url' => (string)$url,
             'title' => ag($item, $possibleTitlesList, '??'),
             'year' => $year,

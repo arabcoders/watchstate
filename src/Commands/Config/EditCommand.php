@@ -31,7 +31,44 @@ final class EditCommand extends Command
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name')
-            ->setAliases(['servers:edit']);
+            ->setAliases(['servers:edit'])
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command allow you to <notice>edit</notice> backend config settings <notice>inline</notice>.
+
+The [<flag>--key</flag>] accept string value. the list of officially supported keys are:
+
+[{keyNames}]
+
+-------
+<notice>[ FAQ ]</notice>
+-------
+
+<question># How to edit config setting?</question>
+
+{cmd} <cmd>{route}</cmd> <flag>--key</flag> <value>key</value> <flag>--set</flag> <value>value</value> -- <value>backend_name</value>
+
+<question># How to change the webhook token?</question>
+
+{cmd} <cmd>{route}</cmd> <flag>--regenerate-webhook-token</flag> -- <value>backend_name</value>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'manage_route' => ManageCommand::ROUTE,
+                        'keyNames' => implode(
+                            ', ',
+                            array_map(
+                                fn($val) => '<value>' . $val . '</value>',
+                                require __DIR__ . '/../../../config/backend.spec.php'
+                            )
+                        )
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
@@ -58,9 +95,11 @@ final class EditCommand extends Command
 
         if (!isValidName($name)) {
             $output->writeln(
-                sprintf(
-                    '<error>ERROR: Invalid \'%s\' name was given. Only \'A-Z, a-z, 0-9, _\' are allowed.</error>',
-                    $name,
+                r(
+                    '<error>ERROR:</error> Invalid [<value>{name}</value>] name was given. Only [<value>a-z, 0-9, _</value>] are allowed.',
+                    [
+                        'name' => $name
+                    ],
                 )
             );
             return self::FAILURE;
@@ -69,6 +108,10 @@ final class EditCommand extends Command
         if (null === ($backend = ag($backends, $name, null))) {
             $output->writeln(sprintf('<error>ERROR: Backend \'%s\' not found.</error>', $name));
             return self::FAILURE;
+        }
+
+        if (strtolower($name) !== $name) {
+            $output->writeln('<comment>Non lower case backend names are deprecated and will not work in v1.</comment>');
         }
 
         if ($input->getOption('regenerate-webhook-token')) {

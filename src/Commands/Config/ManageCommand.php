@@ -34,7 +34,17 @@ final class ManageCommand extends Command
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
-            ->setAliases(['servers:manage']);
+            ->setAliases(['servers:manage'])
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command allows you to manage backend settings.
+This command require <notice>interaction</notice> to work.
+
+HELP,
+                )
+            );
     }
 
     /**
@@ -49,12 +59,22 @@ final class ManageCommand extends Command
         }
 
         if (false === $tty || $input->getOption('no-interaction')) {
-            $output->writeln('<error>ERROR: This command require interaction.</error>');
             $output->writeln(
-                '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
-            );
-            $output->writeln(
-                '<comment>For example: docker exec -ti watchstate console config:manage my_server</comment>'
+                r(
+                    <<<ERROR
+
+<error>ERROR:</error> This command require <notice>interaction</notice>. For example:
+
+{cmd} <cmd>{route}</cmd> -- <value>{backend}</value>
+
+ERROR,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'backend' => $input->getArgument('backend'),
+                    ]
+                )
+
             );
             return self::FAILURE;
         }
@@ -64,11 +84,10 @@ final class ManageCommand extends Command
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
-                $this->checkCustomBackendsFile($config);
                 $custom = true;
-                $backends = (array)Yaml::parseFile($config);
+                $backends = (array)Yaml::parseFile($this->checkCustomBackendsFile($config));
             } catch (\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                $output->writeln(r('<error>ERROR:</error> {error}', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }
         } else {
@@ -84,36 +103,51 @@ final class ManageCommand extends Command
 
         if (!isValidName($name)) {
             $output->writeln(
-                sprintf(
-                    '<error>ERROR: Invalid \'%s\' name was given. Only \'A-Z, a-z, 0-9, _\' are allowed.</error>',
-                    $name,
+                r(
+                    '<error>ERROR:</error> Invalid [<value>{name}</value>] name was given. Only [<value>a-z, 0-9, _</value>] are allowed.',
+                    [
+                        'name' => $name
+                    ],
                 )
             );
             return self::FAILURE;
         }
 
-        if (false === $add && null === ag($backends, "{$name}.type", null)) {
+        if (true === $add) {
+            if (null !== ag($backends, "{$name}.type", null)) {
+                $output->writeln(
+                    r(
+                        '<error>ERROR:</error> Backend with [<value>{backend}</value>] name already exists. Omit the [<flag>--add</flag>] flag if you want to edit the backend settings.',
+                        [
+                            'backend' => $name,
+                        ],
+                    )
+                );
+                return self::FAILURE;
+            }
+            $name = strtolower($name);
+        } elseif (null === ag($backends, "{$name}.type", null)) {
             $output->writeln(
-                sprintf(
-                    '<error>ERROR: Backend \'%s\' not found. To add new backend append --add flag to the command.</error>',
-                    $name,
+                r(
+                    '<error>ERROR:</error> No backend named [<value>{backend}</value>] was found. Append [<flag>--add</flag>] to add as new backend.',
+                    [
+                        'backend' => $name,
+                    ]
                 )
             );
             return self::FAILURE;
         }
 
-        if (true === $add && null !== ag($backends, "{$name}.type", null)) {
+        if (strtolower($name) !== $name) {
+            // @RELEASE - remove warning and make sure to lower case name.
             $output->writeln(
-                sprintf(
-                    '<error>ERROR: Backend name \'%s\' already exists in \'%s\' omit the --add flag if you want to edit the config.</error>',
-                    $name,
-                    $config
-                )
+                '<comment>Non lower case backend names are deprecated and will not work in v1.0.</comment>'
             );
-            return self::FAILURE;
         }
 
         $u = $rerun ?? ag($backends, $name, []);
+
+        $output->writeln('');
 
         // -- $name.type
         (function () use ($input, $output, &$u, $name) {
@@ -124,11 +158,10 @@ final class ManageCommand extends Command
             $choice = array_search($chosen, $list);
 
             $question = new ChoiceQuestion(
-                sprintf(
-                    'Select %s type. %s',
-                    $name,
-                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : ''
-                ),
+                r('<question>Select [<value>{name}</value>] type</question>. {default}', [
+                    'name' => $name,
+                    'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
+                ]),
                 $list,
                 false === $choice ? null : $choice
             );
@@ -150,11 +183,10 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $chosen = ag($u, 'url');
             $question = new Question(
-                sprintf(
-                    'Enter %s URL. %s' . PHP_EOL . '> ',
-                    $name,
-                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
-                ),
+                r('<question>Enter [<value>{name}</value>] URL</question>. {default}' . PHP_EOL . '> ', [
+                    'name' => $name,
+                    'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
+                ]),
                 $chosen
             );
 
@@ -175,11 +207,10 @@ final class ManageCommand extends Command
             $helper = $this->getHelper('question');
             $chosen = ag($u, 'token');
             $question = new Question(
-                sprintf(
-                    'Enter %s API token. %s' . PHP_EOL . '> ',
-                    $name,
-                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
-                ),
+                r('<question>Enter [<value>{name}</value>] API token</question>. {default}' . PHP_EOL . '> ', [
+                    'name' => $name,
+                    'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
+                ]),
                 $chosen
             );
 
@@ -227,10 +258,12 @@ final class ManageCommand extends Command
 
             $helper = $this->getHelper('question');
             $question = new Question(
-                sprintf(
-                    'Enter %s backend unique identifier. %s' . PHP_EOL . '> ',
-                    $name,
-                    null !== $chosen ? "<comment>[Default: {$chosen}]</comment>" : '',
+                r(
+                    '<question>Enter [<value>{name}</value>] backend unique identifier</question>. {default}' . PHP_EOL . '> ',
+                    [
+                        'name' => $name,
+                        'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
+                    ]
                 ),
                 $chosen
             );
@@ -285,10 +318,9 @@ final class ManageCommand extends Command
                 $choice = $ids[$chosen] ?? null;
 
                 $question = new ChoiceQuestion(
-                    sprintf(
-                        'Select which user to associate with this backend. %s',
-                        null !== $choice ? "<comment>[Default: {$choice}]</comment>" : ''
-                    ),
+                    r('<question>Select which user to associate with this backend</question>. {default}', [
+                        'default' => null !== $choice ? "<value>[Default: {$choice}]</value>" : ''
+                    ]),
                     $list,
                     false === $choice ? null : $choice
                 );
@@ -317,7 +349,7 @@ final class ManageCommand extends Command
                 sprintf(
                     'Please enter %s user id to associate this config to %s' . PHP_EOL . '> ',
                     ucfirst(ag($u, 'type')),
-                    null !== $chosen ? "- <comment>[Default: {$chosen}]</comment>" : '',
+                    null !== $chosen ? "- <value>[Default: {$chosen}]</value>" : '',
                 ),
                 $chosen
             );
@@ -348,12 +380,13 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'import.enabled', true);
 
             $helper = $this->getHelper('question');
-            $text = 'Enable <info>Importing</info> <comment>metadata</comment> and <comment>play state</comment> from this backend? <comment>%s</comment>';
 
             $question = new ConfirmationQuestion(
-                sprintf(
-                    $text . PHP_EOL . '> ',
-                    '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                r(
+                    '<question>Enable importing of <flag>metadata</flag> and <flag>play state</flag> from this backend</question>? {default}' . PHP_EOL . '> ',
+                    [
+                        'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
+                    ]
                 ),
                 $chosen
             );
@@ -368,12 +401,13 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'export.enabled', true);
 
             $helper = $this->getHelper('question');
-            $text = 'Enable <info>Exporting</info> <comment>play state</comment> to this backend? <comment>%s</comment>';
 
             $question = new ConfirmationQuestion(
-                sprintf(
-                    $text . PHP_EOL . '> ',
-                    '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                r(
+                    '<question>Enable exporting <value>play state</value> to this backend</question>? {default}' . PHP_EOL . '> ',
+                    [
+                        'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
+                    ]
                 ),
                 $chosen
             );
@@ -396,21 +430,21 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'options.' . Options::IMPORT_METADATA_ONLY, true);
 
             $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                Enable <info>Importing</info> <comment>metadata ONLY</comment> from this backend? <comment>%s</comment>
-                ------------------
-                To efficiently <info>export</info> to this backend we need relation map and this require
-                us to get metadata from the backend. You have <comment>Importing</comment> disabled, as such this option
-                allow us to import this backend <info>metadata</info> without altering your play state.
-                ------------------
-                <info>This option is SAFE and WILL NOT change your play state or add new items.</info>
-                TEXT;
 
             $question = new ConfirmationQuestion(
-                sprintf(
-                    $text . PHP_EOL . '> ',
-                    '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                r(
+                    <<<HELP
+                    <question>Enable Importing <info>metadata ONLY</info> from this backend</question>? {default}
+                    ------------------
+                    To efficiently <cmd>export</cmd> to this backend we need relation map and this require
+                    us to get metadata from the backend. You have <cmd>Importing</cmd> disabled, as such this option
+                    allow us to import this backend <info>metadata</info> without altering your play state.
+                    ------------------
+                    <value>This option will not alter your play state or add new items to the database.</value>
+                    HELP. PHP_EOL . '> ',
+                    [
+                        'default' => '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                    ]
                 ),
                 $chosen
             );
@@ -425,18 +459,15 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'webhook.match.user', false);
 
             $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                <info>Limit</info> backend webhook events to the selected <info>user</info>? <comment>%s</comment>
-                ------------------
-                <comment>Helpful for Plex multi user/servers setup.</comment>
-                <comment>Lead sometimes to missed events for jellyfin itemAdd events. You should scope the token at jellyfin level.</comment>
-                TEXT;
 
             $question = new ConfirmationQuestion(
-                sprintf(
-                    $text . PHP_EOL . '> ',
-                    '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                r(
+                    <<<HELP
+                    <question>Limit backend webhook events to the selected <flag>user</flag></question>? {default}
+                    HELP. PHP_EOL . '> ',
+                    [
+                        'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
+                    ]
                 ),
                 $chosen
             );
@@ -451,17 +482,17 @@ final class ManageCommand extends Command
             $chosen = (bool)ag($u, 'webhook.match.uuid', false);
 
             $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-                <info>Limit</info> backend webhook events to the selected <info>backend unique id</info>? <comment>%s</comment>
-                ------------------
-                <comment>Helpful for Plex multi user/servers setup.</comment>
-                TEXT;
 
             $question = new ConfirmationQuestion(
-                sprintf(
-                    $text . PHP_EOL . '> ',
-                    '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                r(
+                    <<<HELP
+                    <question>Limit this backend webhook events to the specified <flag>backend unique id</flag></question>? {default}
+                    ------------------
+                    <comment>This option MUST be enabled for multi plex servers setup.</comment>
+                    HELP. PHP_EOL . '> ',
+                    [
+                        'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
+                    ]
                 ),
                 $chosen
             );
@@ -476,7 +507,9 @@ final class ManageCommand extends Command
                 $u = ag_set($u, 'webhook.token', bin2hex(random_bytes(Config::get('webhook.tokenLength'))));
             } catch (Throwable $e) {
                 $output->writeln(
-                    sprintf('<error>Generating webhook api token has failed. %s</error>', $e->getMessage())
+                    r('<error>ERROR</error>: Generating webhook token has failed. {error}', [
+                        'error' => $e->getMessage()
+                    ])
                 );
                 return self::FAILURE;
             }
@@ -498,7 +531,8 @@ final class ManageCommand extends Command
 
         $helper = $this->getHelper('question');
         $question = new ConfirmationQuestion(
-            'Is the info correct? <comment>[Y|N] [Default: Yes]</comment>' . PHP_EOL . '> ', true
+            '<question>Is the info correct? [<value>Y|N</value>] [<value>Default: Yes</value>]</question>' . PHP_EOL . '> ',
+            true
         );
 
         if (false === $helper->ask($input, $output, $question)) {
@@ -520,13 +554,13 @@ final class ManageCommand extends Command
             $text =
                 <<<TEXT
 
-                Create Database indexes now? <comment>[Y|N] [Default: Yes]</comment>
+                <question>Create database indexes now</question>? [<value>Y|N</value>] [<value>Default: Yes</value>]
                 -----------------
-                <info>This is necessary action to ensure speedy operations on database,
-                If not run now, you have to manually run the system:index command, or restart the container
-                which will trigger index check to make sure your database data is fully indexed.</info>
-                <comment>P.S: this could take few minutes to execute depending on your disk speed.</comment>
+                This is necessary action to ensure speedy operations on database,
+                If you do not run this now, you have to manually run the system:index command, or restart the container
+                which will trigger index check to make sure your database data is fully indexed.
                 -----------------
+                <value>P.S: this could take few minutes to execute.</value>
 
                 TEXT;
 
@@ -546,10 +580,9 @@ final class ManageCommand extends Command
                 $text =
                     <<<TEXT
 
-                Would you like to import <info>{type}</info> from the backend now? <comment>[Y|N] [Default: No]</comment>
+                <question>Would you like to import <flag>{type}</flag> from the backend now</question>? [<value>Y|N</value>] [<value>Default: No</value>]
                 -----------------
-                <comment>P.S: this could take few minutes to execute.</comment>
-                -----------------
+                <value>P.S: this could take few minutes to execute.</value>
 
                 TEXT;
 

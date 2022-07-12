@@ -8,8 +8,8 @@ use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\Date;
 use App\Libs\Router;
 use App\Libs\Servers\ServerInterface;
+use App\Libs\Uri;
 use Nyholm\Psr7\Response;
-use Nyholm\Psr7\Uri;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -74,7 +74,7 @@ if (!function_exists('makeDate')) {
 }
 
 if (!function_exists('ag')) {
-    function ag(array|object $array, string|array|null $path, mixed $default = null, string $separator = '.'): mixed
+    function ag(array|object $array, string|array|int|null $path, mixed $default = null, string $separator = '.'): mixed
     {
         if (empty($path)) {
             return $array;

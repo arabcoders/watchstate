@@ -131,25 +131,25 @@ class Command extends BaseCommand
     {
         if (!file_exists($config) || !is_file($config)) {
             throw new RuntimeException(
-                sprintf('ERROR: Config file \'%s\' does not exists.', $config)
+                r('Config file [{config}] does not exists.', [
+                    'config' => $config
+                ])
             );
         }
 
         if (!is_readable($config)) {
             throw new RuntimeException(
-                sprintf(
-                    'ERROR: Unable to read config file \'%s\'. (Check Permissions)',
-                    $config
-                )
+                r('Unable to read config file [{config}]. (Check Permissions)', [
+                    'config' => $config
+                ])
             );
         }
 
         if (!is_writable($config)) {
             throw new RuntimeException(
-                sprintf(
-                    'ERROR: Unable to edit config file \'%s\'. (Check Permissions)',
-                    $config
-                )
+                r('Unable to edit config file [{config}]. (Check Permissions)', [
+                    'config' => $config
+                ])
             );
         }
 

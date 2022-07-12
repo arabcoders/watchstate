@@ -28,7 +28,23 @@ final class QueryCommand extends Command
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit returned results.', 25)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
-            ->addArgument('query', InputArgument::REQUIRED, 'Search query.');
+            ->addArgument('query', InputArgument::REQUIRED, 'Search query.')->setHelp(
+                r(
+                    <<<HELP
+This command allow you to search for specific <notice>keyword</notice> in backend libraries.
+
+The default mode display minimal information. To get more information you have to switch the output
+mode to [<value>json</value> or <value>yaml</value>] and use the [<flag>--include-raw-response</flag>] flag. For example,
+
+{cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>BACKEND_NAME</value> '<value>KEYWORD</value>'
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -76,6 +92,16 @@ final class QueryCommand extends Command
                 return self::FAILURE;
             }
 
+            if ('table' === $mode) {
+                foreach ($results as &$item) {
+                    $item['title'] = preg_replace(
+                        '#(' . preg_quote($query, '#') . ')#i',
+                        '<value>$1</value>',
+                        $item['title']
+                    );
+                }
+                unset($item);
+            }
             $this->displayContent($results, $output, $mode);
 
             return self::SUCCESS;
