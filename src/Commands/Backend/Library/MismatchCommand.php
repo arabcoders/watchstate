@@ -28,19 +28,45 @@ final class MismatchCommand extends Command
         'levenshtein',
     ];
 
+    private const DEFAULT_PERCENT = 50.0;
+
+    private const REMOVED_CHARS = [
+        '?',
+        ':',
+        '(',
+        '[',
+        ']',
+        ')',
+        ',',
+        '|',
+        '%',
+        '.',
+        '–',
+        '-',
+        "'",
+        '"',
+        '+',
+        '/',
+        ';',
+        '&',
+        '_',
+        '!',
+        '*',
+    ];
+
+    private const CUTOFF = 30;
+
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription(
-                'Find possible mis-identified item in a library. This only works for Media that follow Plex naming format.'
-            )
+            ->setDescription('Find possible mis-matched item in a libraries.')
             ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of status.')
-            ->addOption('percentage', 'p', InputOption::VALUE_OPTIONAL, 'Acceptable percentage.', 50.0)
+            ->addOption('percentage', 'p', InputOption::VALUE_OPTIONAL, 'Acceptable percentage.', self::DEFAULT_PERCENT)
             ->addOption(
                 'method',
                 'm',
                 InputOption::VALUE_OPTIONAL,
-                sprintf('Comparison method. Can be [%s].', implode(', ', $this->methods)),
+                r('Comparison method. Can be [{list}].', ['list' => implode(', ', $this->methods)]),
                 $this->methods[0]
             )
             ->addOption(
@@ -51,9 +77,51 @@ final class MismatchCommand extends Command
                 Config::get('http.default.options.timeout')
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
+            ->addOption('cutoff', null, InputOption::VALUE_REQUIRED, 'Increase title cutoff', self::CUTOFF)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('id', null, InputOption::VALUE_REQUIRED, 'backend Library id.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
-            ->addArgument('id', InputArgument::REQUIRED, 'Library id.');
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command help find possible mis-matched <info>Movies</info> and <info>Series</info> in library items.
+
+This command require <info>Plex Naming Standard</info> and assume the reported [<comment>title</comment>, <comment>year</comment>] somewhat matches the reported media path.
+
+We remove text contained within <info>{}</info> and <info>[]</info> brackets, as well as this characters:
+[{removedList}]
+
+Plex naming standard for <info>Movies</info> is:
+/storage/movies/<comment>Movie Title (Year)/Movie Title (Year)</comment> [Tags].ext
+
+Plex naming standard for <info>Series</info> is:
+/storage/series/<comment>Series Title (Year)</comment>
+
+-------------------
+<comment>[ Expected Values ]</comment>
+-------------------
+
+<info>percentage</info> expects the value to be [number]. [<comment>Default: {defaultPercent}</comment>].
+<info>method</info>     expects the value to be one of [{methodsList}]. [<comment>Default: {DefaultMethod}</comment>].
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'methodsList' => implode(
+                            ', ',
+                            array_map(fn($val) => '<comment>' . $val . '</comment>', $this->methods)
+                        ),
+                        'DefaultMethod' => $this->methods[0],
+                        'defaultPercent' => self::DEFAULT_PERCENT,
+                        'removedList' => implode(
+                            ', ',
+                            array_map(fn($val) => '<comment>' . $val . '</comment>', self::REMOVED_CHARS)
+                        )
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int
@@ -62,7 +130,8 @@ final class MismatchCommand extends Command
         $showAll = $input->getOption('show-all');
         $percentage = $input->getOption('percentage');
         $backend = $input->getArgument('backend');
-        $id = $input->getArgument('id');
+        $id = $input->getOption('id');
+        $cutoff = (int)$input->getOption('cutoff');
 
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
@@ -94,14 +163,31 @@ final class MismatchCommand extends Command
 
             $opts[Options::MISMATCH_DEEP_SCAN] = true;
 
-            foreach ($this->getBackend($backend, $backendOpts)->getLibrary(id: $id, opts: $opts) as $item) {
-                $processed = $this->compare(item: $item, method: $input->getOption('method'));
+            $client = $this->getBackend($backend, $backendOpts);
 
-                if (!$showAll && (empty($processed) || $processed['percent'] >= (float)$percentage)) {
-                    continue;
+            $ids = [];
+
+            if (null !== $id) {
+                $ids[] = $id;
+            } else {
+                foreach ($client->listLibraries() as $library) {
+                    if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
+                        continue;
+                    }
+                    $ids[] = ag($library, 'id');
                 }
+            }
 
-                $list[] = $processed;
+            foreach ($ids as $libraryId) {
+                foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
+                    $processed = $this->compare(item: $item, method: $input->getOption('method'));
+
+                    if (!$showAll && (empty($processed) || $processed['percent'] >= (float)$percentage)) {
+                        continue;
+                    }
+
+                    $list[] = $processed;
+                }
             }
         } catch (Throwable $e) {
             $arr = [
@@ -127,11 +213,7 @@ final class MismatchCommand extends Command
 
         if (empty($list)) {
             $arr = [
-                'info' => sprintf(
-                    'No mis-identified items were found in [%s] library [%s] using given parameters.',
-                    $backend,
-                    $id
-                )
+                'info' => 'No mis-matched items were found.',
             ];
 
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
@@ -142,14 +224,27 @@ final class MismatchCommand extends Command
             $forTable = [];
 
             foreach ($list as $item) {
-                $forTable[] = [
+                $leaf = [
                     'id' => ag($item, 'id'),
-                    'type' => ag($item, 'type'),
-                    'title' => ag($item, 'title'),
-                    'year' => ag($item, 'year'),
-                    'percent' => ag($item, 'percent') . '%',
-                    'path' => ag($item, 'path'),
                 ];
+
+                if (!$id) {
+                    $leaf['type'] = ag($item, 'type');
+                    $leaf['library'] = ag($item, 'library');
+                }
+
+                $title = ag($item, 'title');
+
+                if (mb_strlen($title) > $cutoff) {
+                    $title = mb_substr($title, 0, $cutoff) . '..';
+                }
+
+                $leaf['title'] = $title;
+                $leaf['year'] = ag($item, 'year');
+                $leaf['percent'] = ag($item, 'percent') . '%';
+                $leaf['path'] = ag($item, 'path');
+
+                $forTable[] = $leaf;
             }
 
             $list = $forTable;
@@ -266,62 +361,25 @@ final class MismatchCommand extends Command
     {
         parent::complete($input, $suggestions);
 
-        $methods = [
-            'method' => 'methods',
-        ];
+        if ($input->mustSuggestOptionValuesFor('methods')) {
+            $currentValue = $input->getCompletionValue();
 
-        foreach ($methods as $key => $of) {
-            if ($input->mustSuggestOptionValuesFor($key)) {
-                $currentValue = $input->getCompletionValue();
+            $suggest = [];
 
-                $suggest = [];
-
-                foreach ($this->{$of} as $name) {
-                    if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                        $suggest[] = $name;
-                    }
+            foreach ($this->{$of} as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
                 }
-
-                $suggestions->suggestValues($suggest);
             }
+
+            $suggestions->suggestValues($suggest);
         }
     }
 
     private function formatName(string $name): string
     {
-        return trim(
-            preg_replace(
-                '/\s+/',
-                ' ',
-                str_replace(
-                    [
-                        '?',
-                        ':',
-                        '(',
-                        '[',
-                        ']',
-                        ')',
-                        ',',
-                        '|',
-                        '%',
-                        '.',
-                        '–',
-                        '-',
-                        "'",
-                        '"',
-                        '+',
-                        '/',
-                        ';',
-                        '&',
-                        '_',
-                        '!',
-                        '*',
-                    ],
-                    ' ',
-                    $name
-                )
-            )
-        );
+        $name = preg_replace('#[\[{].+?[]}]#', '', $name);
+        return trim(preg_replace('/\s+/', ' ', str_replace(self::REMOVED_CHARS, ' ', $name)));
     }
 
     /**

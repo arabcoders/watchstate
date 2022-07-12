@@ -197,6 +197,7 @@ class GetLibrary
         $metadata = [
             'id' => ag($item, 'Id'),
             'type' => ucfirst(ag($item, 'Type', 'unknown')),
+            'library' => ag($log, 'library.title'),
             'url' => (string)$url,
             'title' => ag($item, $possibleTitlesList, '??'),
             'year' => ag($item, 'ProductionYear'),
