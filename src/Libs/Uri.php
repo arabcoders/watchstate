@@ -134,7 +134,7 @@ final class Uri implements UriInterface, Stringable
 
     public function getPath(): string
     {
-        if (rtrim($this->path) === $this->basePath) {
+        if (rtrim($this->path, '/') === $this->basePath) {
             return $this->path;
         }
 
