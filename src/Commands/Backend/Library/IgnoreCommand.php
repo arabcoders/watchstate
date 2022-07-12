@@ -31,34 +31,34 @@ final class IgnoreCommand extends Command
                 r(
                     <<<HELP
 
- This command help manage your ignored libraries list.
- This command require interaction to select the library that you want to ignore.
+This command help manage your ignored libraries list.
+This command require interaction to select the library that you want to ignore.
 
- -------
- <comment>[ FAQ ]</comment>
- -------
+-------
+<notice>[ FAQ ]</notice>
+-------
 
- <comment># I can't use interaction is there different way to ignore library?</comment>
+<question># I can't use interaction is there different way to ignore library?</question>
 
- Yes, you can do it the manual way, First get list of your libraries ids, and to do so run the following command
+Yes, First get your libraries ids by running this command:
 
- {cmd} {library_list} -- [<info>BACKEND_NAME</info>]
+{cmd} <cmd>{library_list}</cmd> <value>BACKEND_NAME</value>
 
- You are mainly interested in the <info>Id</info> column, once you have list of your ids, you can run the following command
- to update the ignorelist. the [<comment>options.ignore</comment>] key accept comma seperated list of ids.
+You are mainly interested in the <notice>Id</notice> column, once you have list of your ids, you can run the following
+command to update the backend ignorelist.
 
- {cmd} {backend_edit} --key '<comment>options.ignore</comment>' --set '<info>id1<comment>,</comment>id2<comment>,</comment>id3</info>' -- [<info>BACKEND_NAME</info>]
+{cmd} <cmd>{backend_edit}</cmd> <flag>--key</flag> '<value>options.ignore</value>' <flag>--set</flag> '<value>id1</value>,<value>id2</value>,<value>id3</value>' <value>BACKEND_NAME</value>
 
- You can also directly update the [<info>servers.yaml</info>] file found in [<comment>{configPath}</comment>],
- although it's not recommended to manually edit the file.
+You can also directly update the config file at [<value>{configPath}</value>].
 
+The [<value>options.ignore</value>] key accept comma seperated list of ids.
 
- HELP,
+HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'library_list' => ListCommand::ROUTE,
                         'backend_edit' => EditCommand::ROUTE,
-                        'configPath' => Config::get('path') . '/config',
+                        'configPath' => Config::get('path') . '/config/servers.yaml',
                     ]
                 )
             );

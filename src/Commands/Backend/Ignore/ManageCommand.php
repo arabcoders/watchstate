@@ -36,43 +36,43 @@ This command allow you to ignore specific external id from backend.
 This helps when there is a conflict between your media servers provided external ids.
 Generally this should only be used as last resort. You should try to fix the source of the problem.
 
-The <info>id</info> format is: <info>type</info>://<info>db</info>:<info>id</info>@<info>backend</info>[<info>?id=backend_id</info>]
+The <notice>id</notice> format is: <flag>type</flag>://<flag>db</flag>:<flag>id</flag>@<flag>backend</flag>[?id=<flag>backend_item_id</flag>]
 
 -------------------
-<comment>[ Expected Values ]</comment>
+<notice>[ Expected Values ]</notice>
 -------------------
 
-<info>type</info>      expects the value to be one of [{listOfTypes}]
-<info>db</info>        expects the value to be one of [{supportedGuids}]
-<info>backend</info>   expects the value to be one of [{listOfBackends}]
+<flag>type</flag>      expects the value to be one of [{listOfTypes}]
+<flag>db</flag>        expects the value to be one of [{supportedGuids}]
+<flag>backend</flag>   expects the value to be one of [{listOfBackends}]
 
 -------
-<comment>[ FAQ ]</comment>
+<notice>[ FAQ ]</notice>
 -------
 
-<comment># Adding external id to ignore list</comment>
+<question># Adding external id to ignore list</question>
 
-To ignore <info>tvdb</info> id <info>320234</info> from <info>my_backend</info> backend you would do something like
+To ignore <value>tvdb</value> id <value>320234</value> from <value>my_backend</value> you would do something like
 
-{cmd} {route} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
+{cmd} <cmd>{route}</cmd> <value>show</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value>
 
-If you want to limit this rule to specific item id you would add [<info>?id=</info><comment>backend_id</comment>] to the rule, for example
+If you want to limit this rule to specific item id you would add [<flag>?id=</flag><value>backend_item_id</value>] to the rule, for example
 
-{cmd} {route} <comment>show</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>?id=<info>1212111</info>
+{cmd} <cmd>{route}</cmd> <value>show</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value><flag>?id=</flag><value>1212111</value>
 
-This will ignore [<info>tvdb://320234</info>] id only when the context id = [<info>1212111</info>]
+This will ignore the external id [<value>tvdb://320234</value>] only when the context id = [<value>1212111</value>]
 
-<comment># Removing external id from ignore list</comment>
+<question># Removing external id from ignore list</question>
 
-To Remove an external id from ignore list just append <info>[-r, --remove]</info> to the command. For example,
+To Remove an external id from ignore list just append [<flag>-r, --remove</flag>] to the command. For example,
 
-{cmd} {route} <info>--remove</info> <comment>episode</comment>://<info>tvdb</info>:<info>320234</info>@<info>my_backend</info>
+{cmd} <cmd>{route}</cmd> <flag>--remove</flag> <value>episode</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value>
 
-The <info>id</info> should match what was added exactly.
+The <notice>id</notice> should match what was added.
 
-<comment># ignore.yaml file location</comment>
+<question># ignore.yaml file location</question>
 
-By default, it should be at [<info>{ignoreListFile}</info>]
+By default, it should be at [<value>{ignoreListFile}</value>]
 
 HELP,
                     [
@@ -81,16 +81,16 @@ HELP,
                         'ignoreListFile' => Config::get('path') . '/config/ignore.yaml',
                         'supportedGuids' => implode(
                             ', ',
-                            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>',
+                            array_map(fn($val) => '<value>' . after($val, 'guid_') . '</value>',
                                 array_keys(Guid::getSupported(includeVirtual: false)))
                         ),
                         'listOfTypes' => implode(
                             ', ',
-                            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>', iState::TYPES_LIST)
+                            array_map(fn($val) => '<value>' . after($val, 'guid_') . '</value>', iState::TYPES_LIST)
                         ),
                         'listOfBackends' => implode(
                             ', ',
-                            array_map(fn($val) => '<comment>' . after($val, 'guid_') . '</comment>',
+                            array_map(fn($val) => '<value>' . after($val, 'guid_') . '</value>',
                                 array_keys(Config::get('servers', [])))
                         ),
                     ]

@@ -47,19 +47,19 @@ final class UnmatchedCommand extends Command
 This command help find unmatched items in your libraries.
 
 -------
-<comment>[ FAQ ]</comment>
+<notice>[ FAQ ]</notice>
 -------
 
-<comment># I want to check specific library id?</comment>
+<question># I want to check specific library id?</question>
 
-You can do that by using [<comment>--id</comment>] flag, change the <info>backend_library_id</info> to the library
-id you get from [<comment>{library_list}</comment>] command.
+You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
+id you get from [<cmd>{library_list}</cmd>] command.
 
-{cmd} {route} <comment>--id</comment> '<info>backend_library_id</info>' -- [<info>BACKEND_NAME</info>]
+{cmd} <cmd>{route}</cmd> <flag>--id</flag> '<value>backend_library_id</value>' <value>BACKEND_NAME</value>
 
-<comment># I want to show all items regardless of the status?</comment>
+<question># I want to show all items regardless of the status?</question>
 
-{cmd} {route} <comment>--show-all</comment> -- [<info>BACKEND_NAME</info>]
+{cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <value>BACKEND_NAME</value>
 
 HELP,
                     [

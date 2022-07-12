@@ -7,6 +7,7 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
+use JsonException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -14,6 +15,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Throwable;
 
 #[Routable(command: self::ROUTE), Routable(command: 'servers:unify')]
@@ -24,7 +26,7 @@ final class UnifyCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Unify [backendType] webhook API key.')
+            ->setDescription('Unify backend type webhook tokens.')
             ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument(
@@ -36,9 +38,40 @@ final class UnifyCommand extends Command
                 ),
             )
             ->setAliases(['servers:unify'])
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command is mainly intended for <notice>Plex</notice> multi server users.
+You shouldn't use this command unless told by the team.
+
+Due to <notice>Plex</notice> webhook limitation you cannot use multiple webhook tokens for one PlexPass account.
+And as workaround we have to use one webhook token for all of your <notice>Plex</notice> backends.
+
+This command will do the following.
+
+3. Update backends unique identifier (uuid).
+1. Change the selected backend's webhook tokens to be replica of each other.
+2. Enable limit backend webhook requests to matching unique identifier.
+
+To execute the command, you can do the following
+
+{cmd} <cmd>{route}</cmd> -- <value>plex</value>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
+    /**
+     * @throws ExceptionInterface
+     * @throws JsonException
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
@@ -160,10 +193,20 @@ final class UnifyCommand extends Command
                 continue;
             }
 
-            $output->writeln(sprintf('<error>ERROR %s: does not have backend unique id set.</error>', $backendName));
-            $output->writeln('<comment>Please run this command to update backend info.</comment>');
-            $output->writeln(sprintf(commandContext() . 'config:manage \'%s\' ', $backendName));
-            return self::FAILURE;
+            $client = makeBackend(Config::get($ref), $backendName);
+
+            $uuid = $client->getServerUUID(true);
+
+            if (empty($uuid)) {
+                $output->writeln(
+                    sprintf('<error>ERROR %s: does not have backend unique id set.</error>', $backendName)
+                );
+                $output->writeln('<comment>Please run this command to update backend info.</comment>');
+                $output->writeln(sprintf(commandContext() . 'config:manage \'%s\' ', $backendName));
+                return self::FAILURE;
+            }
+
+            Config::save("{$ref}.uuid", $uuid);
         }
 
         try {
@@ -176,6 +219,7 @@ final class UnifyCommand extends Command
         foreach ($list as $backend) {
             $ref = ag($backend, 'ref');
             Config::save("{$ref}.webhook.token", $apiToken);
+            Config::save("{$ref}.webhook.match.uuid", true);
         }
 
         if (false === $custom) {
@@ -184,7 +228,9 @@ final class UnifyCommand extends Command
 
         file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
 
-        $output->writeln(sprintf('<comment>Unified the API key of %d %s backends.</comment>', count($list), $type));
+        $output->writeln(
+            sprintf('<comment>Unified the webhook token of %d %s backends.</comment>', count($list), $type)
+        );
         $output->writeln(sprintf('<info>%s global webhook API key is: %s</info>', ucfirst($type), $apiToken));
         return self::SUCCESS;
     }

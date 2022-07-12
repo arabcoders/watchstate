@@ -28,7 +28,33 @@ final class ListCommand extends Command
             ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.');
+            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->setHelp(
+                r(
+                    <<<HELP
+This command List the users from the backend. The configured should have access to do so otherwise, error will be
+thrown this mainly concern plex managed users.
+
+-------
+<notice>[ FAQ ]</notice>
+-------
+
+<question># How to get user tokens?</question>
+
+{cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>BACKEND_NAME</value>
+
+<question># How to see the raw response?</question>
+
+{cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>BACKEND_NAME</value>
+
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

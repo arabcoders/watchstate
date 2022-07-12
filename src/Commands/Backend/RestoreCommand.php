@@ -40,11 +40,7 @@ class RestoreCommand extends Command
 
     protected function configure(): void
     {
-        $cmdContext = trim(commandContext());
-        $cmdRoute = self::ROUTE;
-        $backupDir = after(Config::get('path') . '/backup/', ROOT_PATH);
-
-        $this->setName($cmdRoute)
+        $this->setName(self::ROUTE)
             ->setDescription('Restore backend play state from backup file.')
             ->addOption('execute', null, InputOption::VALUE_NONE, 'Commit the changes to backend.')
             ->addOption('assume-yes', null, InputOption::VALUE_NONE, 'Answer yes to understanding the risks.')
@@ -53,58 +49,66 @@ class RestoreCommand extends Command
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name to restore.')
             ->addArgument('file', InputArgument::REQUIRED, 'Backup file to restore from')
             ->setHelp(
-                <<<HELP
-This command allow you restore specfic backend play state from backup file
-generated via <info>state:backup</info> command.
+                r(
+                    <<<HELP
+
+This command allow you restore specific backend play state from backup file
+generated via [<cmd>state:backup</cmd>] command.
 
 This restore process only works on backends that has export enabled.
 
-The restore process is exactly the same as the <info>state:export</info> with <info>[--ignore-date, --force-full]</info>
+The restore process is exactly the same as the [<cmd>state:export</cmd>] with [<flag>--ignore-date, --force-full</flag>]
 flags enabled, the difference is instead of reading state from database we are reading it from backup file.
 
 -------------------
-<comment>[ Risk Assessment ]</comment>
+<notice>[ Risk Assessment ]</notice>
 -------------------
 
 If you are trying to restore a backend that has import play state enabled, the changes from restoring from backup file
 will propagate back to your other backends. If you don't intend for that to happen, then <fg=white;bg=red;options=bold,underscore>DISABLE</> import from the backend.
 
 --------------------------------
-<comment>[ Enable restore functionality ]</comment>
+<notice>[ Enable restore functionality ]</notice>
 --------------------------------
 
 If you understand the risks and what might happen if you do restore from a backup file,
-then you can enable the command by adding <info>[--execute]</info> to the command.
+then you can enable the command by adding [<flag>--execute</flag>] to the command.
 
 For example,
 
-{$cmdContext} {$cmdRoute} --execute -- my_plex {$backupDir}/my_plex.json
+{cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv</flag> -- <value>my_plex</value> <value>{backupDir}/my_plex.json</value>
 
 -------
-<comment>[ FAQ ]</comment>
+<notice>[ FAQ ]</notice>
 -------
 
-<comment># Restore operation is cancelled.</comment>
+<question># Restore operation is cancelled.</question>
 
 If you encounter this error, it means either you didn't answer with yes for risk assessment confirmation,
-or the interaction is disabled, if you can't enable interaction, then you can add another flag <info>[--assume-yes]</info>
-to bypass the check. This confirms that you understand the risks of restoring backend that has import enabled.
+or the interaction is disabled, if you can't enable interaction, then you can add another flag [<flag>--assume-yes</flag>]
+to bypass the check. This <notice>confirms</notice> that you understand the risks of restoring backend that has import enabled.
 
-<comment># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</comment>
+<question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
 
-This is normal, this is likely becuase the backup is already outdated and some items in remote does not exist in backup file,
+This is normal, this is likely because the backup is already outdated and some items in remote does not exist in backup file,
 or you are using backup from another source which likely does not have matching data.
 
-<comment># Where are my backups stored?</comment>
+<question># Where are the backups stored?</question>
 
-By defualt we store backups at {$backupDir}
+By default, it should be at [<value>{backupDir}</value>].
 
-<comment># How to see what data will be changed?</comment>
+<question># How to see what data will be changed?</question>
 
-if you do not add <comment>[--execute]</comment> flag to the comment, it will run in test mode by default,
-To see what data will be changed run the command with <info>[-v]</info> log level.
+if you do not add [<flag>--execute</flag>] to the comment, it will run in dry mode by default,
+To see what data will be changed run the command with [<info>-v</info>]</info> log level.
 
-HELP
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'backupDir' => after(Config::get('path') . '/backup/', ROOT_PATH),
+                    ]
+                )
             );
     }
 

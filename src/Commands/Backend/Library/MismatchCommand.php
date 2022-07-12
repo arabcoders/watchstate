@@ -85,25 +85,25 @@ final class MismatchCommand extends Command
                 r(
                     <<<HELP
 
-This command help find possible mis-matched <info>Movies</info> and <info>Series</info> in library items.
+This command help find possible mis-matched <notice>Movies</notice> and <notice>Series</notice> in library items.
 
-This command require <info>Plex Naming Standard</info> and assume the reported [<comment>title</comment>, <comment>year</comment>] somewhat matches the reported media path.
+This command require <notice>Plex Naming Standard</notice> and assume the reported [<value>title</value>, <value>year</value>] somewhat matches the reported media path.
 
-We remove text contained within <info>{}</info> and <info>[]</info> brackets, as well as this characters:
+We remove text contained within <value>{}</value> and <value>[]</value> brackets, as well as this characters:
 [{removedList}]
 
-Plex naming standard for <info>Movies</info> is:
-/storage/movies/<comment>Movie Title (Year)/Movie Title (Year)</comment> [Tags].ext
+Plex naming standard for <notice>Movies</notice> is:
+/storage/movies/<value>Movie Title (Year)/Movie Title (Year)</value> [Tags].ext
 
-Plex naming standard for <info>Series</info> is:
-/storage/series/<comment>Series Title (Year)</comment>
+Plex naming standard for <notice>Series</notice> is:
+/storage/series/<value>Series Title (Year)</value>
 
 -------------------
-<comment>[ Expected Values ]</comment>
+<notice>[ Expected Values ]</notice>
 -------------------
 
-<info>percentage</info> expects the value to be [number]. [<comment>Default: {defaultPercent}</comment>].
-<info>method</info>     expects the value to be one of [{methodsList}]. [<comment>Default: {DefaultMethod}</comment>].
+<flag>percentage</flag> expects the value to be [<value>number</value>]. [<value>Default: {defaultPercent}</value>].
+<flag>method</flag>     expects the value to be one of [{methodsList}]. [<value>Default: {DefaultMethod}</value>].
 
 HELP,
                     [
@@ -111,13 +111,13 @@ HELP,
                         'route' => self::ROUTE,
                         'methodsList' => implode(
                             ', ',
-                            array_map(fn($val) => '<comment>' . $val . '</comment>', $this->methods)
+                            array_map(fn($val) => '<value>' . $val . '</value>', $this->methods)
                         ),
                         'DefaultMethod' => $this->methods[0],
                         'defaultPercent' => self::DEFAULT_PERCENT,
                         'removedList' => implode(
                             ', ',
-                            array_map(fn($val) => '<comment>' . $val . '</comment>', self::REMOVED_CHARS)
+                            array_map(fn($val) => '<value>' . $val . '</value>', self::REMOVED_CHARS)
                         )
                     ]
                 )

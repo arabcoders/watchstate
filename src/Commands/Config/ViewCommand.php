@@ -37,7 +37,40 @@ final class ViewCommand extends Command
                 'Can be any key from servers.yaml, use dot notion to access sub keys, for example [webhook.token]'
             )
             ->setAliases(['servers:view'])
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '');
+            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+This command display all of your backends information.
+You can select and/or filter the displayed information.
+
+-------
+<notice>[ FAQ ]</notice>
+-------
+
+<question># How to show one backend information?</question>
+
+The flag [<flag>-s, --select-backends</flag>] accept comma seperated list of backends name, Using the flag
+in combination with [<flag>--exclude</flag>] flag will flip the logic to exclude the selected backends
+rather than include them.
+
+{cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>my_backend</value>
+
+<question># How to show specific <value>key</value>?</question>
+
+The key can be any value that already exists in the list. to access sub-keys use dot notation for example,
+To see if the value of <value>import.enabled</value> you would run:
+
+{cmd} <cmd>{route}</cmd> <value>import.enabled</value>
+
+HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     /**
