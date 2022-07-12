@@ -25,16 +25,30 @@ final class EnvCommand extends Command
                 r(
                     <<<HELP
 
-This command display the environment variables that was loaded during the run of the tool.
+This command display the environment variables that was loaded execution of the tool.
+
+-------------------------------
+<notice>[ Environment variables rules ]</notice>
+-------------------------------
+
+* the key MUST be in CAPITAL LETTERS. For example [<flag>WS_CRON_IMPORT</flag>].
+* the key MUST start with [<flag>WS_</flag>]. For example [<flag>WS_CRON_EXPORT</flag>].
+* the value is usually simple type, usually string unless otherwise stated.
+* the key SHOULD attempt to mirror the key path in default config, If not applicable or otherwise impossible it
+should then use an approximate path.
+
+-------
+<notice>[ FAQ ]</notice>
+-------
+
+<question># How to load environment variables?</question>
+
 You can load environment variables in many ways. However, the recommended methods are:
 
-<comment># Docker compose file</comment>
+<question>(1) Via Docker compose file</>
 
 You can load environment variables via [<comment>docker-compose.yaml</comment>] file by adding them under the [<comment>environment</comment>] key.
-
-<comment>## [ Example ]</comment>
-
-To enable import task, do the following:
+For example, to enable import task, do the following:
 
 -------------------------------
 version: '3.3'
@@ -43,24 +57,21 @@ services:
     image: ghcr.io/arabcoders/watchstate:latest
     restart: unless-stopped
     container_name: watchstate
-    <comment>environment:</comment>
-      <info>- WS_CRON_IMPORT=1</info>
+    <flag>environment:</flag>
+      - <flag>WS_CRON_IMPORT</flag>=<value>1</value>
 -------------------------------
 
-<comment># .env file</comment>
+<question>(2) Via .env file</question>
 
-We automatically look for [<comment>.env</comment>] in this path [<info>{path}</info>]. The file usually
+We automatically look for [<value>.env</value>] in this path [<value>{path}</value>]. The file usually
 does not exist unless you have created it.
 
-The file format is simple <info>[KEY<comment>=</comment>VALUE]</info> pair per line.
-
-<comment>## [ Example ]</comment>
-
-To enable import task add the following line to [<comment>.env</comment>] file
+The file format is simple <flag>key</flag>=<value>value</value> per line. For example, to enable import task, edit the [<value>.env</value>] and add
 
 -------------------------------
-<info>WS_CRON_IMPORT<comment>=</comment>1</info>
+<flag>WS_CRON_IMPORT</flag>=<value>1</value>
 -------------------------------
+
 
 HELP,
                     ['path' => $configPath]

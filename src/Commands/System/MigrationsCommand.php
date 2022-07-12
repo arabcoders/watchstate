@@ -29,10 +29,11 @@ final class MigrationsCommand extends Command
             ->setHelp(
                 <<<HELP
 
-This command runs database schema migrations to make sure you database is up to date.
-You do not need to run this command unless told by the team. This is done automatically on container startup.
+                This command execute <notice>database schema migrations</notice> to make sure the database is up-to-date.
+                You do not need to run this command unless told by the team.
+                This is done automatically on container startup.
 
-HELP
+                HELP
             );
     }
 

@@ -65,50 +65,50 @@ final class LogsCommand extends Command
                 r(
                     <<<HELP
 
-This command allow you to access all recorded logs by the tool.
+This command allow you to access all recorded logs.
 
 -------------------
-<comment>[ Expected Values ]</comment>
+<notice>[ Expected Values ]</notice>
 -------------------
 
-<info>type</info>  expects the value to be [{files}], By Default [<comment>{defaultLog}</comment>].
-<info>date</info>  expects the value to be [<comment>(number){8}</comment>]. By Default [<comment>{defaultDate}</comment>].
-<info>limit</info> expects the value to be [<comment>(number)</comment>]. By Default [<comment>{defaultLimit}</comment>].
+<flag>type</flag>  expects the value to be one of [{files}]. [<value>Default: {defaultLog}</value>].
+<flag>date</flag>  expects the value to be [<value>(number){8}</value>]. [<value>Default: {defaultDate}</value>].
+<flag>limit</flag> expects the value to be [<value>(number)</value>]. [<value>Default: {defaultLimit}</value>].
 
 -------
-<comment>[ FAQ ]</comment>
+<notice>[ FAQ ]</notice>
 -------
 
-<comment># How to see all log files?</comment>
+<question># How to see all log files?</question>
 
-{cmd} {route} <info>--list</info>
+{cmd} <cmd>{route}</cmd> <flag>--list</flag>
 
-<comment># How to follow log file?</comment>
+<question># How to follow log file?</question>
 
-{cmd} {route} <info>--follow</info>
+{cmd} <cmd>{route}</cmd> <flag>--follow</flag>
 
-<comment># How to clear log file?</comment>
+<question># How to clear log file?</question>
 
 You can clear log file by running this command, However clearing log file require interactive confirmation.
 
-{cmd} {route} --type {defaultLog} --date {defaultDate} <info>--clear</info>
+{cmd} <cmd>{route}</cmd> <flag>--type</flag> <value>{defaultLog}</value> <flag>--date</flag> <value>{defaultDate}</value> <flag>--clear</flag>
 
-<comment># How to increase/decrease the returned log lines?</comment>
+<question># How to increase/decrease the returned log lines?</question>
 
-By default, we return the last [<comment>{defaultLimit}</comment>] log lines. However, you can increase/decrease
-the limit however you like by using [<info>-l, --limit</info>] flag. For example,
+By default, we return the last [<value>{defaultLimit}</value>] log lines. However, you can increase/decrease
+the limit however you like by using [<flag>-l, --limit</flag>] flag. For example,
 
-{cmd} {route} <info>--limit</info> <comment>100</comment>
+{cmd} <cmd>{route}</cmd> <flag>--limit</flag> <value>100</value>
 
-<comment># Where log files stored?</comment>
+<question># Where log files stored?</question>
 
-By default, We store logs at [<info>{logsPath}</info>]
+By default, We store logs at [<value>{logsPath}</value>]
 
 HELP,
                     [
                         'files' => implode(
-                            ' or ',
-                            array_map(fn($val) => '<comment>' . $val . '</comment>', self::LOG_FILES)
+                            ', ',
+                            array_map(fn($val) => '<value>' . $val . '</value>', self::LOG_FILES)
                         ),
                         'defaultLog' => self::LOG_FILES[0],
                         'defaultDate' => $defaultDate,
