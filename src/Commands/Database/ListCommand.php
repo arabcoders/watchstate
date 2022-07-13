@@ -61,6 +61,15 @@ final class ListCommand extends Command
 
     protected function configure(): void
     {
+        $list = [];
+
+        foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
+            $guid = afterLast($guid, 'guid_');
+            $list[] = '<value>' . $guid . '</value>';
+        }
+
+        $list = implode(', ', $list);
+
         $this->setName(self::ROUTE)
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit results to this number', 20)
             ->addOption(
@@ -84,46 +93,90 @@ final class ListCommand extends Command
                 'sort',
                 null,
                 InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
-                'Set sort by columns. for example, <comment>--sort season:asc --sort episode:desc</comment>.',
+                'Set sort by columns. [Example: <flag>--sort</flag> <value>season:asc</value>].',
             )
             ->addOption(
-                'metadata-as',
+                'show-as',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Display metadata from this backend instead of latest.'
+                'Switch the default metadata display to the chosen backend instead of latest metadata.'
             )
-            ->setDescription('List Database entries.');
-
-        foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
-            $guid = afterLast($guid, 'guid_');
-            $this->addOption(
-                $guid,
+            ->addOption(
+                'guid',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Search Using <info>' . $guid . '</info> external id.'
-            );
-        }
-
-        $this->addOption('parent', null, InputOption::VALUE_NONE, 'If set it will search parent external ids instead.')
-            ->addOption('key', null, InputOption::VALUE_REQUIRED, 'For JSON Fields key selection.')
-            ->addOption('value', null, InputOption::VALUE_REQUIRED, 'For JSON Fields value selection.')
+                'Search <notice>item</notice> external db ids. [Format: <value>db://id</value>].'
+            )
+            ->addOption(
+                'parent',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Search <notice>parent</notice> external db ids. [Format: <value>db://id</value>].'
+            )
+            ->addOption('key', null, InputOption::VALUE_REQUIRED, 'For <notice>JSON Fields</notice> key selection.')
+            ->addOption('value', null, InputOption::VALUE_REQUIRED, 'For <notice>JSON Fields</notice> value selection.')
             ->addOption(
                 'metadata',
                 null,
                 InputOption::VALUE_NONE,
-                'Search in (metadata) provided by backends JSON Field using (--key, --value) options.'
+                'Search in (<notice>metadata</notice>) provided by backends JSON field. Expects [<flag>--key</flag>, <flag>--value</flag>] flags.'
             )
             ->addOption(
                 'extra',
                 null,
                 InputOption::VALUE_NONE,
-                'Search in (extra information) JSON Field using (--key, --value) options.'
+                'Search in (<notice>extra</notice>) info by backends JSON field. Expects [<flag>--key</flag>, <flag>--value</flag>] flags.'
             )
             ->addOption(
                 'dump-query',
                 null,
                 InputOption::VALUE_NONE,
                 'Dump the generated query and exit.'
+            )
+            ->addOption(
+                'exact',
+                null,
+                InputOption::VALUE_NONE,
+                'Use <notice>equal</notice> check instead of <notice>LIKE</notice> for JSON field query.'
+            )
+            ->setDescription('List Database entries.')
+            ->setHelp(
+                r(
+                    <<<HELP
+                    
+                    This command show your <notice>current</notice> stored play state.
+                    This command is powerful tool to explore your database and the metadata gathered
+                    about your media files. Please do read the options it's just too many to list here.
+
+                    -------------------
+                    <notice>[ Expected Values ]</notice>
+                    -------------------
+
+                    <flag>guid</flag>, <flag>parent</flag> expects the format to be [<value>db</value>://<value>id</value>]. Where the db refers to [{dbs_list}].
+
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
+
+                    <question># How to search JSON fields?</question>
+
+                    You can search JSON fields [<notice>metadata</notice>, <notice>extra</notice>] by using the corresponding flags.
+                    [<flag>--metadata</flag>, <flag>--extra</flag>] Searching JSON fields require the use of [<flag>--key</flag>] and [<flag>--value</flag>] flags as well.
+                    Unlike regular table fields JSON fields does not have fixed schema. You can alter the search mode by using [<flag>--exact</flag>] flag
+                    that will switch the search mode from loose to strict match.
+
+                    For example, To search for item that match backend id, you would run the following:
+
+                    {cmd} <cmd>{route}</cmd> <flag>--key</flag> '<value>backend_name</value>.id' <flag>--value</flag> '<value>backend_item_id</value>' <flag>--metadata</flag>
+
+
+                    HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'dbs_list' => $list,
+                    ]
+                )
             );
     }
 
@@ -182,22 +235,34 @@ final class ListCommand extends Command
             $params['episode'] = $input->getOption('episode');
         }
 
-        if ($input->getOption('parent')) {
-            foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
-                if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
-                    continue;
-                }
-                $where[] = "json_extract(" . iFace::COLUMN_PARENT . ",'$.{$guid}') = :{$guid}";
-                $params[$guid] = $val;
+        if (null !== ($parent = $input->getOption('parent'))) {
+            $d = Guid::fromArray(['guid_' . before($parent, '://') => after($parent, '://')]);
+            $parent = array_keys($d->getAll())[0] ?? null;
+
+            if (null === $parent) {
+                $output->writeln(
+                    '<error>ERROR:</error> Invalid value for [<flag>--parent</flag>] expected value format is [<value>db://id</value>].'
+                );
+                return self::INVALID;
             }
-        } else {
-            foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
-                if (null === ($val = $input->getOption(afterLast($guid, 'guid_')))) {
-                    continue;
-                }
-                $where[] = "json_extract(" . iFace::COLUMN_GUIDS . ",'$.{$guid}') = :{$guid}";
-                $params[$guid] = $val;
+
+            $where[] = "json_extract(" . iFace::COLUMN_PARENT . ",'$.{$parent}') = :parent";
+            $params['parent'] = array_values($d->getAll())[0];
+        }
+
+        if (null !== ($guid = $input->getOption('guid'))) {
+            $d = Guid::fromArray(['guid_' . before($guid, '://') => after($guid, '://')]);
+            $guid = array_keys($d->getAll())[0] ?? null;
+
+            if (null === $guid) {
+                $output->writeln(
+                    '<error>ERROR:</error> Invalid value for [<flag>--guid</flag>] expected value format is [<value>db://id</value>]'
+                );
+                return self::INVALID;
             }
+
+            $where[] = "json_extract(" . iFace::COLUMN_GUIDS . ",'$.{$guid}') = :guid";
+            $params['guid'] = array_values($d->getAll())[0];
         }
 
         if ($input->getOption('metadata')) {
@@ -209,7 +274,12 @@ final class ListCommand extends Command
                 );
             }
 
-            $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
+            if ($input->getOption('exact')) {
+                $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value ";
+            } else {
+                $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
+            }
+
             $params['jf_metadata_value'] = $sValue;
         }
 
@@ -222,7 +292,12 @@ final class ListCommand extends Command
                 );
             }
 
-            $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
+            if ($input->getOption('exact')) {
+                $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
+            } else {
+                $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
+            }
+
             $params['jf_extra_value'] = $sValue;
         }
 
@@ -256,19 +331,25 @@ final class ListCommand extends Command
         }
 
         $sql[] = 'ORDER BY ' . implode(', ', $sorts) . ' LIMIT :limit';
-        $sql = implode(' ', $sql);
+        $sql = implode(' ', array_map('trim', $sql));
 
         if ($input->getOption('dump-query')) {
             $arr = [
                 'query' => $sql,
                 'parameters' => $params,
-                'raw' => $this->db->getRawSQLString($sql, $params),
             ];
 
             if ('table' === $input->getOption('output')) {
-                $arr['parameters'] = arrayToString($params);
-                unset($arr['raw']);
                 $arr = [$arr];
+
+                $arr[0]['parameters'] = arrayToString($params);
+
+                $arr[1] = [
+                    'query' => $this->db->getRawSQLString($sql, $params),
+                    'parameters' => 'raw sql query',
+                ];
+            } else {
+                $arr['raw'] = $this->db->getRawSQLString($sql, $params);
             }
 
             $this->displayContent($arr, $output, $input->getOption('output'));
@@ -316,7 +397,7 @@ final class ListCommand extends Command
                 $row[$key] = json_decode($row[$key], true);
             }
 
-            if (null !== ($via = $input->getOption('metadata-as'))) {
+            if (null !== ($via = $input->getOption('show-as'))) {
                 $path = $row[iFace::COLUMN_META_DATA][$via] ?? [];
 
                 foreach (self::COLUMNS_CHANGEABLE as $column) {
@@ -378,7 +459,7 @@ final class ListCommand extends Command
     {
         parent::complete($input, $suggestions);
 
-        if ($input->mustSuggestOptionValuesFor('via') || $input->mustSuggestOptionValuesFor('metadata-as')) {
+        if ($input->mustSuggestOptionValuesFor('via') || $input->mustSuggestOptionValuesFor('show-as')) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];

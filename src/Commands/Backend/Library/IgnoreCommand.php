@@ -31,29 +31,29 @@ final class IgnoreCommand extends Command
                 r(
                     <<<HELP
 
-This command help manage your ignored libraries list.
-This command require interaction to select the library that you want to ignore.
+                    This command help manage your ignored libraries list.
+                    This command require interaction to select the library that you want to ignore.
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># I can't use interaction is there different way to ignore library?</question>
+                    <question># I can't use interaction is there different way to ignore library?</question>
 
-Yes, First get your libraries ids by running this command:
+                    Yes, First get your libraries ids by running this command:
 
-{cmd} <cmd>{library_list}</cmd> <value>BACKEND_NAME</value>
+                    {cmd} <cmd>{library_list}</cmd> -- <value>backend_name</value>
 
-You are mainly interested in the <notice>Id</notice> column, once you have list of your ids, you can run the following
-command to update the backend ignorelist.
+                    You are mainly interested in the <notice>Id</notice> column, once you have list of your ids,
+                    you can run the following command to update the backend ignorelist.
 
-{cmd} <cmd>{backend_edit}</cmd> <flag>--key</flag> '<value>options.ignore</value>' <flag>--set</flag> '<value>id1</value>,<value>id2</value>,<value>id3</value>' <value>BACKEND_NAME</value>
+                    {cmd} <cmd>{backend_edit}</cmd> <flag>--key</flag> '<value>options.ignore</value>' <flag>--set</flag> '<value>id1</value>,<value>id2</value>,<value>id3</value>' -- <value>backend_name</value>
 
-You can also directly update the config file at [<value>{configPath}</value>].
+                    You can also directly update the config file at [<value>{configPath}</value>].
 
-The [<value>options.ignore</value>] key accept comma seperated list of ids.
+                    The [<value>options.ignore</value>] key accept comma seperated list of ids.
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'library_list' => ListCommand::ROUTE,

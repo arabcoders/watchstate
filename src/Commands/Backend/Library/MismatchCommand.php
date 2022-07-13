@@ -85,27 +85,42 @@ final class MismatchCommand extends Command
                 r(
                     <<<HELP
 
-This command help find possible mis-matched <notice>Movies</notice> and <notice>Series</notice> in library items.
+                    This command help find possible mis-matched <notice>Movies</notice> and <notice>Series</notice>.
 
-This command require <notice>Plex Naming Standard</notice> and assume the reported [<value>title</value>, <value>year</value>] somewhat matches the reported media path.
+                    This command require <notice>Plex Naming Standard</notice> and assume the reported [<value>title</value>, <value>year</value>] somewhat matches the reported media path.
 
-We remove text contained within <value>{}</value> and <value>[]</value> brackets, as well as this characters:
-[{removedList}]
+                    We remove text contained within <value>{}</value> and <value>[]</value> brackets, as well as this characters:
+                    [{removedList}]
 
-Plex naming standard for <notice>Movies</notice> is:
-/storage/movies/<value>Movie Title (Year)/Movie Title (Year)</value> [Tags].ext
+                    Plex naming standard for <notice>Movies</notice> is:
+                    /storage/movies/<value>Movie Title (Year)/Movie Title (Year)</value> [Tags].ext
 
-Plex naming standard for <notice>Series</notice> is:
-/storage/series/<value>Series Title (Year)</value>
+                    Plex naming standard for <notice>Series</notice> is:
+                    /storage/series/<value>Series Title (Year)</value>
 
--------------------
-<notice>[ Expected Values ]</notice>
--------------------
+                    -------------------
+                    <notice>[ Expected Values ]</notice>
+                    -------------------
 
-<flag>percentage</flag> expects the value to be [<value>number</value>]. [<value>Default: {defaultPercent}</value>].
-<flag>method</flag>     expects the value to be one of [{methodsList}]. [<value>Default: {DefaultMethod}</value>].
+                    <flag>percentage</flag> expects the value to be [<value>number</value>]. [<value>Default: {defaultPercent}</value>].
+                    <flag>method</flag>     expects the value to be one of [{methodsList}]. [<value>Default: {DefaultMethod}</value>].
 
-HELP,
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
+
+                    <question># I want to check specific library id?</question>
+
+                    You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
+                    id you get from [<cmd>{library_list}</cmd>] command.
+
+                    {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> -- <value>backend_name</value>
+
+                    <question># I want to show all items regardless of the status?</question>
+
+                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> -- <value>backend_name</value>
+
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
@@ -118,7 +133,8 @@ HELP,
                         'removedList' => implode(
                             ', ',
                             array_map(fn($val) => '<value>' . $val . '</value>', self::REMOVED_CHARS)
-                        )
+                        ),
+                        'library_list' => ListCommand::ROUTE,
                     ]
                 )
             );

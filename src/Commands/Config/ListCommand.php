@@ -30,10 +30,9 @@ final class ListCommand extends Command
             ->setHelp(
                 <<<HELP
 
-This command list your configured backends.
+                This command list your configured backends.
 
-HELP
-
+                HELP
             );
     }
 

@@ -27,54 +27,54 @@ final class ManageCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Add/Remove external id from ignore list.')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove id from ignore list.')
-            ->addArgument('id', InputArgument::REQUIRED, 'Id to ignore.')
+            ->addArgument('id', InputArgument::REQUIRED, 'id.')
             ->setHelp(
                 r(
                     <<<HELP
 
-This command allow you to ignore specific external id from backend.
-This helps when there is a conflict between your media servers provided external ids.
-Generally this should only be used as last resort. You should try to fix the source of the problem.
+                    This command allow you to ignore specific external id from backend.
+                    This helps when there is a conflict between your media servers provided external ids.
+                    Generally this should only be used as last resort. You should try to fix the source of the problem.
 
-The <notice>id</notice> format is: <flag>type</flag>://<flag>db</flag>:<flag>id</flag>@<flag>backend</flag>[?id=<flag>backend_item_id</flag>]
+                    The <notice>id</notice> format is: <flag>type</flag>://<flag>db</flag>:<flag>id</flag>@<flag>backend</flag>[?id=<flag>backend_item_id</flag>]
 
--------------------
-<notice>[ Expected Values ]</notice>
--------------------
+                    -------------------
+                    <notice>[ Expected Values ]</notice>
+                    -------------------
 
-<flag>type</flag>      expects the value to be one of [{listOfTypes}]
-<flag>db</flag>        expects the value to be one of [{supportedGuids}]
-<flag>backend</flag>   expects the value to be one of [{listOfBackends}]
+                    <flag>type</flag>      expects the value to be one of [{listOfTypes}]
+                    <flag>db</flag>        expects the value to be one of [{supportedGuids}]
+                    <flag>backend</flag>   expects the value to be one of [{listOfBackends}]
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># Adding external id to ignore list</question>
+                    <question># Adding external id to ignore list</question>
 
-To ignore <value>tvdb</value> id <value>320234</value> from <value>my_backend</value> you would do something like
+                    To ignore <value>tvdb</value> id <value>320234</value> from <value>my_backend</value> you would do something like
 
-{cmd} <cmd>{route}</cmd> <value>show</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value>
+                    {cmd} <cmd>{route}</cmd> -- <value>show</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value>
 
-If you want to limit this rule to specific item id you would add [<flag>?id=</flag><value>backend_item_id</value>] to the rule, for example
+                    If you want to limit this rule to specific item id you would add [<flag>?id=</flag><value>backend_item_id</value>] to the rule, for example
 
-{cmd} <cmd>{route}</cmd> <value>show</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value><flag>?id=</flag><value>1212111</value>
+                    {cmd} <cmd>{route}</cmd> -- <value>show</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value><flag>?id=</flag><value>1212111</value>
 
-This will ignore the external id [<value>tvdb://320234</value>] only when the context id = [<value>1212111</value>]
+                    This will ignore the external id [<value>tvdb://320234</value>] only when the context id = [<value>1212111</value>]
 
-<question># Removing external id from ignore list</question>
+                    <question># Removing external id from ignore list</question>
 
-To Remove an external id from ignore list just append [<flag>-r, --remove</flag>] to the command. For example,
+                    To Remove an external id from ignore list just append [<flag>-r, --remove</flag>] to the command. For example,
 
-{cmd} <cmd>{route}</cmd> <flag>--remove</flag> <value>episode</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--remove</flag> -- <value>episode</value>://<value>tvdb</value>:<value>320234</value>@<value>my_backend</value>
 
-The <notice>id</notice> should match what was added.
+                    The <notice>id</notice> should match what was added.
 
-<question># ignore.yaml file location</question>
+                    <question># ignore.yaml file location</question>
 
-By default, it should be at [<value>{ignoreListFile}</value>]
+                    By default, it should be at [<value>{ignoreListFile}</value>]
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

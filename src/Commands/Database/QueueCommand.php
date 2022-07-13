@@ -35,7 +35,22 @@ class QueueCommand extends Command
         $this->setName(self::ROUTE)
             ->addOption('add', 'a', InputOption::VALUE_REQUIRED, 'Add record id to push queue.')
             ->addOption('remove', 'r', InputOption::VALUE_REQUIRED, 'Remove record id from push queue.')
-            ->setDescription('Show webhook queued events.');
+            ->setDescription('Show webhook queued events.')
+            ->setHelp(
+                r(
+                    <<<HELP
+
+                    This command show items that was queued via <notice>webhook</notice> for change play state.
+
+                    You can add items or remove item from the queue using the [<flag>-a, --add</flag>] and [<flag>-r, --remove</flag>] flags.
+
+                    HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
+                )
+            );
     }
 
     /**

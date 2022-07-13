@@ -36,25 +36,25 @@ final class EditCommand extends Command
                 r(
                     <<<HELP
 
-This command allow you to <notice>edit</notice> backend config settings <notice>inline</notice>.
+                    This command allow you to <notice>edit</notice> backend config settings <notice>inline</notice>.
 
-The [<flag>--key</flag>] accept string value. the list of officially supported keys are:
+                    The [<flag>--key</flag>] accept string value. the list of officially supported keys are:
 
-[{keyNames}]
+                    [{keyNames}]
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># How to edit config setting?</question>
+                    <question># How to edit config setting?</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--key</flag> <value>key</value> <flag>--set</flag> <value>value</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--key</flag> <value>key</value> <flag>--set</flag> <value>value</value> -- <value>backend_name</value>
 
-<question># How to change the webhook token?</question>
+                    <question># How to change the webhook token?</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--regenerate-webhook-token</flag> -- <value>backend_name</value>
-
-HELP,
+                    {cmd} <cmd>{route}</cmd> <flag>--regenerate-webhook-token</flag> -- <value>backend_name</value>
+                    
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

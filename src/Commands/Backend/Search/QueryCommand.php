@@ -31,14 +31,16 @@ final class QueryCommand extends Command
             ->addArgument('query', InputArgument::REQUIRED, 'Search query.')->setHelp(
                 r(
                     <<<HELP
-This command allow you to search for specific <notice>keyword</notice> in backend libraries.
 
-The default mode display minimal information. To get more information you have to switch the output
-mode to [<value>json</value> or <value>yaml</value>] and use the [<flag>--include-raw-response</flag>] flag. For example,
+                    This command allow you to search for <notice>keyword</notice> in backend libraries.
 
-{cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>BACKEND_NAME</value> '<value>KEYWORD</value>'
+                    The default mode display minimal information. To get more information you have to switch the
+                    [<flag>--output</flag>] flag to [<value>json</value> or <value>yaml</value>] and use the [<flag>--include-raw-response</flag>] flag.
+                    For example,
 
-HELP,
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value> '<value>search query word</value>'
+
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
