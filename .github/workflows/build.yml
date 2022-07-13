@@ -61,6 +61,10 @@ jobs:
     needs: unit-tests
     if: github.event_name != 'pull_request'
     runs-on: "ubuntu-latest"
+
+    env:
+      PLATFORMS: linux/amd64${{ endsWith(github.ref, github.event.repository.default_branch) && ', linux/arm64, linux/arm' || '' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -105,25 +109,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push amd64
+      - name: Build and push
         uses: docker/build-push-action@v3
         with:
-          platforms: linux/amd64
+          platforms: ${{ env.PLATFORMS }}
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-
-      - name: Build and push arm64
-        uses: docker/build-push-action@v3
-        with:
-          platforms: linux/arm64
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
-
