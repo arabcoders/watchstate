@@ -32,23 +32,23 @@ final class ListCommand extends Command
             ->setHelp(
                 r(
                     <<<HELP
-This command List the users from the backend. The configured should have access to do so otherwise, error will be
-thrown this mainly concern plex managed users.
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    This command List the users from the backend. The configured should have access to do so otherwise, error will be
+                    thrown this mainly concern plex managed users.
 
-<question># How to get user tokens?</question>
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-{cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>BACKEND_NAME</value>
+                    <question># How to get user tokens?</question>
 
-<question># How to see the raw response?</question>
+                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
 
-{cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>BACKEND_NAME</value>
+                    <question># How to see the raw response?</question>
 
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value>
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

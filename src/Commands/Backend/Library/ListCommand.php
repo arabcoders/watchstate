@@ -30,10 +30,10 @@ final class ListCommand extends Command
             ->setHelp(
                 <<<HELP
 
-This command list the backend libraries. This help you to know which library are supported.
-This command also show the <notice>backend library id</notice>.
+                This command list the backend libraries. This help you to know which library are supported.
+                the <notice>Id</notice> column refers to backend <notice>library id</notice>.
 
-HELP
+                HELP
             );
     }
 

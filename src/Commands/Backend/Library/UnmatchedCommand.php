@@ -44,24 +44,24 @@ final class UnmatchedCommand extends Command
                 r(
                     <<<HELP
 
-This command help find unmatched items in your libraries.
+                    This command help find unmatched items in your libraries.
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># I want to check specific library id?</question>
+                    <question># I want to check specific library id?</question>
 
-You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
-id you get from [<cmd>{library_list}</cmd>] command.
+                    You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
+                    id you get from [<cmd>{library_list}</cmd>] command.
 
-{cmd} <cmd>{route}</cmd> <flag>--id</flag> '<value>backend_library_id</value>' <value>BACKEND_NAME</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> -- <value>backend_name</value>
 
-<question># I want to show all items regardless of the status?</question>
+                    <question># I want to show all items regardless of the status?</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <value>BACKEND_NAME</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> -- <value>backend_name</value>
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

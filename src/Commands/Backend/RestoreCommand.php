@@ -52,61 +52,61 @@ class RestoreCommand extends Command
                 r(
                     <<<HELP
 
-This command allow you restore specific backend play state from backup file
-generated via [<cmd>state:backup</cmd>] command.
+                    This command allow you restore specific backend play state from backup file
+                    generated via [<cmd>state:backup</cmd>] command.
 
-This restore process only works on backends that has export enabled.
+                    This restore process only works on backends that has export enabled.
 
-The restore process is exactly the same as the [<cmd>state:export</cmd>] with [<flag>--ignore-date, --force-full</flag>]
-flags enabled, the difference is instead of reading state from database we are reading it from backup file.
+                    The restore process is exactly the same as the [<cmd>state:export</cmd>] with [<flag>--ignore-date</flag>, <flag>--force-full</flag>]
+                    flags enabled, the difference is instead of reading state from database we are reading it from backup file.
 
--------------------
-<notice>[ Risk Assessment ]</notice>
--------------------
+                    -------------------
+                    <notice>[ Risk Assessment ]</notice>
+                    -------------------
 
-If you are trying to restore a backend that has import play state enabled, the changes from restoring from backup file
-will propagate back to your other backends. If you don't intend for that to happen, then <fg=white;bg=red;options=bold,underscore>DISABLE</> import from the backend.
+                    If you are trying to restore a backend that has import play state enabled, the changes from restoring from backup file
+                    will propagate back to your other backends. If you don't intend for that to happen, then <fg=white;bg=red;options=bold,underscore>DISABLE</> import from the backend.
 
---------------------------------
-<notice>[ Enable restore functionality ]</notice>
---------------------------------
+                    --------------------------------
+                    <notice>[ Enable restore functionality ]</notice>
+                    --------------------------------
 
-If you understand the risks and what might happen if you do restore from a backup file,
-then you can enable the command by adding [<flag>--execute</flag>] to the command.
+                    If you understand the risks and what might happen if you do restore from a backup file,
+                    then you can enable the command by adding [<flag>--execute</flag>] to the command.
 
-For example,
+                    For example,
 
-{cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv</flag> -- <value>my_plex</value> <value>{backupDir}/my_plex.json</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv</flag> -- <value>backend_name</value> <value>{backupDir}/backup_file.json</value>
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># Restore operation is cancelled.</question>
+                    <question># Restore operation is cancelled.</question>
 
-If you encounter this error, it means either you didn't answer with yes for risk assessment confirmation,
-or the interaction is disabled, if you can't enable interaction, then you can add another flag [<flag>--assume-yes</flag>]
-to bypass the check. This <notice>confirms</notice> that you understand the risks of restoring backend that has import enabled.
+                    If you encounter this error, it means either you didn't answer with yes for risk assessment confirmation,
+                    or the interaction is disabled, if you can't enable interaction, then you can add another flag [<flag>--assume-yes</flag>]
+                    to bypass the check. This <notice>confirms</notice> that you understand the risks of restoring backend that has import enabled.
 
-<question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
+                    <question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
 
-This is normal, this is likely because the backup is already outdated and some items in remote does not exist in backup file,
-or you are using backup from another source which likely does not have matching data.
+                    This is normal, this is likely because the backup is already outdated and some items in remote does not exist in backup file,
+                    or you are using backup from another source which likely does not have matching data.
 
-<question># Where are the backups stored?</question>
+                    <question># Where are the backups stored?</question>
 
-By default, it should be at [<value>{backupDir}</value>].
+                    By default, it should be at [<value>{backupDir}</value>].
 
-<question># How to see what data will be changed?</question>
+                    <question># How to see what data will be changed?</question>
 
-if you do not add [<flag>--execute</flag>] to the comment, it will run in dry mode by default,
-To see what data will be changed run the command with [<info>-v</info>]</info> log level.
+                    if you do not add [<flag>--execute</flag>] to the comment, it will run in dry mode by default,
+                    To see what data will be changed run the command with [<info>-v</info>]</info> log level.
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
-                        'backupDir' => after(Config::get('path') . '/backup/', ROOT_PATH),
+                        'backupDir' => after(Config::get('path') . '/backup', ROOT_PATH),
                     ]
                 )
             );

@@ -47,22 +47,22 @@ final class ListCommand extends Command
                 r(
                     <<<HELP
 
-This command display list of ignored external ids. You can filter the list by
-using one or more of the provided options like [<flag>--type</flag>, <flag>--backend</flag>, <flag>--db</flag>, <flag>--id</flag>].
+                    This command display list of ignored external ids. You can filter the list by
+                    using one or more of the provided options.
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># List all ignore rules that relate to specific backend.</question>
+                    <question># List all ignore rules that relate to specific backend.</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>BACKEND_NAME</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>backend_name</value>
 
-<question># Appending more filters to narrow down list</question>
+                    <question># Appending more filters to narrow down list</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>BACKEND_NAME</value> <flag>--db</flag> <value>tvdb</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>backend_name</value> <flag>--db</flag> <value>tvdb</value>
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
