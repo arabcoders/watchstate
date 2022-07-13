@@ -33,14 +33,14 @@ final class PruneCommand extends Command
             ->setHelp(
                 r(
                     <<<HELP
+                    
+                    This command remove automatically generated files. like logs and backups.
 
-This command remove automatically generated files. like logs and backups.
+                    to see what files will be removed without actually removing them. run the following command.
 
-to see what files will be removed without actually removing them. run the following command.
+                    {cmd} <cmd>{route}</cmd> <flag>--dry-run</flag> <flag>-vvv</flag>
 
-{cmd} {route} --dry-run -vvv
-
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

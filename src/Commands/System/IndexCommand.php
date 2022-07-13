@@ -26,8 +26,6 @@ final class IndexCommand extends Command
 
     protected function configure(): void
     {
-        $cmdContext = trim(commandContext());
-
         $this->setName(self::ROUTE)
             ->setDescription('Ensure database has correct indexes.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes.')
@@ -36,14 +34,24 @@ final class IndexCommand extends Command
                 r(
                     <<<HELP
 
-This command check the status of your database indexes, and update any missed index.
+                    This command check the status of your database indexes, and update any missed indexes.
+                    You usually should not run command manually as it's run during container startup process.
 
-To recreate your database indexes run the following command
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-{cmd} {route} --force-reindex -vvv
+                    <question># How to recreate the indexes?</question>
 
-HELP,
-                    ['cmd' => $cmdContext, 'route' => self::ROUTE]
+                    You can drop the current indexes and rebuild them by using the following command
+
+                    {cmd} <cmd>{route}</cmd> <flag>--force-reindex</flag>
+
+                    HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE
+                    ]
                 )
             );
     }

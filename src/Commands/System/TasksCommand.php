@@ -55,48 +55,48 @@ final class TasksCommand extends Command
 This command automates the runs of scheduled tasks.
 
 -------
-<comment>[ FAQ ]</comment>
+<notice>[ FAQ ]</notice>
 -------
 
-<comment># How run scheduled tasks?</comment>
+<question># How run scheduled tasks?</question>
 
 To run scheduled tasks, Do the following
 
-{cmd} {route} <info>--run</info>
+{cmd} <cmd>{route}</cmd> <flag>--run</flag>
 
-<comment># How to force run specific task?</comment>
+<question># How to force run specific task?</question>
 
-You have to combine both <info>[--run]</info> and <info>[--task <comment>task_name</comment>]</info>, For example:
+You have to combine both <flag>[--run]</flag> and [<flag>--task</flag> <value>task_name</value>], For example:
 
-{cmd} {route} <info>--task</info> <comment>import</comment> <info>--run</info>
+{cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag>
 
-Running task in force mode, bypass the task enabled check.
+Running task in force mode, <notice>bypass</notice> the task enabled check.
 
-<comment># How to configure tasks?</comment>
+<question># How to configure tasks?</question>
 
 All Prebuilt tasks have 3 environment variables associated with them.
 
-## <info>WS_CRON_<comment>{TASK}</comment>:</info>
+## <flag>WS_CRON_<value>{TASK}</value>:</flag>
 
 This environment variable control whether the task is enabled or not, it auto cast the value to bool. For example,
-to enable <comment>import</comment> task simply add new environment variable called [<info>WS_CRON_</info><comment>IMPORT</comment>] with value of [<info>true</info>] or [<info>1</info>].
+to enable <value>import</value> task simply add new environment variable called [<flag>WS_CRON_</flag><value>IMPORT</value>] with value of [<value>true</value>] or [<value>1</value>].
 
-## <info>WS_CRON_<comment>{TASK}</comment>_AT:</info>
+## <info>WS_CRON_<value>{TASK}</value>_AT:</info>
 
 This environment variable control when the task should run, it accepts valid cron expression timer. For example,
-to run <comment>import</comment> every two hours add new environment variable called [<info>WS_CRON_<comment>IMPORT</comment>_AT</info>] with value of [<info>0 */2 * * *</info>].
+to run <value>import</value> every two hours add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_AT</info>] with value of [<info>0 */2 * * *</info>].
 
 
-## <info>WS_CRON_<comment>{TASK}</comment>_ARGS</info>:
+## <info>WS_CRON_<value>{TASK}</value>_ARGS</info>:
 
 This environment variable control the options passed to the executed command, For example to expand the information
-logged during <comment>import</comment> run, add new environment variable called [<info>WS_CRON_<comment>IMPORT</comment>_ARGS</info>] with value of [<info>-vvv --context</info>].
-Simply put, run help on the associated command, and you can use any <comment>Options</comment> listed there in this variable.
+logged during <value>import</value> run, add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_ARGS</info>] with value of [<info>-vvv --context</info>].
+Simply put, run help on the associated command, and you can use any <value>Options</value> listed there in this variable.
 
-## <comment>{TASK}</comment>
+## <value>{TASK}</value>
 
-Replace <comment>{TASK}</comment> tag in environment variables which one of the following [ {tasksList} ]
-environment variables are in <comment>ALL CAPITAL LETTERS</comment>.
+Replace <value>{TASK}</value> tag in environment variables which one of the following [ {tasksList} ]
+environment variables are in <value>ALL CAPITAL LETTERS</value>.
 
 HELP,
                     [

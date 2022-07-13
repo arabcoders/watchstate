@@ -25,13 +25,13 @@ final class PHPCommand extends Command
                 r(
                     <<<HELP
 
-This command generate expected values for [<info>php.ini</info>] and [<info>fpm</info>] pool.
+                    This command generate expected values for <notice>php.ini</notice> and <notice>fpm</notice> pool worker.
 
-To generate fpm values run:
+                    To generate fpm values run:
 
-{cmd} {route} <info>--fpm</info>
+                    {cmd} <cmd>{route}</cmd> <flag>--fpm</flag>
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

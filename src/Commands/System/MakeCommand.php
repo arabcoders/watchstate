@@ -30,15 +30,17 @@ final class MakeCommand extends Command
                 r(
                     <<<HELP
 
-This command creates a migration file for database schema.
-This is mostly used for people who develop features for this tool.
+                    This command creates a <notice>migration file</notice> for database schema.
+                    This is mostly used for people who develop features for this tool.
 
-By default, migration files stored at [<info>{migrationPath}</info>].
+                    By default, migration files stored at [<value>{migrationPath}</value>].
 
-The migration file name must be in [<info>in_english</info>] without spaces.
+                    The migration file name must be in [<value>in_english</value>] without spaces and in lower case.
 
-HELP,
-                    ['migrationPath' => after(realpath(__DIR__ . '/../../../migrations'), ROOT_PATH)]
+                    HELP,
+                    [
+                        'migrationPath' => after(realpath(__DIR__ . '/../../../migrations'), ROOT_PATH)
+                    ]
                 )
 
             );

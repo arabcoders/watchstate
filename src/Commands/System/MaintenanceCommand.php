@@ -27,10 +27,11 @@ final class MaintenanceCommand extends Command
             ->setHelp(
                 <<<HELP
 
-This command runs maintenance tasks on database to make sure the database is in optimal state.
-You do not need to run this command unless told by the team. This is done automatically on container startup.
+                This command runs <notice>maintenance</notice> tasks on database to make sure the database is in optimal state.
+                You do not need to run this command unless told by the team.
+                This is done automatically on container startup.
 
-HELP
+                HELP
             );
     }
 
