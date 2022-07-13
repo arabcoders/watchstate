@@ -27,14 +27,14 @@ final class AddCommand extends Command
                 r(
                     <<<HELP
 
-This command allow you to add new backend to your [<value>servers.yaml</value>] config.
-This command require <notice>interaction</notice> to work.
+                    This command allow you to add new backend.
+                    This command require <notice>interaction</notice> to work.
 
-This command is purely shortcut for running the following command:
+                    This command is purely shortcut for running the following command:
 
-{cmd} <cmd>{manage_route}</cmd> --add -- <value>backend_name</value>
+                    {cmd} <cmd>{manage_route}</cmd> --add -- <value>backend_name</value>
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

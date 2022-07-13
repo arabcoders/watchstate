@@ -43,23 +43,23 @@ final class UnifyCommand extends Command
                 r(
                     <<<HELP
 
-This command is mainly intended for <notice>Plex</notice> multi server users.
-You shouldn't use this command unless told by the team.
+                    This command is mainly intended for <notice>Plex</notice> multi server users.
+                    You shouldn't use this command unless told by the team.
+                    
+                    Due to <notice>Plex</notice> webhook limitation you cannot use multiple webhook tokens for one PlexPass account.
+                    And as workaround we have to use one webhook token for all of your <notice>Plex</notice> backends.
 
-Due to <notice>Plex</notice> webhook limitation you cannot use multiple webhook tokens for one PlexPass account.
-And as workaround we have to use one webhook token for all of your <notice>Plex</notice> backends.
+                    This command will do the following.
 
-This command will do the following.
+                    3. Update backends unique identifier (uuid).
+                    1. Change the selected backend's webhook tokens to be replica of each other.
+                    2. Enable limit backend webhook requests to matching unique identifier.
 
-3. Update backends unique identifier (uuid).
-1. Change the selected backend's webhook tokens to be replica of each other.
-2. Enable limit backend webhook requests to matching unique identifier.
+                    To execute the command, you can do the following
 
-To execute the command, you can do the following
+                    {cmd} <cmd>{route}</cmd> -- <value>plex</value>
 
-{cmd} <cmd>{route}</cmd> -- <value>plex</value>
-
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

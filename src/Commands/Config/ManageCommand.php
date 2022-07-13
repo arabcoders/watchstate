@@ -39,10 +39,10 @@ final class ManageCommand extends Command
                 r(
                     <<<HELP
 
-This command allows you to manage backend settings.
-This command require <notice>interaction</notice> to work.
+                    This command allows you to manage backend settings.
+                    This command require <notice>interaction</notice> to work.
 
-HELP,
+                    HELP,
                 )
             );
     }
@@ -63,11 +63,11 @@ HELP,
                 r(
                     <<<ERROR
 
-<error>ERROR:</error> This command require <notice>interaction</notice>. For example:
+                    <error>ERROR:</error> This command require <notice>interaction</notice>. For example:
 
-{cmd} <cmd>{route}</cmd> -- <value>{backend}</value>
+                    {cmd} <cmd>{route}</cmd> -- <value>{backend_name}</value>
 
-ERROR,
+                    ERROR,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
