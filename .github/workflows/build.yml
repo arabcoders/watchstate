@@ -17,6 +17,7 @@ on:
 env:
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
+  PLATFORMS: linux/amd64${{ endsWith(github.ref, github.event.repository.default_branch) && ', linux/arm64, linux/arm' || '' }}
 
 jobs:
   unit-tests:
@@ -61,9 +62,6 @@ jobs:
     needs: unit-tests
     if: github.event_name != 'pull_request'
     runs-on: "ubuntu-latest"
-
-    env:
-      PLATFORMS: linux/amd64${{ endsWith(github.ref, github.event.repository.default_branch) && ', linux/arm64, linux/arm' || '' }}
 
     steps:
       - name: Checkout
