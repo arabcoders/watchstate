@@ -570,6 +570,7 @@ class Import
                 guid: $guid,
                 item: $item,
                 opts: $opts + [
+                    iState::COLUMN_META_LIBRARY => ag($logContext, 'library.id'),
                     'override' => [
                         iState::COLUMN_EXTRA => [
                             $context->backendName => [
