@@ -23,7 +23,7 @@ final class ConsoleOutput extends baseConsoleOutput
             //bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white)
             $formatter->setStyle('flag', new OutputFormatterStyle('green'));
             $formatter->setStyle('value', new OutputFormatterStyle('yellow'));
-            $formatter->setStyle('notice', new OutputFormatterStyle('blue'));
+            $formatter->setStyle('notice', new OutputFormatterStyle('magenta'));
             $formatter->setStyle('cmd', new OutputFormatterStyle('blue'));
             $formatter->setStyle('question', new OutputFormatterStyle('cyan'));
         }
