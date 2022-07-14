@@ -55,7 +55,7 @@ class ExportCommand extends Command
             ->setHelp(
                 r(
                     <<<HELP
-                    
+
                     This command export your <notice>current</notice> play state to backends.
                     This command provide powerful options. do read them.
 
@@ -69,7 +69,7 @@ class ExportCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>-fi</flag> <flag>--select-backends</flag> <value>backend_name</value>
 
-                    <question># How to what will change without committing the changes?</question>
+                    <question># how to see what will be changed without committing them?</question>
 
                     You have to use the [<flag>--dry-run</flag>]. For example,
 
