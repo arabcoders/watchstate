@@ -49,18 +49,20 @@ class PushCommand extends Command
                 r(
                     <<<HELP
 
-This command push the play state of the items that are updated by webhooks. This approach is a faster way of syncing
-the state back to the export.enabled backends. This approach is more efficient than the traditional export method.
+                    This command push <notice>webhook</notice> updated play state to export enabled backends.
+                    You should not run this manually and instead rely on scheduled task to run this command.
 
-This approach require items metadata to be already available in database to actually do the necessary work. As we require
-backend id to do play state comparison. However, if the metadata for the items not available, then it will ignore that item for that backend.
+                    This command require the metadata to be already saved in database.
+                    If no metadata available for a backend the item will be ignored for that backend.
 
-If the item ignored, it will then be picked up by the next state:export run and will try to match the item if possible.
+                    If the item was ignored during <cmd>{route}</cmd> run, it will be picked up later by next <cmd>{export_route}</cmd> run.
 
-You should not run this manually and instead rely on scheduled task to run this command. For more information read the <info>FAQ.md</info>
-
-HELP,
-                    []
+                    HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'export_route' => ExportCommand::ROUTE,
+                    ]
                 )
             );
     }

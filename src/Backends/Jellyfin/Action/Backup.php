@@ -9,11 +9,14 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Options;
 use SplFileObject;
 use Throwable;
 
 class Backup extends Import
 {
+    private const JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+
     protected function process(
         Context $context,
         iGuid $guid,
@@ -132,12 +135,9 @@ class Backup extends Import
                 }
             }
 
-            $writer->fwrite(
-                PHP_EOL . json_encode(
-                    $arr,
-                    JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                ) . ','
-            );
+            if (false === (bool)ag($opts, Options::DRY_RUN, false)) {
+                $writer->fwrite(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
+            }
         } catch (Throwable $e) {
             $this->logger->error(
                 'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] backup.',

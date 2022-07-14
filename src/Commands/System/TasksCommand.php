@@ -52,53 +52,53 @@ final class TasksCommand extends Command
                 r(
                     <<<HELP
 
-This command automates the runs of scheduled tasks.
+                    This command automates the runs of scheduled tasks.
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># How run scheduled tasks?</question>
+                    <question># How run scheduled tasks?</question>
 
-To run scheduled tasks, Do the following
+                    To run scheduled tasks, Do the following
 
-{cmd} <cmd>{route}</cmd> <flag>--run</flag>
+                    {cmd} <cmd>{route}</cmd> <flag>--run</flag>
 
-<question># How to force run specific task?</question>
+                    <question># How to force run specific task?</question>
 
-You have to combine both <flag>[--run]</flag> and [<flag>--task</flag> <value>task_name</value>], For example:
+                    You have to combine both <flag>[--run]</flag> and [<flag>--task</flag> <value>task_name</value>], For example:
 
-{cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag>
+                    {cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag>
 
-Running task in force mode, <notice>bypass</notice> the task enabled check.
+                    Running task in force mode, <notice>bypass</notice> the task enabled check.
 
-<question># How to configure tasks?</question>
+                    <question># How to configure tasks?</question>
 
-All Prebuilt tasks have 3 environment variables associated with them.
+                    All Prebuilt tasks have 3 environment variables associated with them.
 
-## <flag>WS_CRON_<value>{TASK}</value>:</flag>
+                    ## <flag>WS_CRON_<value>{TASK}</value>:</flag>
 
-This environment variable control whether the task is enabled or not, it auto cast the value to bool. For example,
-to enable <value>import</value> task simply add new environment variable called [<flag>WS_CRON_</flag><value>IMPORT</value>] with value of [<value>true</value>] or [<value>1</value>].
+                    This environment variable control whether the task is enabled or not, it auto cast the value to bool. For example,
+                    to enable <value>import</value> task simply add new environment variable called [<flag>WS_CRON_</flag><value>IMPORT</value>] with value of [<value>true</value>] or [<value>1</value>].
 
-## <info>WS_CRON_<value>{TASK}</value>_AT:</info>
+                    ## <info>WS_CRON_<value>{TASK}</value>_AT:</info>
 
-This environment variable control when the task should run, it accepts valid cron expression timer. For example,
-to run <value>import</value> every two hours add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_AT</info>] with value of [<info>0 */2 * * *</info>].
+                    This environment variable control when the task should run, it accepts valid cron expression timer. For example,
+                    to run <value>import</value> every two hours add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_AT</info>] with value of [<info>0 */2 * * *</info>].
 
 
-## <info>WS_CRON_<value>{TASK}</value>_ARGS</info>:
+                    ## <info>WS_CRON_<value>{TASK}</value>_ARGS</info>:
 
-This environment variable control the options passed to the executed command, For example to expand the information
-logged during <value>import</value> run, add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_ARGS</info>] with value of [<info>-vvv --context</info>].
-Simply put, run help on the associated command, and you can use any <value>Options</value> listed there in this variable.
+                    This environment variable control the options passed to the executed command, For example to expand the information
+                    logged during <value>import</value> run, add new environment variable called [<info>WS_CRON_<value>IMPORT</value>_ARGS</info>] with value of [<info>-vvv --context</info>].
+                    Simply put, run help on the associated command, and you can use any <value>Options</value> listed there in this variable.
 
-## <value>{TASK}</value>
+                    ## <value>{TASK}</value>
 
-Replace <value>{TASK}</value> tag in environment variables which one of the following [ {tasksList} ]
-environment variables are in <value>ALL CAPITAL LETTERS</value>.
+                    Replace <value>{TASK}</value> tag in environment variables which one of the following [ {tasksList} ]
+                    environment variables are in <value>ALL CAPITAL LETTERS</value>.
 
-HELP,
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,

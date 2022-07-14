@@ -37,9 +37,6 @@ class BackupCommand extends Command
 
     protected function configure(): void
     {
-        $cmdContext = trim(commandContext());
-        $backupDir = after(Config::get('path') . '/backup/', ROOT_PATH);
-
         $this->setName(self::ROUTE)
             ->setDescription('Backup backends play state.')
             ->addOption(
@@ -65,51 +62,59 @@ class BackupCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Full path backup file. Will only be used if backup list is 1'
             )
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
             ->setHelp(
-                <<<HELP
-Generate <info>portable</info> backup of your backends play state that can be used to restore any supported backend type.
+                r(
+                    <<<HELP
 
-------------------
-<comment>[ Important info ]</comment>
-------------------
+                    Generate <notice>portable</notice> backup of your backends play state that can be used to restore any supported backend type.
 
-The command will only work on backends that has import enabled.
+                    ------------------
+                    <notice>[ Important info ]</notice>
+                    ------------------
 
-Backups generated without <info>[-k, --keep]</info> flag are subject to be <info>REMOVED</info> during system:prune run.
-To keep permanent copy of your backups you can use the <info>[-k, --keep]</info> flag. For example:
+                    The command will only work on backends that has import enabled.
+                    
+                    Backups generated without [<flag>-k</flag>, <flag>--keep</flag>] flag are subject to be <notice>REMOVED</notice> during system:prune run.
+                    To keep permanent copy of your backups you can use the [<flag>-k</flag>, </flag>--keep</info>] flag. For example:
 
-{$cmdContext} state:backup <info>--keep</info> [--select-backends <info>my_backend</info>]
+                    {cmd} <cmd>{route}</cmd> <info>--keep</info> [<flag>--select-backends</flag> <value>backend_name</value>]
 
-Backups generated with --keep flag will not contain a date and will be named [<info>{backend}.json</info>] where automated backups
-will be named [<info>{backend}.{date}.json</info>]
+                    Backups generated with [<flag>-k</flag>, <flag>--keep</flag>] flag will not contain a date and will be named [<value>backend_name.json</value>]
+                    where automated backups will be named [<value>backend_name.00000000{date}.json</value>]
 
-<comment>If a backup already exists using the same filename, it will be overwritten.</comment>
+                    <notice>If filename already exists, it will be overwritten.</notice>
 
--------
-<comment>[ FAQ ]</comment>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<comment># Where are my backups stored?</comment>
+                    <question># Where are my backups stored?</question>
 
-By defualt we store backups at {$backupDir}
+                    By default, we store backups at [<value>{backupDir}</value>].
 
-<comment># Why the externals ids are not exactly the same from backend?</comment>
+                    <question># Why the external ids are not exactly the same from backend?</question>
 
-By defualt we enhance the data from the backend to allow the backup to be usuable by all if your backends,
-The expanded externals ids make the data more portable, However, if you do not wish to have this enabled. You can
-Disable it via the flag <info>[--no-enhance].</info> We recommand to keep this option enabled.
+                    By default we enhance the data from the backend to allow the backup to be usable by all if your backends,
+                    The expanded external ids make the data more portable, However, if you do not wish to have this enabled. You can
+                    disable it via [<flag>--no-enhance</flag>] flag. <notice>We recommend to keep this option enabled</notice>.
 
-<comment># I want different file name for my backup?</comment>
+                    <question># I want different file name for my backup?</question>
 
-Backup names are something tricky, however it's possible to choose the backup filename if the total number
-of backed up backends are 1. So, in essence you have to combine two flags <info>[-s, --select-backends]</info> and <info>[--file]</info>.
+                    Backup names are something tricky, however it's possible to choose the backup filename if the total number
+                    of backed up backends are 1. So, in essence you have to combine two flags [<flag>-s</flag>, <flag>--select-backends</flag>] and [<flag>--file</flag>].
 
-For example, to backup [<info>my_backend</info>] backend data to [<info>/tmp/my_backend.json</info>] do the following:
+                    For example, to backup [<value>backend_name</value>] backend data to [<value>/tmp/backend_name.json</value>] do the following:
 
-{$cmdContext} state:backup <info>--select-backends</info> my_backend <info>--file</info> /tmp/my_backend.json
+                    {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>backend_name</value> <flag>--file</flag> <value>/tmp/my_backend.json</value>
 
-HELP
+                    HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                        'backupDir' => after(Config::get('path') . '/backup', ROOT_PATH),
+
+                    ]
+                )
             );
     }
 
@@ -125,21 +130,9 @@ HELP
             Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
         }
 
-        $selectBackends = (string)$input->getOption('select-backends');
-        $serversFilter = (string)$input->getOption('servers-filter');
-
-        if (!empty($serversFilter)) {
-            $this->logger->warning(
-                'The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].'
-            );
-            if (empty($selectBackends)) {
-                $selectBackends = $serversFilter;
-            }
-        }
-
         $list = [];
-        $selected = explode(',', $selectBackends);
-        $isCustom = !empty($selectBackends) && count($selected) >= 1;
+        $selected = explode(',', (string)$input->getOption('select-backends'));
+        $isCustom = !empty($selected) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
@@ -162,7 +155,7 @@ HELP
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by servers filter flag.', [
+                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by select backends flag.', [
                     'backend' => $backendName,
                 ]);
                 continue;
@@ -260,24 +253,30 @@ HELP
                 $fileName = $file;
             }
 
-            $fileName = r($fileName, [
-                'backend' => ag($backend, 'name'),
-                'date' => makeDate()->format('Ymd'),
-            ]);
+            if (false === $input->getOption('dry-run')) {
+                $fileName = r($fileName, [
+                    'backend' => ag($backend, 'name'),
+                    'date' => makeDate()->format('Ymd'),
+                ]);
 
-            if (!file_exists($fileName)) {
-                touch($fileName);
+                if (!file_exists($fileName)) {
+                    touch($fileName);
+                }
+
+                $backend['fp'] = new SplFileObject($fileName, 'wb+');
+                $backend['fp']->fwrite('[');
             }
-
-            $backend['fp'] = new SplFileObject($fileName, 'wb+');
-
-            $backend['fp']->fwrite('[');
 
             array_push(
                 $queue,
-                ...$backend['class']->backup($this->mapper, $backend['fp'], [
-                'no_enhance' => true === $input->getOption('no-enhance')
-            ])
+                ...$backend['class']->backup(
+                $this->mapper,
+                $backend['fp'] ?? new SplFileObject('php://stdout', 'wb+'),
+                [
+                    'no_enhance' => true === $input->getOption('no-enhance'),
+                    Options::DRY_RUN => (bool)$input->getOption('dry-run'),
+                ]
+            )
             );
         }
 
@@ -314,7 +313,9 @@ HELP
                 continue;
             }
 
-            if (true === ($backend['fp'] instanceof SplFileObject)) {
+            assert($backend['fp'] instanceof SplFileObject);
+
+            if (false === $input->getOption('dry-run')) {
                 $backend['fp']->fseek(-1, SEEK_END);
                 $backend['fp']->fwrite(PHP_EOL . ']');
             }
