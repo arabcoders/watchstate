@@ -65,46 +65,46 @@ final class LogsCommand extends Command
                 r(
                     <<<HELP
 
-This command allow you to access all recorded logs.
+                    This command allow you to access all recorded logs.
 
--------------------
-<notice>[ Expected Values ]</notice>
--------------------
+                    -------------------
+                    <notice>[ Expected Values ]</notice>
+                    -------------------
 
-<flag>type</flag>  expects the value to be one of [{files}]. [<value>Default: {defaultLog}</value>].
-<flag>date</flag>  expects the value to be [<value>(number){8}</value>]. [<value>Default: {defaultDate}</value>].
-<flag>limit</flag> expects the value to be [<value>(number)</value>]. [<value>Default: {defaultLimit}</value>].
+                    <flag>type</flag>  expects the value to be one of [{files}]. [<value>Default: {defaultLog}</value>].
+                    <flag>date</flag>  expects the value to be [<value>(number){8}</value>]. [<value>Default: {defaultDate}</value>].
+                    <flag>limit</flag> expects the value to be [<value>(number)</value>]. [<value>Default: {defaultLimit}</value>].
 
--------
-<notice>[ FAQ ]</notice>
--------
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<question># How to see all log files?</question>
+                    <question># How to see all log files?</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--list</flag>
+                    {cmd} <cmd>{route}</cmd> <flag>--list</flag>
 
-<question># How to follow log file?</question>
+                    <question># How to follow log file?</question>
 
-{cmd} <cmd>{route}</cmd> <flag>--follow</flag>
+                    {cmd} <cmd>{route}</cmd> <flag>--follow</flag>
 
-<question># How to clear log file?</question>
+                    <question># How to clear log file?</question>
 
-You can clear log file by running this command, However clearing log file require interactive confirmation.
+                    You can clear log file by running this command, However clearing log file require interactive confirmation.
 
-{cmd} <cmd>{route}</cmd> <flag>--type</flag> <value>{defaultLog}</value> <flag>--date</flag> <value>{defaultDate}</value> <flag>--clear</flag>
+                    {cmd} <cmd>{route}</cmd> <flag>--type</flag> <value>{defaultLog}</value> <flag>--date</flag> <value>{defaultDate}</value> <flag>--clear</flag>
 
-<question># How to increase/decrease the returned log lines?</question>
+                    <question># How to increase/decrease the returned log lines?</question>
 
-By default, we return the last [<value>{defaultLimit}</value>] log lines. However, you can increase/decrease
-the limit however you like by using [<flag>-l, --limit</flag>] flag. For example,
+                    By default, we return the last [<value>{defaultLimit}</value>] log lines. However, you can increase/decrease
+                    the limit however you like by using [<flag>-l, --limit</flag>] flag. For example,
 
-{cmd} <cmd>{route}</cmd> <flag>--limit</flag> <value>100</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--limit</flag> <value>100</value>
 
-<question># Where log files stored?</question>
+                    <question># Where log files stored?</question>
 
-By default, We store logs at [<value>{logsPath}</value>]
+                    By default, We store logs at [<value>{logsPath}</value>]
 
-HELP,
+                    HELP,
                     [
                         'files' => implode(
                             ', ',

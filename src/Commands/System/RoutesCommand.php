@@ -20,7 +20,7 @@ final class RoutesCommand extends Command
             ->setDescription('Generate commands routes.')->setHelp(
                 <<<HELP
 
-                This command generate the force regenerate command routes.
+                This command force routes <notice>regeneration</notice> for commands.
                 You do not need to run this command unless told by the team.
                 This is done automatically on container startup.
 

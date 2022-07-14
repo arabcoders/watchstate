@@ -75,93 +75,97 @@ class ImportCommand extends Command
                 r(
                     <<<HELP
 
-This command sync metadata and the play state of items from backends. This step is necessary to have working tool.
-Without metadata syncing will be impossible. So for each backend that you add you need to import at miniuim the metadata
-of that backend.
+                    This command import <notice>metadata</notice> and the <notice>play state</notice> of items from backends.
 
--------
-<comment>[ FAQ ]</comment>
--------
+                    ------------------
+                    <notice>[ Important info ]</notice>
+                    ------------------
 
-<comment># Import from specific backend?</comment>
+                    You MUST import the metadata as minimum to have efficient push/export.
 
-{cmd} {route} <info>--select-backends</info> [BACKEND_NAME]
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
 
-<comment># How to Import the metadata only?</comment>
+                    <question># How to import from specific backend?</question>
 
-{cmd} {route} <info>--metadata-only</info>
+                    {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>backend_name</value>
 
-<comment># Import is failing due to timeout?</comment>
+                    <question># How to Import the metadata only?</question>
 
-If you want to permanently increase the <info>timeout</info> for specific backend, you can do the following
+                    {cmd} <cmd>{route}</cmd> <flag>--metadata-only</flag>
 
-{cmd} {config_edit} --key <comment>options.client.timeout</comment> --set <info>600.0</info> -- [BACKEND_NAME]
+                    <question># Import is failing due to timeout?</question>
 
-<info>600.0</info> seconds is equal to 10 minutes before the timeout handler kicks in. Alternatively, you can also increase the
-timeout temporarily by using the <info>--timeout</info> flag. It will increase the timeout for all backends during this run.
+                    If you want to permanently increase the <notice>timeout</notice> for specific backend, you can do the following
 
-{cmd} {route} <info>--timeout</info> 600.0
+                    {cmd} <cmd>{config_edit}</cmd> <flag>--key</flag> <value>options.client.timeout</value> <flag>--set</flag> <value>600.0</value> -- <value>backend_name</value>
 
-<comment># Import is failing due to memory constraint?</comment>
+                    <value>600.0</value> seconds is equal to 10 minutes before the timeout handler kicks in. Alternatively, you can also increase the
+                    timeout temporarily by using the [<flag>--timeout</flag>] flag. It will increase the timeout for all backends during this run.
 
-This is a tricky situation, the default mapper we use is a memory mapper that load the entire state into memory, However
-This may not be possible for memory constraint systems, You can use the alternative mapper implementation, it's less
-memory hungry. However, it is slower than the default mapper. to use alternative mapper you can do the following:
+                    {cmd} <cmd>{route}</cmd> <flag>--timeout</flag> <value>600.0</value>
 
-{cmd} {route} <info>--direct-mapper</info>
+                    <question># Import is failing due to memory constraint?</question>
 
-<comment># Run import to see changes without altering the database?</comment>
+                    This is a tricky situation, the default mapper we use is a memory mapper that load the entire state into memory, However
+                    This may not be possible for memory constraint systems, You can use the alternative mapper implementation, it's less
+                    memory hungry. However, it is slower than the default mapper. to use alternative mapper you can do the following:
 
-Most important commands have [<info>--dry-run</info>] flag. This flag signal that the changes will not be committed if the flag is used.
-To see the changes that will happen during an import run you could for example run the following command
+                    {cmd} <cmd>{route}</cmd> <flag>--direct-mapper</flag>
 
-{cmd} {route} <info>--dry-run</info> -vvv
+                    <question># Run import to see changes without altering the database?</question>
 
-<comment># Import does not show any output?</comment>
+                    Most important commands have [<flag>--dry-run</flag>] flag. This flag signal that the changes will not be committed if the flag is used.
+                    To see the changes that will happen during an import run you could for example run the following command
 
-By default commands only show log level <comment>WARNING</comment> and higher, to see more verbose output
-You can use the [<info>-v|-vv|-vvv</info>] flag to signal that you want more output. And you can enable
-even more info by using [<info>--trace</info>] and [<info>--context</info>] flags. Be warned the output using all those flags
-is quite excessive and shouldn't be used unless told by the team.
+                    {cmd} <cmd>{route}</cmd> <flag>--dry-run</flag> <flag>-vvv</flag>
 
-{cmd} {route} <info>-vvv --trace --context</info>
+                    <question># Import command does not show any output?</question>
 
-<comment># The Import operation keep updating some items repeatedly even when play state did not change?</comment>
+                    By default commands only show log level <value>WARNING</value> and higher, to see more verbose output
+                    You can use the [<flag>-v|-vv|-vvv</flag>] flag to signal that you want more output. And you can enable
+                    even more info by using [<flag>--trace</flag>] and [<flag>--context</flag>] flags. Be warned the output using all those flags
+                    is quite excessive and shouldn't be used unless told by the team.
 
-This most likely means your media backends have conflicting external ids for the reported items, and thus triggering an
-Update as the importer see different external ids on each item from backends. you could diagnose the problem by
-viewing each item and comparing the external ids being reported. This less likely to happen if you have parsing
-external guids for episodes disabled by using the environment variable [<info>WS_EPISODES_DISABLE_GUID=1</info>].
+                    {cmd} <cmd>{route}</cmd> <flag>-vvv --trace --context</flag>
 
-<comment># "No valid/supported external ids." in logs?</comment>
+                    <question># The Import operation keep updating some items repeatedly even when play state did not change?</question>
 
-This most likely means that the item is not matched in your media backend
+                    This most likely means your media backends have conflicting external ids for the reported items, and thus triggering an
+                    Update as the importer see different external ids on each item from backends. you could diagnose the problem by
+                    viewing each item and comparing the external ids being reported. This less likely to happen if you have parsing
+                    external guids for episodes disabled by using the environment variable [<flag>WS_EPISODES_DISABLE_GUID</flag>=<value>1</value>].
 
-For [<comment>Movies</comment>] check the following:
+                    <question># "No valid/supported external ids." in logs?</question>
 
-[<info>jellyfin/emby</info>]: Go to the movie, click edit metadata and make sure there are external ids listed.
-[<info>Plex</info>]: Go to the movie, click the (...), and click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
+                    This most likely means that the item is not matched in your media backend.
 
-For [<comment>Series</comment>] check the following:
+                    For [<comment>Movies</comment>] check the following:
 
-[<info>jellyfin/emby</info>]: Go to the series, click edit metadata and make sure there are external ids listed.
-[<info>Plex</info>]: Go to the series, click the (...), then click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
+                    [<info>jellyfin/emby</info>]: Go to the movie, click edit metadata and make sure there are external ids listed.
+                    [<info>Plex</info>]: Go to the movie, click the (...), and click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
 
-or you could use the built-in unmatched checker.
+                    For [<comment>Series</comment>] check the following:
 
-{cmd} {unmatched_route} [BACKEND_NAME] [BACKEND_LIBRARY_ID]
+                    [<info>jellyfin/emby</info>]: Go to the series, click edit metadata and make sure there are external ids listed.
+                    [<info>Plex</info>]: Go to the series, click the (...), then click view info, then click view xml and look for tag called [<info>Guid</info>] tag.
 
-If you don't have any unmatched items, this likely means you are using unsupported external id.
+                    or you could use the built-in unmatched checker.
 
-<comment># I removed the database, The import command is not importing the metadata again?</comment>
+                    {cmd} <cmd>{unmatched_route}</cmd> -- <value>backend_name</value>
 
-This is caused by the key [<comment>import.lastSync</comment>] found in [<comment>servers.yaml</comment>]. You have to bypass it
-by using [<info>-f, --force-full</info>] flag. This flag will cause the importer to not consider the last import date
-and instead import all the items.
+                    If you don't have any unmatched items, this likely means you are using unsupported external db ids.
 
-{cmd} {route} <info>-force-full</info>
+                    <question># I removed the database and the import command is not importing the metadata again?</question>
 
-HELP,
+                    This is caused by the key [<value>import.lastSync</value>] found in [<value>servers.yaml</value>]. You have to bypass it
+                    by using [<flag>-f</flag>, <flag>--force-full</flag>] flag. This flag will cause the importer to not consider the last
+                    import date and instead import all the items.
+
+                    {cmd} <cmd>{route}</cmd> <flag>-force-full</flag>
+
+                    HELP,
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
@@ -169,7 +173,6 @@ HELP,
                         'unmatched_route' => UnmatchedCommand::ROUTE,
                     ]
                 )
-
             );
     }
 

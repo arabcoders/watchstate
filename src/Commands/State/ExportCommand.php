@@ -52,8 +52,37 @@ class ExportCommand extends Command
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
-            ->addOption('force-export-mode', null, InputOption::VALUE_NONE, '[DEPRECATED] Force export mode.')
-            ->addOption('force-push-mode', null, InputOption::VALUE_NONE, '[DEPRECATED] Force push mode.');
+            ->setHelp(
+                r(
+                    <<<HELP
+                    
+                    This command export your <notice>current</notice> play state to backends.
+                    This command provide powerful options. do read them.
+
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
+
+                    <question># How to force export play state to a backend?</question>
+
+                    You have to use the following flags [<flag>-f</flag>, <flag>--force-full</flag>] and [<flag>-i</flag>, <flag>--ignore-date</flag>]. For example,
+
+                    {cmd} <cmd>{route}</cmd> <flag>-fi</flag> <flag>--select-backends</flag> <value>backend_name</value>
+
+                    <question># How to what will change without committing the changes?</question>
+
+                    You have to use the [<flag>--dry-run</flag>]. For example,
+
+                    {cmd} <cmd>{route}</cmd> <flag>-v --dry-run</flag> <flag>--select-backends</flag> <value>backend_name</value>
+
+                    HELP,
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+
+                    ]
+                )
+            );
     }
 
     protected function runCommand(InputInterface $input, OutputInterface $output): int

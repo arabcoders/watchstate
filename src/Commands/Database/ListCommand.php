@@ -143,7 +143,7 @@ final class ListCommand extends Command
             ->setHelp(
                 r(
                     <<<HELP
-                    
+
                     This command show your <notice>current</notice> stored play state.
                     This command is powerful tool to explore your database and the metadata gathered
                     about your media files. Please do read the options it's just too many to list here.
@@ -168,7 +168,6 @@ final class ListCommand extends Command
                     For example, To search for item that match backend id, you would run the following:
 
                     {cmd} <cmd>{route}</cmd> <flag>--key</flag> '<value>backend_name</value>.id' <flag>--value</flag> '<value>backend_item_id</value>' <flag>--metadata</flag>
-
 
                     HELP,
                     [
