@@ -52,8 +52,8 @@ class PushCommand extends Command
                     This command push <notice>webhook</notice> updated play state to export enabled backends.
                     You should not run this manually and instead rely on scheduled task to run this command.
 
-                    This command require the metadata to be already saved in database.
-                    If no metadata available for a backend the item will be ignored for that backend.
+                    This command require the <notice>metadata</notice> to be already saved in database.
+                    If no metadata available for a backend, then the item will be ignored for that backend.
 
                     If the item was ignored during <cmd>{route}</cmd> run, it will be picked up later by next <cmd>{export_route}</cmd> run.
 
