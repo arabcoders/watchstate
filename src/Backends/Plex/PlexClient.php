@@ -7,6 +7,7 @@ namespace App\Backends\Plex;
 use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Plex\Action\Backup;
 use App\Backends\Plex\Action\Export;
 use App\Backends\Plex\Action\GetIdentifier;
@@ -27,6 +28,7 @@ use App\Libs\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\Uri;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface as iLogger;
@@ -49,10 +51,22 @@ class PlexClient implements iClient
         PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
 
-    private Context|null $context = null;
+    private Context $context;
+    private iLogger $logger;
+    private iGuid $guid;
+    private Cache $cache;
 
-    public function __construct(private iLogger $logger, private Cache $cache, private PlexGuid $guid)
+    public function __construct(iLogger $logger, Cache $cache, PlexGuid $guid)
     {
+        $this->cache = $cache;
+        $this->logger = $logger;
+        $this->context = new Context(
+            clientName: static::CLIENT_NAME,
+            backendName: static::CLIENT_NAME,
+            backendUrl: new Uri('http://localhost'),
+            cache: $this->cache,
+        );
+        $this->guid = $guid->withContext($this->context);
     }
 
     public function withContext(Context $context): self

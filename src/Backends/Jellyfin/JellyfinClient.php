@@ -7,6 +7,7 @@ namespace App\Backends\Jellyfin;
 use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
@@ -25,6 +26,7 @@ use App\Libs\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\Uri;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface as iLogger;
@@ -61,10 +63,22 @@ class JellyfinClient implements iClient
         JellyfinClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
 
-    private Context|null $context = null;
+    private Context $context;
+    private iGuid $guid;
+    private iLogger $logger;
+    private Cache $cache;
 
-    public function __construct(private Cache $cache, private iLogger $logger, private JellyfinGuid $guid)
+    public function __construct(Cache $cache, iLogger $logger, JellyfinGuid $guid)
     {
+        $this->cache = $cache;
+        $this->logger = $logger;
+        $this->context = new Context(
+            clientName: static::CLIENT_NAME,
+            backendName: static::CLIENT_NAME,
+            backendUrl: new Uri('http://localhost'),
+            cache: $this->cache,
+        );
+        $this->guid = $guid->withContext($this->context);
     }
 
     public function withContext(Context $context): self
@@ -90,6 +104,8 @@ class JellyfinClient implements iClient
             trace: true === ag($context->options, Options::DEBUG_TRACE),
             options: $context->options
         );
+
+        $cloned->guid = $cloned->guid->withContext($cloned->context);
 
         return $cloned;
     }

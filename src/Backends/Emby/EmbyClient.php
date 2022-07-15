@@ -7,6 +7,7 @@ namespace App\Backends\Emby;
 use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Emby\Action\Backup;
 use App\Backends\Emby\Action\Export;
 use App\Backends\Emby\Action\GetIdentifier;
@@ -28,6 +29,7 @@ use App\Libs\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\Uri;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface as iLogger;
@@ -49,13 +51,22 @@ class EmbyClient implements iClient
 
     public const EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
 
-    private Context|null $context = null;
+    private Context $context;
+    private iGuid $guid;
+    private Cache $cache;
+    private iLogger $logger;
 
-    public function __construct(
-        private Cache $cache,
-        private iLogger $logger,
-        private EmbyGuid $guid
-    ) {
+    public function __construct(Cache $cache, iLogger $logger, EmbyGuid $guid)
+    {
+        $this->logger = $logger;
+        $this->cache = $cache;
+        $this->context = new Context(
+            clientName: static::CLIENT_NAME,
+            backendName: static::CLIENT_NAME,
+            backendUrl: new Uri('http://localhost'),
+            cache: $this->cache,
+        );
+        $this->guid = $guid->withContext($this->context);
     }
 
     public function withContext(Context $context): self
@@ -81,6 +92,9 @@ class EmbyClient implements iClient
             trace: true === ag($context->options, Options::DEBUG_TRACE),
             options: $context->options
         );
+
+        $cloned->guid = $cloned->guid->withContext($cloned->context);
+
         return $cloned;
     }
 
