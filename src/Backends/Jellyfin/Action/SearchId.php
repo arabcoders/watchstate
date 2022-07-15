@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\CommonTrait;
-use App\Backends\Common\Response;
 use App\Backends\Common\Context;
+use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Options;
 use Psr\Log\LoggerInterface;
@@ -14,7 +14,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class SearchId
 {
-    use CommonTrait, JellyfinActionTrait;
+    use CommonTrait;
+    use JellyfinActionTrait;
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {

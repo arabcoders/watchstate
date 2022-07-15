@@ -22,7 +22,9 @@ use Throwable;
 
 final class ParseWebhook
 {
-    use CommonTrait, JellyfinActionTrait, EmbyActionTrait;
+    use CommonTrait;
+    use EmbyActionTrait;
+    use JellyfinActionTrait;
 
     protected const WEBHOOK_ALLOWED_TYPES = [
         EmbyClient::TYPE_MOVIE,
@@ -181,7 +183,7 @@ final class ParseWebhook
             }
 
             if (null !== ($path = ag($json, 'Item.Path'))) {
-                $fields[iState::COLUMN_META_DATA][iState::COLUMN_META_PATH] = $path;
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] = $path;
             }
 
             $entity = $this->createEntity(

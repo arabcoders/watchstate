@@ -21,7 +21,8 @@ use Throwable;
 
 final class ParseWebhook
 {
-    use CommonTrait, PlexActionTrait;
+    use CommonTrait;
+    use PlexActionTrait;
 
     protected const WEBHOOK_ALLOWED_TYPES = [
         PlexClient::TYPE_MOVIE,

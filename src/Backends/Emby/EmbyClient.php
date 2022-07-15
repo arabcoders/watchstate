@@ -40,7 +40,7 @@ class EmbyClient implements iClient
 {
     public const NAME = 'EmbyBackend';
 
-    public const CLIENT_NAME = 'Jellyfin';
+    public const CLIENT_NAME = 'Emby';
 
     public const TYPE_MOVIE = JellyfinClient::TYPE_MOVIE;
     public const TYPE_SHOW = JellyfinClient::TYPE_SHOW;

@@ -21,7 +21,8 @@ use Throwable;
 
 final class ParseWebhook
 {
-    use CommonTrait, JellyfinActionTrait;
+    use CommonTrait;
+    use JellyfinActionTrait;
 
     protected const WEBHOOK_ALLOWED_TYPES = [
         JFC::TYPE_MOVIE,
