@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Backends\Common\Cache as BackendCache;
+use App\Backends\Common\ClientInterface as iClient;
+use App\Backends\Common\Context;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
@@ -417,6 +420,52 @@ if (!function_exists('makeBackend')) {
             userId: ag($backend, 'user', null),
             uuid: ag($backend, 'uuid', null),
             options: ag($backend, 'options', []),
+        );
+    }
+}
+
+if (!function_exists('makeClient')) {
+    /**
+     * Create new Backend Client instance.
+     *
+     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $backend
+     * @param string|null $name server name.
+     *
+     * @return iClient
+     *
+     * @throws RuntimeException if configuration is wrong.
+     */
+    function makeClient(array $backend, string|null $name = null): iClient
+    {
+        if (null === ($backendType = ag($backend, 'type'))) {
+            throw new RuntimeException('No backend type was set.');
+        }
+
+        if (null === ag($backend, 'url')) {
+            throw new RuntimeException('No Backend url was set.');
+        }
+
+        if (null === ($class = Config::get("clients.{$backendType}", null))) {
+            throw new RuntimeException(
+                sprintf(
+                    'Unexpected backend type was given. Expecting [%s] but got \'%s\' instead.',
+                    $backendType,
+                    implode('|', Config::get('clients', []))
+                )
+            );
+        }
+
+        return Container::getNew($class)->withContext(
+            new Context(
+                clientName: $backendType,
+                backendName: $name ?? ag($backend, 'name', '??'),
+                backendUrl: new Uri(ag($backend, 'url')),
+                cache: Container::get(BackendCache::class),
+                backendId: ag($backend, 'uuid', null),
+                backendToken: ag($backend, 'token', null),
+                backendUser: ag($backend, 'user', null),
+                options: ag($backend, 'options', []),
+            )
         );
     }
 }

@@ -19,6 +19,7 @@ use App\Backends\Jellyfin\Action\Push;
 use App\Backends\Jellyfin\Action\SearchId;
 use App\Backends\Jellyfin\Action\SearchQuery;
 use App\Backends\Jellyfin\JellyfinActionTrait;
+use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -37,6 +38,9 @@ use SplFileObject;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
+/**
+ * @deprecated Use {@see JellyfinClient}
+ */
 class JellyfinServer implements ServerInterface
 {
     use JellyfinActionTrait;

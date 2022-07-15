@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Backends\Emby\EmbyClient;
+use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Plex\PlexClient;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
@@ -143,6 +146,12 @@ return (function () {
         'plex' => PlexServer::class,
         'emby' => EmbyServer::class,
         'jellyfin' => JellyfinServer::class,
+    ];
+
+    $config['clients'] = [
+        'plex' => PlexClient::class,
+        'emby' => EmbyClient::class,
+        'jellyfin' => JellyfinClient::class,
     ];
 
     $config['servers'] = [];

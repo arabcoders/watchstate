@@ -19,6 +19,7 @@ use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\PlexActionTrait;
+use App\Backends\Plex\PlexClient;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -35,6 +36,9 @@ use RuntimeException;
 use SplFileObject;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * @deprecated use {@see PlexClient}
+ */
 class PlexServer implements ServerInterface
 {
     use PlexActionTrait;

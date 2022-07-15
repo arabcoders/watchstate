@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\Servers\ServerInterface;
 use DirectoryIterator;
@@ -165,7 +166,19 @@ class Command extends BaseCommand
         $default = Config::get("servers.{$name}");
         $default['name'] = $name;
 
-        return makeBackend(array_merge_recursive($default, $config), $name);
+        return makeBackend(array_replace_recursive($default, $config), $name);
+    }
+
+    protected function makeClient(string $name, array $config = []): iClient
+    {
+        if (null === Config::get("servers.{$name}.type", null)) {
+            throw new RuntimeException(r('No backend named [{backend}] was found.', ['backend' => $name]));
+        }
+
+        $default = Config::get("servers.{$name}");
+        $default['name'] = $name;
+
+        return makeClient(array_replace_recursive($default, $config), $name);
     }
 
     protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void

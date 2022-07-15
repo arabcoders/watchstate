@@ -6,11 +6,15 @@ namespace App\Libs\Servers;
 
 use App\Backends\Emby\Action\InspectRequest;
 use App\Backends\Emby\Action\ParseWebhook;
+use App\Backends\Emby\EmbyClient;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\HttpException;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * @deprecated Use {@see EmbyClient}
+ */
 class EmbyServer extends JellyfinServer
 {
     public const NAME = 'EmbyBackend';
