@@ -7,7 +7,6 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
-use JsonException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,7 +14,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Throwable;
 
 #[Routable(command: self::ROUTE), Routable(command: 'servers:unify')]
@@ -45,7 +43,7 @@ final class UnifyCommand extends Command
 
                     This command is mainly intended for <notice>Plex</notice> multi server users.
                     You shouldn't use this command unless told by the team.
-                    
+
                     Due to <notice>Plex</notice> webhook limitation you cannot use multiple webhook tokens for one PlexPass account.
                     And as workaround we have to use one webhook token for all of your <notice>Plex</notice> backends.
 
@@ -68,10 +66,6 @@ final class UnifyCommand extends Command
             );
     }
 
-    /**
-     * @throws ExceptionInterface
-     * @throws JsonException
-     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
@@ -195,7 +189,7 @@ final class UnifyCommand extends Command
 
             $client = makeBackend(Config::get($ref), $backendName);
 
-            $uuid = $client->getServerUUID(true);
+            $uuid = $client->getIdentifier(true);
 
             if (empty($uuid)) {
                 $output->writeln(

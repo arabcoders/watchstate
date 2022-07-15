@@ -323,11 +323,6 @@ class JellyfinClient implements iClient
         return $response->isSuccessful() ? $response->response : null;
     }
 
-    public function getServerUUID(bool $forceRefresh = false): int|string|null
-    {
-        return $this->getIdentifier($forceRefresh);
-    }
-
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
