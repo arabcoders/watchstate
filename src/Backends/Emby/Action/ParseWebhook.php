@@ -22,7 +22,9 @@ use Throwable;
 
 final class ParseWebhook
 {
-    use CommonTrait, JellyfinActionTrait, EmbyActionTrait;
+    use CommonTrait;
+    use EmbyActionTrait;
+    use JellyfinActionTrait;
 
     protected const WEBHOOK_ALLOWED_TYPES = [
         EmbyClient::TYPE_MOVIE,

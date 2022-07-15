@@ -22,7 +22,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class GetLibrary
 {
-    use CommonTrait, JellyfinActionTrait;
+    use CommonTrait;
+    use JellyfinActionTrait;
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
