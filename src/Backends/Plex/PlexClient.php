@@ -86,6 +86,7 @@ class PlexClient implements iClient
                     'headers' => [
                         'Accept' => 'application/json',
                         'X-Plex-Token' => $context->backendToken,
+                        'X-Plex-Container-Size' => 0,
                     ],
                 ],
                 ag($context->options, 'client', [])
