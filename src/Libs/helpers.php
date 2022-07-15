@@ -10,7 +10,6 @@ use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\Date;
 use App\Libs\Router;
-use App\Libs\Servers\ServerInterface;
 use App\Libs\Uri;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
@@ -387,13 +386,16 @@ if (!function_exists('after')) {
 
 if (!function_exists('makeBackend')) {
     /**
+     * Create new Backend Client instance.
+     *
      * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $backend
      * @param string|null $name server name.
-     * @return ServerInterface
+     *
+     * @return iClient
      *
      * @throws RuntimeException if configuration is wrong.
      */
-    function makeBackend(array $backend, string|null $name = null): ServerInterface
+    function makeBackend(array $backend, string|null $name = null): iClient
     {
         if (null === ($backendType = ag($backend, 'type'))) {
             throw new RuntimeException('No backend type was set.');
@@ -405,53 +407,10 @@ if (!function_exists('makeBackend')) {
 
         if (null === ($class = Config::get("supported.{$backendType}", null))) {
             throw new RuntimeException(
-                sprintf(
-                    'Unexpected backend type was given. Expecting [%s] but got \'%s\' instead.',
-                    $backendType,
-                    implode('|', Config::get("supported", []))
-                )
-            );
-        }
-
-        return Container::getNew($class)->setUp(
-            name: $name ?? ag($backend, 'name', fn() => md5(ag($backend, 'url'))),
-            url: new Uri(ag($backend, 'url')),
-            token: ag($backend, 'token', null),
-            userId: ag($backend, 'user', null),
-            uuid: ag($backend, 'uuid', null),
-            options: ag($backend, 'options', []),
-        );
-    }
-}
-
-if (!function_exists('makeClient')) {
-    /**
-     * Create new Backend Client instance.
-     *
-     * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $backend
-     * @param string|null $name server name.
-     *
-     * @return iClient
-     *
-     * @throws RuntimeException if configuration is wrong.
-     */
-    function makeClient(array $backend, string|null $name = null): iClient
-    {
-        if (null === ($backendType = ag($backend, 'type'))) {
-            throw new RuntimeException('No backend type was set.');
-        }
-
-        if (null === ag($backend, 'url')) {
-            throw new RuntimeException('No Backend url was set.');
-        }
-
-        if (null === ($class = Config::get("clients.{$backendType}", null))) {
-            throw new RuntimeException(
-                sprintf(
-                    'Unexpected backend type was given. Expecting [%s] but got \'%s\' instead.',
-                    $backendType,
-                    implode('|', Config::get('clients', []))
-                )
+                r('Unexpected client type [{type}] was given. Expecting [{list}]', [
+                    'type' => $backendType,
+                    'list' => array_keys(Config::get('supported', [])),
+                ])
             );
         }
 
