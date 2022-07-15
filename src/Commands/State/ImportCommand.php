@@ -347,7 +347,7 @@ class ImportCommand extends Command
             }
 
             $backend['options'] = $opts;
-            $backend['class'] = makeBackend($backend, $name);
+            $backend['class'] = $this->getBackend($name, $backend);
 
             $after = ag($backend, 'import.lastSync', null);
 

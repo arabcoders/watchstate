@@ -167,7 +167,7 @@ class PushCommand extends Command
             }
 
             $backend['options'] = $opts;
-            $backend['class'] = makeBackend(backend: $backend, name: $name);
+            $backend['class'] = $this->getBackend(name: $name, config: $backend);
 
             $backend['class']->push(entities: $entities, queue: $this->queue);
         }

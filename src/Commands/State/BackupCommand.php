@@ -73,7 +73,7 @@ class BackupCommand extends Command
                     ------------------
 
                     The command will only work on backends that has import enabled.
-                    
+
                     Backups generated without [<flag>-k</flag>, <flag>--keep</flag>] flag are subject to be <notice>REMOVED</notice> during system:prune run.
                     To keep permanent copy of your backups you can use the [<flag>-k</flag>, </flag>--keep</info>] flag. For example:
 
@@ -235,7 +235,7 @@ class BackupCommand extends Command
             }
 
             $backend['options'] = $opts;
-            $backend['class'] = makeBackend($backend, $name);
+            $backend['class'] = $this->getBackend($name, $backend);
 
             $this->logger->notice('SYSTEM: Backing up [%(backend)] play state.', [
                 'backend' => $name,
@@ -271,7 +271,7 @@ class BackupCommand extends Command
                 $queue,
                 ...$backend['class']->backup(
                 $this->mapper,
-                $backend['fp'] ?? new SplFileObject('php://stdout', 'wb+'),
+                $backend['fp'] ?? null,
                 [
                     'no_enhance' => true === $input->getOption('no-enhance'),
                     Options::DRY_RUN => (bool)$input->getOption('dry-run'),
