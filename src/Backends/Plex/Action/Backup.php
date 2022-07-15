@@ -30,13 +30,7 @@ final class Backup extends Import
             return;
         }
 
-        if (null === ($writer = ag($opts, 'writer'))) {
-            throw new \RuntimeException('No writer was found.');
-        }
-
-        if (false === ($writer instanceof SplFileObject)) {
-            throw new \RuntimeException('Writer is not SplFileObject.');
-        }
+        $writer = ag($opts, 'writer');
 
         try {
             $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
@@ -138,7 +132,7 @@ final class Backup extends Import
                 }
             }
 
-            if (false === (bool)ag($opts, Options::DRY_RUN, false)) {
+            if (($writer instanceof SplFileObject) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
                 $writer->fwrite(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
             }
         } catch (Throwable $e) {

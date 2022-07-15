@@ -243,7 +243,7 @@ final class ManageCommand extends Command
                 );
 
                 $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
-                $chosen = ag($u, 'uuid', fn() => makeBackend($backend, $name)->getServerUUID(true));
+                $chosen = ag($u, 'uuid', fn() => makeBackend($backend, $name)->getIdentifier(true));
             } catch (Throwable $e) {
                 $output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $output->writeln(

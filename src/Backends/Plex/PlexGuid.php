@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Backends\Plex;
 
 use App\Backends\Common\Context;
-use App\Backends\Common\GuidInterface;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Libs\Guid;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class PlexGuid implements GuidInterface
+final class PlexGuid implements iGuid
 {
     private const GUID_MAPPER = [
         'imdb' => Guid::GUID_IMDB,

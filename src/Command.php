@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
-use App\Libs\Servers\ServerInterface;
 use DirectoryIterator;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command as BaseCommand;
@@ -156,16 +156,16 @@ class Command extends BaseCommand
         return $config;
     }
 
-    protected function getBackend(string $name, array $config = []): ServerInterface
+    protected function getBackend(string $name, array $config = []): iClient
     {
         if (null === Config::get("servers.{$name}.type", null)) {
-            throw new RuntimeException(sprintf('No backend named \'%s\' was found.', $name));
+            throw new RuntimeException(r('No backend named [{backend}] was found.', ['backend' => $name]));
         }
 
         $default = Config::get("servers.{$name}");
         $default['name'] = $name;
 
-        return makeBackend(array_merge_recursive($default, $config), $name);
+        return makeBackend(array_replace_recursive($default, $config), $name);
     }
 
     protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void

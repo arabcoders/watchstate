@@ -1,5 +1,7 @@
 # FAQ
 
+**All commands have help document attached to them. So, please read them.**
+
 ### Q: How to sync play state to a new backend without overwriting current play state?
 
 Add the backend and when asked, answer `no` for `Enable Importing metadata and play state from this backend?`. when you

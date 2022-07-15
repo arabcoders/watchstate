@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Backends\Emby\EmbyClient;
+use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Plex\PlexClient;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
@@ -9,9 +12,6 @@ use App\Commands\State\PushCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
-use App\Libs\Servers\EmbyServer;
-use App\Libs\Servers\JellyfinServer;
-use App\Libs\Servers\PlexServer;
 use Monolog\Logger;
 
 return (function () {
@@ -140,9 +140,9 @@ return (function () {
     ];
 
     $config['supported'] = [
-        'plex' => PlexServer::class,
-        'emby' => EmbyServer::class,
-        'jellyfin' => JellyfinServer::class,
+        'plex' => PlexClient::class,
+        'emby' => EmbyClient::class,
+        'jellyfin' => JellyfinClient::class,
     ];
 
     $config['servers'] = [];

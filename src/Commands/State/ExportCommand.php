@@ -201,7 +201,7 @@ class ExportCommand extends Command
             }
 
             $backend['options'] = $opts;
-            $backend['class'] = makeBackend($backend, $name)->setLogger($this->logger);
+            $backend['class'] = $this->getBackend($name, $backend)->setLogger($this->logger);
         }
 
         unset($backend);

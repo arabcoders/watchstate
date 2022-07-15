@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Libs\Servers;
+namespace App\Backends\Common;
 
 use App\Libs\Entity\StateInterface;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -10,34 +10,28 @@ use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use SplFileObject;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-interface ServerInterface
+interface ClientInterface
 {
     /**
-     * Initiate server. It should return **NEW OBJECT**
+     * Initiate Client with context. It **MUST** return new instance.
      *
-     * @param string $name Server name
-     * @param UriInterface $url Server url
-     * @param null|int|string $token Server Token
-     * @param null|int|string $userId Server user Id
-     * @param string|int|null $uuid
-     * @param array $options array of options.
+     * @param Context $context
      *
-     * @return self
+     * @return ClientInterface
      */
-    public function setUp(
-        string $name,
-        UriInterface $url,
-        null|string|int $token = null,
-        null|string|int $userId = null,
-        null|string|int $uuid = null,
-        array $options = []
-    ): self;
+    public function withContext(Context $context): ClientInterface;
+
+    /**
+     * Return client context.
+     *
+     * @return Context
+     */
+    public function getContext(): Context;
 
     /**
      * Get Backend name.
@@ -51,9 +45,9 @@ interface ServerInterface
      *
      * @param LoggerInterface $logger
      *
-     * @return ServerInterface
+     * @return ClientInterface
      */
-    public function setLogger(LoggerInterface $logger): ServerInterface;
+    public function setLogger(LoggerInterface $logger): ClientInterface;
 
     /**
      * Process The request For attributes extraction.
@@ -66,7 +60,7 @@ interface ServerInterface
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
 
     /**
-     * Parse server specific webhook event. for play/un-played event.
+     * Parse backend webhook event.
      *
      * @param ServerRequestInterface $request
      * @return StateInterface
@@ -74,7 +68,7 @@ interface ServerInterface
     public function parseWebhook(ServerRequestInterface $request): StateInterface;
 
     /**
-     * Import watch state.
+     * Import metadata & play state.
      *
      * @param iImport $mapper
      * @param iDate|null $after
@@ -84,16 +78,18 @@ interface ServerInterface
     public function pull(iImport $mapper, iDate|null $after = null): array;
 
     /**
-     * Backup watch state.
+     * Backup play state.
      *
      * @param iImport $mapper
+     * @param SplFileObject|null $writer
+     * @param array $opts
      *
      * @return array<array-key,ResponseInterface>
      */
-    public function backup(iImport $mapper, SplFileObject $writer, array $opts = []): array;
+    public function backup(iImport $mapper, SplFileObject|null $writer = null, array $opts = []): array;
 
     /**
-     * Export watch state to server.
+     * Compare play state and export.
      *
      * @param iImport $mapper
      * @param QueueRequests $queue
@@ -104,7 +100,7 @@ interface ServerInterface
     public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
-     * Push webhook queued states.
+     * Compare webhook queued events and push.
      *
      * @param array<StateInterface> $entities
      * @param QueueRequests $queue
@@ -115,7 +111,7 @@ interface ServerInterface
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
-     * Search server libraries.
+     * Search backend libraries.
      *
      * @param string $query
      * @param int $limit
@@ -126,7 +122,7 @@ interface ServerInterface
     public function search(string $query, int $limit = 25, array $opts = []): array;
 
     /**
-     * Server Backend id.
+     * Search backend for item id.
      *
      * @param string|int $id
      * @param array $opts
@@ -156,19 +152,16 @@ interface ServerInterface
     public function getLibrary(string|int $id, array $opts = []): array;
 
     /**
-     * Get Server Unique ID.
+     * Get backend unique id.
      *
-     * @param bool $forceRefresh force read uuid from server.
+     * @param bool $forceRefresh force reload from backend.
      *
      * @return int|string|null
-     *
-     * @throws JsonException May throw if json decoding fails.
-     * @throws ExceptionInterface May be thrown if there is HTTP request errors.
      */
-    public function getServerUUID(bool $forceRefresh = false): int|string|null;
+    public function getIdentifier(bool $forceRefresh = false): int|string|null;
 
     /**
-     * Return List of users from server.
+     * Return list of backend users.
      *
      * @param array $opts
      *
@@ -180,7 +173,7 @@ interface ServerInterface
     public function getUsersList(array $opts = []): array;
 
     /**
-     * Return list of server libraries.
+     * Return list of backend libraries.
      *
      * @param array $opts
      *
