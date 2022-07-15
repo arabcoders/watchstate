@@ -183,7 +183,7 @@ final class ParseWebhook
             }
 
             if (null !== ($path = ag($json, 'Item.Path'))) {
-                $fields[iState::COLUMN_META_DATA][iState::COLUMN_META_PATH] = $path;
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] = $path;
             }
 
             $entity = $this->createEntity(
