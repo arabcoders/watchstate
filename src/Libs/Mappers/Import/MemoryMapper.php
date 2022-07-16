@@ -6,7 +6,6 @@ namespace App\Libs\Mappers\Import;
 
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
@@ -151,29 +150,26 @@ final class MemoryMapper implements iImport
          */
         if (true === $metadataOnly) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
                 $this->changed[$pointer] = $pointer;
                 Message::increment("{$entity->via}.{$entity->type}.updated");
 
-                $entity->guids = Guid::makeVirtualGuid(
-                    $entity->via,
-                    ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                );
-
                 $this->objects[$pointer] = $this->objects[$pointer]->apply(
                     entity: $entity,
-                    fields: array_merge($localFields, [iState::COLUMN_EXTRA])
+                    fields: array_merge($keys, [iState::COLUMN_EXTRA])
                 );
 
                 $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
-                $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                    'changes' => $this->objects[$pointer]->diff(fields: $localFields)
-                ]);
+                $changes = $this->objects[$pointer]->diff(fields: $keys);
 
+                if (count($changes) >= 1) {
+                    $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                        'changes' => $changes,
+                    ]);
+                }
                 return $this;
             }
 
@@ -220,18 +216,12 @@ final class MemoryMapper implements iImport
                 // -- this sometimes leads to never ending updates as data from backends conflicts.
                 if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                        $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
                         $this->changed[$pointer] = $pointer;
                         Message::increment("{$entity->via}.{$entity->type}.updated");
 
-                        $entity->guids = Guid::makeVirtualGuid(
-                            $entity->via,
-                            ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                        );
-
                         $this->objects[$pointer] = $this->objects[$pointer]->apply(
                             entity: $entity,
-                            fields: array_merge($localFields, [iState::COLUMN_EXTRA])
+                            fields: array_merge($keys, [iState::COLUMN_EXTRA])
                         );
 
                         $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
@@ -244,7 +234,7 @@ final class MemoryMapper implements iImport
                                 'backend' => $entity->via,
                                 'title' => $cloned->getName(),
                                 'changes' => $changes,
-                                'fields' => implode(',', $localFields),
+                                'fields' => implode(',', $keys),
                             ]);
                         }
 

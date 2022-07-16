@@ -81,8 +81,10 @@ final class ManageCommand extends Command
                         'ignoreListFile' => Config::get('path') . '/config/ignore.yaml',
                         'supportedGuids' => implode(
                             ', ',
-                            array_map(fn($val) => '<value>' . after($val, 'guid_') . '</value>',
-                                array_keys(Guid::getSupported(includeVirtual: false)))
+                            array_map(
+                                fn($val) => '<value>' . after($val, 'guid_') . '</value>',
+                                array_keys(Guid::getSupported())
+                            )
                         ),
                         'listOfTypes' => implode(
                             ', ',
@@ -172,7 +174,7 @@ final class ManageCommand extends Command
             throw new RuntimeException('No db source was given.');
         }
 
-        $sources = array_keys(Guid::getSupported(includeVirtual: false));
+        $sources = array_keys(Guid::getSupported());
 
         if (false === in_array('guid_' . $db, $sources)) {
             throw new RuntimeException(
@@ -188,9 +190,7 @@ final class ManageCommand extends Command
             throw new RuntimeException('No external id was given.');
         }
 
-        if (false === Guid::validate($db, $id)) {
-            throw new RuntimeException(sprintf('Id value validation for db source \'%s\' failed.', $db));
-        }
+        Guid::validate($db, $id);
 
         if (null === ($type = ag($urlParts, 'scheme'))) {
             throw new RuntimeException('No type was given.');

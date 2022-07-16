@@ -90,8 +90,6 @@ trait PlexActionTrait
             $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
         }
 
-        $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'ratingKey'));
-
         $builder = [
             iState::COLUMN_TYPE => $type,
             iState::COLUMN_UPDATED => (int)$date,

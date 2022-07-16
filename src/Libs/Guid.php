@@ -35,9 +35,7 @@ final class Guid implements JsonSerializable, Stringable
         ]
     ];
 
-    private const BACKEND_GUID = 'guidv_';
-
-    private const LOOKUP_KEY = '%s://%s';
+    private const LOOKUP_KEY = '{db}://{id}';
 
     private array $data = [];
 
@@ -47,15 +45,12 @@ final class Guid implements JsonSerializable, Stringable
      * Create List of db => external id list.
      *
      * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
-     * @param bool $includeVirtual Whether to consider virtual guids.
      * @param array $context
      */
-    public function __construct(array $guids, bool $includeVirtual = true, array $context = [])
+    public function __construct(array $guids, array $context = [])
     {
-        $supported = self::getSupported(includeVirtual: $includeVirtual);
-
         foreach ($guids as $key => $value) {
-            if (null === $value || null === ($supported[$key] ?? null)) {
+            if (null === $value || null === (self::SUPPORTED[$key] ?? null)) {
                 continue;
             }
 
@@ -75,7 +70,7 @@ final class Guid implements JsonSerializable, Stringable
                 continue;
             }
 
-            if (null === ($supported[$key] ?? null)) {
+            if (null === (self::SUPPORTED[$key] ?? null)) {
                 $this->getLogger()->info(
                     'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Not supported.',
                     [
@@ -86,13 +81,13 @@ final class Guid implements JsonSerializable, Stringable
                 continue;
             }
 
-            if ($supported[$key] !== ($valueType = get_debug_type($value))) {
+            if (self::SUPPORTED[$key] !== ($valueType = get_debug_type($value))) {
                 $this->getLogger()->info(
                     'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value type.',
                     [
                         'key' => $key,
                         'condition' => [
-                            'expecting' => $supported[$key],
+                            'expecting' => self::SUPPORTED[$key],
                             'actual' => $valueType,
                         ],
                         ...$context,
@@ -104,7 +99,7 @@ final class Guid implements JsonSerializable, Stringable
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
                     $this->getLogger()->info(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value expecting [%(expected)] but got [%(given)].',
+                        'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected [%(given)] value, expecting [%(expected)].',
                         [
                             'key' => $key,
                             'expected' => self::VALIDATE_GUID[$key]['example'],
@@ -132,58 +127,26 @@ final class Guid implements JsonSerializable, Stringable
     }
 
     /**
-     * Make Virtual external id that point to backend://(backend_id)
-     *
-     * @param string $backend backend name.
-     * @param string $value backend id
-     *
-     * @return array<string,string>
-     */
-    public static function makeVirtualGuid(string $backend, string $value): array
-    {
-        return [self::BACKEND_GUID . $backend => $value];
-    }
-
-    /**
      * Get Supported External ids sources.
      *
-     * @param bool $includeVirtual Whether to include virtual ids.
-     *
      * @return array<string,string>
      */
-    public static function getSupported(bool $includeVirtual = false): array
+    public static function getSupported(): array
     {
-        static $list = null;
-
-        if (false === $includeVirtual) {
-            return self::SUPPORTED;
-        }
-
-        if (null !== $list) {
-            return $list;
-        }
-
-        $list = self::SUPPORTED;
-
-        foreach (array_keys((array)Config::get('servers', [])) as $name) {
-            $list[self::BACKEND_GUID . $name] = 'string';
-        }
-
-        return $list;
+        return self::SUPPORTED;
     }
 
     /**
      * Create new instance from array.
      *
      * @param array $payload array of [ 'key' => 'value' ] pairs of [ 'db_source' => 'external id' ].
-     * @param bool $includeVirtual Whether to include parsing of Virtual guids.
      * @param array $context
      *
      * @return self
      */
-    public static function fromArray(array $payload, bool $includeVirtual = true, array $context = []): self
+    public static function fromArray(array $payload, array $context = []): self
     {
-        return new self(guids: $payload, includeVirtual: $includeVirtual, context: $context);
+        return new self(guids: $payload, context: $context);
     }
 
     /**
@@ -205,11 +168,10 @@ final class Guid implements JsonSerializable, Stringable
 
         if (false === array_key_exists($lookup, self::SUPPORTED)) {
             throw new RuntimeException(
-                sprintf(
-                    'Invalid db \'%s\' source was given. Expecting \'%s\'.',
-                    $db,
-                    implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::SUPPORTED)))
-                )
+                r('Invalid db [{db}] source was given. Expecting [{db_list}].', [
+                    'db' => $db,
+                    'db_list' => implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::SUPPORTED))),
+                ])
             );
         }
 
@@ -219,12 +181,11 @@ final class Guid implements JsonSerializable, Stringable
 
         if (1 !== preg_match(self::VALIDATE_GUID[$lookup]['pattern'], $id)) {
             throw new InvalidArgumentException(
-                sprintf(
-                    'Invalid value id for db source \'%s\'. Expecting \'%s\' but got \'%s\'.',
-                    $db,
-                    self::VALIDATE_GUID[$lookup]['example'],
-                    $id
-                )
+                r('Invalid [{value}] value for [{db}]. Expecting [{example}].', [
+                    'db' => $db,
+                    'value' => $id,
+                    'example' => self::VALIDATE_GUID[$lookup]['example'],
+                ])
             );
         }
 
@@ -241,7 +202,7 @@ final class Guid implements JsonSerializable, Stringable
         $arr = [];
 
         foreach ($this->data as $key => $value) {
-            $arr[] = sprintf(self::LOOKUP_KEY, $key, $value);
+            $arr[] = r(self::LOOKUP_KEY, ['db' => $key, 'id' => $value]);
         }
 
         return $arr;

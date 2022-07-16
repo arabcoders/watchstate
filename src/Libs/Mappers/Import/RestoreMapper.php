@@ -58,9 +58,11 @@ final class RestoreMapper implements iImport
             }
 
             $entity[iState::COLUMN_VIA] = 'backup_file';
+
             if (null !== ($entity[iState::COLUMN_GUIDS] ?? null)) {
                 $entity[iState::COLUMN_GUIDS] = Guid::fromArray($entity[iState::COLUMN_GUIDS])->getAll();
             }
+
             if (null !== ($entity[iState::COLUMN_PARENT] ?? null)) {
                 $entity[iState::COLUMN_PARENT] = Guid::fromArray($entity[iState::COLUMN_PARENT])->getAll();
             }

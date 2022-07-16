@@ -14,7 +14,6 @@ use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Guid;
 use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
@@ -146,8 +145,6 @@ final class ParseWebhook
             } else {
                 $guids = $guid->get(guids: ag($item, 'Guid', []), context: $logContext);
             }
-
-            $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
 
             $fields = [
                 iState::COLUMN_WATCHED => (int)$isPlayed,

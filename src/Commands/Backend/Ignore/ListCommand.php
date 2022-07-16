@@ -227,7 +227,7 @@ final class ListCommand extends Command
 
             $suggest = [];
 
-            foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $name) {
+            foreach (array_keys(Guid::getSupported()) as $name) {
                 $name = after($name, 'guid_');
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;

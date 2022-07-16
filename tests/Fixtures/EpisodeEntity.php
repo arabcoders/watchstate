@@ -26,7 +26,6 @@ return [
         Guid::GUID_TVMAZE => '6400',
         Guid::GUID_TVRAGE => '6500',
         Guid::GUID_ANIDB => '6600',
-        ...Guid::makeVirtualGuid('home_plex', '122'),
     ],
     iFace::COLUMN_META_DATA => [
         'home_plex' => [

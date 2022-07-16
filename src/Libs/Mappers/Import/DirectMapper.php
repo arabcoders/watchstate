@@ -7,7 +7,6 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
@@ -194,14 +193,7 @@ final class DirectMapper implements iImport
         if (true === $metadataOnly) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                 try {
-                    $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
-
-                    $entity->guids = Guid::makeVirtualGuid(
-                        $entity->via,
-                        ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                    );
-
-                    $local = $local->apply(entity: $entity, fields: array_merge($localFields, [iState::COLUMN_EXTRA]));
+                    $local = $local->apply(entity: $entity, fields: array_merge($keys, [iState::COLUMN_EXTRA]));
 
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
@@ -209,7 +201,7 @@ final class DirectMapper implements iImport
                         'id' => $local->id,
                         'backend' => $entity->via,
                         'title' => $local->getName(),
-                        'changes' => $local->diff(fields: $localFields)
+                        'changes' => $local->diff(fields: $keys)
                     ]);
 
                     if (false === $inDryRunMode) {
@@ -299,28 +291,21 @@ final class DirectMapper implements iImport
                 if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                         try {
-                            $localFields = array_merge($keys, [iState::COLUMN_GUIDS]);
-
-                            $entity->guids = Guid::makeVirtualGuid(
-                                $entity->via,
-                                ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
-                            );
-
                             $local = $local->apply(
                                 entity: $entity,
-                                fields: array_merge($localFields, [iState::COLUMN_EXTRA])
+                                fields: array_merge($keys, [iState::COLUMN_EXTRA])
                             );
 
                             $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                            $changes = $local->diff(fields: $localFields);
+                            $changes = $local->diff(fields: $keys);
 
                             if (count($changes) >= 1) {
                                 $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
                                     'id' => $cloned->id,
                                     'backend' => $entity->via,
                                     'title' => $cloned->getName(),
-                                    'changes' => $local->diff(fields: $localFields),
+                                    'changes' => $changes,
                                 ]);
                             }
 

@@ -15,7 +15,6 @@ use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Guid;
 use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
@@ -148,8 +147,6 @@ final class ParseWebhook
             } else {
                 $guids = $guid->get(guids: ag($json, 'Item.ProviderIds', []), context: $logContext);
             }
-
-            $guids += Guid::makeVirtualGuid($context->backendName, (string)$id);
 
             $fields = [
                 iState::COLUMN_GUIDS => $guids,

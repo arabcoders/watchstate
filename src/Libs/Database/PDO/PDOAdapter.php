@@ -58,7 +58,7 @@ final class PDOAdapter implements iDB
         try {
             if (null !== ($entity->id ?? null)) {
                 throw new DBException(
-                    sprintf('Unable to insert item that has primary key. \'%s\'.', $entity->id), 21
+                    r('Unable to insert item that has primary key. [#{id}].', ['id' => $entity->id]), 21
                 );
             }
 
@@ -117,15 +117,19 @@ final class PDOAdapter implements iDB
         $inTraceMode = true === (bool)($this->options[Options::DEBUG_TRACE] ?? false);
 
         if ($inTraceMode) {
-            $this->logger->debug(sprintf('DATABASE: Looking for \'%s\'.', $entity->getName()));
+            $this->logger->debug(r('DATABASE: Looking for [{name}].', ['name' => $entity->getName()]));
         }
 
         if (null !== $entity->id) {
             $stmt = $this->query(
-                sprintf(
-                    'SELECT * FROM state WHERE %s = %d',
-                    iState::COLUMN_ID,
-                    (int)$entity->id
+                r(
+                    'SELECT * FROM state WHERE $[column] = $[id]',
+                    [
+                        'column' => iState::COLUMN_ID,
+                        'id' => (int)$entity->id
+                    ],
+                    '$[',
+                    ']'
                 )
             );
 
@@ -133,9 +137,14 @@ final class PDOAdapter implements iDB
                 $item = $entity::fromArray($item);
 
                 if ($inTraceMode) {
-                    $this->logger->debug(sprintf('DATABASE: Found \'%s\' using direct id match.', $item->getName()), [
-                        iState::COLUMN_ID => $entity->id
-                    ]);
+                    $this->logger->debug(
+                        r('DATABASE: Found [{name}] using direct id match.', [
+                            'name' => $item->getName()
+                        ]),
+                        [
+                            iState::COLUMN_ID => $entity->id
+                        ]
+                    );
                 }
                 return $item;
             }
@@ -143,9 +152,14 @@ final class PDOAdapter implements iDB
 
         if (null !== ($item = $this->findByExternalId($entity))) {
             if ($inTraceMode) {
-                $this->logger->debug(sprintf('DATABASE: Found \'%s\' using external id match.', $item->getName()), [
-                    iState::COLUMN_GUIDS => $entity->getGuids(),
-                ]);
+                $this->logger->debug(
+                    r('DATABASE: Found [{name}] using external id match.', [
+                        'name' => $item->getName()
+                    ]),
+                    [
+                        iState::COLUMN_GUIDS => $entity->getGuids(),
+                    ]
+                );
             }
             return $item;
         }
@@ -282,7 +296,12 @@ final class PDOAdapter implements iDB
                 $id = $entity->id;
             }
 
-            $this->query(sprintf('DELETE FROM state WHERE %s = %d', iState::COLUMN_ID, (int)$id));
+            $this->query(
+                r('DELETE FROM state WHERE ${column} = ${id}', [
+                    'column' => iState::COLUMN_ID,
+                    'id' => (int)$id
+                ])
+            );
         } catch (PDOException $e) {
             $this->logger->error($e->getMessage(), [
                 'entity' => $entity->getAll(),
@@ -342,7 +361,11 @@ final class PDOAdapter implements iDB
         return match (strtolower($dir)) {
             iDB::MIGRATE_UP => $class->up(),
             iDB::MIGRATE_DOWN => $class->down(),
-            default => throw new DBException(sprintf('Unknown direction \'%s\' was given.', $dir), 91),
+            default => throw new DBException(
+                r('Unknown migration direction [{dir}] was given.', [
+                    'name' => $dir
+                ]), 91
+            ),
         };
     }
 
@@ -482,7 +505,7 @@ final class PDOAdapter implements iDB
             if (iState::COLUMN_ID === $column) {
                 continue;
             }
-            $placeholders[] = sprintf('%1$s = :%1$s', $column);
+            $placeholders[] = r('{column} = :{column}', ['column' => $column]);
         }
 
         return trim(str_replace('%(place) = %(holder)', implode(', ', $placeholders), $queryString));
@@ -527,6 +550,12 @@ final class PDOAdapter implements iDB
 
             $guids[] = "JSON_EXTRACT(" . iState::COLUMN_GUIDS . ",'$.{$key}') = :g_{$key}";
             $cond['g_' . $key] = $val;
+        }
+
+        if (null !== ($backendId = $entity->getMetadata($entity->via)[iState::COLUMN_ID] ?? null)) {
+            $key = $entity->via . '.' . iState::COLUMN_ID;
+            $guids[] = "JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = :m_bid";
+            $cond['m_bid'] = $backendId;
         }
 
         if (empty($guids)) {
@@ -605,7 +634,9 @@ final class PDOAdapter implements iDB
     }
 
     /**
-     * FOR DEBUGGING PURPOSES DO NOT USE FOR ANYTHING ELSE.
+     * FOR DEBUGGING AND DISPLAY PURPOSES ONLY.
+     *
+     * **DO NOT USE FOR ANYTHING ELSE.**
      *
      * @param string $sql
      * @param array $parameters
@@ -632,19 +663,18 @@ final class PDOAdapter implements iDB
         // this is opinionated, but we only allow [a-zA-Z0-9_] in column/table name.
         if (!\preg_match('#\w#', $text)) {
             throw new \RuntimeException(
-                sprintf(
-                    'Invalid identifier "%s": Column/table must be valid ASCII code.',
-                    $text
-                )
+                r('Invalid column/table [{ident}]: Column/table must be valid ASCII code.', [
+                    'ident' => $text
+                ])
             );
         }
 
         // The first character cannot be [0-9]:
         if (\preg_match('/^\d/', $text)) {
             throw new \RuntimeException(
-                sprintf(
-                    'Invalid identifier "%s": Must begin with a letter or underscore.',
-                    $text
+                r('Invalid column/table [{ident}]: Must begin with a letter or underscore.', [
+                        'ident' => $text
+                    ]
                 )
             );
         }

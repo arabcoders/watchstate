@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Libs\Entity;
 
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use RuntimeException;
 
-final class StateEntity implements iFace
+final class StateEntity implements iState
 {
     private array $data = [];
     private bool $tainted = false;
@@ -33,22 +33,20 @@ final class StateEntity implements iFace
     public function __construct(array $data)
     {
         foreach ($data as $key => $val) {
-            if (!in_array($key, iFace::ENTITY_KEYS)) {
+            if (!in_array($key, iState::ENTITY_KEYS)) {
                 continue;
             }
 
-            if (iFace::COLUMN_TYPE === $key && self::TYPE_MOVIE !== $val && self::TYPE_EPISODE !== $val) {
+            if (iState::COLUMN_TYPE === $key && self::TYPE_MOVIE !== $val && self::TYPE_EPISODE !== $val) {
                 throw new RuntimeException(
-                    sprintf(
-                        'Unexpected type value was given. Was expecting \'%1$s or %2$s\' but got \'%3$s\' instead.',
-                        self::TYPE_MOVIE,
-                        self::TYPE_EPISODE,
-                        $val
-                    )
+                    r('Unexpected [{value}] type was given. Expecting [{types_list}].', [
+                        'value' => $val,
+                        'types_list' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
+                    ])
                 );
             }
 
-            foreach (iFace::ENTITY_ARRAY_KEYS as $subKey) {
+            foreach (iState::ENTITY_ARRAY_KEYS as $subKey) {
                 if ($subKey !== $key) {
                     continue;
                 }
@@ -77,14 +75,14 @@ final class StateEntity implements iFace
     {
         $changed = [];
 
-        $keys = !empty($fields) ? $fields : iFace::ENTITY_KEYS;
+        $keys = !empty($fields) ? $fields : iState::ENTITY_KEYS;
 
         foreach ($keys as $key) {
             if ($this->{$key} === ($this->data[$key] ?? null)) {
                 continue;
             }
 
-            if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
+            if (true === in_array($key, iState::ENTITY_ARRAY_KEYS)) {
                 $changes = $this->arrayDiff($this->data[$key] ?? [], $this->{$key} ?? []);
                 if (!empty($changes)) {
                     $changed[$key] = $changes;
@@ -102,38 +100,44 @@ final class StateEntity implements iFace
 
     public function getName(bool $asMovie = false): string
     {
-        $title = ag($this->data, iFace::COLUMN_TITLE, $this->title);
-        $year = ag($this->data, iFace::COLUMN_YEAR, $this->year);
+        $year = ag($this->data, iState::COLUMN_YEAR, $this->year);
+        $title = ag($this->data, iState::COLUMN_TITLE, $this->title);
 
         if ($this->isMovie() || true === $asMovie) {
-            return sprintf('%s (%s)', $title, $year ?? '0000');
+            return r('{title} ({year})', [
+                'title' => $title,
+                'year' => $year ?? '0000'
+            ]);
         }
 
-        return sprintf(
-            '%s (%s) - %sx%s',
-            $title ?? '??',
-            $year ?? '0000',
-            str_pad((string)ag($this->data, iFace::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT),
-            str_pad((string)ag($this->data, iFace::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT)
+        $season = str_pad((string)ag($this->data, iState::COLUMN_SEASON, $this->season ?? 0), 2, '0', STR_PAD_LEFT);
+        $episode = str_pad((string)ag($this->data, iState::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT);
+
+        return r('{title} ({year}) - {season}x{episode}', [
+                'title' => $title ?? '??',
+                'year' => $year ?? '0000',
+                'season' => $season,
+                'episode' => $episode,
+            ]
         );
     }
 
     public function getAll(): array
     {
         return [
-            iFace::COLUMN_ID => $this->id,
-            iFace::COLUMN_TYPE => $this->type,
-            iFace::COLUMN_UPDATED => $this->updated,
-            iFace::COLUMN_WATCHED => $this->watched,
-            iFace::COLUMN_VIA => $this->via,
-            iFace::COLUMN_TITLE => $this->title,
-            iFace::COLUMN_YEAR => $this->year,
-            iFace::COLUMN_SEASON => $this->season,
-            iFace::COLUMN_EPISODE => $this->episode,
-            iFace::COLUMN_PARENT => $this->parent,
-            iFace::COLUMN_GUIDS => $this->guids,
-            iFace::COLUMN_META_DATA => $this->metadata,
-            iFace::COLUMN_EXTRA => $this->extra,
+            iState::COLUMN_ID => $this->id,
+            iState::COLUMN_TYPE => $this->type,
+            iState::COLUMN_UPDATED => $this->updated,
+            iState::COLUMN_WATCHED => $this->watched,
+            iState::COLUMN_VIA => $this->via,
+            iState::COLUMN_TITLE => $this->title,
+            iState::COLUMN_YEAR => $this->year,
+            iState::COLUMN_SEASON => $this->season,
+            iState::COLUMN_EPISODE => $this->episode,
+            iState::COLUMN_PARENT => $this->parent,
+            iState::COLUMN_GUIDS => $this->guids,
+            iState::COLUMN_META_DATA => $this->metadata,
+            iState::COLUMN_EXTRA => $this->extra,
         ];
     }
 
@@ -144,11 +148,14 @@ final class StateEntity implements iFace
 
     public function hasGuids(): bool
     {
-        $list = array_intersect_key($this->guids, Guid::getSupported(includeVirtual: false));
+        $list = array_intersect_key($this->guids, Guid::getSupported());
 
         return count($list) >= 1;
     }
 
+    /**
+     * @return array
+     */
     public function getGuids(): array
     {
         return $this->guids;
@@ -156,21 +163,16 @@ final class StateEntity implements iFace
 
     public function getPointers(array|null $guids = null): array
     {
-        return Guid::fromArray(
-            array_intersect_key(
-                $this->guids,
-                Guid::getSupported(includeVirtual: true)
-            ), context: [
+        return Guid::fromArray(payload: array_intersect_key($this->guids, Guid::getSupported()), context: [
             'backend' => $this->via,
-            'backend_id' => ag($this->getMetadata($this->via) ?? [], 'id'),
+            'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID),
             'item' => [
-                'id' => $this->id,
-                'type' => $this->type,
-                'year' => $this->year,
-                'title' => $this->getName()
+                iState::COLUMN_ID => $this->id,
+                iState::COLUMN_TYPE => $this->type,
+                iState::COLUMN_YEAR => $this->year,
+                iState::COLUMN_TITLE => $this->getName()
             ]
-        ]
-        )->getPointers();
+        ])->getPointers();
     }
 
     public function hasParentGuid(): bool
@@ -185,12 +187,12 @@ final class StateEntity implements iFace
 
     public function isMovie(): bool
     {
-        return iFace::TYPE_MOVIE === $this->type;
+        return iState::TYPE_MOVIE === $this->type;
     }
 
     public function isEpisode(): bool
     {
-        return iFace::TYPE_EPISODE === $this->type;
+        return iState::TYPE_EPISODE === $this->type;
     }
 
     public function isWatched(): bool
@@ -215,7 +217,7 @@ final class StateEntity implements iFace
             $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
         }
 
-        return array_intersect_key($list, Guid::getSupported(includeVirtual: false));
+        return array_intersect_key($list, Guid::getSupported());
     }
 
     public function getRelativePointers(): array
@@ -224,14 +226,14 @@ final class StateEntity implements iFace
             return [];
         }
 
-        $list = Guid::fromArray($this->getRelativeGuids(), context: [
+        $list = Guid::fromArray(payload: $this->getRelativeGuids(), context: [
             'backend' => $this->via,
-            'backend_id' => ag($this->getMetadata($this->via) ?? [], 'id'),
+            'backend_id' => ag($this->getMetadata($this->via), iState::COLUMN_ID),
             'item' => [
-                'id' => $this->id,
-                'type' => $this->type,
-                'year' => $this->year,
-                'title' => $this->getName()
+                iState::COLUMN_ID => $this->id,
+                iState::COLUMN_TYPE => $this->type,
+                iState::COLUMN_YEAR => $this->year,
+                iState::COLUMN_TITLE => $this->getName()
             ]
         ])->getPointers();
 
@@ -244,11 +246,11 @@ final class StateEntity implements iFace
         return $rPointers;
     }
 
-    public function apply(iFace $entity, array $fields = []): self
+    public function apply(iState $entity, array $fields = []): self
     {
         if (!empty($fields)) {
             foreach ($fields as $key) {
-                if (false === in_array($key, iFace::ENTITY_KEYS) || true === $this->isEqualValue($key, $entity)) {
+                if (false === in_array($key, iState::ENTITY_KEYS) || true === $this->isEqualValue($key, $entity)) {
                     continue;
                 }
                 $this->updateValue($key, $entity);
@@ -257,7 +259,7 @@ final class StateEntity implements iFace
             return $this;
         }
 
-        foreach (iFace::ENTITY_KEYS as $key) {
+        foreach (iState::ENTITY_KEYS as $key) {
             if (true === $this->isEqualValue($key, $entity)) {
                 continue;
             }
@@ -267,7 +269,7 @@ final class StateEntity implements iFace
         return $this;
     }
 
-    public function updateOriginal(): iFace
+    public function updateOriginal(): iState
     {
         $this->data = $this->getAll();
         return $this;
@@ -278,7 +280,7 @@ final class StateEntity implements iFace
         return $this->data;
     }
 
-    public function setIsTainted(bool $isTainted): iFace
+    public function setIsTainted(bool $isTainted): iState
     {
         $this->tainted = $isTainted;
         return $this;
@@ -307,14 +309,14 @@ final class StateEntity implements iFace
         return $this->extra[$via] ?? [];
     }
 
-    public function shouldMarkAsUnplayed(iFace $backend): bool
+    public function shouldMarkAsUnplayed(iState $backend): bool
     {
         if (false !== $backend->isWatched() && true === $this->isWatched()) {
             return false;
         }
 
-        $addedAt = ag($this->getMetadata($backend->via), iFace::COLUMN_META_DATA_ADDED_AT);
-        $playedAt = ag($this->getMetadata($backend->via), iFace::COLUMN_META_DATA_PLAYED_AT);
+        $addedAt = ag($this->getMetadata($backend->via), iState::COLUMN_META_DATA_ADDED_AT);
+        $playedAt = ag($this->getMetadata($backend->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
         // -- Required columns are not recorded at the backend database. so discontinue.
         if (null === $playedAt || null === $addedAt) {
@@ -329,7 +331,7 @@ final class StateEntity implements iFace
         return true;
     }
 
-    public function markAsUnplayed(iFace $backend): StateInterface
+    public function markAsUnplayed(iState $backend): StateInterface
     {
         $this->watched = 0;
         $this->via = $backend->via;
@@ -338,9 +340,9 @@ final class StateEntity implements iFace
         return $this;
     }
 
-    private function isEqualValue(string $key, iFace $entity): bool
+    private function isEqualValue(string $key, iState $entity): bool
     {
-        if (iFace::COLUMN_UPDATED === $key || iFace::COLUMN_WATCHED === $key) {
+        if (iState::COLUMN_UPDATED === $key || iState::COLUMN_WATCHED === $key) {
             return !($entity->updated > $this->updated && $entity->watched !== $this->watched);
         }
 
@@ -351,9 +353,9 @@ final class StateEntity implements iFace
         return true;
     }
 
-    private function updateValue(string $key, iFace $remote): void
+    private function updateValue(string $key, iState $remote): void
     {
-        if (iFace::COLUMN_UPDATED === $key || iFace::COLUMN_WATCHED === $key) {
+        if (iState::COLUMN_UPDATED === $key || iState::COLUMN_WATCHED === $key) {
             // -- Normal logic flow usually this indicates that backend has played_at date column.
             if ($remote->updated > $this->updated && $remote->isWatched() !== $this->isWatched()) {
                 $this->updated = $remote->updated;
@@ -362,11 +364,11 @@ final class StateEntity implements iFace
             return;
         }
 
-        if (iFace::COLUMN_ID === $key) {
+        if (iState::COLUMN_ID === $key) {
             return;
         }
 
-        if (true === in_array($key, iFace::ENTITY_ARRAY_KEYS)) {
+        if (true === in_array($key, iState::ENTITY_ARRAY_KEYS)) {
             $this->{$key} = array_replace_recursive($this->{$key} ?? [], $remote->{$key} ?? []);
         } else {
             $this->{$key} = $remote->{$key};
