@@ -63,7 +63,7 @@ final class ListCommand extends Command
     {
         $list = [];
 
-        foreach (array_keys(Guid::getSupported(includeVirtual: false)) as $guid) {
+        foreach (array_keys(Guid::getSupported()) as $guid) {
             $guid = afterLast($guid, 'guid_');
             $list[] = '<value>' . $guid . '</value>';
         }

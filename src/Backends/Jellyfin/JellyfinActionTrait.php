@@ -71,8 +71,6 @@ trait JellyfinActionTrait
             $guids = $guid->get(guids: ag($item, 'ProviderIds', []), context: $logContext);
         }
 
-        $guids += Guid::makeVirtualGuid($context->backendName, (string)ag($item, 'Id'));
-
         $builder = [
             iState::COLUMN_TYPE => strtolower(ag($item, 'Type')),
             iState::COLUMN_UPDATED => makeDate($date)->getTimestamp(),

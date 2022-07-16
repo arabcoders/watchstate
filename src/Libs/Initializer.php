@@ -374,14 +374,6 @@ final class Initializer
             $keys = true === $metadataOnly ? [iFace::COLUMN_META_DATA] : iFace::ENTITY_FORCE_UPDATE_FIELDS;
 
             if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                if (true === $metadataOnly) {
-                    $entity->guids = Guid::makeVirtualGuid(
-                        $entity->via,
-                        ag($entity->getMetadata($entity->via), iFace::COLUMN_ID)
-                    );
-                    $keys = array_merge($keys, [iFace::COLUMN_GUIDS, iFace::COLUMN_EXTRA]);
-                }
-
                 $local = $db->update(
                     $local->apply(
                         entity: $entity,

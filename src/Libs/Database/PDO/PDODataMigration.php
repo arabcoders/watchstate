@@ -148,12 +148,12 @@ final class PDODataMigration
                         value: array_intersect_key(
                             $row,
                             ag($row['meta'], iFace::COLUMN_PARENT, []),
-                            Guid::getSupported(includeVirtual: false)
+                            Guid::getSupported()
                         ),
                         flags: $this->jFlags
                     ),
                     iFace::COLUMN_GUIDS => json_encode(
-                        value: array_intersect_key($row, Guid::getSupported(includeVirtual: false)),
+                        value: array_intersect_key($row, Guid::getSupported()),
                         flags: $this->jFlags
                     ),
                     iFace::COLUMN_META_DATA => json_encode(
@@ -331,12 +331,12 @@ final class PDODataMigration
                 iFace::COLUMN_PARENT => json_encode(
                     value: array_intersect_key(
                         $row[iFace::COLUMN_PARENT] ?? [],
-                        Guid::getSupported(includeVirtual: false)
+                        Guid::getSupported()
                     ),
                     flags: $this->jFlags
                 ),
                 iFace::COLUMN_GUIDS => json_encode(
-                    value: array_intersect_key($row[iFace::COLUMN_GUIDS], Guid::getSupported(includeVirtual: false)),
+                    value: array_intersect_key($row[iFace::COLUMN_GUIDS], Guid::getSupported()),
                     flags: $this->jFlags
                 ),
                 iFace::COLUMN_META_DATA => json_encode(
