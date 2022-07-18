@@ -664,13 +664,26 @@ final class Initializer
             return;
         }
 
+        $params = $request->getServerParams();
+
+        $uri = new Uri((string)ag($params, 'REQUEST_URI', '/'));
+
+        if (false === empty($uri->getQuery())) {
+            $query = [];
+            parse_str($uri->getQuery(), $query);
+            if (true === ag_exists($query, 'apikey')) {
+                $query['apikey'] = 'api_key_removed';
+                $uri = $uri->withQuery(http_build_query($query));
+            }
+        }
+
         $context = array_replace_recursive(
             [
                 'request' => [
-                    'id' => ag($request->getServerParams(), 'X_REQUEST_ID'),
-                    'ip' => ag($request->getServerParams(), 'REMOTE_ADDR'),
-                    'agent' => ag($request->getServerParams(), 'HTTP_USER_AGENT'),
-                    'uri' => ag($request->getServerParams(), 'REQUEST_URI'),
+                    'id' => ag($params, 'X_REQUEST_ID'),
+                    'ip' => ag($params, 'REMOTE_ADDR'),
+                    'agent' => ag($params, 'HTTP_USER_AGENT'),
+                    'uri' => (string)$uri,
                 ],
             ],
             $context
