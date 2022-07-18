@@ -8,7 +8,7 @@ RUN mkdir -p /app /config
 
 COPY . /app
 
-RUN usermod -u 1000 www-data && groupmod -g 1000 www-data && chown -R www-data:www-data /app && \
+RUN usermod -u 1000 www-data && groupmod -g 1000 users && usermod -a -G users www-data && chown -R www-data:users /app && \
     runuser -u www-data -- composer --working-dir=/app/ -o --no-progress --no-interaction --no-ansi --no-dev --no-cache --quiet -- install && \
     echo '* * * * * /usr/bin/run-app-cron'>>/etc/crontabs/www-data && \
     cp /app/docker/files/nginx.conf /etc/nginx/nginx.conf && \
@@ -19,7 +19,8 @@ RUN usermod -u 1000 www-data && groupmod -g 1000 www-data && chown -R www-data:w
     cp /app/docker/files/redis.conf /etc/redis.conf && \
     rm -rf /app/docker/ /app/var/ /app/.github/ && \
     chmod +x /usr/bin/run-app-cron /usr/bin/console /usr/bin/entrypoint-docker && \
-    chown -R www-data:www-data /app /config /var/lib/nginx/
+    chown -R www-data:users /app /config /var/lib/nginx/ && \
+    sed -i 's/group = www-data/group = users/' /usr/local/etc/php-fpm.d/www.conf
 
 ENTRYPOINT ["/usr/bin/entrypoint-docker"]
 

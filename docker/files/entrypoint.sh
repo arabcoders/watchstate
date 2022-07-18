@@ -14,8 +14,8 @@ if [ "${WS_UID}" != "$(id -u www-data)" ]; then
   usermod -u "${WS_UID}" www-data
 fi
 
-if [ "${WS_GID}" != "$(id -g www-data)" ]; then
-  groupmod -g "${WS_GID}" www-data
+if [ "${WS_GID}" != "$(getent group users | cut -d: -f3)" ]; then
+  groupmod -g "${WS_GID}" users
 fi
 
 if [ ! -f "/app/vendor/autoload.php" ]; then
@@ -36,8 +36,14 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
 fi
 
 if [ 0 = "${WS_DISABLE_CHOWN}" ]; then
-  chown -R www-data:www-data /app /config /var/lib/nginx/ /etc/redis.conf
+  if [ -w /app ]; then
+    chown -R www-data:users /app
+  fi
+  chown -R www-data:users /config /var/lib/nginx/ /etc/redis.conf
 fi
+
+# Generate config structure.
+/usr/bin/console --version >>/dev/null
 
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
