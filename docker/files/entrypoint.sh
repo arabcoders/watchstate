@@ -36,7 +36,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
 fi
 
 if [ 0 = "${WS_DISABLE_CHOWN}" ]; then
-  if [ -w /app ]; then
+  if ! cat /proc/mounts | grep '/app'; then
     chown -R www-data:users /app
   fi
   chown -R www-data:users /config /var/lib/nginx/ /etc/redis.conf
