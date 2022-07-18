@@ -277,21 +277,26 @@ interface StateInterface
     public function getExtra(string|null $via = null): array;
 
     /**
-     * Should we mark the media as unplayed?<br><br>
-     * The Logic flows as the following:<br>
+     * Should we mark the item as unplayed?
      *
-     * Is the backend item marked as unplayed? if so get the recorded metadata that relates to the backend.
-     * Does that metadata contains {@see iFace::COLUMN_META_DATA_ADDED_AT} and {@see iFace::COLUMN_META_DATA_PLAYED_AT} ?
-     * since media backends when marking media items as unplayed they remove {@see iFace::COLUMN_META_DATA_PLAYED_AT}
-     * field from response, so our logic handler for {@see iFace::COLUMN_UPDATED} fall back to
-     * {@see iFace::COLUMN_META_DATA_ADDED_AT}.<br><br>
+     * Since media backends when marking item as unplayed they remove lastPlayedDate from response,
+     * we have to compare the **entity.updated** field against **db.item.metadata.backend.added_at** field.<br><br>
      *
-     * so to mark items as unplayed the following conditions **MUST** be met<br><br>
+     * To mark items as unplayed the following conditions **MUST** be met:
      *
-     * 1- Backend item **MUST** be marked as unplayed.<br>
-     * 2- db item **MUST** be marked as played.<br>
-     * 3- db metadata **MUST** contain {@see iFace::COLUMN_META_DATA_PLAYED_AT} and {@see iFace::COLUMN_META_DATA_ADDED_AT} columns.<br>
-     * 4- backend {@see iFace::COLUMN_UPDATED} **MUST** be equal to database metadata {@see iFace::COLUMN_META_DATA_ADDED_AT}<br><br>
+     * ----------------
+     *
+     * * [1] **entity.watched** field **MUST** must be marked as unplayed.
+     * * [2] **db.item.watched** field **MUST** be set as played.
+     * * [3] **db.item.metadata** field **MUST** have pre-existing metadata from that backend.
+     * * [4] **db.item.metadata.backend** JSON field **MUST** contain **watched**, **id**, **played_at** and **added_at** as keys with values.
+     * * [5] **db.item.metadata.backend.watched** field **MUST** be set as played.
+     * * [6] **entity.metadata.backend.id** field **MUST** match **db.item.metadata.backend.id**.
+     * * [7] **entity.updated** field **MUST** match **db.item.metadata.backend.added_at**.
+     *
+     * ----------------
+     *
+     * Ref: **.db.item.[]** refers to local db data. **entity.[]** refers to the data being received from backend.
      *
      * @param StateInterface $backend Backend object.
      *

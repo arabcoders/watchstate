@@ -311,19 +311,39 @@ final class StateEntity implements iState
 
     public function shouldMarkAsUnplayed(iState $backend): bool
     {
+        // -- Condition: 1 & 2
         if (false !== $backend->isWatched() && true === $this->isWatched()) {
             return false;
         }
 
-        $addedAt = ag($this->getMetadata($backend->via), iState::COLUMN_META_DATA_ADDED_AT);
-        $playedAt = ag($this->getMetadata($backend->via), iState::COLUMN_META_DATA_PLAYED_AT);
+        $metadata = $this->getMetadata($backend->via);
 
-        // -- Required columns are not recorded at the backend database. so discontinue.
-        if (null === $playedAt || null === $addedAt) {
+        // -- Condition: 3
+        if (count($metadata) < 1) {
             return false;
         }
 
-        // -- Recorded added_at at database is not equal to remote updated.
+        $itemId = ag($metadata, iState::COLUMN_ID);
+        $watched = ag($metadata, iState::COLUMN_WATCHED);
+        $addedAt = ag($metadata, iState::COLUMN_META_DATA_ADDED_AT);
+        $playedAt = ag($metadata, iState::COLUMN_META_DATA_PLAYED_AT);
+
+        // -- Condition: 4
+        if (null === $playedAt || null === $addedAt || null === $itemId || null === $watched) {
+            return false;
+        }
+
+        // -- Condition: 5
+        if (1 !== (int)$watched) {
+            return false;
+        }
+
+        // -- Condition: 6
+        if ($itemId !== ag($backend->getMetadata($backend->via), iState::COLUMN_ID)) {
+            return false;
+        }
+
+        // -- Condition: 7
         if ((int)$addedAt !== $backend->updated) {
             return false;
         }
