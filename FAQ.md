@@ -479,6 +479,8 @@ Those are some Webhook limitations we discovered for the following media backend
   items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/).
 * Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
   played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
+* Items might be marked as unplayed if Libraries > Advanced - `Date added behavior for new content:` is set
+  to `Use date scanned into library`. This happens if the media file has been replaced.
 
 #### Jellyfin
 
@@ -486,6 +488,8 @@ Those are some Webhook limitations we discovered for the following media backend
   you happen to enable `webhook.match.user` for jellyfin.
 * Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
 * Even if you select user id, sometimes `itemAdd` event will fire without user data.
+* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set
+  to `Use date scanned into library`. This happens if the media file has been replaced.
 
 ---
 

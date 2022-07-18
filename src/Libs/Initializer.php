@@ -672,7 +672,7 @@ final class Initializer
             $query = [];
             parse_str($uri->getQuery(), $query);
             if (true === ag_exists($query, 'apikey')) {
-                $query['apikey'] = '(removed_api_key)';
+                $query['apikey'] = 'api_key_removed';
                 $uri = $uri->withQuery(http_build_query($query));
             }
         }
