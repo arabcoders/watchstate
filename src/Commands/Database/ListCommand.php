@@ -8,19 +8,19 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Routable;
 use Exception;
 use PDO;
 use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 
 #[Routable(command: self::ROUTE)]
@@ -29,30 +29,30 @@ final class ListCommand extends Command
     public const ROUTE = 'db:list';
 
     private const COLUMNS_CHANGEABLE = [
-        iFace::COLUMN_WATCHED,
-        iFace::COLUMN_VIA,
-        iFace::COLUMN_TITLE,
-        iFace::COLUMN_YEAR,
-        iFace::COLUMN_SEASON,
-        iFace::COLUMN_EPISODE,
-        iFace::COLUMN_UPDATED,
+        iState::COLUMN_WATCHED,
+        iState::COLUMN_VIA,
+        iState::COLUMN_TITLE,
+        iState::COLUMN_YEAR,
+        iState::COLUMN_SEASON,
+        iState::COLUMN_EPISODE,
+        iState::COLUMN_UPDATED,
     ];
 
     private const COLUMNS_SORTABLE = [
-        iFace::COLUMN_ID,
-        iFace::COLUMN_TYPE,
-        iFace::COLUMN_UPDATED,
-        iFace::COLUMN_WATCHED,
-        iFace::COLUMN_VIA,
-        iFace::COLUMN_TITLE,
-        iFace::COLUMN_YEAR,
-        iFace::COLUMN_SEASON,
-        iFace::COLUMN_EPISODE,
+        iState::COLUMN_ID,
+        iState::COLUMN_TYPE,
+        iState::COLUMN_UPDATED,
+        iState::COLUMN_WATCHED,
+        iState::COLUMN_VIA,
+        iState::COLUMN_TITLE,
+        iState::COLUMN_YEAR,
+        iState::COLUMN_SEASON,
+        iState::COLUMN_EPISODE,
     ];
 
     private PDO $pdo;
 
-    public function __construct(private iDB $db)
+    public function __construct(private iDB $db, private DirectMapper $mapper)
     {
         $this->pdo = $this->db->getPdo();
 
@@ -139,6 +139,12 @@ final class ListCommand extends Command
                 InputOption::VALUE_NONE,
                 'Use <notice>equal</notice> check instead of <notice>LIKE</notice> for JSON field query.'
             )
+            ->addOption(
+                'mark-as',
+                'm',
+                InputOption::VALUE_REQUIRED,
+                'Change items play state. Expects [<value>played</value>, <value>unplayed</value>] as value. Requires <notice>interaction</notice>.'
+            )
             ->setDescription('List Database entries.')
             ->setHelp(
                 r(
@@ -169,6 +175,15 @@ final class ListCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--key</flag> '<value>backend_name</value>.id' <flag>--value</flag> '<value>backend_item_id</value>' <flag>--metadata</flag>
 
+                    <question># How to mark items as played/unplayed?</question>
+
+                    Use the filters to narrow down the list to what you want to the state of, once you have the list
+                    append the [<flag>-m</flag>, <flag>--mark-as</flag>] to the command with value of [<value>played</value>, <value>unplayed</value>]. This flag requires <notice>interaction</notice>.
+
+                    Example, to mark a show that has id of [<value>tvdb://269586</value>], you would do something like.
+
+                    {cmd} <cmd>{route}</cmd> <flag>--parent</flag> <value>tvdb://269586</value> <flag>--mark-as</flag> <value>played</value>
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
@@ -186,6 +201,10 @@ final class ListCommand extends Command
     {
         $limit = (int)$input->getOption('limit');
 
+        if (null !== ($changeState = $input->getOption('mark-as'))) {
+            $limit = PHP_INT_MAX;
+        }
+
         $es = fn(string $val) => $this->db->identifier($val);
 
         $params = [
@@ -197,40 +216,40 @@ final class ListCommand extends Command
         $sql[] = sprintf('SELECT * FROM %s', $es('state'));
 
         if ($input->getOption('id')) {
-            $where[] = $es(iFace::COLUMN_ID) . ' = :id';
+            $where[] = $es(iState::COLUMN_ID) . ' = :id';
             $params['id'] = $input->getOption('id');
         }
 
         if ($input->getOption('via')) {
-            $where[] = $es(iFace::COLUMN_VIA) . ' = :via';
+            $where[] = $es(iState::COLUMN_VIA) . ' = :via';
             $params['via'] = $input->getOption('via');
         }
 
         if ($input->getOption('year')) {
-            $where[] = $es(iFace::COLUMN_YEAR) . ' = :year';
+            $where[] = $es(iState::COLUMN_YEAR) . ' = :year';
             $params['year'] = $input->getOption('year');
         }
 
         if ($input->getOption('type')) {
-            $where[] = $es(iFace::COLUMN_TYPE) . ' = :type';
+            $where[] = $es(iState::COLUMN_TYPE) . ' = :type';
             $params['type'] = match ($input->getOption('type')) {
-                iFace::TYPE_MOVIE => iFace::TYPE_MOVIE,
-                default => iFace::TYPE_EPISODE,
+                iState::TYPE_MOVIE => iState::TYPE_MOVIE,
+                default => iState::TYPE_EPISODE,
             };
         }
 
         if ($input->getOption('title')) {
-            $where[] = $es(iFace::COLUMN_TITLE) . ' LIKE "%" || :title || "%"';
+            $where[] = $es(iState::COLUMN_TITLE) . ' LIKE "%" || :title || "%"';
             $params['title'] = $input->getOption('title');
         }
 
         if (null !== $input->getOption('season')) {
-            $where[] = $es(iFace::COLUMN_SEASON) . ' = :season';
+            $where[] = $es(iState::COLUMN_SEASON) . ' = :season';
             $params['season'] = $input->getOption('season');
         }
 
         if (null !== $input->getOption('episode')) {
-            $where[] = $es(iFace::COLUMN_EPISODE) . ' = :episode';
+            $where[] = $es(iState::COLUMN_EPISODE) . ' = :episode';
             $params['episode'] = $input->getOption('episode');
         }
 
@@ -245,7 +264,7 @@ final class ListCommand extends Command
                 return self::INVALID;
             }
 
-            $where[] = "json_extract(" . iFace::COLUMN_PARENT . ",'$.{$parent}') = :parent";
+            $where[] = "json_extract(" . iState::COLUMN_PARENT . ",'$.{$parent}') = :parent";
             $params['parent'] = array_values($d->getAll())[0];
         }
 
@@ -260,7 +279,7 @@ final class ListCommand extends Command
                 return self::INVALID;
             }
 
-            $where[] = "json_extract(" . iFace::COLUMN_GUIDS . ",'$.{$guid}') = :guid";
+            $where[] = "json_extract(" . iState::COLUMN_GUIDS . ",'$.{$guid}') = :guid";
             $params['guid'] = array_values($d->getAll())[0];
         }
 
@@ -274,9 +293,9 @@ final class ListCommand extends Command
             }
 
             if ($input->getOption('exact')) {
-                $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value ";
+                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value ";
             } else {
-                $where[] = "json_extract(" . iFace::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
+                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
             }
 
             $params['jf_metadata_value'] = $sValue;
@@ -292,9 +311,9 @@ final class ListCommand extends Command
             }
 
             if ($input->getOption('exact')) {
-                $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
+                $where[] = "json_extract(" . iState::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
             } else {
-                $where[] = "json_extract(" . iFace::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
+                $where[] = "json_extract(" . iState::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
             }
 
             $params['jf_extra_value'] = $sValue;
@@ -389,7 +408,7 @@ final class ListCommand extends Command
         }
 
         foreach ($rows as &$row) {
-            foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
+            foreach (iState::ENTITY_ARRAY_KEYS as $key) {
                 if (null === ($row[$key] ?? null)) {
                     continue;
                 }
@@ -397,7 +416,7 @@ final class ListCommand extends Command
             }
 
             if (null !== ($via = $input->getOption('show-as'))) {
-                $path = $row[iFace::COLUMN_META_DATA][$via] ?? [];
+                $path = $row[iState::COLUMN_META_DATA][$via] ?? [];
 
                 foreach (self::COLUMNS_CHANGEABLE as $column) {
                     if (null === ($path[$column] ?? null)) {
@@ -407,48 +426,80 @@ final class ListCommand extends Command
                     $row[$column] = 'int' === get_debug_type($row[$column]) ? (int)$path[$column] : $path[$column];
                 }
 
-                if (null !== ($dateFromBackend = $path[iFace::COLUMN_META_DATA_PLAYED_AT] ?? $path[iFace::COLUMN_META_DATA_ADDED_AT] ?? null)) {
-                    $row[iFace::COLUMN_UPDATED] = $dateFromBackend;
+                if (null !== ($dateFromBackend = $path[iState::COLUMN_META_DATA_PLAYED_AT] ?? $path[iState::COLUMN_META_DATA_ADDED_AT] ?? null)) {
+                    $row[iState::COLUMN_UPDATED] = $dateFromBackend;
                 }
             }
 
-            $row[iFace::COLUMN_WATCHED] = (bool)$row[iFace::COLUMN_WATCHED];
-            $row[iFace::COLUMN_UPDATED] = makeDate($row[iFace::COLUMN_UPDATED]);
+            $row[iState::COLUMN_WATCHED] = (bool)$row[iState::COLUMN_WATCHED];
+            $row[iState::COLUMN_UPDATED] = makeDate($row[iState::COLUMN_UPDATED]);
         }
 
         unset($row);
 
         if ('table' === $input->getOption('output')) {
-            $list = [];
+            foreach ($rows as &$row) {
+                $row[iState::COLUMN_UPDATED] = $row[iState::COLUMN_UPDATED]->getTimestamp();
+                $row[iState::COLUMN_WATCHED] = (int)$row[iState::COLUMN_WATCHED];
+                $entity = Container::get(iState::class)->fromArray($row);
 
-            foreach ($rows as $row) {
-                $row[iFace::COLUMN_UPDATED] = $row[iFace::COLUMN_UPDATED]->getTimestamp();
-                $row[iFace::COLUMN_WATCHED] = (int)$row[iFace::COLUMN_WATCHED];
-                $entity = Container::get(iFace::class)->fromArray($row);
-
-                $item = [
+                $row = [
                     'id' => $entity->id,
-                    'Type' => ucfirst($entity->type),
-                    'Title' => $entity->getName(),
-                    'Via (Last)' => $entity->via ?? '??',
-                    'Date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
-                    'Played' => $entity->isWatched() ? 'Yes' : 'No',
-                    'Via (Event)' => ag($entity->extra[$entity->via] ?? [], iFace::COLUMN_EXTRA_EVENT, '-'),
+                    'type' => ucfirst($entity->type),
+                    'title' => $entity->getName(),
+                    'via' => $entity->via ?? '??',
+                    'date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
+                    'played' => $entity->isWatched() ? 'Yes' : 'No',
+                    'event' => ag($entity->extra[$entity->via] ?? [], iState::COLUMN_EXTRA_EVENT, '-'),
                 ];
+            }
+            unset($row);
+        }
 
-                $list[] = $item;
-                $list[] = new TableSeparator();
+        $this->displayContent($rows, $output, $input->getOption('output'));
+
+        if (null !== $changeState && count($rows) >= 1) {
+            $changeState = strtolower($changeState);
+            $text = r(
+                <<<TEXT
+
+                <question>Are you sure you want to mark [<notce>{total}</notce>] items as [<notice>{state}</notice>]</question> ? [<value>Y|N</value>] [<value>Default: No</value>]
+                TEXT,
+                [
+                    'total' => count($rows),
+                    'state' => 'played' === $changeState ? 'Played' : 'Unplayed',
+                ]
+            );
+
+            $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
+
+            if (false === $this->getHelper('question')->ask($input, $output, $question)) {
+                return self::FAILURE;
             }
 
-            $rows = null;
+            foreach ($rows ?? [] as $row) {
+                $entity = $this->mapper->get(
+                    Container::get(iState::class)->fromArray([iState::COLUMN_ID => $row['id']])
+                );
 
-            if (count($list) >= 2) {
-                array_pop($list);
+                $entity->watched = 'played' === $changeState ? 1 : 0;
+                $entity->updated = time();
+                $entity->extra = ag_set($entity->getExtra(), $entity->via, [
+                    iState::COLUMN_EXTRA_EVENT => 'cli.mark' . ($entity->isWatched() ? 'played' : 'unplayed'),
+                    iState::COLUMN_EXTRA_DATE => (string)makeDate('now'),
+                ]);
+
+                $this->mapper->add($entity);
+
+                queuePush($entity);
             }
 
-            (new Table($output))->setHeaders(array_keys($list[0] ?? []))->setStyle('box')->setRows($list)->render();
-        } else {
-            $this->displayContent($rows, $output, $input->getOption('output'));
+            $output->writeln(
+                r('<info>Successfully marked [<notice>{total}</notice>] items as [<notice>{state}</notice>].', [
+                    'total' => count($rows),
+                    'state' => 'played' === $changeState ? 'Played' : 'Unplayed',
+                ])
+            );
         }
 
         return self::SUCCESS;
@@ -477,7 +528,21 @@ final class ListCommand extends Command
 
             $suggest = [];
 
-            foreach ([iFace::TYPE_MOVIE, iFace::TYPE_EPISODE] as $name) {
+            foreach ([iState::TYPE_MOVIE, iState::TYPE_EPISODE] as $name) {
+                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
+                    $suggest[] = $name;
+                }
+            }
+
+            $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('mark-as')) {
+            $currentValue = $input->getCompletionValue();
+
+            $suggest = [];
+
+            foreach (['played', 'unplayed'] as $name) {
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }
