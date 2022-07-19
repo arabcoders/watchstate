@@ -7,12 +7,10 @@ namespace App\Commands\Database;
 use App\Command;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Routable;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -62,7 +60,7 @@ class QueueCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         if (null !== ($id = $input->getOption('add'))) {
-            $item = Container::get(StateInterface::class)::fromArray(['id' => $id]);
+            $item = Container::get(iState::class)::fromArray(['id' => $id]);
 
             if (null === ($item = $this->db->get($item))) {
                 $output->writeln(sprintf('<error>Record id \'%d\' does not exists.</error>', $id));
@@ -88,13 +86,13 @@ class QueueCommand extends Command
             }
 
             unset($queue[$id]);
-            $item = Container::get(StateInterface::class)::fromArray(['id' => $id]);
+            $item = Container::get(iState::class)::fromArray(['id' => $id]);
 
             queuePush($item, remove: true);
         }
 
         foreach ($queue as $item) {
-            $items[] = Container::get(StateInterface::class)::fromArray($item);
+            $items[] = Container::get(iState::class)::fromArray($item);
         }
 
         if (!empty($items)) {
@@ -113,27 +111,18 @@ class QueueCommand extends Command
 
         $rows = [];
 
-        $x = 0;
-        $count = count($entities);
-
         foreach ($entities as $entity) {
-            $x++;
-
             $rows[] = [
-                $entity->id,
-                $entity->getName(),
-                $entity->isWatched() ? 'Yes' : 'No',
-                $entity->via ?? '??',
-                makeDate($entity->updated)->format('Y-m-d H:i:s T'),
+                'id' => $entity->id,
+                'title' => $entity->getName(),
+                'played' => $entity->isWatched() ? 'Yes' : 'No',
+                'via' => $entity->via ?? '??',
+                'date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
+                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
             ];
-
-            if ($x < $count) {
-                $rows[] = new TableSeparator();
-            }
         }
 
-        (new Table($output))->setHeaders(['Id', 'Title', 'Played', 'Via', 'Date'])
-            ->setStyle('box')->setRows($rows)->render();
+        $this->displayContent($rows, $output, $input->getOption('output'));
 
         return self::SUCCESS;
     }
