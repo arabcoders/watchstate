@@ -582,7 +582,7 @@ final class DirectMapper implements iImport
 
             $this->addPointers($lazyEntity, $lazyEntity->id);
 
-            return $entity;
+            return $lazyEntity;
         }
 
         return false;
