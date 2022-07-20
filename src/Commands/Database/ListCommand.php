@@ -177,8 +177,8 @@ final class ListCommand extends Command
 
                     <question># How to mark items as played/unplayed?</question>
 
-                    Use the filters to narrow down the list to what you want to the state of, once you have the list
-                    append the [<flag>-m</flag>, <flag>--mark-as</flag>] to the command with value of [<value>played</value>, <value>unplayed</value>]. This flag requires <notice>interaction</notice>.
+                    First Use filters to narrow down the list. then add the [<flag>-m</flag>, <flag>--mark-as</flag>] flag with one value of [<value>played</value>, <value>unplayed</value>].
+                    This flag requires <notice>interaction</notice>.
 
                     Example, to mark a show that has id of [<value>tvdb://269586</value>], you would do something like.
 
