@@ -1,9 +1,18 @@
 # WatchState
 
-WatchState is a tool that can sync your play state cross your media backends, without relying on 3rd party services,
-this tool support `Jellyfin`, `Plex Media Server` and `Emby`. It's also come with some features, like
-finding `mis-identified` or `unmatched` items, and the ability to
-`search` your backend for specific `item id` or `title`.
+This tool primary goal is to sync your backends play state without relying on third party services,
+out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
+
+# Features
+
+* Sync backends play state (from many to many).
+* Backup your backends play state into `portable` format.
+* Webhook play state receiver.
+* Find `un-matched` media items.
+* FInd `mis-matched` media items.
+* Search your backend for `title`.
+* Search your backend for `item id`.
+* Display and filter your play state can be exported to `json` or `yaml`.
 
 # Install
 
@@ -68,7 +77,7 @@ $ docker exec -ti watchstate console state:import -v --select-backends 'home_ple
 
 Now that you have imported your current play state enable the import task by adding the following environment variables
 to your `docker-compose.yaml` file `WS_CRON_IMPORT=1`. By default, we have it disabled. for more environment variables
-please refer to [Environment variables list](FAQ.md#q-what-environment-variables-supported).
+please refer to [Environment variables list](FAQ.md#environment-variables).
 
 ### Supported import methods
 
@@ -101,7 +110,7 @@ $ docker exec -ti watchstate console state:export -v --select-backends 'home_ple
 
 Now that you have exported your current play state, enable the export task by adding the following environment variables
 to your `docker-compose.yaml` file `WS_CRON_EXPORT=1`. By default, we have it disabled. for more environment variables
-please refer to [Environment variables list](FAQ.md#q-what-environment-variables-supported).
+please refer to [Environment variables list](FAQ.md#environment-variables).
 
 ---
 

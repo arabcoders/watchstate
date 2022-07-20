@@ -16,10 +16,11 @@
     "require": {
         "php": ">=8.1",
         "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
         "ext-mbstring": "*",
         "ext-ctype": "*",
         "ext-curl": "*",
-        "ext-sqlite3": "*",
+        "ext-sodium": "*",
         "monolog/monolog": "^2.3",
         "symfony/console": "^6.0",
         "symfony/cache": "^6.0",
@@ -38,7 +39,10 @@
         "halaxa/json-machine": "^1.0"
     },
     "suggest": {
-        "ext-redis": "For caching"
+        "ext-sockets": "For UDP commincations.",
+        "ext-posix": "to check if running under super user.",
+        "ext-redis": "For caching.",
+        "ext-simplexml": "For backends that send xml responses."
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",

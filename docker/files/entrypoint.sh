@@ -1,5 +1,21 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -e
+
+ENV_FILE="${WS_DATA_PATH:-/config}/config/.env"
+
+TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+
+if [ -f "${ENV_FILE}" ]; then
+  echo "[${TIME_DATE}] INFO: Loading environment variables from [${ENV_FILE}]."
+  while read -r LINE; do
+    if [[ $LINE == *'='* ]] && [[ $LINE != '#'* ]]; then
+      ENV_VAR="$(echo "${LINE}" | envsubst)"
+      eval "declare -x $ENV_VAR"
+    fi
+  done <"${ENV_FILE}"
+else
+  echo "[${TIME_DATE}] INFO: No environment file present at [${ENV_FILE}]."
+fi
 
 WS_UID=${WS_UID:-1000}
 WS_GID=${WS_GID:-1000}
@@ -36,7 +52,7 @@ if [ ! -f "/usr/bin/run-app-cron" ]; then
 fi
 
 if [ 0 = "${WS_DISABLE_CHOWN}" ]; then
-  if ! cat /proc/mounts | grep '/app'; then
+  if ! grep '/app' /proc/mounts; then
     chown -R www-data:users /app
   fi
   chown -R www-data:users /config /var/lib/nginx/ /etc/redis.conf
