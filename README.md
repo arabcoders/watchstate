@@ -31,10 +31,12 @@ services:
             - WS_UID=${UID:-1000} # Set container user id.
             - WS_GID=${GID:-1000} # Set container group id.
         ports:
-            - "8081:80" # webhook listener port.
+            - "8081:8081" # webhook listener port.
         volumes:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```
+
+**Note:** Using port `80` is deprecated and will be removed in v1 release.
 
 After creating your docker compose file, start the container.
 
