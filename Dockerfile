@@ -48,7 +48,7 @@ RUN ln -s ${TOOL_PATH}/bin/console /usr/bin/console && \
 # Change Permissions.
 #
 RUN chmod +x /usr/bin/console /opt/init-container /opt/job-runner && \
-    chown -R user:user /config /opt /etc/${PHP_V} /var/run
+    chown -R user:user /config /opt /etc/${PHP_V} /var/run /run
 
 # Set the entrypoint.
 #
