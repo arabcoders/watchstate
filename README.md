@@ -19,24 +19,25 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 create your `docker-compose.yaml` file:
 
 ```yaml
-version: '3.3'
+version: '2.3'
 services:
     watchstate:
         image: ghcr.io/arabcoders/watchstate:latest
         # If you want to change the default uid/gid mapping enable the user option.
-        #user: "${UID:-1000}:${GID:-1000}"
+        user: "${UID:-1000}:${GID:-1000}"
         container_name: watchstate
         restart: unless-stopped
         # For information about supported environment variables visit FAQ page.
         # works for both global and container specific environment variables. 
         environment:
             - WS_TZ=Asia/Kuwait${UID:-1000} # Set container user id.
-            - WS_GID=${GID:-1000} # Set container group id.
         ports:
             - "8081:8081" # webhook listener port.
         volumes:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```
+
+Create directory called `data` next to the `docker-compose.yaml` file.
 
 ----
 
@@ -48,8 +49,8 @@ Things that need to be adjusted:
 
 * Default webhook listener port is now `8081` instead of `80`. If you were using the webhook functionality you have to
   change the port.
-* If you changed the default gid/uid `1000` You have to use the `user:` directive instead of `WS_GID`, `WS_UID`. The
-  example above has the syntax for it just uncomment `#user:` and add your uid:gid
+* If you changed the default gid/uid `1000` You have to use the `user:` directive instead of `WS_GID`, `WS_UID` now. The
+  `docker-compose.yaml` example file has the directive.
 
 -----
 
