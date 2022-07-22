@@ -2,14 +2,14 @@
 
 # Exit if already running.
 #
-if [[ "`pidof -x $(basename $0) -o %PPID`" ]]; then
-    exit;
+if [[ "$(pgrep -f $(basename $0))" ]]; then
+  echo "Another process is running."
+  exit 0
 fi
 
 # Loop until the sun explode.
 #
-while true
-do
-    sleep 60
-    /usr/bin/console system:tasks --run --save-log
+while true; do
+  sleep 60
+  /usr/bin/console system:tasks --run --save-log
 done
