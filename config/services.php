@@ -52,7 +52,7 @@ return (function (): array {
 
         CacheInterface::class => [
             'class' => function () {
-                if (false === (bool)config::get('cache.enabled')) {
+                if (true === (bool)env('WS_CACHE_NULL', false)) {
                     return new Psr16Cache(new NullAdapter());
                 }
 
@@ -63,6 +63,10 @@ return (function (): array {
                 }
 
                 try {
+                    if (false === (bool)config::get('cache.enabled')) {
+                        throw new RuntimeException('Cache server is disabled.');
+                    }
+
                     if (!extension_loaded('redis')) {
                         throw new RuntimeException('Redis extension is not loaded.');
                     }
@@ -86,16 +90,10 @@ return (function (): array {
                         $redis->select((int)ag($params, 'db'));
                     }
 
-                    $backend = new RedisAdapter(
-                        redis: $redis,
-                        namespace: $ns,
-                    );
+                    $backend = new RedisAdapter(redis: $redis, namespace: $ns);
                 } catch (Throwable) {
                     // -- in case of error, fallback to file system cache.
-                    $backend = new FilesystemAdapter(
-                        namespace: $ns,
-                        directory: Config::get('cache.path')
-                    );
+                    $backend = new FilesystemAdapter(namespace: $ns, directory: Config::get('cache.path'));
                 }
 
                 return new Psr16Cache($backend);
