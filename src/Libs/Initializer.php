@@ -184,6 +184,11 @@ final class Initializer
 
         $request = $realRequest;
 
+        // -- health endpoint.
+        if (true === str_starts_with($request->getUri()->getPath(), '/healthcheck')) {
+            return new Response(200);
+        }
+
         // -- Save request payload.
         if (true === Config::get('webhook.debug') && true === (bool)ag($realRequest->getQueryParams(), 'rdump')) {
             saveRequestPayload($realRequest);
