@@ -681,7 +681,7 @@ final class Initializer
             [
                 'request' => [
                     'id' => ag($params, 'X_REQUEST_ID'),
-                    'ip' => ag($params, 'REMOTE_ADDR'),
+                    'ip' => ag($params, ['X_FORWARDED_FOR', 'REMOTE_ADDR']),
                     'agent' => ag($params, 'HTTP_USER_AGENT'),
                     'uri' => (string)$uri,
                 ],

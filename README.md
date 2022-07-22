@@ -19,24 +19,40 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 create your `docker-compose.yaml` file:
 
 ```yaml
-version: '3.3'
+version: '2.3'
 services:
     watchstate:
         image: ghcr.io/arabcoders/watchstate:latest
+        # If you want to change the default uid/gid mapping enable the user option.
+        user: "${UID:-1000}:${GID:-1000}"
         container_name: watchstate
         restart: unless-stopped
         # For information about supported environment variables visit FAQ page.
         # works for both global and container specific environment variables. 
         environment:
-            - WS_UID=${UID:-1000} # Set container user id.
-            - WS_GID=${GID:-1000} # Set container group id.
+            - WS_TZ=Asia/Kuwait${UID:-1000} # Set container user id.
         ports:
             - "8081:8081" # webhook listener port.
         volumes:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```
 
-**Note:** Using port `80` is deprecated and will be removed in v1 release.
+Create directory called `data` next to the `docker-compose.yaml` file.
+
+----
+
+## Breaking change since 2022-07-22
+
+We fully switched to rootless container, as such we have to rebuild the container.
+
+Things that need to be adjusted:
+
+* Default webhook listener port is now `8081` instead of `80`. If you were using the webhook functionality you have to
+  change the port.
+* If you changed the default gid/uid `1000` You have to use the `user:` directive instead of `WS_GID`, `WS_UID` now. The
+  `docker-compose.yaml` example file has the directive.
+
+-----
 
 After creating your docker compose file, start the container.
 
@@ -87,9 +103,8 @@ please refer to [Environment variables list](FAQ.md#environment-variables).
 * On demand.
 * Webhooks.
 
-### Note:
-
-Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy relationship.
+**Note**: Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy
+relationship.
 and pick up any missed events.
 
 ---
