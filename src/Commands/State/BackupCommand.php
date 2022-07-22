@@ -131,8 +131,9 @@ class BackupCommand extends Command
         }
 
         $list = [];
-        $selected = explode(',', (string)$input->getOption('select-backends'));
-        $isCustom = !empty($selected) && count($selected) >= 1;
+        $selectBackends = (string)$input->getOption('select-backends');
+        $selected = explode(',', $selectBackends);
+        $isCustom = !empty($selectBackends) && count($selected) >= 1;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
@@ -154,7 +155,7 @@ class BackupCommand extends Command
         foreach (Config::get('servers', []) as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
+            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected, true)) {
                 $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by select backends flag.', [
                     'backend' => $backendName,
                 ]);
