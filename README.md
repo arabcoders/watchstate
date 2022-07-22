@@ -33,7 +33,7 @@ services:
         ports:
             - "8081:80" # webhook listener port.
         volumes:
-            - ${PWD}:/config:rw # mount current directory to container /config directory.
+            - ./data:/config:rw # mount current directory to container /config directory.
 ```
 
 After creating your docker compose file, start the container.
