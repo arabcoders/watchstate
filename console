@@ -2,65 +2,8 @@
 
 declare(strict_types=1);
 
-if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
-    fwrite(STDERR, 'Unable to run as root. Please choose different user.' . PHP_EOL);
-    exit(1);
-}
-
-error_reporting(E_ALL);
-ini_set('display_errors', 'On');
-
-require __DIR__ . '/pre_init.php';
-
-set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
-    $errno = $number & error_reporting();
-    static $errorLevels = [
-        E_ERROR => 'Error',
-        E_WARNING => 'Warning',
-        E_PARSE => 'Parser Error',
-        E_NOTICE => 'Notice',
-        E_CORE_ERROR => 'Core Error',
-        E_CORE_WARNING => 'Core Warning',
-        E_COMPILE_ERROR => 'Compile Error',
-        E_COMPILE_WARNING => 'Compile Warning',
-        E_USER_ERROR => 'User Error',
-        E_USER_WARNING => 'User Warning',
-        E_USER_NOTICE => 'User notice',
-        E_STRICT => 'Strict Notice',
-        E_RECOVERABLE_ERROR => 'Recoverable Error'
-    ];
-
-    if (0 === $errno) {
-        return;
-    }
-
-    fwrite(
-        STDERR,
-        trim(
-            sprintf('%s: %s (%s:%d)' . PHP_EOL, ($errorLevels[$number] ?? (string)$number), $error, $file, $line)
-        ) . PHP_EOL
-    );
-
-    exit(1);
-});
-
-set_exception_handler(function (Throwable $e) {
-    fwrite(
-        STDERR,
-        trim(
-            sprintf("%s: %s (%s:%d)." . PHP_EOL, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine())
-        ) . PHP_EOL
-    );
-    exit(1);
-});
-
-if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
-    fwrite(STDERR, 'Composer dependencies are missing. Run the following commands.' . PHP_EOL);
-    fwrite(STDERR, sprintf('cd %s', __DIR__) . PHP_EOL);
-    fwrite(STDERR, 'composer install --optimize-autoloader' . PHP_EOL);
-    exit(1);
-}
-
-require __DIR__ . '/vendor/autoload.php';
-
-(new App\Libs\Initializer())->boot()->runConsole();
+/**
+ * @RELEASE
+ * This file is deprecated and will be removed in v1.
+ */
+require __DIR__ . '/bin/console';

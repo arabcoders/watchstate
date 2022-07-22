@@ -53,8 +53,8 @@ $ php console
 
 The app should save your data into `./var` directory. If you want to change the directory you can export the environment
 variable `WS_DATA_PATH` for console and browser. you can add a file called `.env` in main tool directory with the
-environment variables. take look at the files inside `docker/files` directory to know how to run the scheduled tasks and
-if you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
+environment variables. take look at the files inside `container/files` directory to know how to run the scheduled tasks
+and if you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
 
 ---
 
@@ -174,12 +174,9 @@ via the `docker-compose.yaml` file.
 
 | Key              | Type    | Description                                  | Default |
 |------------------|---------|----------------------------------------------|---------|
-| WS_DISABLE_CHOWN | integer | Do not change ownership `/config` directory. | `0`     |
 | WS_DISABLE_HTTP  | integer | Disable included `HTTP Server`.              | `0`     |
 | WS_DISABLE_CRON  | integer | Disable included `Task Scheduler`.           | `0`     |
 | WS_DISABLE_CACHE | integer | Disable included `Cache Server`.             | `0`     |
-| WS_UID           | integer | Set container user id.                       | `1000`  |
-| WS_GID           | integer | Set container group id.                      | `1000`  |
 
 ---
 
@@ -243,7 +240,7 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 Click `Save Changes`
 
-**Note:** If you use multiple plex servers and use the same PlexPass account for all of them, you have to unify the API
+**Note**: If you use multiple plex servers and use the same PlexPass account for all of them, you have to unify the API
 key, by
 running the following command:
 

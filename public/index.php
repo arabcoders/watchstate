@@ -37,4 +37,9 @@ set_exception_handler(function (Throwable $e) {
     exit(Command::FAILURE);
 });
 
+// -- In case the frontend proxy does not generate request unique id.
+if (!isset($_SERVER['X_REQUEST_ID'])) {
+    $_SERVER['X_REQUEST_ID'] = bin2hex(random_bytes(16));
+}
+
 (new App\Libs\Initializer())->boot()->runHttp();
