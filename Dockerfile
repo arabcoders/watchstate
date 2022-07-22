@@ -66,6 +66,10 @@ USER user
 #
 EXPOSE 9000 8081
 
+# Health check.
+#
+HEALTHCHECK CMD /usr/bin/console -v
+
 # Run php-fpm
 #
 CMD ["php-fpm81"]
