@@ -49,8 +49,8 @@ Things that need to be adjusted:
 
 * Default webhook listener port is now `8081` instead of `80`. If you were using the webhook functionality you have to
   change the port.
-* If you changed the default gid/uid `1000` You have to use the `user:` directive instead of `WS_GID`, `WS_UID` now. The
-  `docker-compose.yaml` example file has the directive.
+* If you have changed the default user gid/uid You have to use the `user:` directive instead of `WS_GID`, `WS_UID` now.
+  The `docker-compose.yaml` example above has the directive with same default as before.
 
 -----
 
