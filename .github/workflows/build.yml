@@ -4,15 +4,9 @@ on:
   push:
     branches:
       - '*'
-    tags-ignore:
-      - 'v0*'
-    paths-ignore:
-      - '**.md'
   pull_request:
     branches:
       - 'master'
-    paths-ignore:
-      - '**.md'
 
 env:
   DOCKERHUB_SLUG: arabcoders/watchstate

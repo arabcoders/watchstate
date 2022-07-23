@@ -66,9 +66,6 @@ echo "[${TIME_DATE}] Ensuring State table has correct indexes."
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Running - $(/usr/bin/console --version)"
 
-/usr/bin/console system:php >"${PHP_INI_DIR}/conf.d/zz-app-custom-ini-settings.ini"
-/usr/bin/console system:php --fpm >"${PHP_INI_DIR}/php-fpm.d/zzz-app-pool-settings.conf"
-
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
   set -- php-fpm "$@"

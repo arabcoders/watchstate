@@ -28,14 +28,7 @@ RUN echo '' && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100
     deluser redis && deluser caddy && groupmod -g 1588787 users && \
     # Create our own user.
-    useradd -u 1000 -U -d /config -s /bin/bash user && \
-    # Create basic directories.
-    mkdir -p /opt/app /config/{backup,cache,config,db,debug,logs,webhooks} && \
-    # link php runtime to to php.
-    ln -s /usr/bin/${PHP_V} /usr/bin/php && \
-    # we are running rootless, so user,group config options has no affect.
-    sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
-    sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf
+    useradd -u 1000 -U -d /config -s /bin/bash user
 
 # Copy source code to container.
 #
@@ -44,31 +37,35 @@ COPY ./ /opt/app
 # install composer & packages.
 #
 RUN echo '' && \
+    # Create basic directories.
+    bash -c 'mkdir -p /opt/app /config/{backup,cache,config,db,debug,logs,webhooks}' && \
+    # link current PHP runtime to PHP.
+    ln -s /usr/bin/${PHP_V} /usr/bin/php && \
+    # we are running rootless, so user,group config options has no affect.
+    sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
+    sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     # Download composer.
     curl -sSL "https://getcomposer.org/download/latest-stable/composer.phar" -o /opt/composer && chmod +x /opt/composer && \
     # Install dependencies.
     /opt/composer --working-dir=/opt/app/ -no --no-progress --no-dev --no-cache --quiet -- install && \
-    # Remove composer.
-    rm /opt/composer
-
-# Copy configuration files to the expected directories.
-#
-RUN ln -s ${TOOL_PATH}/bin/console /usr/bin/console && \
+    # Copy configuration files to the expected directories.
+    ln -s ${TOOL_PATH}/bin/console /usr/bin/console && \
     cp ${TOOL_PATH}/container/files/job-runner.sh /opt/job-runner && \
     cp ${TOOL_PATH}/container/files/Caddyfile /opt/Caddyfile && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/redis.conf && \
     cp ${TOOL_PATH}/container/files/init-container.sh /opt/init-container && \
     cp ${TOOL_PATH}/container/files/fpm.conf /etc/${PHP_V}/php-fpm.d/z-container.conf && \
-    rm -rf ${TOOL_PATH}/{container,var,.github,.git,.env} && \
-    caddy fmt -overwrite /opt/Caddyfile
-
-# Change Permissions.
-#
-RUN echo '' && \
+    caddy fmt -overwrite /opt/Caddyfile && \
     # Make sure console,init-container,job-runner are given executable flag.
     chmod +x /usr/bin/console /opt/init-container /opt/job-runner && \
-    # Change permissions on our working directories.
-    chown -R user:user /config /opt /etc/${PHP_V}
+    # Update php.ini & php fpm
+    mkdir -p /temp_data/ && \
+    WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php >"${PHP_INI_DIR}/conf.d/zz-custom-php.ini" && \
+    WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php --fpm >"${PHP_INI_DIR}/php-fpm.d/zz-pool.conf" && \
+    # Remove unneeded data.
+    bash -c 'rm -rf /temp_data/ /opt/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
+    # Change Permissions.
+    chown -R user:user /config /opt && chmod -R 777 /config /opt
 
 # Set the entrypoint.
 #
