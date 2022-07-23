@@ -73,19 +73,19 @@ class JellyfinGuid implements iGuid
     {
         $guid = [];
 
+        $id = ag($context, 'item.id', null);
+        $type = ag($context, 'item.type', '??');
+        $type = JellyfinClient::TYPE_MAPPER[$type] ?? $type;
+
         foreach (array_change_key_case($guids, CASE_LOWER) as $key => $value) {
             if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
                 continue;
             }
 
             try {
-                $id = ag($context, 'item.id', null);
-                $type = ag($context, 'item.type', '??');
-                $type = JellyfinClient::TYPE_MAPPER[$type] ?? $type;
-
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
-                        $this->logger->info(
+                        $this->logger->debug(
                             'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
                             [
                                 'backend' => $this->context->backendName,
@@ -99,28 +99,6 @@ class JellyfinGuid implements iGuid
                         );
                     }
                     continue;
-                }
-
-                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
-                    if (true === $log) {
-                        $this->logger->info(
-                            '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
-                            [
-                                'backend' => $this->context->backendName,
-                                'key' => $key,
-                                'ids' => sprintf('%s, %s', $guid[self::GUID_MAPPER[$key]], $value),
-                                ...$context
-                            ]
-                        );
-                    }
-
-                    if (false === ctype_digit($value)) {
-                        continue;
-                    }
-
-                    if ((int)$guid[self::GUID_MAPPER[$key]] < (int)$value) {
-                        continue;
-                    }
                 }
 
                 $guid[self::GUID_MAPPER[$key]] = $value;
