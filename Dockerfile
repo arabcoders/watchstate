@@ -9,7 +9,7 @@ ENV PHP_INI_DIR=/etc/${PHP_V}
 
 # Setup the required environment.
 #
-RUN apk add --no-cache bash caddy nano curl procps net-tools iproute2 shadow sqlite redis tzdata gettext \
+RUN apk add --no-cache bash caddy nano curl procps net-tools iproute2 shadow sqlite redis tzdata gettext fcgi \
     ${PHP_V} ${PHP_V}-common ${PHP_V}-ctype ${PHP_V}-curl ${PHP_V}-dom ${PHP_V}-fileinfo ${PHP_V}-fpm \
     ${PHP_V}-intl ${PHP_V}-mbstring ${PHP_V}-opcache ${PHP_V}-pcntl ${PHP_V}-pdo_sqlite ${PHP_V}-phar \
     ${PHP_V}-posix ${PHP_V}-session ${PHP_V}-shmop ${PHP_V}-simplexml ${PHP_V}-snmp ${PHP_V}-sockets \
@@ -54,9 +54,10 @@ RUN echo '' && \
     cp ${TOOL_PATH}/container/files/Caddyfile /opt/Caddyfile && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/redis.conf && \
     cp ${TOOL_PATH}/container/files/init-container.sh /opt/init-container && \
+    cp ${TOOL_PATH}/container/files/php-fpm-healthcheck.sh /usr/bin/php-fpm-healthcheck && \
     caddy fmt -overwrite /opt/Caddyfile && \
     # Make sure console,init-container,job-runner are given executable flag.
-    chmod +x /usr/bin/console /opt/init-container /opt/job-runner && \
+    chmod +x /usr/bin/console /opt/init-container /opt/job-runner /usr/bin/php-fpm-healthcheck && \
     # Update php.ini & php fpm
     WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php >"${PHP_INI_DIR}/conf.d/zz-custom-php.ini" && \
     WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php --fpm >"${PHP_INI_DIR}/php-fpm.d/zz-custom-pool.conf" && \
@@ -64,6 +65,11 @@ RUN echo '' && \
     bash -c 'rm -rf /temp_data/ /opt/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
     # Change Permissions.
     chown -R user:user /config /opt
+
+# Add Healthcheck for PHP FPM.
+#
+RUN curl -Ls https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
+    -o /usr/local/bin/php-fpm-healthcheck && chmod +x /usr/local/bin/php-fpm-healthcheck
 
 # Set the entrypoint.
 #
@@ -83,7 +89,7 @@ EXPOSE 9000 8080 8443
 
 # Health check.
 #
-HEALTHCHECK CMD /usr/bin/console -v
+HEALTHCHECK CMD /usr/bin/php-fpm-healthcheck -v
 
 # Run php-fpm
 #
