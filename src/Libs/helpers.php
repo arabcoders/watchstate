@@ -708,3 +708,37 @@ if (false === function_exists('generateRoutes')) {
         return $routes;
     }
 }
+
+if (!function_exists('getClientIp')) {
+    function getClientIp(?ServerRequestInterface $request = null): string
+    {
+        $params = $request?->getServerParams() ?? $_SERVER;
+
+        $realIp = (string)ag($params, 'REMOTE_ADDR', '0.0.0.0');
+
+        if (false === (bool)Config::get('trust.proxy', false)) {
+            return $realIp;
+        }
+
+        $forwardIp = ag(
+            $params,
+            'HTTP_' . strtoupper(trim(str_replace('-', '_', Config::get('trust.header', 'X-Forwarded-For'))))
+        );
+
+        if ($forwardIp === $realIp || empty($forwardIp)) {
+            return $realIp;
+        }
+
+        if (null === ($firstIp = explode(',', $forwardIp)[0] ?? null)) {
+            return $realIp;
+        }
+
+        $firstIp = trim($firstIp);
+
+        if (false === filter_var($firstIp, FILTER_VALIDATE_IP)) {
+            return $realIp;
+        }
+
+        return trim($firstIp);
+    }
+}

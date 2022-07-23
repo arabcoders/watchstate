@@ -1,6 +1,24 @@
-http://:8081 {
+{
+    order request_id before header
+    http_port 8080
+    https_port 8443
+}
+
+http:// {
+    request_id 12
+
     root * /opt/app/public
-    php_fastcgi 127.0.0.1:9000
-    file_server
-    log
+
+    header * X-Request-Id "{http.request_id}"
+
+    php_fastcgi 127.0.0.1:9000 {
+        trusted_proxies private_ranges
+        env X_REQUEST_ID "{http.request_id}"
+    }
+
+    log {
+        format transform `{request>remote_ip} - {request>headers>X-Forwarded-For>[0]} - [{ts}] "{request>method} {request>uri} {request>proto}" {status} {size} "{request>headers>Referer>[0]}" "{request>headers>User-Agent>[0]}" - "{resp_headers>X-Request-Id>[0]}"` {
+            time_format "02/Jan/2006:15:04:05 -0700"
+        }
+    }
 }

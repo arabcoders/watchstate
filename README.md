@@ -16,7 +16,7 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ----
 
-## Breaking change since 2022-07-22
+## Breaking change since 2022-07-23
 
 We rebuilt the container to be `rootless` and to be more secure. So, there are some breaking changes that might need
 your attention. Things that need to be adjusted if you run this tool before 2022-07-22:
@@ -24,10 +24,10 @@ your attention. Things that need to be adjusted if you run this tool before 2022
 ### Webhook default listener port
 
 Since we used to use the port `80` and this port is privileged we cannot use it in rootless container, so the default
-port changed to `8081`. If you used the webhook receiver before. you have to change the port in your media backends and
+port changed to `8080`. If you used the webhook receiver before. you have to change the port in your media backends and
 or your frontend proxy.
 
-### User/Group Id
+### User id and group id mapping
 
 Running rootless means we cannot change the user and group id inside the container anymore. So, if you changed the
 user/group id before using `WS_GID`, `WS_UID` those no longer works, and you need to use the `user:` directive. There is
@@ -58,7 +58,7 @@ services:
         environment:
             - WS_TZ=Asia/Kuwait # Set timezone.
         ports:
-            - "8081:8081" # webhook listener port.
+            - "8080:8080" # webhook listener port.
         volumes:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```

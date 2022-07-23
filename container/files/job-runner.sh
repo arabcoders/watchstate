@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-PID="/var/run/runner.pid"
+PID="/opt/job-runner.pid"
 
-trap "rm -f ${pid}" SIGSEGV
-trap "rm -f ${pid}" SIGINT
+# shellcheck disable=SC2064
+trap 'rm -f "${PID}"; exit' EXIT SIGQUIT SIGINT SIGTERM ERR
 
 # Exit if already running.
 #
 if [ -f "${PID}" ]; then
-  echo "Another process is running. $(cat "${PID}")"
+  echo "Another process is running. [${PID}]: $(cat "${PID}")"
   exit 0
 fi
 
