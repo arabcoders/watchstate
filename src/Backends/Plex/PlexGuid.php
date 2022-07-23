@@ -105,6 +105,10 @@ final class PlexGuid implements iGuid
     {
         $guid = [];
 
+        $id = ag($context, 'item.id', null);
+        $type = ag($context, 'item.type', '??');
+        $type = PlexClient::TYPE_MAPPER[$type] ?? $type;
+
         foreach (array_column($guids, 'id') as $val) {
             try {
                 if (empty($val)) {
@@ -140,13 +144,9 @@ final class PlexGuid implements iGuid
                     continue;
                 }
 
-                $id = ag($context, 'item.id', null);
-                $type = ag($context, 'item.type', '??');
-                $type = PlexClient::TYPE_MAPPER[$type] ?? $type;
-
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
-                        $this->logger->info(
+                        $this->logger->debug(
                             'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
                             [
                                 'backend' => $this->context->backendName,
