@@ -67,6 +67,7 @@ class Command extends BaseCommand
         ];
 
         $appVersion = getAppVersion();
+        $inContainer = inContainer();
 
         $url = '/cli/' . $this->getName();
         $data['meta']['url'] = $data['meta']['simple_url'] = $url;
@@ -76,12 +77,12 @@ class Command extends BaseCommand
             'PHP_VERSION' => PHP_VERSION,
             'PHP_VERSION_ID' => PHP_VERSION_ID,
             'PHP_OS' => PHP_OS,
-            'DOCKER' => env('IN_DOCKER') ? 'Yes' : 'No',
+            'CONTAINER' => $inContainer ? 'Yes' : 'No',
             'SYSTEM' => php_uname('s') . ' ' . php_uname('r') . ' ' . php_uname('v') . ' ' . php_uname('m'),
-            'DOCUMENT_ROOT' => env('IN_DOCKER') ? '/docker/' : '/cli',
+            'DOCUMENT_ROOT' => $inContainer ? '/container/' : '/cli',
             'REMOTE_ADDR' => '127.0.0.1',
             'SERVER_ADDR' => '127.0.0.1',
-            'SERVER_NAME' => (env('IN_DOCKER') ? 'docker' : 'cli') . '.watchstate.' . $appVersion
+            'SERVER_NAME' => ($inContainer ? 'container' : 'cli') . '.watchstate.' . $appVersion
         ]);
 
         foreach ($removeKeys as $key) {

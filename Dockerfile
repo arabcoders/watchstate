@@ -2,7 +2,7 @@ FROM alpine:3.16
 
 LABEL maintainer="admin@arabcoders.org"
 
-ENV IN_DOCKER=1
+ENV IN_CONTAINER=1
 ENV PHP_V=php81
 ENV TOOL_PATH=/opt/app
 ENV PHP_INI_DIR=/etc/${PHP_V}
@@ -64,7 +64,7 @@ RUN echo '' && \
     # Remove unneeded directories and tools.
     bash -c 'rm -rf /temp_data/ /opt/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
     # Change Permissions.
-    chown -R user:user /config /opt
+    chown -R user:user /config /opt /var/log/ && chmod -R 775 /var/log/
 
 # Add Healthcheck for PHP FPM.
 #

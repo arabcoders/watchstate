@@ -33,7 +33,7 @@ For Jellyfin/Emby, you can just generate new API tokens.
 
 ----
 
-### Q: Can this tool run without docker?
+### Q: Can this tool run without container?
 
 Yes, if you have the required PHP version and the needed extensions. to run this tool you need the following `php8.1`,
 `php8.1-fpm` and `redis-server` and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`
@@ -66,8 +66,8 @@ No, You can use the task scheduler or on demand sync if you want.
 
 ### Q: I get tired of writing the whole command everytime is there an easy way run the commands?
 
-Since there is no way to access the command interface outside docker, you can create small shell script to at least omit
-part of command that you have to write for example, to create shortcut for docker command do the following:
+Since there is no way to access the command interface outside the container, you can create small shell script to at
+least omit part of command that you have to write for example, to create shortcut for docker command do the following:
 
 ```bash
 $ echo 'docker exec -ti watchstate console "$@"' > ws

@@ -166,7 +166,7 @@ final class TasksCommand extends Command
         foreach ($run as $task) {
             $cmd = [];
 
-            $cmd[] = env('IN_DOCKER') ? 'console' : 'php ' . ROOT_PATH . '/console';
+            $cmd[] = ROOT_PATH . '/bin/console';
             $cmd[] = ag($task, 'command');
 
             if (null !== ($args = ag($task, 'args'))) {

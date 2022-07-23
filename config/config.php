@@ -15,11 +15,12 @@ use App\Libs\Mappers\Import\MemoryMapper;
 use Monolog\Logger;
 
 return (function () {
+    $inContainer = inContainer();
     $config = [
         'name' => 'WatchState',
         'version' => '$(version_via_ci)',
         'tz' => env('WS_TZ', 'UTC'),
-        'path' => fixPath(env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : realpath(__DIR__ . '/../var'))),
+        'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
             'context' => (bool)env('WS_LOGS_CONTEXT', false),
             'prune' => [
@@ -137,7 +138,7 @@ return (function () {
             'type' => 'syslog',
             'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
-            'enabled' => (bool)env('WS_LOGGER_SYSLOG_ENABLED', !env('IN_DOCKER')),
+            'enabled' => (bool)env('WS_LOGGER_SYSLOG_ENABLED', !$inContainer),
             'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
             'name' => ag($config, 'name'),
         ],
@@ -155,7 +156,7 @@ return (function () {
         'ini' => [
             'disable_functions' => null,
             'display_errors' => 0,
-            'error_log' => env('IN_DOCKER') ? '/proc/self/fd/2' : 'syslog',
+            'error_log' => $inContainer ? '/proc/self/fd/2' : 'syslog',
             'syslog.ident' => 'php-fpm',
             'memory_limit' => '265M',
             'pcre.jit' => 1,
@@ -177,6 +178,7 @@ return (function () {
                 'log_limit' => '8192',
             ],
             'www' => [
+                'clear_env' => 'no',
                 'pm' => 'dynamic',
                 'pm.max_children' => 10,
                 'pm.start_servers' => 1,

@@ -43,7 +43,7 @@ final class Initializer
                 (new Dotenv())->usePutenv(true)->overload(__DIR__ . '/../../.env');
             }
 
-            $dataPath = env('WS_DATA_PATH', fn() => env('IN_DOCKER') ? '/config' : __DIR__ . '/../../var');
+            $dataPath = env('WS_DATA_PATH', fn() => inContainer() ? '/config' : __DIR__ . '/../../var');
             if (file_exists($dataPath . '/config/.env')) {
                 (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/.env');
             }
@@ -166,6 +166,7 @@ final class Initializer
 
         try {
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
+            $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
         } catch (Throwable $e) {
             Container::get(LoggerInterface::class)->error(
                 $e->getMessage(),
@@ -595,14 +596,14 @@ final class Initializer
 
     private function setupLoggers(Logger $logger, array $loggers): void
     {
-        $inDocker = (bool)env('IN_DOCKER');
+        $inContainer = inContainer();
 
         if (null !== ($logfile = Config::get('webhook.logfile'))) {
             $level = Config::get('webhook.debug') ? Logger::DEBUG : Logger::INFO;
             $this->accessLog = $logger->withName(name: 'webhook')
                 ->pushHandler(new StreamHandler($logfile, $level, true));
 
-            if (true === $inDocker) {
+            if (true === $inContainer) {
                 $this->accessLog->pushHandler(new StreamHandler('php://stderr', $level, true));
             }
         }
@@ -618,11 +619,11 @@ final class Initializer
 
             if (null !== ($cDocker = ag($context, 'docker', null))) {
                 $cDocker = (bool)$cDocker;
-                if (true === $cDocker && !$inDocker) {
+                if (true === $cDocker && !$inContainer) {
                     continue;
                 }
 
-                if (false === $cDocker && $inDocker) {
+                if (false === $cDocker && $inContainer) {
                     continue;
                 }
             }

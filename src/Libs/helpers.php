@@ -463,7 +463,7 @@ if (!function_exists('arrayToString')) {
 if (!function_exists('commandContext')) {
     function commandContext(): string
     {
-        if (env('IN_DOCKER')) {
+        if (inContainer()) {
             return sprintf('docker exec -ti %s console ', env('CONTAINER_NAME', 'watchstate'));
         }
 
@@ -740,5 +740,20 @@ if (!function_exists('getClientIp')) {
         }
 
         return trim($firstIp);
+    }
+}
+
+if (false === function_exists('inContainer')) {
+    function inContainer(): bool
+    {
+        if (true === (bool)env('IN_CONTAINER')) {
+            return true;
+        }
+
+        if (true === file_exists('/.dockerenv')) {
+            return true;
+        }
+
+        return false;
     }
 }
