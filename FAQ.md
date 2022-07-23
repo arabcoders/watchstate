@@ -108,10 +108,10 @@ where `600` is the number of secs before the timeout handler will kill the reque
 * tvdb://(id) `New Plex Agent`
 * imdb://(id) `New Plex Agent`
 * tmdb://(id) `New Plex Agent`
-* com.plexapp.agents.imdb://(id)?lang=en `(Lagecy plex agent)`
-* com.plexapp.agents.tmdb://(id)?lang=en `(Lagecy plex agent)`
-* com.plexapp.agents.themoviedb://(id)?lang=en `(Lagecy plex agent)`
-* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(Lagecy plex agent)`
+* com.plexapp.agents.imdb://(id)?lang=en `(Legacy plex agent)`
+* com.plexapp.agents.tmdb://(id)?lang=en `(Legacy plex agent)`
+* com.plexapp.agents.themoviedb://(id)?lang=en `(Legacy plex agent)`
+* com.plexapp.agents.thetvdb://(seriesId)?lang=en `(Legacy plex agent)`
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO parser agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO parser agent for tv)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(hama agent is multi db source agent)`
