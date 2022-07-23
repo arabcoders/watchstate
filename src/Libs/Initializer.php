@@ -108,7 +108,12 @@ final class Initializer
 
         set_exception_handler(function (Throwable $e) {
             Container::get(LoggerInterface::class)->error(
-                sprintf("%s: %s (%s:%d)." . PHP_EOL, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine())
+                r("{class}: {error} ({file}:{line})." . PHP_EOL, [
+                    'class' => get_class($e),
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ])
             );
             exit(1);
         });
@@ -243,11 +248,10 @@ final class Initializer
                 if (false === hash_equals((string)$userId, (string)$requestUser)) {
                     $validUser = false;
                     $backend = $class = null;
-                    $log[] = sprintf(
-                        'Request user id [%s] does not match configured value [%s]',
-                        $requestUser ?? 'NOT SET',
-                        $userId
-                    );
+                    $log[] = r('Request user id [{req_user}] does not match configured value [{config_user}]', [
+                        'req_user' => $requestUser ?? 'NOT SET',
+                        'config_user' => $userId,
+                    ]);
                     continue;
                 }
 
@@ -265,11 +269,10 @@ final class Initializer
                 if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
                     $validUUid = false;
                     $backend = $class = null;
-                    $log[] = sprintf(
-                        'Request backend unique id [%s] does not match configured value [%s]',
-                        $requestBackendId ?? 'NOT SET',
-                        $uuid
-                    );
+                    $log[] = r('Request backend unique id [{req_uid}] does not match backend uuid [{config_uid}].', [
+                        'req_uid' => $requestBackendId ?? 'NOT SET',
+                        'config_uid' => $uuid,
+                    ]);
                     continue;
                 }
 
@@ -545,33 +548,29 @@ final class Initializer
         }
 
         $fn = function (string $key, string $path): string {
-            if (!file_exists($path)) {
-                if (!@mkdir($path, 0755, true) && !is_dir($path)) {
-                    throw new RuntimeException(sprintf('Unable to create "%s" Directory.', $path));
+            if (false === file_exists($path)) {
+                if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+                    throw new RuntimeException(r('Unable to create [{path}] directory.', ['path' => $path]));
                 }
             }
 
-            if (!is_dir($path)) {
-                throw new RuntimeException(sprintf('%s is not a directory.', $key));
+            if (false === is_dir($path)) {
+                throw new RuntimeException(r('[{path}] is not a directory.', ['path' => $key]));
             }
 
-            if (!is_writable($path)) {
+            if (false === is_writable($path)) {
                 throw new RuntimeException(
-                    sprintf(
-                        '%s: Unable to write to the specified directory. \'%s\' check permissions and/or user ACL.',
-                        $key,
-                        $path
-                    )
+                    r('Unable to write to [{path}] directory. Check user permissions and/or user mapping.', [
+                        'path' => $path,
+                    ])
                 );
             }
 
-            if (!is_readable($path)) {
+            if (false === is_readable($path)) {
                 throw new RuntimeException(
-                    sprintf(
-                        '%s: Unable to read data from specified directory. \'%s\' check permissions and/or user ACL.',
-                        $key,
-                        $path
-                    )
+                    r('Unable to read data from [{path}] directory. Check user permissions and/or user mapping.', [
+                        'path' => $path,
+                    ])
                 );
             }
 
@@ -586,9 +585,9 @@ final class Initializer
         foreach (require $dirList as $dir) {
             $dir = str_replace(array_keys($list), array_values($list), $dir);
 
-            if (!file_exists($dir)) {
-                if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
-                    throw new RuntimeException(sprintf('Directory "%s" was not created', $dir));
+            if (false === file_exists($dir)) {
+                if (false === @mkdir($dir, 0755, true) && false === is_dir($dir)) {
+                    throw new RuntimeException(r('Unable to create [{path}] directory.', ['path' => $dir]));
                 }
             }
         }
@@ -610,7 +609,7 @@ final class Initializer
 
         foreach ($loggers as $name => $context) {
             if (!ag($context, 'type')) {
-                throw new RuntimeException(sprintf('Logger: \'%s\' has no type set.', $name));
+                throw new RuntimeException(r('Logger: [{name}] has no type set.', ['name' => $name]));
             }
 
             if (true !== (bool)ag($context, 'enabled')) {
@@ -653,7 +652,10 @@ final class Initializer
                     break;
                 default:
                     throw new RuntimeException(
-                        sprintf('Unknown Logger type \'%s\' set by \'%s\'.', $context['type'], $name)
+                        r('Unknown Logger type [{type} set by [{name}].', [
+                            'type' => $context['type'],
+                            'name' => $name
+                        ])
                     );
             }
         }

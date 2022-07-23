@@ -171,6 +171,11 @@ return (function () {
             'mbstring.internal_encoding' => ag($config, 'charset', 'UTF-8'),
         ],
         'fpm' => [
+            'global' => [
+                'daemonize' => 'no',
+                'error_log' => '/proc/self/fd/2',
+                'log_limit' => '8192',
+            ],
             'www' => [
                 'pm' => 'dynamic',
                 'pm.max_children' => 10,
@@ -178,8 +183,8 @@ return (function () {
                 'pm.min_spare_servers' => 1,
                 'pm.max_spare_servers' => 3,
                 'pm.max_requests' => 1000,
-                'pm.status_path' => '/fpm_status',
-                'ping.path' => '/fpm_ping',
+                'pm.status_path' => '/status',
+                'ping.path' => '/ping',
                 'catch_workers_output' => 'yes',
                 'decorate_workers_output' => 'no',
             ],
