@@ -171,6 +171,11 @@ return (function () {
             'mbstring.internal_encoding' => ag($config, 'charset', 'UTF-8'),
         ],
         'fpm' => [
+            'global' => [
+                'daemonize' => 'no',
+                'error_log' => '/proc/self/fd/2',
+                'log_limit' => '8192',
+            ],
             'www' => [
                 'pm' => 'dynamic',
                 'pm.max_children' => 10,

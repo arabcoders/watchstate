@@ -38,7 +38,7 @@ COPY ./ /opt/app
 #
 RUN echo '' && \
     # Create basic directories.
-    bash -c 'mkdir -p /opt/app /config/{backup,cache,config,db,debug,logs,webhooks}' && \
+    bash -c 'mkdir -p /temp_data/ /opt/app /config/{backup,cache,config,db,debug,logs,webhooks}' && \
     # link current PHP runtime to PHP.
     ln -s /usr/bin/${PHP_V} /usr/bin/php && \
     # we are running rootless, so user,group config options has no affect.
@@ -54,15 +54,13 @@ RUN echo '' && \
     cp ${TOOL_PATH}/container/files/Caddyfile /opt/Caddyfile && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/redis.conf && \
     cp ${TOOL_PATH}/container/files/init-container.sh /opt/init-container && \
-    cp ${TOOL_PATH}/container/files/fpm.conf /etc/${PHP_V}/php-fpm.d/z-container.conf && \
     caddy fmt -overwrite /opt/Caddyfile && \
     # Make sure console,init-container,job-runner are given executable flag.
     chmod +x /usr/bin/console /opt/init-container /opt/job-runner && \
     # Update php.ini & php fpm
-    mkdir -p /temp_data/ && \
     WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php >"${PHP_INI_DIR}/conf.d/zz-custom-php.ini" && \
-    WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php --fpm >"${PHP_INI_DIR}/php-fpm.d/zz-pool.conf" && \
-    # Remove unneeded data.
+    WS_DATA_PATH=/temp_data/ WS_CACHE_NULL=1 /usr/bin/console system:php --fpm >"${PHP_INI_DIR}/php-fpm.d/zz-custom-pool.conf" && \
+    # Remove unneeded directories and tools.
     bash -c 'rm -rf /temp_data/ /opt/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
     # Change Permissions.
     chown -R user:user /config /opt && chmod -R 777 /config /opt

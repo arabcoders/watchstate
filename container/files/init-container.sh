@@ -33,8 +33,6 @@ if [ 0 = "${WS_DISABLE_CACHE}" ]; then
   redis-server "/opt/redis.conf"
 fi
 
-WS_CACHE_NULL=0
-
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting HTTP Server."
