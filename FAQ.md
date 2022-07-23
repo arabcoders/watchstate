@@ -159,6 +159,8 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_LOGGER_FILE_LEVEL     | string | File Logger Level.                                                            | `ERROR`            |
 | WS_WEBHOOK_DEBUG         | bool   | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters. | `false`            |
 | WS_EPISODES_DISABLE_GUID | bool   | Disable external id parsing for episodes and rely on relative ids.            | `true`             |
+| WS_TRUST_PROXY           | bool   | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                             | `false`            |
+| WS_TRUST_HEADER          | string | Which header contain user true IP.                                            | `X-Forwarded-For`  |
 
 **Note**: for environment variables that has `{TASK}` tag, you **MUST** replace it with one
 of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`. To see tasks active settings run
@@ -185,7 +187,7 @@ via the `docker-compose.yaml` file.
 To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be
 like this:
 
-Directly to container: `http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
+Directly to container: `http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
 
 Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
 
@@ -215,7 +217,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook Url:
 
-`http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
+`http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
 
 ##### Webhook Events:
 
@@ -236,7 +238,7 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 ##### URL:
 
-`http://localhost:8081/?apikey=[WEBHOOK_TOKEN]`
+`http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
 
 Click `Save Changes`
 
@@ -276,7 +278,7 @@ go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 
 ##### Webhook Url:
 
-`http://localhost:8081`
+`http://localhost:8080`
 
 ##### Notification Type:
 

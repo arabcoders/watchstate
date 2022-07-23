@@ -682,17 +682,14 @@ final class Initializer
             }
         }
 
-        $context = array_replace_recursive(
-            [
-                'request' => [
-                    'id' => ag($params, 'X_REQUEST_ID'),
-                    'ip' => ag($params, ['X_FORWARDED_FOR', 'REMOTE_ADDR']),
-                    'agent' => ag($params, 'HTTP_USER_AGENT'),
-                    'uri' => (string)$uri,
-                ],
+        $context = array_replace_recursive([
+            'request' => [
+                'id' => ag($params, 'X_REQUEST_ID'),
+                'ip' => getClientIp($request),
+                'agent' => ag($params, 'HTTP_USER_AGENT'),
+                'uri' => (string)$uri,
             ],
-            $context
-        );
+        ], $context);
 
         if (($attributes = $request->getAttributes()) && count($attributes) >= 1) {
             $context['attributes'] = $attributes;

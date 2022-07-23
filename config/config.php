@@ -41,6 +41,10 @@ return (function () {
             ]
         ],
         'ignore' => [],
+        'trust' => [
+            'proxy' => (bool)env('WS_TRUST_PROXY', false),
+            'header' => (string)env('WS_TRUST_HEADER', 'X-Forwarded-For'),
+        ],
     ];
 
     $logDateFormat = makeDate()->format('Ymd');
