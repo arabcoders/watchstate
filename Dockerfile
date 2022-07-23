@@ -34,22 +34,22 @@ RUN echo '' && \
 #
 COPY ./ /opt/app
 
+# Copy Composer.
+COPY --from=composer:2 /usr/bin/composer /opt/composer
+
 # install composer & packages.
 #
 RUN echo '' && \
     # Create basic directories.
     bash -c 'mkdir -p /temp_data/ /opt/app /config/{backup,cache,config,db,debug,logs,webhooks}' && \
-    # link current PHP runtime to PHP.
-    ln -s /usr/bin/${PHP_V} /usr/bin/php && \
+    # Link Console & PHP shortcuts.
+    ln -s /usr/bin/${PHP_V} /usr/bin/php && ln -s ${TOOL_PATH}/bin/console /usr/bin/console && \
     # we are running rootless, so user,group config options has no affect.
     sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf && \
-    # Download composer.
-    curl -sSL "https://getcomposer.org/download/latest-stable/composer.phar" -o /opt/composer && chmod +x /opt/composer && \
     # Install dependencies.
     /opt/composer --working-dir=/opt/app/ -no --no-progress --no-dev --no-cache --quiet -- install && \
     # Copy configuration files to the expected directories.
-    ln -s ${TOOL_PATH}/bin/console /usr/bin/console && \
     cp ${TOOL_PATH}/container/files/job-runner.sh /opt/job-runner && \
     cp ${TOOL_PATH}/container/files/Caddyfile /opt/Caddyfile && \
     cp ${TOOL_PATH}/container/files/redis.conf /opt/redis.conf && \
@@ -63,7 +63,7 @@ RUN echo '' && \
     # Remove unneeded directories and tools.
     bash -c 'rm -rf /temp_data/ /opt/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
     # Change Permissions.
-    chown -R user:user /config /opt && chmod -R 777 /config /opt
+    chown -R user:user /config /opt
 
 # Set the entrypoint.
 #
