@@ -2,7 +2,7 @@ FROM alpine:3.16
 
 LABEL maintainer="admin@arabcoders.org"
 
-ENV IN_DOCKER=1
+ENV IN_CONTAINER=1
 ENV PHP_V=php81
 ENV TOOL_PATH=/opt/app
 ENV PHP_INI_DIR=/etc/${PHP_V}

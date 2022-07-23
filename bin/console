@@ -3,6 +3,8 @@
 
 declare(strict_types=1);
 
+use App\Command;
+
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
@@ -33,20 +35,31 @@ set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
     $message = sprintf('%s: %s (%s:%d).' . PHP_EOL, $errorLevels[$number] ?? (string)$number, $error, $file, $line);
     fwrite(STDERR, trim($message) . PHP_EOL);
 
-    exit(1);
+    exit(Command::FAILURE);
 });
 
 set_exception_handler(function (Throwable $e) {
     $message = sprintf("%s: %s (%s:%d)." . PHP_EOL, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
     fwrite(STDERR, trim($message) . PHP_EOL);
-    exit(1);
+    exit(Command::FAILURE);
 });
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
     fwrite(STDERR, 'Dependencies are missing.' . PHP_EOL);
-    exit(1);
+    exit(Command::FAILURE);
 }
 
 require __DIR__ . '/../vendor/autoload.php';
 
-(new App\Libs\Initializer())->boot()->runConsole();
+try {
+    $app = (new App\Libs\Initializer())->boot();
+} catch (Throwable $e) {
+    fwrite(
+            STDERR,
+            trim(sprintf("PANIC: %s: %s (%s:%d).", get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()))
+    );
+
+    exit(Command::FAILURE);
+}
+
+$app->runHttp();
