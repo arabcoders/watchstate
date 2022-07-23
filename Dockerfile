@@ -64,7 +64,7 @@ RUN echo '' && \
     # Remove unneeded directories and tools.
     bash -c 'rm -rf /temp_data/ /opt/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
     # Change Permissions.
-    chown -R user:user /config /opt
+    chown -R user:user /config /opt /var/log/ && chmod -R 775 /var/log/
 
 # Add Healthcheck for PHP FPM.
 #
