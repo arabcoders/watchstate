@@ -66,11 +66,6 @@ RUN echo '' && \
     # Change Permissions.
     chown -R user:user /config /opt /var/log/ && chmod -R 775 /var/log/
 
-# Add Healthcheck for PHP FPM.
-#
-RUN curl -Ls https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
-    -o /usr/local/bin/php-fpm-healthcheck && chmod +x /usr/local/bin/php-fpm-healthcheck
-
 # Set the entrypoint.
 #
 ENTRYPOINT ["/opt/init-container"]
