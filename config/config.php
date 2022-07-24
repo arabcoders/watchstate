@@ -30,11 +30,15 @@ return (function () {
         'database' => [
             'version' => 'v01',
         ],
+        'library' => [
+            // -- this is used to segment backends requests into pages.
+            'segment' => (int)env('WS_LIBRARY_SEGMENT', 8_000),
+        ],
         'export' => [
             // -- Trigger full export mode if changes exceed X number.
-            'threshold' => env('WS_EXPORT_THRESHOLD', 1000),
+            'threshold' => (int)env('WS_EXPORT_THRESHOLD', 1_000),
             // -- Extra margin for marking item not found for backend in export mode. Default 3 days.
-            'not_found' => env('WS_EXPORT_NOT_FOUND', 259_200),
+            'not_found' => (int)env('WS_EXPORT_NOT_FOUND', 259_200),
         ],
         'episodes' => [
             'disable' => [

@@ -157,7 +157,7 @@ class Import
             $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
         }
 
-        $requests = [];
+        $requests = $libraryTotalItems = $total = [];
         $ignored = $unsupported = 0;
 
         // -- Get TV shows metadata.
@@ -236,7 +236,134 @@ class Import
             }
         }
 
-        // -- Get Movies/episodes.
+        // -- Get library items count.
+        foreach ($listDirs as $section) {
+            $key = (int)ag($section, 'key');
+
+            $logContext = [
+                'library' => [
+                    'id' => ag($section, 'key'),
+                    'title' => ag($section, 'title', '??'),
+                    'type' => ag($section, 'type', 'unknown'),
+                ],
+            ];
+
+            if (true === in_array($key, $ignoreIds ?? [])) {
+                continue;
+            }
+
+            if (!in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
+                continue;
+            }
+
+            $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
+
+            $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
+                http_build_query([
+                    'includeGuids' => 1,
+                    'type' => $isMovieLibrary ? 1 : 4,
+                    'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
+                ])
+            );
+
+            $logContext['library']['url'] = $url;
+
+            $this->logger->debug('Requesting [%(backend)] [%(library.title)] items count.', [
+                'backend' => $context->backendName,
+                ...$logContext,
+            ]);
+
+            try {
+                $libraryTotalItems[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($context->backendHeaders, [
+                        'headers' => [
+                            'X-Plex-Container-Start' => 0,
+                            'X-Plex-Container-Size' => 0,
+                        ],
+                        'user_data' => $logContext,
+                    ])
+                );
+            } catch (ExceptionInterface $e) {
+                $this->logger->error('Request for [%(backend)] [%(library.title)] items count has failed.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
+                    ],
+                ]);
+                continue;
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] items count request.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ],
+                    ]
+                );
+                continue;
+            }
+        }
+
+        foreach ($libraryTotalItems as $response) {
+            $logContext = ag($response->getInfo('user_data'), []);
+
+            try {
+                if (200 !== $response->getStatusCode()) {
+                    $this->logger->error(
+                        'Request for [%(backend)] [%(library.title)] items count returned with unexpected [%(status_code)] status code.',
+                        [
+                            'backend' => $context->backendName,
+                            'status_code' => $response->getStatusCode(),
+                            ...$logContext,
+                        ]
+                    );
+                    continue;
+                }
+
+                $totalCount = (int)(ag($response->getHeaders(), 'x-plex-container-total-size')[0] ?? 0);
+
+                if ($totalCount < 1) {
+                    $this->logger->warning(
+                        'Request for [%(backend)] [%(library.title)] items count returned with total number of 0.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'headers' => $response->getHeaders(),
+                        ]
+                    );
+                    continue;
+                }
+
+                $total[(int)ag($logContext, 'library.id')] = $totalCount;
+            } catch (ExceptionInterface $e) {
+                $this->logger->error('Request for [%(backend)] [%(library.title)] total items has failed.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
+                    ],
+                ]);
+                continue;
+            }
+        }
+
         foreach ($listDirs as $section) {
             $key = (int)ag($section, 'key');
 
@@ -269,49 +396,85 @@ class Import
                 continue;
             }
 
-            $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
-                http_build_query(
-                    [
-                        'type' => PlexClient::TYPE_MOVIE === ag($logContext, 'library.type') ? 1 : 4,
-                        'includeGuids' => 1,
-                    ]
-                )
-            );
-
-            $logContext['library']['url'] = $url;
-
-            $this->logger->debug('Requesting [%(backend)] [%(library.title)] content list.', [
-                'backend' => $context->backendName,
-                ...$logContext,
-            ]);
-
-            try {
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    $context->backendHeaders + [
-                        'user_data' => [
-                            'ok' => $handle($logContext),
-                            'error' => $error($logContext),
-                        ]
-                    ],
-                );
-            } catch (ExceptionInterface $e) {
-                $this->logger->error('Requesting for [%(backend)] [%(library.title)] content list has failed.', [
+            if (false === array_key_exists($key, $total)) {
+                $ignored++;
+                $this->logger->warning('Ignoring [%(backend)] [%(library.title)]. No items count was found.', [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $context->trace ? $e->getTrace() : [],
-                    ],
                 ]);
+                continue;
+            }
+
+            try {
+                $segmentTotal = (int)$total[ag($logContext, 'library.id')];
+                $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
+                $segmented = ceil($segmentTotal / $segmentSize);
+
+                for ($i = 0; $i < $segmented; $i++) {
+                    $logContext['segment'] = [
+                        'number' => $i + 1,
+                        'of' => $segmented,
+                        'size' => $segmentSize,
+                        'total' => $segmentTotal,
+                    ];
+
+                    $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
+                    $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
+                        http_build_query(
+                            [
+                                'includeGuids' => 1,
+                                'type' => $isMovieLibrary ? 1 : 4,
+                                'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
+                                'X-Plex-Container-Size' => $segmentSize,
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
+                            ]
+                        )
+                    );
+
+                    $logContext['library']['url'] = $url;
+
+                    $this->logger->debug(
+                        'Requesting [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                        ]
+                    );
+
+                    $requests[] = $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($context->backendHeaders, [
+                            'headers' => [
+                                'X-Plex-Container-Size' => $segmentSize,
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
+                            ],
+                            'user_data' => [
+                                'ok' => $handle($logContext),
+                                'error' => $error($logContext),
+                            ]
+                        ]),
+                    );
+                }
+            } catch (ExceptionInterface $e) {
+                $this->logger->error(
+                    'Request for [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list has failed.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ],
+                    ]
+                );
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] content list request.',
+                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list request.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
