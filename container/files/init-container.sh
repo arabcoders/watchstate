@@ -66,7 +66,7 @@ echo "[${TIME_DATE}] Running - $(/usr/bin/console --version)"
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
-  set -- php-fpm "$@"
+  set -- php-fpm81 "$@"
 fi
 
 exec "$@"
