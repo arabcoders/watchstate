@@ -81,18 +81,21 @@ class PlexClient implements iClient
             backendId: $context->backendId,
             backendToken: $context->backendToken,
             backendUser: $context->backendUser,
-            backendHeaders: array_replace_recursive(
-                [
-                    'headers' => [
-                        'Accept' => 'application/json',
-                        'X-Plex-Token' => $context->backendToken,
-                        'X-Plex-Container-Size' => 0,
-                    ],
+            backendHeaders: array_replace_recursive([
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'X-Plex-Token' => $context->backendToken,
+                    'X-Plex-Container-Size' => 0,
                 ],
-                ag($context->options, 'client', [])
-            ),
+            ], ag($context->options, 'client', [])),
             trace: true === ag($context->options, Options::DEBUG_TRACE),
-            options: $context->options
+            options: array_replace_recursive($context->options, [
+                Options::LIBRARY_SEGMENT => (int)ag(
+                    $context->options,
+                    Options::LIBRARY_SEGMENT,
+                    Config::get('library.segment')
+                ),
+            ])
         );
 
         $cloned->guid = $cloned->guid->withContext($cloned->context);

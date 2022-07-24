@@ -150,16 +150,29 @@ class Import
             ]);
             Message::add("{$context->backendName}.has_errors", true);
             return [];
+        } catch (Throwable $e) {
+            $this->logger->error('Unhandled exception was thrown during request for [%(backend)] libraries.', [
+                'backend' => $context->backendName,
+                'exception' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'trace' => $context->trace ? $e->getTrace() : [],
+                ],
+            ]);
+            Message::add("{$context->backendName}.has_errors", true);
+            return [];
         }
 
         if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
             $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
-        $requests = [];
+        $requests = $total = [];
         $ignored = $unsupported = 0;
 
-        // -- Episodes Parent external ids.
+        // -- Get library items count.
         foreach ($listDirs as $section) {
             $logContext = [
                 'library' => [
@@ -169,12 +182,152 @@ class Import
                 ],
             ];
 
+            if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
+                continue;
+            }
+
+            if (!in_array(ag($logContext, 'library.type'), [JFC::COLLECTION_TYPE_SHOWS, JFC::COLLECTION_TYPE_MOVIES])) {
+                continue;
+            }
+
+            $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
+                http_build_query(
+                    [
+                        'sortBy' => 'DateCreated',
+                        'sortOrder' => 'Ascending',
+                        'parentId' => ag($logContext, 'library.id'),
+                        'recursive' => 'true',
+                        'excludeLocationTypes' => 'Virtual',
+                        'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
+                        'startIndex' => 0,
+                        'limit' => 0,
+                    ]
+                )
+            );
+
+            $logContext['library']['url'] = (string)$url;
+
+            $this->logger->debug('Requesting [%(backend)] [%(library.title)] items count.', [
+                'backend' => $context->backendName,
+                ...$logContext,
+            ]);
+
+            try {
+                $requests[] = $this->http->request(
+                    'GET',
+                    (string)$url,
+                    array_replace_recursive($context->backendHeaders, [
+                        'user_data' => $logContext
+                    ])
+                );
+            } catch (ExceptionInterface $e) {
+                $this->logger->error('Request for [%(backend)] [%(library.title)] items count has failed.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
+                    ],
+                ]);
+                continue;
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] items count request.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ],
+                    ]
+                );
+                continue;
+            }
+        }
+
+        // -- Parse libraries items count.
+        foreach ($requests as $response) {
+            $logContext = ag($response->getInfo('user_data'), []);
+
+            try {
+                if (200 !== $response->getStatusCode()) {
+                    $this->logger->error(
+                        'Request for [%(backend)] [%(library.title)] items count returned with unexpected [%(status_code)] status code.',
+                        [
+                            'backend' => $context->backendName,
+                            'status_code' => $response->getStatusCode(),
+                            ...$logContext,
+                        ]
+                    );
+                    continue;
+                }
+
+                $json = json_decode($response->getContent(), true);
+
+                $totalCount = (int)(ag($json, 'TotalRecordCount', 0));
+
+                if ($totalCount < 1) {
+                    $this->logger->warning(
+                        'Request for [%(backend)] [%(library.title)] items count returned with total number of 0.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'body' => $json,
+                        ]
+                    );
+                    continue;
+                }
+
+                $total[ag($logContext, 'library.id')] = $totalCount;
+            } catch (ExceptionInterface $e) {
+                $this->logger->error('Request for [%(backend)] [%(library.title)] total items has failed.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
+                    ],
+                ]);
+                continue;
+            }
+        }
+
+        $requests = [];
+
+        // -- Episodes Parent external ids.
+        foreach ($listDirs as $section) {
+            $logContext = [
+                'library' => [
+                    'id' => (string)ag($section, 'Id'),
+                    'title' => ag($section, 'Name', '??'),
+                    'type' => ag($section, 'CollectionType', 'unknown'),
+                ],
+                'segment' => [
+                    'number' => 1,
+                    'of' => 1,
+                ],
+            ];
+
             if (JFC::COLLECTION_TYPE_SHOWS !== ag($logContext, 'library.type')) {
                 continue;
             }
 
             if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
                 continue;
+            }
+
+            if (true === array_key_exists(ag($logContext, 'library.id'), $total)) {
+                $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
             }
 
             $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
@@ -224,9 +377,26 @@ class Import
                     ]
                 );
                 continue;
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] series external ids request.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ],
+                    ]
+                );
+                continue;
             }
         }
 
+        // -- get paginated movies/episodes.
         foreach ($listDirs as $section) {
             $logContext = [
                 'library' => [
@@ -235,6 +405,7 @@ class Import
                     'type' => ag($section, 'CollectionType', 'unknown'),
                 ],
             ];
+
 
             if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
                 $ignored++;
@@ -257,51 +428,101 @@ class Import
                 continue;
             }
 
-            $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
-                http_build_query(
-                    [
-                        'parentId' => ag($logContext, 'library.id'),
-                        'recursive' => 'true',
-                        'enableUserData' => 'true',
-                        'enableImages' => 'false',
-                        'excludeLocationTypes' => 'Virtual',
-                        'fields' => implode(',', JFC::EXTRA_FIELDS),
-                        'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
-                    ]
-                )
-            );
-
-            $logContext['library']['url'] = (string)$url;
-
-            $this->logger->debug('Requesting [%(backend)] [%(library.title)] content list.', [
-                'backend' => $context->backendName,
-                ...$logContext,
-            ]);
-
-            try {
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    $context->backendHeaders + [
-                        'user_data' => [
-                            'ok' => $handle($logContext),
-                            'error' => $error($logContext),
-                        ]
-                    ]
-                );
-            } catch (ExceptionInterface $e) {
-                $this->logger->error('Requesting for [%(backend)] [%(library.title)] content list has failed.', [
+            if (false === array_key_exists(ag($logContext, 'library.id'), $total)) {
+                $ignored++;
+                $this->logger->warning('Ignoring [%(backend)] [%(library.title)]. No items count was found.', [
                     'backend' => $context->backendName,
                     ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $context->trace ? $e->getTrace() : [],
-                    ],
                 ]);
                 continue;
+            }
+
+            $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
+
+            $segmentTotal = (int)$total[ag($logContext, 'library.id')];
+            $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
+            $segmented = ceil($segmentTotal / $segmentSize);
+
+            for ($i = 0; $i < $segmented; $i++) {
+                try {
+                    $logContext['segment'] = [
+                        'number' => $i + 1,
+                        'of' => $segmented,
+                        'size' => $segmentSize,
+                    ];
+
+                    $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))
+                        ->withQuery(
+                            http_build_query(
+                                [
+                                    'sortBy' => 'DateCreated',
+                                    'sortOrder' => 'Ascending',
+                                    'parentId' => ag($logContext, 'library.id'),
+                                    'recursive' => 'true',
+                                    'enableUserData' => 'true',
+                                    'enableImages' => 'false',
+                                    'excludeLocationTypes' => 'Virtual',
+                                    'fields' => implode(',', JFC::EXTRA_FIELDS),
+                                    'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
+                                    'limit' => $segmentSize,
+                                    'startIndex' => $i < 1 ? 0 : ($segmentSize * $i),
+                                ]
+                            )
+                        );
+
+                    $logContext['library']['url'] = (string)$url;
+
+                    $this->logger->debug(
+                        'Requesting [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                        ]
+                    );
+
+                    $requests[] = $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($context->backendHeaders, [
+                            'user_data' => [
+                                'ok' => $handle($logContext),
+                                'error' => $error($logContext),
+                            ]
+                        ])
+                    );
+                } catch (ExceptionInterface $e) {
+                    $this->logger->error(
+                        'Request for [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list has failed.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $context->trace ? $e->getTrace() : [],
+                            ],
+                        ]
+                    );
+                    continue;
+                } catch (Throwable $e) {
+                    $this->logger->error(
+                        'Unhandled exception was thrown during [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list request.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $context->trace ? $e->getTrace() : [],
+                            ],
+                        ]
+                    );
+                    continue;
+                }
             }
         }
 
@@ -314,6 +535,7 @@ class Import
                     'unsupported' => $unsupported,
                 ],
             ]);
+
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         }
@@ -339,13 +561,16 @@ class Import
         }
 
         $start = makeDate();
-        $this->logger->info('Parsing [%(backend)] library [%(library.title)] response.', [
-            'backend' => $context->backendName,
-            ...$logContext,
-            'time' => [
-                'start' => $start,
-            ],
-        ]);
+        $this->logger->info(
+            'Parsing [%(backend)] library [%(library.title)] [%(segment.number)/%(segment.of)] response.',
+            [
+                'backend' => $context->backendName,
+                ...$logContext,
+                'time' => [
+                    'start' => $start,
+                ],
+            ]
+        );
 
         try {
             $it = Items::fromIterable(
@@ -364,7 +589,7 @@ class Import
             foreach ($it as $entity) {
                 if ($entity instanceof DecodingError) {
                     $this->logger->warning(
-                        'Failed to decode one item of [%(backend)] [%(library.title)] content.',
+                        'Failed to decode one item of [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -381,7 +606,7 @@ class Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during parsing of [%(backend)] library [%(library.title)] response.',
+                'Unhandled exception was thrown during parsing of [%(backend)] library [%(library.title)] [%(segment.number)/%(segment.of)] response.',
                 [
                     'backend' => $context->backendName,
                     ...$logContext,
@@ -397,15 +622,18 @@ class Import
         }
 
         $end = makeDate();
-        $this->logger->info('Parsing [%(backend)] library [%(library.title)] response is complete.', [
-            'backend' => $context->backendName,
-            ...$logContext,
-            'time' => [
-                'start' => $start,
-                'end' => $end,
-                'duration' => number_format($end->getTimestamp() - $start->getTimestamp()),
-            ],
-        ]);
+        $this->logger->info(
+            'Parsing [%(backend)] library [%(library.title)] [%(segment.number)/%(segment.of)] response is complete.',
+            [
+                'backend' => $context->backendName,
+                ...$logContext,
+                'time' => [
+                    'start' => $start,
+                    'end' => $end,
+                    'duration' => number_format($end->getTimestamp() - $start->getTimestamp()),
+                ],
+            ]
+        );
 
         Message::increment('response.size', (int)$response->getInfo('size_download'));
     }
