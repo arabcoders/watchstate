@@ -80,17 +80,20 @@ class EmbyClient implements iClient
             backendId: $context->backendId,
             backendToken: $context->backendToken,
             backendUser: $context->backendUser,
-            backendHeaders: array_replace_recursive(
-                [
-                    'headers' => [
-                        'Accept' => 'application/json',
-                        'X-MediaBrowser-Token' => $context->backendToken,
-                    ],
+            backendHeaders: array_replace_recursive([
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'X-MediaBrowser-Token' => $context->backendToken,
                 ],
-                ag($context->options, 'client', [])
-            ),
+            ], ag($context->options, 'client', [])),
             trace: true === ag($context->options, Options::DEBUG_TRACE),
-            options: $context->options
+            options: array_replace_recursive($context->options, [
+                Options::LIBRARY_SEGMENT => (int)ag(
+                    $context->options,
+                    Options::LIBRARY_SEGMENT,
+                    Config::get('library.segment')
+                ),
+            ])
         );
 
         $cloned->guid = $cloned->guid->withContext($cloned->context);

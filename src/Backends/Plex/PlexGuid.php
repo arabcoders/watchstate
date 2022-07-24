@@ -165,7 +165,7 @@ final class PlexGuid implements iGuid
                 // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
                     if (true === $log) {
-                        $this->logger->info(
+                        $this->logger->debug(
                             '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
                             [
                                 'backend' => $this->context->backendName,
