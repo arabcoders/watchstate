@@ -7,34 +7,32 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 * Sync backends play state (from many to many).
 * Backup your backends play state into `portable` format.
-* Webhook play state receiver.
-* Find `un-matched` media items.
-* Find `mis-matched` media items.
-* Search your backend for `title`.
-* Search your backend for `item id`.
-* Display and filter your play state can be exported to `json` or `yaml`.
+* Receive Webhook events from media backends..
+* Find `un-matched` or `mis-matched` items.
+* Search your backend for `title` or `item id`.
+* Display and filter your play state. Can be exported variety of formats.
 
 ----
 
 ## Breaking change since 2022-07-23
 
-We rebuilt the container to be `rootless` and to be more secure. So, there are some breaking changes that might need
-your attention. Things that need to be adjusted if you run this tool before 2022-07-22:
+We rebuilt the container to be `rootless`. So, there are some breaking changes that might need your attention. Things
+that need to be adjusted if you run this tool before 2022-07-22:
 
 ### Webhook default listener port
 
-Since we used to use the port `80` and this port is privileged we cannot use it in rootless container, so the default
-port changed to `8080`. If you used the webhook receiver before. you have to change the port in your media backends and
-or your frontend proxy.
+Default port has been changed from `80` to `8080`. If you are using the webhook functionality, You have to change the
+port in your media backends and or your frontend proxy.
 
-### User id and group id mapping
+### User and group id mapping
 
-Running rootless means we cannot change the user and group id inside the container anymore. So, if you changed the
-user/group id before using `WS_GID`, `WS_UID` those no longer works, and you need to use the `user:` directive. There is
-example written in the [installation](#install) section.
+Running `rootless` container means we cannot change the user and group id during runtime. If you have changed the
+default user and/or group id before using `WS_GID`, `WS_UID` environment variables those no longer works. You need to
+use the `user:` directive. There is example written in the [installation](#install) section. Most users will not be
+affected as the default user/group id is `1000`.
 
-Most users will not be affected as the default uid/gid is `1000`, However for `unRaid` users you need to change
-the `user:` directive to be `user: "99:100"`
+**Note**: `Unraid` users you need to change the `user:` directive to be `user: "99:100"` to match the default user/group
+mapping.
 
 **Note**: this change does not affect Windows users.
 

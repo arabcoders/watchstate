@@ -245,7 +245,7 @@ class ImportCommand extends Command
             $metadata = false;
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by [-s, --select-backends] flag.', [
+                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by select backends flag.', [
                     'backend' => $backendName,
                 ]);
                 continue;
