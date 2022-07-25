@@ -66,7 +66,7 @@ Create directory called `data` next to the `docker-compose.yaml` file.
 After creating your docker compose file, start the container.
 
 ```bash
-$ docker-compose pull && docker-compose up -d
+$ mkdir -p ./data && docker-compose pull && docker-compose up -d
 ```
 
 # Adding backend
