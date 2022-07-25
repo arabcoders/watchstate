@@ -10,7 +10,7 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 * Receive Webhook events from media backends..
 * Find `un-matched` or `mis-matched` items.
 * Search your backend for `title` or `item id`.
-* Display and filter your play state. Can be exported variety of formats.
+* Display and filter your play state. Can be exported as `yaml` or `json`.
 
 ----
 
