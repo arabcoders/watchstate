@@ -168,16 +168,26 @@ final class Initializer
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
             $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
         } catch (Throwable $e) {
-            Container::get(LoggerInterface::class)->error(
-                $e->getMessage(),
+            $httpException = (true === ($e instanceof HttpException));
+
+            if (false === $httpException || $e->getCode() !== 200) {
+                Container::get(LoggerInterface::class)->error(
+                    $e->getMessage(),
+                    [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'trace' => $e->getTrace(),
+                    ]
+                );
+            }
+
+            $response = new Response(
+                $httpException && $e->getCode() >= 200 && $e->getCode() <= 499 ? $e->getCode() : 500,
                 [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'trace' => $e->getTrace(),
+                    'X-Error-Message' => $httpException ? $e->getMessage() : ''
                 ]
             );
-            $response = new Response(500);
         }
 
         $emitter->emit($response);
