@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use App\Cli;
-use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use Closure;
+use DateInterval;
 use ErrorException;
-use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
+use Laminas\HttpHandlerRunner\Emitter\EmitterInterface as iEmitter;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
@@ -20,7 +20,7 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
@@ -39,10 +39,12 @@ final class Initializer
     {
         // -- Load user custom environment variables.
         (function () {
+            // -- This env file should only be used during development or direct installation.
             if (file_exists(__DIR__ . '/../../.env')) {
                 (new Dotenv())->usePutenv(true)->overload(__DIR__ . '/../../.env');
             }
 
+            // -- This is the official place where users are supposed to store .env file.
             $dataPath = env('WS_DATA_PATH', fn() => inContainer() ? '/config' : __DIR__ . '/../../var');
             if (file_exists($dataPath . '/config/.env')) {
                 (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/.env');
@@ -121,18 +123,14 @@ final class Initializer
         return $this;
     }
 
-    public function runConsole(): void
+    public function console(): void
     {
         try {
             $this->cli->setCatchExceptions(false);
 
             $cache = Container::get(CacheInterface::class);
 
-            if (!$cache->has('routes')) {
-                $routes = generateRoutes();
-            } else {
-                $routes = $cache->get('routes', []);
-            }
+            $routes = false === $cache->has('routes') ? generateRoutes() : $cache->get('routes', []);
 
             $this->cli->setCommandLoader(
                 new ContainerCommandLoader(Container::getContainer(), $routes)
@@ -148,15 +146,12 @@ final class Initializer
     /**
      * Handle HTTP Request.
      *
-     * @param ServerRequestInterface|null $request
-     * @param EmitterInterface|null $emitter
-     * @param null|Closure(ServerRequestInterface): ResponseInterface $fn
+     * @param iRequest|null $request
+     * @param iEmitter|null $emitter
+     * @param null|Closure(iRequest): ResponseInterface $fn
      */
-    public function runHttp(
-        ServerRequestInterface|null $request = null,
-        EmitterInterface|null $emitter = null,
-        Closure|null $fn = null,
-    ): void {
+    public function http(iRequest|null $request = null, iEmitter|null $emitter = null, Closure|null $fn = null): void
+    {
         $emitter = $emitter ?? new SapiEmitter();
 
         if (null === $request) {
@@ -193,7 +188,10 @@ final class Initializer
         $emitter->emit($response);
     }
 
-    private function defaultHttpServer(ServerRequestInterface $realRequest): ResponseInterface
+    /**
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    private function defaultHttpServer(iRequest $realRequest): ResponseInterface
     {
         $log = $backend = [];
         $class = null;
@@ -349,195 +347,35 @@ final class Initializer
             return new Response(304);
         }
 
-        $db = Container::get(iDB::class);
+        $cache = Container::get(CacheInterface::class);
 
-        if (null === ($local = $db->get($entity))) {
-            if (true === $metadataOnly) {
-                $this->write(
-                    $request, Logger::INFO,
-                    'Ignoring [%(backend)] %(item.type) [%(item.title)]. Backend flagged for metadata only.',
-                    [
-                        'backend' => $entity->via,
-                        'item' => [
-                            'title' => $entity->getName(),
-                            'type' => $entity->type,
-                        ]
-                    ]
-                );
+        $items = $cache->get('requests', []);
 
-                return new Response(204);
-            }
+        $itemId = r('{type}://{id}:{tainted}@{backend}', [
+            'type' => $entity->type,
+            'backend' => $entity->via,
+            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+        ]);
 
-            $entity = $db->insert($entity);
+        $items[$itemId] = [
+            'options' => [
+                Options::IMPORT_METADATA_ONLY => $metadataOnly,
+            ],
+            'entity' => $entity,
+        ];
 
-            if (true === $entity->isWatched()) {
-                queuePush($entity);
-            }
+        $cache->set('requests', $items, new DateInterval('P3D'));
 
-            $this->write($request, Logger::NOTICE, '[%(backend)] Added [%(item.title)] as new item.', [
-                'id' => $entity->id,
-                'backend' => $entity->via,
-                'item' => [
-                    'title' => $entity->getName(),
-                    'type' => $entity->type,
-                ]
-            ]);
-
-            return new Response(200);
-        }
-
-        $cloned = clone $local;
-
-        if (true === $metadataOnly || true === $entity->isTainted()) {
-            $flag = true === $metadataOnly ? 'M' : 'T';
-            $keys = true === $metadataOnly ? [iFace::COLUMN_META_DATA] : iFace::ENTITY_FORCE_UPDATE_FIELDS;
-
-            if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                $local = $db->update(
-                    $local->apply(
-                        entity: $entity,
-                        fields: array_merge($keys, [iFace::COLUMN_EXTRA])
-                    )
-                );
-
-                $this->write(
-                    $request, Logger::NOTICE,
-                    '[%(flag)] [%(backend)] updated [%(item.title)] metadata.',
-                    [
-                        'flag' => $flag,
-                        'id' => $local->id,
-                        'backend' => $entity->via,
-                        'item' => [
-                            'title' => $entity->getName(),
-                            'type' => $entity->type,
-                        ]
-                    ]
-                );
-
-                return new Response(200);
-            }
-
-            $this->write(
-                $request, Logger::DEBUG,
-                '[%(flag)] Ignoring [%(backend)] [%(item.title)] request. This webhook event is irrelevant.',
-                [
-                    'flag' => $flag,
-                    'id' => $local->id,
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                    ],
-                ]
-            );
-
-            return new Response(204);
-        }
-
-        if ($local->updated >= $entity->updated) {
-            $keys = iFace::ENTITY_FORCE_UPDATE_FIELDS;
-
-            // -- Handle mark as unplayed logic.
-            if (false === $entity->isWatched() && true === $local->shouldMarkAsUnplayed($entity)) {
-                $local = $db->update(
-                    $local->apply(entity: $entity, fields: [iFace::COLUMN_META_DATA])->markAsUnplayed($entity)
-                );
-
-                queuePush($local);
-
-                $this->write(
-                    $request, Logger::NOTICE,
-                    '[%(backend)] marked [%(item.title)] as [Unplayed].',
-                    [
-                        'id' => $local->id,
-                        'backend' => $entity->via,
-                        'item' => [
-                            'title' => $entity->getName(),
-                        ],
-                    ]
-                );
-
-                return new Response(200);
-            }
-
-            if ((clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                $local = $db->update(
-                    $local->apply(
-                        entity: $entity,
-                        fields: array_merge($keys, [iFace::COLUMN_EXTRA])
-                    )
-                );
-
-                $this->write(
-                    $request, Logger::INFO,
-                    '[%(backend)] updated [%(item.title)] metadata.',
-                    [
-                        'id' => $local->id,
-                        'backend' => $entity->via,
-                        'item' => [
-                            'title' => $entity->getName(),
-                            'type' => $entity->type,
-                        ],
-                    ]
-                );
-
-                return new Response(200);
-            }
-
-            $this->write(
-                $request, Logger::DEBUG,
-                '[%(backend)] %(item.type) [%(item.title)] metadata is identical to locally stored metadata.',
-                [
-                    'id' => $local->id,
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                    ],
-                ]
-            );
-
-            return new Response(200);
-        }
-
-        if ((clone $cloned)->apply($entity)->isChanged()) {
-            $local = $db->update($local->apply($entity));
-            $stateChanged = $cloned->isWatched() !== $local->isWatched();
-
-            $this->write(
-                $request,
-                $stateChanged ? Logger::NOTICE : Logger::INFO,
-                $stateChanged ? '[%(backend)] marked [%(item.title)] as [%(item.state)].' : '[%(backend)] updated [%(item.title)] metadata.',
-                [
-                    'id' => $local->id,
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                        'state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                    ],
-                ]
-            );
-
-            if (true === $stateChanged) {
-                queuePush($local);
-            }
-
-            return new Response(200);
-        }
-
-        $this->write(
-            $request, Logger::DEBUG,
-            '[%(backend)] %(item.type) [%(item.title)] metadata and play state is identical to local data.',
-            [
-                'id' => $local->id,
-                'backend' => $entity->via,
-                'item' => [
-                    'title' => $entity->getName(),
-                    'type' => $entity->type,
-                ],
+        $this->write($request, Logger::INFO, 'Queued [%(backend)] %(item.type) [%(item.title)] for processing.', [
+            'backend' => $entity->via,
+            'item' => [
+                'title' => $entity->getName(),
+                'type' => $entity->type,
+                'played' => $entity->isWatched() ? 'Yes' : 'No',
+                'queue_id' => $itemId,
             ]
-        );
+        ]);
 
         return new Response(200);
     }
@@ -673,7 +511,7 @@ final class Initializer
     }
 
     private function write(
-        ServerRequestInterface $request,
+        iRequest $request,
         int $level,
         string $message,
         array $context = [],

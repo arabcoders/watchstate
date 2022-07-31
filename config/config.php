@@ -9,6 +9,7 @@ use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
 use App\Commands\State\PushCommand;
+use App\Commands\State\RequestsCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
@@ -247,6 +248,14 @@ return (function () {
                 'enabled' => (bool)env('WS_CRON_INDEXES', true),
                 'timer' => (string)env('WS_CRON_INDEXES_AT', '0 3 * * 3'),
                 'args' => env('WS_CRON_INDEXES_ARGS', '-v'),
+            ],
+            RequestsCommand::TASK_NAME => [
+                'command' => RequestsCommand::ROUTE,
+                'name' => RequestsCommand::TASK_NAME,
+                'info' => 'Process queued http requests.',
+                'enabled' => (bool)env('WS_CRON_REQUESTS', true),
+                'timer' => (string)env('WS_CRON_REQUESTS_AT', '*/2 * * * *'),
+                'args' => env('WS_CRON_REQUESTS_ARGS', '-v'),
             ],
         ],
     ];

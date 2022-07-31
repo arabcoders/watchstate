@@ -289,17 +289,20 @@ final class MemoryMapper implements iImport
             return $this;
         }
 
+        $context = [
+            'id' => $cloned->id,
+            'backend' => $entity->via,
+            'title' => $cloned->getName(),
+        ];
+
         if (true === $this->inTraceMode()) {
-            $this->logger->debug('MAPPER: [%(backend)] [%(title)] metadata and play state is identical.', [
-                'id' => $cloned->id,
-                'backend' => $entity->via,
-                'title' => $cloned->getName(),
-                'state' => [
-                    'database' => $cloned->getAll(),
-                    'backend' => $entity->getAll(),
-                ],
-            ]);
+            $context['state'] = [
+                'database' => $cloned->getAll(),
+                'backend' => $entity->getAll(),
+            ];
         }
+
+        $this->logger->debug('MAPPER: [%(backend)] [%(title)] metadata and play state is identical.', $context);
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
