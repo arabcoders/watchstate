@@ -164,7 +164,7 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number.       | `8000`             |
 
 **Note**: for environment variables that has `{TASK}` tag, you **MUST** replace it with one
-of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`. To see tasks active settings run
+of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
 
 ```bash
 $ docker exec -ti watchstate console system:tasks
