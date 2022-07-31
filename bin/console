@@ -32,16 +32,16 @@ set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
         return;
     }
 
-    $message = sprintf('%s: %s (%s:%d).' . PHP_EOL, $errorLevels[$number] ?? (string)$number, $error, $file, $line);
+    $message = sprintf('%s: %s (%s:%d).', $errorLevels[$number] ?? (string)$number, $error, $file, $line);
     fwrite(STDERR, trim($message) . PHP_EOL);
 
-    exit(Command::FAILURE);
+    exit(501);
 });
 
 set_exception_handler(function (Throwable $e) {
-    $message = sprintf("%s: %s (%s:%d)." . PHP_EOL, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+    $message = sprintf('%s: %s (%s:%d).', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
     fwrite(STDERR, trim($message) . PHP_EOL);
-    exit(Command::FAILURE);
+    exit(502);
 });
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
@@ -54,12 +54,10 @@ require __DIR__ . '/../vendor/autoload.php';
 try {
     $app = (new App\Libs\Initializer())->boot();
 } catch (Throwable $e) {
-    fwrite(
-            STDERR,
-            trim(sprintf("PANIC: %s: %s (%s:%d).", get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()))
-    );
+    $message = sprintf('%s: %s (%s:%d).', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+    fwrite(STDERR, trim($message) . PHP_EOL);
 
-    exit(Command::FAILURE);
+    exit(503);
 }
 
-$app->runConsole();
+$app->console();

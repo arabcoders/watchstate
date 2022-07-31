@@ -57,4 +57,4 @@ try {
     exit(Command::FAILURE);
 }
 
-$app->runHttp();
+$app->http();
