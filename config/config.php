@@ -255,7 +255,7 @@ return (function () {
                 'info' => 'Process queued http requests.',
                 'enabled' => (bool)env('WS_CRON_REQUESTS', true),
                 'timer' => (string)env('WS_CRON_REQUESTS_AT', '*/2 * * * *'),
-                'args' => env('WS_CRON_REQUESTS_ARGS', '-v'),
+                'args' => env('WS_CRON_REQUESTS_ARGS', '-v --no-stats'),
             ],
         ],
     ];
