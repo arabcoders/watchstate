@@ -38,6 +38,7 @@ final class ParseWebhook
     protected const WEBHOOK_TAINTED_EVENTS = [
         'PlaybackStart',
         'PlaybackStop',
+        'ItemAdded',
     ];
 
     /**
