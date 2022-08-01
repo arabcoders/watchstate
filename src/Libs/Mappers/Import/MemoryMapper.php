@@ -147,8 +147,9 @@ final class MemoryMapper implements iImport
 
         /**
          * ONLY update backend metadata as requested by caller.
+         * if metadataOnly is set or the event is tainted.
          */
-        if (true === $metadataOnly) {
+        if (true === $metadataOnly || true === $entity->isTainted()) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                 $this->changed[$pointer] = $pointer;
                 Message::increment("{$entity->via}.{$entity->type}.updated");
@@ -276,12 +277,19 @@ final class MemoryMapper implements iImport
 
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
+            $message = 'MAPPER: [%(backend)] Updated [%(title)].';
+
+            if ($cloned->isWatched() !== $this->objects[$pointer]->isWatched()) {
+                $message = 'MAPPER: [%(backend)] Updated and marked [%(title)] as [%(state)].';
+            }
+
             if (count($changes) >= 1) {
-                $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
+                $this->logger->notice($message, [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
                     'changes' => $changes,
+                    'state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
                     'fields' => implode(', ', $keys),
                 ]);
             }

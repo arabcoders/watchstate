@@ -188,9 +188,10 @@ final class DirectMapper implements iImport
         $cloned = clone $local;
 
         /**
-         * Only allow metadata updates no play state changes.
+         * ONLY update backend metadata as requested by caller.
+         * if metadataOnly is set or the event is tainted.
          */
-        if (true === $metadataOnly) {
+        if (true === $metadataOnly || true === $entity->isTainted()) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                 try {
                     $local = $local->apply(entity: $entity, fields: array_merge($keys, [iState::COLUMN_EXTRA]));
@@ -368,11 +369,18 @@ final class DirectMapper implements iImport
 
                 $changes = $local->diff(fields: $keys);
 
+                $message = 'MAPPER: [%(backend)] Updated [%(title)].';
+
+                if ($cloned->isWatched() !== $local->isWatched()) {
+                    $message = 'MAPPER: [%(backend)] updated and marked [%(title)] as [%(state)].';
+                }
+
                 if (count($changes) >= 1) {
-                    $this->logger->notice('MAPPER: [%(backend)] Updated [%(title)].', [
+                    $this->logger->notice($message, [
                         'id' => $cloned->id,
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
+                        'state' => $local->isWatched() ? 'played' : 'unplayed',
                         'changes' => $local->diff(fields: $keys)
                     ]);
                 }
