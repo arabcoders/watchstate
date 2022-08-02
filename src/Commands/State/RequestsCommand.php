@@ -65,6 +65,7 @@ class RequestsCommand extends Command
             return self::SUCCESS;
         }
 
+        $queued = [];
         $requests = $this->cache->get('requests', []);
 
         if (count($requests) < 1) {
@@ -85,6 +86,10 @@ class RequestsCommand extends Command
             Options::DEBUG_TRACE => $input->getOption('trace')
         ]);
 
+        $fn = function (iState $state) use (&$queued) {
+            $queued[$state->id] = $state;
+        };
+
         foreach ($requests as $request) {
             $entity = ag($request, 'entity');
             assert($entity instanceof iState);
@@ -100,7 +105,12 @@ class RequestsCommand extends Command
 
             $this->mapper->add($entity, [
                 Options::IMPORT_METADATA_ONLY => (bool)ag($options, Options::IMPORT_METADATA_ONLY),
+                Options::STATE_UPDATE_EVENT => $fn,
             ]);
+        }
+
+        foreach ($queued as $item) {
+            queuePush($item);
         }
 
         $operations = $this->mapper->commit();
