@@ -20,6 +20,7 @@ final class Options
     public const MISMATCH_DEEP_SCAN = 'MISMATCH_DEEP_SCAN';
     public const DISABLE_GUID = 'DISABLE_GUID';
     public const LIBRARY_SEGMENT = 'LIBRARY_SEGMENT';
+    public const STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
 
     private function __construct()
     {

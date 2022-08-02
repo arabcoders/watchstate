@@ -104,6 +104,7 @@ final class DirectMapper implements iImport
 
         $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
         $inDryRunMode = $this->inDryRunMode();
+        $onStateUpdate = ag($opts, Options::STATE_UPDATE_EVENT, null);
 
         /**
          * Handle adding new item logic.
@@ -149,6 +150,10 @@ final class DirectMapper implements iImport
                     $entity->id = random_int((int)(PHP_INT_MAX / 2), PHP_INT_MAX);
                 } else {
                     $entity = $this->db->insert($entity);
+
+                    if (null !== $onStateUpdate && true === $entity->isWatched()) {
+                        $onStateUpdate($entity);
+                    }
                 }
 
                 $this->logger->notice('MAPPER: [%(backend)] added [%(title)] as new item.', [
@@ -256,6 +261,10 @@ final class DirectMapper implements iImport
 
                         if (false === $inDryRunMode) {
                             $this->db->update($local);
+
+                            if (null !== $onStateUpdate) {
+                                $onStateUpdate($local);
+                            }
                         }
 
                         $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
@@ -351,12 +360,12 @@ final class DirectMapper implements iImport
         }
 
         $keys = $opts['diff_keys'] ?? array_flip(
-                array_keys_diff(
-                    base: array_flip(iState::ENTITY_KEYS),
-                    list: iState::ENTITY_IGNORE_DIFF_CHANGES,
-                    has: false
-                )
-            );
+            array_keys_diff(
+                base: array_flip(iState::ENTITY_KEYS),
+                list: iState::ENTITY_IGNORE_DIFF_CHANGES,
+                has: false
+            )
+        );
 
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             try {
@@ -373,6 +382,10 @@ final class DirectMapper implements iImport
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
                     $message = 'MAPPER: [%(backend)] updated and marked [%(title)] as [%(state)].';
+
+                    if (null !== $onStateUpdate) {
+                        $onStateUpdate($local);
+                    }
                 }
 
                 if (count($changes) >= 1) {
