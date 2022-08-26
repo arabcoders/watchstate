@@ -161,7 +161,7 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_EPISODES_DISABLE_GUID | bool    | Disable external id parsing for episodes and rely on relative ids.            | `true`             |
 | WS_TRUST_PROXY           | bool    | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                             | `false`            |
 | WS_TRUST_HEADER          | string  | Which header contain user true IP.                                            | `X-Forwarded-For`  |
-| WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number.       | `8000`             |
+| WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number.       | `1000`             |
 
 **Note**: for environment variables that has `{TASK}` tag, you **MUST** replace it with one
 of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
