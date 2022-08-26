@@ -33,7 +33,7 @@ return (function () {
         ],
         'library' => [
             // -- this is used to segment backends requests into pages.
-            'segment' => (int)env('WS_LIBRARY_SEGMENT', 8_000),
+            'segment' => (int)env('WS_LIBRARY_SEGMENT', 1_000),
         ],
         'export' => [
             // -- Trigger full export mode if changes exceed X number.
