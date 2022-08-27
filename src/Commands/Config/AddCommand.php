@@ -6,6 +6,7 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Routable;
+use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -30,7 +31,7 @@ final class AddCommand extends Command
                     This command allow you to add new backend.
                     This command require <notice>interaction</notice> to work.
 
-                    This command is purely shortcut for running the following command:
+                    This command is shortcut for running the following command:
 
                     {cmd} <cmd>{manage_route}</cmd> --add -- <value>backend_name</value>
 
@@ -45,7 +46,7 @@ final class AddCommand extends Command
     }
 
     /**
-     * @throws \Exception
+     * @throws ExceptionInterface
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -59,6 +60,6 @@ final class AddCommand extends Command
 
         $opts['backend'] = strtolower($input->getArgument('backend'));
 
-        return $this->getApplication()?->find(ManageCommand::ROUTE)->run(new ArrayInput($opts), $output);
+        return $this->getApplication()?->find(ManageCommand::ROUTE)->run(new ArrayInput($opts), $output) ?? 1;
     }
 }
