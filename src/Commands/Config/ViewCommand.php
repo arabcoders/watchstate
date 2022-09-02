@@ -139,10 +139,16 @@ final class ViewCommand extends Command
             }
         }
 
-        (new Table($output))->setStyle('box')
-            ->setHeaders(['Backend', 'Filter: ' . (empty($filter) ? 'None' : $filter)]
-            )->setRows($rows)
-            ->render();
+        $mode = $input->getOption('output');
+
+        if ('table' === $mode) {
+            (new Table($output))->setStyle('box')
+                ->setHeaders(['Backend', 'Filter: ' . (empty($filter) ? 'None' : $filter)]
+                )->setRows($rows)
+                ->render();
+        } else {
+            $this->displayContent($list, $output, $mode);
+        }
 
         return self::SUCCESS;
     }

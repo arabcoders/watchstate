@@ -16,7 +16,7 @@ use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use Monolog\Logger;
 use Psr\Http\Message\UriInterface;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\NullAdapter;
@@ -28,7 +28,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 return (function (): array {
     return [
-        LoggerInterface::class => [
+        iLogger::class => [
             'class' => fn() => new Logger(name: 'logger', processors: [new LogMessageProcessor()])
         ],
 
@@ -63,15 +63,17 @@ return (function (): array {
                 }
 
                 try {
-                    if (false === (bool)config::get('cache.enabled')) {
-                        throw new RuntimeException('Cache server is disabled.');
+                    $cacheUrl = Config::get('cache.url');
+
+                    if (empty($cacheUrl)) {
+                        throw new RuntimeException('No cache server was set.');
                     }
 
                     if (!extension_loaded('redis')) {
                         throw new RuntimeException('Redis extension is not loaded.');
                     }
 
-                    $uri = new Uri(Config::get('cache.url'));
+                    $uri = new Uri($cacheUrl);
                     $params = [];
 
                     if (!empty($uri->getQuery())) {
@@ -122,7 +124,7 @@ return (function (): array {
         ],
 
         iDB::class => [
-            'class' => function (LoggerInterface $logger, PDO $pdo): iDB {
+            'class' => function (iLogger $logger, PDO $pdo): iDB {
                 $adapter = new PDOAdapter($logger, $pdo);
 
                 if (true !== $adapter->isMigrated()) {
@@ -130,25 +132,25 @@ return (function (): array {
                     $adapter->ensureIndex();
                     $adapter->migrateData(
                         Config::get('database.version'),
-                        Container::get(LoggerInterface::class)
+                        Container::get(iLogger::class)
                     );
                 }
 
                 return $adapter;
             },
             'args' => [
-                LoggerInterface::class,
+                iLogger::class,
                 PDO::class,
             ],
         ],
 
         MemoryMapper::class => [
-            'class' => function (LoggerInterface $logger, iDB $db): iImport {
+            'class' => function (iLogger $logger, iDB $db): iImport {
                 return (new MemoryMapper(logger: $logger, db: $db))
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
-                LoggerInterface::class,
+                iLogger::class,
                 iDB::class,
             ],
         ],

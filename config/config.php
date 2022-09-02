@@ -114,7 +114,6 @@ return (function () {
     ];
 
     $config['cache'] = [
-        'enabled' => true !== (bool)env('WS_DISABLE_CACHE'),
         'prefix' => env('WS_CACHE_PREFIX', null),
         'url' => env('WS_CACHE_URL', 'redis://127.0.0.1:6379'),
         'path' => env('WS_CACHE_PATH', fn() => ag($config, 'tmpDir') . '/cache'),
