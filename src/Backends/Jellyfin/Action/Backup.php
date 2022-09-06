@@ -10,6 +10,7 @@ use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use InvalidArgumentException;
 use SplFileObject;
 use Throwable;
 
@@ -33,33 +34,47 @@ class Backup extends Import
         $writer = ag($opts, 'writer');
 
         try {
-            $logContext['item'] = [
-                'backend' => $context->backendName,
-                'id' => ag($item, 'Id'),
-                'title' => match ($type) {
-                    JFC::TYPE_MOVIE => sprintf(
-                        '%s (%d)',
-                        ag($item, ['Name', 'OriginalTitle'], '??'),
-                        ag($item, 'ProductionYear', '0000')
-                    ),
-                    JFC::TYPE_EPISODE => trim(
-                        sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, 'SeriesName', '??'),
-                            str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                        )
-                    ),
-                },
-                'type' => $type,
-            ];
-
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
+                $this->logger->debug('Processing [%(backend)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'payload' => $item,
                 ]);
+            }
+
+            try {
+                $logContext['item'] = [
+                    'backend' => $context->backendName,
+                    'id' => ag($item, 'Id'),
+                    'title' => match ($type) {
+                        JFC::TYPE_MOVIE => sprintf(
+                            '%s (%d)',
+                            ag($item, ['Name', 'OriginalTitle'], '??'),
+                            ag($item, 'ProductionYear', '0000')
+                        ),
+                        JFC::TYPE_EPISODE => trim(
+                            sprintf(
+                                '%s - (%sx%s)',
+                                ag($item, 'SeriesName', '??'),
+                                str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                                str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            )
+                        ),
+                        default => throw new InvalidArgumentException(
+                            r('Unexpected Content type [{type}] was received.', [
+                                'type' => $type
+                            ])
+                        ),
+                    },
+                    'type' => $type,
+                ];
+            } catch (InvalidArgumentException $e) {
+                $this->logger->info($e->getMessage(), [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'body' => $item,
+                ]);
+                return;
             }
 
             $entity = $this->createEntity(

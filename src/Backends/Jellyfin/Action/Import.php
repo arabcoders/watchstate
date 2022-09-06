@@ -17,6 +17,7 @@ use App\Libs\Message;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface as iDate;
+use InvalidArgumentException;
 use JsonException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
@@ -705,35 +706,48 @@ class Import
         $mappedType = JFC::TYPE_MAPPER[$type] ?? $type;
 
         try {
-            Message::increment("{$context->backendName}.{$mappedType}.total");
-
-            $logContext['item'] = [
-                'id' => ag($item, 'Id'),
-                'title' => match ($type) {
-                    JFC::TYPE_MOVIE => sprintf(
-                        '%s (%d)',
-                        ag($item, ['Name', 'OriginalTitle'], '??'),
-                        ag($item, 'ProductionYear', 0000)
-                    ),
-                    JFC::TYPE_EPISODE => trim(
-                        sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, 'SeriesName', '??'),
-                            str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                        )
-                    ),
-                    default => throw new \InvalidArgumentException('Invalid Content type was given.')
-                },
-                'type' => ag($item, 'Type'),
-            ];
-
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
+                $this->logger->debug('Processing [%(backend)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item
                 ]);
+            }
+
+            Message::increment("{$context->backendName}.{$mappedType}.total");
+
+            try {
+                $logContext['item'] = [
+                    'id' => ag($item, 'Id'),
+                    'title' => match ($type) {
+                        JFC::TYPE_MOVIE => sprintf(
+                            '%s (%d)',
+                            ag($item, ['Name', 'OriginalTitle'], '??'),
+                            ag($item, 'ProductionYear', 0000)
+                        ),
+                        JFC::TYPE_EPISODE => trim(
+                            sprintf(
+                                '%s - (%sx%s)',
+                                ag($item, 'SeriesName', '??'),
+                                str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                                str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            )
+                        ),
+                        default => throw new InvalidArgumentException(
+                            r('Unexpected Content type [{type}] was received.', [
+                                'type' => $type
+                            ])
+                        ),
+                    },
+                    'type' => ag($item, 'Type'),
+                ];
+            } catch (InvalidArgumentException $e) {
+                $this->logger->error($e->getMessage(), [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'body' => $item,
+                ]);
+                return;
             }
 
             $isPlayed = true === (bool)ag($item, 'UserData.Played');

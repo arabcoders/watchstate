@@ -12,6 +12,7 @@ use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Options;
+use InvalidArgumentException;
 use RuntimeException;
 
 trait JellyfinActionTrait
@@ -59,6 +60,11 @@ trait JellyfinActionTrait
                         ag($item, ['Name', 'OriginalTitle'], '??'),
                         str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                    ),
+                    default => throw new InvalidArgumentException(
+                        r('Unexpected Content type [{type}] was received.', [
+                            'type' => $type
+                        ])
                     ),
                 },
                 'year' => (string)ag($item, 'ProductionYear', '0000'),

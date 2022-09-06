@@ -17,6 +17,7 @@ use App\Libs\Message;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface as iDate;
+use InvalidArgumentException;
 use JsonException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
@@ -716,6 +717,14 @@ class Import
         $mappedType = PlexClient::TYPE_MAPPER[$type] ?? $type;
 
         try {
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] payload.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'body' => $item,
+                ]);
+            }
+
             Message::increment("{$context->backendName}.{$mappedType}.total");
 
             $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
@@ -723,30 +732,36 @@ class Import
                 $year = (int)makeDate($airDate)->format('Y');
             }
 
-            $logContext['item'] = [
-                'id' => ag($item, 'ratingKey'),
-                'title' => match ($type) {
-                    PlexClient::TYPE_MOVIE => sprintf(
-                        '%s (%s)',
-                        ag($item, ['title', 'originalTitle'], '??'),
-                        0 === $year ? '0000' : $year,
-                    ),
-                    PlexClient::TYPE_EPISODE => sprintf(
-                        '%s - (%sx%s)',
-                        ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                        str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                        str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                    ),
-                },
-                'type' => ag($item, 'type', 'unknown'),
-            ];
-
-            if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
+            try {
+                $logContext['item'] = [
+                    'id' => ag($item, 'ratingKey'),
+                    'title' => match ($type) {
+                        PlexClient::TYPE_MOVIE => sprintf(
+                            '%s (%s)',
+                            ag($item, ['title', 'originalTitle'], '??'),
+                            0 === $year ? '0000' : $year,
+                        ),
+                        PlexClient::TYPE_EPISODE => sprintf(
+                            '%s - (%sx%s)',
+                            ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                            str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                        ),
+                        default => throw new InvalidArgumentException(
+                            r('Unexpected Content type [{type}] was received.', [
+                                'type' => $type
+                            ])
+                        ),
+                    },
+                    'type' => ag($item, 'type', 'unknown'),
+                ];
+            } catch (InvalidArgumentException $e) {
+                $this->logger->error($e->getMessage(), [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item,
                 ]);
+                return;
             }
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
