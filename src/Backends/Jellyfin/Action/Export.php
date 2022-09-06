@@ -13,6 +13,7 @@ use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
+use InvalidArgumentException;
 use Throwable;
 
 class Export extends Import
@@ -33,6 +34,14 @@ class Export extends Import
         $mappedType = JFC::TYPE_MAPPER[$type] ?? $type;
 
         try {
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] %(item.type) payload.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'body' => $item,
+                ]);
+            }
+            
             $queue = ag($opts, 'queue', fn() => Container::get(QueueRequests::class));
             $after = ag($opts, 'after', null);
 
@@ -54,17 +63,15 @@ class Export extends Import
                             str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         )
                     ),
+                    default => throw new InvalidArgumentException(
+                        r('Invalid Content type [{type}] was given.', [
+                            'type' => $type
+                        ])
+                    ),
                 },
                 'type' => $type,
             ];
 
-            if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'body' => $item,
-                ]);
-            }
 
             $isPlayed = true === (bool)ag($item, 'UserData.Played');
             $dateKey = true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated';

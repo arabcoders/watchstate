@@ -13,6 +13,7 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Options;
+use InvalidArgumentException;
 use RuntimeException;
 
 trait PlexActionTrait
@@ -77,6 +78,11 @@ trait PlexActionTrait
                         ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
                         str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                    ),
+                    default => throw new InvalidArgumentException(
+                        r('Invalid Content type [{type}] was given.', [
+                            'type' => $type
+                        ])
                     ),
                 },
                 'year' => 0 === $year ? '0000' : $year,

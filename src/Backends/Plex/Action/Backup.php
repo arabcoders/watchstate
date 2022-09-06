@@ -10,6 +10,7 @@ use App\Backends\Plex\PlexClient;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use InvalidArgumentException;
 use SplFileObject;
 use Throwable;
 
@@ -33,6 +34,14 @@ final class Backup extends Import
         $writer = ag($opts, 'writer');
 
         try {
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] %(item.type) payload.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'payload' => $item,
+                ]);
+            }
+
             $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
             if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
                 $year = (int)makeDate($airDate)->format('Y');
@@ -53,17 +62,14 @@ final class Backup extends Import
                         str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
+                    default => throw new InvalidArgumentException(
+                        r('Invalid Content type [{type}] was given.', [
+                            'type' => $type
+                        ])
+                    ),
                 },
                 'type' => $type,
             ];
-
-            if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'payload' => $item,
-                ]);
-            }
 
             $entity = $this->createEntity(
                 context: $context,

@@ -13,6 +13,7 @@ use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
+use InvalidArgumentException;
 use Throwable;
 
 final class Export extends Import
@@ -38,6 +39,14 @@ final class Export extends Import
         $mappedType = PlexClient::TYPE_MAPPER[$type] ?? $type;
 
         try {
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] %(item.type) payload.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'body' => $item,
+                ]);
+            }
+            
             Message::increment("{$context->backendName}.{$library}.total");
             Message::increment("{$context->backendName}.{$mappedType}.total");
 
@@ -60,17 +69,14 @@ final class Export extends Import
                         str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
+                    default => throw new InvalidArgumentException(
+                        r('Invalid Content type [{type}] was given.', [
+                            'type' => $type
+                        ])
+                    ),
                 },
                 'type' => $type,
             ];
-
-            if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'body' => $item,
-                ]);
-            }
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug('Ignoring [%(backend)] [%(item.title)]. No Date is set on object.', [

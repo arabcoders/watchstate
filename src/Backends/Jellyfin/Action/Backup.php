@@ -10,6 +10,7 @@ use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
+use InvalidArgumentException;
 use SplFileObject;
 use Throwable;
 
@@ -33,6 +34,14 @@ class Backup extends Import
         $writer = ag($opts, 'writer');
 
         try {
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] %(item.type) payload.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'payload' => $item,
+                ]);
+            }
+
             $logContext['item'] = [
                 'backend' => $context->backendName,
                 'id' => ag($item, 'Id'),
@@ -50,17 +59,14 @@ class Backup extends Import
                             str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         )
                     ),
+                    default => throw new InvalidArgumentException(
+                        r('Invalid Content type [{type}] was given.', [
+                            'type' => $type
+                        ])
+                    ),
                 },
                 'type' => $type,
             ];
-
-            if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title)] payload.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'payload' => $item,
-                ]);
-            }
 
             $entity = $this->createEntity(
                 context: $context,
