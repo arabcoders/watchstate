@@ -80,7 +80,7 @@ trait PlexActionTrait
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
-                        r('Invalid Content type [{type}] was given.', [
+                        r('Unexpected Content type [{type}] was received.', [
                             'type' => $type
                         ])
                     ),

@@ -35,7 +35,7 @@ final class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) payload.', [
+                $this->logger->debug('Processing [%(backend)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'payload' => $item,
@@ -63,7 +63,7 @@ final class Backup extends Import
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
-                        r('Invalid Content type [{type}] was given.', [
+                        r('Unexpected Content type [{type}] was received.', [
                             'type' => $type
                         ])
                     ),

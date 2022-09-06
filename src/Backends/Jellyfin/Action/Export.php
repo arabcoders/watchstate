@@ -35,13 +35,13 @@ class Export extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] %(item.type) payload.', [
+                $this->logger->debug('Processing [%(backend)] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item,
                 ]);
             }
-            
+
             $queue = ag($opts, 'queue', fn() => Container::get(QueueRequests::class));
             $after = ag($opts, 'after', null);
 
@@ -64,7 +64,7 @@ class Export extends Import
                         )
                     ),
                     default => throw new InvalidArgumentException(
-                        r('Invalid Content type [{type}] was given.', [
+                        r('Unexpected Content type [{type}] was received.', [
                             'type' => $type
                         ])
                     ),

@@ -137,7 +137,7 @@ final class ParseWebhook
                             )
                         ),
                         default => throw new InvalidArgumentException(
-                            r('Invalid Content type [{type}] was given.', [
+                            r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type
                             ])
                         ),
