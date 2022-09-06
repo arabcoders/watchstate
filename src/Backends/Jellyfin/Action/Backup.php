@@ -42,31 +42,40 @@ class Backup extends Import
                 ]);
             }
 
-            $logContext['item'] = [
-                'backend' => $context->backendName,
-                'id' => ag($item, 'Id'),
-                'title' => match ($type) {
-                    JFC::TYPE_MOVIE => sprintf(
-                        '%s (%d)',
-                        ag($item, ['Name', 'OriginalTitle'], '??'),
-                        ag($item, 'ProductionYear', '0000')
-                    ),
-                    JFC::TYPE_EPISODE => trim(
-                        sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, 'SeriesName', '??'),
-                            str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                        )
-                    ),
-                    default => throw new InvalidArgumentException(
-                        r('Unexpected Content type [{type}] was received.', [
-                            'type' => $type
-                        ])
-                    ),
-                },
-                'type' => $type,
-            ];
+            try {
+                $logContext['item'] = [
+                    'backend' => $context->backendName,
+                    'id' => ag($item, 'Id'),
+                    'title' => match ($type) {
+                        JFC::TYPE_MOVIE => sprintf(
+                            '%s (%d)',
+                            ag($item, ['Name', 'OriginalTitle'], '??'),
+                            ag($item, 'ProductionYear', '0000')
+                        ),
+                        JFC::TYPE_EPISODE => trim(
+                            sprintf(
+                                '%s - (%sx%s)',
+                                ag($item, 'SeriesName', '??'),
+                                str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                                str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            )
+                        ),
+                        default => throw new InvalidArgumentException(
+                            r('Unexpected Content type [{type}] was received.', [
+                                'type' => $type
+                            ])
+                        ),
+                    },
+                    'type' => $type,
+                ];
+            } catch (InvalidArgumentException $e) {
+                $this->logger->info($e->getMessage(), [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                    'body' => $item,
+                ]);
+                return;
+            }
 
             $entity = $this->createEntity(
                 context: $context,
