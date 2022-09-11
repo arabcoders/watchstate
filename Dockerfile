@@ -20,7 +20,7 @@ RUN apk add --no-cache bash caddy nano curl procps net-tools iproute2 shadow sql
 #
 RUN echo 'Adding non modules to HTTP Server.' && \
     # add modules to caddy.
-    caddy add-package github.com/lolPants/caddy-requestid github.com/caddyserver/transform-encoder >/dev/null 2>&1
+    caddy add-package github.com/caddyserver/transform-encoder >/dev/null 2>&1
 
 # Basic setup
 #
