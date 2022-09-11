@@ -4,8 +4,6 @@
 }
 
 http:// {
-    request_id 12
-
     root * /opt/app/public
 
 	header * ?X-Request-Id "{http.request.uuid}"
