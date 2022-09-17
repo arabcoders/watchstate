@@ -1,9 +1,0 @@
-<?php
-
-declare(strict_types=1);
-
-/**
- * @RELEASE
- * This file is deprecated and will be removed in v1.
- */
-require __DIR__ . '/bin/console';

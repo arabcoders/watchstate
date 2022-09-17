@@ -7,6 +7,7 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
+use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -53,7 +54,7 @@ final class EditCommand extends Command
                     <question># How to change the webhook token?</question>
 
                     {cmd} <cmd>{route}</cmd> <flag>--regenerate-webhook-token</flag> -- <value>backend_name</value>
-                    
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
@@ -78,8 +79,8 @@ final class EditCommand extends Command
             try {
                 $custom = true;
                 $backends = Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+            } catch (RuntimeException $e) {
+                $output->writeln(r('<error>{error}</error>', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }
         } else {
@@ -93,25 +94,21 @@ final class EditCommand extends Command
 
         $name = $input->getArgument('backend');
 
-        if (!isValidName($name)) {
+        if (!isValidName($name) || strtolower($name) !== $name) {
             $output->writeln(
                 r(
                     '<error>ERROR:</error> Invalid [<value>{name}</value>] name was given. Only [<value>a-z, 0-9, _</value>] are allowed.',
                     [
                         'name' => $name
-                    ],
+                    ]
                 )
             );
             return self::FAILURE;
         }
 
         if (null === ($backend = ag($backends, $name, null))) {
-            $output->writeln(sprintf('<error>ERROR: Backend \'%s\' not found.</error>', $name));
+            $output->writeln(r('<error>ERROR: Backend \'{name}\' not found.</error>', ['name' => $name]));
             return self::FAILURE;
-        }
-
-        if (strtolower($name) !== $name) {
-            $output->writeln('<comment>Non lower case backend names are deprecated and will not work in v1.</comment>');
         }
 
         if ($input->getOption('regenerate-webhook-token')) {
@@ -119,12 +116,15 @@ final class EditCommand extends Command
                 $webhookToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 
                 $output->writeln(
-                    sprintf('<info>The webhook token for \'%s\' is: \'%s\'.</info>', $name, $webhookToken)
+                    r('<info>The webhook token for \'{name}\' is: \'{token}\'.</info>', [
+                        'name' => $name,
+                        'token' => $webhookToken
+                    ])
                 );
 
                 $backend = ag_set($backend, 'webhook.token', $webhookToken);
             } catch (Throwable $e) {
-                $output->writeln(sprintf('<error>ERROR: %s</error>', $e->getMessage()));
+                $output->writeln(r('<error>ERROR: {error}</error>', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }
         } else {
@@ -167,23 +167,32 @@ final class EditCommand extends Command
                 $backend = ag_set($backend, $key, $value);
 
                 $output->writeln(
-                    sprintf(
-                        '<info>%s: Updated \'%s\' key value to \'%s\'.</info>',
-                        $name,
-                        $key,
-                        is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
-                    )
+                    r('<info>{name}: Updated \'{key}\' key value to \'{value}\'.</info>', [
+                        'name' => $name,
+                        'key' => $key,
+                        'value' => is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
+                    ])
                 );
             }
 
             if ($input->getOption('delete')) {
                 if (false === ag_exists($backend, $key)) {
-                    $output->writeln(sprintf('<error>%s: \'%s\' key does not exists.</error>', $name, $key));
+                    $output->writeln(
+                        r('<error>{name}: \'{key}\' key does not exists.</error>', [
+                            'name' => $name,
+                            'key' => $key
+                        ])
+                    );
                     return self::FAILURE;
                 }
 
                 $backend = ag_delete($backend, $key);
-                $output->writeln(sprintf('<info>%s: Removed \'%s\' key.</info>', $name, $key));
+                $output->writeln(
+                    r('<info>{name}: Removed \'{key}\' key.</info>', [
+                        'name' => $name,
+                        'key' => $key
+                    ])
+                );
             }
         }
 

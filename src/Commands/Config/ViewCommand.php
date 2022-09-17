@@ -37,7 +37,6 @@ final class ViewCommand extends Command
                 'Can be any key from servers.yaml, use dot notion to access sub keys, for example [webhook.token]'
             )
             ->setAliases(['servers:view'])
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
             ->setHelp(
                 r(
                     <<<HELP
@@ -89,16 +88,6 @@ final class ViewCommand extends Command
         }
 
         $selectBackends = (string)$input->getOption('select-backends');
-        $serversFilter = (string)$input->getOption('servers-filter');
-
-        if (!empty($serversFilter)) {
-            $output->writeln(
-                '<comment>The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].</comment>'
-            );
-            if (empty($selectBackends)) {
-                $selectBackends = $serversFilter;
-            }
-        }
 
         $list = [];
         $selected = array_map('trim', explode(',', $selectBackends));

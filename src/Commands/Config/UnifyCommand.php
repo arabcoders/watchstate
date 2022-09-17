@@ -7,6 +7,7 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
+use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -36,7 +37,6 @@ final class UnifyCommand extends Command
                 ),
             )
             ->setAliases(['servers:unify'])
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
             ->setHelp(
                 r(
                     <<<HELP
@@ -73,7 +73,7 @@ final class UnifyCommand extends Command
             try {
                 $custom = true;
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\RuntimeException $e) {
+            } catch (RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
@@ -99,16 +99,6 @@ final class UnifyCommand extends Command
         }
 
         $selectBackends = (string)$input->getOption('select-backends');
-        $serversFilter = (string)$input->getOption('servers-filter');
-
-        if (!empty($serversFilter)) {
-            $output->writeln(
-                '<comment>The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].</comment>'
-            );
-            if (empty($selectBackends)) {
-                $selectBackends = $serversFilter;
-            }
-        }
 
         $selected = explode(',', $selectBackends);
         $selected = array_map('trim', $selected);

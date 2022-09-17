@@ -14,30 +14,6 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ----
 
-## Breaking change since 2022-07-23
-
-We rebuilt the container to be `rootless`. So, there are some breaking changes that might need your attention. Things
-that need to be adjusted if you run this tool before 2022-07-22:
-
-### Webhook default listener port
-
-Default port has been changed from `80` to `8080`. If you are using the webhook functionality, You have to change the
-port in your media backends and or your frontend proxy.
-
-### User and group id mapping
-
-Running `rootless` container means we cannot change the user and group id during runtime. If you have changed the
-default user and/or group id before using `WS_GID`, `WS_UID` environment variables those no longer works. You need to
-use the `user:` directive. There is example written in the [installation](#install) section. Most users will not be
-affected as the default user/group id is `1000`.
-
-**Note**: `Unraid` users you need to change the `user:` directive to be `user: "99:100"` to match the default user/group
-mapping.
-
-**Note**: this change does not affect Windows users.
-
------
-
 # Install
 
 create your `docker-compose.yaml` with the following content:
