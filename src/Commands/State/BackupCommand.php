@@ -190,7 +190,6 @@ class BackupCommand extends Command
         }
 
         if (empty($list)) {
-            // -- @RELEASE - expand this message to account for filtering, import status etc.
             $this->logger->warning('No backends were found.');
             return self::FAILURE;
         }

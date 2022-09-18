@@ -10,7 +10,8 @@ use App\Commands\System\IndexCommand;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use Exception;
+use RuntimeException;
+use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -48,7 +49,7 @@ final class ManageCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * @throws ExceptionInterface
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
@@ -86,7 +87,7 @@ final class ManageCommand extends Command
             try {
                 $custom = true;
                 $backends = (array)Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\RuntimeException $e) {
+            } catch (RuntimeException $e) {
                 $output->writeln(r('<error>ERROR:</error> {error}', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }
@@ -101,7 +102,7 @@ final class ManageCommand extends Command
         $add = $input->getOption('add');
         $name = $input->getArgument('backend');
 
-        if (!isValidName($name)) {
+        if (!isValidName($name) || strtolower($name) !== $name) {
             $output->writeln(
                 r(
                     '<error>ERROR:</error> Invalid [<value>{name}</value>] name was given. Only [<value>a-z, 0-9, _</value>] are allowed.',
@@ -125,7 +126,6 @@ final class ManageCommand extends Command
                 );
                 return self::FAILURE;
             }
-            $name = strtolower($name);
         } elseif (null === ag($backends, "{$name}.type", null)) {
             $output->writeln(
                 r(
@@ -136,13 +136,6 @@ final class ManageCommand extends Command
                 )
             );
             return self::FAILURE;
-        }
-
-        if (strtolower($name) !== $name) {
-            // @RELEASE - remove warning and make sure to lower case name.
-            $output->writeln(
-                '<comment>Non lower case backend names are deprecated and will not work in v1.0.</comment>'
-            );
         }
 
         $u = $rerun ?? ag($backends, $name, []);
@@ -192,7 +185,7 @@ final class ManageCommand extends Command
 
             $question->setValidator(function ($answer) {
                 if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new \RuntimeException('Invalid backend URL was given.');
+                    throw new RuntimeException('Invalid backend URL was given.');
                 }
                 return $answer;
             });
@@ -216,11 +209,11 @@ final class ManageCommand extends Command
 
             $question->setValidator(function ($answer) {
                 if (empty($answer)) {
-                    throw new \RuntimeException('Token value cannot be empty or null.');
+                    throw new RuntimeException('Token value cannot be empty or null.');
                 }
 
                 if (!is_string($answer) && !is_int($answer)) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         sprintf(
                             'Token value is invalid. Was Expecting [string|integer]. but got \'%s\' instead.',
                             get_debug_type($answer)
@@ -270,11 +263,11 @@ final class ManageCommand extends Command
 
             $question->setValidator(function ($answer) {
                 if (empty($answer)) {
-                    throw new \RuntimeException('Backend unique identifier cannot be empty.');
+                    throw new RuntimeException('Backend unique identifier cannot be empty.');
                 }
 
                 if (!is_string($answer) && !is_int($answer)) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         sprintf(
                             'Backend unique identifier is invalid. Expecting [string|integer]. but got \'%s\' instead.',
                             get_debug_type($answer)
@@ -303,7 +296,7 @@ final class ManageCommand extends Command
                 $users = makeBackend($backend, $name)->getUsersList();
 
                 if (empty($users)) {
-                    throw new \RuntimeException('Backend returned empty list of users.');
+                    throw new RuntimeException('Backend returned empty list of users.');
                 }
 
                 foreach ($users as $user) {
@@ -356,11 +349,11 @@ final class ManageCommand extends Command
 
             $question->setValidator(function ($answer) {
                 if (empty($answer)) {
-                    throw new \RuntimeException('Backend user id cannot be empty.');
+                    throw new RuntimeException('Backend user id cannot be empty.');
                 }
 
                 if (!is_string($answer) && !is_int($answer)) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         sprintf(
                             'Backend user id is invalid. Expecting [string|integer]. but got \'%s\' instead.',
                             get_debug_type($answer)

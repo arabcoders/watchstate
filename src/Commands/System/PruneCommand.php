@@ -33,7 +33,7 @@ final class PruneCommand extends Command
             ->setHelp(
                 r(
                     <<<HELP
-                    
+
                     This command remove automatically generated files. like logs and backups.
 
                     to see what files will be removed without actually removing them. run the following command.
@@ -58,14 +58,6 @@ final class PruneCommand extends Command
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
                 'filter' => '*.log',
-                'time' => strtotime('-7 DAYS', $time)
-            ],
-            [
-                // -- @RELEASE - remove path.
-                'path' => Config::get('tmpDir') . '/logs/tasks',
-                'base' => Config::get('tmpDir'),
-                'filter' => '*.log',
-                'report' => false,
                 'time' => strtotime('-7 DAYS', $time)
             ],
             [

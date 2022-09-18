@@ -114,8 +114,7 @@ class PushCommand extends Command
         foreach ((array)Config::get('servers', []) as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
-            // -- @RELEASE remove 'webhook.push'
-            if (true !== (bool)ag($backend, ['export.enabled', 'webhook.push'])) {
+            if (true !== (bool)ag($backend, 'export.enabled')) {
                 $this->logger->info('SYSTEM: Export to [%(backend)] is disabled by user.', [
                     'backend' => $backendName,
                 ]);

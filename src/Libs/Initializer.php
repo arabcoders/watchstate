@@ -23,6 +23,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
 use Symfony\Component\Dotenv\Dotenv;
@@ -189,7 +190,7 @@ final class Initializer
     }
 
     /**
-     * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     private function defaultHttpServer(iRequest $realRequest): ResponseInterface
     {
@@ -306,8 +307,7 @@ final class Initializer
         }
 
         // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-        // -- @RELEASE remove 'webhook.import'
-        if (true === (bool)ag($backend, ['import.enabled', 'webhook.import'])) {
+        if (true === (bool)ag($backend, 'import.enabled')) {
             if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
             }
@@ -315,8 +315,7 @@ final class Initializer
 
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
-        // -- @RELEASE remove 'webhook.import'
-        if (true !== $metadataOnly && true !== (bool)ag($backend, ['import.enabled', 'webhook.import'])) {
+        if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
             $this->write($request, Logger::ERROR, 'Import are disabled for [%(backend)].', [
                 'backend' => $class->getName()
             ]);

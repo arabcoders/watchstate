@@ -70,7 +70,6 @@ class ImportCommand extends Command
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
             ->setHelp(
                 r(
                     <<<HELP
@@ -200,17 +199,6 @@ class ImportCommand extends Command
         $list = [];
 
         $selectBackends = (string)$input->getOption('select-backends');
-        $serversFilter = (string)$input->getOption('servers-filter');
-
-        if (!empty($serversFilter)) {
-            $this->logger->warning(
-                'The [--servers-filter] flag is deprecated and will be removed in v1.0, please use [--select-backends].'
-            );
-            if (empty($selectBackends)) {
-                $selectBackends = $serversFilter;
-            }
-        }
-
         $selected = explode(',', $selectBackends);
         $isCustom = !empty($selectBackends) && count($selected) >= 1;
         $supported = Config::get('supported', []);
@@ -294,7 +282,6 @@ class ImportCommand extends Command
         }
 
         if (empty($list)) {
-            // -- @RELEASE - expand this message to account for filtering, import status etc.
             $this->logger->warning('No backends were found');
             return self::FAILURE;
         }

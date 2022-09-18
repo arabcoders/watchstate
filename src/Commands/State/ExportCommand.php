@@ -51,7 +51,6 @@ class ExportCommand extends Command
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('servers-filter', null, InputOption::VALUE_OPTIONAL, '[DEPRECATED] Select backends.', '')
             ->setHelp(
                 r(
                     <<<HELP
@@ -107,16 +106,6 @@ class ExportCommand extends Command
         }
 
         $selectBackends = (string)$input->getOption('select-backends');
-        $serversFilter = (string)$input->getOption('servers-filter');
-
-        if (!empty($serversFilter)) {
-            $this->logger->warning(
-                'The [--servers-filter] flag is deprecated and will be removed in v1.0. Use [--select-backends].'
-            );
-            if (empty($selectBackends)) {
-                $selectBackends = $serversFilter;
-            }
-        }
 
         $backends = [];
         $selected = explode(',', $selectBackends);
