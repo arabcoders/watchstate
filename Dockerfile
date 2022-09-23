@@ -47,6 +47,7 @@ RUN echo '' && \
     # we are running rootless, so user,group config options has no affect.
     sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf && \
+    sed -i 's/listen = 127.0.0.1:9000/listen = 0.0.0.0:9000/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     # Install dependencies.
     /opt/composer --working-dir=/opt/app/ -no --no-progress --no-dev --no-cache --quiet -- install && \
     # Copy configuration files to the expected directories.
