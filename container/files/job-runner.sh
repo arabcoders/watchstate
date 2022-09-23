@@ -18,7 +18,7 @@ echo $$ >"${PID}"
 #
 while true; do
   sleep 60
-  /usr/bin/console system:tasks --run --save-log >/dev/null 2>&1
+  /opt/bin/console system:tasks --run --save-log >/dev/null 2>&1
 done
 
 if [ -f "${PID}" ]; then

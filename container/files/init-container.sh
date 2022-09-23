@@ -25,44 +25,44 @@ set -u
 
 # Generate Config structure.
 #
-WS_CACHE_NULL=1 /usr/bin/console -v >/dev/null
+WS_CACHE_NULL=1 /opt/bin/console -v >/dev/null
 
 if [ 0 = "${WS_DISABLE_CACHE}" ]; then
   TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting Cache Server."
-  redis-server "/opt/redis.conf"
+  redis-server "/opt/config/redis.conf"
 fi
 
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting HTTP Server."
-  caddy start --config /opt/Caddyfile
+  caddy start --config /opt/config/Caddyfile
 fi
 
 if [ 0 = "${WS_DISABLE_CRON}" ]; then
   TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
   echo "[${TIME_DATE}] Starting Task Scheduler."
-  /opt/job-runner &
+  /opt/bin/job-runner &
 fi
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Caching tool Routes."
-/usr/bin/console system:routes
+/opt/bin/console system:routes
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Running database migrations."
-/usr/bin/console system:db:migrations
+/opt/bin/console system:db:migrations
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Running database maintenance tasks."
-/usr/bin/console system:db:maintenance
+/opt/bin/console system:db:maintenance
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Ensuring State table has correct indexes."
-/usr/bin/console system:index
+/opt/bin/console system:index
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo "[${TIME_DATE}] Running - $(/usr/bin/console --version)"
+echo "[${TIME_DATE}] Running - $(/opt/bin/console --version)"
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
