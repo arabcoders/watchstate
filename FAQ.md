@@ -346,3 +346,37 @@ As stated in webhook limitation section sometimes media backends don't make it e
 complement webhooks, you should enable import/export tasks by settings their respective environment variables in
 your `docker-compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks`
 command.
+
+---
+
+### Q: How to disable the included HTTP server and use external server?
+
+Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_HTTP` with value of `1`. your external
+server, need to send correct fastcgi environment variables. Example caddy file
+
+```caddyfile
+
+https://watchstate.example.org {
+
+	# Set the handler to the container ip:9000 and leave [DOCUMENT_ROOT] and [SCRIPT_FILENAME] as they are.
+	php_fastcgi watchstate:9000 {
+		# Caddy require valid root path for it to proxy fastcgi requests.	 
+		# so set this path to empty directory.  
+		root * /tmp
+		env DOCUMENT_ROOT /opt/app/public
+		env SCRIPT_FILENAME /opt/app/public/index.php
+		env X_REQUEST_ID "{http.request.uuid}"
+	}
+}
+```
+
+### Q: How to disable the included cache server and use external cache server?
+
+Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_CACHE` with value of `1`.
+to use external redis server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this
+variable is `redis://host:port?password=auth&db=db_num`, for example to use redis from another container you could use
+something like `redis://redis:6379?password=my_secert_password&db=8`. We only support `redis` at the moment.
+
+Once that done, restart the container.
+
+
