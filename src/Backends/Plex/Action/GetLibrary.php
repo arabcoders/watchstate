@@ -14,12 +14,14 @@ use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Options;
 use JsonException;
+use JsonMachine\Exception\InvalidArgumentException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
@@ -48,8 +50,8 @@ final class GetLibrary
     }
 
     /**
-     * @throws \Symfony\Contracts\HttpClient\Exception\ExceptionInterface
-     * @throws \JsonMachine\Exception\InvalidArgumentException
+     * @throws ExceptionInterface
+     * @throws InvalidArgumentException
      */
     private function action(Context $context, iGuid $guid, string|int $id, array $opts = []): Response
     {

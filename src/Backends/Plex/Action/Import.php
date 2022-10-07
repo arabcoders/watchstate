@@ -88,6 +88,8 @@ class Import
 
     protected function getLibraries(Context $context, Closure $handle, Closure $error): array
     {
+        $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
+
         try {
             $url = $context->backendUrl->withPath('/library/sections');
 
@@ -201,6 +203,8 @@ class Import
                     'includeGuids' => 1,
                     'type' => $isMovieLibrary ? 1 : 4,
                     'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
+                    'X-Plex-Container-Start' => 0,
+                    'X-Plex-Container-Size' => $segmentSize,
                 ])
             );
 
@@ -218,11 +222,44 @@ class Import
                     array_replace_recursive($context->backendHeaders, [
                         'headers' => [
                             'X-Plex-Container-Start' => 0,
-                            'X-Plex-Container-Size' => 0,
+                            'X-Plex-Container-Size' => $segmentSize,
                         ],
                         'user_data' => $logContext,
                     ])
                 );
+
+                // -- parse total tv shows count.
+                if (PlexClient::TYPE_SHOW === ag($logContext, 'library.type')) {
+                    $logContextSub = $logContext;
+                    $logContextSub['library']['url'] = $url->withQuery(
+                        http_build_query([
+                            'includeGuids' => 1,
+                            'type' => 2,
+                            'X-Plex-Container-Start' => 0,
+                            'X-Plex-Container-Size' => $segmentSize,
+                        ])
+                    );
+
+                    $this->logger->debug('Requesting [%(backend)] [%(library.title)] tv shows count.', [
+                        'backend' => $context->backendName,
+                        ...$logContextSub,
+                    ]);
+
+                    $requests[] = $this->http->request(
+                        'HEAD',
+                        (string)$logContextSub['library']['url'],
+                        array_replace_recursive($context->backendHeaders, [
+                            'headers' => [
+                                'X-Plex-Container-Start' => 0,
+                                'X-Plex-Container-Size' => $segmentSize,
+                            ],
+                            'user_data' => [
+                                'isShowRequest' => true,
+                                ...$logContextSub
+                            ],
+                        ])
+                    );
+                }
             } catch (ExceptionInterface $e) {
                 $this->logger->error('Request for [%(backend)] [%(library.title)] items count has failed.', [
                     'backend' => $context->backendName,
@@ -276,8 +313,7 @@ class Import
 
                 if ($totalCount < 1) {
                     $this->logger->warning(
-                        'Request for [%(backend)] [%(library.title)] items count returned with total number of 0.',
-                        [
+                        'Request for [%(backend)] [%(library.title)] items count returned with 0 or less.', [
                             'backend' => $context->backendName,
                             ...$logContext,
                             'headers' => $response->getHeaders(),
@@ -286,7 +322,11 @@ class Import
                     continue;
                 }
 
-                $total[(int)ag($logContext, 'library.id')] = $totalCount;
+                if (ag_exists($logContext, 'isShowRequest')) {
+                    $total['show_' . ag($logContext, 'library.id')] = $totalCount;
+                } else {
+                    $total[(int)ag($logContext, 'library.id')] = $totalCount;
+                }
             } catch (ExceptionInterface $e) {
                 $this->logger->error('Request for [%(backend)] [%(library.title)] total items has failed.', [
                     'backend' => $context->backendName,
@@ -305,7 +345,7 @@ class Import
 
         $requests = [];
 
-        // -- Get TV shows metadata.
+        // -- get paginated tv shows metadata.
         foreach ($listDirs as $section) {
             $key = (int)ag($section, 'key');
 
@@ -317,10 +357,6 @@ class Import
                 continue;
             }
 
-            $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
-                http_build_query(['type' => 2, 'includeGuids' => 1])
-            );
-
             $logContext = [
                 'library' => [
                     'id' => $key,
@@ -328,64 +364,96 @@ class Import
                     'type' => ag($section, 'type', 'unknown'),
                     'url' => $url,
                 ],
-                'segment' => [
-                    'number' => 1,
-                    'of' => 1,
-                ],
             ];
 
-            if (true === array_key_exists($key, $total)) {
-                $logContext['library']['totalRecords'] = $total[$key];
+            if (false === array_key_exists('show_' . $key, $total)) {
+                $ignored++;
+                $this->logger->warning('Ignoring [%(backend)] [%(library.title)]. No tv shows items count was found.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                ]);
+                continue;
             }
 
-            $this->logger->debug('Requesting [%(backend)] [%(library.title)] series external ids.', [
-                'backend' => $context->backendName,
-                ...$logContext,
-            ]);
+            $logContext['library']['totalRecords'] = $total['show_' . $key];
 
-            try {
-                $requests[] = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    $context->backendHeaders + [
-                        'user_data' => [
-                            'ok' => $handle($logContext),
-                            'error' => $error($logContext),
+            $segmentTotal = (int)$total['show_' . $key];
+            $segmented = ceil($segmentTotal / $segmentSize);
+
+            for ($i = 0; $i < $segmented; $i++) {
+                try {
+                    $logContext['segment'] = [
+                        'number' => $i + 1,
+                        'of' => $segmented,
+                        'size' => $segmentSize,
+                    ];
+
+                    $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
+                        http_build_query([
+                            'type' => 2,
+                            'includeGuids' => 1,
+                            'X-Plex-Container-Size' => $segmentSize,
+                            'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
+                        ])
+                    );
+
+                    $logContext['library']['url'] = $url;
+
+                    $this->logger->debug(
+                        'Requesting [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] series external ids.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
                         ]
-                    ]
-                );
-            } catch (ExceptionInterface $e) {
-                $this->logger->error(
-                    'Request for [%(backend)] [%(library.title)] series external ids has failed.',
-                    [
-                        'backend' => $context->backendName,
-                        ...$logContext,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
-                        ],
-                    ]
-                );
-                continue;
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] series external ids request.',
-                    [
-                        'backend' => $context->backendName,
-                        ...$logContext,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
-                        ],
-                    ]
-                );
-                continue;
+                    );
+
+                    $requests[] = $this->http->request(
+                        'GET',
+                        (string)$url,
+                        array_replace_recursive($context->backendHeaders, [
+                            'headers' => [
+                                'X-Plex-Container-Size' => $segmentSize,
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
+                            ],
+                            'user_data' => [
+                                'ok' => $handle($logContext),
+                                'error' => $error($logContext),
+                            ]
+                        ])
+                    );
+                } catch (ExceptionInterface $e) {
+                    $this->logger->error(
+                        'Request for [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] series external ids has failed.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $context->trace ? $e->getTrace() : [],
+                            ],
+                        ]
+                    );
+                    continue;
+                } catch (Throwable $e) {
+                    $this->logger->error(
+                        'Unhandled exception was thrown during [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] series external ids request.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $context->trace ? $e->getTrace() : [],
+                            ],
+                        ]
+                    );
+                    continue;
+                }
             }
         }
 
@@ -434,7 +502,6 @@ class Import
             $logContext['library']['totalRecords'] = $total[$key];
 
             $segmentTotal = (int)$total[$key];
-            $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
             $segmented = ceil($segmentTotal / $segmentSize);
 
             for ($i = 0; $i < $segmented; $i++) {
