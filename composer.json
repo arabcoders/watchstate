@@ -21,6 +21,7 @@
         "ext-ctype": "*",
         "ext-curl": "*",
         "ext-sodium": "*",
+        "ext-simplexml": "*",
         "monolog/monolog": "^2.8",
         "symfony/console": "^6.1.4",
         "symfony/cache": "^6.1.3",
@@ -41,8 +42,7 @@
     "suggest": {
         "ext-sockets": "For UDP commincations.",
         "ext-posix": "to check if running under super user.",
-        "ext-redis": "For caching.",
-        "ext-simplexml": "For backends that send xml responses."
+        "ext-redis": "For caching."
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
