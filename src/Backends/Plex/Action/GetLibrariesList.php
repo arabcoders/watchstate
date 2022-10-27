@@ -52,6 +52,16 @@ final class GetLibrariesList
 
         $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
 
+        $payload = $response->getContent(false);
+
+        if ($context->trace) {
+            $this->logger->debug('Processing [%(backend)] response.', [
+                'backend' => $context->backendName,
+                'url' => (string)$url,
+                'response' => $payload,
+            ]);
+        }
+
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
@@ -67,19 +77,18 @@ final class GetLibrariesList
         }
 
         $json = json_decode(
-            json: $response->getContent(),
+            json: $payload,
             associative: true,
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
 
+        unset($payload);
+
         if ($context->trace) {
-            $this->logger->debug(
-                'Parsing [%(backend)] libraries payload.',
-                [
-                    'backend' => $context->backendName,
-                    'trace' => $json,
-                ]
-            );
+            $this->logger->debug('Parsing [%(backend)] libraries payload.', [
+                'backend' => $context->backendName,
+                'trace' => $json,
+            ]);
         }
 
         $listDirs = ag($json, 'MediaContainer.Directory', []);
