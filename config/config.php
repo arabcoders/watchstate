@@ -76,7 +76,8 @@ return (function () {
     $config['webhook'] = [
         'logfile' => ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log',
         'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
-        'tokenLength' => 16,
+        'dumpRequest' => (bool)env('WS_WEBHOOK_DUMP_REQUEST', false),
+        'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
     ];
 
     $config['mapper'] = [

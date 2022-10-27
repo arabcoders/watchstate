@@ -19,9 +19,9 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
     for ext in ${PHP_PACKAGES}; do PACKAGES="${PACKAGES} ${PHP_V}-${ext}"; done && \
     apk add --no-cache bash caddy icu-data-full nano curl procps net-tools iproute2  \
     shadow sqlite redis tzdata gettext fcgi ${PHP_V} ${PACKAGES} && \
-    # Update Caddy and add packages to it.
-    echo 'Adding non standard modules to http server.' && \
-    caddy add-package github.com/caddyserver/transform-encoder >/dev/null 2>&1 && \
+    # Update Caddy and add packages to it. disabled as workaround for arm/v7 build
+    #echo 'Adding non standard modules to http server.' && \
+    #caddy add-package github.com/caddyserver/transform-encoder >/dev/null 2>&1 && \
     # Basic setup
     echo '' && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100

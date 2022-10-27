@@ -167,15 +167,12 @@ final class Initializer
             $httpException = (true === ($e instanceof HttpException));
 
             if (false === $httpException || $e->getCode() !== 200) {
-                Container::get(LoggerInterface::class)->error(
-                    $e->getMessage(),
-                    [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'trace' => $e->getTrace(),
-                    ]
-                );
+                Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'kind' => get_class($e),
+                    'trace' => $e->getTrace(),
+                ]);
             }
 
             $response = new Response(
@@ -205,7 +202,7 @@ final class Initializer
         }
 
         // -- Save request payload.
-        if (true === Config::get('webhook.debug') && true === (bool)ag($realRequest->getQueryParams(), 'rdump')) {
+        if (true === Config::get('webhook.dumpRequest')) {
             saveRequestPayload($realRequest);
         }
 
@@ -326,7 +323,7 @@ final class Initializer
         $entity = $class->parseWebhook($request);
 
         // -- Dump Webhook context.
-        if (true === Config::get('webhook.debug') && true === (bool)ag($request->getQueryParams(), 'wdump')) {
+        if (true === (bool)ag($backend, 'options.' . Options::DUMP_PAYLOAD)) {
             saveWebhookPayload($entity, $request);
         }
 

@@ -16,5 +16,6 @@ return [
     'webhook.match.user',
     'webhook.match.uuid',
     'webhook.token',
-    'options.ignore'
+    'options.ignore',
+    'options.DUMP_PAYLOAD',
 ];

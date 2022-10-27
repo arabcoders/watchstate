@@ -13,9 +13,13 @@ http:// {
         env X_REQUEST_ID "{http.request.uuid}"
     }
 
-    log {
-        format transform `{request>headers>X-Forwarded-For>[0]:request>remote_ip} - [{ts}] "{request>method} {request>uri} {request>proto}" {status} {size} "{request>headers>Referer>[0]}" "{request>headers>User-Agent>[0]}" - "{resp_headers>X-Request-Id>[0]}" - "{resp_headers>X-Application-Version>[0]}"` {
-            time_format "02/Jan/2006:15:04:05 -0700"
-        }
-    }
+    log
+
+    # Disabled as workaround for arm/v7 build.
+    #
+    #log {
+    #    format transform `{request>headers>X-Forwarded-For>[0]:request>remote_ip} - [{ts}] "{request>method} {request>uri} {request>proto}" {status} {size} "{request>headers>Referer>[0]}" "{request>headers>User-Agent>[0]}" - "{resp_headers>X-Request-Id>[0]}" - "{resp_headers>X-Application-Version>[0]}"` {
+    #        time_format "02/Jan/2006:15:04:05 -0700"
+    #    }
+    #}
 }
