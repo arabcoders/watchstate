@@ -53,6 +53,8 @@ final class GetIdentifier
                     array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                 );
 
+                $content = $response->getContent(false);
+
                 if (200 !== $response->getStatusCode()) {
                     return new Response(
                         status: false,
@@ -63,13 +65,13 @@ final class GetIdentifier
                                 'client' => $context->clientName,
                                 'backend' => $context->backendName,
                                 'status_code' => $response->getStatusCode(),
+                                'url' => (string)$url,
+                                'response' => $content,
                             ],
                             level: Levels::WARNING
                         )
                     );
                 }
-
-                $content = $response->getContent();
 
                 $item = json_decode(
                     json: $content,

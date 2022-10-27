@@ -10,8 +10,10 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
+use App\Backends\Jellyfin\Action\GetIdentifier;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetLibrary;
+use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\Import;
 use App\Backends\Jellyfin\Action\InspectRequest;
@@ -287,7 +289,7 @@ class JellyfinClient implements iClient
 
     public function getMetadata(string|int $id, array $opts = []): array
     {
-        $response = Container::get(\App\Backends\Jellyfin\Action\GetMetaData::class)(
+        $response = Container::get(GetMetaData::class)(
             context: $this->context,
             id: $id,
             opts: $opts
@@ -321,7 +323,11 @@ class JellyfinClient implements iClient
             return $this->context->backendId;
         }
 
-        $response = Container::get(\App\Backends\Jellyfin\Action\GetIdentifier::class)(context: $this->context);
+        $response = Container::get(GetIdentifier::class)(context: $this->context);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
 
         return $response->isSuccessful() ? $response->response : null;
     }
