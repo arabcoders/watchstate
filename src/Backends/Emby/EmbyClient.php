@@ -311,6 +311,10 @@ class EmbyClient implements iClient
 
         $response = Container::get(GetIdentifier::class)(context: $this->context);
 
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
         return $response->isSuccessful() ? $response->response : null;
     }
 
