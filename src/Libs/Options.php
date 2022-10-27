@@ -21,6 +21,7 @@ final class Options
     public const DISABLE_GUID = 'DISABLE_GUID';
     public const LIBRARY_SEGMENT = 'LIBRARY_SEGMENT';
     public const STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
+    public const DUMP_PAYLOAD = 'DUMP_PAYLOAD';
 
     private function __construct()
     {

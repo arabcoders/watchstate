@@ -146,22 +146,22 @@ $ docker exec -ti watchstate console system:env
 
 These environment variables relates to the tool itself, you can load them via the recommended methods.
 
-| Key                      | Type    | Description                                                                   | Default            |
-|--------------------------|---------|-------------------------------------------------------------------------------|--------------------|
-| WS_DATA_PATH             | string  | Where to store main data. (config, db).                                       | `${BASE_PATH}/var` |
-| WS_TMP_DIR               | string  | Where to store temp data. (logs, cache)                                       | `${WS_DATA_PATH}`  |
-| WS_TZ                    | string  | Set timezone.                                                                 | `UTC`              |
-| WS_CRON_{TASK}           | bool    | Enable {task} task. Value casted to bool.                                     | `false`            |
-| WS_CRON_{TASK}_AT        | string  | When to run {task} task. Valid Cron Expression Expected.                      | `*/1 * * * *`      |
-| WS_CRON_{TASK}_ARGS      | string  | Flags to pass to the {task} command.                                          | `-v`               |
-| WS_LOGS_CONTEXT          | bool    | Add context to console output messages.                                       | `false`            |
-| WS_LOGGER_FILE_ENABLE    | bool    | Save logs to file.                                                            | `true`             |
-| WS_LOGGER_FILE_LEVEL     | string  | File Logger Level.                                                            | `ERROR`            |
-| WS_WEBHOOK_DEBUG         | bool    | If enabled, allow dumping request/webhook using `rdump` & `wdump` parameters. | `false`            |
-| WS_EPISODES_DISABLE_GUID | bool    | Disable external id parsing for episodes and rely on relative ids.            | `true`             |
-| WS_TRUST_PROXY           | bool    | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                             | `false`            |
-| WS_TRUST_HEADER          | string  | Which header contain user true IP.                                            | `X-Forwarded-For`  |
-| WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number.       | `1000`             |
+| Key                      | Type    | Description                                                             | Default            |
+|--------------------------|---------|-------------------------------------------------------------------------|--------------------|
+| WS_DATA_PATH             | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var` |
+| WS_TMP_DIR               | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`  |
+| WS_TZ                    | string  | Set timezone.                                                           | `UTC`              |
+| WS_CRON_{TASK}           | bool    | Enable {task} task. Value casted to bool.                               | `false`            |
+| WS_CRON_{TASK}_AT        | string  | When to run {task} task. Valid Cron Expression Expected.                | `*/1 * * * *`      |
+| WS_CRON_{TASK}_ARGS      | string  | Flags to pass to the {task} command.                                    | `-v`               |
+| WS_LOGS_CONTEXT          | bool    | Add context to console output messages.                                 | `false`            |
+| WS_LOGGER_FILE_ENABLE    | bool    | Save logs to file.                                                      | `true`             |
+| WS_LOGGER_FILE_LEVEL     | string  | File Logger Level.                                                      | `ERROR`            |
+| WS_WEBHOOK_DUMP_REQUEST  | bool    | If enabled, will dump all received requests.                            | `false`            |
+| WS_EPISODES_DISABLE_GUID | bool    | Disable external id parsing for episodes and rely on relative ids.      | `true`             |
+| WS_TRUST_PROXY           | bool    | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                       | `false`            |
+| WS_TRUST_HEADER          | string  | Which header contain user true IP.                                      | `X-Forwarded-For`  |
+| WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number. | `1000`             |
 
 **Note**: for environment variables that has `{TASK}` tag, you **MUST** replace it with one
 of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
