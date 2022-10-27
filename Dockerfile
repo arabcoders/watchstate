@@ -1,5 +1,10 @@
+FROM caddy:builder-alpine AS builder
+
+RUN xcaddy build --with github.com/caddyserver/transform-encoder
+
 FROM alpine:3.16
 
+COPY --from=builder /usr/bin/caddy /usr/sbin/caddy
 COPY --from=composer:2 /usr/bin/composer /opt/bin/composer
 
 LABEL maintainer="admin@arabcoders.org"
@@ -17,15 +22,10 @@ ENV PATH=/opt/bin:${PATH}
 #
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
     for ext in ${PHP_PACKAGES}; do PACKAGES="${PACKAGES} ${PHP_V}-${ext}"; done && \
-    apk add --no-cache bash caddy icu-data-full nano curl procps net-tools iproute2  \
+    apk add --no-cache bash icu-data-full nano curl procps net-tools iproute2  \
     shadow sqlite redis tzdata gettext fcgi ${PHP_V} ${PACKAGES} && \
-    # Update Caddy and add packages to it.
-    echo 'Adding non standard modules to http server.' && \
-    caddy add-package github.com/caddyserver/transform-encoder >/dev/null 2>&1 && \
-    # Basic setup
-    echo '' && \
-    # Delete unused users change users group gid to allow unRaid users to use gid 100
-    deluser redis && deluser caddy && groupmod -g 1588787 users && \
+    # Basic clean yo Delete unused users change users group gid to allow unRaid users to use gid 100
+    deluser redis && groupmod -g 1588787 users && \
     # Create our own user.
     useradd -u 1000 -U -d /config -s /bin/bash user
 
