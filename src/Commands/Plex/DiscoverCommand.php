@@ -10,6 +10,7 @@ use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -31,15 +32,32 @@ final class DiscoverCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Discover servers linked to plex token.')
+            ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
             ->addArgument('token', InputArgument::REQUIRED, 'Plex token')
+            ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->setHelp(
                 r(
                     <<<HELP
 
                     This command allow you to <notice>discover</notice> servers associated with plex <notice>token</notice>.
 
+                    -------
+                    <notice>[ FAQ ]</notice>
+                    -------
+
+                    <question># How to get access tokens?</question>
+
+                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
+
+                    <question># How to see the raw response?</question>
+
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value>
+
                     HELP,
-                    []
+                    [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
+                    ]
                 )
             );
     }
@@ -61,7 +79,7 @@ final class DiscoverCommand extends Command
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    'Exception [{exception}] was thrown during call for servers list, likely network related? [{error}]',
+                    'Unexpected exception [{exception}] was thrown during request for servers list, likely network related error. [{error}]',
                     [
                         'exception' => $e::class,
                         'error' => $e->getMessage(),
@@ -85,6 +103,15 @@ final class DiscoverCommand extends Command
 
         $list = [];
 
+        if (false === $xml->Device) {
+            throw new RuntimeException(
+                r('No devices found associated with the given token.', [
+                    'status_code' => $response->getStatusCode(),
+                    'context' => arrayToString(['payload' => $xml]),
+                ])
+            );
+        }
+
         foreach ($xml->Device as $device) {
             if (null === ($attr = $device->attributes())) {
                 continue;
@@ -96,6 +123,11 @@ final class DiscoverCommand extends Command
                 continue;
             }
 
+            if (!property_exists($device, 'Connection') || false === $device->Connection) {
+                $this->logger->notice('Server [%(name)] has no reported connections.');
+                continue;
+            }
+
             foreach ($device->Connection as $uri) {
                 if (null === ($cAttr = $uri->attributes())) {
                     continue;
@@ -103,15 +135,26 @@ final class DiscoverCommand extends Command
 
                 $cAttr = ag((array)$cAttr, '@attributes');
 
-                $list[] = [
+                $arr = [
                     'name' => ag($attr, 'name'),
                     'identifier' => ag($attr, 'clientIdentifier'),
                     'proto' => ag($cAttr, 'protocol'),
                     'address' => ag($cAttr, 'address'),
                     'port' => (int)ag($cAttr, 'port'),
                     'uri' => ag($cAttr, 'uri'),
+                    'online' => 1 === (int)ag($attr, 'presence') ? 'Yes' : 'No',
                 ];
+
+                if ($input->getOption('with-tokens')) {
+                    $arr['AccessToken'] = ag($attr, 'accessToken');
+                }
+
+                $list[] = $arr;
             }
+        }
+
+        if ('table' !== $input->getOption('output') && $input->getOption('include-raw-response')) {
+            $list['raw'] = json_decode(json_encode((array)$xml), true);
         }
 
         $this->displayContent($list, $output, $input->getOption('output'));
