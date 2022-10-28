@@ -7,7 +7,7 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 * Sync backends play state (from many to many).
 * Backup your backends play state into `portable` format.
-* Receive Webhook events from media backends..
+* Receive Webhook events from media backends.
 * Find `un-matched` or `mis-matched` items.
 * Search your backend for `title` or `item id`.
 * Display and filter your play state. Can be exported as `yaml` or `json`.
@@ -30,7 +30,7 @@ services:
         # For information about supported environment variables visit FAQ page.
         # works for both global and container specific environment variables. 
         environment:
-            - WS_TZ=Asia/Kuwait # Set timezone.
+            - WS_TZ=UTC # Set timezone.
         ports:
             - "8080:8080" # webhook listener port.
         volumes:
@@ -42,8 +42,13 @@ Create directory called `data` next to the `docker-compose.yaml` file.
 After creating your docker compose file, start the container.
 
 ```bash
-$ mkdir -p ./data && docker-compose pull && docker-compose up -d
+$ mkdir -p ./data && docker-compose pull && docker-compose up
 ```
+
+**Note**: It's really important to match the `user:` to the owner of the `data` directory, the container is rootless, as
+such it will crash if it's unable to write to the data directory. It's really not recommended to run containers as root,
+but if you fail to run the container you can try setting the `user: "0:0"` if that works it means you have permissions
+issues. refer to [FAQ](FAQ.md) to troubleshoot the problem.
 
 # Adding backend
 

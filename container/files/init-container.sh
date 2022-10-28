@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
-ENV_FILE="${WS_DATA_PATH:-/config}/config/.env"
-
+DATA_PATH="${WS_DATA_PATH:-/config}"
+ENV_FILE="${DATA_PATH}/config/.env"
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+
+if [ ! -w "${DATA_PATH}" ]; then
+  CH_USER=$(stat -c "%u" "${DATA_PATH}")
+  CH_GRP=$(stat -c "%g" "${DATA_PATH}")
+  echo "[${TIME_DATE}] ERROR: Unable to write to [${DATA_PATH}] data directory. Current user id [${UID}] while directory owner is [$(stat -c "%u" "${DATA_PATH}")]"
+  echo "[${TIME_DATE}] change docker-compose.yaml user: to user:\"${CH_USER}:${CH_GRP}\""
+  exit 1
+fi
 
 if [ -f "${ENV_FILE}" ]; then
   echo "[${TIME_DATE}] INFO: Loading environment variables from [${ENV_FILE}]."
