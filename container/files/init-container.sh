@@ -8,7 +8,7 @@ TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 if [ ! -w "${DATA_PATH}" ]; then
   CH_USER=$(stat -c "%u" "${DATA_PATH}")
   CH_GRP=$(stat -c "%g" "${DATA_PATH}")
-  echo "[${TIME_DATE}] ERROR: Unable to write to [${DATA_PATH}] data directory. Current user id [${UID}] while directory owner is [$(stat -c "%u" "${DATA_PATH}")]"
+  echo "[${TIME_DATE}] ERROR: Unable to write to [${DATA_PATH}] data directory. Current user id [${UID}] while directory owner is [${CH_USER}]"
   echo "[${TIME_DATE}] change docker-compose.yaml user: to user:\"${CH_USER}:${CH_GRP}\""
   exit 1
 fi
