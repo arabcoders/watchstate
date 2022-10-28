@@ -13,7 +13,53 @@ $ docker exec -ti watchstate console help [COMMAND_NAME]
 ```
 
 It will show you the relevant information regarding the command and some frequently asked question about that command.
-The help document attach to each command is more up to date and precise. So, please read it.
+**The help document attached to each command is more up to date and precise. So, please read it.**
+
+----
+
+### Q: How to turn on scheduled tasks for import/export?
+
+Scheduled tasks are configured via specific environment variables refers to
+[environment variables](#environment-variables) section, to turn on the import/export tasks add the following
+environment variables:
+
+* `WS_CRON_IMPORT=1`
+* `WS_CRON_EXPORT=1`
+
+By default, `import` is scheduled to run every `1hour` while `export` is scheduled to run every `1hour 30minutes`, you
+can alter the time when the tasks are run via adding the following variables with valid cron expression. good source to
+check your cron expression is [crontab.guru](https://crontab.guru/).
+
+* `WS_CRON_IMPORT_AT="*/1 * * * *"`
+* `WS_CRON_EXPORT_AT="30 */1 * * *"`
+
+to see the status of your scheduled tasks, simply run the following command:
+
+```bash
+$ docker exec -ti watchstate console system:tasks
+```
+
+**Note**: All scheduled tasks are configured via the same variables style, refer
+to [Tool specific environment variables](#tool-specific-environment-variables) for more information.
+
+----
+
+### Q: Container is crashing on startup?
+
+This is likely due to misconfigured `user:` in `docker-compose.yaml`, the container is rootless as such it will crash if
+the tool unable to access the data path. to check permissions simply do the following
+
+```bash
+$ stat data/config/ | grep 'Uid:'
+```
+
+It should show something like
+
+```
+Access: (0755/drwxr-xr-x)  Uid: ( 1000/  user)   Gid: ( 1000/  user)
+```
+
+Use the ids as parameters for `user:` in this case it should be `user:"1000:1000"`.
 
 ----
 
@@ -29,38 +75,13 @@ to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
 $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
 ```
 
-For Jellyfin/Emby, you can just generate new API tokens.
+For Jellyfin/Emby, you can just generate new API tokens. and associate them with users.
 
 ----
 
-### Q: Can this tool run without container?
-
-Yes, if you have the required PHP version and the needed extensions. to run this tool you need the following `php8.1`,
-`php8.1-fpm` and `redis-server` and the following extensions `php8.1-pdo`, `php8.1-mbstring`, `php8.1-ctype`
-, `php8.1-curl`,`php8.1-sqlite3`, `php8.1-redis`, and [composer](https://getcomposer.org/). once you have the required
-runtime dependencies, for first time run:
-
-```bash
-cd ~/watchstate
-composer install --optimize-autoloader
-```
-
-after that you can start using the tool via this command.
-
-```bash
-$ php console
-```
-
-The app should save your data into `./var` directory. If you want to change the directory you can export the environment
-variable `WS_DATA_PATH` for console and browser. you can add a file called `.env` in main tool directory with the
-environment variables. take look at the files inside `container/files` directory to know how to run the scheduled tasks
-and if you want a webhook support you would need a frontend proxy for `php8.1-fpm` like nginx, caddy or apache.
-
----
-
 ### Q: Does this tool require webhooks to work?
 
-No, You can use the task scheduler or on demand sync if you want.
+No, You can use the task scheduler or on demand sync "manually running import and export" if you want.
 
 ---
 
@@ -352,12 +373,11 @@ command.
 ### Q: How to disable the included HTTP server and use external server?
 
 Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_HTTP` with value of `1`. your external
-server, need to send correct fastcgi environment variables. Example caddy file
+server need to send correct fastcgi environment variables. Example caddy file
 
 ```caddyfile
 
 https://watchstate.example.org {
-
 	# Set the handler to the container ip:9000 and leave [DOCUMENT_ROOT] and [SCRIPT_FILENAME] as they are.
 	php_fastcgi watchstate:9000 {
 		# Caddy require valid root path for it to proxy fastcgi requests.	 
@@ -365,7 +385,6 @@ https://watchstate.example.org {
 		root * /tmp
 		env DOCUMENT_ROOT /opt/app/public
 		env SCRIPT_FILENAME /opt/app/public/index.php
-		env X_REQUEST_ID "{http.request.uuid}"
 	}
 }
 ```
