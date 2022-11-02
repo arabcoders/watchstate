@@ -147,10 +147,13 @@ class Export extends Import
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
-                $this->logger->warning('Ignoring [%(backend)] [%(item.title)]. %(item.type) Is not imported yet.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->info(
+                    'Ignoring [%(backend)] [%(item.title)]. %(item.type) Is not imported yet. Possibly because the backend was imported as metadata only.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_not_found_in_db");
                 return;
             }
