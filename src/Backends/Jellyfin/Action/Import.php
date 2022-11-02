@@ -603,7 +603,14 @@ class Import
                     continue;
                 }
 
-                $callback(item: $entity, logContext: $logContext);
+                if (null !== ($indexNumberEnd = ag($entity, 'IndexNumberEnd'))) {
+                    foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
+                        $entity['IndexNumber'] = $i;
+                        $callback(item: $entity, logContext: $logContext);
+                    }
+                } else {
+                    $callback(item: $entity, logContext: $logContext);
+                }
             }
         } catch (Throwable $e) {
             $this->logger->error(

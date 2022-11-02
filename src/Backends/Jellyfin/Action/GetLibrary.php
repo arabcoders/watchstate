@@ -13,11 +13,13 @@ use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Options;
+use JsonMachine\Exception\InvalidArgumentException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class GetLibrary
@@ -45,8 +47,8 @@ class GetLibrary
     }
 
     /**
-     * @throws \Symfony\Contracts\HttpClient\Exception\ExceptionInterface
-     * @throws \JsonMachine\Exception\InvalidArgumentException
+     * @throws ExceptionInterface
+     * @throws InvalidArgumentException
      */
     private function action(Context $context, string|int $id, array $opts = []): Response
     {
@@ -173,7 +175,14 @@ class GetLibrary
                 'url' => (string)$url,
             ];
 
-            $list[] = $this->process($context, $entity, $logContext, $opts);
+            if (null !== ($indexNumberEnd = ag($entity, 'IndexNumberEnd'))) {
+                foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
+                    $entity['IndexNumber'] = $i;
+                    $list[] = $this->process($context, $entity, $logContext, $opts);
+                }
+            } else {
+                $list[] = $this->process($context, $entity, $logContext, $opts);
+            }
         }
 
         return new Response(status: true, response: $list);
