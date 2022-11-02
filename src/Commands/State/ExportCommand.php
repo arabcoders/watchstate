@@ -74,6 +74,18 @@ class ExportCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>-v --dry-run</flag> <flag>--select-backends</flag> <value>backend_name</value>
 
+                    <question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
+
+                    This error indicates that INFO indicates that the item is not imported possibly because the backend
+                    in the question is set as metadata only, and thus it will not import the item unless it's already exists
+                    in the database. if you are sure it's already exists on the other backend. Then this likely means
+                    that you have mismatched IDs. Run,
+
+                    {cmd} <cmd>db:list</cmd> <flag>--output</flag> <value>yaml</value> <flag>--title</flag> <value>"showName"</value>
+
+                    This command will show you which items are linked to given title,
+                    you can replace  <flag>--title</flag> <value>"showName"</value> with <flag>--parent</flag> <value>tvdb://id</value> to check specific show id
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
