@@ -39,12 +39,14 @@ final class ParseWebhook
         'playback.unpause',
         'playback.start',
         'playback.stop',
+        'library.new',
     ];
 
     protected const WEBHOOK_TAINTED_EVENTS = [
         'playback.pause',
         'playback.unpause',
         'playback.start',
+        'library.new'
     ];
 
     /**

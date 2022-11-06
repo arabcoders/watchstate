@@ -346,7 +346,8 @@ Those are some Webhook limitations we discovered for the following media backend
 #### Emby
 
 * Emby does not send webhooks events for newly added
-  items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/).
+  items. ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
+  implemented in 4.7.9.
 * Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
   played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
