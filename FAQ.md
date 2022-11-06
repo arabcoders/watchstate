@@ -243,12 +243,25 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook Events:
 
+#### v4.7.9 or higher
+
+* New Media Added
+* Playback
+* Mark played
+* Mark unplayed
+
+#### Versions prior to 4.7.9
+
 * Playback events
 * User events
 
 ##### Limit user events to:
 
 * Select your user.
+
+##### Limit library events to:
+
+* Select libraries that you want to sync or leave it blank for all libraries.
 
 Click `Add Webhook`
 
@@ -346,7 +359,8 @@ Those are some Webhook limitations we discovered for the following media backend
 #### Emby
 
 * Emby does not send webhooks events for newly added
-  items. [See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/).
+  items. ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
+  implemented in 4.7.9.
 * Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
   played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
