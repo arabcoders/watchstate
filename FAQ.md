@@ -243,12 +243,25 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook Events:
 
+#### v4.7.9 or higher
+
+* New Media Added
+* Playback
+* Mark played
+* Mark unplayed
+
+#### Versions prior to 4.7.9
+
 * Playback events
 * User events
 
 ##### Limit user events to:
 
 * Select your user.
+
+##### Limit library events to:
+
+* Select libraries that you want to sync or leave it blant for all.
 
 Click `Add Webhook`
 
