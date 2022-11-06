@@ -392,16 +392,20 @@ server need to send correct fastcgi environment variables. Example caddy file
 ```caddyfile
 
 https://watchstate.example.org {
-	# Set the handler to the container ip:9000 and leave [DOCUMENT_ROOT] and [SCRIPT_FILENAME] as they are.
-	php_fastcgi watchstate:9000 {
-		# Caddy require valid root path for it to proxy fastcgi requests.	 
-		# so set this path to empty directory.  
-		root * /tmp
-		env DOCUMENT_ROOT /opt/app/public
-		env SCRIPT_FILENAME /opt/app/public/index.php
+    # Change "172.23.1.2" to your watchstate container ip e.g. "172.23.20.20"
+	reverse_proxy 172.23.1.2:9000 {
+		transport fastcgi {
+			root /opt/app/public
+			env DOCUMENT_ROOT /opt/app/public
+			env SCRIPT_FILENAME /opt/app/public/index.php
+			env X_REQUEST_ID "{http.request.uuid}"
+			split .php
+		}
 	}
 }
 ```
+
+---
 
 ### Q: How to disable the included cache server and use external cache server?
 
