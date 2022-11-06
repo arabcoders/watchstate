@@ -261,7 +261,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Limit library events to:
 
-* Select libraries that you want to sync or leave it blant for all.
+* Select libraries that you want to sync or leave it blank for all libraries.
 
 Click `Add Webhook`
 
