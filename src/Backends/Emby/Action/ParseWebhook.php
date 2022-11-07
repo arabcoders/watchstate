@@ -39,9 +39,7 @@ final class ParseWebhook
         'playback.unpause',
         'playback.start',
         'playback.stop',
-        // @TODO turn it on when Emby 4.8 releases
-        // right now it's reporting bogus data for episodes.
-        // 'library.new',
+        'library.new',
     ];
 
     protected const WEBHOOK_TAINTED_EVENTS = [
