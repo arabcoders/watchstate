@@ -336,6 +336,24 @@ final class Initializer
                     'item' => [
                         'title' => $entity->getName(),
                         'type' => $entity->type,
+                    ],
+                ]
+            );
+
+            return new Response(304);
+        }
+
+        if ((null === $entity->episode || null === $entity->season) && $entity->isEpisode()) {
+            $this->write(
+                $request, Logger::NOTICE,
+                'Ignoring [%(backend)] %(item.type) [%(item.title)]. No episode/season number present.',
+                [
+                    'backend' => $entity->via,
+                    'item' => [
+                        'title' => $entity->getName(),
+                        'type' => $entity->type,
+                        'season' => (string)($entity->season ?? 'None'),
+                        'episode' => (string)($entity->episode ?? 'None'),
                     ]
                 ]
             );
@@ -363,7 +381,7 @@ final class Initializer
 
         $cache->set('requests', $items, new DateInterval('P3D'));
 
-        $this->write($request, Logger::INFO, 'Queued [%(backend)] %(item.type) [%(item.title)] for processing.', [
+        $this->write($request, Logger::INFO, 'Queued [%(backend)] %(item.type) [%(item.title)].', [
             'backend' => $entity->via,
             'item' => [
                 'title' => $entity->getName(),
