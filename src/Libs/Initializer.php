@@ -343,9 +343,10 @@ final class Initializer
             return new Response(304);
         }
 
-        if ((null === $entity->episode || null === $entity->season) && $entity->isEpisode()) {
+        if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
             $this->write(
-                $request, Logger::NOTICE,
+                $request,
+                Logger::NOTICE,
                 'Ignoring [%(backend)] %(item.type) [%(item.title)]. No episode/season number present.',
                 [
                     'backend' => $entity->via,
