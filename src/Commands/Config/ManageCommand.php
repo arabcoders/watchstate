@@ -23,7 +23,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:manage')]
+#[Routable(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
     public const ROUTE = 'config:manage';
@@ -35,7 +35,6 @@ final class ManageCommand extends Command
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
-            ->setAliases(['servers:manage'])
             ->setHelp(
                 r(
                     <<<HELP

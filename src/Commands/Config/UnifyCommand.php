@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:unify')]
+#[Routable(command: self::ROUTE)]
 final class UnifyCommand extends Command
 {
     public const ROUTE = 'config:unify';
@@ -36,7 +36,6 @@ final class UnifyCommand extends Command
                     implode('|', array_keys(Config::get('supported', [])))
                 ),
             )
-            ->setAliases(['servers:unify'])
             ->setHelp(
                 r(
                     <<<HELP

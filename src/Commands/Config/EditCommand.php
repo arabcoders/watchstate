@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:edit')]
+#[Routable(command: self::ROUTE)]
 final class EditCommand extends Command
 {
     public const ROUTE = 'config:edit';
@@ -32,7 +32,6 @@ final class EditCommand extends Command
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name')
-            ->setAliases(['servers:edit'])
             ->setHelp(
                 r(
                     <<<HELP

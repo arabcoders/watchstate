@@ -18,7 +18,7 @@ use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:edit')]
+#[Routable(command: self::ROUTE)]
 final class DiscoverCommand extends Command
 {
     public const ROUTE = 'plex:discover';
@@ -45,7 +45,7 @@ final class DiscoverCommand extends Command
                     <notice>[ FAQ ]</notice>
                     -------
 
-                    <question># How to get access tokens?</question>
+                    <question># How to get list servers associated with token?</question>
 
                     {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
 
