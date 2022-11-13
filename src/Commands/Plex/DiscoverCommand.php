@@ -45,7 +45,7 @@ final class DiscoverCommand extends Command
                     <notice>[ FAQ ]</notice>
                     -------
 
-                    <question># How to get access tokens?</question>
+                    <question># How to get list servers associated with token?</question>
 
                     {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
 
