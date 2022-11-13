@@ -19,7 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:view')]
+#[Routable(command: self::ROUTE)]
 final class ViewCommand extends Command
 {
     public const ROUTE = 'config:view';
@@ -36,7 +36,6 @@ final class ViewCommand extends Command
                 InputArgument::OPTIONAL,
                 'Can be any key from servers.yaml, use dot notion to access sub keys, for example [webhook.token]'
             )
-            ->setAliases(['servers:view'])
             ->setHelp(
                 r(
                     <<<HELP

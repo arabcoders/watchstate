@@ -59,7 +59,6 @@ final class LogsCommand extends Command
             )
             ->addOption('follow', 'f', InputOption::VALUE_NONE, 'Follow log file.')
             ->addOption('clear', null, InputOption::VALUE_NONE, 'Clear log file')
-            ->setAliases(['logs'])
             ->setDescription('View current logs.')
             ->setHelp(
                 r(

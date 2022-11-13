@@ -18,7 +18,7 @@ use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:edit')]
+#[Routable(command: self::ROUTE)]
 final class DiscoverCommand extends Command
 {
     public const ROUTE = 'plex:discover';

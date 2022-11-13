@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-#[Routable(command: self::ROUTE), Routable(command: 'servers:list')]
+#[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'config:list';
@@ -26,7 +26,6 @@ final class ListCommand extends Command
         $this->setName(self::ROUTE)
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->setDescription('List Added backends.')
-            ->setAliases(['servers:list'])
             ->setHelp(
                 <<<HELP
 
