@@ -54,6 +54,10 @@ issues. refer to [FAQ](FAQ.md) to troubleshoot the problem.
 
 After starting the container you should start adding your backends and to do so run the following command:
 
+**Note**: to get your plex token, please
+visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to know
+how to extract your plex token. For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api keys.
+
 ```bash
 $ docker exec -ti watchstate console config:add [BACKEND_NAME]
 ```
