@@ -22,6 +22,7 @@ final class Options
     public const LIBRARY_SEGMENT = 'LIBRARY_SEGMENT';
     public const STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
     public const DUMP_PAYLOAD = 'DUMP_PAYLOAD';
+    public const ADMIN_TOKEN = 'ADMIN_TOKEN';
 
     private function __construct()
     {

@@ -26,6 +26,7 @@ final class ListCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Get backend users list.')
             ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
+            ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Use this given token.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
@@ -33,8 +34,8 @@ final class ListCommand extends Command
                 r(
                     <<<HELP
 
-                    This command List the users from the backend. The configured should have access to do so otherwise, error will be
-                    thrown this mainly concern plex managed users.
+                    This command List the users from the backend. The configured backend token should have access to do so otherwise, error will be
+                    thrown this mainly concern plex managed users. as managed user token is limited.
 
                     -------
                     <notice>[ FAQ ]</notice>
@@ -47,6 +48,14 @@ final class ListCommand extends Command
                     <question># How to see the raw response?</question>
 
                     {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value>
+
+                    <question># My Plex backend report only one user?</question>
+
+                    This probably because you added a managed user instead of the default admin user, to make syncing
+                    work for managed user we have to use the managed user token instead of the admin user token due to
+                    plex api limitation. To see list of your users you can do the following.
+
+                    {cmd} <cmd>{route}</cmd> <flag>--use-token</flag> <value>PLEX_TOKEN</value> -- <value>backend_name</value>
 
                     HELP,
                     [
@@ -84,6 +93,10 @@ final class ListCommand extends Command
 
             if ($input->getOption('include-raw-response')) {
                 $opts[Options::RAW_RESPONSE] = true;
+            }
+
+            if ($input->getOption('use-token')) {
+                $backendOpts = ag_set($backendOpts, 'token', $input->getOption('use-token'));
             }
 
             if ($input->getOption('trace')) {
