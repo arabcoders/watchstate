@@ -262,14 +262,21 @@ if (!function_exists('saveWebhookPayload')) {
             'entity' => $entity->getAll(),
         ];
 
+        $filename = r(Config::get('webhook.file_format', 'webhook.{backend}.{event}.{id}.json'), [
+            'time' => (string)time(),
+            'backend' => $entity->via,
+            'event' => ag($entity->getExtra($entity->via), 'event', 'unknown'),
+            'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
+            'date' => makeDate('now')->format('Ymd'),
+            'context' => $content,
+        ]);
+
         @file_put_contents(
-            Config::get('tmpDir') . '/webhooks/' . sprintf(
-                'webhook.%s.%s.%s.json',
-                $entity->via,
-                ag($entity->getExtra($entity->via), 'event', 'unknown'),
-                ag($request->getServerParams(), 'X_REQUEST_ID', time())
-            ),
-            json_encode(value: $content, flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE)
+            Config::get('tmpDir') . '/webhooks/' . $filename,
+            json_encode(
+                value: $content,
+                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
+            )
         );
     }
 }

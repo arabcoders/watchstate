@@ -213,9 +213,9 @@ final class ManageCommand extends Command
 
                 if (!is_string($answer) && !is_int($answer)) {
                     throw new RuntimeException(
-                        sprintf(
-                            'Token value is invalid. Was Expecting [string|integer]. but got \'%s\' instead.',
-                            get_debug_type($answer)
+                        r(
+                            'Invalid token was given. Expecting string or integer, but got \'{type}\' instead.',
+                            ['type' => get_debug_type($answer)]
                         )
                     );
                 }
@@ -290,12 +290,35 @@ final class ManageCommand extends Command
                     '<info>Trying to get users list from backend. Please wait...</info>'
                 );
 
-                $list = $map = $ids = [];
+                $list = $map = $ids = $userInfo = [];
                 $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
-                $users = makeBackend($backend, $name)->getUsersList();
 
-                if (empty($users)) {
-                    throw new RuntimeException('Backend returned empty list of users.');
+                try {
+                    $users = makeBackend($backend, $name)->getUsersList(['tokens' => true]);
+                    if (empty($users)) {
+                        throw new RuntimeException('Backend returned empty list of users.');
+                    }
+                } catch (Throwable $e) {
+                    // -- Check admin token.
+                    $adminToken = ag($u, 'options.' . Options::ADMIN_TOKEN);
+                    if (null !== $adminToken && $adminToken !== ag($u, 'token')) {
+                        $output->writeln(
+                            r(
+                                '<notice>Backend returned an error \'{error}\'. Attempting to use admin token.</notice>',
+                                [
+                                    'error' => $e->getMessage()
+                                ]
+                            )
+                        );
+
+                        $backend['token'] = $adminToken;
+                        $users = makeBackend($backend, $name)->getUsersList(['tokens' => true]);
+                        if (empty($users)) {
+                            throw new RuntimeException('Backend returned empty list of users.');
+                        }
+                    } else {
+                        throw $e;
+                    }
                 }
 
                 foreach ($users as $user) {
@@ -304,6 +327,7 @@ final class ManageCommand extends Command
                     $list[] = $val;
                     $ids[$uid] = $val;
                     $map[$val] = $uid;
+                    $userInfo[$uid] = $user;
                 }
 
                 $helper = $this->getHelper('question');
@@ -324,6 +348,32 @@ final class ManageCommand extends Command
                 $user = $helper->ask($input, $output, $question);
                 $u = ag_set($u, 'user', $map[$user]);
 
+                if ('plex' === ag($u, 'type')) {
+                    if (false === (bool)ag($userInfo[$map[$user]], 'admin')) {
+                        $output->writeln(
+                            r(
+                                <<<INFO
+
+                            The selected user [<value>{user}</value>] is not the <flag>admin</flag> of the backend.
+                            Thus syncing the user watch state using the provided token is not possible, as <value>Plex</value>
+                            use tokens to identify users rather than user ids. We <value>replaced</value> the token with the one reported from the server.
+                            ------------------
+                            <info>This might lead to some functionality to not work as expected, like listing backend users.
+                            this is expected as the managed user token is rather limited compared to the admin user token.</info>
+
+                            INFO,
+                                [
+                                    'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
+                                ]
+                            )
+                        );
+                        $u = ag_set($u, 'options.' . Options::ADMIN_TOKEN, ag($u, 'token'));
+                    } else {
+                        $u = ag_delete($u, 'options.' . Options::ADMIN_TOKEN);
+                    }
+
+                    $u = ag_set($u, 'token', ag($userInfo[$map[$user]], 'token'));
+                }
                 return;
             } catch (Throwable $e) {
                 $output->writeln('<error>Failed to get the users list from backend.</error>');
