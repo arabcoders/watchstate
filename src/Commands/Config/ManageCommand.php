@@ -413,7 +413,7 @@ final class ManageCommand extends Command
             });
 
             $user = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'uuid', $user);
+            $u = ag_set($u, 'user', $user);
         })();
         $output->writeln('');
 
