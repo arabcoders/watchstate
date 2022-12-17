@@ -347,4 +347,9 @@ class PlexClient implements iClient
 
         return $response->response;
     }
+
+    public static function manage(array $backend, array $opts = []): array
+    {
+        return Container::get(PlexManage::class)->manage(backend: $backend, opts: $opts);
+    }
 }

@@ -22,6 +22,8 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Cache\Psr16Cache;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -105,6 +107,10 @@ return (function (): array {
         UriInterface::class => [
             'class' => fn() => new Uri(''),
             'shared' => false,
+        ],
+
+        InputInterface::class => [
+            'class' => fn(): InputInterface => new ArgvInput()
         ],
 
         OutputInterface::class => [

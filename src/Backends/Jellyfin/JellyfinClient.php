@@ -363,4 +363,9 @@ class JellyfinClient implements iClient
 
         return $response->response;
     }
+
+    public static function manage(array $backend, array $opts = []): array
+    {
+        return Container::get(JellyfinManage::class)->manage(backend: $backend, opts: $opts);
+    }
 }
