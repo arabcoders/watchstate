@@ -180,4 +180,14 @@ interface ClientInterface
      * @return array
      */
     public function listLibraries(array $opts = []): array;
+
+    /**
+     * Add/Edit Backend.
+     *
+     * @param array $backend
+     * @param array $opts
+     *
+     * @return array
+     */
+    public static function manage(array $backend, array $opts = []): array;
 }

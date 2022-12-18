@@ -19,7 +19,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
@@ -138,6 +137,7 @@ final class ManageCommand extends Command
         }
 
         $u = $rerun ?? ag($backends, $name, []);
+        $u['name'] = $name;
 
         $output->writeln('');
 
@@ -167,254 +167,9 @@ final class ManageCommand extends Command
             $type = $helper->ask($input, $output, $question);
 
             $u = ag_set($u, 'type', $type);
+            $u = ag(Config::get('supported'), $type)::manage($u);
         })();
-        $output->writeln('');
 
-        // -- $name.url
-        (function () use ($input, $output, &$u, $name) {
-            $helper = $this->getHelper('question');
-            $chosen = ag($u, 'url');
-            $question = new Question(
-                r('<question>Enter [<value>{name}</value>] URL</question>. {default}' . PHP_EOL . '> ', [
-                    'name' => $name,
-                    'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
-                ]),
-                $chosen
-            );
-
-            $question->setValidator(function ($answer) {
-                if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new RuntimeException('Invalid backend URL was given.');
-                }
-                return $answer;
-            });
-
-            $url = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'url', $url);
-        })();
-        $output->writeln('');
-
-        // -- $name.token
-        (function () use ($input, $output, &$u, $name) {
-            $helper = $this->getHelper('question');
-            $chosen = ag($u, 'token');
-            $question = new Question(
-                r('<question>Enter [<value>{name}</value>] API token</question>. {default}' . PHP_EOL . '> ', [
-                    'name' => $name,
-                    'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
-                ]),
-                $chosen
-            );
-
-            $question->setValidator(function ($answer) {
-                if (empty($answer)) {
-                    throw new RuntimeException('Token value cannot be empty or null.');
-                }
-
-                if (!is_string($answer) && !is_int($answer)) {
-                    throw new RuntimeException(
-                        r(
-                            'Invalid token was given. Expecting string or integer, but got \'{type}\' instead.',
-                            ['type' => get_debug_type($answer)]
-                        )
-                    );
-                }
-                return $answer;
-            });
-
-            $token = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'token', $token);
-        })();
-        $output->writeln('');
-
-        // -- $name.uuid
-        (function () use ($input, $output, &$u, $name) {
-            try {
-                $output->writeln(
-                    '<info>Getting backend unique identifier. Please wait...</info>'
-                );
-
-                $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 10]]]);
-                $chosen = ag($u, 'uuid', fn() => makeBackend($backend, $name)->getIdentifier(true));
-            } catch (Throwable $e) {
-                $output->writeln('<error>Failed to get the backend unique identifier.</error>');
-                $output->writeln(
-                    sprintf(
-                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
-                        afterLast(get_class($e), '\\'),
-                        $e->getMessage()
-                    )
-                );
-                $chosen = null;
-            }
-
-            $helper = $this->getHelper('question');
-            $question = new Question(
-                r(
-                    '<question>Enter [<value>{name}</value>] backend unique identifier</question>. {default}' . PHP_EOL . '> ',
-                    [
-                        'name' => $name,
-                        'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
-                    ]
-                ),
-                $chosen
-            );
-
-            $question->setValidator(function ($answer) {
-                if (empty($answer)) {
-                    throw new RuntimeException('Backend unique identifier cannot be empty.');
-                }
-
-                if (!is_string($answer) && !is_int($answer)) {
-                    throw new RuntimeException(
-                        sprintf(
-                            'Backend unique identifier is invalid. Expecting [string|integer]. but got \'%s\' instead.',
-                            get_debug_type($answer)
-                        )
-                    );
-                }
-                return $answer;
-            });
-
-            $uuid = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'uuid', $uuid);
-        })();
-        $output->writeln('');
-
-        // -- $name.user
-        (function () use ($input, $output, &$u, $name) {
-            $chosen = ag($u, 'user');
-
-            try {
-                $output->writeln(
-                    '<info>Trying to get users list from backend. Please wait...</info>'
-                );
-
-                $list = $map = $ids = $userInfo = [];
-                $backend = array_replace_recursive($u, ['options' => ['client' => ['timeout' => 5]]]);
-
-                try {
-                    $users = makeBackend($backend, $name)->getUsersList(['tokens' => true]);
-                    if (empty($users)) {
-                        throw new RuntimeException('Backend returned empty list of users.');
-                    }
-                } catch (Throwable $e) {
-                    // -- Check admin token.
-                    $adminToken = ag($u, 'options.' . Options::ADMIN_TOKEN);
-                    if (null !== $adminToken && $adminToken !== ag($u, 'token')) {
-                        $output->writeln(
-                            r(
-                                '<notice>Backend returned an error \'{error}\'. Attempting to use admin token.</notice>',
-                                [
-                                    'error' => $e->getMessage()
-                                ]
-                            )
-                        );
-
-                        $backend['token'] = $adminToken;
-                        $users = makeBackend($backend, $name)->getUsersList(['tokens' => true]);
-                        if (empty($users)) {
-                            throw new RuntimeException('Backend returned empty list of users.');
-                        }
-                    } else {
-                        throw $e;
-                    }
-                }
-
-                foreach ($users as $user) {
-                    $uid = ag($user, 'id');
-                    $val = ag($user, 'name', '??');
-                    $list[] = $val;
-                    $ids[$uid] = $val;
-                    $map[$val] = $uid;
-                    $userInfo[$uid] = $user;
-                }
-
-                $helper = $this->getHelper('question');
-                $choice = $ids[$chosen] ?? null;
-
-                $question = new ChoiceQuestion(
-                    r('<question>Select which user to associate with this backend</question>. {default}', [
-                        'default' => null !== $choice ? "<value>[Default: {$choice}]</value>" : ''
-                    ]),
-                    $list,
-                    false === $choice ? null : $choice
-                );
-
-                $question->setAutocompleterValues($list);
-
-                $question->setErrorMessage('Invalid value [%s] was selected.');
-
-                $user = $helper->ask($input, $output, $question);
-                $u = ag_set($u, 'user', $map[$user]);
-
-                if ('plex' === ag($u, 'type')) {
-                    if (false === (bool)ag($userInfo[$map[$user]], 'admin')) {
-                        $output->writeln(
-                            r(
-                                <<<INFO
-
-                            The selected user [<value>{user}</value>] is not the <flag>admin</flag> of the backend.
-                            Thus syncing the user watch state using the provided token is not possible, as <value>Plex</value>
-                            use tokens to identify users rather than user ids. We <value>replaced</value> the token with the one reported from the server.
-                            ------------------
-                            <info>This might lead to some functionality to not work as expected, like listing backend users.
-                            this is expected as the managed user token is rather limited compared to the admin user token.</info>
-
-                            INFO,
-                                [
-                                    'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
-                                ]
-                            )
-                        );
-                        $u = ag_set($u, 'options.' . Options::ADMIN_TOKEN, ag($u, 'token'));
-                    } else {
-                        $u = ag_delete($u, 'options.' . Options::ADMIN_TOKEN);
-                    }
-
-                    $u = ag_set($u, 'token', ag($userInfo[$map[$user]], 'token'));
-                }
-                return;
-            } catch (Throwable $e) {
-                $output->writeln('<error>Failed to get the users list from backend.</error>');
-                $output->writeln(
-                    sprintf(
-                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
-                        afterLast(get_class($e), '\\'),
-                        $e->getMessage()
-                    )
-                );
-            }
-
-            $helper = $this->getHelper('question');
-            $question = new Question(
-                sprintf(
-                    'Please enter %s user id to associate this config to %s' . PHP_EOL . '> ',
-                    ucfirst(ag($u, 'type')),
-                    null !== $chosen ? "- <value>[Default: {$chosen}]</value>" : '',
-                ),
-                $chosen
-            );
-
-            $question->setValidator(function ($answer) {
-                if (empty($answer)) {
-                    throw new RuntimeException('Backend user id cannot be empty.');
-                }
-
-                if (!is_string($answer) && !is_int($answer)) {
-                    throw new RuntimeException(
-                        sprintf(
-                            'Backend user id is invalid. Expecting [string|integer]. but got \'%s\' instead.',
-                            get_debug_type($answer)
-                        )
-                    );
-                }
-                return $answer;
-            });
-
-            $user = $helper->ask($input, $output, $question);
-            $u = ag_set($u, 'uuid', $user);
-        })();
         $output->writeln('');
 
         // -- $name.import.enabled
@@ -562,6 +317,10 @@ final class ManageCommand extends Command
             if (true === ag_exists($u, 'options.' . Options::IMPORT_METADATA_ONLY)) {
                 $u = ag_delete($u, 'options.' . Options::IMPORT_METADATA_ONLY);
             }
+        }
+
+        if (true === ag_exists($u, 'name')) {
+            $u = ag_delete($u, 'name');
         }
 
         $output->writeln('-----------');

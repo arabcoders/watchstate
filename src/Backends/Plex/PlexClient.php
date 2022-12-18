@@ -34,6 +34,11 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use SplFileObject;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class PlexClient implements iClient
 {
@@ -346,5 +351,103 @@ class PlexClient implements iClient
         }
 
         return $response->response;
+    }
+
+    public static function manage(array $backend, array $opts = []): array
+    {
+        return Container::get(PlexManage::class)->manage(backend: $backend, opts: $opts);
+    }
+
+    /**
+     * Discover Servers linked to plex token.
+     *
+     * @throws ServerExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     */
+    public static function discover(HttpClientInterface $http, string $token, array $opts = []): array
+    {
+        try {
+            $response = $http->request('GET', 'https://plex.tv/api/resources?includeHttps=1&includeRelay=0', [
+                'headers' => [
+                    'X-Plex-Token' => $token,
+                ],
+            ]);
+
+            $payload = $response->getContent(false);
+
+            if (200 !== $response->getStatusCode()) {
+                throw new RuntimeException(
+                    r('Request for servers list returned with unexpected [{status_code}] status code. {context}', [
+                        'status_code' => $response->getStatusCode(),
+                        'context' => arrayToString(['payload' => $payload]),
+                    ])
+                );
+            }
+        } catch (TransportExceptionInterface $e) {
+            throw new RuntimeException(
+                r(
+                    'Unexpected exception [{exception}] was thrown during request for servers list, likely network related error. [{error}]',
+                    [
+                        'exception' => $e::class,
+                        'error' => $e->getMessage(),
+                    ]
+                )
+            );
+        }
+
+        $xml = simplexml_load_string($payload);
+
+        $list = [];
+
+        if (false === $xml->Device) {
+            throw new RuntimeException('No devices found associated with the given token.');
+        }
+
+        foreach ($xml->Device as $device) {
+            if (null === ($attr = $device->attributes())) {
+                continue;
+            }
+
+            $attr = ag((array)$attr, '@attributes');
+
+            if ('server' !== ag($attr, 'provides')) {
+                continue;
+            }
+
+            if (!property_exists($device, 'Connection') || false === $device->Connection) {
+                continue;
+            }
+
+            foreach ($device->Connection as $uri) {
+                if (null === ($cAttr = $uri->attributes())) {
+                    continue;
+                }
+
+                $cAttr = ag((array)$cAttr, '@attributes');
+
+                $arr = [
+                    'name' => ag($attr, 'name'),
+                    'identifier' => ag($attr, 'clientIdentifier'),
+                    'proto' => ag($cAttr, 'protocol'),
+                    'address' => ag($cAttr, 'address'),
+                    'port' => (int)ag($cAttr, 'port'),
+                    'uri' => ag($cAttr, 'uri'),
+                    'online' => 1 === (int)ag($attr, 'presence') ? 'Yes' : 'No',
+                ];
+
+                if (true === ag_exists($opts, 'with-tokens')) {
+                    $arr['AccessToken'] = ag($attr, 'accessToken');
+                }
+
+                $list['list'][] = $arr;
+            }
+        }
+
+        if (true === ag_exists($opts, Options::RAW_RESPONSE)) {
+            $list[Options::RAW_RESPONSE] = $xml;
+        }
+
+        return $list;
     }
 }

@@ -168,11 +168,11 @@ if (!function_exists('ag_exists')) {
      */
     function ag_exists(array $array, string|int $path, string $separator = '.'): bool
     {
-        if (is_int($path)) {
-            return isset($array[$path]);
+        if (isset($array[$path])) {
+            return true;
         }
 
-        foreach (explode($separator, $path) as $lookup) {
+        foreach (explode($separator, (string)$path) as $lookup) {
             if (isset($array[$lookup])) {
                 $array = $array[$lookup];
             } else {
@@ -701,7 +701,21 @@ if (false === function_exists('r')) {
 if (false === function_exists('generateRoutes')) {
     function generateRoutes(): array
     {
-        $routes = (new Router([__DIR__ . '/../Commands']))->generate();
+        $dirs = [
+            __DIR__ . '/../Commands',
+        ];
+
+        foreach (array_keys(Config::get('supported', [])) as $backend) {
+            $dir = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
+
+            if (!file_exists($dir)) {
+                continue;
+            }
+
+            $dirs[] = $dir;
+        }
+
+        $routes = (new Router($dirs))->generate();
 
         try {
             Container::get(CacheInterface::class)->set(
