@@ -301,7 +301,12 @@ class PlexManage implements ManageInterface
                     $backend = ag_delete($backend, 'options.' . Options::ADMIN_TOKEN);
                 }
 
-                $backend = ag_set($backend, 'token', ag($userInfo[$map[$user]], 'token'));
+                $userToken = ag($userInfo[$map[$user]], 'token');
+
+                // @TODO temp fix until we understand why plex sometimes does not report user token.
+                if ('not found' !== strtolower($userToken)) {
+                    $backend = ag_set($backend, 'token', $userToken);
+                }
 
                 return;
             } catch (Throwable $e) {
