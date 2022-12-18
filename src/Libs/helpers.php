@@ -701,7 +701,21 @@ if (false === function_exists('r')) {
 if (false === function_exists('generateRoutes')) {
     function generateRoutes(): array
     {
-        $routes = (new Router([__DIR__ . '/../Commands']))->generate();
+        $dirs = [
+            __DIR__ . '/../Commands',
+        ];
+
+        foreach (array_keys(Config::get('supported', [])) as $backend) {
+            $dir = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
+
+            if (!file_exists($dir)) {
+                continue;
+            }
+
+            $dirs[] = $dir;
+        }
+
+        $routes = (new Router($dirs))->generate();
 
         try {
             Container::get(CacheInterface::class)->set(
