@@ -168,11 +168,11 @@ if (!function_exists('ag_exists')) {
      */
     function ag_exists(array $array, string|int $path, string $separator = '.'): bool
     {
-        if (is_int($path)) {
-            return isset($array[$path]);
+        if (isset($array[$path])) {
+            return true;
         }
 
-        foreach (explode($separator, $path) as $lookup) {
+        foreach (explode($separator, (string)$path) as $lookup) {
             if (isset($array[$lookup])) {
                 $array = $array[$lookup];
             } else {

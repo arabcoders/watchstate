@@ -6,50 +6,31 @@ namespace App\Backends\Plex;
 
 use App\Backends\Common\ManageInterface;
 use App\Libs\Options;
+use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
 use Symfony\Component\Console\Helper\QuestionHelper;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\Question;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 class PlexManage implements ManageInterface
 {
     private QuestionHelper $questionHelper;
 
-    public function __construct(private OutputInterface $output, private InputInterface $input)
-    {
+    public function __construct(
+        private iHttp $http,
+        private iOutput $output,
+        private iInput $input,
+        private CacheInterface $cache
+    ) {
         $this->questionHelper = new QuestionHelper();
     }
 
     public function manage(array $backend, array $opts = []): array
     {
-        // -- $backend.url
-        (function () use (&$backend) {
-            $chosen = ag($backend, 'url');
-
-            $question = new Question(
-                r('<question>Enter [<value>{name}</value>] URL</question>. {default}' . PHP_EOL . '> ', [
-                    'name' => ag($backend, 'name'),
-                    'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
-                ]),
-                $chosen
-            );
-
-            $question->setValidator(function ($answer) {
-                if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new RuntimeException('Invalid backend URL was given.');
-                }
-                return $answer;
-            });
-
-            $url = $this->questionHelper->ask($this->input, $this->output, $question);
-
-            $backend = ag_set($backend, 'url', $url);
-        })();
-        $this->output->writeln('');
-
         // -- $backend.token
         (function () use (&$backend) {
             $chosen = ag($backend, 'token');
@@ -82,6 +63,91 @@ class PlexManage implements ManageInterface
 
             $token = $this->questionHelper->ask($this->input, $this->output, $question);
             $backend = ag_set($backend, 'token', $token);
+        })();
+        $this->output->writeln('');
+
+        // -- $backend.url
+        (function () use (&$backend) {
+            $chosen = ag($backend, 'url');
+
+            try {
+                if (null === $chosen) {
+                    $this->output->writeln(
+                        '<info>Trying to get list of plex servers associated with the token. Please wait...</info>'
+                    );
+
+                    $token = ag($backend, 'token');
+                    $cacheKey = md5($token);
+                    if (null === ($response = $this->cache->get($cacheKey))) {
+                        $response = PlexClient::discover(http: $this->http, token: $token);
+                        $this->cache->set($cacheKey, $response, 120);
+                    }
+
+                    $backends = ag($response, 'list', []);
+
+                    if (empty($backends)) {
+                        throw new RuntimeException('Plex API returned empty list of servers.');
+                    }
+
+                    $list = $map = [];
+
+                    foreach ($backends as $server) {
+                        $val = r('{name} - {uri}', [
+                            'name' => ag($server, 'name'),
+                            'uri' => ag($server, 'uri')
+                        ]);
+
+                        $list[] = $val;
+                        $map[$val] = ag($server, 'uri');
+                    }
+
+                    $list[] = 'Other. Enter manually.';
+
+                    $question = new ChoiceQuestion(
+                        r('<question>Select [<value>{name}</value>] URL.</question>', [
+                            'name' => ag($backend, 'name'),
+                        ]), $list
+                    );
+
+                    $question->setAutocompleterValues($list);
+
+                    $question->setErrorMessage('Invalid value [%s] was selected.');
+
+                    $server = $this->questionHelper->ask($this->input, $this->output, $question);
+
+                    if (true === ag_exists($map, $server)) {
+                        $backend = ag_set($backend, 'url', ag($map, $server));
+                        return;
+                    }
+                }
+            } catch (Throwable $e) {
+                $this->output->writeln('<error>Failed to get list of servers associated with the token.</error>');
+                $this->output->writeln(
+                    r('<error>ERROR - {class}: {error}.</error>' . PHP_EOL, [
+                        'class' => afterLast(get_class($e), '\\'),
+                        'error' => $e->getMessage(),
+                    ])
+                );
+            }
+
+            $question = new Question(
+                r('<question>Enter [<value>{name}</value>] URL</question>. {default}' . PHP_EOL . '> ', [
+                    'name' => ag($backend, 'name'),
+                    'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
+                ]),
+                $chosen
+            );
+
+            $question->setValidator(function ($answer) {
+                if (!filter_var($answer, FILTER_VALIDATE_URL)) {
+                    throw new RuntimeException('Invalid backend URL was given.');
+                }
+                return $answer;
+            });
+
+            $url = $this->questionHelper->ask($this->input, $this->output, $question);
+
+            $backend = ag_set($backend, 'url', $url);
         })();
         $this->output->writeln('');
 
