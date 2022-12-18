@@ -6,7 +6,6 @@ namespace App\Backends\Plex;
 
 use App\Backends\Common\ManageInterface;
 use App\Libs\Options;
-use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -24,7 +23,6 @@ class PlexManage implements ManageInterface
         private iHttp $http,
         private iOutput $output,
         private iInput $input,
-        private CacheInterface $cache
     ) {
         $this->questionHelper = new QuestionHelper();
     }
@@ -71,17 +69,12 @@ class PlexManage implements ManageInterface
             $chosen = ag($backend, 'url');
 
             try {
-                if (null === $chosen) {
+                if (null === $chosen || 'http://choose' === $chosen) {
                     $this->output->writeln(
                         '<info>Trying to get list of plex servers associated with the token. Please wait...</info>'
                     );
 
-                    $token = ag($backend, 'token');
-                    $cacheKey = md5($token);
-                    if (null === ($response = $this->cache->get($cacheKey))) {
-                        $response = PlexClient::discover(http: $this->http, token: $token);
-                        $this->cache->set($cacheKey, $response, 120);
-                    }
+                    $response = PlexClient::discover(http: $this->http, token: ag($backend, 'token'));
 
                     $backends = ag($response, 'list', []);
 
