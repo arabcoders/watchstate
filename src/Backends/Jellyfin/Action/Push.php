@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -248,8 +249,19 @@ class Push
                 }
 
                 $url = $context->backendUrl->withPath(
-                    sprintf('/Users/%s/PlayedItems/%s', $context->backendUser, ag($json, 'Id'))
+                    r('/Users/{user}/PlayedItems/{id}', [
+                        'user' => $context->backendUser,
+                        'id' => ag($json, 'Id')
+                    ])
                 );
+
+                if ($context->clientName === JellyfinClient::CLIENT_NAME) {
+                    $url = $url->withQuery(
+                        http_build_query([
+                            'DatePlayed' => makeDate($entity->updated)->format(Date::ATOM)
+                        ])
+                    );
+                }
 
                 $logContext['remote']['url'] = $url;
 

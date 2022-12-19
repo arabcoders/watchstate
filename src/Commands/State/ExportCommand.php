@@ -375,10 +375,13 @@ class ExportCommand extends Command
                 $context = ag($response->getInfo('user_data'), 'context', []);
 
                 try {
-                    if (200 !== $response->getStatusCode()) {
+                    if (200 !== ($statusCode = $response->getStatusCode())) {
                         $this->logger->error(
                             'Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
-                            $context
+                            [
+                                'status_code' => $statusCode,
+                                ...$context,
+                            ],
                         );
                         continue;
                     }
