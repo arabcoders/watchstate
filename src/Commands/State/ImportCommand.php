@@ -164,6 +164,27 @@ class ImportCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>-force-full</flag>
 
+                    <question># My new backend overriding my old backend state / My watch state is not correct?</question>
+
+                    This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
+                    prioritize items with newer date compared to old ones. This is what you want to happen normally. However, if the new
+                    media backend state is not correct this might override your current watch state.
+
+                    The solution to get both in sync, and to do so follow these steps:
+
+                    1. Add your backend that has correct watch state and enable full import.
+                    2. Add your new backend as metadata source only, when adding a backend you will get
+                       asked <question>Enable importing of metadata and play state from this backend?</question> answer with <value>N</value> for the new backend.
+
+                    After that, do single backend export by using the following command:
+
+                    {cmd} <cmd>state:export</cmd> <flag>-vvf -s</flag> <value>new_backend_name</value>
+
+                    Running this command will force full export your current database state to the selected backend. Once that done you can
+                    turn on import from the new backend. by editing the backend setting:
+
+                    {cmd} <cmd>config:manage</cmd> <value>backend_name</value>
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
