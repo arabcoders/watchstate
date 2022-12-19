@@ -170,8 +170,6 @@ final class ManageCommand extends Command
             $u = ag(Config::get('supported'), $type)::manage($u);
         })();
 
-        $output->writeln('');
-
         // -- $name.import.enabled
         (function () use ($input, $output, &$u) {
             $chosen = (bool)ag($u, 'import.enabled', true);
@@ -180,7 +178,15 @@ final class ManageCommand extends Command
 
             $question = new ConfirmationQuestion(
                 r(
-                    '<question>Enable importing of <flag>metadata</flag> and <flag>play state</flag> from this backend</question>? {default}' . PHP_EOL . '> ',
+                    <<<HELP
+                    <question>Enable <flag>watch/play state</flag> import from this backend</question>? {default}
+                    ------------------
+                    <notice>WARNING:</notice> If this backend is new and does not have your correct watch/play state, then you <error>SHOULD</error>
+                    answer with <value>no</value>. If the date on movies/episodes is newer than your old backend watch date, it will
+                    override the that state. Select <value>no</value>, and export your current play state and then re-nable the play state import.
+                    ------------------
+                    <value>Please read the FAQ about this subject.</value>
+                    HELP. PHP_EOL . '> ',
                     [
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
@@ -201,7 +207,7 @@ final class ManageCommand extends Command
 
             $question = new ConfirmationQuestion(
                 r(
-                    '<question>Enable exporting <value>play state</value> to this backend</question>? {default}' . PHP_EOL . '> ',
+                    '<question>Enable <value>watch/play state</value> export to this backend</question>? {default}' . PHP_EOL . '> ',
                     [
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
@@ -231,7 +237,7 @@ final class ManageCommand extends Command
             $question = new ConfirmationQuestion(
                 r(
                     <<<HELP
-                    <question>Enable Importing <info>metadata ONLY</info> from this backend</question>? {default}
+                    <question>Enable <value>metadata</value> only import from this backend</question>? {default}
                     ------------------
                     To efficiently <cmd>export</cmd> to this backend we need relation map and this require
                     us to get metadata from the backend. You have <cmd>Importing</cmd> disabled, as such this option
@@ -240,7 +246,7 @@ final class ManageCommand extends Command
                     <value>This option will not alter your play state or add new items to the database.</value>
                     HELP. PHP_EOL . '> ',
                     [
-                        'default' => '[Y|N] [Default: ' . ($chosen ? 'Yes' : 'No') . ']',
+                        'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
                 ),
                 $chosen

@@ -128,7 +128,7 @@ final class GetUsersList
                     );
                 }
 
-                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : 'Not found';
+                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
             }
 
             if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {

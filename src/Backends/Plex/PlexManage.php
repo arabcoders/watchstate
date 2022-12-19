@@ -301,12 +301,19 @@ class PlexManage implements ManageInterface
                     $backend = ag_delete($backend, 'options.' . Options::ADMIN_TOKEN);
                 }
 
-                $userToken = ag($userInfo[$map[$user]], 'token');
-
-                // @TODO temp fix until we understand why plex sometimes does not report user token.
-                if ('not found' !== strtolower($userToken)) {
-                    $backend = ag_set($backend, 'token', $userToken);
+                if (null === ($userToken = ag($userInfo[$map[$user]], 'token'))) {
+                    $this->output->writeln(
+                        r(
+                            '<error>Unable to get [{user}] access_token. check the logs.</error>',
+                            [
+                                'user' => $user
+                            ]
+                        )
+                    );
+                    return;
                 }
+
+                $backend = ag_set($backend, 'token', $userToken);
 
                 return;
             } catch (Throwable $e) {
