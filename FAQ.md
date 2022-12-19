@@ -17,7 +17,7 @@ It will show you the relevant information regarding the command and some frequen
 
 ----
 
-### Q: How to turn on scheduled tasks for import/export?
+### How to turn on scheduled tasks for import/export?
 
 Scheduled tasks are configured via specific environment variables refers to
 [environment variables](#environment-variables) section, to turn on the import/export tasks add the following
@@ -44,7 +44,7 @@ to [Tool specific environment variables](#tool-specific-environment-variables) f
 
 ----
 
-### Q: Container is crashing on startup?
+### Container is crashing on startup?
 
 This is likely due to misconfigured `user:` in `docker-compose.yaml`, the container is rootless as such it will crash if
 the tool unable to access the data path. to check permissions simply do the following
@@ -63,7 +63,31 @@ Use the ids as parameters for `user:` in this case it should be `user:"1000:1000
 
 ----
 
-### Q: Is there support for Multi-user setup?
+### My new backend overriding my old backend state / My watch state is not correct?
+
+This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
+prioritize items with newer date compared to old ones. This is what you want to happen normally. However, if the new
+media backend state is not correct this might override your current watch state.
+
+The solution to get both in sync, and to do so follow these steps:
+
+1. Add your backend that has correct watch state and enable full import.
+2. Add your new backend as metadata source only, when adding a backend you will get
+   asked `Enable importing of metadata and play state from this backend?` answer with `N` for the new backend.
+
+After that, do single backend export by using the following command:
+
+```bash
+$ docker exec -ti watchstate console state:export -vvf -s new_backend_name
+```
+
+Running this command will force full export your current database state to the selected backend. Once that done you can
+turn on import from the new backend. by editing the backend setting
+via `docker exec -ti watchstate console config:manage backend_name`
+
+----
+
+### Is there support for Multi-user setup?
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
 use single container for all users, however it's not really easy refer
@@ -79,13 +103,13 @@ For Jellyfin/Emby, you can just generate new API tokens. and associate them with
 
 ----
 
-### Q: Does this tool require webhooks to work?
+### Does this tool require webhooks to work?
 
 No, You can use the task scheduler or on demand sync "manually running import and export" if you want.
 
 ---
 
-### Q: I get tired of writing the whole command everytime is there an easy way run the commands?
+### I get tired of writing the whole command everytime is there an easy way run the commands?
 
 Since there is no way to access the command interface outside the container, you can create small shell script to at
 least omit part of command that you have to write for example, to create shortcut for docker command do the following:
@@ -99,7 +123,7 @@ after that you can do `./ws command` for example, `./ws db:list`
 
 ---
 
-### Q: I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
+### I am using media backends hosted behind HTTPS, and see errors related to HTTP/2?
 
 Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
 
@@ -112,7 +136,7 @@ about it.
 
 ---
 
-### Q: Sync operations are failing due to request timeout?
+### Sync operations are failing due to request timeout?
 
 If you want to increase the timeout for specific backend you can run the following command:
 
@@ -124,7 +148,7 @@ where `600` is the number of secs before the timeout handler will kill the reque
 
 ---
 
-### Q: Which external db ids supported for Plex Media Server?
+### Which external db ids supported for Plex Media Server?
 
 * tvdb://(id) `New plex agent`
 * imdb://(id) `New plex agent`
@@ -139,7 +163,7 @@ where `600` is the number of secs before the timeout handler will kill the reque
 
 ---
 
-### Q: Which external db ids supported for Jellyfin and Emby?
+### Which external db ids supported for Jellyfin and Emby?
 
 * imdb://(id)
 * tvdb://(id)
@@ -196,15 +220,15 @@ $ docker exec -ti watchstate console system:tasks
 These environment variables relates to the container itself, and it's recommended to load them
 via the `docker-compose.yaml` file.
 
-| Key              | Type    | Description                                  | Default |
-|------------------|---------|----------------------------------------------|---------|
-| WS_DISABLE_HTTP  | integer | Disable included `HTTP Server`.              | `0`     |
-| WS_DISABLE_CRON  | integer | Disable included `Task Scheduler`.           | `0`     |
-| WS_DISABLE_CACHE | integer | Disable included `Cache Server`.             | `0`     |
+| Key              | Type    | Description                        | Default |
+|------------------|---------|------------------------------------|---------|
+| WS_DISABLE_HTTP  | integer | Disable included `HTTP Server`.    | `0`     |
+| WS_DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`     |
+| WS_DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`     |
 
 ---
 
-### Q: How to add webhooks?
+### How to add webhooks?
 
 To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be
 like this:
@@ -345,7 +369,7 @@ Click `save`
 
 ---
 
-### Q: What are the webhook limitations?
+### What are the webhook limitations?
 
 Those are some Webhook limitations we discovered for the following media backends.
 
@@ -359,8 +383,9 @@ Those are some Webhook limitations we discovered for the following media backend
 #### Emby
 
 * Emby does not send webhooks events for newly added
-  items. ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
-  implemented in 4.7.9.
+  items.
+  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
+  implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
 * Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
   played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
@@ -375,7 +400,7 @@ Those are some Webhook limitations we discovered for the following media backend
 
 ---
 
-### Q: Sometimes newly added episodes or movies don't make it to webhook endpoint?
+### Sometimes newly added episodes or movies don't make it to webhook endpoint?
 
 As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
 complement webhooks, you should enable import/export tasks by settings their respective environment variables in
@@ -384,7 +409,7 @@ command.
 
 ---
 
-### Q: How to disable the included HTTP server and use external server?
+### How to disable the included HTTP server and use external server?
 
 Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_HTTP` with value of `1`. your external
 server need to send correct fastcgi environment variables. Example caddy file
@@ -407,7 +432,7 @@ https://watchstate.example.org {
 
 ---
 
-### Q: How to disable the included cache server and use external cache server?
+### How to disable the included cache server and use external cache server?
 
 Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_CACHE` with value of `1`.
 to use external redis server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this

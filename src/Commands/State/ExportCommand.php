@@ -76,9 +76,9 @@ class ExportCommand extends Command
 
                     <question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
 
-                    This error indicates that INFO indicates that the item is not imported possibly because the backend
-                    in the question is set as metadata only, and thus it will not import the item unless it's already exists
-                    in the database. if you are sure it's already exists on the other backend. Then this likely means
+                    This error indicates that the item is not imported possibly because the backend in the question is
+                    set as metadata only, and thus it will not import the item unless it's already exists in the
+                    database. if you are sure it's already exists on the other backend. Then this likely means
                     that you have mismatched IDs. Run,
 
                     {cmd} <cmd>db:list</cmd> <flag>--output</flag> <value>yaml</value> <flag>--title</flag> <value>"showName"</value>
@@ -375,10 +375,13 @@ class ExportCommand extends Command
                 $context = ag($response->getInfo('user_data'), 'context', []);
 
                 try {
-                    if (200 !== $response->getStatusCode()) {
+                    if (200 !== ($statusCode = $response->getStatusCode())) {
                         $this->logger->error(
                             'Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
-                            $context
+                            [
+                                'status_code' => $statusCode,
+                                ...$context,
+                            ],
                         );
                         continue;
                     }

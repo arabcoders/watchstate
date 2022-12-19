@@ -6,6 +6,7 @@ namespace App\Backends\Jellyfin\Action;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Container;
 use App\Libs\Extends\Date;
@@ -195,12 +196,19 @@ class Export extends Import
             }
 
             $url = $context->backendUrl->withPath(
-                sprintf('/Users/%s/PlayedItems/%s', $context->backendUser, ag($item, 'Id'))
-            )->withQuery(
-                http_build_query([
-                    'DatePlayed' => makeDate($entity->updated)->format(Date::ATOM)
+                r('/Users/{user}/PlayedItems/{id}', [
+                    'user' => $context->backendUser,
+                    'id' => ag($item, 'Id')
                 ])
             );
+
+            if ($context->clientName === JellyfinClient::CLIENT_NAME) {
+                $url = $url->withQuery(
+                    http_build_query([
+                        'DatePlayed' => makeDate($entity->updated)->format(Date::ATOM)
+                    ])
+                );
+            }
 
             $logContext['item']['url'] = $url;
 
