@@ -53,6 +53,7 @@ return (function () {
         ],
     ];
 
+    date_default_timezone_set(ag($config, 'tz', 'UTC'));
     $logDateFormat = makeDate()->format('Ymd');
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
