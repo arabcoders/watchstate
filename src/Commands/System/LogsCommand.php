@@ -328,4 +328,9 @@ final class LogsCommand extends Command
             $suggestions->suggestValues($suggest);
         }
     }
+
+    public static function getTypes(): array
+    {
+        return self::LOG_FILES;
+    }
 }

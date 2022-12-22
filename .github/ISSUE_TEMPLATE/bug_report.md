@@ -27,10 +27,19 @@ A clear and concise description of what you expected to happen.
 Attach screenshots if it helps explain your bug report.
 -->
 
-** Tool Version:**
+**Basic report**
 <!-- 
-# Use the command
-docker exec -ti watchstate console --version 
+# Please use the following command to generate basic report to help us diagnose the issue
+# Make sure review the logs sections as it might have some private information.
+
+docker exec -ti watchstate console system:report
+
+Please put the output in a code block like this
+
+```
+PASTE THE LOG HERE BETWEEN THESE MARKS
+```
+
 -->
 
 **Additional context**
