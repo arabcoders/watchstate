@@ -281,10 +281,10 @@ final class ManageCommand extends Command
                     <question>Limit [<value>{type}</value>:<value>{name}</value>] webhook events to the selected <flag>user</flag></question>? {default}
                     ------------------
                     For <flag>Plex</flag>, if you have managed users, <error>YOU MUST</error> enable this
-                    option to prevent other users from diluting your watch/play state. As plex uses webhook associated
-                    with the account.
+                    option to <notice>prevent</notice> other users from <notice>diluting your watch/play state</notice>.
+                    As plex uses webhook associated with the account.
 
-                    For <flag>Jellyfin/Emby</flag>, You shouldn't enable this option, instead rely on the server selected user,
+                    For <flag>Jellyfin/Emby</flag>, You <error>SHOULD NOT</error> enable this option, instead rely on the server selected user,
                     As sometimes their webhook events does not include user information, and you will be missing events.
                     ------------------
                     Please refers to the FAQ file "What are the webhook limitations?" section to know more
