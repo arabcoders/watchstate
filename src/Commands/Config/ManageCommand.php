@@ -171,7 +171,7 @@ final class ManageCommand extends Command
         })();
 
         // -- $name.import.enabled
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $chosen = (bool)ag($u, 'import.enabled', true);
 
             $helper = $this->getHelper('question');
@@ -179,15 +179,16 @@ final class ManageCommand extends Command
             $question = new ConfirmationQuestion(
                 r(
                     <<<HELP
-                    <question>Enable <flag>watch/play state</flag> import from this backend</question>? {default}
+                    <question>Enable [<value>{name}</value>] <flag>watch/play state</flag> import</question>? {default}
                     ------------------
-                    <notice>WARNING:</notice> If this backend is new and does not have your correct watch/play state, then you <error>SHOULD</error>
-                    answer with <value>no</value>. If the date on movies/episodes is newer than your old backend watch date, it will
-                    override the that state. Select <value>no</value>, and export your current play state and then re-nable the play state import.
+                    <notice>WARNING:</notice> If this backend is new and does not have your correct watch/play state, then <error>YOU MUST</error>
+                    answer with <value>no</value>. If the date on movies/episodes is newer than your recorded watch/play date, it will
+                    override that. Select <value>no</value>, and export your current watch/play state and then you can re-enable this option.
                     ------------------
-                    <value>Please read the FAQ about this subject.</value>
+                    <notice>For more information please read the FAQ.</notice>
                     HELP. PHP_EOL . '> ',
                     [
+                        'name' => $name,
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
                 ),
@@ -200,15 +201,26 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.export.enabled
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $chosen = (bool)ag($u, 'export.enabled', true);
 
             $helper = $this->getHelper('question');
 
             $question = new ConfirmationQuestion(
                 r(
-                    '<question>Enable <value>watch/play state</value> export to this backend</question>? {default}' . PHP_EOL . '> ',
+                    <<<HELP
+                    <question>Enable <value>watch/play state</value> export to [<value>{name}</value>]</question>? {default}
+                    ------------------
+                    If the backend has <value>newer date on movies/episodes</value>, For example <notice>new server setup</notice>,
+                    You're going to need to <notice>do forced full sync</notice> for the first time, as the <cmd>export</cmd> command normally checks the date
+                    on objects before changing the play state. and forced full sync override that check.
+                    After that you can do normal export. The command to do forced full export is:
+                    ---
+                    {cmd} <cmd>state:export</cmd> <flag>-vvfs</flag> <value>{name}</value>
+                    HELP. PHP_EOL . '> ',
                     [
+                        'name' => $name,
+                        'cmd' => trim(commandContext()),
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
                 ),
@@ -237,13 +249,13 @@ final class ManageCommand extends Command
             $question = new ConfirmationQuestion(
                 r(
                     <<<HELP
-                    <question>Enable <value>metadata</value> only import from this backend</question>? {default}
+                    <question>Enable [<value>{name}</value>] <value>metadata</value> only import</question>? {default}
                     ------------------
-                    To efficiently <cmd>export</cmd> to this backend we need relation map and this require
+                    To efficiently <cmd>export</cmd> watch/play state to this backend we need relation map and this require
                     us to get metadata from the backend. You have <cmd>Importing</cmd> disabled, as such this option
                     allow us to import this backend <info>metadata</info> without altering your play state.
                     ------------------
-                    <value>This option will not alter your play state or add new items to the database.</value>
+                    <notice>This option will not alter your play state or add new items to the database.</notice>
                     HELP. PHP_EOL . '> ',
                     [
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
@@ -258,7 +270,7 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.webhook.match.user
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $chosen = (bool)ag($u, 'webhook.match.user', false);
 
             $helper = $this->getHelper('question');
@@ -266,9 +278,22 @@ final class ManageCommand extends Command
             $question = new ConfirmationQuestion(
                 r(
                     <<<HELP
-                    <question>Limit backend webhook events to the selected <flag>user</flag></question>? {default}
+                    <question>Limit [<value>{type}</value>:<value>{name}</value>] webhook events to the selected <flag>user</flag></question>? {default}
+                    ------------------
+                    For <flag>Plex</flag>, if you have managed users, <error>YOU MUST</error> enable this
+                    option to prevent other users from diluting your watch/play state. As plex uses webhook associated
+                    with the account.
+
+                    For <flag>Jellyfin/Emby</flag>, You shouldn't enable this option, instead rely on the server selected user,
+                    As sometimes their webhook events does not include user information, and you will be missing events.
+                    ------------------
+                    Please refers to the FAQ file "What are the webhook limitations?" section to know more
+                    ------------------
+                    <notice>This option only relevant if you're going to use webhook related functionalities.</notice>
                     HELP. PHP_EOL . '> ',
                     [
+                        'name' => $name,
+                        'type' => ag($u, 'type'),
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
                 ),
@@ -281,7 +306,7 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.webhook.match.uuid
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             $chosen = (bool)ag($u, 'webhook.match.uuid', false);
 
             $helper = $this->getHelper('question');
@@ -289,11 +314,19 @@ final class ManageCommand extends Command
             $question = new ConfirmationQuestion(
                 r(
                     <<<HELP
-                    <question>Limit this backend webhook events to the specified <flag>backend unique id</flag></question>? {default}
+                    <question>Limit [<value>{type}</value>:<value>{name}</value>] webhook events to the specified <flag>backend unique id</flag></question>? {default}
                     ------------------
-                    <comment>This option MUST be enabled for multi plex servers setup.</comment>
+                    for <info>Plex</info>, This option <notice>MUST BE</notice> enabled if you have multi plex servers associated with your account.
+                    As Plex uses Plex account to store webhook URLs not the server itself. If you do not enable this option,
+                    then any events from any servers associated with your plex account will be processed.
+
+                    for <info>Jellyfin/Emby</info>, this option optional and can be enabled if you unified your API key.
+                    ------------------
+                    <notice>This option only relevant if you're going to use webhook related functionalities.</notice>
                     HELP. PHP_EOL . '> ',
                     [
+                        'name' => $name,
+                        'type' => ag($u, 'type'),
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
                 ),

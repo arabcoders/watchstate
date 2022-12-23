@@ -34,10 +34,23 @@ class PlexManage implements ManageInterface
             $chosen = ag($backend, 'token');
 
             $question = new Question(
-                r('<question>Enter [<value>{name}</value>] Plex admin token</question>. {default}' . PHP_EOL . '> ', [
-                    'name' => ag($backend, 'name'),
-                    'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
-                ]),
+                r(
+                    <<<HELP
+                    <question>Enter [<value>{name}</value>] Plex admin token</question>. {default}
+                    ------------------
+                    <info>Please log in your main plex account to extract the admin token.</info>
+                    to find your plex token. follow the steps described in the following link.
+                    <href={url}>{url}</>
+                    ------------------
+                    <notice>Plex uses tokens to differentiate between users. As such the token you enter not necessarily the final
+                    one that ends up in the config due to user selection.</notice>
+                    HELP. PHP_EOL . '> ',
+                    [
+                        'name' => ag($backend, 'name'),
+                        'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
+                        'url' => 'https://support.plex.tv/articles/204059436',
+                    ]
+                ),
                 $chosen
             );
 
@@ -69,6 +82,7 @@ class PlexManage implements ManageInterface
             $chosen = ag($backend, 'url');
 
             try {
+                re_select:
                 if (null === $chosen || 'http://choose' === $chosen) {
                     $this->output->writeln(
                         '<info>Trying to get list of plex servers associated with the token. Please wait...</info>'
@@ -124,21 +138,33 @@ class PlexManage implements ManageInterface
             }
 
             $question = new Question(
-                r('<question>Enter [<value>{name}</value>] URL</question>. {default}' . PHP_EOL . '> ', [
-                    'name' => ag($backend, 'name'),
-                    'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
-                ]),
+                r(
+                    <<<HELP
+                    <question>Enter [<value>{name}</value>] URL</question>. {default}
+                    ------------------
+                    To see list of servers associated with this plex token, Please write the following as URL
+                    <value>http://choose</value>
+                    HELP. PHP_EOL . '> ',
+                    [
+                        'name' => ag($backend, 'name'),
+                        'default' => null !== $chosen ? "[<value>Default: {$chosen}</value>]" : '',
+                    ]
+                ),
                 $chosen
             );
 
             $question->setValidator(function ($answer) {
                 if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new RuntimeException('Invalid backend URL was given.');
+                    throw new RuntimeException('Invalid URL was selected/given.');
                 }
                 return $answer;
             });
 
             $url = $this->questionHelper->ask($this->input, $this->output, $question);
+            if (null === $url || 'http://choose' === $url) {
+                $chosen = $url;
+                goto re_select;
+            }
 
             $backend = ag_set($backend, 'url', $url);
         })();
@@ -174,7 +200,16 @@ class PlexManage implements ManageInterface
 
             $question = new Question(
                 r(
-                    '<question>Enter [<value>{name}</value>] backend unique identifier</question>. {default}' . PHP_EOL . '> ',
+                    <<<HELP
+                    <question>Enter [<value>{name}</value>] backend unique identifier</question>. {default}
+                    ------------------
+                    The Unique identifier is randomly generated string on server setup.
+                    ------------------
+                    <notice>It's mainly used to differentiate between plex servers installations as Plex way of doing webhooks
+                    is tied to Plex account not the server itself. While you may want to select specfic server
+                    Plex instead will send events from all servers that are associated with your Plex account.
+                    To prevent other servers events diluting your watch state, we need this to scope the events to selected server.</notice>
+                    HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
                         'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
@@ -222,7 +257,7 @@ class PlexManage implements ManageInterface
                 $custom = array_replace_recursive($backend, [
                     'options' => [
                         'client' => [
-                            'timeout' => 5
+                            'timeout' => 10
                         ]
                     ]
                 ]);
@@ -266,9 +301,18 @@ class PlexManage implements ManageInterface
                 $choice = $ids[$chosen] ?? null;
 
                 $question = new ChoiceQuestion(
-                    r('<question>Select which user to associate with this backend?</question>. {default}', [
-                        'default' => null !== $choice ? "<value>[Default: {$choice}]</value>" : ''
-                    ]),
+                    r(
+                        <<<HELP
+                        <question>Select [<value>{name}</value>] User</question>. {default}
+                        ------------------
+                        Unlike other media backends, Plex does not use user id to scope API calls, they use
+                        Tokens to do so, thus the user is mainly used for webhook events.
+                        HELP. PHP_EOL . '> ',
+                        [
+                            'name' => ag($backend, 'name'),
+                            'default' => null !== $choice ? "<value>[Default: {$choice}]</value>" : ''
+                        ]
+                    ),
                     $list,
                     false === $choice ? null : $choice
                 );
@@ -283,14 +327,14 @@ class PlexManage implements ManageInterface
                 if (false === (bool)ag($userInfo[$map[$user]], 'admin')) {
                     $this->output->writeln(
                         r(
-                            <<<INFO
-                            The selected user [<value>{user}</value>] is not the <flag>admin</flag> of the backend.
+                            <<<HELP
+                            The selected user [<value>{user}</value>] is not the <flag>main</flag> user of the server.
                             Thus syncing the user watch state using the provided token is not possible, as <value>Plex</value>
                             use tokens to identify users rather than user ids. We <value>replaced</value> the token with the one reported from the server.
                             ------------------
                             <info>This might lead to some functionality to not work as expected, like listing backend users.
                             this is expected as the managed user token is rather limited compared to the admin user token.</info>
-                            INFO,
+                            HELP,
                             [
                                 'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
                             ]
@@ -303,12 +347,9 @@ class PlexManage implements ManageInterface
 
                 if (null === ($userToken = ag($userInfo[$map[$user]], 'token'))) {
                     $this->output->writeln(
-                        r(
-                            '<error>Unable to get [{user}] access_token. check the logs.</error>',
-                            [
-                                'user' => $user
-                            ]
-                        )
+                        r('<error>Unable to get [{user}] access_token. check the logs.</error>', [
+                            'user' => $user
+                        ])
                     );
                     return;
                 }
@@ -329,7 +370,16 @@ class PlexManage implements ManageInterface
 
             $question = new Question(
                 r(
-                    '<question>Please enter [<value>{name}</value>] user id to associate this config to</question>. {default}' . PHP_EOL . '> ',
+                    <<<HELP
+                    <question>Enter [<value>{name}</value>] User ID</question>. {default}
+                    ------------------
+                    If you are seeing this, This may indicate a problem with the given token as we are unable to get list of users.
+                    The cause of this problem is in the following order from most likely to unlikely:
+                    * Invalid token.
+                    * You used a limited plex token (managed user token) instead of admin one.
+                    * plex.tv api is having problems.
+                    * Plex pushed an updated that break backwards compatibility and the tool need to be updated.
+                    HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
                         'default' => null !== $chosen ? "- <value>[Default: {$chosen}]</value>" : '',
