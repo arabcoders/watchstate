@@ -7,6 +7,7 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\Routable;
@@ -14,9 +15,9 @@ use Cron\CronExpression;
 use Exception;
 use LimitIterator;
 use SplFileObject;
-use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 
 #[Routable(command: self::ROUTE)]
 final class ReportCommand extends Command
@@ -33,6 +34,12 @@ final class ReportCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Show basic information for diagnostics.')
             ->addOption('limit', 'l', InputOption::VALUE_OPTIONAL, 'Show last X number of log lines.', 10)
+            ->addOption(
+                'include-db-sample',
+                's',
+                InputOption::VALUE_NONE,
+                'Include Some synced entries for backends.'
+            )
             ->setHelp(
                 <<<HELP
                 This command generate basic report to diagnose problems. it should be included in any
@@ -46,7 +53,7 @@ final class ReportCommand extends Command
             );
     }
 
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         $output->writeln('<info>[ Basic Report ]</info>' . PHP_EOL);
         $output->writeln(r('WatchState Version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
@@ -65,7 +72,7 @@ final class ReportCommand extends Command
         $output->writeln(r('Report Generated At: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
 
         $output->writeln(PHP_EOL . '<info>[ Backends ]</info>' . PHP_EOL);
-        $this->getBackends($output);
+        $this->getBackends($input, $output);
         $output->writeln('<info>[ Tasks ]</info>' . PHP_EOL);
         $this->getTasks($output);
         $output->writeln('<info>[ Logs ]</info>' . PHP_EOL);
@@ -74,8 +81,10 @@ final class ReportCommand extends Command
         return self::SUCCESS;
     }
 
-    private function getBackends(OutputInterface $output): void
+    private function getBackends(iInput $input, iOutput $output): void
     {
+        $includeSample = (bool)$input->getOption('include-db-sample');
+
         foreach (Config::get('servers', []) as $name => $backend) {
             $output->writeln(
                 r('[ <value>{type} ==> {name}</value> ]' . PHP_EOL, [
@@ -164,15 +173,43 @@ final class ReportCommand extends Command
             $opts = ag_delete($opts, 'options.' . Options::ADMIN_TOKEN);
 
             $output->writeln(
-                r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}' . PHP_EOL, [
+                r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
                     'answer' => count($opts) >= 1 ? 'Yes' : 'No',
-                    'opts' => count($opts) >= 1 ? json_encode($opts) : '{}',
+                    'opts' => count($opts) >= 1 ? json_encode(
+                        $opts,
+                        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                    ) : '{}',
                 ])
             );
+
+            if (true === $includeSample) {
+                $sql = "SELECT * FROM state WHERE via = :name ORDER BY updated DESC LIMIT 3";
+                $stmt = $this->db->getPdo()->prepare($sql);
+                $stmt->execute([
+                    'name' => $name,
+                ]);
+
+                $entries = [];
+
+                foreach ($stmt as $row) {
+                    $entries[] = StateEntity::fromArray($row);
+                }
+
+                $output->writeln(
+                    r('Sample db entries related to backend.' . PHP_EOL . '{json}', [
+                        'json' => count($entries) >= 1 ? json_encode(
+                            $entries,
+                            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                        ) : '{}',
+                    ])
+                );
+
+                $output->writeln('');
+            }
         }
     }
 
-    private function getTasks(OutputInterface $output): void
+    private function getTasks(iOutput $output): void
     {
         foreach (Config::get('tasks.list', []) as $task) {
             $output->writeln(
@@ -221,7 +258,7 @@ final class ReportCommand extends Command
         }
     }
 
-    private function getLogs(InputInterface $input, OutputInterface $output): void
+    private function getLogs(iInput $input, iOutput $output): void
     {
         $todayAffix = makeDate()->format('Ymd');
         $yesterdayAffix = makeDate('yesterday')->format('Ymd');
@@ -240,7 +277,7 @@ final class ReportCommand extends Command
         }
     }
 
-    private function handleLog(OutputInterface $output, string $type, string|int $date, int|string $limit): void
+    private function handleLog(iOutput $output, string $type, string|int $date, int|string $limit): void
     {
         $logFile = Config::get('tmpDir') . '/logs/' . r(
                 '{type}.{date}.log',
