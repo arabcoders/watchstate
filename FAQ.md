@@ -78,7 +78,7 @@ The solution to get both in sync, and to do so follow these steps:
 After that, do single backend export by using the following command:
 
 ```bash
-$ docker exec -ti watchstate console state:export -vvf -s new_backend_name
+$ docker exec -ti watchstate console state:export -vvif -s new_backend_name
 ```
 
 Running this command will force full export your current database state to the selected backend. Once that done you can
