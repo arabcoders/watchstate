@@ -129,3 +129,8 @@ please refer to [Environment variables list](FAQ.md#environment-variables).
 
 Take look at this [frequently asked questions](FAQ.md) page. to know more about this tool and how to enable webhook
 support and answers to many questions.
+
+# Social contact
+
+If you have short or quick questions, you are free to join my [discord server](https://discord.gg/haUXHJyj6Y) and ask
+the question. keep in mind it's solo project, as such it might take me a bit of time to reply.

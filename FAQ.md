@@ -87,6 +87,36 @@ via `docker exec -ti watchstate console config:manage backend_name`
 
 ----
 
+### My new backend watch state not being updated?
+
+The likely cause of this problem is date related problem, as we check the date on backend object and compare that to the
+date in local database, to make sure this is the error you are facing please do the following.
+
+```
+$ docker exec -ti watchstate console state:export -vvv --trace --context -s new_backend_name > backend.log
+```
+
+After running the command, open the log file and look for episode and movie that has the problem and read the text next
+to it. The error usually looks like:
+
+```
+[YYYY-MM-DDTHH:MM:SS-ZZ] DEBUG: Ignoring [backend_name] [Title - (Year or episode)]. reason. { ..., (comparison: [ ... ]) }
+```
+
+In this case the error text should be `Backend date is equal or newer than database date.`
+
+To bypass the date check you need to force ignore date comparison by using the `[-i, --ignore-date]` flag, so to get
+your new backend in sync with your old database, do the following:
+
+```bash
+$ docker exec -ti watchstate console state:export -vvif -s new_backend_name
+```
+
+This command will ignore your `lastSync` date and will also ignore `object date comparison` and thus will mirror your
+database state back to the selected backend.
+
+----
+
 ### Is there support for Multi-user setup?
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
