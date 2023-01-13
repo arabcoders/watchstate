@@ -98,13 +98,32 @@ class Import
 
             $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
 
+            $payload = $response->getContent(false);
+
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] response.', [
+                    'backend' => $context->backendName,
+                    'url' => (string)$url,
+                    'status_code' => $response->getStatusCode(),
+                    'headers' => $response->getHeaders(false),
+                    'response' => $payload,
+                ]);
+            }
+
             if (200 !== $response->getStatusCode()) {
+                $logContext = [
+                    'backend' => $context->backendName,
+                    'status_code' => $response->getStatusCode(),
+                    'headers' => $response->getHeaders(false),
+                ];
+
+                if ($context->trace) {
+                    $logContext['trace'] = $response->getInfo('debug');
+                }
+
                 $this->logger->error(
                     'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $context->backendName,
-                        'status_code' => $response->getStatusCode(),
-                    ]
+                    $logContext
                 );
                 Message::add("{$context->backendName}.has_errors", true);
                 return [];
