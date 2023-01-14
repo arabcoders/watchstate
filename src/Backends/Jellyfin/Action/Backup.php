@@ -47,19 +47,15 @@ class Backup extends Import
                     'backend' => $context->backendName,
                     'id' => ag($item, 'Id'),
                     'title' => match ($type) {
-                        JFC::TYPE_MOVIE => sprintf(
-                            '%s (%d)',
-                            ag($item, ['Name', 'OriginalTitle'], '??'),
-                            ag($item, 'ProductionYear', '0000')
-                        ),
-                        JFC::TYPE_EPISODE => trim(
-                            sprintf(
-                                '%s - (%sx%s)',
-                                ag($item, 'SeriesName', '??'),
-                                str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                                str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                            )
-                        ),
+                        JFC::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
+                            'year' => ag($item, 'ProductionYear', '0000'),
+                        ]),
+                        JFC::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
+                            'title' => ag($item, 'SeriesName', '??'),
+                            'season' => str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                        ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type

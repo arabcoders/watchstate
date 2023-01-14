@@ -87,15 +87,16 @@ class Push
 
             try {
                 $url = $context->backendUrl->withPath(
-                    sprintf('/Users/%s/items/%s', $context->backendUser, ag($metadata, iState::COLUMN_ID))
+                    r('/Users/{user_id}/items/{item_id}', [
+                        'user_id' => $context->backendUser,
+                        'item_id' => ag($metadata, iState::COLUMN_ID),
+                    ])
                 )->withQuery(
-                    http_build_query(
-                        [
-                            'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                            'enableUserData' => 'true',
-                            'enableImages' => 'false',
-                        ]
-                    )
+                    http_build_query([
+                        'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                        'enableUserData' => 'true',
+                        'enableImages' => 'false',
+                    ])
                 );
 
                 $logContext['remote']['url'] = (string)$url;
@@ -249,9 +250,9 @@ class Push
                 }
 
                 $url = $context->backendUrl->withPath(
-                    r('/Users/{user}/PlayedItems/{id}', [
-                        'user' => $context->backendUser,
-                        'id' => ag($json, 'Id')
+                    r('/Users/{user_id}/PlayedItems/{item_id}', [
+                        'user_id' => $context->backendUser,
+                        'item_id' => ag($json, 'Id')
                     ])
                 );
 

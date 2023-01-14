@@ -45,19 +45,21 @@ class GetMetaData
             }
 
             $url = $context->backendUrl
-                ->withPath(sprintf('/Users/%s/items/%s', $context->backendUser, $id))
+                ->withPath(
+                    r('/Users/{user_id}/items/{item_id}', [
+                        'user_id' => $context->backendUser,
+                        'item_id' => $id
+                    ])
+                )
                 ->withQuery(
                     http_build_query(
-                        array_merge_recursive(
-                            [
-                                'recursive' => 'false',
-                                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                                'enableUserData' => 'true',
-                                'enableImages' => 'false',
-                                'includeItemTypes' => 'Episode,Movie,Series',
-                            ],
-                            $opts['query'] ?? []
-                        ),
+                        array_merge_recursive([
+                            'recursive' => 'false',
+                            'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                            'enableUserData' => 'true',
+                            'enableImages' => 'false',
+                            'includeItemTypes' => 'Episode,Movie,Series',
+                        ], $opts['query'] ?? []),
                     )
                 );
 

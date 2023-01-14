@@ -61,7 +61,7 @@ final class ParseWebhook
         if (null === ($json = $request->getParsedBody())) {
             return new Response(status: false, extra: [
                 'http_code' => 400,
-                'message' => $context->clientName . ': No payload.'
+                'message' => r('{client}: No payload.', ['client' => $context->clientName]),
             ]);
         }
 
@@ -72,21 +72,27 @@ final class ParseWebhook
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             return new Response(status: false, extra: [
                 'http_code' => 200,
-                'message' => sprintf('%s: Webhook content type [%s] is not supported.', $context->backendName, $type)
+                'message' => r('{backend}: Webhook content type [{type}] is not supported.', [
+                    'backend' => $context->backendName,
+                    'type' => $type,
+                ])
             ]);
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             return new Response(status: false, extra: [
                 'http_code' => 200,
-                'message' => sprintf('%s: Webhook event type [%s] is not supported.', $context->backendName, $event)
+                'message' => r('{backend}: Webhook event type [{event}] is not supported.', [
+                    'backend' => $context->backendName,
+                    'event' => $event
+                ])
             ]);
         }
 
         if (null === $id) {
             return new Response(status: false, extra: [
                 'http_code' => 400,
-                'message' => $context->backendName . ': No item id was found in body.'
+                'message' => r('{backend}: No item id was found in body.', ['client' => $context->backendName]),
             ]);
         }
 
@@ -101,19 +107,15 @@ final class ParseWebhook
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
                     'title' => match (ag($obj, 'Type')) {
-                        JFC::TYPE_MOVIE => sprintf(
-                            '%s (%s)',
-                            ag($obj, ['Name', 'OriginalTitle'], '??'),
-                            ag($obj, 'ProductionYear', '0000')
-                        ),
-                        JFC::TYPE_EPISODE => trim(
-                            sprintf(
-                                '%s - (%sx%s)',
-                                ag($obj, 'SeriesName', '??'),
-                                str_pad((string)ag($obj, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                                str_pad((string)ag($obj, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                            )
-                        ),
+                        JFC::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($obj, ['Name', 'OriginalTitle'], '??'),
+                            'year' => ag($obj, 'ProductionYear', 0000)
+                        ]),
+                        JFC::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
+                            'title' => ag($obj, 'SeriesName', '??'),
+                            'season' => str_pad((string)ag($obj, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string)ag($obj, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                        ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type
