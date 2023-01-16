@@ -57,6 +57,7 @@ final class ReportCommand extends Command
     {
         $output->writeln('<info>[ Basic Report ]</info>' . PHP_EOL);
         $output->writeln(r('WatchState Version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
+        $output->writeln(r('PHP Version: <flag>{answer}</flag>', ['answer' => PHP_VERSION]));
         $output->writeln(r('Timezone: <flag>{answer}</flag>', ['answer' => Config::get('tz', 'UTC')]));
         $output->writeln(r('Running in Container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
         $output->writeln(r('Data Path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));

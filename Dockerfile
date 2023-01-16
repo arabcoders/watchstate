@@ -1,11 +1,11 @@
-FROM alpine:3.16
+FROM alpine:edge
 
 COPY --from=composer:2 /usr/bin/composer /opt/bin/composer
 
 LABEL maintainer="admin@arabcoders.org"
 
 ARG TZ=UTC
-ARG PHP_V=php81
+ARG PHP_V=php82
 ARG PHP_PACKAGES="common ctype curl dom fileinfo fpm intl mbstring opcache pcntl pdo_sqlite phar posix session shmop simplexml snmp sockets sodium sysvmsg sysvsem sysvshm tokenizer xml openssl xmlreader xmlwriter zip pecl-igbinary pecl-xhprof pecl-redis"
 ARG TOOL_PATH=/opt/app
 
