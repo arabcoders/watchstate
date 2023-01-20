@@ -52,17 +52,15 @@ final class Backup extends Import
                     'backend' => $context->backendName,
                     'id' => ag($item, 'ratingKey'),
                     'title' => match ($type) {
-                        PlexClient::TYPE_MOVIE => sprintf(
-                            '%s (%s)',
-                            ag($item, ['title', 'originalTitle'], '??'),
-                            0 === $year ? '0000' : $year,
-                        ),
-                        PlexClient::TYPE_EPISODE => sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                        ),
+                        PlexClient::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($item, ['title', 'originalTitle'], '??'),
+                            'year' => 0 === $year ? '0000' : $year,
+                        ]),
+                        PlexClient::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
+                            'title' => ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                            'season' => str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                        ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type

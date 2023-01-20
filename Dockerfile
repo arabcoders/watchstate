@@ -1,11 +1,11 @@
-FROM alpine:3.16
+FROM alpine:edge
 
 COPY --from=composer:2 /usr/bin/composer /opt/bin/composer
 
 LABEL maintainer="admin@arabcoders.org"
 
 ARG TZ=UTC
-ARG PHP_V=php81
+ARG PHP_V=php82
 ARG PHP_PACKAGES="common ctype curl dom fileinfo fpm intl mbstring opcache pcntl pdo_sqlite phar posix session shmop simplexml snmp sockets sodium sysvmsg sysvsem sysvshm tokenizer xml openssl xmlreader xmlwriter zip pecl-igbinary pecl-xhprof pecl-redis"
 ARG TOOL_PATH=/opt/app
 
@@ -39,8 +39,8 @@ RUN echo '' && \
     # Create basic directories.
     bash -c 'mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks}' && \
     # Link console & php.
-    ln -s /usr/bin/${PHP_V} /usr/bin/php && ln -s ${TOOL_PATH}/bin/console /usr/bin/console && \
-    ln -s ${TOOL_PATH}/bin/console /opt/bin/console && \
+    bash -c "ln -s /usr/sbin/php-fpm${PHP_V:3} /usr/sbin/php-fpm" && \
+    ln -s /usr/bin/${PHP_V} /usr/bin/php && ln -s ${TOOL_PATH}/bin/console /opt/bin/console && \
     # we are running rootless, so user,group config options has no affect.
     sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf && \
@@ -87,4 +87,4 @@ HEALTHCHECK CMD /opt/bin/php-fpm-healthcheck -v
 
 # Run php-fpm
 #
-CMD ["php-fpm81"]
+CMD ["php-fpm"]

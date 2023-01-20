@@ -47,20 +47,21 @@ class SearchQuery
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
-        $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
+        $url = $context->backendUrl->withPath(
+            r('/Users/{user_id}/items/', [
+                'user_id' => $context->backendUser
+            ])
+        )->withQuery(
             http_build_query(
-                array_replace_recursive(
-                    [
-                        'searchTerm' => $query,
-                        'limit' => $limit,
-                        'recursive' => 'true',
-                        'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                        'enableUserData' => 'true',
-                        'enableImages' => 'false',
-                        'includeItemTypes' => 'Episode,Movie,Series',
-                    ],
-                    $opts['query'] ?? []
-                )
+                array_replace_recursive([
+                    'searchTerm' => $query,
+                    'limit' => $limit,
+                    'recursive' => 'true',
+                    'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                    'enableUserData' => 'true',
+                    'enableImages' => 'false',
+                    'includeItemTypes' => 'Episode,Movie,Series',
+                ], $opts['query'] ?? [])
             )
         );
 
@@ -118,11 +119,10 @@ class SearchQuery
 
             $type = strtolower(ag($item, 'Type'));
 
-            $episodeNumber = ('episode' === $type) ? sprintf(
-                '%sx%s - ',
-                str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
-                str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
-            ) : null;
+            $episodeNumber = ('episode' === $type) ? r('{season}x{episode} - ', [
+                'season' => str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
+                'episode' => str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
+            ]) : null;
 
             $builder = [
                 'id' => ag($item, 'Id'),

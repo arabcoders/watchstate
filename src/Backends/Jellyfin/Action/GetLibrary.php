@@ -98,17 +98,17 @@ class GetLibrary
             );
         }
 
-        $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
-            http_build_query(
-                [
-                    'parentId' => $id,
-                    'enableUserData' => 'false',
-                    'enableImages' => 'false',
-                    'excludeLocationTypes' => 'Virtual',
-                    'include' => implode(',', [JellyfinClient::TYPE_SHOW, JellyfinClient::TYPE_MOVIE]),
-                    'fields' => implode(',', JellyfinClient::EXTRA_FIELDS)
-                ]
-            )
+        $url = $context->backendUrl->withPath(
+            r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
+        )->withQuery(
+            http_build_query([
+                'parentId' => $id,
+                'enableUserData' => 'false',
+                'enableImages' => 'false',
+                'excludeLocationTypes' => 'Virtual',
+                'include' => implode(',', [JellyfinClient::TYPE_SHOW, JellyfinClient::TYPE_MOVIE]),
+                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS)
+            ])
         );
 
         $logContext['library']['url'] = (string)$url;

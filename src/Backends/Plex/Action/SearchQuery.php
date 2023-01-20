@@ -125,11 +125,10 @@ final class SearchQuery
                     $year = (int)makeDate($airDate)->format('Y');
                 }
 
-                $episodeNumber = ('episode' === $type) ? sprintf(
-                    '%sx%s - ',
-                    str_pad((string)(ag($item, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
-                    str_pad((string)(ag($item, 'index', 0)), 3, '0', STR_PAD_LEFT),
-                ) : null;
+                $episodeNumber = ('episode' === $type) ? r('{season}x{episode} - ', [
+                    'season' => str_pad((string)(ag($item, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
+                    'episode' => str_pad((string)(ag($item, 'index', 0)), 3, '0', STR_PAD_LEFT),
+                ]) : null;
 
                 $builder = [
                     'id' => (int)ag($item, 'ratingKey'),

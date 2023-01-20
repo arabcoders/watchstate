@@ -89,7 +89,7 @@ class Import
     protected function getLibraries(Context $context, Closure $handle, Closure $error): array
     {
         try {
-            $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser));
+            $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
 
             $this->logger->debug('Requesting [%(backend)] libraries.', [
                 'backend' => $context->backendName,
@@ -98,20 +98,39 @@ class Import
 
             $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
 
+            $payload = $response->getContent(false);
+
+            if ($context->trace) {
+                $this->logger->debug('Processing [%(backend)] response.', [
+                    'backend' => $context->backendName,
+                    'url' => (string)$url,
+                    'status_code' => $response->getStatusCode(),
+                    'headers' => $response->getHeaders(false),
+                    'response' => $payload,
+                ]);
+            }
+
             if (200 !== $response->getStatusCode()) {
+                $logContext = [
+                    'backend' => $context->backendName,
+                    'status_code' => $response->getStatusCode(),
+                    'headers' => $response->getHeaders(false),
+                ];
+
+                if ($context->trace) {
+                    $logContext['trace'] = $response->getInfo('debug');
+                }
+
                 $this->logger->error(
                     'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
-                    [
-                        'backend' => $context->backendName,
-                        'status_code' => $response->getStatusCode(),
-                    ]
+                    $logContext
                 );
                 Message::add("{$context->backendName}.has_errors", true);
                 return [];
             }
 
             $json = json_decode(
-                json: $response->getContent(),
+                json: $payload,
                 associative: true,
                 flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
             );
@@ -121,7 +140,7 @@ class Import
             if (empty($listDirs)) {
                 $this->logger->warning('Request for [%(backend)] libraries returned with empty list.', [
                     'backend' => $context->backendName,
-                    'body' => $json,
+                    'body' => $payload,
                 ]);
                 Message::add("{$context->backendName}.has_errors", true);
                 return [];
@@ -191,19 +210,21 @@ class Import
                 continue;
             }
 
-            $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
-                http_build_query(
-                    [
-                        'sortBy' => 'DateCreated',
-                        'sortOrder' => 'Ascending',
-                        'parentId' => ag($logContext, 'library.id'),
-                        'recursive' => 'true',
-                        'excludeLocationTypes' => 'Virtual',
-                        'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
-                        'startIndex' => 0,
-                        'limit' => 0,
-                    ]
-                )
+            $url = $context->backendUrl->withPath(
+                r('/Users/{user_id}/items/', [
+                    'user_id' => $context->backendUser
+                ])
+            )->withQuery(
+                http_build_query([
+                    'sortBy' => 'DateCreated',
+                    'sortOrder' => 'Ascending',
+                    'parentId' => ag($logContext, 'library.id'),
+                    'recursive' => 'true',
+                    'excludeLocationTypes' => 'Virtual',
+                    'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
+                    'startIndex' => 0,
+                    'limit' => 0,
+                ])
             );
 
             $logContext['library']['url'] = (string)$url;
@@ -331,17 +352,17 @@ class Import
                 $logContext['library']['totalRecords'] = $total[ag($logContext, 'library.id')];
             }
 
-            $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))->withQuery(
-                http_build_query(
-                    [
-                        'parentId' => ag($logContext, 'library.id'),
-                        'recursive' => 'false',
-                        'enableUserData' => 'false',
-                        'enableImages' => 'false',
-                        'fields' => implode(',', JFC::EXTRA_FIELDS),
-                        'excludeLocationTypes' => 'Virtual',
-                    ]
-                )
+            $url = $context->backendUrl->withPath(
+                r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
+            )->withQuery(
+                http_build_query([
+                    'parentId' => ag($logContext, 'library.id'),
+                    'recursive' => 'false',
+                    'enableUserData' => 'false',
+                    'enableImages' => 'false',
+                    'fields' => implode(',', JFC::EXTRA_FIELDS),
+                    'excludeLocationTypes' => 'Virtual',
+                ])
             );
 
             $logContext['library']['url'] = (string)$url;
@@ -407,7 +428,6 @@ class Import
                 ],
             ];
 
-
             if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
                 $ignored++;
                 $this->logger->info('Ignoring [%(backend)] [%(library.title)]. Requested by user config.', [
@@ -452,24 +472,25 @@ class Import
                         'size' => $segmentSize,
                     ];
 
-                    $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser))
-                        ->withQuery(
-                            http_build_query(
-                                [
-                                    'sortBy' => 'DateCreated',
-                                    'sortOrder' => 'Ascending',
-                                    'parentId' => ag($logContext, 'library.id'),
-                                    'recursive' => 'true',
-                                    'enableUserData' => 'true',
-                                    'enableImages' => 'false',
-                                    'excludeLocationTypes' => 'Virtual',
-                                    'fields' => implode(',', JFC::EXTRA_FIELDS),
-                                    'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
-                                    'limit' => $segmentSize,
-                                    'startIndex' => $i < 1 ? 0 : ($segmentSize * $i),
-                                ]
-                            )
-                        );
+                    $url = $context->backendUrl->withPath(
+                        r('/Users/{user_id}/items/', [
+                            'user_id' => $context->backendUser
+                        ])
+                    )->withQuery(
+                        http_build_query([
+                            'sortBy' => 'DateCreated',
+                            'sortOrder' => 'Ascending',
+                            'parentId' => ag($logContext, 'library.id'),
+                            'recursive' => 'true',
+                            'enableUserData' => 'true',
+                            'enableImages' => 'false',
+                            'excludeLocationTypes' => 'Virtual',
+                            'fields' => implode(',', JFC::EXTRA_FIELDS),
+                            'includeItemTypes' => implode(',', [JFC::TYPE_MOVIE, JFC::TYPE_EPISODE]),
+                            'limit' => $segmentSize,
+                            'startIndex' => $i < 1 ? 0 : ($segmentSize * $i),
+                        ])
+                    );
 
                     $logContext['library']['url'] = (string)$url;
 
@@ -603,6 +624,7 @@ class Import
                     continue;
                 }
 
+                // -- Handle multi episode entries.
                 if (null !== ($indexNumberEnd = ag($entity, 'IndexNumberEnd'))) {
                     foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
                         $entity['IndexNumber'] = $i;
@@ -650,11 +672,10 @@ class Import
     {
         $logContext['item'] = [
             'id' => ag($item, 'Id'),
-            'title' => sprintf(
-                '%s (%s)',
-                ag($item, ['Name', 'OriginalTitle'], '??'),
-                ag($item, 'ProductionYear', '0000')
-            ),
+            'title' => r('{title} ({year})', [
+                'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
+                'year' => ag($item, 'ProductionYear', '0000'),
+            ]),
             'year' => ag($item, 'ProductionYear', null),
             'type' => ag($item, 'Type'),
         ];
@@ -727,19 +748,15 @@ class Import
                 $logContext['item'] = [
                     'id' => ag($item, 'Id'),
                     'title' => match ($type) {
-                        JFC::TYPE_MOVIE => sprintf(
-                            '%s (%d)',
-                            ag($item, ['Name', 'OriginalTitle'], '??'),
-                            ag($item, 'ProductionYear', 0000)
-                        ),
-                        JFC::TYPE_EPISODE => trim(
-                            sprintf(
-                                '%s - (%sx%s)',
-                                ag($item, 'SeriesName', '??'),
-                                str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                                str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                            )
-                        ),
+                        JFC::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($item, ['Name', 'OriginalTitle'], '??'),
+                            'year' => ag($item, 'ProductionYear', 0000),
+                        ]),
+                        JFC::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
+                            'title' => ag($item, 'SeriesName', '??'),
+                            'season' => str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                        ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type
@@ -776,7 +793,7 @@ class Import
                 context: $context,
                 guid: $guid,
                 item: $item,
-                opts: $opts + [
+                opts: array_replace_recursive($opts, [
                     iState::COLUMN_META_LIBRARY => ag($logContext, 'library.id'),
                     'override' => [
                         iState::COLUMN_EXTRA => [
@@ -786,7 +803,7 @@ class Import
                             ],
                         ],
                     ]
-                ],
+                ]),
             );
 
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {

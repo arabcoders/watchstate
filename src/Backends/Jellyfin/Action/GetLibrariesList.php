@@ -43,7 +43,7 @@ class GetLibrariesList
      */
     private function action(Context $context, array $opts = []): Response
     {
-        $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/', $context->backendUser));
+        $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
 
         $this->logger->debug('Requesting [%(backend)] libraries list.', [
             'backend' => $context->backendName,
@@ -73,13 +73,10 @@ class GetLibrariesList
         );
 
         if ($context->trace) {
-            $this->logger->debug(
-                'Parsing [%(backend)] libraries payload.',
-                [
-                    'backend' => $context->backendName,
-                    'trace' => $json,
-                ]
-            );
+            $this->logger->debug('Parsing [%(backend)] libraries payload.', [
+                'backend' => $context->backendName,
+                'trace' => $json,
+            ]);
         }
 
         $listDirs = ag($json, 'Items', []);
@@ -91,9 +88,7 @@ class GetLibrariesList
                     message: 'Request for [%(backend)] libraries returned empty list.',
                     context: [
                         'backend' => $context->backendName,
-                        'response' => [
-                            'body' => $json
-                        ],
+                        'response' => ['body' => $json],
                     ],
                     level: Levels::WARNING
                 ),

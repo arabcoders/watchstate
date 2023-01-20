@@ -100,13 +100,13 @@ final class GetLibrary
             );
         }
 
-        $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $id))->withQuery(
-            http_build_query(
-                [
-                    'type' => PlexClient::TYPE_MOVIE === ag($logContext, 'library.type') ? 1 : 2,
-                    'includeGuids' => 1,
-                ]
-            )
+        $url = $context->backendUrl->withPath(
+            r('/library/sections/{library_id}/all', ['library_id' => $id])
+        )->withQuery(
+            http_build_query([
+                'type' => PlexClient::TYPE_MOVIE === ag($logContext, 'library.type') ? 1 : 2,
+                'includeGuids' => 1,
+            ])
         );
 
         $logContext['library']['url'] = (string)$url;
@@ -184,7 +184,9 @@ final class GetLibrary
             } else {
                 $requests[] = $this->http->request(
                     'GET',
-                    (string)$context->backendUrl->withPath(sprintf('/library/metadata/%d', ag($logContext, 'item.id'))),
+                    (string)$context->backendUrl->withPath(
+                        r('/library/metadata/{item_id}', ['item_id' => ag($logContext, 'item.id')])
+                    ),
                     $context->backendHeaders + [
                         'user_data' => [
                             'context' => $logContext
@@ -263,7 +265,7 @@ final class GetLibrary
 
     private function process(Context $context, iGuid $guid, array $item, array $log = [], array $opts = []): array
     {
-        $url = $context->backendUrl->withPath(sprintf('/library/metadata/%d', ag($item, 'ratingKey')));
+        $url = $context->backendUrl->withPath(r('/library/metadata/{item_id}', ['item_id' => ag($item, 'ratingKey')]));
         $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
 
         $data = [
@@ -343,12 +345,11 @@ final class GetLibrary
                 break;
             default:
                 throw new RuntimeException(
-                    sprintf(
-                        'While parsing [%s] library [%s] items, we encountered unexpected item type [%s].',
-                        $context->backendName,
-                        ag($log, 'library.title', '??'),
-                        ag($item, 'type')
-                    )
+                    r('Unexpected item type [{type}] was encountered while parsing [{backend}] library [{library}].', [
+                        'backend' => $context->backendName,
+                        'library' => ag($log, 'library.title', '??'),
+                        'type' => ag($item, 'type')
+                    ])
                 );
         }
 

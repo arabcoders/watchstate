@@ -155,7 +155,7 @@ final class GetUsersList
         try {
             $url = Container::getNew(UriInterface::class)
                 ->withPort(443)->withScheme('https')->withHost('plex.tv')
-                ->withPath(sprintf('/api/v2/home/users/%s/switch', $userId));
+                ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
 
             $this->logger->debug('Requesting temporary access token for [%(backend)] user [%(username)].', [
                 'backend' => $context->backendName,
