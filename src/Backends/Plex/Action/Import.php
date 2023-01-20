@@ -219,7 +219,9 @@ class Import
 
             $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
 
-            $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
+            $url = $context->backendUrl->withPath(
+                r('/library/sections/{library_id}/all', ['library_id' => $key])
+            )->withQuery(
                 http_build_query([
                     'includeGuids' => 1,
                     'type' => $isMovieLibrary ? 1 : 4,
@@ -409,7 +411,9 @@ class Import
                         'size' => $segmentSize,
                     ];
 
-                    $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))->withQuery(
+                    $url = $context->backendUrl->withPath(
+                        r('/library/sections/{library_id}/all', ['library_id' => $key])
+                    )->withQuery(
                         http_build_query([
                             'type' => 2,
                             'includeGuids' => 1,
@@ -535,7 +539,9 @@ class Import
 
                     $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
 
-                    $url = $context->backendUrl->withPath(sprintf('/library/sections/%d/all', $key))
+                    $url = $context->backendUrl->withPath(
+                        r('/library/sections/{library_id}/all', ['library_id' => $key])
+                    )
                         ->withQuery(
                             http_build_query(
                                 [
@@ -739,11 +745,10 @@ class Import
 
         $logContext['item'] = [
             'id' => ag($item, 'ratingKey'),
-            'title' => sprintf(
-                '%s (%s)',
-                ag($item, ['title', 'originalTitle'], '??'),
-                0 === $year ? '0000' : $year,
-            ),
+            'title' => r('{title} ({year})', [
+                'title' => ag($item, ['title', 'originalTitle'], '??'),
+                'year' => 0 === $year ? '0000' : $year,
+            ]),
             'year' => 0 === $year ? '0000' : $year,
             'type' => ag($item, 'type', 'unknown'),
         ];
@@ -824,17 +829,15 @@ class Import
                 $logContext['item'] = [
                     'id' => ag($item, 'ratingKey'),
                     'title' => match ($type) {
-                        PlexClient::TYPE_MOVIE => sprintf(
-                            '%s (%s)',
-                            ag($item, ['title', 'originalTitle'], '??'),
-                            0 === $year ? '0000' : $year,
-                        ),
-                        PlexClient::TYPE_EPISODE => sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                        ),
+                        PlexClient::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($item, ['title', 'originalTitle'], '??'),
+                            'year' => 0 === $year ? '0000' : $year,
+                        ]),
+                        PlexClient::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
+                            'title' => ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                            'season' => str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                        ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type

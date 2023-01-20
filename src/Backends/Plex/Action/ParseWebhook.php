@@ -77,14 +77,20 @@ final class ParseWebhook
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             return new Response(status: false, extra: [
                 'http_code' => 200,
-                'message' => sprintf('%s: Webhook content type [%s] is not supported.', $context->backendName, $type)
+                'message' => r('{backend}: Webhook content type [{type}] is not supported.', [
+                    'backend' => $context->backendName,
+                    'type' => $type
+                ])
             ]);
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             return new Response(status: false, extra: [
                 'http_code' => 200,
-                'message' => sprintf('%s: Webhook event type [%s] is not supported.', $context->backendName, $event)
+                'message' => r('{backend}: Webhook event type [{type}] is not supported.', [
+                    'backend' => $context->backendName,
+                    'type' => $event,
+                ])
             ]);
         }
 
@@ -122,17 +128,15 @@ final class ParseWebhook
                     'id' => ag($item, 'ratingKey'),
                     'type' => ag($item, 'type'),
                     'title' => match ($type) {
-                        iState::TYPE_MOVIE => sprintf(
-                            '%s (%s)',
-                            ag($item, ['title', 'originalTitle'], '??'),
-                            0 === $year ? '0000' : $year,
-                        ),
-                        iState::TYPE_EPISODE => sprintf(
-                            '%s - (%sx%s)',
-                            ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
-                            str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
-                            str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
-                        ),
+                        iState::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($item, ['title', 'originalTitle'], '??'),
+                            'year' => 0 === $year ? '0000' : $year,
+                        ]),
+                        iState::TYPE_EPISODE => r('{title} - ({season}x{episode})', [
+                            'title' => ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
+                            'season' => str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
+                            'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
+                        ]),
                         default => throw new InvalidArgumentException(
                             r('Unexpected Content type [{type}] was received.', [
                                 'type' => $type

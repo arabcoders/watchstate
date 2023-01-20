@@ -49,11 +49,10 @@ final class SearchId
             $year = (int)makeDate($airDate)->format('Y');
         }
 
-        $episodeNumber = ('episode' === $type) ? sprintf(
-            '%sx%s - ',
-            str_pad((string)(ag($metadata, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
-            str_pad((string)(ag($metadata, 'index', 0)), 3, '0', STR_PAD_LEFT),
-        ) : null;
+        $episodeNumber = ('episode' === $type) ? r('{season}x{episode} - ', [
+            'season' => str_pad((string)(ag($metadata, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
+            'episode' => str_pad((string)(ag($metadata, 'index', 0)), 3, '0', STR_PAD_LEFT),
+        ]) : null;
 
         $builder = [
             'id' => (int)ag($metadata, 'ratingKey'),
