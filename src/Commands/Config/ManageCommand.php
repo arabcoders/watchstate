@@ -216,7 +216,7 @@ final class ManageCommand extends Command
                     on objects before changing the play state. and forced full sync override that check.
                     After that you can do normal export. The command to do forced full export is:
                     ---
-                    {cmd} <cmd>state:export</cmd> <flag>-vvfs</flag> <value>{name}</value>
+                    {cmd} <cmd>state:export</cmd> <flag>-vvifs</flag> <value>{name}</value>
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => $name,
