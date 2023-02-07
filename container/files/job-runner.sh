@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PID="/opt/job-runner.pid"
+PID="/tmp/job-runner.pid"
 
 # shellcheck disable=SC2064
 trap 'rm -f "${PID}"; exit' EXIT SIGQUIT SIGINT SIGTERM ERR

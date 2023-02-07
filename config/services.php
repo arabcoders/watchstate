@@ -119,7 +119,14 @@ return (function (): array {
 
         PDO::class => [
             'class' => function (): PDO {
+                $dbFile = Config::get('database.file');
+                $changePerm = !file_exists($dbFile);
+
                 $pdo = new PDO(dsn: Config::get('database.dsn'), options: Config::get('database.options', []));
+
+                if ($changePerm && inContainer() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
+                    @chmod($dbFile, 0777);
+                }
 
                 foreach (Config::get('database.exec', []) as $cmd) {
                     $pdo->exec($cmd);

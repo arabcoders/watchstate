@@ -18,6 +18,7 @@ use SplFileObject;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Throwable;
 
 #[Routable(command: self::ROUTE)]
 final class ReportCommand extends Command
@@ -70,6 +71,34 @@ final class ReportCommand extends Command
                 'answer' => file_exists(Config::get('path') . '/config/.env') ? 'Yes' : 'No',
             ])
         );
+
+        if (inContainer()) {
+            $output->writeln(
+                r('Is Tasks Runner working? <flag>{answer}</flag>', [
+                    'answer' => (function () {
+                        $pidFile = '/tmp/job-runner.pid';
+                        if (!file_exists($pidFile)) {
+                            return 'No PID file was found - Likely means job-runner failed to run.';
+                        }
+
+                        try {
+                            $pid = trim(file_get_contents($pidFile));
+                        } catch (Throwable $e) {
+                            return $e->getMessage();
+                        }
+
+                        if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
+                            return 'Yes';
+                        }
+
+                        return r('No. Found PID ({pid}) in file, but it seems the process crashed.', [
+                            'pid' => $pid
+                        ]);
+                    })(),
+                ])
+            );
+        }
+
         $output->writeln(r('Report Generated At: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
 
         $output->writeln(PHP_EOL . '<info>[ Backends ]</info>' . PHP_EOL);

@@ -178,7 +178,7 @@ class ImportCommand extends Command
 
                     After that, do single backend export by using the following command:
 
-                    {cmd} <cmd>state:export</cmd> <flag>-vvf -s</flag> <value>new_backend_name</value>
+                    {cmd} <cmd>state:export</cmd> <flag>-vvifs</flag> <value>new_backend_name</value>
 
                     Running this command will force full export your current database state to the selected backend. Once that done you can
                     turn on import from the new backend. by editing the backend setting:
