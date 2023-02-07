@@ -8,6 +8,7 @@ ARG TZ=UTC
 ARG PHP_V=php82
 ARG PHP_PACKAGES="common ctype curl dom fileinfo fpm intl mbstring opcache pcntl pdo_sqlite phar posix session shmop simplexml snmp sockets sodium sysvmsg sysvsem sysvshm tokenizer xml openssl xmlreader xmlwriter zip pecl-igbinary pecl-xhprof pecl-redis"
 ARG TOOL_PATH=/opt/app
+ARG USER_ID=1000
 
 ENV IN_CONTAINER=1
 ENV PHP_INI_DIR=/etc/${PHP_V}
@@ -27,7 +28,7 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
     # Delete unused users change users group gid to allow unRaid users to use gid 100
     deluser redis && deluser caddy && groupmod -g 1588787 users && \
     # Create our own user.
-    useradd -u 1000 -U -d /config -s /bin/bash user
+    useradd -u ${USER_ID:-1000} -U -d /config -s /bin/bash user
 
 # Copy source code to container.
 #
@@ -37,7 +38,7 @@ COPY ./ /opt/app
 #
 RUN echo '' && \
     # Create basic directories.
-    bash -c 'mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks}' && \
+    bash -c 'umask 0000 && mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks,profiler}' && \
     # Link console & php.
     bash -c "ln -s /usr/sbin/php-fpm${PHP_V:3} /usr/sbin/php-fpm" && \
     ln -s /usr/bin/${PHP_V} /usr/bin/php && ln -s ${TOOL_PATH}/bin/console /opt/bin/console && \
@@ -63,7 +64,7 @@ RUN echo '' && \
     # Remove unneeded directories and tools.
     bash -c 'rm -rf /temp_data/ /opt/bin/composer ${TOOL_PATH}/{container,var,.github,.git,.env}' && \
     # Change Permissions.
-    chown -R user:user /config /opt /var/log/ && chmod -R 775 /var/log/
+    chown -R user:user /config /opt /var/log && chmod -R 777 /var/log /etc/${PHP_V}
 
 # Set the entrypoint.
 #

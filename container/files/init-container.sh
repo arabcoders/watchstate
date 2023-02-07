@@ -4,6 +4,9 @@ set -e
 DATA_PATH="${WS_DATA_PATH:-/config}"
 ENV_FILE="${DATA_PATH}/config/.env"
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+WS_UMASK="${WS_UMASK:-0000}"
+
+umask "${WS_UMASK}"
 
 if [ ! -w "${DATA_PATH}" ]; then
   CH_USER=$(stat -c "%u" "${DATA_PATH}")

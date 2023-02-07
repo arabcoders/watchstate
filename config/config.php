@@ -58,8 +58,11 @@ return (function () {
 
     $config['tmpDir'] = fixPath(env('WS_TMP_DIR', ag($config, 'path')));
 
+    $dbFile = ag($config, 'path') . '/db/watchstate_' . ag($config, 'database.version') . '.db';
+
     $config['database'] += [
-        'dsn' => 'sqlite:' . ag($config, 'path') . '/db/watchstate_' . ag($config, 'database.version') . '.db',
+        'file' => $dbFile,
+        'dsn' => 'sqlite:' . $dbFile,
         'username' => null,
         'password' => null,
         'options' => [
