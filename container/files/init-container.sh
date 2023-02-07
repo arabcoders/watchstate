@@ -50,12 +50,6 @@ if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   caddy start --config /opt/config/Caddyfile
 fi
 
-if [ 0 = "${WS_DISABLE_CRON}" ]; then
-  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-  echo "[${TIME_DATE}] Starting Task Scheduler."
-  /opt/bin/job-runner &
-fi
-
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Caching tool Routes."
 /opt/bin/console system:routes
@@ -71,6 +65,16 @@ echo "[${TIME_DATE}] Running database maintenance tasks."
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Ensuring State table has correct indexes."
 /opt/bin/console system:index
+
+if [ 0 = "${WS_DISABLE_CRON}" ]; then
+  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+  echo "[${TIME_DATE}] Starting Task Scheduler."
+  PID="/tmp/job-runner.pid"
+  if [ -f "${PID}" ]; then
+    rm -f "${PID}"
+  fi
+  /opt/bin/job-runner &
+fi
 
 TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo "[${TIME_DATE}] Running - $(/opt/bin/console --version)"
