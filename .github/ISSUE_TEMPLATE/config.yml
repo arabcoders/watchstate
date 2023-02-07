@@ -5,4 +5,7 @@ contact_links:
     about: Please use the discussions tab for features or enhancements requests.
   - name: Questions & Answers
     url: https://github.com/ArabCoders/watchstate/discussions
-    about: Please use the discussions tab for questions.
+    about: Please use the discussions tab for long questions and general discussions.
+  - name: Discord Link.
+    url: https://discord.gg/haUXHJyj6Y
+    about: Use Discord for quick questions like can you do XX? etc or quick support requests.

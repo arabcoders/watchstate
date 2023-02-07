@@ -35,12 +35,11 @@ Attach screenshots if it helps explain your bug report.
 docker exec -ti watchstate console system:report
 
 Please put the output in a code block like this
-
-```
-PASTE THE LOG HERE BETWEEN THESE MARKS
-```
-
 -->
+
+```
+Paste the system:report output here
+```
 
 **Additional context**
 <!-- 
