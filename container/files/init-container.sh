@@ -3,7 +3,7 @@ set -e
 
 DATA_PATH="${WS_DATA_PATH:-/config}"
 ENV_FILE="${DATA_PATH}/config/.env"
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
+
 WS_UMASK="${WS_UMASK:-0000}"
 
 umask "${WS_UMASK}"
@@ -11,13 +11,13 @@ umask "${WS_UMASK}"
 if [ ! -w "${DATA_PATH}" ]; then
   CH_USER=$(stat -c "%u" "${DATA_PATH}")
   CH_GRP=$(stat -c "%g" "${DATA_PATH}")
-  echo "[${TIME_DATE}] ERROR: Unable to write to [${DATA_PATH}] data directory. Current user id [${UID}] while directory owner is [${CH_USER}]"
-  echo "[${TIME_DATE}] change docker-compose.yaml user: to user:\"${CH_USER}:${CH_GRP}\""
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] ERROR: Unable to write to [${DATA_PATH}] data directory. Current user id [${UID}] while directory owner is [${CH_USER}]"
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] change docker-compose.yaml user: to user:\"${CH_USER}:${CH_GRP}\""
   exit 1
 fi
 
 if [ -f "${ENV_FILE}" ]; then
-  echo "[${TIME_DATE}] INFO: Loading environment variables from [${ENV_FILE}]."
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: Loading environment variables from [${ENV_FILE}]."
   while read -r LINE; do
     if [[ $LINE == *'='* ]] && [[ $LINE != '#'* ]]; then
       ENV_VAR="$(echo "${LINE}" | envsubst)"
@@ -25,7 +25,7 @@ if [ -f "${ENV_FILE}" ]; then
     fi
   done <"${ENV_FILE}"
 else
-  echo "[${TIME_DATE}] INFO: No environment file present at [${ENV_FILE}]."
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: No environment file present at [${ENV_FILE}]."
 fi
 
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
@@ -39,45 +39,38 @@ set -u
 WS_CACHE_NULL=1 /opt/bin/console -v >/dev/null
 
 if [ 0 = "${WS_DISABLE_CACHE}" ]; then
-  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-  echo "[${TIME_DATE}] Starting Cache Server."
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting Cache Server."
   redis-server "/opt/config/redis.conf"
 fi
 
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
-  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-  echo "[${TIME_DATE}] Starting HTTP Server."
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting HTTP Server."
   caddy start --config /opt/config/Caddyfile
 fi
 
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo "[${TIME_DATE}] Caching tool Routes."
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching tool Routes."
 /opt/bin/console system:routes
 
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo "[${TIME_DATE}] Running database migrations."
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database migrations."
 /opt/bin/console system:db:migrations
 
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo "[${TIME_DATE}] Running database maintenance tasks."
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database maintenance tasks."
 /opt/bin/console system:db:maintenance
 
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo "[${TIME_DATE}] Ensuring State table has correct indexes."
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Ensuring State table has correct indexes."
 /opt/bin/console system:index
 
 if [ 0 = "${WS_DISABLE_CRON}" ]; then
-  TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-  echo "[${TIME_DATE}] Starting Task Scheduler."
-  PID="/tmp/job-runner.pid"
-  if [ -f "${PID}" ]; then
-    rm -f "${PID}"
+  if [ -f "/tmp/job-runner.pid" ]; then
+    echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Found pre-existing tasks scheduler pid file. Removing it."
+    rm -f "/tmp/job-runner.pid"
   fi
+
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting Tasks Scheduler."
   /opt/bin/job-runner &
 fi
 
-TIME_DATE=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo "[${TIME_DATE}] Running - $(/opt/bin/console --version)"
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running - $(/opt/bin/console --version)"
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
