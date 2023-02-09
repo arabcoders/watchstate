@@ -54,10 +54,8 @@ issues. refer to [FAQ](FAQ.md) to troubleshoot the problem.
 value `--user 99:100`. This has to happen before you start the container, otherwise it will have the old user id, and
 you then have to run the following command from terminal `chown -R 99:100 /mnt/user/appdata/watchstate`.
 
-**Note**: To run the container inside `podman` instead of docker you need to fix permissions issues that arise only in
-podman context, Run this command to make the data dir writable inside the container
-`podman unshare chown -R "${UID:-1000}:${GID:-1000}" ./data` the `${GID}` and `${UID}` need to match what you have
-written in `docker-compose.yaml`.
+**Note**: To use this container with `podman` set `docker-compose.yaml` `user` to `0:0`. it will appear to be working as
+root inside the container, but it will be mapped to the user in which the command was run under.
 
 # Adding backend
 

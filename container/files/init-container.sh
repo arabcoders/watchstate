@@ -14,10 +14,12 @@ if [ ! -w "${DATA_PATH}" ]; then
   CH_USER=$(stat -c "%u" "${DATA_PATH}")
   CH_GRP=$(stat -c "%g" "${DATA_PATH}")
   echo_err "ERROR: Unable to write to [${DATA_PATH}] data directory. Current user id [${UID}] while directory owner is [${CH_USER}]"
+  echo_err "[Running under docker]"
   echo_err "change docker-compose.yaml user: to user:\"${CH_USER}:${CH_GRP}\""
-  echo_err "Run the following command to change ownership if the data directory:"
-  echo_err "[Docker]: chown -R \"${CH_USER}:${CH_GRP}\" ./data"
-  echo_err "[Podman]: podman unshare chown -R \"${CH_USER}:${CH_GRP}\" ./data"
+  echo_err "Run the following command to change the directory ownership"
+  echo_err "chown -R \"${CH_USER}:${CH_GRP}\" ./data"
+  echo_err "[Running under podman]"
+  echo_err "change docker-compose.yaml user: to user:\"0:0\""
   exit 1
 fi
 
@@ -79,7 +81,7 @@ echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running - $(/opt/bin/console --version)"
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
-  set -- php-fpm "$@"
+  set -- php-fpm "${@}"
 fi
 
-exec "$@"
+exec "${@}"

@@ -88,4 +88,4 @@ HEALTHCHECK CMD /opt/bin/php-fpm-healthcheck -v
 
 # Run php-fpm
 #
-CMD ["php-fpm"]
+CMD ["php-fpm", "-R"]
