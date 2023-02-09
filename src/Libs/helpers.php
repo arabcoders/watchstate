@@ -471,7 +471,10 @@ if (!function_exists('commandContext')) {
     function commandContext(): string
     {
         if (inContainer()) {
-            return sprintf('docker exec -ti %s console ', env('CONTAINER_NAME', 'watchstate'));
+            return r('{command} exec -ti {name} console ', [
+                'command' => @file_exists('/run/.containerenv') ? 'podman' : 'docker',
+                'name' => env('CONTAINER_NAME', 'watchstate'),
+            ]);
         }
 
         return ($_SERVER['argv'][0] ?? 'php console') . ' ';
@@ -771,7 +774,7 @@ if (false === function_exists('inContainer')) {
             return true;
         }
 
-        if (true === file_exists('/.dockerenv')) {
+        if (true === @file_exists('/.dockerenv') || true === @file_exists('/run/.containerenv')) {
             return true;
         }
 
