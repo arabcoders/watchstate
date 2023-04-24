@@ -206,6 +206,7 @@ class Import
                     'id' => ag($section, 'key'),
                     'title' => ag($section, 'title', '??'),
                     'type' => ag($section, 'type', 'unknown'),
+                    'agent' => ag($section, 'agent', 'unknown'),
                 ],
             ];
 
@@ -214,6 +215,17 @@ class Import
             }
 
             if (!in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
+                continue;
+            }
+
+            if (!in_array(ag($logContext, 'library.agent'), PlexClient::SUPPORTED_AGENTS)) {
+                $this->logger->notice(
+                    'Ignoring [%(backend)] [%(library.title)] Unsupported agent type.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
 
@@ -376,6 +388,10 @@ class Import
                 continue;
             }
 
+            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS)) {
+                continue;
+            }
+
             if (true === in_array($key, $ignoreIds ?? [])) {
                 continue;
             }
@@ -493,6 +509,10 @@ class Import
                     'type' => ag($section, 'type', 'unknown'),
                 ],
             ];
+
+            if (!in_array(ag($section, 'agent'), PlexClient::SUPPORTED_AGENTS)) {
+                continue;
+            }
 
             if (true === in_array($key, $ignoreIds ?? [])) {
                 $ignored++;

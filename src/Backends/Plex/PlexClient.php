@@ -55,7 +55,18 @@ class PlexClient implements iClient
         PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
-
+    
+    public const SUPPORTED_AGENTS = [
+        'com.plexapp.agents.imdb',
+        'com.plexapp.agents.tmdb',
+        'com.plexapp.agents.themoviedb',
+        'com.plexapp.agents.xbmcnfo',
+        'com.plexapp.agents.xbmcnfotv',
+        'com.plexapp.agents.thetvdb',
+        'com.plexapp.agents.hama',
+        'tv.plex.agents.movie',
+        'tv.plex.agents.series',
+    ];
     private Context $context;
     private iLogger $logger;
     private iGuid $guid;

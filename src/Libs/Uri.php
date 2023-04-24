@@ -311,7 +311,7 @@ final class Uri implements UriInterface, Stringable
         }
 
         $port = (int)$port;
-        if (0 > $port || 0xffff < $port) {
+        if (0 > $port || 0xFFFF < $port) {
             throw new \InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
         }
 
