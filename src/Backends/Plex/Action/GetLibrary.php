@@ -82,6 +82,7 @@ final class GetLibrary
             'library' => [
                 'id' => $id,
                 'type' => ag($section, 'type', 'unknown'),
+                'agent' => ag($section, 'agent', 'unknown'),
                 'title' => ag($section, 'title', '??'),
             ],
         ];
