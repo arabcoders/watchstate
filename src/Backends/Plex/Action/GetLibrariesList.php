@@ -119,12 +119,14 @@ final class GetLibrariesList
             $key = (int)ag($section, 'key');
             $type = ag($section, 'type', 'unknown');
             $agent = ag($section, 'agent', 'unknown');
+            $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
+
             $builder = [
                 'id' => $key,
                 'title' => ag($section, 'title', '???'),
                 'type' => ucfirst($type),
                 'ignored' => true === in_array($key, $ignoreIds ?? []),
-                'supported' => true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
+                'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
                 'agent' => ag($section, 'agent'),
                 'scanner' => ag($section, 'scanner'),
             ];
