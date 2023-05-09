@@ -54,7 +54,7 @@ final class ListCommand extends Command
 
     public function __construct(private iDB $db, private DirectMapper $mapper)
     {
-        $this->pdo = $this->db->getPdo();
+        $this->pdo = $this->db->getPDO();
 
         parent::__construct();
     }

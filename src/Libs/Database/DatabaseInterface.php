@@ -169,7 +169,7 @@ interface DatabaseInterface
      * @return PDO
      * @throws RuntimeException if PDO is not initialized yet.
      */
-    public function getPdo(): PDO;
+    public function getPDO(): PDO;
 
     /**
      * Enable Single Transaction mode.

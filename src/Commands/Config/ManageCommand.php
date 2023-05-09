@@ -64,7 +64,7 @@ final class ManageCommand extends Command
 
                     <error>ERROR:</error> This command require <notice>interaction</notice>. For example:
 
-                    {cmd} <cmd>{route}</cmd> -- <value>{backend_name}</value>
+                    {cmd} <cmd>{route}</cmd> -- <value>{backend}</value>
 
                     ERROR,
                     [

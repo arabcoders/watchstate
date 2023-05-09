@@ -401,7 +401,7 @@ final class PDOAdapter implements iDB
         return $this;
     }
 
-    public function getPdo(): PDO
+    public function getPDO(): PDO
     {
         return $this->pdo;
     }
