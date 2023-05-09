@@ -1,6 +1,6 @@
 -- # migrate_up
 
-CREATE TABLE "state"
+CREATE TABLE IF NOT EXISTS "state"
 (
     "id"       integer NOT NULL PRIMARY KEY AUTOINCREMENT,
     "type"     text    NOT NULL,
