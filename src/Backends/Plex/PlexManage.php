@@ -265,7 +265,6 @@ class PlexManage implements ManageInterface
                         Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
                     ]
                 ]);
-                dump($opts, $custom);
 
                 try {
                     $users = makeBackend($custom, ag($backend, 'name'))->getUsersList(['tokens' => true]);
