@@ -40,15 +40,25 @@ final class DeleteCommand extends Command
                 r(
                     <<<HELP
 
-                    This command will <error>REMOVE</error> db entries related to the given backend.
-                    However, it will <error>NOT</error> remove data from previous backups.
+                    This command allows you to delete local backend data from the database.
+
+                    This command require <notice>interaction</notice> to work.
 
                     This command will do the following:
 
-                    1. Remove any db entries that was related to the <notice>backend</notice>.
-                    2. Remove backend from <notice>servers.yaml</notice> file.
+                    1. Remove records metadata that references the given <notice>backend</notice>.
+                    2. Run data integrity check to remove no longer used records.
+                    2. Update <value>servers.yaml</value> file and remove <notice>backend</notice> configuration.
+
+                    ------------------
+                    <notice>WARNING:</notice> This command works on the current active database. it will <error>NOT</error> delete
+                    data from the backend itself or the backups stored at [<value>{backupDir}</value>].
+                    ------------------
 
                     HELP,
+                    [
+                        'backupDir' => after(Config::get('path') . '/backup', ROOT_PATH),
+                    ]
                 )
             );
     }
@@ -56,7 +66,7 @@ final class DeleteCommand extends Command
     /**
      * @throws ExceptionInterface
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
+    protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         if (function_exists('stream_isatty') && defined('STDERR')) {
             $tty = stream_isatty(STDERR);
@@ -127,9 +137,6 @@ final class DeleteCommand extends Command
             return self::FAILURE;
         }
 
-        $u = $rerun ?? ag($backends, $name, []);
-        $u['name'] = $name;
-
         $helper = $this->getHelper('question');
 
         $question = new ConfirmationQuestion(
@@ -151,9 +158,10 @@ final class DeleteCommand extends Command
             false
         );
 
+        $response = $helper->ask($input, $output, $question);
         $output->writeln('');
 
-        if (false === $helper->ask($input, $output, $question)) {
+        if (false === $response) {
             $output->writeln(
                 r('Backend [<value>{backend}</value>] removal was cancelled.', [
                     'backend' => $name
@@ -163,7 +171,7 @@ final class DeleteCommand extends Command
         }
 
         $output->writeln(
-            r('Removing [<value>{backend}</value>] database entries. This might take a while. Please wait...', [
+            r('Removing [<value>{backend}</value>] database references. This might take a while. Please wait...', [
                 'backend' => $name
             ])
         );
@@ -182,7 +190,7 @@ final class DeleteCommand extends Command
 
         $output->writeln(
             r(
-                'Unlinked [<value>{records}</value>] records referenced by [<value>{backend}</value>].',
+                'Removed [<value>{records}</value>] metadata references related to [<value>{backend}</value>].',
                 [
                     'records' => number_format($stmt->rowCount()),
                     'backend' => $name,
@@ -190,7 +198,7 @@ final class DeleteCommand extends Command
             )
         );
 
-        $output->writeln('Trying to delete dead records. This might take a while. Please wait...');
+        $output->writeln('Checking data integrity, this might take a while. Please wait...');
 
         $sql = "DELETE FROM
                     state
@@ -200,11 +208,15 @@ final class DeleteCommand extends Command
         ";
         $stmt = $this->pdo->query($sql);
 
-        $output->writeln(
-            r('Removed [<value>{records}</value>] records that are no longer used.', [
-                'records' => number_format($stmt->rowCount()),
-            ])
-        );
+        $deleteCount = $stmt->rowCount();
+
+        if ($deleteCount > 1) {
+            $output->writeln(
+                r('Removed [<value>{records}</value>] records that are no longer valid.', [
+                    'records' => number_format($stmt->rowCount()),
+                ])
+            );
+        }
 
         if (false === $custom) {
             copy($config, $config . '.bak');
