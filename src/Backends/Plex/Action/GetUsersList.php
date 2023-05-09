@@ -258,7 +258,7 @@ final class GetUsersList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'No permanent access token found in [%(backend)] user [%(username)] response.',
+                    message: 'No permanent access token was found for [%(username)] in [%(backend)] response. Likely plex.tv API error, check https://status.plex.tv or try running same command with [-vvv --trace --context] flags for more information.',
                     context: [
                         'backend' => $context->backendName,
                         'username' => $username,

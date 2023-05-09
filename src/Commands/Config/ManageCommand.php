@@ -64,7 +64,7 @@ final class ManageCommand extends Command
 
                     <error>ERROR:</error> This command require <notice>interaction</notice>. For example:
 
-                    {cmd} <cmd>{route}</cmd> -- <value>{backend_name}</value>
+                    {cmd} <cmd>{route}</cmd> -- <value>{backend}</value>
 
                     ERROR,
                     [
@@ -167,7 +167,9 @@ final class ManageCommand extends Command
             $type = $helper->ask($input, $output, $question);
 
             $u = ag_set($u, 'type', $type);
-            $u = ag(Config::get('supported'), $type)::manage($u);
+            $u = ag(Config::get('supported'), $type)::manage($u, [
+                Options::DEBUG_TRACE => $input->getOption('trace'),
+            ]);
         })();
 
         // -- $name.import.enabled

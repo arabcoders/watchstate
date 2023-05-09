@@ -178,6 +178,30 @@ where `600` is the number of secs before the timeout handler will kill the reque
 
 ---
 
+### How to fix corrupt SQLite database?
+
+Sometimes your SQLite database will be corrupted, and you will get an error similar to this
+`General error: 11 database disk image is malformed`. To fix this error simply execute the following commands:
+
+```bash
+$ docker exec -ti watchstate  
+$ sqlite3 /config/db/watchstate_v01.db '.dump' | sqlite3 /config/db/watchstate_v01-repaired.db
+```
+
+After executing the previous command you should run `integrity check`, by running the following command:
+
+```bash
+$ sqlite3 /config/db/watchstate_v01-repaired.db 'PRAGMA integrity_check'
+```
+
+it should simply say `ok`. then you should run the following command to replace the corrupted database.
+
+```bash
+$ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
+```
+
+---
+
 ### Which external db ids supported for Plex Media Server?
 
 * tvdb://(id) `New plex agent`

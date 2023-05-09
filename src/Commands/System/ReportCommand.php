@@ -214,7 +214,7 @@ final class ReportCommand extends Command
 
             if (true === $includeSample) {
                 $sql = "SELECT * FROM state WHERE via = :name ORDER BY updated DESC LIMIT 3";
-                $stmt = $this->db->getPdo()->prepare($sql);
+                $stmt = $this->db->getPDO()->prepare($sql);
                 $stmt->execute([
                     'name' => $name,
                 ]);

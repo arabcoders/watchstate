@@ -54,8 +54,11 @@ final class AddCommand extends Command
             '--add' => true,
         ];
 
-        if ($input->getOption('config')) {
-            $opts['--config'] = $input->getOption('config');
+        foreach ($input->getOptions() as $option => $val) {
+            if (null === $val) {
+                continue;
+            }
+            $opts['--' . $option] = $val;
         }
 
         $opts['backend'] = strtolower($input->getArgument('backend'));

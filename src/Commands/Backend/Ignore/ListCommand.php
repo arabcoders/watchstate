@@ -30,7 +30,7 @@ final class ListCommand extends Command
 
     public function __construct(iDB $db)
     {
-        $this->db = $db->getPdo();
+        $this->db = $db->getPDO();
 
         parent::__construct();
     }

@@ -111,9 +111,12 @@ class PlexManage implements ManageInterface
                     $list[] = 'Other. Enter manually.';
 
                     $question = new ChoiceQuestion(
-                        r('<question>Select [<value>{name}</value>] URL.</question>', [
-                            'name' => ag($backend, 'name'),
-                        ]), $list
+                        r(
+                            '<question>Select [<value>{name}</value>] URL.</question>',
+                            [
+                                'name' => ag($backend, 'name'),
+                            ]
+                        ), $list
                     );
 
                     $question->setAutocompleterValues($list);
@@ -244,7 +247,7 @@ class PlexManage implements ManageInterface
         // -- $backend.user
 
         // -- $name.user
-        (function () use (&$backend) {
+        (function () use (&$backend, $opts) {
             $chosen = ag($backend, 'user');
 
             try {
@@ -258,7 +261,8 @@ class PlexManage implements ManageInterface
                     'options' => [
                         'client' => [
                             'timeout' => 10
-                        ]
+                        ],
+                        Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
                     ]
                 ]);
 

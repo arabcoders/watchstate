@@ -9,6 +9,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Extends\Date;
+use App\Libs\Options;
 use App\Libs\Router;
 use App\Libs\Uri;
 use Nyholm\Psr7\Response;
@@ -430,6 +431,7 @@ if (!function_exists('makeBackend')) {
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
+                trace: (bool)ag($backend, 'options.' . Options::DEBUG_TRACE, false),
                 options: ag($backend, 'options', []),
             )
         );
