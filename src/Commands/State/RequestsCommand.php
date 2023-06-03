@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
@@ -96,16 +97,23 @@ class RequestsCommand extends Command
 
             $options = ag($request, 'options', []);
 
+            $lastSync = ag(Config::get("servers.{$entity->via}", []), 'import.lastSync');
+            if (null !== $lastSync) {
+                $lastSync = makeDate($lastSync);
+            }
+
             $this->logger->notice('SYSTEM: Processing [%(backend)] [%(title)] %(tainted) request.', [
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
                 'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                'lastSync' => $lastSync,
             ]);
 
             $this->mapper->add($entity, [
                 Options::IMPORT_METADATA_ONLY => (bool)ag($options, Options::IMPORT_METADATA_ONLY),
                 Options::STATE_UPDATE_EVENT => $fn,
+                'after' => $lastSync,
             ]);
         }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
+use App\Libs\Container;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 trait CommonTrait
@@ -50,5 +52,10 @@ trait CommonTrait
                 )
             );
         }
+    }
+
+    protected function getLogger(): LoggerInterface
+    {
+        return Container::get(LoggerInterface::class);
     }
 }
