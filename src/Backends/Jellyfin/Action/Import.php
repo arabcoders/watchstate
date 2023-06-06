@@ -775,7 +775,8 @@ class Import
             }
 
             $isPlayed = true === (bool)ag($item, 'UserData.Played');
-            $dateKey = true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated';
+            $date_key = 'UserData.LastPlayedDate';
+            $dateKey = true === $isPlayed && ag_exists($item, $date_key) ? $date_key : 'DateCreated';
 
             if (null === ag($item, $dateKey)) {
                 $this->logger->debug('Ignoring [%(backend)] %(item.type) [%(item.title)]. No Date is set on object.', [

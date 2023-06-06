@@ -6,6 +6,7 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Options;
 use App\Libs\Routable;
 use Exception;
 use RuntimeException;
@@ -22,6 +23,12 @@ use Symfony\Component\Yaml\Yaml;
 #[Routable(command: self::ROUTE)]
 final class ViewCommand extends Command
 {
+    private array $hidden = [
+        'token',
+        'webhook.token',
+        'options.' . Options::ADMIN_TOKEN
+    ];
+
     public const ROUTE = 'config:view';
 
     protected function configure(): void
@@ -31,6 +38,7 @@ final class ViewCommand extends Command
             ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose the secret tokens in the view.')
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,
@@ -119,7 +127,7 @@ final class ViewCommand extends Command
             $x++;
             $rows[] = [
                 $backendName,
-                $this->filterData($backend, $filter)
+                $this->filterData($backend, $filter, $input->getOption('expose'))
             ];
 
             if ($x < $count) {
@@ -160,8 +168,16 @@ final class ViewCommand extends Command
         }
     }
 
-    private function filterData(array $backend, string|null $filter = null): string
+    private function filterData(array $backend, string|null $filter = null, bool $expose = false): string
     {
+        if (null === $filter && true !== $expose) {
+            foreach ($this->hidden as $hideValue) {
+                if (true === ag_exists($backend, $hideValue)) {
+                    $backend = ag_set($backend, $hideValue, '*HIDDEN*');
+                }
+            }
+        }
+
         if (null === $filter || false === str_contains($filter, ',')) {
             return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
         }
