@@ -775,8 +775,26 @@ class Import
             }
 
             $isPlayed = true === (bool)ag($item, 'UserData.Played');
-            $date_key = 'UserData.LastPlayedDate';
-            $dateKey = true === $isPlayed && ag_exists($item, $date_key) ? $date_key : 'DateCreated';
+            $dateKey = true === $isPlayed ? 'UserData.LastPlayedDate' : 'DateCreated';
+
+            /**
+             * this code is workaround for bug in emby sometimes marking items as played
+             * without adding UserData.LastPlayedDate data field to userData. thus, it will
+             * trigger the No Date is set check.
+             */
+            if (true === $isPlayed && false === ag_exists($item, 'UserData.LastPlayedDate')) {
+                if ($context->trace) {
+                    $this->logger->debug(
+                        'The item [%(backend)] %(item.type) [%(item.title)]. Marked as played without LastPlayedDate field.',
+                        [
+                            'backend' => $context->backendName,
+                            'body' => $item,
+                            ...$logContext,
+                        ]
+                    );
+                }
+                $dateKey = 'DateCreated';
+            }
 
             if (null === ag($item, $dateKey)) {
                 $this->logger->debug('Ignoring [%(backend)] %(item.type) [%(item.title)]. No Date is set on object.', [
@@ -784,6 +802,7 @@ class Import
                     'date_key' => $dateKey,
                     ...$logContext,
                     'body' => $item,
+                    'isPlayed' => $isPlayed ? 'Yes' : 'No',
                 ]);
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
