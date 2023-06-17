@@ -57,6 +57,7 @@ class JellyfinClient implements iClient
         'PremiereDate',
         'ProductionYear',
         'Path',
+        'UserDataLastPlayedDate',
     ];
 
     public const TYPE_MAPPER = [
