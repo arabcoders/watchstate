@@ -20,6 +20,8 @@ use Throwable;
 
 final class GetUsersList
 {
+    private int $maxRetry = 3;
+
     use CommonTrait;
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
@@ -147,10 +149,11 @@ final class GetUsersList
      * @param Context $context
      * @param int|string $userId
      * @param string $username
+     * @param int $retry
      *
      * @return Response
      */
-    private function getUserToken(Context $context, int|string $userId, string $username): Response
+    private function getUserToken(Context $context, int|string $userId, string $username, int $retry = 0): Response
     {
         try {
             $url = Container::getNew(UriInterface::class)
@@ -172,6 +175,26 @@ final class GetUsersList
                 ],
             ]);
 
+            if ($retry < $this->maxRetry && 429 === $response->getStatusCode()) {
+                $retry++;
+                $sleepFor = ($retry * 1_000_000) + random_int(100000, 999999);
+                $this->logger->warning(
+                    'Request for temporary access token for [%(backend)] user [%(username)] failed due to rate limit. waiting for few secs. before retrying. [%(attempt)/%(out_of)]',
+                    [
+                        'backend' => $context->backendName,
+                        'username' => $username,
+                        'user_id' => $userId,
+                        'url' => (string)$url,
+                        'headers' => $response->getHeaders(),
+                        'retry_in' => $sleepFor,
+                        'attempt' => $retry,
+                        'out_of' => $this->maxRetry,
+                    ]
+                );
+                usleep((int)$sleepFor);
+                return $this->getUserToken($context, $userId, $username, $retry);
+            }
+
             if (201 !== $response->getStatusCode()) {
                 return new Response(
                     status: false,
@@ -182,6 +205,7 @@ final class GetUsersList
                             'username' => $username,
                             'user_id' => $userId,
                             'status_code' => $response->getStatusCode(),
+                            'headers' => $response->getHeaders(),
                         ],
                         level: Levels::ERROR
                     ),
@@ -201,6 +225,7 @@ final class GetUsersList
                     'user_id' => $userId,
                     'url' => (string)$url,
                     'trace' => $json,
+                    'headers' => $response->getHeaders(),
                 ]);
             }
 
