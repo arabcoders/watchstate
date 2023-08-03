@@ -208,10 +208,12 @@ class PlexManage implements ManageInterface
                     ------------------
                     The Unique identifier is randomly generated string on server setup.
                     ------------------
-                    <notice>It's mainly used to differentiate between plex servers installations as Plex way of doing webhooks
-                    is tied to Plex account not the server itself. While you may want to select specfic server
-                    Plex instead will send events from all servers that are associated with your Plex account.
-                    To prevent other servers events diluting your watch state, we need this to scope the events to selected server.</notice>
+                    <notice>Backend unique identifier is used for two purposes.
+                    1. To generate access tokens to access the server content for given user.
+                    2. To deny other servers webhook events from reaching yor watch state installation if enabled.
+                    ------------------
+                    If you select invalid or given invalid unique identifier, the access token generation will fails.
+                    and Webhooks will be non-functional.</notice>
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
@@ -245,14 +247,12 @@ class PlexManage implements ManageInterface
         $this->output->writeln('');
 
         // -- $backend.user
-
-        // -- $name.user
         (function () use (&$backend, $opts) {
             $chosen = ag($backend, 'user');
 
             try {
                 $this->output->writeln(
-                    '<info>Trying to get users list from backend. Please wait...</info>'
+                    '<info>Trying to get users list from plex.tv api. Please wait...</info>'
                 );
 
                 $list = $map = $ids = $userInfo = [];
@@ -267,7 +267,7 @@ class PlexManage implements ManageInterface
                 ]);
 
                 try {
-                    $users = makeBackend($custom, ag($backend, 'name'))->getUsersList(['tokens' => true]);
+                    $users = makeBackend($custom, ag($backend, 'name'))->getUsersList();
                 } catch (Throwable $e) {
                     // -- Check admin token.
                     $adminToken = ag($backend, 'options.' . Options::ADMIN_TOKEN);
@@ -283,7 +283,7 @@ class PlexManage implements ManageInterface
 
                         $backend['token'] = $adminToken;
                         $custom['token'] = $adminToken;
-                        $users = makeBackend($custom, ag($backend, 'name'))->getUsersList(['tokens' => true]);
+                        $users = makeBackend($custom, ag($backend, 'name'))->getUsersList([]);
                     } else {
                         throw $e;
                     }
@@ -334,7 +334,8 @@ class PlexManage implements ManageInterface
                             <<<HELP
                             The selected user [<value>{user}</value>] is not the <flag>main</flag> user of the server.
                             Thus syncing the user watch state using the provided token is not possible, as <value>Plex</value>
-                            use tokens to identify users rather than user ids. We <value>replaced</value> the token with the one reported from the server.
+                            use tokens to identify users rather than user ids. We are going to attempt to generate access
+                            token for the [<value>{user}</value>] and replace the given token with it.
                             ------------------
                             <info>This might lead to some functionality to not work as expected, like listing backend users.
                             this is expected as the managed user token is rather limited compared to the admin user token.</info>
@@ -343,6 +344,11 @@ class PlexManage implements ManageInterface
                                 'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
                             ]
                         )
+                    );
+
+                    $userInfo[$map[$user]]['token'] = makeBackend($custom, ag($backend, 'name'))->getUserToken(
+                        ag($userInfo[$map[$user]], 'uuid', $map[$user]),
+                        $user
                     );
                     $backend = ag_set($backend, 'options.' . Options::ADMIN_TOKEN, ag($backend, 'token'));
                 } else {

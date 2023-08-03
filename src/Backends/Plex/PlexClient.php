@@ -15,6 +15,7 @@ use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\GetUsersList;
+use App\Backends\Plex\Action\GetUserToken;
 use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
@@ -55,7 +56,7 @@ class PlexClient implements iClient
         PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
-    
+
     public const SUPPORTED_AGENTS = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
@@ -335,6 +336,23 @@ class PlexClient implements iClient
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            throw new RuntimeException(
+                ag($response->extra, 'message', fn() => $response->error->format())
+            );
+        }
+
+        return $response->response;
+    }
+
+    public function getUserToken(int|string $userId, string $username): string|bool
+    {
+        $response = Container::get(GetUserToken::class)($this->context, $userId, $username);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {

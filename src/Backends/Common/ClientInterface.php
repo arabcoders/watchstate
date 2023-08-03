@@ -190,4 +190,14 @@ interface ClientInterface
      * @return array
      */
     public static function manage(array $backend, array $opts = []): array;
+
+    /**
+     * Return user access token.
+     *
+     * @param int|string $userId
+     * @param string $username
+     *
+     * @return string|bool return user token as string or bool(FALSE) if not supported.
+     */
+    public function getUserToken(int|string $userId, string $username): string|bool;
 }

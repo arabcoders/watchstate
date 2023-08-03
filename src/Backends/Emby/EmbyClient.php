@@ -335,6 +335,11 @@ class EmbyClient implements iClient
         return $response->response;
     }
 
+    public function getUserToken(int|string $userId, string $username): string|bool
+    {
+        return false;
+    }
+
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
