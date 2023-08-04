@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\Backend\Users;
 
+use App\Backends\Plex\Commands\AccessTokenCommand;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
@@ -25,7 +26,12 @@ final class ListCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Get backend users list.')
-            ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
+            ->addOption(
+                'with-tokens',
+                't',
+                InputOption::VALUE_NONE,
+                'Include access tokens in response. <notice>NOTE: if you have many plex users you will be rate limited</notice>.'
+            )
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Use this given token.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
@@ -45,6 +51,14 @@ final class ListCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
 
+                    <notice>Notice: If you have many plex users and request tokens for all of them you may get rate-limited by plex api,
+                    you shouldn't do this unless you have good reason. In most cases you dont need to, and can use
+                    <cmd>{plex_accesstoken_command}</cmd> command to generate tokens for specific user. for example:</notice>
+
+                    {cmd} <cmd>{plex_accesstoken_command}</cmd> -- <value>backend_name plex_user_uuid</value>
+
+                    plex_user_uuid: is what can be seen using this list command.
+
                     <question># How to see the raw response?</question>
 
                     {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value>
@@ -61,6 +75,7 @@ final class ListCommand extends Command
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
+                        'plex_accesstoken_command' => AccessTokenCommand::ROUTE,
                     ]
                 )
             );

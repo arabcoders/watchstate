@@ -350,6 +350,19 @@ class JellyfinClient implements iClient
         return $response->response;
     }
 
+    /**
+     * For Jellyfin we do not generate api access token, thus we simply return
+     * the given the access token.
+     *
+     * @param int|string $userId
+     * @param string $username
+     * @return string|bool
+     */
+    public function getUserToken(int|string $userId, string $username): string|bool
+    {
+        return $this->context->backendToken;
+    }
+
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
