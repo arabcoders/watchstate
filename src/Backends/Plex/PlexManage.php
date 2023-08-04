@@ -85,7 +85,7 @@ class PlexManage implements ManageInterface
                 re_select:
                 if (null === $chosen || 'http://choose' === $chosen) {
                     $this->output->writeln(
-                        '<info>Trying to get list of plex servers associated with the token. Please wait...</info>'
+                        '<info>Trying to get list of servers associated with the token from plex.tv API. Please wait...</info>'
                     );
 
                     $response = PlexClient::discover(http: $this->http, token: ag($backend, 'token'));
@@ -111,12 +111,9 @@ class PlexManage implements ManageInterface
                     $list[] = 'Other. Enter manually.';
 
                     $question = new ChoiceQuestion(
-                        r(
-                            '<question>Select [<value>{name}</value>] URL.</question>',
-                            [
-                                'name' => ag($backend, 'name'),
-                            ]
-                        ), $list
+                        r('<question>Select [<value>{name}</value>] URL.</question>', [
+                            'name' => ag($backend, 'name'),
+                        ]), $list
                     );
 
                     $question->setAutocompleterValues($list);
@@ -131,7 +128,9 @@ class PlexManage implements ManageInterface
                     }
                 }
             } catch (Throwable $e) {
-                $this->output->writeln('<error>Failed to get list of servers associated with the token.</error>');
+                $this->output->writeln(
+                    '<error>Failed to get list of servers associated with the token from plex.tv api.</error>'
+                );
                 $this->output->writeln(
                     r('<error>ERROR - {class}: {error}.</error>' . PHP_EOL, [
                         'class' => afterLast(get_class($e), '\\'),
@@ -177,7 +176,7 @@ class PlexManage implements ManageInterface
         (function () use (&$backend) {
             try {
                 $this->output->writeln(
-                    '<info>Getting backend unique identifier. Please wait...</info>'
+                    '<info>Attempting to automatically get the server unique identifier. Please wait...</info>'
                 );
 
                 $custom = array_replace_recursive($backend, [
@@ -190,13 +189,20 @@ class PlexManage implements ManageInterface
 
                 $chosen = ag($backend, 'uuid', fn() => makeBackend($custom, ag($custom, 'name'))->getIdentifier(true));
             } catch (Throwable $e) {
-                $this->output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $this->output->writeln(
-                    sprintf(
-                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
-                        afterLast(get_class($e), '\\'),
-                        $e->getMessage()
-                    )
+                    r(
+                        <<<ERROR
+                        <error>Failed to automatically get server unique identifier.</error>
+                        ------------------
+                        This most likely means the token that was given doesn't have access to the selected server.
+                        ------------------
+                        {class}: {error}
+                        ERROR,
+                        [
+                            'class' => afterLast(get_class($e), '\\'),
+                            'error' => $e->getMessage(),
+                        ]
+                    ),
                 );
                 $chosen = null;
             }
@@ -204,7 +210,7 @@ class PlexManage implements ManageInterface
             $question = new Question(
                 r(
                     <<<HELP
-                    <question>Enter [<value>{name}</value>] backend unique identifier</question>. {default}
+                    <question>Enter [<value>{name}</value>] Unique identifier</question>. {default}
                     ------------------
                     The Unique identifier is randomly generated string on server setup.
                     ------------------
@@ -212,8 +218,8 @@ class PlexManage implements ManageInterface
                     1. To generate access tokens to access the server content for given user.
                     2. To deny other servers webhook events from reaching yor watch state installation if enabled.
                     ------------------
-                    If you select invalid or given invalid unique identifier, the access token generation will fails.
-                    and Webhooks will be non-functional.</notice>
+                    If you select invalid or give incorrect server unique identifier, the access token generation will
+                    fails. and Webhooks receiver will most likely be non-functional.</notice>
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
@@ -249,10 +255,11 @@ class PlexManage implements ManageInterface
         // -- $backend.user
         (function () use (&$backend, $opts) {
             $chosen = ag($backend, 'user');
+            $errorType = 'none';
 
             try {
                 $this->output->writeln(
-                    '<info>Trying to get users list from plex.tv api. Please wait...</info>'
+                    '<info>Attempting to get users list from plex.tv API. Please wait...</info>'
                 );
 
                 $list = $map = $ids = $userInfo = [];
@@ -274,7 +281,7 @@ class PlexManage implements ManageInterface
                     if (null !== $adminToken && $adminToken !== ag($backend, 'token')) {
                         $this->output->writeln(
                             r(
-                                '<notice>Backend returned an error \'{error}\'. Attempting to use admin token.</notice>',
+                                '<notice>The API returned an error \'{error}\'. Attempting to use admin token.</notice>',
                                 [
                                     'error' => $e->getMessage()
                                 ]
@@ -285,12 +292,13 @@ class PlexManage implements ManageInterface
                         $custom['token'] = $adminToken;
                         $users = makeBackend($custom, ag($backend, 'name'))->getUsersList([]);
                     } else {
+                        $errorType = 'users_list';
                         throw $e;
                     }
                 }
 
                 if (empty($users)) {
-                    throw new RuntimeException('Backend returned empty list of users.');
+                    throw new RuntimeException('plex.tv API returned empty list of users.');
                 }
 
                 foreach ($users as $user) {
@@ -309,8 +317,6 @@ class PlexManage implements ManageInterface
                         <<<HELP
                         <question>Select [<value>{name}</value>] User</question>. {default}
                         ------------------
-                        Unlike other media backends, Plex does not use user id to scope API calls, they use
-                        Tokens to do so, thus the user is mainly used for webhook events.
                         HELP. PHP_EOL . '> ',
                         [
                             'name' => ag($backend, 'name'),
@@ -346,20 +352,28 @@ class PlexManage implements ManageInterface
                         )
                     );
 
-                    $userInfo[$map[$user]]['token'] = makeBackend($custom, ag($backend, 'name'))->getUserToken(
-                        ag($userInfo[$map[$user]], 'uuid', $map[$user]),
-                        $user
-                    );
-                    $backend = ag_set($backend, 'options.' . Options::ADMIN_TOKEN, ag($backend, 'token'));
+                    try {
+                        $userInfo[$map[$user]]['token'] = makeBackend($custom, ag($backend, 'name'))->getUserToken(
+                            ag($userInfo[$map[$user]], 'uuid', $map[$user]),
+                            $user
+                        );
+                        $backend = ag_set($backend, 'options.' . Options::ADMIN_TOKEN, ag($backend, 'token'));
+                    } catch (RuntimeException $e) {
+                        $errorType = 'token';
+                        throw $e;
+                    }
                 } else {
                     $backend = ag_delete($backend, 'options.' . Options::ADMIN_TOKEN);
                 }
 
                 if (null === ($userToken = ag($userInfo[$map[$user]], 'token'))) {
                     $this->output->writeln(
-                        r('<error>Unable to get [{user}] access_token. check the logs.</error>', [
-                            'user' => $user
-                        ])
+                        r(
+                            '<error>Unable to get [{user}] access token. rerun the command with [-vvv --context --trace] flags for more info or check logs.</error>',
+                            [
+                                'user' => $user
+                            ]
+                        )
                     );
                     return;
                 }
@@ -368,12 +382,19 @@ class PlexManage implements ManageInterface
 
                 return;
             } catch (Throwable $e) {
-                $this->output->writeln('<error>Failed to get the users list from backend.</error>');
                 $this->output->writeln(
-                    sprintf(
-                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
-                        afterLast(get_class($e), '\\'),
-                        $e->getMessage()
+                    r(
+                        <<<ERROR
+                        <error>Failed to get list of users from plex.tv API.</error>
+                        ------------------
+                        This most likely means the token is not a valid admin token.
+                        ------------------
+                        {class}: {error}
+                        ERROR,
+                        [
+                            'class' => afterLast(get_class($e), '\\'),
+                            'error' => $e->getMessage(),
+                        ]
                     )
                 );
             }
@@ -383,16 +404,20 @@ class PlexManage implements ManageInterface
                     <<<HELP
                     <question>Enter [<value>{name}</value>] User ID</question>. {default}
                     ------------------
-                    If you are seeing this, This may indicate a problem with the given token as we are unable to get list of users.
-                    The cause of this problem is in the following order from most likely to unlikely:
-                    * Invalid token.
-                    * You used a limited plex token (managed user token) instead of admin one.
-                    * plex.tv api is having problems.
-                    * Plex pushed an updated that break backwards compatibility and the tool need to be updated.
+                    The error occurred at [<notice>{errorType}</notice>] stage.
+
+                    If you are seeing this, The reason is in the following order from most likely to unlikely:
+
+                    * Invalid token was given. (<notice>users_list</notice>)
+                    * You used a limited plex token instead of admin one. (<notice>token, users_list</notice>)
+                    * the selected user doesn't have access to the selected server. (<notice>token</notice>)
+                    * plex.tv API is having problems. (<notice>none</notice>)
+                    * Plex.tv API made breaking changes, and thus the tool need to be updated. (<notice>none</notice>)
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
                         'default' => null !== $chosen ? "- <value>[Default: {$chosen}]</value>" : '',
+                        'reason' => $errorType,
                     ]
                 ),
                 $chosen
@@ -400,14 +425,16 @@ class PlexManage implements ManageInterface
 
             $question->setValidator(function ($answer) {
                 if (empty($answer)) {
-                    throw new RuntimeException('Backend user id cannot be empty.');
+                    throw new RuntimeException('User id cannot be empty.');
                 }
 
                 if (!is_string($answer) && !is_int($answer)) {
                     throw new RuntimeException(
-                        sprintf(
-                            'Backend user id is invalid. Expecting [string|integer]. but got \'%s\' instead.',
-                            get_debug_type($answer)
+                        r(
+                            'Invalid user id type was given. Expecting a string or integer. but got \'{type}\' instead.',
+                            [
+                                'type' => get_debug_type($answer)
+                            ]
                         )
                     );
                 }
