@@ -167,19 +167,29 @@ final class GetUserToken
                 ]);
             }
 
+            $servers = [];
+
             foreach ($json ?? [] as $server) {
+                if ('server' !== ag($server, 'provides')) {
+                    continue;
+                }
+
+                $servers[ag($server, 'clientIdentifier')] = ag($server, 'name');
+
                 if (ag($server, 'clientIdentifier') !== $context->backendId) {
                     continue;
                 }
+
                 return new Response(status: true, response: ag($server, 'accessToken'));
             }
 
             $this->logger->error(
-                'Response had [%(count)] of associated servers non match [%(backend)] unique identifier.',
+                'Response had [%(count)] associated servers, non match [%(backend) - [%(backend_id)] unique identifier.',
                 [
-                    'backend' => $context->backendName,
                     'count' => count(($json)),
+                    'backend' => $context->backendName,
                     'backend_id' => $context->backendId,
+                    'servers' => $servers,
                 ]
             );
 
