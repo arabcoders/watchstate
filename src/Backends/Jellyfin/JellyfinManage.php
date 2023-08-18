@@ -88,7 +88,7 @@ class JellyfinManage implements ManageInterface
         (function () use (&$backend) {
             try {
                 $this->output->writeln(
-                    '<info>Getting backend unique identifier. Please wait...</info>'
+                    '<info>Attempting to automatically get the server unique identifier from API. Please wait...</info>'
                 );
 
                 $custom = array_replace_recursive($backend, [
@@ -100,6 +100,14 @@ class JellyfinManage implements ManageInterface
                 ]);
 
                 $chosen = ag($backend, 'uuid', fn() => makeBackend($custom, ag($custom, 'name'))->getIdentifier(true));
+                $this->output->writeln(
+                    r(
+                        '<notice>Backend responded with [{id}] as it\'s unique identifier. setting it as default value.</notice>',
+                        [
+                            'id' => $chosen
+                        ]
+                    )
+                );
             } catch (Throwable $e) {
                 $this->output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $this->output->writeln(
@@ -114,7 +122,16 @@ class JellyfinManage implements ManageInterface
 
             $question = new Question(
                 r(
-                    '<question>Enter [<value>{name}</value>] backend unique identifier</question>. {default}' . PHP_EOL . '> ',
+                    <<<HELP
+                    <question>Enter [<value>{name}</value>] Unique identifier</question>. {default}
+                    ------------------
+                    The Server Unique identifier is randomly generated string on server setup.
+                    ------------------
+                    <notice>If you select invalid or give incorrect server unique identifier, Some checks will
+                    fail And you may not be able to sync your backend.</notice>
+                    ------------------
+                    <error>DO NOT CHANGE the default value unless you know what you are doing, or was told by devs.</error>
+                    HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
                         'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',

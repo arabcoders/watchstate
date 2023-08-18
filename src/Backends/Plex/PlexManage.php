@@ -176,7 +176,7 @@ class PlexManage implements ManageInterface
         (function () use (&$backend) {
             try {
                 $this->output->writeln(
-                    '<info>Attempting to automatically get the server unique identifier. Please wait...</info>'
+                    '<info>Attempting to automatically get the server unique identifier from API. Please wait...</info>'
                 );
 
                 $custom = array_replace_recursive($backend, [
@@ -188,6 +188,14 @@ class PlexManage implements ManageInterface
                 ]);
 
                 $chosen = ag($backend, 'uuid', fn() => makeBackend($custom, ag($custom, 'name'))->getIdentifier(true));
+                $this->output->writeln(
+                    r(
+                        '<notice>Backend responded with [{id}] as it\'s unique identifier. setting it as default value.</notice>',
+                        [
+                            'id' => $chosen
+                        ]
+                    )
+                );
             } catch (Throwable $e) {
                 $this->output->writeln(
                     r(
@@ -212,14 +220,12 @@ class PlexManage implements ManageInterface
                     <<<HELP
                     <question>Enter [<value>{name}</value>] Unique identifier</question>. {default}
                     ------------------
-                    The Unique identifier is randomly generated string on server setup.
+                    The Server Unique identifier is randomly generated string on server setup.
                     ------------------
-                    <notice>Backend unique identifier is used for two purposes.
-                    1. To generate access tokens to access the server content for given user.
-                    2. To deny other servers webhook events from reaching yor watch state installation if enabled.
+                    <notice>If you select invalid or give incorrect server unique identifier, the access token generation will
+                    fail. and Webhooks receiver will most likely be non-functional as well.</notice>
                     ------------------
-                    If you select invalid or give incorrect server unique identifier, the access token generation will
-                    fails. and Webhooks receiver will most likely be non-functional.</notice>
+                    <error>DO NOT CHANGE the default value unless you know what you are doing, or was told by devs.</error>
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
