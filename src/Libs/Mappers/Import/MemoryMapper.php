@@ -256,13 +256,32 @@ final class MemoryMapper implements iImport
             }
         }
 
-        $keys = $opts['diff_keys'] ?? array_flip(
-                array_keys_diff(
-                    base: array_flip(iState::ENTITY_KEYS),
-                    list: iState::ENTITY_IGNORE_DIFF_CHANGES,
-                    has: false
-                )
+        /**
+         * Fix for #329
+         */
+        $ignoreKeys = iState::ENTITY_IGNORE_DIFF_CHANGES;
+        if (true === $this->objects[$pointer]->isWatched() && false === $cloned->isWatched()) {
+            $ignoreKeys[] = iState::COLUMN_WATCHED;
+
+            $this->logger->warning(
+                'MAPPER: Play state conflict detected in [%(backend)] [%(title)] [%(new_state)] vs db [%(current_state)]. Ignoring state change.',
+                [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'current_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
+                    'new_state' => $cloned->isWatched() ? 'played' : 'unplayed',
+                ]
             );
+        }
+
+        $keys = $opts['diff_keys'] ?? array_flip(
+            array_keys_diff(
+                base: array_flip(iState::ENTITY_KEYS),
+                list: $ignoreKeys,
+                has: false
+            )
+        );
 
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             $this->changed[$pointer] = $pointer;

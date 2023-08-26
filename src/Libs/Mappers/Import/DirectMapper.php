@@ -359,10 +359,29 @@ final class DirectMapper implements iImport
             }
         }
 
+        /**
+         * Fix for #329
+         */
+        $ignoreKeys = iState::ENTITY_IGNORE_DIFF_CHANGES;
+        if (true === $local->isWatched() && false === $cloned->isWatched()) {
+            $ignoreKeys[] = iState::COLUMN_WATCHED;
+
+            $this->logger->warning(
+                'MAPPER: Play state conflict detected in [%(backend)] [%(title)] [%(new_state)] vs db [%(current_state)]. Ignoring state change.',
+                [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'current_state' => $local->isWatched() ? 'played' : 'unplayed',
+                    'new_state' => $cloned->isWatched() ? 'played' : 'unplayed',
+                ]
+            );
+        }
+
         $keys = $opts['diff_keys'] ?? array_flip(
             array_keys_diff(
                 base: array_flip(iState::ENTITY_KEYS),
-                list: iState::ENTITY_IGNORE_DIFF_CHANGES,
+                list: $ignoreKeys,
                 has: false
             )
         );
