@@ -185,7 +185,7 @@ final class ManageCommand extends Command
                     ------------------
                     <notice>WARNING:</notice> If this backend is new and does not have your correct watch/play state, then <error>YOU MUST</error>
                     answer with <value>no</value>. If the date on movies/episodes is newer than your recorded watch/play date, it will
-                    override that. Select <value>no</value>, and export your current watch/play state and then you can re-enable this option.
+                    override that. Select <value>no</value>, and export your current watch/play state, and then you can re-enable this option.
                     ------------------
                     <notice>For more information please read the FAQ.</notice>
                     HELP. PHP_EOL . '> ',
@@ -440,7 +440,14 @@ final class ManageCommand extends Command
                         ])
                     );
                     $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
-                    $cmd->run(new ArrayInput(['--quiet', '--select-backends' => $name]), $output);
+                    $cmd->run(
+                        new ArrayInput([
+                            '--quiet',
+                            '--config' => $config,
+                            '--select-backends' => $name
+                        ]),
+                        $output
+                    );
                 }
 
                 $output->writeln('<info>Import complete</info>');
