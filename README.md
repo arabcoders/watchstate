@@ -81,7 +81,7 @@ $ docker exec -ti watchstate console config:manage [BACKEND_NAME]
 
 # Importing play state.
 
-What does `Import` or what does the command `state:import` in context of watchstate?
+What does `Import` or what does the command `state:import` means in context of watchstate?
 
 Import means, pulling data from the backends into the database while attempting to normalize the state.
 
@@ -116,7 +116,7 @@ and pick up any missed events.
 
 # Exporting play state
 
-What does `export` or what does the command `state:export` in context of watchstate?
+What does `export` or what does the command `state:export` means in context of watchstate?
 
 Export means, sending data back to backends, while trying to minimize the network traffic.
 
