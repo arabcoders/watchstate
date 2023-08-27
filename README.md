@@ -50,9 +50,11 @@ such it will crash if it's unable to write to the data directory. It's really no
 but if you fail to run the container you can try setting the `user: "0:0"` if that works it means you have permissions
 issues. refer to [FAQ](FAQ.md) to troubleshoot the problem.
 
-**Note**: For `Unraid` users you need add value to the `Extra Parameters` section in advanced tab. add the following
-value `--user 99:100`. This has to happen before you start the container, otherwise it will have the old user id, and
-you then have to run the following command from terminal `chown -R 99:100 /mnt/user/appdata/watchstate`.
+**Note**: For `Unraid` users You can install the `Community Applications` plugin, and search for `watchstate` it comes
+preconfigured. Otherwise, to manually install it, you need to add value to the `Extra Parameters` section in advanced
+tab/view. add the following value `--user 99:100`. This has to happen before you start the container, otherwise it will
+have the old user id, and you then have to run the following command from
+terminal `chown -R 99:100 /mnt/user/appdata/watchstate`.
 
 **Note**: To use this container with `podman` set `docker-compose.yaml` `user` to `0:0`. it will appear to be working as
 root inside the container, but it will be mapped to the user in which the command was run under.
@@ -80,6 +82,10 @@ $ docker exec -ti watchstate console config:manage [BACKEND_NAME]
 ```
 
 # Importing play state.
+
+What does `Import` or what does the command `state:import` means in context of watchstate?
+
+Import means, pulling data from the backends into the database while attempting to normalize the state.
 
 To import your current play state from backends that have import enabled, run the following command:
 
@@ -111,6 +117,10 @@ and pick up any missed events.
 ---
 
 # Exporting play state
+
+What does `export` or what does the command `state:export` means in context of watchstate?
+
+Export means, sending data back to backends, while trying to minimize the network traffic.
 
 To export your current play state to backends that have export enabled, run the following command
 

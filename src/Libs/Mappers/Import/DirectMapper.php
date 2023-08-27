@@ -358,6 +358,40 @@ final class DirectMapper implements iImport
                 return $this;
             }
         }
+        /**
+         * Fix for #329
+         * This conditional block should proceed only if specific conditions are met.
+         * 1- the backend state is [unwatched] while the db state is [watched]
+         * 2- if the db.metadata.backend.played_at is equal to entity.updated or the db.metadata has no data.
+         * 3 - mark entity as tainted and re-process it.
+         */
+        if (true === $cloned->isWatched() && false === $entity->isWatched()) {
+            $message = 'MAPPER: Watch state conflict detected in [%(backend)] [%(title)] [%(new_state)] vs db [%(current_state)].';
+            $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
+            $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
+
+            if (false === $hasMeta) {
+                $message .= ' No metadata. Marking the item as tainted and re-processing.';
+            } elseif (true === $hasDate) {
+                $message .= ' db.metadata.played_at is equal to entity.updated. Marking the item as tainted and re-processing.';
+            }
+
+            $this->logger->warning($message, [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
+                'current_state' => $cloned->isWatched() ? 'played' : 'unplayed',
+                'new_state' => $entity->isWatched() ? 'played' : 'unplayed',
+            ]);
+
+            if (false === $hasMeta || true === $hasDate) {
+                $metadata = $entity->getMetadata();
+                $metadata[$entity->via][iState::COLUMN_META_DATA_PLAYED_AT] = $entity->updated;
+                $entity->metadata = $metadata;
+                $entity->setIsTainted(true);
+                return $this->add($entity, $opts);
+            }
+        }
 
         $keys = $opts['diff_keys'] ?? array_flip(
             array_keys_diff(
@@ -366,6 +400,8 @@ final class DirectMapper implements iImport
                 has: false
             )
         );
+
+        $this->logger->warning('entering', ['keys' => $keys]);
 
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             try {
