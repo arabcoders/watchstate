@@ -63,6 +63,20 @@ Use the ids as parameters for `user:` in this case it should be `user:"1000:1000
 
 ----
 
+### MAPPER: Watch state conflict detected in [BACKEND_NAME]...?
+
+This warning occurs when the database has the movie/episode marked as played but a backend reporting the
+item as unplayed and there is no metadata that indicates that the movie was previously imported from the backend.
+So, Preserving your current watch state takes priority, and thus we mark the item as tainted and re-process it.
+To Fix this conflict you should re-export your database state back to the problematic backend using the following
+command:
+
+```bash
+$ docker exec -ti console state:export -fi -s [BACKEND_NAME]
+```
+
+----
+
 ### My new backend overriding my old backend state / My watch state is not correct?
 
 This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
