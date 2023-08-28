@@ -94,17 +94,7 @@ final class GetUsersList
 
         $list = [];
 
-        $adminsCount = 0;
-
-        $users = ag($json, 'users', []);
-
-        foreach ($users as $user) {
-            if (true === (bool)ag($user, 'admin')) {
-                $adminsCount++;
-            }
-        }
-
-        foreach ($users as $user) {
+        foreach (ag($json, 'users', []) as $user) {
             $data = [
                 'id' => ag($user, 'id'),
                 'uuid' => ag($user, 'uuid'),
