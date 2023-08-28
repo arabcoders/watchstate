@@ -292,6 +292,7 @@ final class Initializer
 
         if (empty($backend) || null === $class) {
             if (false === $validUser) {
+                $loglevel = Logger::DEBUG;
                 $message = 'token is valid, User matching failed.';
             } elseif (false === $validUUid) {
                 $message = 'token and user are valid. Backend unique id matching failed.';
@@ -299,7 +300,7 @@ final class Initializer
                 $message = 'Invalid token was given.';
             }
 
-            $this->write($request, Logger::ERROR, $message, ['messages' => $log]);
+            $this->write($request, $loglevel ?? Logger::ERROR, $message, ['messages' => $log]);
             return new Response(401);
         }
 

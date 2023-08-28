@@ -6,10 +6,13 @@ namespace App\Libs\Entity;
 
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
+use Psr\Log\LoggerAwareTrait;
 use RuntimeException;
 
 final class StateEntity implements iState
 {
+    use LoggerAwareTrait;
+
     private array $data = [];
     private bool $tainted = false;
 

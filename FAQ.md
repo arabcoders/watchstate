@@ -445,7 +445,7 @@ Those are some Webhook limitations we discovered for the following media backend
 
 * Plex does not send webhooks events for "marked as played/unplayed".
 * Sometimes does not send events if you add more than one item at time.
-* If you have multi-user setup, Plex will still report the admin account user id as `1`.
+* If you have multi-user setup, Plex will still report the admin account user id as `1`. `(Fixed Recently)`
 * When you mark items as unwatched, Plex reset the date on the object.
 
 #### Emby

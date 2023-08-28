@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs\Entity;
 
-interface StateInterface
+use Psr\Log\LoggerAwareInterface;
+
+interface StateInterface extends LoggerAwareInterface
 {
     public const TYPE_MOVIE = 'movie';
     public const TYPE_EPISODE = 'episode';

@@ -106,7 +106,7 @@ final class GetUsersList
 
         foreach ($users as $user) {
             $data = [
-                'id' => ag($user, 'admin') && $adminsCount <= 1 ? 1 : ag($user, 'id'),
+                'id' => ag($user, 'id'),
                 'uuid' => ag($user, 'uuid'),
                 'name' => ag($user, ['friendlyName', 'username', 'title', 'email'], '??'),
                 'admin' => (bool)ag($user, 'admin'),
