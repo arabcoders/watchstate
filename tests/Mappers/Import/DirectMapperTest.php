@@ -8,6 +8,7 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
@@ -88,6 +89,58 @@ class DirectMapperTest extends TestCase
         );
 
         $this->assertCount(0, $this->mapper);
+    }
+
+    public function test_update_watch_conditions(): void
+    {
+        $this->testMovie[iState::COLUMN_WATCHED] = 0;
+        $this->testMovie = ag_set($this->testMovie, 'metadata.home_plex.watched', 0);
+
+        $testMovie = new StateEntity($this->testMovie);
+
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $obj = $this->mapper->get($testMovie);
+        $this->assertSame(0, $obj->watched);
+        $this->assertSame(1, $obj->updated);
+        $this->assertSame(0, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
+
+        $this->testMovie[iState::COLUMN_WATCHED] = 1;
+        $this->testMovie[iState::COLUMN_UPDATED] = 10;
+        $this->testMovie = ag_set($this->testMovie, 'metadata.home_plex.watched', 1);
+        $this->testMovie = ag_set($this->testMovie, 'metadata.home_plex.played_at', 10);
+        $testMovie = new StateEntity($this->testMovie);
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $obj = $this->mapper->get($testMovie);
+
+        $this->assertSame(1, $testMovie->watched);
+        $this->assertSame(1, $obj->watched);
+        $this->assertSame(10, $obj->updated);
+        $this->assertSame(1, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
+        $this->assertSame(10, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PLAYED_AT));
+    }
+
+    public function test_update_unwatch_conditions(): void
+    {
+        $testMovie = new StateEntity($this->testMovie);
+
+        $this->mapper->add($testMovie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $testMovie->watched = 0;
+        $this->mapper->add($testMovie, ['after' => new \DateTimeImmutable('now')]);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $objs = $this->mapper->getObjects();
+        $obj = array_pop($objs);
+
+        $this->assertSame(0, (int)$obj->watched);
+        $this->assertSame($obj->updated, (int)$obj->updated);
+        $this->assertSame(0, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
     }
 
     public function test_get_conditions(): void
