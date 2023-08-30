@@ -10,12 +10,12 @@ use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Guid;
+use App\Libs\TestCase;
 use DateTimeImmutable;
 use Error;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 

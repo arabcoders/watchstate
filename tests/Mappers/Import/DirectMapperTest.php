@@ -7,15 +7,14 @@ namespace Tests\Mappers\Import;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
-use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
+use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -65,8 +64,8 @@ class DirectMapperTest extends TestCase
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
             $this->mapper->commit()
         );
@@ -74,7 +73,7 @@ class DirectMapperTest extends TestCase
         // -- assert 0 as we have committed the changes to the db, and the state should have been reset.
         $this->assertCount(0, $this->mapper);
 
-        $testEpisode->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
+        $testEpisode->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
 
         $this->mapper->add($testEpisode);
 
@@ -82,8 +81,8 @@ class DirectMapperTest extends TestCase
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
             $this->mapper->commit()
         );
@@ -143,12 +142,78 @@ class DirectMapperTest extends TestCase
         $this->assertSame(0, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
     }
 
+    /**
+     * @throws \Exception
+     */
+    public function test_update_unwatch_conflict_no_metadata(): void
+    {
+        $this->mapper->add(new StateEntity($this->testMovie));
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $timeNow = time();
+
+        $testData = $this->testMovie;
+        $testData[iState::COLUMN_VIA] = 'fiz';
+        $testData[iState::COLUMN_WATCHED] = 0;
+        $testData[iState::COLUMN_UPDATED] = $timeNow;
+        $testData[iState::COLUMN_META_DATA] = [
+            'fiz' => [
+                iState::COLUMN_ID => 121,
+                iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                iState::COLUMN_WATCHED => 0,
+                iState::COLUMN_YEAR => '2020',
+                iState::COLUMN_META_DATA_EXTRA => [
+                    iState::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
+                ],
+                iState::COLUMN_META_DATA_ADDED_AT => $timeNow,
+            ],
+        ];
+
+        $testMovie = new StateEntity($testData);
+        $this->mapper->add($testMovie, ['after' => new \DateTimeImmutable('@' . ($timeNow - 10))]);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $obj = $this->mapper->get($testMovie);
+
+        $this->assertSame(1, $obj->watched);
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function test_update_unwatch_conflict_no_date(): void
+    {
+        $testData = $this->testMovie;
+        $timeNow = time();
+
+        $testData[iState::COLUMN_UPDATED] = $timeNow;
+        $testData[iState::COLUMN_META_DATA]['home_plex'][iState::COLUMN_META_DATA_PLAYED_AT] = $timeNow;
+
+        $movie = new StateEntity($testData);
+        $this->mapper->add($movie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $testData[iState::COLUMN_WATCHED] = 0;
+        $testData[iState::COLUMN_UPDATED] = $timeNow;
+
+        $testMovie = new StateEntity($testData);
+
+        $this->mapper->add($testMovie, ['after' => new \DateTimeImmutable('@' . ($timeNow - 10))]);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $obj = $this->mapper->get($testMovie);
+
+        $this->assertSame(1, $obj->watched);
+    }
+
     public function test_get_conditions(): void
     {
         $movie = $this->testMovie;
         $episode = $this->testEpisode;
 
-        foreach (iFace::ENTITY_ARRAY_KEYS as $key) {
+        foreach (iState::ENTITY_ARRAY_KEYS as $key) {
             if (null !== ($movie[$key] ?? null)) {
                 ksort($movie[$key]);
             }
@@ -186,25 +251,25 @@ class DirectMapperTest extends TestCase
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 1, 'updated' => 0, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 1, 'updated' => 0, 'failed' => 0],
             ],
             $insert
         );
 
-        $testMovie->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
-        $testEpisode->metadata['home_plex'][iFace::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
+        $testMovie->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
+        $testEpisode->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
 
         $this->mapper
-            ->add($testMovie, ['diff_keys' => iFace::ENTITY_KEYS])
-            ->add($testEpisode, ['diff_keys' => iFace::ENTITY_KEYS]);
+            ->add($testMovie, ['diff_keys' => iState::ENTITY_KEYS])
+            ->add($testEpisode, ['diff_keys' => iState::ENTITY_KEYS]);
 
         $updated = $this->mapper->commit();
 
         $this->assertSame(
             [
-                iFace::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
-                iFace::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                iState::TYPE_MOVIE => ['added' => 0, 'updated' => 1, 'failed' => 0],
+                iState::TYPE_EPISODE => ['added' => 0, 'updated' => 1, 'failed' => 0],
             ],
             $updated
         );

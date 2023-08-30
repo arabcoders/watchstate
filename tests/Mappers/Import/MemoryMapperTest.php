@@ -11,10 +11,10 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Message;
+use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -135,8 +135,8 @@ class MemoryMapperTest extends TestCase
         $this->mapper->commit();
         $this->mapper->reset()->loadData();
         $obj = $this->mapper->get($testMovie);
-        $this->assertSame(0, (int)$obj->watched);
-        $this->assertSame(1, (int)$obj->updated);
+        $this->assertSame(0, $obj->watched);
+        $this->assertSame(1, $obj->updated);
         $this->assertSame(0, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
 
         // -- update
@@ -153,8 +153,8 @@ class MemoryMapperTest extends TestCase
         $obj = $this->mapper->get($testMovie);
 
         $this->assertSame(1, $testMovie->watched);
-        $this->assertSame(1, (int)$obj->watched);
-        $this->assertSame(5, (int)$obj->updated);
+        $this->assertSame(1, $obj->watched);
+        $this->assertSame(5, $obj->updated);
         $this->assertSame(1, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
         $this->assertSame(5, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PLAYED_AT));
     }
@@ -176,6 +176,72 @@ class MemoryMapperTest extends TestCase
         $this->assertSame(0, $obj->watched);
         $this->assertSame($obj->updated, $obj->updated);
         $this->assertSame(0, (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED));
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function test_update_unwatch_conflict_no_metadata(): void
+    {
+        $this->mapper->add(new StateEntity($this->testMovie));
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $timeNow = time();
+
+        $testData = $this->testMovie;
+        $testData[iState::COLUMN_VIA] = 'fiz';
+        $testData[iState::COLUMN_WATCHED] = 0;
+        $testData[iState::COLUMN_UPDATED] = $timeNow;
+        $testData[iState::COLUMN_META_DATA] = [
+            'fiz' => [
+                iState::COLUMN_ID => 121,
+                iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+                iState::COLUMN_WATCHED => 0,
+                iState::COLUMN_YEAR => '2020',
+                iState::COLUMN_META_DATA_EXTRA => [
+                    iState::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
+                ],
+                iState::COLUMN_META_DATA_ADDED_AT => $timeNow,
+            ],
+        ];
+
+        $testMovie = new StateEntity($testData);
+        $this->mapper->add($testMovie, ['after' => new \DateTimeImmutable('@' . ($timeNow - 10))]);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $obj = $this->mapper->get($testMovie);
+
+        $this->assertSame(1, $obj->watched);
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function test_update_unwatch_conflict_no_date(): void
+    {
+        $testData = $this->testMovie;
+        $timeNow = time();
+
+        $testData[iState::COLUMN_UPDATED] = $timeNow;
+        $testData[iState::COLUMN_META_DATA]['home_plex'][iState::COLUMN_META_DATA_PLAYED_AT] = $timeNow;
+
+        $movie = new StateEntity($testData);
+        $this->mapper->add($movie);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+
+        $testData[iState::COLUMN_WATCHED] = 0;
+        $testData[iState::COLUMN_UPDATED] = $timeNow;
+
+        $testMovie = new StateEntity($testData);
+
+        $this->mapper->add($testMovie, ['after' => new \DateTimeImmutable('@' . ($timeNow - 10))]);
+        $this->mapper->commit();
+        $this->mapper->reset()->loadData();
+        $obj = $this->mapper->get($testMovie);
+
+        $this->assertSame(1, $obj->watched);
     }
 
     public function test_get_conditions(): void
