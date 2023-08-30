@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Libs;
 
 use App\Libs\Config;
-use PHPUnit\Framework\TestCase;
+use App\Libs\TestCase;
 
 class ConfigTest extends TestCase
 {

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Server;
 
 use App\Libs\Server;
+use App\Libs\TestCase;
 use Exception;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
