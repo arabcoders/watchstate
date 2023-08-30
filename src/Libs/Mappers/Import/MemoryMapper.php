@@ -291,6 +291,14 @@ final class MemoryMapper implements iImport
             }
         }
 
+        $keys = $opts['diff_keys'] ?? array_flip(
+            array_keys_diff(
+                base: array_flip(iState::ENTITY_KEYS),
+                list: iState::ENTITY_IGNORE_DIFF_CHANGES,
+                has: false
+            )
+        );
+        
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             $this->changed[$pointer] = $pointer;
             Message::increment("{$entity->via}.{$entity->type}.updated");
