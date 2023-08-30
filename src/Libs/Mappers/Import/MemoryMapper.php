@@ -298,7 +298,7 @@ final class MemoryMapper implements iImport
                 has: false
             )
         );
-        
+
         if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             $this->changed[$pointer] = $pointer;
             Message::increment("{$entity->via}.{$entity->type}.updated");

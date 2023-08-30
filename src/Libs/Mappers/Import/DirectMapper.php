@@ -433,6 +433,7 @@ final class DirectMapper implements iImport
                 }
 
                 if (false === $inDryRunMode) {
+                    $this->logger->notice('db update');
                     $this->db->update($local);
                 }
 
