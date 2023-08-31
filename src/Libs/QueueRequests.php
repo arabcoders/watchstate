@@ -7,7 +7,7 @@ namespace App\Libs;
 use Countable;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-final class QueueRequests implements Countable
+final class QueueRequests implements Countable, \Iterator
 {
     /**
      * @var array<ResponseInterface> Queued Requests.
@@ -21,6 +21,9 @@ final class QueueRequests implements Countable
         return $this;
     }
 
+    /**
+     * @return array<ResponseInterface>
+     */
     public function getQueue(): array
     {
         return $this->queue;
@@ -36,5 +39,30 @@ final class QueueRequests implements Countable
     public function count(): int
     {
         return count($this->queue);
+    }
+
+    public function current(): ResponseInterface|bool
+    {
+        return current($this->queue);
+    }
+
+    public function next(): void
+    {
+        next($this->queue);
+    }
+
+    public function key(): string|int|null
+    {
+        return key($this->queue);
+    }
+
+    public function valid(): bool
+    {
+        return null !== key($this->queue);
+    }
+
+    public function rewind(): void
+    {
+        reset($this->queue);
     }
 }
