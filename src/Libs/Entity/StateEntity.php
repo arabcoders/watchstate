@@ -108,7 +108,7 @@ final class StateEntity implements iState
 
         if ($this->isMovie() || true === $asMovie) {
             return r('{title} ({year})', [
-                'title' => $title,
+                'title' => !empty($title) ? $title : '??',
                 'year' => $year ?? '0000'
             ]);
         }
@@ -117,7 +117,7 @@ final class StateEntity implements iState
         $episode = str_pad((string)ag($this->data, iState::COLUMN_EPISODE, $this->episode ?? 0), 3, '0', STR_PAD_LEFT);
 
         return r('{title} ({year}) - {season}x{episode}', [
-                'title' => $title ?? '??',
+                'title' => !empty($title) ? $title : '??',
                 'year' => $year ?? '0000',
                 'season' => $season,
                 'episode' => $episode,
@@ -180,7 +180,8 @@ final class StateEntity implements iState
 
     public function hasParentGuid(): bool
     {
-        return count($this->parent) >= 1;
+        $list = array_intersect_key($this->parent, Guid::getSupported());
+        return count($list) >= 1;
     }
 
     public function getParentGuids(): array
@@ -303,6 +304,20 @@ final class StateEntity implements iState
         return $this->metadata[$via] ?? [];
     }
 
+    public function setMetadata(array $metadata): StateInterface
+    {
+        if (empty($this->via)) {
+            throw new RuntimeException('No backend was set in $this->via parameter.');
+        }
+
+        $this->metadata[$this->via] = empty($metadata) ? [] : array_replace_recursive(
+            $this->metadata[$this->via],
+            $metadata
+        );
+
+        return $this;
+    }
+
     public function getExtra(string|null $via = null): array
     {
         if (null === $via) {
@@ -310,6 +325,20 @@ final class StateEntity implements iState
         }
 
         return $this->extra[$via] ?? [];
+    }
+
+    public function setExtra(array $extra): StateInterface
+    {
+        if (empty($this->via)) {
+            throw new RuntimeException('No backend was set in $this->via parameter.');
+        }
+
+        $this->extra[$this->via] = empty($extra) ? [] : array_replace_recursive(
+            $this->extra[$this->via],
+            $extra
+        );
+
+        return $this;
     }
 
     public function shouldMarkAsUnplayed(iState $backend): bool

@@ -38,7 +38,9 @@ return [
         ],
     ],
     iFace::COLUMN_EXTRA => [
-        iFace::COLUMN_EXTRA_EVENT => 'media.scrobble',
-        iFace::COLUMN_EXTRA_DATE => 1,
+        'home_plex' => [
+            iFace::COLUMN_EXTRA_EVENT => 'media.scrobble',
+            iFace::COLUMN_EXTRA_DATE => 1,
+        ],
     ],
 ];

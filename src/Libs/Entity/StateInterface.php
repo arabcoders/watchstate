@@ -270,6 +270,17 @@ interface StateInterface extends LoggerAwareInterface
     public function getMetadata(string|null $via = null): array;
 
     /**
+     * Set Metadata related to {$this->via} backend
+     *
+     * @param array $metadata metadata
+     *
+     * @return StateInterface
+     *
+     * @throws \RuntimeException if no via is set.
+     */
+    public function setMetadata(array $metadata): StateInterface;
+
+    /**
      * Get extra.
      *
      * @param string|null $via if via is omitted, the entire "extra" will be returned.
@@ -277,6 +288,17 @@ interface StateInterface extends LoggerAwareInterface
      * @return array
      */
     public function getExtra(string|null $via = null): array;
+
+    /**
+     * Set Extra related to {$this->via} backend
+     *
+     * @param array $extra Extra
+     *
+     * @return StateInterface
+     *
+     * @throws \RuntimeException if no via is set.
+     */
+    public function setExtra(array $extra): StateInterface;
 
     /**
      * Should we mark the item as unplayed?
