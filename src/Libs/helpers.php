@@ -56,7 +56,7 @@ if (!function_exists('makeDate')) {
      */
     function makeDate(string|int|DateTimeInterface $date = 'now', DateTimeZone|string|null $tz = null): Date
     {
-        if (ctype_digit((string)$date)) {
+        if ((is_string($date) || is_int($date)) && ctype_digit((string)$date)) {
             $date = '@' . $date;
         }
 

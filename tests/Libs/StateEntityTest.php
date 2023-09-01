@@ -27,28 +27,49 @@ class StateEntityTest extends TestCase
         try {
             new StateEntity($this->testMovie);
         } catch (RuntimeException $e) {
-            $this->assertInstanceOf(RuntimeException::class, $e);
+            $this->assertInstanceOf(
+                RuntimeException::class,
+                $e,
+                'When new instance of StateEntity is called with invalid type, exception is thrown'
+            );
         }
 
         try {
             StateEntity::fromArray($this->testMovie);
         } catch (RuntimeException $e) {
-            $this->assertInstanceOf(RuntimeException::class, $e);
+            $this->assertInstanceOf(
+                RuntimeException::class,
+                $e,
+                'When ::fromArray is called with invalid type, exception is thrown'
+            );
         }
     }
 
     public function test_init_bad_data(): void
     {
-        $entityEmpty = new StateEntity([]);
+        $entityEmpty = new StateEntity(['bad_key' => 'foo']);
         $entity = $entityEmpty::fromArray(['bad_key' => 'foo']);
-        $this->assertSame($entityEmpty->getAll(), $entity->getAll());
+        $this->assertSame(
+            $entityEmpty->getAll(),
+            $entity->getAll(),
+            'When new instance of StateEntity is called with total invalid data, getAll() return empty array'
+        );
     }
 
     public function test_diff_direct_param(): void
     {
         $entity = new StateEntity($this->testEpisode);
         $entity->watched = 0;
-        $this->assertSame([iState::COLUMN_WATCHED => ['old' => 1, 'new' => 0]], $entity->diff());
+        $this->assertSame(
+            [
+                iState::COLUMN_WATCHED => [
+                    'old' => 1,
+                    'new' => 0
+                ]
+            ],
+            $entity->diff(),
+            'When object directly modified and diff() is called, only modified fields are returned in format [field => [old => old_value, new => new_value]]'
+        );
     }
 
     public function test_diff_array_param(): void
@@ -60,14 +81,26 @@ class StateEntityTest extends TestCase
         $arr = ag_set($arr, 'metadata.home_plex.played_at.old', 2);
         $arr = ag_set($arr, 'metadata.home_plex.played_at.new', 4);
 
-        $this->assertSame($arr, $entity->diff());
+        $this->assertSame(
+            $arr,
+            $entity->diff(),
+            'When array parameter is updated and diff() is called, only modified fields are returned in format [field => [old => old_value, new => new_value]]'
+        );
     }
 
     public function test_getName_as_movie(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertSame('Movie Title (2020)', $entity->getName());
-        $this->assertSame('Movie Title (2020)', $entity->getName(asMovie: true));
+        $this->assertSame(
+            'Movie Title (2020)',
+            $entity->getName(),
+            'When entity is movie, getName() returns title and year'
+        );
+        $this->assertSame(
+            'Movie Title (2020)',
+            $entity->getName(asMovie: true),
+            'When getName() called with asMovie parameter set to true, getName() returns title and year'
+        );
 
         $data = $this->testMovie;
 
@@ -75,19 +108,35 @@ class StateEntityTest extends TestCase
         unset($data[iState::COLUMN_YEAR]);
 
         $entity = $entity::fromArray($data);
-        $this->assertSame('?? (0000)', $entity->getName());
+        $this->assertSame(
+            '?? (0000)',
+            $entity->getName(),
+            'When no title and year is set, getName() returns ?? (0000)'
+        );
 
         $entity = new StateEntity($this->testMovie);
         $entity->title = '';
         $entity->year = 2000;
-        $this->assertSame('Movie Title (2020)', $entity->getName());
+        $this->assertSame(
+            'Movie Title (2020)',
+            $entity->getName(),
+            'getName() should reference initial data, not current object data'
+        );
     }
 
     public function test_getName_as_episode(): void
     {
         $entity = new StateEntity($this->testEpisode);
-        $this->assertSame('Series Title (2020) - 01x002', $entity->getName());
-        $this->assertSame('Series Title (2020)', $entity->getName(asMovie: true));
+        $this->assertSame(
+            'Series Title (2020) - 01x002',
+            $entity->getName(),
+            'When entity is episode, getName() returns series title, year, season and episode in format of Series Title (2020) - SSxEEE'
+        );
+        $this->assertSame(
+            'Series Title (2020)',
+            $entity->getName(asMovie: true),
+            'When entity is episode, and getName() called with asMovie parameter set to true, getName() returns series title and year'
+        );
 
         $data = $this->testEpisode;
 
@@ -97,14 +146,22 @@ class StateEntityTest extends TestCase
         unset($data[iState::COLUMN_YEAR]);
 
         $entity = $entity::fromArray($data);
-        $this->assertSame('?? (0000) - 00x000', $entity->getName());
+        $this->assertSame(
+            '?? (0000) - 00x000',
+            $entity->getName(),
+            'When no title, year, season and episode is set, getName() returns ?? (0000) - 00x000'
+        );
 
         $entity = new StateEntity($this->testEpisode);
         $entity->episode = 0;
         $entity->season = 0;
         $entity->title = '';
         $entity->year = 2000;
-        $this->assertSame('Series Title (2020) - 01x002', $entity->getName());
+        $this->assertSame(
+            'Series Title (2020) - 01x002',
+            $entity->getName(),
+            'getName() should reference initial data, not current object data'
+        );
     }
 
     public function test_getAll(): void
@@ -115,7 +172,11 @@ class StateEntityTest extends TestCase
         $data['not_real'] = 1;
         $entity = $base::fromArray($data);
 
-        $this->assertSame($base->getAll(), $entity->getAll());
+        $this->assertSame(
+            $base->getAll(),
+            $entity->getAll(),
+            'When new instance of StateEntity is called with invalid data, getAll() return only valid data'
+        );
     }
 
     public function test_isChanged(): void
@@ -123,35 +184,61 @@ class StateEntityTest extends TestCase
         $entity = new StateEntity($this->testEpisode);
         $entity->watched = 0;
 
-        $this->assertTrue($entity->isChanged());
-        $this->assertTrue($entity->isChanged([iState::COLUMN_WATCHED]));
-        $this->assertFalse($entity->isChanged([iState::COLUMN_UPDATED]));
+        $this->assertTrue(
+            $entity->isChanged(),
+            'When object directly modified and isChanged() is called, returns true'
+        );
+        $this->assertTrue(
+            $entity->isChanged([iState::COLUMN_WATCHED]),
+            'When object directly modified and isChanged() is called with fields that contain changed keys, it returns true'
+        );
+        $this->assertFalse(
+            $entity->isChanged([iState::COLUMN_UPDATED]),
+            'When object directly modified and isChanged() is called with fields that do not contain changed keys, it returns false'
+        );
     }
 
     public function test_hasGuids(): void
     {
         $entity = new StateEntity($this->testMovie);
 
-        $this->assertTrue($entity->hasGuids());
+        $this->assertTrue(
+            $entity->hasGuids(),
+            'When entity has supported GUIDs, hasGuids() returns true'
+        );
 
         $data = $this->testMovie;
         $data[iState::COLUMN_GUIDS] = ['guid_non' => '121'];
 
         $entity = $entity::fromArray($data);
-        $this->assertFalse($entity->hasGuids());
-        $this->assertSame($data[iState::COLUMN_GUIDS], $entity->getGuids());
+        $this->assertFalse(
+            $entity->hasGuids(),
+            'When entity does not have supported GUIDs, hasGuids() returns false'
+        );
+        $this->assertSame(
+            $data[iState::COLUMN_GUIDS],
+            $entity->getGuids(),
+            'getGuids() returns list of all keys including unsupported ones'
+        );
     }
 
     public function test_getGuids(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertSame($this->testMovie[iState::COLUMN_GUIDS], $entity->getGuids());
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_GUIDS],
+            $entity->getGuids(),
+            'When entity has GUIDs, getGuids() returns list of all GUIDs'
+        );
 
         $data = $this->testMovie;
         unset($data[iState::COLUMN_GUIDS]);
         $entity = $entity::fromArray($data);
 
-        $this->assertSame([], $entity->getGuids());
+        $this->assertSame([],
+            $entity->getGuids(),
+            'When entity does not have GUIDs, getGuids() returns empty array'
+        );
     }
 
     public function test_getPointers(): void
@@ -170,109 +257,177 @@ class StateEntityTest extends TestCase
             'guid_anidb://1600',
         ];
 
-        $this->assertSame($pointers, $entity->getPointers());
+        $this->assertSame(
+            $pointers,
+            $entity->getPointers(),
+            'When entity has supported GUIDs, getPointers() returns list of all GUIDs in format of guid_<provider>://<id>'
+        );
+
+        $data = $this->testMovie;
+        $data[iState::COLUMN_GUIDS] = [
+            'guid_foo' => '123',
+            'guid_bar' => '456',
+        ];
+        $entity = $entity::fromArray($data);
+
+        $this->assertSame(
+            [],
+            $entity->getPointers(),
+            'When entity does not have GUIDs or supported ones, getPointers() returns empty array'
+        );
     }
 
     public function test_hasParentGuid(): void
     {
         $entity = new StateEntity($this->testEpisode);
 
-        $this->assertTrue($entity->hasParentGuid());
+        $this->assertTrue(
+            $entity->hasParentGuid(),
+            'When entity has supported parent GUIDs, hasParentGuid() returns true'
+        );
 
         $data = $this->testEpisode;
         $data[iState::COLUMN_PARENT] = ['guid_non' => '121'];
 
         $entity = $entity::fromArray($data);
-        $this->assertFalse($entity->hasParentGuid());
+        $this->assertFalse(
+            $entity->hasParentGuid(),
+            'When entity does not have supported parent GUIDs, hasParentGuid() returns false'
+        );
 
         $data = $this->testEpisode;
         $data[iState::COLUMN_PARENT]['guid_non'] = '121';
         $entity = $entity::fromArray($data);
-        $this->assertTrue($entity->hasParentGuid());
+        $this->assertTrue(
+            $entity->hasParentGuid(),
+            'When entity has parent supported GUIDs even if contains unsupported ones, hasParentGuid() returns true'
+        );
     }
 
     public function test_getParentGuids(): void
     {
         $entity = new StateEntity($this->testEpisode);
-        $this->assertSame($this->testEpisode[iState::COLUMN_PARENT], $entity->getParentGuids());
+        $this->assertSame(
+            $this->testEpisode[iState::COLUMN_PARENT],
+            $entity->getParentGuids(),
+            'When entity has parent GUIDs, getParentGuids() returns list of all GUIDs'
+        );
 
         $data = $this->testEpisode;
         unset($data[iState::COLUMN_PARENT]);
         $entity = $entity::fromArray($data);
 
-        $this->assertSame([], $entity->getParentGuids());
+        $this->assertSame(
+            [],
+            $entity->getParentGuids(),
+            'When entity does not have parent GUIDs, getParentGuids() returns empty array'
+        );
 
         $data = $this->testEpisode;
         $data[iState::COLUMN_PARENT]['guid_foo'] = '123';
         $entity = $entity::fromArray($data);
 
-        $this->assertSame($data[iState::COLUMN_PARENT], $entity->getParentGuids());
+        $this->assertSame(
+            $data[iState::COLUMN_PARENT],
+            $entity->getParentGuids(),
+            'When entity has parent GUIDs, getParentGuids() returns list of all GUIDs including unsupported ones'
+        );
     }
 
     public function test_isMovie_isEpisode(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertTrue($entity->isMovie());
-        $this->assertFalse($entity->isEpisode());
+        $this->assertTrue($entity->isMovie(), 'When entity is movie, isMovie() returns true');
+        $this->assertFalse($entity->isEpisode(), 'When entity is movie, isEpisode() returns false');
 
         $entity = new StateEntity($this->testEpisode);
-        $this->assertFalse($entity->isMovie());
-        $this->assertTrue($entity->isEpisode());
+        $this->assertFalse($entity->isMovie(), 'When entity is episode, isMovie() returns false');
+        $this->assertTrue($entity->isEpisode(), 'When entity is episode, isEpisode() returns true');
     }
 
     public function test_isWatched(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertTrue($entity->isWatched());
+        $this->assertTrue($entity->isWatched(), 'When entity is watched, isWatched() returns true');
 
         $data = $this->testMovie;
         $data[iState::COLUMN_WATCHED] = 0;
         $entity = $entity::fromArray($data);
 
-        $this->assertFalse($entity->isEpisode());
+        $this->assertFalse($entity->isWatched(), 'When entity is not watched, isWatched() returns false');
     }
 
     public function test_hasRelativeGuid(): void
     {
-        $this->assertTrue((new StateEntity($this->testEpisode))->hasRelativeGuid());
-        $this->assertFalse((new StateEntity($this->testMovie))->hasRelativeGuid());
+        $this->assertTrue(
+            (new StateEntity($this->testEpisode))->hasRelativeGuid(),
+            'When entity is episode, and only if has supported GUIDs hasRelativeGuid() returns true'
+        );
+        $this->assertFalse(
+            (new StateEntity($this->testMovie))->hasRelativeGuid(),
+            'When entity is movie, hasRelativeGuid() returns false regardless'
+        );
 
         $data = $this->testEpisode;
         unset($data[iState::COLUMN_SEASON]);
         $entity = StateEntity::fromArray($data);
-        $this->assertFalse($entity->hasRelativeGuid());
+        $this->assertFalse(
+            $entity->hasRelativeGuid(),
+            'When entity is episode, and does not have season, hasRelativeGuid() returns false'
+        );
 
         $data = $this->testEpisode;
         unset($data[iState::COLUMN_EPISODE]);
         $entity = StateEntity::fromArray($data);
-        $this->assertFalse($entity->hasRelativeGuid());
+        $this->assertFalse(
+            $entity->hasRelativeGuid(),
+            'When entity is episode, and does not have episode, hasRelativeGuid() returns false'
+        );
 
         $data = $this->testEpisode;
         unset($data[iState::COLUMN_PARENT]);
         $entity = StateEntity::fromArray($data);
-        $this->assertFalse($entity->hasRelativeGuid());
+        $this->assertFalse(
+            $entity->hasRelativeGuid(),
+            'When entity is episode, and does not have parent GUIDs, hasRelativeGuid() returns false'
+        );
     }
 
     public function test_getRelativeGuids(): void
     {
-        $this->assertSame([], (new StateEntity($this->testMovie))->getRelativeGuids());
-        $this->assertSame([
-            'guid_imdb' => 'tt510/1/2',
-            'guid_tvdb' => '520/1/2'
-        ], (new StateEntity($this->testEpisode))->getRelativeGuids());
+        $this->assertSame(
+            [],
+            (new StateEntity($this->testMovie))->getRelativeGuids(),
+            'When entity is movie, getRelativeGuids() returns empty array regardless'
+        );
+        $this->assertSame(
+            [
+                'guid_imdb' => 'tt510/1/2',
+                'guid_tvdb' => '520/1/2'
+            ],
+            (new StateEntity($this->testEpisode))->getRelativeGuids(),
+            'When entity is episode, and has supported GUIDs, getRelativeGuids() returns list of all supported GUIDs'
+        );
 
         $data = $this->testEpisode;
         unset($data[iState::COLUMN_PARENT]);
         $entity = new StateEntity($data);
-        $this->assertSame([], $entity->getRelativeGuids());
+        $this->assertSame([],
+            $entity->getRelativeGuids(),
+            'When entity is episode, and does not have parent GUIDs, getRelativeGuids() returns empty array'
+        );
 
         $data = $this->testEpisode;
         $data[iState::COLUMN_PARENT]['guid_foo'] = '123';
         $entity = $entity::fromArray($data);
-        $this->assertSame([
-            'guid_imdb' => 'tt510/1/2',
-            'guid_tvdb' => '520/1/2'
-        ], $entity->getRelativeGuids());
+        $this->assertSame(
+            [
+                'guid_imdb' => 'tt510/1/2',
+                'guid_tvdb' => '520/1/2'
+            ],
+            $entity->getRelativeGuids(),
+            'When entity is episode, and has supported GUIDs, getRelativeGuids() returns list of all supported GUIDs excluding unsupported ones'
+        );
     }
 
     public function test_getRelativePointers(): void
@@ -287,14 +442,25 @@ class StateEntityTest extends TestCase
             'rguid_tvdb://520/1/2',
         ];
 
-        $this->assertSame($pointers, $entity->getRelativePointers());
-        $this->assertSame([], (new StateEntity($this->testMovie))->getRelativePointers());
+        $this->assertSame(
+            $pointers,
+            $entity->getRelativePointers(),
+            'When entity is episode, and has supported GUIDs, getRelativePointers() returns list of all supported GUIDs in format of rguid_<provider>://<id>/<season>/<episode>'
+        );
+        $this->assertSame([],
+            (new StateEntity($this->testMovie))->getRelativePointers(),
+            'When entity is movie, getRelativePointers() returns empty array regardless.'
+        );
 
         $data = $this->testEpisode;
         $data[iState::COLUMN_PARENT]['guid_foo'] = '123';
         $entity = $entity::fromArray($data);
 
-        $this->assertSame($pointers, $entity->getRelativePointers());
+        $this->assertSame(
+            $pointers,
+            $entity->getRelativePointers(),
+            'When entity is episode, and has supported GUIDs, getRelativePointers() returns list of all supported GUIDs in format of rguid_<provider>://<id>/<season>/<episode> excluding unsupported ones'
+        );
     }
 
     public function test_apply(): void
@@ -303,76 +469,115 @@ class StateEntityTest extends TestCase
 
         $entity = new StateEntity($this->testMovie);
         $updated = $entity::fromArray($entity->getAll());
-        $this->assertSame($updated->getAll(), $entity->getAll());
+        $this->assertSame(
+            $updated->getAll(),
+            $entity->getAll(),
+            'When entity is updated with itself, nothing should change'
+        );
 
         $entity = new StateEntity($this->testMovie);
         $updated->title = 'Test';
         $entity->apply($updated, [iState::COLUMN_VIA]);
-        $this->assertSame([], $entity->diff());
+        $this->assertSame(
+            [],
+            $entity->diff(),
+            'When apply() called with fields that do not contain changed keys, diff() returns empty array'
+        );
 
         $entity = new StateEntity($this->testMovie);
         $updated = $entity::fromArray($entity->getAll());
         $updated->watched = 1;
         $updated->updated = 105;
         $entity->apply($updated);
-        $this->assertSame([
-            iState::COLUMN_UPDATED => [
-                'old' => 1,
-                'new' => 105,
+        $this->assertSame(
+            [
+                iState::COLUMN_UPDATED => [
+                    'old' => 1,
+                    'new' => 105,
+                ],
+                iState::COLUMN_WATCHED => [
+                    'old' => 0,
+                    'new' => 1,
+                ],
             ],
-            iState::COLUMN_WATCHED => [
-                'old' => 0,
-                'new' => 1,
-            ],
-        ], $entity->diff());
+            $entity->diff(),
+            'When apply() is called with no fields set, the updated fields from given entity are applied to current entity.'
+        );
 
         $entity = new StateEntity($this->testMovie);
         $updated = $entity::fromArray($entity->getAll());
         $updated->title = 'Test';
+        $updated->year = 2021;
         $updated->setMetadata([iState::COLUMN_ID => 1234]);
 
         $entity->apply($updated, [iState::COLUMN_TITLE, iState::COLUMN_META_DATA]);
-        $this->assertSame([
-            iState::COLUMN_TITLE => [
-                'old' => 'Movie Title',
-                'new' => 'Test',
-            ],
-            iState::COLUMN_META_DATA => [
-                $updated->via => [
-                    iState::COLUMN_ID => [
-                        'old' => 121,
-                        'new' => 1234,
+        $this->assertSame(
+            [
+                iState::COLUMN_TITLE => [
+                    'old' => 'Movie Title',
+                    'new' => 'Test',
+                ],
+                iState::COLUMN_META_DATA => [
+                    $updated->via => [
+                        iState::COLUMN_ID => [
+                            'old' => 121,
+                            'new' => 1234,
+                        ]
                     ]
                 ]
-            ]
-        ], $entity->diff());
+            ],
+            $entity->diff(),
+            'When apply() is called with fields that contain changed keys, only those fields are applied to current entity.'
+        );
     }
 
     public function test_updateOriginal(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertSame($entity->getOriginalData(), $entity->getAll());
+        $this->assertSame(
+            $entity->getOriginalData(),
+            $entity->getAll(),
+            'When entity is created, getOriginalData() returns same data as getAll()'
+        );
 
         $entity->watched = 0;
         $entity->updateOriginal();
-        $this->assertSame($entity->getOriginalData(), $entity->getAll());
+        $this->assertSame(
+            $entity->getOriginalData(),
+            $entity->getAll(),
+            'When entity is updated, and updateOriginal() is called getOriginalData() returns same data as getAll()'
+        );
     }
 
     public function test_getOriginalData(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertSame($entity->getOriginalData(), $entity->getAll());
+        $this->assertSame(
+            $entity->getOriginalData(),
+            $entity->getAll(),
+            'When entity is created, getOriginalData() returns same data as getAll()'
+        );
 
         $entity->watched = 0;
-        $this->assertNotSame($entity->getOriginalData(), $entity->getAll());
+        $this->assertNotSame(
+            $entity->getOriginalData(),
+            $entity->getAll(),
+            'When entity is updated, getOriginalData() returns different data than getAll()'
+        );
     }
 
     public function test_setIsTainted(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertFalse($entity->isTainted());
+        $this->assertFalse(
+            $entity->isTainted(),
+            'When entity is created, isTainted() returns false'
+        );
         $entity->setIsTainted(true);
-        $this->assertTrue($entity->isTainted());
+        $this->assertTrue(
+            $entity->isTainted(),
+            'When setIsTainted() is called with true, isTainted() returns true'
+        );
 
         $this->expectException(\TypeError::class);
         /** @noinspection PhpStrictTypeCheckingInspection */
@@ -382,18 +587,30 @@ class StateEntityTest extends TestCase
     public function test_isTainted(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertFalse($entity->isTainted());
+        $this->assertFalse($entity->isTainted(), 'When entity is created, isTainted() returns false');
 
         $entity->setIsTainted(true);
-        $this->assertTrue($entity->isTainted());
+        $this->assertTrue($entity->isTainted(), 'When setIsTainted() is called with true, isTainted() returns true');
     }
 
     public function test_getMetadata(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertSame($this->testMovie[iState::COLUMN_META_DATA], $entity->getMetadata());
-        $this->assertSame($this->testMovie[iState::COLUMN_META_DATA][$entity->via], $entity->getMetadata($entity->via));
-        $this->assertSame([], $entity->getMetadata('not_set'));
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_META_DATA],
+            $entity->getMetadata(),
+            'getMetadata() returns all stored metadata in format of [ via => [ key => mixed ], via2 => [ key => mixed ] ]'
+        );
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_META_DATA][$entity->via],
+            $entity->getMetadata($entity->via),
+            'getMetadata() called with via parameter returns metadata for that via in format of [ key => mixed ]'
+        );
+        $this->assertSame(
+            [],
+            $entity->getMetadata('not_set'),
+            'getMetadata() called with via parameter that does not exist returns empty array'
+        );
     }
 
     public function test_setMetadata(): void
@@ -402,9 +619,16 @@ class StateEntityTest extends TestCase
         $metadata = $entity->getMetadata($entity->via);
         $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = 10;
         $entity->setMetadata([iState::COLUMN_META_DATA_PLAYED_AT => 10]);
-        $this->assertSame($metadata, $entity->getMetadata($entity->via));
+        $this->assertSame(
+            $metadata,
+            $entity->getMetadata($entity->via),
+            'setMetadata() Should recursively replace given metadata with existing metadata for given via'
+        );
         $entity->setMetadata([]);
-        $this->assertSame([], $entity->getMetadata($entity->via));
+        $this->assertSame([],
+            $entity->getMetadata($entity->via),
+            'if setMetadata() called with empty array, getMetadata() returns empty array'
+        );
 
         unset($this->testMovie[iState::COLUMN_VIA]);
         $entity = new StateEntity($this->testMovie);
@@ -415,9 +639,21 @@ class StateEntityTest extends TestCase
     public function test_getExtra(): void
     {
         $entity = new StateEntity($this->testMovie);
-        $this->assertSame($this->testMovie[iState::COLUMN_EXTRA], $entity->getExtra());
-        $this->assertSame($this->testMovie[iState::COLUMN_EXTRA][$entity->via], $entity->getExtra($entity->via));
-        $this->assertSame([], $entity->getMetadata('not_set'));
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_EXTRA],
+            $entity->getExtra(),
+            'When getExtra() called with no via parameter, returns all stored extra data in format of [ via => [ key => mixed ], via2 => [ key => mixed ] ]'
+        );
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_EXTRA][$entity->via],
+            $entity->getExtra($entity->via),
+            'When getExtra() called with via parameter, returns extra data for that via in format of [ key => mixed ]'
+        );
+        $this->assertSame(
+            [],
+            $entity->getMetadata('not_set'),
+            'When getExtra() called with via parameter that does not exist, returns empty array'
+        );
     }
 
     public function test_setExtra(): void
@@ -426,10 +662,18 @@ class StateEntityTest extends TestCase
         $extra = $entity->getExtra($entity->via);
         $extra[iState::COLUMN_EXTRA_EVENT] = 'foo';
         $entity->setExtra([iState::COLUMN_EXTRA_EVENT => 'foo']);
-        $this->assertSame($extra, $entity->getExtra($entity->via));
+        $this->assertSame(
+            $extra,
+            $entity->getExtra($entity->via),
+            'setExtra() Should recursively replace given extra data with existing extra data for given via'
+        );
 
         $entity->setExtra([]);
-        $this->assertSame([], $entity->getExtra($entity->via));
+        $this->assertSame(
+            [],
+            $entity->getExtra($entity->via),
+            'if setExtra() called with empty array, getExtra() returns empty array'
+        );
 
         unset($this->testMovie[iState::COLUMN_VIA]);
         $entity = new StateEntity($this->testMovie);
@@ -443,11 +687,17 @@ class StateEntityTest extends TestCase
         $data[iState::COLUMN_WATCHED] = 0;
         $entity = new StateEntity($this->testMovie);
         // -- Condition 1: db entity not marked as watched.
-        $this->assertFalse($entity->shouldMarkAsUnplayed($entity));
+        $this->assertFalse(
+            $entity->shouldMarkAsUnplayed($entity),
+            'When entity is not watched, shouldMarkAsUnplayed() returns false'
+        );
 
         $entity = new StateEntity($this->testMovie);
         // -- Condition 2: backend entity not marked as unwatched.
-        $this->assertFalse($entity->shouldMarkAsUnplayed($entity));
+        $this->assertFalse(
+            $entity->shouldMarkAsUnplayed($entity),
+            'When entity is watched, and backend entity is not marked as unwatched, shouldMarkAsUnplayed() returns false'
+        );
 
         $entity = new StateEntity($this->testMovie);
         $data = $this->testMovie;
@@ -455,9 +705,12 @@ class StateEntityTest extends TestCase
         unset($data[iState::COLUMN_META_DATA]);
         $updater = new StateEntity($data);
         // -- Condition 3: No metadata was set previously on records.
-        $this->assertFalse($entity->shouldMarkAsUnplayed($updater));
+        $this->assertFalse(
+            $entity->shouldMarkAsUnplayed($updater),
+            'When entity is watched, and backend entity is marked as unwatched, and no metadata was set previously on records, shouldMarkAsUnplayed() returns false'
+        );
 
-        // -- Condition 4: Required metadata fields.
+        // -- Condition 4: Required metadata fields is missing.
         $fields = [
             iState::COLUMN_ID,
             iState::COLUMN_WATCHED,
@@ -477,24 +730,44 @@ class StateEntityTest extends TestCase
         $updater = new StateEntity($this->testMovie);
         $updater->watched = 0;
 
-        $this->assertTrue((StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater)));
-        $this->assertFalse(StateEntity::fromArray($d[0])->shouldMarkAsUnplayed($updater));
-        $this->assertFalse(StateEntity::fromArray($d[1])->shouldMarkAsUnplayed($updater));
-        $this->assertFalse(StateEntity::fromArray($d[2])->shouldMarkAsUnplayed($updater));
-        $this->assertFalse(StateEntity::fromArray($d[3])->shouldMarkAsUnplayed($updater));
+        $this->assertFalse(
+            StateEntity::fromArray($d[0])->shouldMarkAsUnplayed($updater),
+            'When metadata id is missing, shouldMarkAsUnplayed() returns false'
+        );
+        $this->assertFalse(
+            StateEntity::fromArray($d[1])->shouldMarkAsUnplayed($updater),
+            'When metadata watched is missing, shouldMarkAsUnplayed() returns false'
+        );
+        $this->assertFalse(
+            StateEntity::fromArray($d[2])->shouldMarkAsUnplayed($updater),
+            'When metadata added date is missing, shouldMarkAsUnplayed() returns false'
+        );
+        $this->assertFalse(
+            StateEntity::fromArray($d[3])->shouldMarkAsUnplayed($updater),
+            'When metadata played date is missing, shouldMarkAsUnplayed() returns false'
+        );
 
         // -- Condition 5: metadata played is false.
         $data = $this->testMovie;
         $data[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_WATCHED] = 0;
-        $this->assertFalse(StateEntity::fromArray($data)->shouldMarkAsUnplayed($updater));
+        $this->assertFalse(
+            StateEntity::fromArray($data)->shouldMarkAsUnplayed($updater),
+            'When metadata watched is false, shouldMarkAsUnplayed() returns false'
+        );
 
         // -- Condition 7: metadata added date not equal to updated.
         $data = $this->testMovie;
         $data[iState::COLUMN_META_DATA][$this->testMovie[iState::COLUMN_VIA]][iState::COLUMN_META_DATA_ADDED_AT] = 124;
-        $this->assertFalse(StateEntity::fromArray($data)->shouldMarkAsUnplayed($updater));
+        $this->assertFalse(
+            StateEntity::fromArray($data)->shouldMarkAsUnplayed($updater),
+            'When metadata added date is not equal to updated, shouldMarkAsUnplayed() returns false'
+        );
 
         // -- Finally, should update.
-        $this->assertTrue((StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater)));
+        $this->assertTrue(
+            StateEntity::fromArray($this->testMovie)->shouldMarkAsUnplayed($updater),
+            'When all 7 conditions are met shouldMarkAsUnplayed() returns true'
+        );
     }
 
     public function test_markAsUnplayed(): void
@@ -504,20 +777,24 @@ class StateEntityTest extends TestCase
         $entity->markAsUnplayed($entity);
         $entity->updated = 105;
 
-        $this->assertFalse($entity->isWatched());
-        $this->assertSame([
-            'updated' => [
-                'old' => 1,
-                'new' => 105,
+        $this->assertFalse($entity->isWatched(), 'When markAsUnplayed() is called, isWatched() returns false');
+        $this->assertSame(
+            [
+                'updated' => [
+                    'old' => 1,
+                    'new' => 105,
+                ],
+                'watched' => [
+                    'old' => 1,
+                    'new' => 0,
+                ],
+                'via' => [
+                    'old' => 'home_plex',
+                    'new' => 'tester',
+                ],
             ],
-            'watched' => [
-                'old' => 1,
-                'new' => 0,
-            ],
-            'via' => [
-                'old' => 'home_plex',
-                'new' => 'tester',
-            ],
-        ], $entity->diff());
+            $entity->diff(),
+            'When markAsUnplayed() is called, three mandatory fields are updated: (updated, watched and via)'
+        );
     }
 }

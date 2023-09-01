@@ -21,25 +21,28 @@ class QueueRequestsTest extends TestCase
 
     public function test_message_init_count(): void
     {
-        self::assertCount(0, $this->queue);
+        $this->assertCount(0, $this->queue, 'When queue empty count on object is 0');
         $this->queue->add(new JsonMockResponse(['test' => 'foo']));
-        self::assertCount(1, $this->queue);
+        $this->assertCount(1, $this->queue, 'When queue has 1 item count on object is 1');
     }
 
     public function test_message_add(): void
     {
         $obj = new JsonMockResponse(['test' => 'foo']);
         $this->queue->add($obj);
-        self::assertSame([$obj], $this->queue->getQueue());
+        $this->assertSame([$obj],
+            $this->queue->getQueue(),
+            'When message is added, it can be retrieved with getQueue() in same order it was added in'
+        );
     }
 
     public function test_message_reset(): void
     {
         $obj = new JsonMockResponse(['test' => 'foo']);
         $this->queue->add($obj);
-        self::assertCount(1, $this->queue);
+        $this->assertCount(1, $this->queue, 'When queue has 1 item count on object is 1');
         $this->queue->reset();
-        self::assertCount(0, $this->queue);
+        $this->assertCount(0, $this->queue, 'When queue is reset count on object is 0');
     }
 
     public function test_message_iterator(): void
@@ -53,16 +56,24 @@ class QueueRequestsTest extends TestCase
             $this->queue->add($obj);
         }
 
-        self::assertCount(count($objs), $this->queue);
+        $this->assertCount(
+            count($objs),
+            $this->queue,
+            'When running count on queue it should return the correct number of queued items.'
+        );
 
         $x = 0;
         foreach ($this->queue as $obj) {
-            $this->assertSame($objs[$x], $obj);
+            $this->assertSame(
+                $objs[$x],
+                $obj,
+                'When iterating over queue it should return the correct item in same order it was added in.'
+            );
             $x++;
         }
 
         $this->queue->reset();
 
-        self::assertCount(0, $this->queue);
+        $this->assertCount(0, $this->queue, 'When queue is reset count on object is 0');
     }
 }

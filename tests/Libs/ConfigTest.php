@@ -21,17 +21,29 @@ class ConfigTest extends TestCase
     {
         Config::init($this->data);
 
-        $this->assertSame($this->data, Config::getAll());
+        $this->assertSame(
+            $this->data,
+            Config::getAll(),
+            'When config is initialized, getAll() returns all data'
+        );
     }
 
     public function test_config_get(): void
     {
-        $this->assertSame($this->data['foo'], Config::get('foo'));
+        $this->assertSame(
+            $this->data['foo'],
+            Config::get('foo'),
+            'When key is set, get() returns its value'
+        );
     }
 
     public function test_get_config_value_default(): void
     {
-        $this->assertSame('not_set', Config::get('key_not_set', 'not_set'));
+        $this->assertSame(
+            'not_set',
+            Config::get('key_not_set', 'not_set'),
+            'When key is not set, default value is returned'
+        );
     }
 
     public function test_config_append(): void
@@ -41,7 +53,11 @@ class ConfigTest extends TestCase
 
         Config::append($data);
 
-        $this->assertSame($data, Config::getAll());
+        $this->assertSame(
+            $data,
+            Config::getAll(),
+            'When data is appended, getAll() returns all data including appended data.'
+        );
     }
 
     public function test_config_save(): void
@@ -49,14 +65,22 @@ class ConfigTest extends TestCase
         Config::save('sub.key', 'updated');
         Config::save('foo', 'updated');
 
-        $this->assertSame('updated', Config::get('foo'));
-        $this->assertSame('updated', Config::get('sub.key'));
+        $this->assertSame(
+            'updated',
+            Config::get('foo'),
+            'When key is set via save, get() returns its value'
+        );
+        $this->assertSame(
+            'updated',
+            Config::get('sub.key'),
+            'When key is set via save, get() returns its value'
+        );
     }
 
     public function test_config_has(): void
     {
-        $this->assertTrue(Config::has('foo'));
-        $this->assertFalse(Config::has('taz'));
+        $this->assertTrue(Config::has('foo'), 'When key is set, has() returns true');
+        $this->assertFalse(Config::has('taz'), 'When key is not set, has() returns false');
     }
 
     public function test_config_delete(): void
@@ -65,8 +89,15 @@ class ConfigTest extends TestCase
         $data = $this->data;
         unset($data['sub']);
 
-        $this->assertSame($data, Config::getAll());
-        $this->assertFalse(Config::has('sub'));
+        $this->assertSame(
+            $data,
+            Config::getAll(),
+            'When key is removed, getAll() returns all data except removed data.'
+        );
+        $this->assertFalse(
+            Config::has('sub'),
+            'When key is removed, has() returns false'
+        );
     }
 
 }
