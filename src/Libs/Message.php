@@ -16,6 +16,19 @@ final class Message
     private static array $data = [];
 
     /**
+     * Add Message to Store.
+     *
+     * @param string $key Message key.
+     * @param mixed $value value.
+     *
+     * @return void
+     */
+    public static function add(string $key, mixed $value): void
+    {
+        self::$data = ag_set(self::$data, $key, $value);
+    }
+
+    /**
      * Get Message.
      *
      * @param string $key message key.
@@ -36,19 +49,6 @@ final class Message
     public static function getAll(): array
     {
         return self::$data;
-    }
-
-    /**
-     * Add Message to Store.
-     *
-     * @param string $key Message key.
-     * @param mixed $value value.
-     *
-     * @return void
-     */
-    public static function add(string $key, mixed $value): void
-    {
-        self::$data = ag_set(self::$data, $key, $value);
     }
 
     /**

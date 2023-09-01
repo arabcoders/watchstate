@@ -56,7 +56,7 @@ class PDOAdapterTest extends TestCase
     public function test_insert_successful(): void
     {
         $item = $this->db->insert(new StateEntity($this->testEpisode));
-        $this->assertSame(1, $item->id);
+        $this->assertSame(1, $item->id, 'When inserting new item, id is set to 1 when db is empty.');
     }
 
     public function test_get_conditions(): void
@@ -73,15 +73,23 @@ class PDOAdapterTest extends TestCase
         $item = new StateEntity($test);
 
         // -- db should be empty at this stage. as such we expect null.
-        $this->assertNull($this->db->get($item));
+        $this->assertNull($this->db->get($item), 'When db is empty, get returns null.');
 
         // -- insert and return object and assert it's the same
         $modified = $this->db->insert(clone $item);
 
-        $this->assertSame($modified->getAll(), $this->db->get($item)->getAll());
+        $this->assertSame(
+            $modified->getAll(),
+            $this->db->get($item)->getAll(),
+            'When db is not empty, get returns object.'
+        );
 
         // -- look up based on id
-        $this->assertSame($modified->getAll(), $this->db->get($modified)->getAll());
+        $this->assertSame(
+            $modified->getAll(),
+            $this->db->get($modified)->getAll(),
+            'Look up db using id pointer and return object.'
+        );
     }
 
     public function test_getAll_call_without_initialized_container(): void
@@ -95,14 +103,24 @@ class PDOAdapterTest extends TestCase
     {
         $item = new StateEntity($this->testEpisode);
 
-        $this->assertSame([], $this->db->getAll(opts: ['class' => $item]));
+        $this->assertSame([],
+            $this->db->getAll(opts: ['class' => $item]),
+            'When db is empty, getAll returns empty array.'
+        );
 
         $this->db->insert($item);
 
-        $this->assertCount(1, $this->db->getAll(opts: ['class' => $item]));
+        $this->assertCount(
+            1,
+            $this->db->getAll(opts: ['class' => $item]),
+            'When db is not empty, objects returned.'
+        );
 
-        // -- future date should be 0.
-        $this->assertCount(0, $this->db->getAll(date: new DateTimeImmutable('now'), opts: ['class' => $item]));
+        $this->assertCount(
+            0,
+            $this->db->getAll(date: new DateTimeImmutable('now'), opts: ['class' => $item]),
+            'When db is not empty, And date condition is not met. empty array should be returned.'
+        );
     }
 
     public function test_update_call_without_id_exception(): void
@@ -130,8 +148,12 @@ class PDOAdapterTest extends TestCase
 
         $updatedItem = $this->db->update($item);
 
-        $this->assertSame($item, $updatedItem);
-        $this->assertSame($updatedItem->getAll(), $this->db->get($item)->getAll());
+        $this->assertSame($item, $updatedItem, 'When updating item, same object is returned.');
+        $this->assertSame(
+            $updatedItem->getAll(),
+            $this->db->get($item)->getAll(),
+            'When updating item, getAll should return same values as the recorded item.'
+        );
     }
 
     public function test_remove_conditions(): void
@@ -140,17 +162,36 @@ class PDOAdapterTest extends TestCase
         $item2 = new StateEntity($this->testMovie);
         $item3 = new StateEntity([]);
 
-        $this->assertFalse($this->db->remove($item1));
+        $this->assertFalse($this->db->remove($item1), 'When db is empty, remove returns false.');
 
         $item1 = $this->db->insert($item1);
         $this->db->insert($item2);
 
-        $this->assertTrue($this->db->remove($item1));
-        $this->assertInstanceOf(StateInterface::class, $this->db->get($item2));
+        $this->assertTrue(
+            $this->db->remove($item1),
+            'When db is not empty, remove returns true if record removed.'
+        );
+        $this->assertInstanceOf(
+            StateInterface::class,
+            $this->db->get($item2),
+            'When Record exists an instance of StateInterface is returned.'
+        );
+
+        $this->assertNull(
+            $this->db->get($item3),
+            'When Record does not exists a null is returned.'
+        );
 
         // -- remove without id pointer.
-        $this->assertTrue($this->db->remove($item2));
-        $this->assertFalse($this->db->remove($item3));
+        $this->assertTrue(
+            $this->db->remove($item2),
+            'If record does not have id but have pointers resolve it in db and remove it, and return true.'
+        );
+
+        $this->assertFalse(
+            $this->db->remove($item3),
+            'If record does not have id and/or pointers, return false.'
+        );
     }
 
     public function test_commit_conditions(): void
@@ -160,7 +201,8 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame(
             ['added' => 2, 'updated' => 0, 'failed' => 0],
-            $this->db->commit([$item1, $item2])
+            $this->db->commit([$item1, $item2]),
+            'Array<added, updated, failed> with count of each operation status.'
         );
 
         $item1->guids['guid_anidb'] = StateInterface::TYPE_EPISODE . '/1';
@@ -168,7 +210,8 @@ class PDOAdapterTest extends TestCase
 
         $this->assertSame(
             ['added' => 0, 'updated' => 2, 'failed' => 0],
-            $this->db->commit([$item1, $item2])
+            $this->db->commit([$item1, $item2]),
+            'Array<added, updated, failed> with count of each operation status.'
         );
     }
 
