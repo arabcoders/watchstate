@@ -559,32 +559,6 @@ if (!function_exists('getAppVersion')) {
     }
 }
 
-if (!function_exists('t')) {
-    function t($phrase, string|int ...$args): string
-    {
-        static $lang;
-
-        if (null === $lang) {
-            $lang = require __DIR__ . '/../../config/lang.php';
-        }
-
-        if (isset($lang[$phrase])) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid language definition \'%s\' key was given.', $phrase)
-            );
-        }
-
-        $text = $lang[$phrase];
-
-        if (!empty($args)) {
-            $text = sprintf($text, ...$args);
-        }
-
-        return $text;
-    }
-}
-
-
 if (!function_exists('isValidName')) {
     /**
      * Allow only [Aa-Zz][0-9][_] in server names.

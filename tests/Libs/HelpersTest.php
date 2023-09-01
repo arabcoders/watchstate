@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\TestCase;
+use JsonMachine\Items;
+use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
+use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Stream;
 use Nyholm\Psr7Server\ServerRequestCreator;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 
 class HelpersTest extends TestCase
 {
@@ -91,8 +97,6 @@ class HelpersTest extends TestCase
                 'foo' => 'bar',
             ],
         ];
-
-        // check against array data source
         $this->assertSame('bar', ag($arr, 'foo'), 'When simple key is passed, value is returned');
         $this->assertSame('bar', ag($arr, 'sub.foo'), 'When dot notation is used, nested key is returned');
         $this->assertSame([], ag([], ''), 'When empty path is passed, source array is returned');
@@ -104,7 +108,7 @@ class HelpersTest extends TestCase
             ag($arr, 'sub/foo', 'bar', '/'),
             'When custom delimiter is passed, it is used to split path.'
         );
-        // check against array object source
+
         $arr = (object)[
             'foo' => 'bar',
             'sub' => [
@@ -112,7 +116,6 @@ class HelpersTest extends TestCase
             ],
         ];
 
-        // check against array data source
         $this->assertSame('bar', ag($arr, 'foo'), 'When simple key is passed, value is returned');
         $this->assertSame('bar', ag($arr, 'sub.foo'), 'When dot notation is used, nested key is returned');
         $this->assertSame([], ag([], ''), 'When empty path is passed, source array is returned');
@@ -131,7 +134,6 @@ class HelpersTest extends TestCase
             ag($arr, 'sub/foo', 'bar', '/'),
             'When custom delimiter is passed, it is used to split path.'
         );
-        // write more tests
     }
 
     public function test_ag_set(): void
@@ -177,7 +179,6 @@ class HelpersTest extends TestCase
                 'foo' => 'bar',
             ],
         ];
-        // write tests covering all cases of ag_exists
         $this->assertTrue(ag_exists($arr, 'foo'), 'When simple key is passed, and it exists, true is returned');
         $this->assertTrue(ag_exists($arr, 'sub.foo'), 'When dot notation is used, and it exists, true is returned');
         $this->assertFalse(ag_exists($arr, 'not_set'), 'When non-existing key is passed, false is returned');
@@ -296,7 +297,6 @@ class HelpersTest extends TestCase
         $stream->rewind();
         $data = trim($stream->getContents());
         $content = json_decode($data, associative: true);
-        dump($content);
 
         $factory2 = new Psr17Factory();
         $fromFile = (new ServerRequestCreator($factory2, $factory2, $factory2, $factory2))
@@ -313,5 +313,288 @@ class HelpersTest extends TestCase
 
         $this->expectException(\Error::class);
         saveRequestPayload(request: $request);
+    }
+
+    public function test_jsonResponse(): void
+    {
+        $data = ['foo' => 'bar'];
+        $response = jsonResponse(200, $data);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
+    }
+
+    public function test_httpClientChunks(): void
+    {
+        $resp = new MockResponse('[{"foo":0},{"foo":1},{"foo":2}]', [
+            'http_code' => 200,
+            'response_headers' => [
+                'content-type' => 'application/json',
+            ],
+        ]);
+
+        $client = new MockHttpClient($resp);
+        /** @noinspection PhpUnhandledExceptionInspection */
+        $response = $client->request('GET', 'http://example.com');
+
+        /** @noinspection PhpUnhandledExceptionInspection */
+        $it = Items::fromIterable(
+            iterable: httpClientChunks($client->stream($response)),
+            options: [
+                'decoder' => new ErrorWrappingDecoder(
+                    new ExtJsonDecoder(assoc: true, options: JSON_INVALID_UTF8_IGNORE)
+                )
+            ]
+        );
+
+        $x = 0;
+        foreach ($it as $chunk) {
+            $this->assertSame(['foo' => $x], $chunk);
+            $x++;
+        }
+    }
+
+    public function test_afterLast(): void
+    {
+        $this->assertSame(
+            'bar',
+            afterLast('foo/bar', '/'),
+            'When search delimiter is found, string after last delimiter is returned.'
+        );
+        $this->assertSame(
+            'foo/bar',
+            afterLast('foo/bar', '_'),
+            'When search delimiter is not found, original string is returned.'
+        );
+        $this->assertSame(
+            'foo/bar',
+            afterLast('foo/bar', ''),
+            'When search delimiter is empty, original string is returned.'
+        );
+    }
+
+    public function test_before(): void
+    {
+        $this->assertSame(
+            'foo',
+            before('foo/bar', '/'),
+            'When search delimiter is found, string before first delimiter is returned.'
+        );
+        $this->assertSame(
+            'foo/bar',
+            before('foo/bar', '_'),
+            'When search delimiter is not found, original string is returned.'
+        );
+        $this->assertSame(
+            'foo/bar',
+            before('foo/bar', ''),
+            'When search delimiter is empty, original string is returned.'
+        );
+    }
+
+    public function test_after(): void
+    {
+        $this->assertSame(
+            'bar/baz',
+            after('foo/bar/baz', '/'),
+            'When search delimiter is found, string after first delimiter is returned.'
+        );
+        $this->assertSame(
+            'foo/bar/baz',
+            after('foo/bar/baz', '_'),
+            'When search delimiter is not found, original string is returned.'
+        );
+        $this->assertSame(
+            'foo/bar/baz',
+            after('foo/bar/baz', ''),
+            'When search delimiter is empty, original string is returned.'
+        );
+    }
+
+    public function test_arrayToString(): void
+    {
+        $data = ['foo' => ['bar' => 'baz'], 'kaz' => ['taz' => 'raz']];
+        $this->assertSame(
+            '(foo: [ (bar: baz) ]), (kaz: [ (taz: raz) ])',
+            arrayToString($data),
+            'When array is passed, it is converted into array text separated by delimiter.'
+        );
+        $this->assertSame(
+            '(foo: [ (bar: baz) ])@ (kaz: [ (taz: raz) ])',
+            arrayToString($data, '@ '),
+            'When array is passed, it is converted into array text separated by delimiter.'
+        );
+    }
+
+    public function test_isValidName(): void
+    {
+        $this->assertTrue(isValidName('foo'), 'When name is valid, true is returned.');
+        $this->assertTrue(isValidName('foo_bar'), 'When name is valid, true is returned.');
+
+        $invalidNames = [
+            'foo bar',
+            'foo-bar',
+            'foo/bar',
+            'foo?bar',
+            'foo*bar',
+        ];
+
+        foreach ($invalidNames as $name) {
+            $this->assertFalse(
+                isValidName($name),
+                "When name ({$name}) is invalid, false is returned."
+            );
+        }
+    }
+
+    public function test_formatDuration(): void
+    {
+        $this->assertSame(
+            '01:00:00',
+            formatDuration(3600000),
+            'When duration is passed, it is converted into human readable format.'
+        );
+
+        $this->assertSame(
+            '01:00:00',
+            formatDuration(3600000.0),
+            'When float duration is passed, it is converted into human readable format.'
+        );
+
+        $this->assertSame(
+            '00:30:00',
+            formatDuration(3600000.0 / 2),
+            'When float duration is passed, it is converted into human readable format.'
+        );
+    }
+
+    public function test_array_keys_diff(): void
+    {
+        $base = array_flip(['foo', 'bar', 'baz', 'kaz']);
+        $list = ['foo', 'bar', 'baz'];
+        $this->assertSame(
+            ['kaz' => 3],
+            array_keys_diff($base, $list, has: false),
+            'When base array is passed, and list of keys is passed, it returns array of keys that are not in list if has is false.'
+        );
+        $this->assertSame(
+            ['foo' => 0, 'bar' => 1, 'baz' => 2],
+            array_keys_diff($base, $list, has: true),
+            'When base array is passed, and list of keys is passed, it returns array of keys that are in list if has is true.'
+        );
+    }
+
+    public function test_makeIgnoreId(): void
+    {
+        $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'home_plex', '121');
+        $keyPassed = $key . '&garbage=1';
+
+        $this->assertSame(
+            $key,
+            (string)makeIgnoreId($keyPassed),
+            'When ignore url is passed with garbage query string, it is removed.'
+        );
+    }
+
+    public function test_isIgnoredId(): void
+    {
+        $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'home_plex', '121');
+
+        Config::init([
+            'ignore' => [
+                (string)makeIgnoreId($key) => makeDate(),
+            ]
+        ]);
+
+        $this->assertTrue(
+            isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1200', '121'),
+            'When exact ignore url is passed, and it is found in ignore list, true is returned.'
+        );
+
+        Config::init([
+            'ignore' => [
+                (string)makeIgnoreId($key)->withQuery('') => makeDate(),
+            ]
+        ]);
+
+        $this->assertTrue(
+            isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1200', '121'),
+            'When ignore url is passed with and ignore list has url without query string, true is returned.'
+        );
+
+        $this->assertFalse(
+            isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1201', '121'),
+            'When ignore url is passed with and ignore list does not contain the url, false is returned.'
+        );
+    }
+
+    public function test_r(): void
+    {
+        $this->assertSame(
+            'Hi bar',
+            r('Hi {foo}', ['foo' => 'bar']),
+            'When string with placeholder is passed, and array of values is passed, placeholders are replaced with values.'
+        );
+
+        $this->assertSame(
+            'Hi bar',
+            r('Hi {foo.bar.kaz}', ['foo' => ['bar' => ['kaz' => 'bar']]]),
+            'When string with placeholder is passed, and array of values is passed, placeholders are replaced with values.'
+        );
+
+        $this->assertSame(
+            'foo',
+            r('foo', ['foo' => 'bar']),
+            'When string passed without placeholders, it is returned as it is.'
+        );
+
+        $this->assertSame(
+            'foo bar,taz',
+            r('foo {obj}', ['obj' => (object)['foo' => 'bar', 'baz' => 'taz']]),
+            'When object is passed, it is converted into array and placeholders are replaced with values.'
+        );
+
+        $this->assertSame(
+            'foo bar,taz',
+            r('foo {obj}', ['obj' => ['foo' => 'bar', 'baz' => 'taz']]),
+            'When array is passed, it is converted into array and placeholders are replaced with values.'
+        );
+
+        $res = fopen('php://memory', 'r');
+        $this->assertSame(
+            'foo [resource]',
+            r('foo {obj}', ['obj' => $res]),
+            'When array is passed, it is converted into array and placeholders are replaced with values.'
+        );
+        fclose($res);
+    }
+
+    public function test_getClientIp(): void
+    {
+        $factory = new Psr17Factory();
+        $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
+            ->fromArrays(['REQUEST_METHOD' => 'GET', 'REMOTE_ADDR' => '1.2.3.4']);
+
+        $this->assertSame(
+            '1.2.3.4',
+            getClientIp($request),
+            'When request is passed, it returns client ip.'
+        );
+
+        Config::init(['trust' => ['proxy' => true]]);
+
+        $factory = new Psr17Factory();
+        $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
+            ->fromArrays([
+                'REQUEST_METHOD' => 'GET',
+                'REMOTE_ADDR' => '1.2.3.4',
+                'HTTP_X_FORWARDED_FOR' => '4.3.2.1',
+            ]);
+
+        $this->assertSame(
+            '4.3.2.1',
+            getClientIp($request),
+            'When request is passed, it returns client ip.'
+        );
     }
 }
