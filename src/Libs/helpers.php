@@ -13,6 +13,7 @@ use App\Libs\Options;
 use App\Libs\Router;
 use App\Libs\Uri;
 use Nyholm\Psr7\Response;
+use Nyholm\Psr7\Stream;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -250,7 +251,14 @@ if (!function_exists('fsize')) {
 }
 
 if (!function_exists('saveWebhookPayload')) {
-    function saveWebhookPayload(iFace $entity, ServerRequestInterface $request): void
+    /**
+     * Save webhook payload to stream.
+     *
+     * @param iFace $entity Entity object.
+     * @param ServerRequestInterface $request Request object.
+     * @param Stream|null $file When given a stream, it will be used to write payload.
+     */
+    function saveWebhookPayload(iFace $entity, ServerRequestInterface $request, Stream|null $file = null): void
     {
         $content = [
             'request' => [
@@ -263,27 +271,50 @@ if (!function_exists('saveWebhookPayload')) {
             'entity' => $entity->getAll(),
         ];
 
-        $filename = r(Config::get('webhook.file_format', 'webhook.{backend}.{event}.{id}.json'), [
-            'time' => (string)time(),
-            'backend' => $entity->via,
-            'event' => ag($entity->getExtra($entity->via), 'event', 'unknown'),
-            'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
-            'date' => makeDate('now')->format('Ymd'),
-            'context' => $content,
-        ]);
+        $closeStream = false;
+        if (null === $file) {
+            $fp = @fopen(
+                r('{path}/webhooks/' . Config::get('webhook.file_format', 'webhook.{backend}.{event}.{id}.json'), [
+                    'path' => Config::get('tmpDir'),
+                    'time' => (string)time(),
+                    'backend' => $entity->via,
+                    'event' => ag($entity->getExtra($entity->via), 'event', 'unknown'),
+                    'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
+                    'date' => makeDate('now')->format('Ymd'),
+                    'context' => $content,
+                ]),
+                'w'
+            );
 
-        @file_put_contents(
-            Config::get('tmpDir') . '/webhooks/' . $filename,
+            if (false === $fp) {
+                throw new Error(ag(error_get_last(), 'message', ''));
+            }
+
+            $file = new Stream($fp);
+            $closeStream = true;
+        }
+
+        $file->write(
             json_encode(
                 value: $content,
                 flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
             )
         );
+
+        if ($closeStream) {
+            $file->close();
+        }
     }
 }
 
 if (!function_exists('saveRequestPayload')) {
-    function saveRequestPayload(ServerRequestInterface $request): void
+    /**
+     * Save request payload to stream.
+     *
+     * @param ServerRequestInterface $request Request object.
+     * @param Stream|null $file When given a stream, it will be used to write payload.
+     */
+    function saveRequestPayload(ServerRequestInterface $request, Stream|null $file = null): void
     {
         $content = [
             'query' => $request->getQueryParams(),
@@ -293,13 +324,34 @@ if (!function_exists('saveRequestPayload')) {
             'attributes' => $request->getAttributes(),
         ];
 
-        @file_put_contents(
-            Config::get('tmpDir') . '/debug/' . sprintf(
-                'request.%s.json',
-                ag($request->getServerParams(), 'X_REQUEST_ID', (string)time())
-            ),
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        $closeStream = false;
+        if (null === $file) {
+            $fp = @fopen(
+                r('{path}/debug/request.{id}.json', [
+                    'path' => Config::get('tmpDir'),
+                    'id' => ag($request->getServerParams(), 'X_REQUEST_ID', (string)time()),
+                ]),
+                'w'
+            );
+
+            if (false === $fp) {
+                throw new Error(ag(error_get_last(), 'message', ''));
+            }
+
+            $file = new Stream($fp);
+            $closeStream = true;
+        }
+
+        $file->write(
+            json_encode(
+                value: $content,
+                flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
+            )
         );
+
+        if ($closeStream) {
+            $file->close();
+        }
     }
 }
 
