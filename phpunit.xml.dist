@@ -8,5 +8,13 @@
             <exclude>./tests/Mappers/Import.php</exclude>
         </testsuite>
     </testsuites>
+    <coverage>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+        <exclude>
+            <directory>tests</directory>
+        </exclude>
+    </coverage>
     <logging/>
 </phpunit>
