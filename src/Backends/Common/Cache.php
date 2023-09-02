@@ -65,7 +65,12 @@ final class Cache implements Countable
 
     public function remove(string $key): bool
     {
-        return ag_exists($this->data, $key);
+        if (false === ag_exists($this->data, $key)) {
+            return false;
+        }
+
+        $this->data = ag_delete($this->data, $key);
+        return true;
     }
 
     public function __destruct()
