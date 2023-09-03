@@ -10,11 +10,14 @@ use App\Commands\Config\EditCommand;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\StreamLogHandler;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Routable;
+use Monolog\Logger;
+use Nyholm\Psr7\Stream;
 use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
@@ -70,6 +73,7 @@ class ImportCommand extends Command
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -203,6 +207,10 @@ class ImportCommand extends Command
 
     protected function process(InputInterface $input, OutputInterface $output): int
     {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+            $this->logger->pushHandler(new StreamLogHandler(new Stream(fopen($logfile, 'a')), $output));
+        }
+
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {

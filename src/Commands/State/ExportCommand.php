@@ -8,11 +8,14 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\StreamLogHandler;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Routable;
+use Monolog\Logger;
+use Nyholm\Psr7\Stream;
 use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -51,6 +54,7 @@ class ExportCommand extends Command
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -103,6 +107,10 @@ class ExportCommand extends Command
 
     protected function process(InputInterface $input, OutputInterface $output): int
     {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+            $this->logger->pushHandler(new StreamLogHandler(new Stream(fopen($logfile, 'a')), $output));
+        }
+
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
