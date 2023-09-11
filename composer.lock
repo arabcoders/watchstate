@@ -4,7 +4,7 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "078c1344b573638e33aff2d23b8ce9f2",
+  "content-hash": "96d8193b949253fa09ebe53676f5d4d6",
   "packages": [
     {
       "name": "dragonmantank/cron-expression",
@@ -127,20 +127,20 @@
     },
     {
       "name": "laminas/laminas-httphandlerrunner",
-      "version": "2.7.0",
+      "version": "2.9.0",
       "source": {
         "type": "git",
         "url": "https://github.com/laminas/laminas-httphandlerrunner.git",
-        "reference": "ab1fe48f1c367953d7e8f5cfbaf902672551d524"
+        "reference": "d3e84755a17e563b1c5f8290cbfb150210501a77"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/laminas/laminas-httphandlerrunner/zipball/ab1fe48f1c367953d7e8f5cfbaf902672551d524",
-        "reference": "ab1fe48f1c367953d7e8f5cfbaf902672551d524",
+        "url": "https://api.github.com/repos/laminas/laminas-httphandlerrunner/zipball/d3e84755a17e563b1c5f8290cbfb150210501a77",
+        "reference": "d3e84755a17e563b1c5f8290cbfb150210501a77",
         "shasum": ""
       },
       "require": {
-        "php": "~8.1.0 || ~8.2.0",
+        "php": "~8.1.0 || ~8.2.0 || ~8.3.0",
         "psr/http-message": "^1.0 || ^2.0",
         "psr/http-message-implementation": "^1.0 || ^2.0",
         "psr/http-server-handler": "^1.0"
@@ -190,7 +190,7 @@
           "type": "community_bridge"
         }
       ],
-      "time": "2023-07-25T20:20:46+00:00"
+      "time": "2023-09-04T10:43:03+00:00"
     },
     {
       "name": "league/container",
@@ -276,42 +276,41 @@
     },
     {
       "name": "monolog/monolog",
-      "version": "2.9.1",
+      "version": "3.4.0",
       "source": {
         "type": "git",
         "url": "https://github.com/Seldaek/monolog.git",
-        "reference": "f259e2b15fb95494c83f52d3caad003bbf5ffaa1"
+        "reference": "e2392369686d420ca32df3803de28b5d6f76867d"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Seldaek/monolog/zipball/f259e2b15fb95494c83f52d3caad003bbf5ffaa1",
-        "reference": "f259e2b15fb95494c83f52d3caad003bbf5ffaa1",
+        "url": "https://api.github.com/repos/Seldaek/monolog/zipball/e2392369686d420ca32df3803de28b5d6f76867d",
+        "reference": "e2392369686d420ca32df3803de28b5d6f76867d",
         "shasum": ""
       },
       "require": {
-        "php": ">=7.2",
-        "psr/log": "^1.0.1 || ^2.0 || ^3.0"
+        "php": ">=8.1",
+        "psr/log": "^2.0 || ^3.0"
       },
       "provide": {
-        "psr/log-implementation": "1.0.0 || 2.0.0 || 3.0.0"
+        "psr/log-implementation": "3.0.0"
       },
       "require-dev": {
-        "aws/aws-sdk-php": "^2.4.9 || ^3.0",
+        "aws/aws-sdk-php": "^3.0",
         "doctrine/couchdb": "~1.0@dev",
         "elasticsearch/elasticsearch": "^7 || ^8",
         "ext-json": "*",
-        "graylog2/gelf-php": "^1.4.2 || ^2@dev",
-        "guzzlehttp/guzzle": "^7.4",
+        "graylog2/gelf-php": "^1.4.2 || ^2.0",
+        "guzzlehttp/guzzle": "^7.4.5",
         "guzzlehttp/psr7": "^2.2",
         "mongodb/mongodb": "^1.8",
         "php-amqplib/php-amqplib": "~2.4 || ^3",
-        "phpspec/prophecy": "^1.15",
-        "phpstan/phpstan": "^0.12.91",
-        "phpunit/phpunit": "^8.5.14",
-        "predis/predis": "^1.1 || ^2.0",
-        "rollbar/rollbar": "^1.3 || ^2 || ^3",
+        "phpstan/phpstan": "^1.9",
+        "phpstan/phpstan-deprecation-rules": "^1.0",
+        "phpstan/phpstan-strict-rules": "^1.4",
+        "phpunit/phpunit": "^10.1",
+        "predis/predis": "^1.1 || ^2",
         "ruflin/elastica": "^7",
-        "swiftmailer/swiftmailer": "^5.3|^6.0",
         "symfony/mailer": "^5.4 || ^6",
         "symfony/mime": "^5.4 || ^6"
       },
@@ -334,7 +333,7 @@
       "type": "library",
       "extra": {
         "branch-alias": {
-          "dev-main": "2.x-dev"
+          "dev-main": "3.x-dev"
         }
       },
       "autoload": {
@@ -362,7 +361,7 @@
       ],
       "support": {
         "issues": "https://github.com/Seldaek/monolog/issues",
-        "source": "https://github.com/Seldaek/monolog/tree/2.9.1"
+        "source": "https://github.com/Seldaek/monolog/tree/3.4.0"
       },
       "funding": [
         {
@@ -374,7 +373,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-02-06T13:44:46+00:00"
+      "time": "2023-06-21T08:46:11+00:00"
     },
     {
       "name": "nyholm/psr7",
@@ -2812,12 +2811,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "9971379442eb64596a59f6c3b89ec66fac58c611"
+        "reference": "00de3fc12503b72bbd1dd43ee273213c811b184c"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/9971379442eb64596a59f6c3b89ec66fac58c611",
-        "reference": "9971379442eb64596a59f6c3b89ec66fac58c611",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/00de3fc12503b72bbd1dd43ee273213c811b184c",
+        "reference": "00de3fc12503b72bbd1dd43ee273213c811b184c",
         "shasum": ""
       },
       "conflict": {
@@ -2874,7 +2873,7 @@
         "brotkrueml/schema": "<1.13.1|>=2,<2.5.1",
         "brotkrueml/typo3-matomo-integration": "<1.3.2",
         "buddypress/buddypress": "<7.2.1",
-        "bugsnag/bugsnag-laravel": ">=2,<2.0.2",
+        "bugsnag/bugsnag-laravel": "<2.0.2",
         "bytefury/crater": "<6.0.2",
         "cachethq/cachet": "<2.5.1",
         "cakephp/cakephp": "<3.10.3|>=4,<4.0.10|>=4.1,<4.1.4|>=4.2,<4.2.12|>=4.3,<4.3.11|>=4.4,<4.4.10",
@@ -2928,7 +2927,7 @@
         "doctrine/orm": ">=2,<2.4.8|>=2.5,<2.5.1|>=2.8.3,<2.8.4",
         "dolibarr/dolibarr": "<17.0.1",
         "dompdf/dompdf": "<2.0.2|==2.0.2",
-        "drupal/core": ">=7,<7.96|>=8,<9.4.14|>=9.5,<9.5.8|>=10,<10.0.8",
+        "drupal/core": "<9.4.14|>=9.5,<9.5.8|>=10,<10.0.8",
         "drupal/drupal": ">=6,<6.38|>=7,<7.80|>=8,<8.9.16|>=9,<9.1.12|>=9.2,<9.2.4",
         "dweeves/magmi": "<=0.7.24",
         "ecodev/newsletter": "<=4",
@@ -3060,7 +3059,7 @@
         "kimai/kimai": "<1.1",
         "kitodo/presentation": "<3.2.3|>=3.3,<3.3.4",
         "klaviyo/magento2-extension": ">=1,<3",
-        "knplabs/knp-snappy": "<1.4.2",
+        "knplabs/knp-snappy": "<=1.4.2",
         "kohana/core": "<3.3.3",
         "krayin/laravel-crm": "<1.2.2",
         "kreait/firebase-php": ">=3.2,<3.8.1",
@@ -3470,7 +3469,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-08-31T19:04:14+00:00"
+      "time": "2023-09-08T15:04:10+00:00"
     },
     {
       "name": "sebastian/cli-parser",

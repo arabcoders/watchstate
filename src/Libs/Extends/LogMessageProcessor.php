@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 use Monolog\Utils;
 
@@ -18,13 +19,13 @@ class LogMessageProcessor implements ProcessorInterface
         private string $tagStart = '%(',
         private string $tagEnd = ')'
     ) {
-        $this->pattern = '#' . preg_quote($this->tagStart, '#') . '([\w\d_.]+)' . preg_quote(
+        $this->pattern = '#' . preg_quote($this->tagStart, '#') . '([\w_.]+)' . preg_quote(
                 $this->tagEnd,
                 '#'
             ) . '#is';
     }
 
-    public function __invoke(array $record): array
+    public function __invoke(LogRecord $record): LogRecord
     {
         if (false === str_contains($record['message'], $this->tagStart)) {
             return $record;
@@ -36,22 +37,24 @@ class LogMessageProcessor implements ProcessorInterface
             return $record;
         }
 
+        $recordArr = $record->toArray();
+
         $replacements = [];
 
         foreach ($matches[1] as $key) {
             $placeholder = $this->tagStart . $key . $this->tagEnd;
 
-            if (false === str_contains($record['message'], $placeholder)) {
+            if (false === str_contains($recordArr['message'], $placeholder)) {
                 continue;
             }
 
-            if (false === ag_exists($record['context'] ?? [], $key)) {
+            if (false === ag_exists($recordArr['context'] ?? [], $key)) {
                 continue;
             }
 
-            $val = ag($record['context'], $key);
+            $val = ag($recordArr['context'], $key);
 
-            $record['context'] = ag_delete($record['context'], $key);
+            $recordArr['context'] = ag_delete($recordArr['context'], $key);
 
             if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
                 $replacements[$placeholder] = $val;
@@ -65,8 +68,12 @@ class LogMessageProcessor implements ProcessorInterface
         }
 
         // -- This might be problem in multibyte context.
-        $record['message'] = strtr($record['message'], $replacements);
+        $recordArr['message'] = strtr($recordArr['message'], $replacements);
 
-        return $record;
+        unset($recordArr['level_name']);
+
+        $recordArr['level'] = $record->level;
+
+        return $record->with(...$recordArr);
     }
 }

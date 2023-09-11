@@ -15,6 +15,7 @@ use Laminas\HttpHandlerRunner\Emitter\EmitterInterface as iEmitter;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
@@ -209,7 +210,7 @@ final class Initializer
         $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
 
         if (empty($apikey)) {
-            $this->write($request, Logger::INFO, 'No webhook token was found in header or query.');
+            $this->write($request, Level::Info, 'No webhook token was found in header or query.');
             return new Response(401);
         }
 
@@ -228,7 +229,7 @@ final class Initializer
             try {
                 $class = makeBackend($info, $name);
             } catch (RuntimeException $e) {
-                $this->write($request, Logger::ERROR, 'An exception was thrown in [%(backend)] instance creation.', [
+                $this->write($request, Level::Error, 'An exception was thrown in [%(backend)] instance creation.', [
                     'backend' => $name,
                     'exception' => [
                         'file' => $e->getFile(),
@@ -292,7 +293,7 @@ final class Initializer
 
         if (empty($backend) || null === $class) {
             if (false === $validUser) {
-                $loglevel = Logger::DEBUG;
+                $loglevel = Level::Debug;
                 $message = 'token is valid, User matching failed.';
             } elseif (false === $validUUid) {
                 $message = 'token and user are valid. Backend unique id matching failed.';
@@ -300,7 +301,7 @@ final class Initializer
                 $message = 'Invalid token was given.';
             }
 
-            $this->write($request, $loglevel ?? Logger::ERROR, $message, ['messages' => $log]);
+            $this->write($request, $loglevel ?? Level::Error, $message, ['messages' => $log]);
             return new Response(401);
         }
 
@@ -314,7 +315,7 @@ final class Initializer
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
-            $this->write($request, Logger::ERROR, 'Import are disabled for [%(backend)].', [
+            $this->write($request, Level::Error, 'Import are disabled for [%(backend)].', [
                 'backend' => $class->getName()
             ]);
 
@@ -330,7 +331,8 @@ final class Initializer
 
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             $this->write(
-                $request, Logger::INFO,
+                $request,
+                Level::Info,
                 'Ignoring [%(backend)] %(item.type) [%(item.title)]. No valid/supported external ids.',
                 [
                     'backend' => $entity->via,
@@ -347,7 +349,7 @@ final class Initializer
         if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
             $this->write(
                 $request,
-                Logger::NOTICE,
+                Level::Notice,
                 'Ignoring [%(backend)] %(item.type) [%(item.title)]. No episode/season number present.',
                 [
                     'backend' => $entity->via,
@@ -383,7 +385,7 @@ final class Initializer
 
         $cache->set('requests', $items, new DateInterval('P3D'));
 
-        $this->write($request, Logger::INFO, 'Queued [%(backend)] %(item.type) [%(item.title)].', [
+        $this->write($request, Level::Info, 'Queued [%(backend)] %(item.type) [%(item.title)].', [
             'backend' => $entity->via,
             'item' => [
                 'title' => $entity->getName(),
@@ -463,7 +465,7 @@ final class Initializer
         $inContainer = inContainer();
 
         if (null !== ($logfile = Config::get('webhook.logfile'))) {
-            $level = Config::get('webhook.debug') ? Logger::DEBUG : Logger::INFO;
+            $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
             $this->accessLog = $logger->withName(name: 'webhook')
                 ->pushHandler(new StreamHandler($logfile, $level, true));
 
@@ -497,7 +499,7 @@ final class Initializer
                     $logger->pushHandler(
                         new StreamHandler(
                             ag($context, 'filename'),
-                            ag($context, 'level', Logger::INFO),
+                            ag($context, 'level', Level::Info),
                             (bool)ag($context, 'bubble', true),
                         )
                     );
@@ -510,7 +512,7 @@ final class Initializer
                         new SyslogHandler(
                             ag($context, 'name', Config::get('name')),
                             ag($context, 'facility', LOG_USER),
-                            ag($context, 'level', Logger::INFO),
+                            ag($context, 'level', Level::Info),
                             (bool)Config::get('bubble', true),
                         )
                     );
@@ -528,7 +530,7 @@ final class Initializer
 
     private function write(
         iRequest $request,
-        int $level,
+        int|string|Level $level,
         string $message,
         array $context = [],
     ): void {
