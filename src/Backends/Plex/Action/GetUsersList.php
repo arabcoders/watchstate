@@ -59,7 +59,7 @@ final class GetUsersList
             ],
         ]);
 
-        $this->logger->debug('Requesting [%(backend)] Users list.', [
+        $this->logger->debug('Requesting [{backend}] Users list.', [
             'backend' => $context->backendName,
             'url' => (string)$url,
         ]);
@@ -68,7 +68,7 @@ final class GetUsersList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [%(backend)] users list returned with unexpected [%(status_code)] status code.',
+                    message: 'Request for [{backend}] users list returned with unexpected [{status_code}] status code.',
                     context: [
                         'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
@@ -85,7 +85,7 @@ final class GetUsersList
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing [%(backend)] user list payload.', [
+            $this->logger->debug('Parsing [{backend}] user list payload.', [
                 'backend' => $context->backendName,
                 'url' => (string)$url,
                 'trace' => $json,

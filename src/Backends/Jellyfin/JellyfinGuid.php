@@ -86,7 +86,7 @@ class JellyfinGuid implements iGuid
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
+                            'Ignoring [{backend}] external id [{source}] for {item.type} [{item.title}] as requested.',
                             [
                                 'backend' => $this->context->backendName,
                                 'source' => $key . '://' . $value,
@@ -105,7 +105,7 @@ class JellyfinGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
+                        'Unhandled exception was thrown in parsing of [{backend}] [{agent}] identifier.',
                         [
                             'backend' => $this->context->backendName,
                             'agent' => $value,

@@ -226,7 +226,7 @@ class RestoreCommand extends Command
 
         $requests = $backend->export($mapper, $this->queue, null);
 
-        $this->logger->notice('SYSTEM: Sending [%(total)] play state comparison requests.', [
+        $this->logger->notice('SYSTEM: Sending [{total}] play state comparison requests.', [
             'total' => count($requests),
         ]);
 
@@ -239,14 +239,14 @@ class RestoreCommand extends Command
             }
         }
 
-        $this->logger->notice('SYSTEM: Sent [%(total)] play state comparison requests.', [
+        $this->logger->notice('SYSTEM: Sent [{total}] play state comparison requests.', [
             'total' => count($requests),
         ]);
 
         $total = count($this->queue->getQueue());
 
         if ($total >= 1) {
-            $this->logger->notice('SYSTEM: Sending [%(total)] change play state requests.', [
+            $this->logger->notice('SYSTEM: Sending [{total}] change play state requests.', [
                 'total' => $total
             ]);
         } else {
@@ -263,16 +263,16 @@ class RestoreCommand extends Command
             try {
                 if (200 !== $response->getStatusCode()) {
                     $this->logger->error(
-                        'Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
+                        'Request to change [{backend}] [{item.title}] play state returned with unexpected [{status_code}] status code.',
                         $context
                     );
                     continue;
                 }
 
-                $this->logger->notice('Marked [%(backend)] [%(item.title)] as [%(play_state)].', $context);
+                $this->logger->notice('Marked [{backend}] [{item.title}] as [{play_state}].', $context);
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception thrown during request to change play state of [%(backend)] %(item.type) [%(item.title)].',
+                    'Unhandled exception thrown during request to change play state of [{backend}] {item.type} [{item.title}].',
                     [
                         ...$context,
                         'exception' => [
@@ -286,7 +286,7 @@ class RestoreCommand extends Command
             }
         }
 
-        $this->logger->notice('SYSTEM: Sent [%(total)] change play state requests.', [
+        $this->logger->notice('SYSTEM: Sent [{total}] change play state requests.', [
             'total' => $total
         ]);
 

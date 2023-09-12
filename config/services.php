@@ -9,6 +9,7 @@ use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -16,6 +17,7 @@ use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use Monolog\Logger;
 use Psr\Http\Message\UriInterface;
+use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
@@ -35,13 +37,20 @@ return (function (): array {
         ],
 
         HttpClientInterface::class => [
-            'class' => function (): HttpClientInterface {
-                return new CurlHttpClient(
-                    defaultOptions: Config::get('http.default.options', []),
-                    maxHostConnections: Config::get('http.default.maxHostConnections', 25),
-                    maxPendingPushes: Config::get('http.default.maxPendingPushes', 50),
+            'class' => function (LoggerInterface $logger): HttpClientInterface {
+                $instance = new HttpClient(
+                    new CurlHttpClient(
+                        defaultOptions: Config::get('http.default.options', []),
+                        maxHostConnections: Config::get('http.default.maxHostConnections', 25),
+                        maxPendingPushes: Config::get('http.default.maxPendingPushes', 50),
+                    )
                 );
-            }
+                $instance->setLogger($logger);
+                return $instance;
+            },
+            'args' => [
+                iLogger::class,
+            ],
         ],
 
         StateInterface::class => [

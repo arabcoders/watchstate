@@ -92,7 +92,7 @@ final class PruneCommand extends Command
             $path = ag($item, 'path');
 
             if (null === ($expiresAt = ag($item, 'time'))) {
-                $this->logger->warning('Error No expected time to live was found for [%(path)].', [
+                $this->logger->warning('Error No expected time to live was found for [{path}].', [
                     'path' => $path
                 ]);
                 continue;
@@ -100,7 +100,7 @@ final class PruneCommand extends Command
 
             if (null === $path || !is_dir($path)) {
                 if (true === (bool)ag($item, 'report', true)) {
-                    $this->logger->warning('Path [%(path)] not found or inaccessible.', [
+                    $this->logger->warning('Path [{path}] not found or inaccessible.', [
                         'path' => $path
                     ]);
                 }
@@ -113,21 +113,21 @@ final class PruneCommand extends Command
                 $fileName = $file->getBasename();
 
                 if ('.' === $fileName || '..' === $fileName || true === $file->isDir() || false === $file->isFile()) {
-                    $this->logger->debug('Path [%(path)] is not considered valid file.', [
+                    $this->logger->debug('Path [{path}] is not considered valid file.', [
                         'path' => $file->getRealPath(),
                     ]);
                     continue;
                 }
 
                 if ($file->getMTime() > $expiresAt) {
-                    $this->logger->debug('File [%(file)] Not yet expired. %(ttl) left seconds.', [
+                    $this->logger->debug('File [{file}] Not yet expired. {ttl} left seconds.', [
                         'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
                         'ttl' => number_format($file->getMTime() - $expiresAt),
                     ]);
                     continue;
                 }
 
-                $this->logger->notice('Removing [%(file)].', [
+                $this->logger->notice('Removing [{file}].', [
                     'file' => after($file->getRealPath(), ag($item, 'base') . '/')
                 ]);
 

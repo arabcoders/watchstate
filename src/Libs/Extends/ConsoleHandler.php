@@ -5,25 +5,26 @@ namespace App\Libs\Extends;
 use App\Libs\Config;
 use DateTimeInterface;
 use Monolog\Handler\AbstractProcessingHandler;
-use Monolog\Logger;
+use Monolog\Level;
+use Monolog\LogRecord;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class ConsoleHandler extends AbstractProcessingHandler
 {
-    private OutputInterface|null $output = null;
+    private OutputInterface|null $output;
 
     private array $levelsMapper = [
-        OutputInterface::VERBOSITY_QUIET => Logger::ERROR,
-        OutputInterface::VERBOSITY_NORMAL => Logger::WARNING,
-        OutputInterface::VERBOSITY_VERBOSE => Logger::NOTICE,
-        OutputInterface::VERBOSITY_VERY_VERBOSE => Logger::INFO,
-        OutputInterface::VERBOSITY_DEBUG => Logger::DEBUG,
+        OutputInterface::VERBOSITY_QUIET => Level::Error,
+        OutputInterface::VERBOSITY_NORMAL => Level::Warning,
+        OutputInterface::VERBOSITY_VERBOSE => Level::Notice,
+        OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
+        OutputInterface::VERBOSITY_DEBUG => Level::Debug,
     ];
 
     public function __construct(OutputInterface|null $output = null, bool $bubble = true, array $levelsMapper = [])
     {
-        parent::__construct(Logger::DEBUG, $bubble);
+        parent::__construct(Level::Debug, $bubble);
 
         $this->output = $output;
 
@@ -32,12 +33,12 @@ class ConsoleHandler extends AbstractProcessingHandler
         }
     }
 
-    public function isHandling(array $record): bool
+    public function isHandling(LogRecord $record): bool
     {
         return $this->updateLevel() && parent::isHandling($record);
     }
 
-    public function handle(array $record): bool
+    public function handle(LogRecord $record): bool
     {
         // we have to update the logging level each time because the verbosity of the
         // console output might have changed in the meantime (it is not immutable)
@@ -52,7 +53,7 @@ class ConsoleHandler extends AbstractProcessingHandler
         $this->output = $output;
     }
 
-    protected function write(array $record): void
+    protected function write(LogRecord $record): void
     {
         $date = $record['datetime'] ?? 'No date set';
 
@@ -92,7 +93,7 @@ class ConsoleHandler extends AbstractProcessingHandler
         if (isset($this->levelsMapper[$verbosity])) {
             $this->setLevel($this->levelsMapper[$verbosity]);
         } else {
-            $this->setLevel(Logger::DEBUG);
+            $this->setLevel(Level::Debug);
         }
 
         return true;

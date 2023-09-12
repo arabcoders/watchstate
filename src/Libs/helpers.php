@@ -12,6 +12,7 @@ use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\Router;
 use App\Libs\Uri;
+use Monolog\Utils;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\Stream;
 use Psr\Http\Message\ResponseInterface;
@@ -678,23 +679,42 @@ if (false === function_exists('r')) {
      *
      * @param string $text text that contains tokens.
      * @param array $context A key/value pairs list.
-     * @param string $tagLeft left tag bracket. Default '{'.
-     * @param string $tagRight right tag bracket. Default '}'.
+     * @param array $opts
      *
      * @return string
      */
-    function r(string $text, array $context = [], string $tagLeft = '{', string $tagRight = '}'): string
+    function r(string $text, array $context = [], array $opts = []): string
     {
+        return r_array($text, $context, $opts)['message'];
+    }
+}
+
+if (false === function_exists('r_array')) {
+    /**
+     * Substitute words enclosed in special tags for values from context.
+     *
+     * @param string $text text that contains tokens.
+     * @param array $context A key/value pairs list.
+     * @param array $opts
+     *
+     * @return array{message:string, context:array}
+     */
+    function r_array(string $text, array $context = [], array $opts = []): array
+    {
+        $tagLeft = $opts['tag_left'] ?? '{';
+        $tagRight = $opts['tag_right'] ?? '}';
+        $logBehavior = $opts['log_behavior'] ?? false;
+
         if (false === str_contains($text, $tagLeft) || false === str_contains($text, $tagRight)) {
-            return $text;
+            return ['message' => $text, 'context' => $context];
         }
 
-        $pattern = '#' . preg_quote($tagLeft, '#') . '([\w\d_.]+)' . preg_quote($tagRight, '#') . '#is';
+        $pattern = '#' . preg_quote($tagLeft, '#') . '([\w_.]+)' . preg_quote($tagRight, '#') . '#is';
 
         $status = preg_match_all($pattern, $text, $matches);
 
         if (false === $status || $status < 1) {
-            return $text;
+            return ['message' => $text, 'context' => $context];
         }
 
         $replacements = [];
@@ -716,16 +736,29 @@ if (false === function_exists('r')) {
 
             if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
                 $replacements[$placeholder] = $val;
+            } elseif ($val instanceof DateTimeInterface) {
+                $replacements[$placeholder] = (string)$val;
+            } elseif ($val instanceof UnitEnum) {
+                $replacements[$placeholder] = $val instanceof BackedEnum ? $val->value : $val->name;
             } elseif (is_object($val)) {
-                $replacements[$placeholder] = implode(',', get_object_vars($val));
+                $replacements[$placeholder] = $logBehavior ? '[object ' . Utils::getClass($val) . ']' : implode(
+                    ',',
+                    get_object_vars($val)
+                );
             } elseif (is_array($val)) {
-                $replacements[$placeholder] = implode(',', $val);
+                $replacements[$placeholder] = $logBehavior ? 'array' . Utils::jsonEncode($val, null, true) : implode(
+                    ',',
+                    $val
+                );
             } else {
                 $replacements[$placeholder] = '[' . gettype($val) . ']';
             }
         }
 
-        return strtr($text, $replacements);
+        return [
+            'message' => strtr($text, $replacements),
+            'context' => $context
+        ];
     }
 }
 

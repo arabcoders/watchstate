@@ -47,8 +47,17 @@ final class PDOIndexer
 
             foreach ($this->db->query($sql) as $row) {
                 $name = ag($row, 'name');
-                $query = r($drop, ['name' => $name], '${', '}');
-                $this->logger->debug('Dropping Index [%(index)].', [
+                $query = r(
+                    text: $drop,
+                    context: [
+                        'name' => $name
+                    ],
+                    opts: [
+                        'tag_left' => '${',
+                        'tag_right' => '}'
+                    ]
+                );
+                $this->logger->debug('Dropping Index [{index}].', [
                     'index' => $name,
                     'query' => $query,
                 ]);
@@ -62,12 +71,19 @@ final class PDOIndexer
                 continue;
             }
 
-            $query = r($insert, [
-                'name' => sprintf('state_%s', $column),
-                'expr' => sprintf('"%s"', $column),
-            ], '${', '}');
+            $query = r(
+                text: $insert,
+                context: [
+                    'name' => sprintf('state_%s', $column),
+                    'expr' => sprintf('"%s"', $column),
+                ],
+                opts: [
+                    'tag_left' => '${',
+                    'tag_right' => '}'
+                ]
+            );
 
-            $this->logger->debug('Generating index on [%(column)].', [
+            $this->logger->debug('Generating index on [{column}].', [
                 'column' => $column,
                 'query' => $query,
             ]);
@@ -78,12 +94,16 @@ final class PDOIndexer
         // -- Ensure main parent/guids sub keys are indexed.
         foreach (array_keys(Guid::getSupported()) as $subKey) {
             foreach ([iState::COLUMN_PARENT, iState::COLUMN_GUIDS] as $column) {
-                $query = r($insert, [
-                    'name' => sprintf('state_%s_%s', $column, $subKey),
-                    'expr' => sprintf("JSON_EXTRACT(%s,'$.%s')", $column, $subKey),
-                ], '${', '}');
+                $query = r(
+                    text: $insert,
+                    context: [
+                        'name' => sprintf('state_%s_%s', $column, $subKey),
+                        'expr' => sprintf("JSON_EXTRACT(%s,'$.%s')", $column, $subKey),
+                    ],
+                    opts: ['tag_left' => '${', 'tag_right' => '}']
+                );
 
-                $this->logger->debug('Generating index on %(column) column [%(key)] key.', [
+                $this->logger->debug('Generating index on {column} column [{key}] key.', [
                     'column' => $column,
                     'key' => $subKey,
                     'query' => $query,
@@ -96,12 +116,16 @@ final class PDOIndexer
         // -- Ensure backends metadata.id,metadata.show are indexed
         foreach (array_keys(Config::get('servers', [])) as $backend) {
             foreach (self::BACKEND_INDEXES as $subKey) {
-                $query = r($insert, [
-                    'name' => sprintf('state_%s_%s_%s', iState::COLUMN_META_DATA, $backend, $subKey),
-                    'expr' => sprintf("JSON_EXTRACT(%s,'$.%s.%s')", iState::COLUMN_META_DATA, $backend, $subKey),
-                ], '${', '}');
+                $query = r(
+                    text: $insert,
+                    context: [
+                        'name' => sprintf('state_%s_%s_%s', iState::COLUMN_META_DATA, $backend, $subKey),
+                        'expr' => sprintf("JSON_EXTRACT(%s,'$.%s.%s')", iState::COLUMN_META_DATA, $backend, $subKey),
+                    ],
+                    opts: ['tag_left' => '${', 'tag_right' => '}']
+                );
 
-                $this->logger->debug('Generating index on [%(backend)] metadata column [%(key)] key.', [
+                $this->logger->debug('Generating index on [{backend}] metadata column [{key}] key.', [
                     'backend' => $backend,
                     'key' => $subKey,
                     'query' => $query,

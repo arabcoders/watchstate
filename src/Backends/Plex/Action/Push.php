@@ -72,7 +72,7 @@ final class Push
 
             if (null === ag($metadata, iState::COLUMN_ID)) {
                 $this->logger->warning(
-                    'Ignoring [%(item.title)] for [%(backend)]. No metadata was found.',
+                    'Ignoring [{item.title}] for [{backend}]. No metadata was found.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -88,7 +88,7 @@ final class Push
 
                 $logContext['remote']['url'] = (string)$url;
 
-                $this->logger->debug('Requesting [%(backend)] %(item.type) [%(item.title)] metadata.', [
+                $this->logger->debug('Requesting [{backend}] {item.type} [{item.title}] metadata.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
@@ -105,7 +105,7 @@ final class Push
                 );
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during request for [%(backend)] %(item.type) [%(item.title)] metadata.',
+                    'Unhandled exception was thrown during request for [{backend}] {item.type} [{item.title}] metadata.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -142,7 +142,7 @@ final class Push
                 if (200 !== $response->getStatusCode()) {
                     if (404 === $response->getStatusCode()) {
                         $this->logger->warning(
-                            'Request for [%(backend)] %(item.type) [%(item.title)] metadata returned with (Not Found) status code.',
+                            'Request for [{backend}] {item.type} [{item.title}] metadata returned with (Not Found) status code.',
                             [
                                 'backend' => $context->backendName,
                                 'status_code' => $response->getStatusCode(),
@@ -151,7 +151,7 @@ final class Push
                         );
                     } else {
                         $this->logger->error(
-                            'Request for [%(backend)] %(item.type) [%(item.title)] metadata returned with unexpected [%(status_code)] status code.',
+                            'Request for [{backend}] {item.type} [{item.title}] metadata returned with unexpected [{status_code}] status code.',
                             [
                                 'backend' => $context->backendName,
                                 'status_code' => $response->getStatusCode(),
@@ -171,7 +171,7 @@ final class Push
 
                 if ($context->trace) {
                     $this->logger->debug(
-                        'Parsing [%(backend)] %(item.type) [%(item.title)] payload.',
+                        'Parsing [{backend}] {item.type} [{item.title}] payload.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -184,7 +184,7 @@ final class Push
 
                 if (empty($json)) {
                     $this->logger->error(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)]. Returned with unexpected body.',
+                        'Ignoring [{backend}] {item.type} [{item.title}]. Returned with unexpected body.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -200,7 +200,7 @@ final class Push
 
                 if ($entity->watched === $isWatched) {
                     $this->logger->info(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)]. Play state is identical.',
+                        'Ignoring [{backend}] {item.type} [{item.title}]. Play state is identical.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -215,7 +215,7 @@ final class Push
 
                     if (null === $date) {
                         $this->logger->error(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. No %(date_key) is set on backend object.',
+                            'Ignoring [{backend}] {item.type} [{item.title}]. No {date_key} is set on backend object.',
                             [
                                 'backend' => $context->backendName,
                                 'date_key' => $dateKey,
@@ -234,7 +234,7 @@ final class Push
 
                     if ($date->getTimestamp() >= ($entity->updated + $timeExtra)) {
                         $this->logger->notice(
-                            'Ignoring [%(backend)] %(item.type) [%(item.title)]. Database date is older than backend date.',
+                            'Ignoring [{backend}] {item.type} [{item.title}]. Database date is older than backend date.',
                             [
                                 'backend' => $context->backendName,
                                 ...$logContext,
@@ -265,7 +265,7 @@ final class Push
                 $logContext['remote']['url'] = $url;
 
                 $this->logger->debug(
-                    'Queuing request to change [%(backend)] %(item.type) [%(item.title)] play state to [%(play_state)].',
+                    'Queuing request to change [{backend}] {item.type} [{item.title}] play state to [{play_state}].',
                     [
                         'backend' => $context->backendName,
                         'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
@@ -291,7 +291,7 @@ final class Push
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during handling of [%(backend)] %(item.type) [%(item.title)].',
+                    'Unhandled exception was thrown during handling of [{backend}] {item.type} [{item.title}].',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,

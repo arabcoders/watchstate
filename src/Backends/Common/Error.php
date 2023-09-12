@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
-use Monolog\Utils;
 use Throwable;
 
-final class Error
+final class Error implements \Stringable
 {
     /**
      * Wrap Error in easy to consume way.
@@ -42,7 +41,7 @@ final class Error
      */
     public function hasTags(): bool
     {
-        return true === str_contains($this->message, '%(');
+        return true === str_contains($this->message, '{') && true === str_contains($this->message, '}');
     }
 
     /**
@@ -67,43 +66,16 @@ final class Error
             return $this->message;
         }
 
-        $pattern = '#' . preg_quote('%(', '#') . '([\w\d_.]+)' . preg_quote(')', '#') . '#is';
+        return r($this->message, $this->context, [
+            'log_behavior' => true
+        ]);
+    }
 
-        $status = preg_match_all($pattern, $this->message, $matches);
-
-        if (false === $status || $status < 1) {
-            return $this->message;
-        }
-
-        $replacements = [];
-        $context = $this->context;
-
-        foreach ($matches[1] as $key) {
-            $placeholder = '%(' . $key . ')';
-
-            if (false === str_contains($this->message, $placeholder)) {
-                continue;
-            }
-
-            if (false === ag_exists($context, $key)) {
-                continue;
-            }
-
-            $val = ag($context, $key);
-
-            $context = ag_delete($context, $key);
-
-            if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
-                $replacements[$placeholder] = $val;
-            } elseif (is_object($val)) {
-                $replacements[$placeholder] = '[object ' . Utils::getClass($val) . ']';
-            } elseif (is_array($val)) {
-                $replacements[$placeholder] = 'array' . Utils::jsonEncode($val, null, true);
-            } else {
-                $replacements[$placeholder] = '[' . gettype($val) . ']';
-            }
-        }
-
-        return strtr($this->message, $replacements);
+    public function __toString(): string
+    {
+        return r('{ERROR}: {message}', [
+            'ERROR' => $this->level->value,
+            'message' => $this->format(),
+        ]);
     }
 }

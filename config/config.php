@@ -13,7 +13,7 @@ use App\Commands\State\RequestsCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
-use Monolog\Logger;
+use Monolog\Level;
 
 return (function () {
     $inContainer = inContainer();
@@ -129,27 +129,27 @@ return (function () {
         'file' => [
             'type' => 'stream',
             'enabled' => (bool)env('WS_LOGGER_FILE_ENABLE', true),
-            'level' => env('WS_LOGGER_FILE_LEVEL', Logger::ERROR),
+            'level' => env('WS_LOGGER_FILE_LEVEL', Level::Error),
             'filename' => ag($config, 'tmpDir') . '/logs/app.' . $logDateFormat . '.log',
         ],
         'stderr' => [
             'type' => 'stream',
             'enabled' => 'cli' !== PHP_SAPI,
-            'level' => Logger::WARNING,
+            'level' => Level::Warning,
             'filename' => 'php://stderr',
         ],
         'console' => [
             'type' => 'console',
             'enabled' => 'cli' === PHP_SAPI,
             // -- controllable by -vvv flag -v for NOTICE -vv for INFO -vvv for DEBUG.
-            'level' => Logger::WARNING,
+            'level' => Level::Warning,
         ],
         'syslog' => [
             'type' => 'syslog',
             'docker' => false,
             'facility' => env('WS_LOGGER_SYSLOG_FACILITY', LOG_USER),
             'enabled' => (bool)env('WS_LOGGER_SYSLOG_ENABLED', !$inContainer),
-            'level' => env('WS_LOGGER_SYSLOG_LEVEL', Logger::ERROR),
+            'level' => env('WS_LOGGER_SYSLOG_LEVEL', Level::Error),
             'name' => ag($config, 'name'),
         ],
     ];

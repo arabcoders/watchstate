@@ -62,7 +62,7 @@ final class MemoryMapper implements iImport
             $this->addPointers($this->objects[$pointer], $pointer);
         }
 
-        $this->logger->info('MAPPER: Preloaded [%(pointers)] pointer and [%(objects)] object into memory.', [
+        $this->logger->info('MAPPER: Preloaded [{pointers}] pointer and [{objects}] object into memory.', [
             'pointers' => number_format(count($this->pointers)),
             'objects' => number_format(count($this->objects)),
         ]);
@@ -73,7 +73,7 @@ final class MemoryMapper implements iImport
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->warning('MAPPER: Ignoring [%(backend)] [%(title)] no valid/supported external ids.', [
+            $this->logger->warning('MAPPER: Ignoring [{backend}] [{title}] no valid/supported external ids.', [
                 'id' => $entity->id,
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -90,7 +90,7 @@ final class MemoryMapper implements iImport
         if (false === ($pointer = $this->getPointer($entity))) {
             if (true === $metadataOnly) {
                 Message::increment("{$entity->via}.{$entity->type}.failed");
-                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in database.', [
+                $this->logger->notice('MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -128,7 +128,7 @@ final class MemoryMapper implements iImport
                 ];
             }
 
-            $this->logger->notice('MAPPER: [%(backend)] added [%(title)] as new item.', [
+            $this->logger->notice('MAPPER: [{backend}] added [{title}] as new item.', [
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
                 true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
@@ -164,7 +164,7 @@ final class MemoryMapper implements iImport
                 $changes = $this->objects[$pointer]->diff(fields: $keys);
 
                 if (count($changes) >= 1) {
-                    $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                    $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
                         'id' => $cloned->id,
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
@@ -175,7 +175,7 @@ final class MemoryMapper implements iImport
             }
 
             if (true === $this->inTraceMode()) {
-                $this->logger->info('MAPPER: [%(backend)] [%(title)] No metadata changes detected.', [
+                $this->logger->info('MAPPER: [{backend}] [{title}] No metadata changes detected.', [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
@@ -203,7 +203,7 @@ final class MemoryMapper implements iImport
                     );
 
                     if (count($changes) >= 1) {
-                        $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
+                        $this->logger->notice('MAPPER: [{backend}] marked [{title}] as unplayed.', [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
@@ -230,7 +230,7 @@ final class MemoryMapper implements iImport
                         $changes = $this->objects[$pointer]->diff(fields: $keys);
 
                         if (count($changes) >= 1) {
-                            $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                            $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
                                 'id' => $cloned->id,
                                 'backend' => $entity->via,
                                 'title' => $cloned->getName(),
@@ -244,7 +244,7 @@ final class MemoryMapper implements iImport
                 }
 
                 if ($this->inTraceMode()) {
-                    $this->logger->debug('MAPPER: Ignoring [%(backend)] [%(title)]. No changes detected.', [
+                    $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
                         'id' => $cloned->id,
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
@@ -264,7 +264,7 @@ final class MemoryMapper implements iImport
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = 'MAPPER: Watch state conflict detected in [%(backend)] [%(title)] [%(new_state)] vs db [%(current_state)].';
+            $message = 'MAPPER: Watch state conflict detected in [{backend}] [{title}] [{new_state}] vs db [{current_state}].';
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -312,10 +312,10 @@ final class MemoryMapper implements iImport
 
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
-            $message = 'MAPPER: [%(backend)] Updated [%(title)].';
+            $message = 'MAPPER: [{backend}] Updated [{title}].';
 
             if ($cloned->isWatched() !== $this->objects[$pointer]->isWatched()) {
-                $message = 'MAPPER: [%(backend)] Updated and marked [%(title)] as [%(state)].';
+                $message = 'MAPPER: [{backend}] Updated and marked [{title}] as [{state}].';
             }
 
             if (count($changes) >= 1) {
@@ -345,7 +345,7 @@ final class MemoryMapper implements iImport
             ];
         }
 
-        $this->logger->debug('MAPPER: [%(backend)] [%(title)] metadata and play state is identical.', $context);
+        $this->logger->debug('MAPPER: [{backend}] [{title}] metadata and play state is identical.', $context);
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
@@ -395,7 +395,7 @@ final class MemoryMapper implements iImport
             $inDryRunMode = $this->inDryRunMode();
 
             if (true === $inDryRunMode) {
-                $this->logger->notice('MAPPER: Recorded [%(total)] object changes.', [
+                $this->logger->notice('MAPPER: Recorded [{total}] object changes.', [
                     'total' => $count
                 ]);
             }

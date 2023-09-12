@@ -60,7 +60,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (false === is_string($key)) {
                 $this->getLogger()->info(
-                    'Ignoring [%(backend)] %(item.type) [%(item.title)] external id. Unexpected key type [%(given)] was given.',
+                    'Ignoring [{backend}] {item.type} [{item.title}] external id. Unexpected key type [{given}] was given.',
                     [
                         'key' => (string)$key,
                         'given' => get_debug_type($key),
@@ -72,7 +72,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (null === (self::SUPPORTED[$key] ?? null)) {
                 $this->getLogger()->info(
-                    'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Not supported.',
+                    'Ignoring [{backend}] {item.type} [{item.title}] [{key}] external id. Not supported.',
                     [
                         'key' => $key,
                         ...$context,
@@ -83,7 +83,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (self::SUPPORTED[$key] !== ($valueType = get_debug_type($value))) {
                 $this->getLogger()->info(
-                    'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected value type.',
+                    'Ignoring [{backend}] {item.type} [{item.title}] [{key}] external id. Unexpected value type.',
                     [
                         'key' => $key,
                         'condition' => [
@@ -99,7 +99,7 @@ final class Guid implements JsonSerializable, Stringable
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
                     $this->getLogger()->info(
-                        'Ignoring [%(backend)] %(item.type) [%(item.title)] [%(key)] external id. Unexpected [%(given)] value, expecting [%(expected)].',
+                        'Ignoring [{backend}] {item.type} [{item.title}] [{key}] external id. Unexpected [{given}] value, expecting [{expected}].',
                         [
                             'key' => $key,
                             'expected' => self::VALIDATE_GUID[$key]['example'],

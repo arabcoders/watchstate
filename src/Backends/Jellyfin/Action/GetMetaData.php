@@ -63,7 +63,7 @@ class GetMetaData
                     )
                 );
 
-            $this->logger->debug('Requesting [%(client): %(backend)] item [%(id)] metadata.', [
+            $this->logger->debug('Requesting [{client}: {backend}] item [{id}] metadata.', [
                 'id' => $id,
                 'url' => $url,
                 'client' => $context->clientName,
@@ -84,7 +84,7 @@ class GetMetaData
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [%(backend)] item [%(id)] returned with unexpected [%(status_code)] status code.',
+                            message: 'Request for [{backend}] item [{id}] returned with unexpected [{status_code}] status code.',
                             context: [
                                 'id' => $id,
                                 'client' => $context->clientName,
@@ -113,7 +113,7 @@ class GetMetaData
             }
 
             if (true === $context->trace) {
-                $this->logger->debug('Processing [%(client): %(backend)] item [%(id)] payload.', [
+                $this->logger->debug('Processing [{client}: {backend}] item [{id}] payload.', [
                     'id' => $id,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,

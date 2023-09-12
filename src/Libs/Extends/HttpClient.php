@@ -12,8 +12,13 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 use Symfony\Contracts\Service\ResetInterface;
 
-final class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInterface
+class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInterface
 {
+    private array $blacklisted = [
+        'x-plex-token',
+        'x-mediabrowser-token',
+    ];
+
     private LoggerInterface|null $logger = null;
 
     public function __construct(private HttpClientInterface $client)
@@ -22,11 +27,25 @@ final class HttpClient implements HttpClientInterface, LoggerAwareInterface, Res
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        $this->logger?->notice('HttpClient [ %(method): %(url)]', [
-            'method' => $method,
-            'url' => $url,
-            'options' => $options,
-        ]);
+        if (null !== $this->logger) {
+            $headers = [];
+
+            foreach ($options['headers'] ?? [] as $key => $value) {
+                $headers[$key] = in_array(strtolower($key), $this->blacklisted) ? '**hidden**' : $value;
+            }
+
+            $this->logger->debug('HttpClient - Request [ {method}: {url}]', [
+                'method' => $method,
+                'url' => $url,
+                'options' => array_replace_recursive($options, [
+                    'headers' => $headers,
+                    'user_data' => [
+                        'ok' => 'callable',
+                        'error' => 'callable'
+                    ],
+                ])
+            ]);
+        }
 
         return $this->client->request($method, $url, $options);
     }
@@ -43,14 +62,10 @@ final class HttpClient implements HttpClientInterface, LoggerAwareInterface, Res
 
     public function setLogger(LoggerInterface $logger): void
     {
-        if ($this->client instanceof LoggerAwareInterface) {
-            $this->client->setLogger($logger);
-        }
-
         $this->logger = $logger;
     }
 
-    public function reset()
+    public function reset(): void
     {
         if ($this->client instanceof ResetInterface) {
             $this->client->reset();

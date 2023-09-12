@@ -71,7 +71,7 @@ class Import
                 logContext: $logContext
             ),
             error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                'Unhandled Exception was thrown during [%(backend)] library [%(library.title)] request.',
+                'Unhandled Exception was thrown during [{backend}] library [{library.title}] request.',
                 [
                     'backend' => $context->backendName,
                     ...$logContext,
@@ -93,7 +93,7 @@ class Import
         try {
             $url = $context->backendUrl->withPath('/library/sections');
 
-            $this->logger->debug('Requesting [%(backend)] libraries.', [
+            $this->logger->debug('Requesting [{backend}] libraries.', [
                 'backend' => $context->backendName,
                 'url' => $url
             ]);
@@ -103,7 +103,7 @@ class Import
             $payload = $response->getContent(false);
 
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] response.', [
+                $this->logger->debug('Processing [{backend}] response.', [
                     'backend' => $context->backendName,
                     'url' => (string)$url,
                     'status_code' => $response->getStatusCode(),
@@ -124,7 +124,7 @@ class Import
                 }
 
                 $this->logger->error(
-                    'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
+                    'Request for [{backend}] libraries returned with unexpected [{status_code}] status code.',
                     $logContext
                 );
 
@@ -143,7 +143,7 @@ class Import
             $listDirs = ag($json, 'MediaContainer.Directory', []);
 
             if (empty($listDirs)) {
-                $this->logger->warning('Request for [%(backend)] libraries returned with empty list.', [
+                $this->logger->warning('Request for [{backend}] libraries returned with empty list.', [
                     'backend' => $context->backendName,
                     'body' => $json,
                 ]);
@@ -151,7 +151,7 @@ class Import
                 return [];
             }
         } catch (ExceptionInterface $e) {
-            $this->logger->error('Request for [%(backend)] libraries has failed.', [
+            $this->logger->error('Request for [{backend}] libraries has failed.', [
                 'backend' => $context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
@@ -164,7 +164,7 @@ class Import
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         } catch (JsonException $e) {
-            $this->logger->error('Request for [%(backend)] libraries returned with invalid body.', [
+            $this->logger->error('Request for [{backend}] libraries returned with invalid body.', [
                 'backend' => $context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
@@ -176,7 +176,7 @@ class Import
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         } catch (Throwable $e) {
-            $this->logger->error('Unhandled exception was thrown during request for [%(backend)] libraries.', [
+            $this->logger->error('Unhandled exception was thrown during request for [{backend}] libraries.', [
                 'backend' => $context->backendName,
                 'exception' => [
                     'file' => $e->getFile(),
@@ -220,7 +220,7 @@ class Import
 
             if (!in_array(ag($logContext, 'library.agent'), PlexClient::SUPPORTED_AGENTS)) {
                 $this->logger->notice(
-                    'Ignoring [%(backend)] [%(library.title)] Unsupported agent type.',
+                    'Ignoring [{backend}] [{library.title}] Unsupported agent type.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -245,7 +245,7 @@ class Import
 
             $logContext['library']['url'] = $url;
 
-            $this->logger->debug('Requesting [%(backend)] [%(library.title)] items count.', [
+            $this->logger->debug('Requesting [{backend}] [{library.title}] items count.', [
                 'backend' => $context->backendName,
                 ...$logContext,
             ]);
@@ -275,7 +275,7 @@ class Import
                         ])
                     );
 
-                    $this->logger->debug('Requesting [%(backend)] [%(library.title)] tv shows count.', [
+                    $this->logger->debug('Requesting [{backend}] [{library.title}] tv shows count.', [
                         'backend' => $context->backendName,
                         ...$logContextSub,
                     ]);
@@ -296,7 +296,7 @@ class Import
                     );
                 }
             } catch (ExceptionInterface $e) {
-                $this->logger->error('Request for [%(backend)] [%(library.title)] items count has failed.', [
+                $this->logger->error('Request for [{backend}] [{library.title}] items count has failed.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'exception' => [
@@ -310,7 +310,7 @@ class Import
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during [%(backend)] [%(library.title)] items count request.',
+                    'Unhandled exception was thrown during [{backend}] [{library.title}] items count request.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -334,7 +334,7 @@ class Import
             try {
                 if (200 !== $response->getStatusCode()) {
                     $this->logger->error(
-                        'Request for [%(backend)] [%(library.title)] items count returned with unexpected [%(status_code)] status code.',
+                        'Request for [{backend}] [{library.title}] items count returned with unexpected [{status_code}] status code.',
                         [
                             'backend' => $context->backendName,
                             'status_code' => $response->getStatusCode(),
@@ -348,7 +348,8 @@ class Import
 
                 if ($totalCount < 1) {
                     $this->logger->warning(
-                        'Request for [%(backend)] [%(library.title)] items count returned with 0 or less.', [
+                        'Request for [{backend}] [{library.title}] items count returned with 0 or less.',
+                        [
                             'backend' => $context->backendName,
                             ...$logContext,
                             'headers' => $response->getHeaders(),
@@ -363,7 +364,7 @@ class Import
                     $total[(int)ag($logContext, 'library.id')] = $totalCount;
                 }
             } catch (ExceptionInterface $e) {
-                $this->logger->error('Request for [%(backend)] [%(library.title)] total items has failed.', [
+                $this->logger->error('Request for [{backend}] [{library.title}] total items has failed.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'exception' => [
@@ -407,7 +408,7 @@ class Import
 
             if (false === array_key_exists('show_' . $key, $total)) {
                 $ignored++;
-                $this->logger->warning('Ignoring [%(backend)] [%(library.title)]. No tv shows items count was found.', [
+                $this->logger->warning('Ignoring [{backend}] [{library.title}]. No tv shows items count was found.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
@@ -441,7 +442,7 @@ class Import
                     $logContext['library']['url'] = $url;
 
                     $this->logger->debug(
-                        'Requesting [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] series external ids.',
+                        'Requesting [{backend}] [{library.title}] [{segment.number}/{segment.of}] series external ids.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -464,7 +465,7 @@ class Import
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
-                        'Request for [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] series external ids has failed.',
+                        'Request for [{backend}] [{library.title}] [{segment.number}/{segment.of}] series external ids has failed.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -480,7 +481,7 @@ class Import
                     continue;
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        'Unhandled exception was thrown during [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] series external ids request.',
+                        'Unhandled exception was thrown during [{backend}] [{library.title}] [{segment.number}/{segment.of}] series external ids request.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -516,7 +517,7 @@ class Import
 
             if (true === in_array($key, $ignoreIds ?? [])) {
                 $ignored++;
-                $this->logger->info('Ignoring [%(backend)] [%(library.title)]. Requested by user config.', [
+                $this->logger->info('Ignoring [{backend}] [{library.title}]. Requested by user config.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
@@ -526,7 +527,7 @@ class Import
             if (!in_array(ag($logContext, 'library.type'), [PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW])) {
                 $unsupported++;
                 $this->logger->info(
-                    'Ignoring [%(backend)] [%(library.title)]. Library type [%(library.type)] is not supported.',
+                    'Ignoring [{backend}] [{library.title}]. Library type [{library.type}] is not supported.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -537,7 +538,7 @@ class Import
 
             if (false === array_key_exists($key, $total)) {
                 $ignored++;
-                $this->logger->warning('Ignoring [%(backend)] [%(library.title)]. No items count was found.', [
+                $this->logger->warning('Ignoring [{backend}] [{library.title}]. No items count was found.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
@@ -577,7 +578,7 @@ class Import
                     $logContext['library']['url'] = $url;
 
                     $this->logger->debug(
-                        'Requesting [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list.',
+                        'Requesting [{backend}] [{library.title}] [{segment.number}/{segment.of}] content list.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -600,7 +601,7 @@ class Import
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
-                        'Request for [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list has failed.',
+                        'Request for [{backend}] [{library.title}] [{segment.number}/{segment.of}] content list has failed.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -616,7 +617,7 @@ class Import
                     continue;
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        'Unhandled exception was thrown during [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content list request.',
+                        'Unhandled exception was thrown during [{backend}] [{library.title}] [{segment.number}/{segment.of}] content list request.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -635,7 +636,7 @@ class Import
         }
 
         if (0 === count($requests)) {
-            $this->logger->warning('No requests for [%(backend)] libraries were queued.', [
+            $this->logger->warning('No requests for [{backend}] libraries were queued.', [
                 'backend' => $context->backendName,
                 'context' => [
                     'total' => count($listDirs),
@@ -658,7 +659,7 @@ class Import
     {
         if (200 !== $response->getStatusCode()) {
             $this->logger->error(
-                'Request for [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content returned with unexpected [%(status_code)] status code.',
+                'Request for [{backend}] [{library.title}] [{segment.number}/{segment.of}] content returned with unexpected [{status_code}] status code.',
                 [
                     'backend' => $context->backendName,
                     'status_code' => $response->getStatusCode(),
@@ -670,7 +671,7 @@ class Import
 
         $start = makeDate();
         $this->logger->info(
-            'Parsing [%(backend)] library [%(library.title)] [%(segment.number)/%(segment.of)] response.',
+            'Parsing [{backend}] library [{library.title}] [{segment.number}/{segment.of}] response.',
             [
                 'backend' => $context->backendName,
                 ...$logContext,
@@ -697,7 +698,7 @@ class Import
             foreach ($it as $entity) {
                 if ($entity instanceof DecodingError) {
                     $this->logger->warning(
-                        'Failed to decode one item of [%(backend)] [%(library.title)] [%(segment.number)/%(segment.of)] content.',
+                        'Failed to decode one item of [{backend}] [{library.title}] [{segment.number}/{segment.of}] content.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -714,7 +715,7 @@ class Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during parsing of [%(backend)] library [%(library.title)] [%(segment.number)/%(segment.of)] response.',
+                'Unhandled exception was thrown during parsing of [{backend}] library [{library.title}] [{segment.number}/{segment.of}] response.',
                 [
                     'backend' => $context->backendName,
                     ...$logContext,
@@ -731,7 +732,7 @@ class Import
 
         $end = makeDate();
         $this->logger->info(
-            'Parsing [%(backend)] library [%(library.title)] [%(segment.number)/%(segment.of)] response is complete.',
+            'Parsing [{backend}] library [{library.title}] [{segment.number}/{segment.of}] response is complete.',
             [
                 'backend' => $context->backendName,
                 ...$logContext,
@@ -774,7 +775,7 @@ class Import
         ];
 
         if ($context->trace) {
-            $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))] payload.', [
+            $this->logger->debug('Processing [{backend}] {item.type} [{item.title} ({item.year})] payload.', [
                 'backend' => $context->backendName,
                 ...$logContext,
                 'body' => $item,
@@ -782,10 +783,10 @@ class Import
         }
 
         if (!$guid->has(guids: $guids, context: $logContext)) {
-            $message = 'Ignoring [%(backend)] [%(item.title)]. %(item.type) has no valid/supported external ids.';
+            $message = 'Ignoring [{backend}] [{item.title}]. {item.type} has no valid/supported external ids.';
 
             if (empty($guids)) {
-                $message .= ' Most likely unmatched %(item.type).';
+                $message .= ' Most likely unmatched {item.type}.';
             }
 
             $this->logger->info($message, [
@@ -831,7 +832,7 @@ class Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] payload.', [
+                $this->logger->debug('Processing [{backend}] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item,
@@ -876,7 +877,7 @@ class Import
             }
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
-                $this->logger->debug('Ignoring [%(backend)] %(item.type) [%(item.title)]. No Date is set on object.', [
+                $this->logger->debug('Ignoring [{backend}] {item.type} [{item.title}]. No Date is set on object.', [
                     'backend' => $context->backendName,
                     'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
                     ...$logContext,
@@ -905,7 +906,7 @@ class Import
             );
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-                $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
+                $message = 'Ignoring [{backend}] [{item.title}]. No valid/supported external ids.';
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -916,7 +917,7 @@ class Import
                 }
 
                 if (empty($item['Guid'])) {
-                    $message .= ' Most likely unmatched %(item.type).';
+                    $message .= ' Most likely unmatched {item.type}.';
                 }
 
                 $this->logger->info($message, [
@@ -935,7 +936,7 @@ class Import
             ]);
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] import.',
+                'Unhandled exception was thrown during handling of [{backend}] [{library.title}] [{item.title}] import.',
                 [
                     'backend' => $context->backendName,
                     ...$logContext,

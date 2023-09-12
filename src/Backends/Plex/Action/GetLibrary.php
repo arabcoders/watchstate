@@ -63,7 +63,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'No Library with id [%(id)] found in [%(backend)] response.',
+                    message: 'No Library with id [{id}] found in [{backend}] response.',
                     context: [
                         'id' => $id,
                         'backend' => $context->backendName,
@@ -91,7 +91,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'The Requested [%(backend)] Library [%(library.title)] returned with unsupported type [%(library.type)].',
+                    message: 'The Requested [{backend}] Library [{library.title}] returned with unsupported type [{library.type}].',
                     context: [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -112,7 +112,7 @@ final class GetLibrary
 
         $logContext['library']['url'] = (string)$url;
 
-        $this->logger->debug('Requesting [%(backend)] library [%(library.title)] content.', [
+        $this->logger->debug('Requesting [{backend}] library [{library.title}] content.', [
             'backend' => $context->backendName,
             ...$logContext,
         ]);
@@ -123,7 +123,7 @@ final class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [%(backend)] library [%(library.title)] returned with unexpected [%(status_code)] status code.',
+                    message: 'Request for [{backend}] library [{library.title}] returned with unexpected [{status_code}] status code.',
                     context: [
                         'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
@@ -154,7 +154,7 @@ final class GetLibrary
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
                 $this->logger->warning(
-                    'Failed to decode one item of [%(backend)] library [%(library.title)] content.',
+                    'Failed to decode one item of [{backend}] library [{library.title}] content.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -199,7 +199,7 @@ final class GetLibrary
 
         if (!empty($requests)) {
             $this->logger->info(
-                'Requesting [%(total)] items metadata from [%(backend)] library [%(library.title)].',
+                'Requesting [{total}] items metadata from [{backend}] library [{library.title}].',
                 [
                     'total' => number_format(count($requests)),
                     'backend' => $context->backendName,
@@ -214,7 +214,7 @@ final class GetLibrary
             try {
                 if (200 !== $response->getStatusCode()) {
                     $this->logger->warning(
-                        'Request for [%(backend)] %(item.type) [%(item.title)] metadata returned with unexpected [%(status_code)] status code.',
+                        'Request for [{backend}] {item.type} [{item.title}] metadata returned with unexpected [{status_code}] status code.',
                         [
                             'backend' => $context->backendName,
                             'status_code' => $response->getStatusCode(),
@@ -242,7 +242,7 @@ final class GetLibrary
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Unhandled exception was thrown during request for [%(backend)] %(item.type) [%(item.title)] metadata.',
+                        message: 'Unhandled exception was thrown during request for [{backend}] {item.type} [{item.title}] metadata.',
                         context: [
                             'backend' => $context->backendName,
                             'exception' => [
@@ -283,7 +283,7 @@ final class GetLibrary
             $data['trace'] = $item;
         }
 
-        $this->logger->debug('Processing [%(backend)] %(item.type) [%(item.title) (%(item.year))].', $data);
+        $this->logger->debug('Processing [{backend}] {item.type} [{item.title} ({item.year})].', $data);
 
         $metadata = [
             'id' => (int)ag($item, 'ratingKey'),

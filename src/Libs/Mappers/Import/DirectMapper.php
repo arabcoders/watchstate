@@ -82,7 +82,7 @@ final class DirectMapper implements iImport
             $this->addPointers($entity, $pointer);
         }
 
-        $this->logger->info('MAPPER: Preloaded [%(pointers)] pointers into memory.', [
+        $this->logger->info('MAPPER: Preloaded [{pointers}] pointers into memory.', [
             'mapper' => afterLast(self::class, '\\'),
             'pointers' => number_format(count($this->pointers)),
         ]);
@@ -93,7 +93,7 @@ final class DirectMapper implements iImport
     public function add(iState $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->warning('MAPPER: Ignoring [%(backend)] [%(title)] no valid/supported external ids.', [
+            $this->logger->warning('MAPPER: Ignoring [{backend}] [{title}] no valid/supported external ids.', [
                 'id' => $entity->id,
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -114,7 +114,7 @@ final class DirectMapper implements iImport
                 $this->actions[$entity->type]['failed']++;
                 Message::increment("{$entity->via}.{$entity->type}.failed");
 
-                $this->logger->notice('MAPPER: Ignoring [%(backend)] [%(title)]. Does not exist in database.', [
+                $this->logger->notice('MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database.', [
                     'metaOnly' => true,
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -156,7 +156,7 @@ final class DirectMapper implements iImport
                     }
                 }
 
-                $this->logger->notice('MAPPER: [%(backend)] added [%(title)] as new item.', [
+                $this->logger->notice('MAPPER: [{backend}] added [{title}] as new item.', [
                     'id' => $entity->id,
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -203,7 +203,7 @@ final class DirectMapper implements iImport
 
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                    $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                    $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
                         'id' => $local->id,
                         'backend' => $entity->via,
                         'title' => $local->getName(),
@@ -238,7 +238,7 @@ final class DirectMapper implements iImport
             }
 
             if ($this->inTraceMode()) {
-                $this->logger->info('MAPPER: [%(backend)] [%(title)] No metadata changes detected.', [
+                $this->logger->info('MAPPER: [{backend}] [{title}] No metadata changes detected.', [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
@@ -267,7 +267,7 @@ final class DirectMapper implements iImport
                             }
                         }
 
-                        $this->logger->notice('MAPPER: [%(backend)] marked [%(title)] as unplayed.', [
+                        $this->logger->notice('MAPPER: [{backend}] marked [{title}] as unplayed.', [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
@@ -311,7 +311,7 @@ final class DirectMapper implements iImport
                             $changes = $local->diff(fields: $keys);
 
                             if (count($changes) >= 1) {
-                                $this->logger->notice('MAPPER: [%(backend)] updated [%(title)] metadata.', [
+                                $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
                                     'id' => $cloned->id,
                                     'backend' => $entity->via,
                                     'title' => $cloned->getName(),
@@ -347,7 +347,7 @@ final class DirectMapper implements iImport
                 }
 
                 if ($this->inTraceMode()) {
-                    $this->logger->debug('MAPPER: Ignoring [%(backend)] [%(title)]. No changes detected.', [
+                    $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
                         'id' => $cloned->id,
                         'backend' => $entity->via,
                         'title' => $cloned->getName(),
@@ -366,7 +366,7 @@ final class DirectMapper implements iImport
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = 'MAPPER: Watch state conflict detected in [%(backend)] [%(title)] [%(new_state)] vs db [%(current_state)].';
+            $message = 'MAPPER: Watch state conflict detected in [{backend}] [{title}] [{new_state}] vs db [{current_state}].';
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -412,10 +412,10 @@ final class DirectMapper implements iImport
 
                 $changes = $local->diff(fields: $keys);
 
-                $message = 'MAPPER: [%(backend)] Updated [%(title)].';
+                $message = 'MAPPER: [{backend}] Updated [{title}].';
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = 'MAPPER: [%(backend)] updated and marked [%(title)] as [%(state)].';
+                    $message = 'MAPPER: [{backend}] updated and marked [{title}] as [{state}].';
 
                     if (null !== $onStateUpdate) {
                         $onStateUpdate($local);
@@ -473,7 +473,7 @@ final class DirectMapper implements iImport
             ];
         }
 
-        $this->logger->debug('MAPPER: [%(backend)] [%(title)] metadata and play state is identical.', $context);
+        $this->logger->debug('MAPPER: [{backend}] [{title}] metadata and play state is identical.', $context);
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
