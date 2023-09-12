@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
+use BackedEnum;
+use DateTimeInterface;
 use Monolog\Utils;
 use Throwable;
+use UnitEnum;
 
-final class Error
+final class Error implements \Stringable
 {
     /**
      * Wrap Error in easy to consume way.
@@ -95,6 +98,10 @@ final class Error
 
             if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
                 $replacements[$placeholder] = $val;
+            } elseif ($val instanceof DateTimeInterface) {
+                $replacements[$placeholder] = (string)$val;
+            } elseif ($val instanceof UnitEnum) {
+                $replacements[$placeholder] = $val instanceof BackedEnum ? $val->value : $val->name;
             } elseif (is_object($val)) {
                 $replacements[$placeholder] = '[object ' . Utils::getClass($val) . ']';
             } elseif (is_array($val)) {
@@ -105,5 +112,13 @@ final class Error
         }
 
         return strtr($this->message, $replacements);
+    }
+
+    public function __toString(): string
+    {
+        return r('{ERROR}: {message}', [
+            'ERROR' => $this->level->value,
+            'message' => $this->format(),
+        ]);
     }
 }
