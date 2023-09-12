@@ -689,7 +689,7 @@ if (false === function_exists('r')) {
             return $text;
         }
 
-        $pattern = '#' . preg_quote($tagLeft, '#') . '([\w\d_.]+)' . preg_quote($tagRight, '#') . '#is';
+        $pattern = '#' . preg_quote($tagLeft, '#') . '([\w_.]+)' . preg_quote($tagRight, '#') . '#is';
 
         $status = preg_match_all($pattern, $text, $matches);
 
@@ -716,6 +716,10 @@ if (false === function_exists('r')) {
 
             if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
                 $replacements[$placeholder] = $val;
+            } elseif ($val instanceof DateTimeInterface) {
+                $replacements[$placeholder] = (string)$val;
+            } elseif ($val instanceof UnitEnum) {
+                $replacements[$placeholder] = $val instanceof BackedEnum ? $val->value : $val->name;
             } elseif (is_object($val)) {
                 $replacements[$placeholder] = implode(',', get_object_vars($val));
             } elseif (is_array($val)) {

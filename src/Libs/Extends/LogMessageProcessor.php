@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use BackedEnum;
+use DateTimeInterface;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 use Monolog\Utils;
+use UnitEnum;
 
 /**
  * Original code by Jordi Boggiano <j.boggiano@seld.be>
  */
 class LogMessageProcessor implements ProcessorInterface
 {
+    private const REGEX = '#{tag_start}([\w_.]+){tag_end}#is';
     private string $pattern;
 
-    public function __construct(
-        private string $tagStart = '%(',
-        private string $tagEnd = ')'
-    ) {
-        $this->pattern = '#' . preg_quote($this->tagStart, '#') . '([\w_.]+)' . preg_quote(
-                $this->tagEnd,
-                '#'
-            ) . '#is';
+    public function __construct(private string $tagStart = '%(', private string $tagEnd = ')')
+    {
+        $this->pattern = r(self::REGEX, [
+            'tag_start' => preg_quote($this->tagStart, '#'),
+            'tag_end' => preg_quote($this->tagEnd, '#'),
+        ]);
     }
 
     public function __invoke(LogRecord $record): LogRecord
@@ -58,6 +60,10 @@ class LogMessageProcessor implements ProcessorInterface
 
             if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
                 $replacements[$placeholder] = $val;
+            } elseif ($val instanceof DateTimeInterface) {
+                $replacements[$placeholder] = (string)$val;
+            } elseif ($val instanceof UnitEnum) {
+                $replacements[$placeholder] = $val instanceof BackedEnum ? $val->value : $val->name;
             } elseif (is_object($val)) {
                 $replacements[$placeholder] = '[object ' . Utils::getClass($val) . ']';
             } elseif (is_array($val)) {
