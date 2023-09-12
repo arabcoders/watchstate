@@ -126,7 +126,7 @@ final class PlexGuid implements iGuid
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
                         $this->logger->info(
-                            'Unable to parse [%(backend)] [%(agent)] identifier.',
+                            'Unable to parse [{backend}] [{agent}] identifier.',
                             [
                                 'backend' => $this->context->backendName,
                                 'agent' => $val ?? null,
@@ -147,7 +147,7 @@ final class PlexGuid implements iGuid
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            'Ignoring [%(backend)] external id [%(source)] for %(item.type) [%(item.title)] as requested.',
+                            'Ignoring [{backend}] external id [{source}] for {item.type} [{item.title}] as requested.',
                             [
                                 'backend' => $this->context->backendName,
                                 'source' => $val,
@@ -166,7 +166,7 @@ final class PlexGuid implements iGuid
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            '[%(backend)] reported multiple ids for same data source [%(key): %(ids)] for %(item.type) [%(item.title)].',
+                            '[{backend}] reported multiple ids for same data source [{key}: {ids}] for {item.type} [{item.title}].',
                             [
                                 'backend' => $this->context->backendName,
                                 'key' => $key,
@@ -189,7 +189,7 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        'Unhandled exception was thrown in parsing of [%(backend)] [%(agent)] identifier.',
+                        'Unhandled exception was thrown in parsing of [{backend}] [{agent}] identifier.',
                         [
                             'backend' => $this->context->backendName,
                             'agent' => $val ?? null,
@@ -253,7 +253,7 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    'Unhandled exception was thrown in parsing of [%(backend)] legacy agent [%(agent)] identifier.',
+                    'Unhandled exception was thrown in parsing of [{backend}] legacy agent [{agent}] identifier.',
                     [
                         'backend' => $this->context->backendName,
                         'agent' => $guid,

@@ -156,21 +156,21 @@ class BackupCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected, true)) {
-                $this->logger->info('SYSTEM: Ignoring [%(backend)] as requested by select backends flag.', [
+                $this->logger->info('SYSTEM: Ignoring [{backend}] as requested by select backends flag.', [
                     'backend' => $backendName,
                 ]);
                 continue;
             }
 
             if (true !== (bool)ag($backend, 'import.enabled')) {
-                $this->logger->info('SYSTEM: Ignoring [%(backend)] imports are disabled for this backend.', [
+                $this->logger->info('SYSTEM: Ignoring [{backend}] imports are disabled for this backend.', [
                     'backend' => $backendName,
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('SYSTEM: Ignoring [%(backend)] because of the unexpected type [%(type)].', [
+                $this->logger->error('SYSTEM: Ignoring [{backend}] because of the unexpected type [{type}].', [
                     'type' => $type,
                     'backend' => $backendName,
                 ]);
@@ -178,7 +178,7 @@ class BackupCommand extends Command
             }
 
             if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error('SYSTEM: Ignoring [%(backend)] because of invalid URL.', [
+                $this->logger->error('SYSTEM: Ignoring [{backend}] because of invalid URL.', [
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
                 ]);
@@ -195,7 +195,7 @@ class BackupCommand extends Command
         }
 
         if (true !== $input->getOption('no-enhance')) {
-            $this->logger->notice('SYSTEM: Preloading %(mapper) data.', [
+            $this->logger->notice('SYSTEM: Preloading {mapper} data.', [
                 'mapper' => afterLast($this->mapper::class, '\\'),
                 'memory' => [
                     'now' => getMemoryUsage(),
@@ -205,7 +205,7 @@ class BackupCommand extends Command
 
             $this->mapper->loadData();
 
-            $this->logger->notice('SYSTEM: Preloading %(mapper) data is complete.', [
+            $this->logger->notice('SYSTEM: Preloading {mapper} data is complete.', [
                 'mapper' => afterLast($this->mapper::class, '\\'),
                 'memory' => [
                     'now' => getMemoryUsage(),
@@ -237,7 +237,7 @@ class BackupCommand extends Command
             $backend['options'] = $opts;
             $backend['class'] = $this->getBackend($name, $backend);
 
-            $this->logger->notice('SYSTEM: Backing up [%(backend)] play state.', [
+            $this->logger->notice('SYSTEM: Backing up [{backend}] play state.', [
                 'backend' => $name,
             ]);
 
@@ -283,7 +283,7 @@ class BackupCommand extends Command
         unset($backend);
 
         $start = makeDate();
-        $this->logger->notice('SYSTEM: Waiting on [%(total)] requests.', [
+        $this->logger->notice('SYSTEM: Waiting on [{total}] requests.', [
             'total' => number_format(count($queue)),
             'time' => [
                 'start' => $start,

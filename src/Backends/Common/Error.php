@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
-use BackedEnum;
-use DateTimeInterface;
-use Monolog\Utils;
 use Throwable;
-use UnitEnum;
 
 final class Error implements \Stringable
 {
@@ -45,7 +41,7 @@ final class Error implements \Stringable
      */
     public function hasTags(): bool
     {
-        return true === str_contains($this->message, '%(');
+        return true === str_contains($this->message, '{') && true === str_contains($this->message, '}');
     }
 
     /**
@@ -70,48 +66,9 @@ final class Error implements \Stringable
             return $this->message;
         }
 
-        $pattern = '#' . preg_quote('%(', '#') . '([\w\d_.]+)' . preg_quote(')', '#') . '#is';
-
-        $status = preg_match_all($pattern, $this->message, $matches);
-
-        if (false === $status || $status < 1) {
-            return $this->message;
-        }
-
-        $replacements = [];
-        $context = $this->context;
-
-        foreach ($matches[1] as $key) {
-            $placeholder = '%(' . $key . ')';
-
-            if (false === str_contains($this->message, $placeholder)) {
-                continue;
-            }
-
-            if (false === ag_exists($context, $key)) {
-                continue;
-            }
-
-            $val = ag($context, $key);
-
-            $context = ag_delete($context, $key);
-
-            if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
-                $replacements[$placeholder] = $val;
-            } elseif ($val instanceof DateTimeInterface) {
-                $replacements[$placeholder] = (string)$val;
-            } elseif ($val instanceof UnitEnum) {
-                $replacements[$placeholder] = $val instanceof BackedEnum ? $val->value : $val->name;
-            } elseif (is_object($val)) {
-                $replacements[$placeholder] = '[object ' . Utils::getClass($val) . ']';
-            } elseif (is_array($val)) {
-                $replacements[$placeholder] = 'array' . Utils::jsonEncode($val, null, true);
-            } else {
-                $replacements[$placeholder] = '[' . gettype($val) . ']';
-            }
-        }
-
-        return strtr($this->message, $replacements);
+        return r($this->message, $this->context, [
+            'log_behavior' => true
+        ]);
     }
 
     public function __toString(): string

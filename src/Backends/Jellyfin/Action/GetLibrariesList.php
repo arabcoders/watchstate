@@ -45,7 +45,7 @@ class GetLibrariesList
     {
         $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
 
-        $this->logger->debug('Requesting [%(backend)] libraries list.', [
+        $this->logger->debug('Requesting [{backend}] libraries list.', [
             'backend' => $context->backendName,
             'url' => (string)$url
         ]);
@@ -56,7 +56,7 @@ class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
+                    message: 'Request for [{backend}] libraries returned with unexpected [{status_code}] status code.',
                     context: [
                         'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
@@ -73,7 +73,7 @@ class GetLibrariesList
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing [%(backend)] libraries payload.', [
+            $this->logger->debug('Parsing [{backend}] libraries payload.', [
                 'backend' => $context->backendName,
                 'trace' => $json,
             ]);
@@ -85,7 +85,7 @@ class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [%(backend)] libraries returned empty list.',
+                    message: 'Request for [{backend}] libraries returned empty list.',
                     context: [
                         'backend' => $context->backendName,
                         'response' => ['body' => $json],

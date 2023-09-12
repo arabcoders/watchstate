@@ -48,7 +48,7 @@ final class GetMetaData
                 $url = $context->backendUrl->withPath('/library/metadata/' . $id)
                     ->withQuery(http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? [])));
 
-                $this->logger->debug('Requesting [%(client): %(backend)] item [%(id)] metadata.', [
+                $this->logger->debug('Requesting [{client}: {backend}] item [{id}] metadata.', [
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'id' => $id,
@@ -69,7 +69,7 @@ final class GetMetaData
                         return new Response(
                             status: false,
                             error: new Error(
-                                message: 'Request for [%(backend)] item [%(id)] returned with unexpected [%(status_code)] status code.',
+                                message: 'Request for [{backend}] item [{id}] returned with unexpected [{status_code}] status code.',
                                 context: [
                                     'id' => $id,
                                     'client' => $context->clientName,
@@ -100,7 +100,7 @@ final class GetMetaData
                 }
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [%(client): %(backend)] item [%(id)] payload.', [
+                    $this->logger->debug('Processing [{client}: {backend}] item [{id}] payload.', [
                         'id' => $id,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,

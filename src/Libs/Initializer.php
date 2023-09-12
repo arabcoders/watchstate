@@ -229,7 +229,7 @@ final class Initializer
             try {
                 $class = makeBackend($info, $name);
             } catch (RuntimeException $e) {
-                $this->write($request, Level::Error, 'An exception was thrown in [%(backend)] instance creation.', [
+                $this->write($request, Level::Error, 'An exception was thrown in [{backend}] instance creation.', [
                     'backend' => $name,
                     'exception' => [
                         'file' => $e->getFile(),
@@ -315,7 +315,7 @@ final class Initializer
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
-            $this->write($request, Level::Error, 'Import are disabled for [%(backend)].', [
+            $this->write($request, Level::Error, 'Import are disabled for [{backend}].', [
                 'backend' => $class->getName()
             ]);
 
@@ -333,7 +333,7 @@ final class Initializer
             $this->write(
                 $request,
                 Level::Info,
-                'Ignoring [%(backend)] %(item.type) [%(item.title)]. No valid/supported external ids.',
+                'Ignoring [{backend}] {item.type} [{item.title}]. No valid/supported external ids.',
                 [
                     'backend' => $entity->via,
                     'item' => [
@@ -350,7 +350,7 @@ final class Initializer
             $this->write(
                 $request,
                 Level::Notice,
-                'Ignoring [%(backend)] %(item.type) [%(item.title)]. No episode/season number present.',
+                'Ignoring [{backend}] {item.type} [{item.title}]. No episode/season number present.',
                 [
                     'backend' => $entity->via,
                     'item' => [
@@ -385,7 +385,7 @@ final class Initializer
 
         $cache->set('requests', $items, new DateInterval('P3D'));
 
-        $this->write($request, Level::Info, 'Queued [%(backend)] %(item.type) [%(item.title)].', [
+        $this->write($request, Level::Info, 'Queued [{backend}] {item.type} [{item.title}].', [
             'backend' => $entity->via,
             'item' => [
                 'title' => $entity->getName(),
@@ -445,8 +445,8 @@ final class Initializer
         };
 
         $list = [
-            '%(path)' => $fn('path', $path),
-            '%(tmpDir)' => $fn('tmpDir', $tmpDir),
+            '{path}' => $fn('path', $path),
+            '{tmpDir}' => $fn('tmpDir', $tmpDir),
         ];
 
         foreach (require $dirList as $dir) {

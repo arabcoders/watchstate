@@ -115,7 +115,7 @@ class PushCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool)ag($backend, 'export.enabled')) {
-                $this->logger->info('SYSTEM: Export to [%(backend)] is disabled by user.', [
+                $this->logger->info('SYSTEM: Export to [{backend}] is disabled by user.', [
                     'backend' => $backendName,
                 ]);
 
@@ -123,7 +123,7 @@ class PushCommand extends Command
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('SYSTEM: [%(backend)] Invalid type.', [
+                $this->logger->error('SYSTEM: [{backend}] Invalid type.', [
                     'backend' => $backendName,
                     'condition' => [
                         'expected' => implode(', ', array_keys($supported)),
@@ -134,7 +134,7 @@ class PushCommand extends Command
             }
 
             if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
-                $this->logger->error('SYSTEM: [%(backend)] Invalid url.', [
+                $this->logger->error('SYSTEM: [{backend}] Invalid url.', [
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
                 ]);
@@ -177,7 +177,7 @@ class PushCommand extends Command
 
         if ($total >= 1) {
             $start = makeDate();
-            $this->logger->notice('SYSTEM: Sending [%(total)] change play state requests.', [
+            $this->logger->notice('SYSTEM: Sending [{total}] change play state requests.', [
                 'total' => $total,
                 'time' => [
                     'start' => $start,
@@ -190,16 +190,16 @@ class PushCommand extends Command
                 try {
                     if (200 !== $response->getStatusCode()) {
                         $this->logger->error(
-                            'SYSTEM: Request to change [%(backend)] [%(item.title)] play state returned with unexpected [%(status_code)] status code.',
+                            'SYSTEM: Request to change [{backend}] [{item.title}] play state returned with unexpected [{status_code}] status code.',
                             $context
                         );
                         continue;
                     }
 
-                    $this->logger->notice('SYSTEM: Marked [%(backend)] [%(item.title)] as [%(play_state)].', $context);
+                    $this->logger->notice('SYSTEM: Marked [{backend}] [{item.title}] as [{play_state}].', $context);
                 } catch (\Throwable $e) {
                     $this->logger->error(
-                        'SYSTEM: Unhandled exception thrown during request to change play state of [%(backend)] %(item.type) [%(item.title)].',
+                        'SYSTEM: Unhandled exception thrown during request to change play state of [{backend}] {item.type} [{item.title}].',
                         [
                             ...$context,
                             'exception' => [
@@ -216,7 +216,7 @@ class PushCommand extends Command
 
             $end = makeDate();
 
-            $this->logger->notice('SYSTEM: Sent [%(total)] change play state requests.', [
+            $this->logger->notice('SYSTEM: Sent [{total}] change play state requests.', [
                 'total' => $total,
                 'time' => [
                     'start' => $start,

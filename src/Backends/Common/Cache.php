@@ -36,7 +36,7 @@ final class Cache implements Countable
         try {
             $cloned->data = $cloned->cache->get($key, []);
         } catch (InvalidArgumentException $e) {
-            $this->logger->error('Failed to load cache data for key [%(key)]. %(message)', [
+            $this->logger->error('Failed to load cache data for key [{key}]. {message}', [
                 'key' => $key,
                 'message' => $e->getMessage(),
             ]);

@@ -26,7 +26,7 @@ class ErrorTest extends TestCase
 
         fclose($context['res']);
 
-        $message = 'Hello World %(foo)! %(arr) %(obj) %(res) %(taz)';
+        $message = 'Hello World {foo}! {arr} {obj} {res} {taz}';
 
         $error = new Error(
             message: $message,
@@ -52,7 +52,7 @@ class ErrorTest extends TestCase
         );
 
         $this->assertEquals(
-            'Hello World bar! array{"foo":"bar"} [object stdClass] [resource (closed)] %(taz)',
+            'Hello World bar! array{"foo":"bar"} [object stdClass] [resource (closed)] {taz}',
             $error->format(),
             'Assert message is formatted correctly if tags are found.'
         );

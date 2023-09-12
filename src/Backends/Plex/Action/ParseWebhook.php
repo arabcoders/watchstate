@@ -198,7 +198,7 @@ final class ParseWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Ignoring [%(backend)] [%(title)] webhook event. No valid/supported external ids.',
+                        message: 'Ignoring [{backend}] [{title}] webhook event. No valid/supported external ids.',
                         context: [
                             'backend' => $context->backendName,
                             'title' => $entity->getName(),
@@ -222,7 +222,7 @@ final class ParseWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Unhandled exception was thrown during [%(backend)] webhook event parsing.',
+                    message: 'Unhandled exception was thrown during [{backend}] webhook event parsing.',
                     context: [
                         'backend' => $context->backendName,
                         'exception' => [

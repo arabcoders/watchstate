@@ -124,12 +124,14 @@ final class PDOAdapter implements iDB
             $stmt = $this->query(
                 r(
                     'SELECT * FROM state WHERE $[column] = $[id]',
-                    [
+                    context: [
                         'column' => iState::COLUMN_ID,
                         'id' => (int)$entity->id
                     ],
-                    '$[',
-                    ']'
+                    opts: [
+                        'tag_left' => '$[',
+                        'tag_right' => ']'
+                    ],
                 )
             );
 
@@ -297,10 +299,17 @@ final class PDOAdapter implements iDB
             }
 
             $this->query(
-                r('DELETE FROM state WHERE ${column} = ${id}', [
-                    'column' => iState::COLUMN_ID,
-                    'id' => (int)$id
-                ])
+                r(
+                    'DELETE FROM state WHERE ${column} = ${id}',
+                    [
+                        'column' => iState::COLUMN_ID,
+                        'id' => (int)$id
+                    ],
+                    opts: [
+                        'tag_left' => '${',
+                        'tag_right' => '}'
+                    ]
+                )
             );
         } catch (PDOException $e) {
             $this->logger->error($e->getMessage(), [
@@ -593,7 +602,7 @@ final class PDOAdapter implements iDB
                     /** @noinspection PhpUnhandledExceptionInspection */
                     $sleep = self::LOCK_RETRY + random_int(1, 3);
 
-                    $this->logger->warning('Database is locked. sleeping for [%(sleep)].', ['sleep' => $sleep]);
+                    $this->logger->warning('Database is locked. sleeping for [{sleep}].', ['sleep' => $sleep]);
 
                     sleep($sleep);
                 } else {
@@ -619,7 +628,7 @@ final class PDOAdapter implements iDB
                     /** @noinspection PhpUnhandledExceptionInspection */
                     $sleep = self::LOCK_RETRY + random_int(1, 3);
 
-                    $this->logger?->warning('Database is locked. sleeping for [%(sleep)].', context: [
+                    $this->logger?->warning('Database is locked. sleeping for [{sleep}].', context: [
                         'sleep' => $sleep,
                     ]);
 

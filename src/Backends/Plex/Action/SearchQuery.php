@@ -61,7 +61,7 @@ final class SearchQuery
             )
         );
 
-        $this->logger->debug('Searching [%(backend)] libraries for [%(query)].', [
+        $this->logger->debug('Searching [{backend}] libraries for [{query}].', [
             'backend' => $context->backendName,
             'query' => $query,
             'url' => $url
@@ -73,7 +73,7 @@ final class SearchQuery
             array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
         );
 
-        $this->logger->debug('Requesting [%(backend)] Users list.', [
+        $this->logger->debug('Requesting [{backend}] Users list.', [
             'backend' => $context->backendName,
             'url' => (string)$url,
         ]);
@@ -82,7 +82,7 @@ final class SearchQuery
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Search request for [%(query)] in [%(backend)] returned with unexpected [%(status_code)] status code.',
+                    message: 'Search request for [{query}] in [{backend}] returned with unexpected [{status_code}] status code.',
                     context: [
                         'backend' => $context->backendName,
                         'query' => $query,
@@ -100,7 +100,7 @@ final class SearchQuery
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing Searching [%(backend)] libraries for [%(query)] payload.', [
+            $this->logger->debug('Parsing Searching [{backend}] libraries for [{query}] payload.', [
                 'backend' => $context->backendName,
                 'query' => $query,
                 'url' => (string)$url,

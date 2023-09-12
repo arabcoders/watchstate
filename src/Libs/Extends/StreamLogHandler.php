@@ -4,6 +4,7 @@ namespace App\Libs\Extends;
 
 use App\Libs\Config;
 use DateTimeInterface;
+use Monolog\LogRecord;
 use Nyholm\Psr7\Stream;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -18,8 +19,12 @@ class StreamLogHandler extends ConsoleHandler
         parent::__construct($output, $bubble, $levelsMapper);
     }
 
-    protected function write(array $record): void
+    protected function write(LogRecord|array $record): void
     {
+        if (true === ($record instanceof LogRecord)) {
+            $record = $record->toArray();
+        }
+
         $date = $record['datetime'] ?? 'No date set';
 
         if (true === ($date instanceof DateTimeInterface)) {

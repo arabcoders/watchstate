@@ -40,7 +40,7 @@ final class Export extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] payload.', [
+                $this->logger->debug('Processing [{backend}] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item,
@@ -86,7 +86,7 @@ final class Export extends Import
             }
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
-                $this->logger->debug('Ignoring [%(backend)] [%(item.title)]. No Date is set on object.', [
+                $this->logger->debug('Ignoring [{backend}] [{item.title}]. No Date is set on object.', [
                     'backend' => $context->backendName,
                     'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
                     ...$logContext,
@@ -107,7 +107,7 @@ final class Export extends Import
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $message = 'Ignoring [%(backend)] [%(item.title)]. No valid/supported external ids.';
+                $message = 'Ignoring [{backend}] [{item.title}]. No valid/supported external ids.';
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -118,7 +118,7 @@ final class Export extends Import
                 }
 
                 if (empty($item['Guid'])) {
-                    $message .= ' Most likely unmatched %(item.type).';
+                    $message .= ' Most likely unmatched {item.type}.';
                 }
 
                 $this->logger->info($message, [
@@ -136,7 +136,7 @@ final class Export extends Import
             if (false === ag($context->options, Options::IGNORE_DATE, false)) {
                 if (true === ($after instanceof DateTimeInterface) && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
-                        'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than last sync date.',
+                        'Ignoring [{backend}] [{item.title}]. Backend date is equal or newer than last sync date.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -154,7 +154,7 @@ final class Export extends Import
 
             if (null === ($entity = $mapper->get($rItem))) {
                 $this->logger->info(
-                    'Ignoring [%(backend)] [%(item.title)]. %(item.type) Is not imported yet. Possibly because the backend was imported as metadata only.',
+                    'Ignoring [{backend}] [{item.title}]. {item.type} Is not imported yet. Possibly because the backend was imported as metadata only.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -167,7 +167,7 @@ final class Export extends Import
             if ($rItem->watched === $entity->watched) {
                 if (true === (bool)ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
-                        'Ignoring [%(backend)] [%(item.title)]. %(item.type) play state is identical.',
+                        'Ignoring [{backend}] [{item.title}]. {item.type} play state is identical.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -185,7 +185,7 @@ final class Export extends Import
 
             if ($rItem->updated >= $entity->updated && false === ag($context->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
-                    'Ignoring [%(backend)] [%(item.title)]. Backend date is equal or newer than database date.',
+                    'Ignoring [{backend}] [{item.title}]. Backend date is equal or newer than database date.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -214,7 +214,7 @@ final class Export extends Import
             $logContext['item']['url'] = $url;
 
             $this->logger->debug(
-                'Queuing Request to change [%(backend)] [%(item.title)] play state to [%(play_state)].',
+                'Queuing Request to change [{backend}] [{item.title}] play state to [{play_state}].',
                 [
                     'backend' => $context->backendName,
                     'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
@@ -242,7 +242,7 @@ final class Export extends Import
             );
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] export.',
+                'Unhandled exception was thrown during handling of [{backend}] [{library.title}] [{item.title}] export.',
                 [
                     'backend' => $context->backendName,
                     ...$logContext,

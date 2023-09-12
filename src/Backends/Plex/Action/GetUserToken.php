@@ -59,7 +59,7 @@ final class GetUserToken
                 ->withPort(443)->withScheme('https')->withHost('plex.tv')
                 ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
 
-            $this->logger->debug('Requesting temporary access token for [%(backend)] user [%(username)].', [
+            $this->logger->debug('Requesting temporary access token for [{backend}] user [{username}].', [
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
@@ -78,7 +78,7 @@ final class GetUserToken
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Request for temporary access token for [%(backend)] user [%(username)] failed due to rate limit. error 429.',
+                        message: 'Request for temporary access token for [{backend}] user [{username}] failed due to rate limit. error 429.',
                         context: [
                             'backend' => $context->backendName,
                             'username' => $username,
@@ -95,7 +95,7 @@ final class GetUserToken
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Request for [%(backend)] user [%(username)] temporary access token responded with unexpected [%(status_code)] status code.',
+                        message: 'Request for [{backend}] user [{username}] temporary access token responded with unexpected [{status_code}] status code.',
                         context: [
                             'backend' => $context->backendName,
                             'username' => $username,
@@ -115,7 +115,7 @@ final class GetUserToken
             );
 
             if ($context->trace) {
-                $this->logger->debug('Parsing temporary access token for [%(backend)] user [%(username)] payload.', [
+                $this->logger->debug('Parsing temporary access token for [{backend}] user [{username}] payload.', [
                     'backend' => $context->backendName,
                     'username' => $username,
                     'user_id' => $userId,
@@ -136,7 +136,7 @@ final class GetUserToken
                     ])
                 );
 
-            $this->logger->debug('Requesting permanent access token for [%(backend)] user [%(username)].', [
+            $this->logger->debug('Requesting permanent access token for [{backend}] user [{username}].', [
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
@@ -158,7 +158,7 @@ final class GetUserToken
             );
 
             if ($context->trace) {
-                $this->logger->debug('Parsing permanent access token for [%(backend)] user [%(username)] payload.', [
+                $this->logger->debug('Parsing permanent access token for [{backend}] user [{username}] payload.', [
                     'backend' => $context->backendName,
                     'username' => $username,
                     'user_id' => $userId,
@@ -184,7 +184,7 @@ final class GetUserToken
             }
 
             $this->logger->error(
-                'Response had [%(count)] associated servers, non match [%(backend) - [%(backend_id)] unique identifier.',
+                'Response had [{count}] associated servers, non match [{backend} - [{backend_id}] unique identifier.',
                 [
                     'count' => count(($json)),
                     'backend' => $context->backendName,
@@ -196,7 +196,7 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'No permanent access token was found for [%(username)] in [%(backend)] response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [-vvv --trace --context] flags for more information.',
+                    message: 'No permanent access token was found for [{username}] in [{backend}] response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [-vvv --trace --context] flags for more information.',
                     context: [
                         'backend' => $context->backendName,
                         'username' => $username,
@@ -209,7 +209,7 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Unhandled exception was thrown during request for [%(backend)] [%(username)] access token.',
+                    message: 'Unhandled exception was thrown during request for [{backend}] [{username}] access token.',
                     context: [
                         'backend' => $context->backendName,
                         'username' => $username,

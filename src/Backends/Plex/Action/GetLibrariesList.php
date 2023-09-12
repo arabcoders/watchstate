@@ -45,7 +45,7 @@ final class GetLibrariesList
     {
         $url = $context->backendUrl->withPath('/library/sections');
 
-        $this->logger->debug('Requesting [%(backend)] libraries list.', [
+        $this->logger->debug('Requesting [{backend}] libraries list.', [
             'backend' => $context->backendName,
             'url' => (string)$url
         ]);
@@ -55,7 +55,7 @@ final class GetLibrariesList
         $payload = $response->getContent(false);
 
         if ($context->trace) {
-            $this->logger->debug('Processing [%(backend)] response.', [
+            $this->logger->debug('Processing [{backend}] response.', [
                 'backend' => $context->backendName,
                 'url' => (string)$url,
                 'response' => $payload,
@@ -66,7 +66,7 @@ final class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [%(backend)] libraries returned with unexpected [%(status_code)] status code.',
+                    message: 'Request for [{backend}] libraries returned with unexpected [{status_code}] status code.',
                     context: [
                         'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
@@ -85,7 +85,7 @@ final class GetLibrariesList
         unset($payload);
 
         if ($context->trace) {
-            $this->logger->debug('Parsing [%(backend)] libraries payload.', [
+            $this->logger->debug('Parsing [{backend}] libraries payload.', [
                 'backend' => $context->backendName,
                 'trace' => $json,
             ]);
@@ -97,7 +97,7 @@ final class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [%(backend)] libraries returned empty list.',
+                    message: 'Request for [{backend}] libraries returned empty list.',
                     context: [
                         'backend' => $context->backendName,
                         'response' => [

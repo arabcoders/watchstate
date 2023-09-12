@@ -41,7 +41,7 @@ final class GetIdentifier
             fn: function () use ($context, $opts) {
                 $url = $context->backendUrl->withPath('/');
 
-                $this->logger->debug('Requesting [%(client): %(backend)] unique identifier.', [
+                $this->logger->debug('Requesting [{client}: {backend}] unique identifier.', [
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'url' => $url
@@ -59,7 +59,7 @@ final class GetIdentifier
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [%(backend)] %(action) returned with unexpected [%(status_code)] status code.',
+                            message: 'Request for [{backend}] {action} returned with unexpected [{status_code}] status code.',
                             context: [
                                 'action' => $this->action,
                                 'client' => $context->clientName,
@@ -80,7 +80,7 @@ final class GetIdentifier
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [%(client): %(backend)] %(action) payload.', [
+                    $this->logger->debug('Processing [{client}: {backend}] {action} payload.', [
                         'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,

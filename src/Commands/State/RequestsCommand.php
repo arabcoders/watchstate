@@ -102,7 +102,7 @@ class RequestsCommand extends Command
                 $lastSync = makeDate($lastSync);
             }
 
-            $this->logger->notice('SYSTEM: Processing [%(backend)] [%(title)] %(tainted) request.', [
+            $this->logger->notice('SYSTEM: Processing [{backend}] [{title}] {tainted} request.', [
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),

@@ -35,7 +35,7 @@ final class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [%(backend)] payload.', [
+                $this->logger->debug('Processing [{backend}] payload.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'payload' => $item,
@@ -150,7 +150,7 @@ final class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during handling of [%(backend)] [%(library.title)] [%(item.title)] backup.',
+                'Unhandled exception was thrown during handling of [{backend}] [{library.title}] [{item.title}] backup.',
                 [
                     'backend' => $context->backendName,
                     ...$logContext,

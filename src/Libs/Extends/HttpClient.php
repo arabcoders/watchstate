@@ -34,7 +34,7 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
                 $headers[$key] = in_array(strtolower($key), $this->blacklisted) ? '**hidden**' : $value;
             }
 
-            $this->logger->debug('HttpClient - Request [ %(method): %(url)]', [
+            $this->logger->debug('HttpClient - Request [ {method}: {url}]', [
                 'method' => $method,
                 'url' => $url,
                 'options' => array_replace_recursive($options, [
