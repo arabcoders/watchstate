@@ -450,7 +450,7 @@ final class Initializer
         ];
 
         foreach (require $dirList as $dir) {
-            $dir = str_replace(array_keys($list), array_values($list), $dir);
+            $dir = r($dir, $list);
 
             if (false === file_exists($dir)) {
                 if (false === @mkdir($dir, 0755, true) && false === is_dir($dir)) {

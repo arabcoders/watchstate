@@ -329,13 +329,13 @@ final class PDOAdapter implements iDB
 
     public function commit(array $entities, array $opts = []): array
     {
-        $actions = [
-            'added' => 0,
-            'updated' => 0,
-            'failed' => 0,
-        ];
+        return $this->transactional(function () use ($entities) {
+            $actions = [
+                'added' => 0,
+                'updated' => 0,
+                'failed' => 0,
+            ];
 
-        return $this->transactional(function () use ($entities, $actions) {
             foreach ($entities as $entity) {
                 try {
                     if (null === $entity->id) {
@@ -474,7 +474,7 @@ final class PDOAdapter implements iDB
      */
     private function pdoInsert(string $table, array $columns): string
     {
-        $queryString = "INSERT INTO {$table} (%(columns)) VALUES(%(values))";
+        $queryString = "INSERT INTO {$table} ({columns}) VALUES({values})";
 
         $sql_columns = $sql_placeholder = [];
 
@@ -488,7 +488,7 @@ final class PDOAdapter implements iDB
         }
 
         $queryString = str_replace(
-            ['%(columns)', '%(values)'],
+            ['{columns}', '{values}'],
             [implode(', ', $sql_columns), implode(', ', $sql_placeholder)],
             $queryString
         );
@@ -506,7 +506,7 @@ final class PDOAdapter implements iDB
     private function pdoUpdate(string $table, array $columns): string
     {
         /** @noinspection SqlWithoutWhere */
-        $queryString = "UPDATE {$table} SET %(place) = %(holder) WHERE " . iState::COLUMN_ID . " = :id";
+        $queryString = "UPDATE {$table} SET {place} = {holder} WHERE " . iState::COLUMN_ID . " = :id";
 
         $placeholders = [];
 
@@ -517,7 +517,7 @@ final class PDOAdapter implements iDB
             $placeholders[] = r('{column} = :{column}', ['column' => $column]);
         }
 
-        return trim(str_replace('%(place) = %(holder)', implode(', ', $placeholders), $queryString));
+        return trim(str_replace('{place} = {holder}', implode(', ', $placeholders), $queryString));
     }
 
     /**
