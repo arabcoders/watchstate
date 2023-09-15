@@ -445,8 +445,8 @@ final class Initializer
         };
 
         $list = [
-            '{path}' => $fn('path', $path),
-            '{tmpDir}' => $fn('tmpDir', $tmpDir),
+            'path' => $fn('path', $path),
+            'tmp_dir' => $fn('tmpDir', $tmpDir),
         ];
 
         foreach (require $dirList as $dir) {
