@@ -509,4 +509,10 @@ something like `redis://redis:6379?password=my_secert_password&db=8`. We only su
 
 Once that done, restart the container.
 
+### There are weirdly named directories in my data path?
 
+Unfortunately, That was due to a bug introduced in (2023-09-12 877a41a) and was fixed in (2023-09-19 a2f8c8a), if you
+have happened to installation or update during this period, you will have those directories. To fix this issue, you
+can simply delete those folders `%(tmpDir)` `%(path)` `{path}` `{tmpDir}`. I decided to not do it automatically to avoid
+any data loss. you should check the directories to make sure they are empty. if not copy the directories to the correct
+location and delete the empty directories.
