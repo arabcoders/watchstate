@@ -14,23 +14,6 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ----
 
-### Breaking change in plex webhook handling.
-
-If you happen to have enabled plex webhooks and had `limit webhook requests to the selected user`, plex in recent
-versions managed to fix bug in old versions where they report the admin account user id as `1` regardless of whether you
-have single or multi-user setup. We have a fix in place `(2023-08-28)` to update the user id to the actual user id from
-plex.tv. However, Sadly this step is manual you have to rerun the `config:manage` command and re-select your user to
-update the value. To fix this please run the command
-
-```bash
-$ docker exec -ti watchstate config:manage [BACKEND_NAME]
-```
-
-And select your actual user which you want to process the webhooks events from. once that fixed you won't be missing
-events from webhooks.
-
-----
-
 # Install
 
 create your `docker-compose.yaml` with the following content:
