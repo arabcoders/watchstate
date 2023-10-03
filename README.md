@@ -152,7 +152,8 @@ support and answers to many questions.
 If you have short or quick questions, you are free to join my [discord server](https://discord.gg/haUXHJyj6Y) and ask
 the question. keep in mind it's solo project, as such it might take me a bit of time to reply.
 
-# Donation
+# Donate
 
-If you appreciate my work, then please consider donating to children charity. For
-example [Make A Wish](https://worldwish.org). It's highly appreciated.
+If you feel like donating and appreciate my work, you can do so by donating to children charity. For
+example [Make-A-Wish](https://worldwish.org). It's highly appreciated. I Personally don't need the money, but I do
+appreciate the gesture. Making a child happy is the best thing you can do in this world.
