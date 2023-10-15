@@ -36,6 +36,7 @@ jobs:
         with:
           filename: '/config/config.php'
           placeholder: '$(version_via_ci)'
+          no_date: true
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
