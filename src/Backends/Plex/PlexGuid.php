@@ -19,7 +19,7 @@ final class PlexGuid implements iGuid
         'tvmaze' => Guid::GUID_TVMAZE,
         'tvrage' => Guid::GUID_TVRAGE,
         'anidb' => Guid::GUID_ANIDB,
-        'ytinforeader' => Guid::GUID_YOUTUBE,
+        'youtube' => Guid::GUID_YOUTUBE,
     ];
 
     private const GUID_LEGACY = [
@@ -30,7 +30,7 @@ final class PlexGuid implements iGuid
         'com.plexapp.agents.xbmcnfotv',
         'com.plexapp.agents.thetvdb',
         'com.plexapp.agents.hama',
-        'com.plexapp.agents.ytinforeader',
+        'com.plexapp.agents.youtube'
     ];
 
     private const GUID_LOCAL = [
@@ -119,9 +119,11 @@ final class PlexGuid implements iGuid
 
                 if (true === str_starts_with($val, 'com.plexapp.agents.')) {
                     // -- DO NOT accept plex relative unique ids, we generate our own.
-                    if (substr_count($val, '/') >= 3) {
+                    // -- exception for youtube agent, as it is a mess.
+                    if (false === str_contains($val, '.youtube') && substr_count($val, '/') >= 3) {
                         continue;
                     }
+
                     $val = $this->parseLegacyAgent(guid: $val, context: $context, log: $log);
                 }
 
@@ -131,7 +133,7 @@ final class PlexGuid implements iGuid
                             'Unable to parse [{backend}] [{agent}] identifier.',
                             [
                                 'backend' => $this->context->backendName,
-                                'agent' => $val ?? null,
+                                'agent' => $val,
                                 ...$context
                             ]
                         );
@@ -194,7 +196,7 @@ final class PlexGuid implements iGuid
                         'Unhandled exception was thrown in parsing of [{backend}] [{agent}] identifier.',
                         [
                             'backend' => $this->context->backendName,
-                            'agent' => $val ?? null,
+                            'agent' => $val,
                             'exception' => [
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
@@ -232,6 +234,45 @@ final class PlexGuid implements iGuid
         }
 
         try {
+            /**
+             * YouTube agent IDs are a mess, and hard to parse, so we have to use fallback system,
+             * series id usually looks like
+             * com.plexapp.agents.youtube://youtube|UCIfuY0NRq1szr_6tzFy23NF|Season 2022?lang=xn
+             * and season looks like
+             * com.plexapp.agents.youtube://youtube|UCIfuY0NRq1szr_6tzFy23NF|Season 2023/2015?lang=xn
+             * and episodes looks like
+             * com.plexapp.agents.youtube://youtube|UCIfuY0NRq1szr_6tzFy23NF|Season 2022/2018/1102421482?lang=xn
+             *
+             * So the order of parsing is from episode to channel.
+             */
+            if (true === str_starts_with($guid, 'com.plexapp.agents.youtube')) {
+                $af = after($guid, '://');
+
+                $pRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)?/is';
+                $iRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)\/(?<season>\d+)\/(?<episode>\d+)\?.+$/is';
+
+                // -- Check for episode id.
+                if (1 === preg_match($iRegex, $af, $matches)) {
+                    return r('{agent}://{channel}/{season}/{episode}', [
+                        'agent' => Guid::GUID_YOUTUBE,
+                        'channel' => ag($matches, 'channel'),
+                        'season' => ag($matches, 'season'),
+                        'episode' => ag($matches, 'episode'),
+                    ]);
+                }
+
+                // -- fallback to channel if episode match fails.
+                if (1 === preg_match($pRegex, $af, $matches)) {
+                    return r('{agent}://{channel}', [
+                        'agent' => Guid::GUID_YOUTUBE,
+                        'channel' => ag($matches, 'channel'),
+                    ]);
+                }
+
+                $this->logger->warning('failed to parse {guid}', ['guid' => $guid]);
+                return $guid;
+            }
+
             // -- Handle hama plex agent. This is multi source agent.
             if (true === str_starts_with($guid, 'com.plexapp.agents.hama')) {
                 $hamaRegex = '/(?P<source>(anidb|tvdb|tmdb|tsdb|imdb))\d?-(?P<id>[^\[\]]*)/';
