@@ -19,6 +19,7 @@ final class PlexGuid implements iGuid
         'tvmaze' => Guid::GUID_TVMAZE,
         'tvrage' => Guid::GUID_TVRAGE,
         'anidb' => Guid::GUID_ANIDB,
+        'ytinforeader' => Guid::GUID_YOUTUBE,
     ];
 
     private const GUID_LEGACY = [
@@ -29,6 +30,7 @@ final class PlexGuid implements iGuid
         'com.plexapp.agents.xbmcnfotv',
         'com.plexapp.agents.thetvdb',
         'com.plexapp.agents.hama',
+        'com.plexapp.agents.ytinforeader',
     ];
 
     private const GUID_LOCAL = [
