@@ -41,7 +41,7 @@ RUN echo '' && \
     bash -c 'umask 0000 && mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks,profiler}' && \
     # Link console & php.
     bash -c "ln -s /usr/sbin/php-fpm${PHP_V:3} /usr/sbin/php-fpm" && \
-    ln -s /usr/bin/${PHP_V} /usr/bin/php && ln -s ${TOOL_PATH}/bin/console /opt/bin/console && \
+    ln -s ${TOOL_PATH}/bin/console /opt/bin/console && \
     # we are running rootless, so user,group config options has no affect.
     sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf && \
