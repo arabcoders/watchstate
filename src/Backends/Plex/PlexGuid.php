@@ -248,13 +248,11 @@ final class PlexGuid implements iGuid
             if (true === str_starts_with($guid, 'com.plexapp.agents.youtube')) {
                 $af = after($guid, '://');
 
-                $pRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)?/is';
-                $iRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)\/(?<season>\d+)\/(?<episode>\d+)\?.+$/is';
-
                 // -- Check for episode id.
+                $iRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)\/(?<season>\d+)\/(?<episode>\d+)\?.+$/is';
                 if (1 === preg_match($iRegex, $af, $matches)) {
                     return r('{agent}://{channel}/{season}/{episode}', [
-                        'agent' => Guid::GUID_YOUTUBE,
+                        'agent' => 'youtube',
                         'channel' => ag($matches, 'channel'),
                         'season' => ag($matches, 'season'),
                         'episode' => ag($matches, 'episode'),
@@ -262,14 +260,14 @@ final class PlexGuid implements iGuid
                 }
 
                 // -- fallback to channel if episode match fails.
+                $pRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)?/is';
                 if (1 === preg_match($pRegex, $af, $matches)) {
                     return r('{agent}://{channel}', [
-                        'agent' => Guid::GUID_YOUTUBE,
+                        'agent' => 'youtube',
                         'channel' => ag($matches, 'channel'),
                     ]);
                 }
 
-                $this->logger->warning('failed to parse {guid}', ['guid' => $guid]);
                 return $guid;
             }
 
