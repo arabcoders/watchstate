@@ -35,6 +35,26 @@ final class Guid implements JsonSerializable, Stringable
             'pattern' => '/tt(\d+)/i',
             'example' => 'tt(number)',
         ],
+        Guid::GUID_TMDB => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_TVDB => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_TVMAZE => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_TVRAGE => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_ANIDB => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
     ];
 
     private const LOOKUP_KEY = '{db}://{id}';
@@ -46,7 +66,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * Create List of db => external id list.
      *
-     * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     * @param array $guids A Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
      * @param array $context
      */
     public function __construct(array $guids, array $context = [])
@@ -234,7 +254,7 @@ final class Guid implements JsonSerializable, Stringable
         return self::$logger;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
         return $this->getAll();
     }
