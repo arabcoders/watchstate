@@ -18,6 +18,7 @@ final class Guid implements JsonSerializable, Stringable
     public const GUID_TVMAZE = 'guid_tvmaze';
     public const GUID_TVRAGE = 'guid_tvrage';
     public const GUID_ANIDB = 'guid_anidb';
+    public const GUID_YOUTUBE = 'guid_youtube';
 
     private const SUPPORTED = [
         Guid::GUID_IMDB => 'string',
@@ -26,13 +27,34 @@ final class Guid implements JsonSerializable, Stringable
         Guid::GUID_TVMAZE => 'string',
         Guid::GUID_TVRAGE => 'string',
         Guid::GUID_ANIDB => 'string',
+        Guid::GUID_YOUTUBE => 'string',
     ];
 
     private const VALIDATE_GUID = [
         Guid::GUID_IMDB => [
             'pattern' => '/tt(\d+)/i',
             'example' => 'tt(number)',
-        ]
+        ],
+        Guid::GUID_TMDB => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_TVDB => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_TVMAZE => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_TVRAGE => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
+        Guid::GUID_ANIDB => [
+            'pattern' => '/^[0-9\/]+$/i',
+            'example' => '(number)',
+        ],
     ];
 
     private const LOOKUP_KEY = '{db}://{id}';
@@ -44,7 +66,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * Create List of db => external id list.
      *
-     * @param array $guids Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     * @param array $guids A Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
      * @param array $context
      */
     public function __construct(array $guids, array $context = [])
@@ -232,7 +254,7 @@ final class Guid implements JsonSerializable, Stringable
         return self::$logger;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
         return $this->getAll();
     }

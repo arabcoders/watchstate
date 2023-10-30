@@ -18,7 +18,7 @@ class JellyfinGuid implements iGuid
         'tvdb' => Guid::GUID_TVDB,
         'tvmaze' => Guid::GUID_TVMAZE,
         'tvrage' => Guid::GUID_TVRAGE,
-        'anidb' => Guid::GUID_ANIDB,
+        'ytinforeader' => Guid::GUID_YOUTUBE,
     ];
 
     private Context|null $context = null;

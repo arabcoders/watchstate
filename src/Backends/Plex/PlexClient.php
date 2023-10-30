@@ -65,6 +65,7 @@ class PlexClient implements iClient
         'com.plexapp.agents.xbmcnfotv',
         'com.plexapp.agents.thetvdb',
         'com.plexapp.agents.hama',
+        'com.plexapp.agents.youtube',
         'tv.plex.agents.movie',
         'tv.plex.agents.series',
     ];

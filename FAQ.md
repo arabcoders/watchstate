@@ -516,3 +516,34 @@ have happened to installation or update during this period, you will have those 
 can simply delete those folders `%(tmpDir)` `%(path)` `{path}` `{tmpDir}`. I decided to not do it automatically to avoid
 any data loss. you should check the directories to make sure they are empty. if not copy the directories to the correct
 location and delete the empty directories.
+
+### How to get WatchState working with YouTube content/library?
+
+Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
+media agents. Please visit [this link](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin#usage) to know how to
+name your files. Please be aware these plugins and scanners `REQUIRE` that you have a `yt-dlp` `.info.json` files named
+exactly as your media file. For example, if you have `20231030 my awesome youtube video [youtube-RandomString].mkv` you
+should have `20231030 my awesome youtube video [youtube-RandomString].info.json` in the same directory. In the future, I
+plan to make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to work.
+
+#### Plex Setup
+
+* Download this agent [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) please follow the
+  instructions on how to install it from the link itself.
+* Download my custom scanner [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) and
+  save it into `[...]/Plex Media Server/Scanners/Series/jp_scanner.py` if you don't know there are more detailed guide
+  at this link [How to install a Scanner](https://github.com/ZeroQI/Absolute-Series-Scanner#install--update).
+
+#### Jellyfin Setup
+
+* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin). Please
+  refer to the link on how to install it.
+
+### Emby Setup
+
+* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin).
+  Please refer to the link on how to install it.
+
+If you media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
+jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the
+relevant data if they are not matching correctly, and we hopefully can resolve it. 
