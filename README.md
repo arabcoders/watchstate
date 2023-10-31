@@ -14,6 +14,22 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ----
 
+### 2023-10-31 Update
+
+Added new command to run parity check on database records and make sure that you backends are reporting the same data.
+You can use the new command by running the following command:
+
+```bash
+$ docker exec -ti watchstate console state:parity
+```
+
+This command run locally on your watchstate db, thus no strain is put on your backends. However, the command is
+resource intensive, and can take a while to finish. It's recommended to run this command once in a while or if you have
+watchstate db stored on NVME drive, then you can totally ignore the warning. I Personally store my docker containers on
+NVME and the command takes about 3 secs to load th entire database.
+
+----
+
 # Install
 
 create your `docker-compose.yaml` with the following content:
