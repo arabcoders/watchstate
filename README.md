@@ -20,7 +20,7 @@ Added new command to run parity check on database records and make sure that you
 You can use the new command by running the following command:
 
 ```bash
-$ docker exec -ti watchstate console state:parity
+$ docker exec -ti watchstate console db:parity
 ```
 
 This command run locally on your watchstate db, thus no strain is put on your backends. However, the command is
