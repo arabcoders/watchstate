@@ -260,7 +260,7 @@ final class PlexGuid implements iGuid
                 }
 
                 // -- fallback to channel if episode match fails.
-                $pRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)?/is';
+                $pRegex = '/^youtube\|(?<channel>PL[^\[\]]{32}|PL[^\[\]]{16}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)?/is';
                 if (1 === preg_match($pRegex, $af, $matches)) {
                     return r('{agent}://{channel}', [
                         'agent' => 'youtube',

@@ -13,6 +13,7 @@ use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 
 #[Routable(command: self::ROUTE)]
@@ -39,8 +40,9 @@ final class ParityCommand extends Command
             )
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit returned results.', 1000)
-            ->addOption('count', null, InputOption::VALUE_NONE, 'Disregard limit and display total count.')
-            ->addOption('distinct', null, InputOption::VALUE_NONE, 'Report distinct records only.')
+            ->addOption('count', 't', InputOption::VALUE_NONE, 'Disregard limit and display total count.')
+            ->addOption('distinct', 'd', InputOption::VALUE_NONE, 'Report distinct records only.')
+            ->addOption('prune', 'p', InputOption::VALUE_NONE, 'Remove all matching records from db.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -73,6 +75,15 @@ final class ParityCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--minimum</flag> <value>3</value>
 
+                    <question># I fixed the records how do i remove them from database?</question>
+
+                    You can use the [<flag>--prune</flag>] flag to remove all matching records from database. For Example,
+                    {cmd} <cmd>{route}</cmd> <flag>--prune</flag>
+
+                    This command require <notice>INTERACTION</notice> to actually delete data otherwise it won't work.
+                    And it doesn't work in combination with [<flag>--count</flag>] or [<flag>--distinct</flag>] flags.
+                    However, it does work with [<flag>--limit</flag>] and [<flag>--minimum</flag>] flags.
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
@@ -86,6 +97,7 @@ final class ParityCommand extends Command
     {
         $countRequest = (bool)$input->getOption('count');
         $distinct = (bool)$input->getOption('distinct');
+        $prune = (bool)$input->getOption('prune');
         $limit = (int)$input->getOption('limit');
         $counter = $input->hasOption('minimum') ? (int)$input->getOption('minimum') : 0;
 
@@ -125,8 +137,9 @@ final class ParityCommand extends Command
                 {$distinctSQL}
             ";
         } else {
+            $sqlFields = $prune ? 'id' : '*';
             $sql = "SELECT
-                    *,
+                    {$sqlFields},
                     ( SELECT COUNT(*) FROM JSON_EACH(state.metadata) ) as total_md
                 FROM
                     state
@@ -161,6 +174,64 @@ final class ParityCommand extends Command
         if (empty($rows)) {
             $output->writeln('<info>No records matched the criteria.</info>');
             return self::INVALID;
+        }
+
+        if (true === $prune) {
+            $tty = !(function_exists('stream_isatty') && defined('STDERR')) || stream_isatty(STDERR);
+            if (false === $tty || $input->getOption('no-interaction')) {
+                $output->writeln(
+                    r(
+                        <<<ERROR
+                        <error>ERROR:</error> This command require <notice>interaction</notice>. For example:
+                        {cmd} <cmd>{route}</cmd> <flag>--prune</flag>
+                        ERROR,
+                        [
+                            'cmd' => trim(commandContext()),
+                            'route' => self::ROUTE,
+                        ]
+                    )
+                );
+                return self::FAILURE;
+            }
+
+            $helper = $this->getHelper('question');
+
+            $question = new ConfirmationQuestion(
+                r(
+                    <<<HELP
+                    <question>Are you sure you want to delete [<value>{count}</value>] records from database</question>? {default}
+                    ------------------
+                    <notice>NOTICE:</notice> You would have to re-import the records using [<cmd>state:import</cmd>] command.
+                    ------------------
+                    <notice>For more information please read the FAQ.</notice>
+                    HELP. PHP_EOL . '> ',
+                    [
+                        'count' => count($rows),
+                        'cmd' => trim(commandContext()),
+                        'default' => '[<value>Y|N</value>] [<value>Default: No</value>]',
+                    ]
+                ),
+                false,
+            );
+
+            if (true !== $helper->ask($input, $output, $question)) {
+                $output->writeln('<info>Pruning aborted.</info>');
+                return self::SUCCESS;
+            }
+
+            $ids = array_column($rows, 'id');
+            $this->db->getPDO()->exec("DELETE FROM state WHERE id IN (" . join(',', $ids) . ")");
+
+            $output->writeln(
+                r(
+                    '<info>Pruned [<value>{count}</value>] records.</info>',
+                    [
+                        'count' => count($ids),
+                    ]
+                )
+            );
+
+            return self::SUCCESS;
         }
 
         if ('table' === $input->getOption('output')) {
