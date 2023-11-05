@@ -13,7 +13,28 @@ $ docker exec -ti watchstate console help [COMMAND_NAME]
 ```
 
 It will show you the relevant information regarding the command and some frequently asked question about that command.
-**The help document attached to each command is more up to date and precise. So, please read it.**
+
+*
+
+*The
+help
+document
+attached
+to
+each
+command
+is
+more
+up
+to
+date
+and
+precise.
+So,
+please
+read
+it.
+**
 
 ----
 
@@ -39,8 +60,9 @@ to see the status of your scheduled tasks, simply run the following command:
 $ docker exec -ti watchstate console system:tasks
 ```
 
-**Note**: All scheduled tasks are configured via the same variables style, refer
-to [Tool specific environment variables](#tool-specific-environment-variables) for more information.
+> [!NOTE]
+> All scheduled tasks are configured via the same variables style, refer
+> to [Tool specific environment variables](#tool-specific-environment-variables) for more information.
 
 ----
 
@@ -137,7 +159,8 @@ No, The tool is designed to work for single user. However, It's possible to run 
 use single container for all users, however it's not really easy refer
 to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
 
-**Note**: for Plex home/managed users run the following command to extract each managed user access token.
+> [!IMPORTANT]
+> for Plex home/managed users run the following command to extract each managed user access token.
 
 ```bash
 $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
@@ -228,6 +251,8 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
+* com.plexapp.agents.youtube://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
+* com.plexapp.agents.youtube://youtube|(seriesId)|(?<folder>\w)?/(?<season>\d)?(.+) [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) With [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
 
 ---
 
@@ -239,6 +264,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvmaze://(id)
 * tvrage://(id)
 * anidb://(id)
+* YTINFOReader://(id) [jellyfin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin). A yt-dlp plugin for both emby & jellyfin.
 
 ---
 
@@ -276,8 +302,14 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_TRUST_HEADER          | string  | Which header contain user true IP.                                      | `X-Forwarded-For`  |
 | WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number. | `1000`             |
 
-**Note**: for environment variables that has `{TASK}` tag, you **MUST** replace it with one
-of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
+> [!IMPORTANT]
+> for environment variables that has `{TASK}` tag, you
+
+*
+
+*MUST
+** replace it with one
+> of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
 
 ```bash
 $ docker exec -ti watchstate console system:tasks
@@ -369,9 +401,9 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 Click `Save Changes`
 
-**Note**: If you use multiple plex servers and use the same PlexPass account for all of them, you have to unify the API
-key, by
-running the following command:
+> [!IMPORTANT]
+> If you use multiple plex servers and use the same PlexPass account for all of them, you have to unify the API key, by
+> running the following command:
 
 ```bash
 $ docker exec -ti watchstate console config:unify plex 
@@ -387,10 +419,10 @@ information run.
 $ docker exec -ti watchstate console help config:unify 
 ```
 
-**Note**: If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id,
-otherwise
-their play state will end up changing your play state. Plex will still send their events. But with match user id they
-will be ignored.
+> [!IMPORTANT]
+> If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise
+> their play state will end up changing your play state. Plex will still send their events. But with match user id they
+> will be ignored.
 
 -----
 
