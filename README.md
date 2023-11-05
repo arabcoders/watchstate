@@ -61,11 +61,10 @@ After creating your docker compose file, start the container.
 $ mkdir -p ./data && docker-compose pull && docker-compose up
 ```
 
-> [!NOTE]
+> [!IMPORTANT]
 > It's really important to match the `user:` to the owner of the `data` directory, the container is rootless, as such
 > it will crash if it's unable to write to the data directory. It's really not recommended to run containers as root,
-> but
-> if you fail to run the container you can try setting the `user: "0:0"` if that works it means you have permissions
+> but if you fail to run the container you can try setting the `user: "0:0"` if that works it means you have permissions
 > issues. refer to [FAQ](FAQ.md) to troubleshoot the problem.
 
 > [!NOTE]
