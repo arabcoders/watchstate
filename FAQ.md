@@ -136,23 +136,24 @@ database state back to the selected backend.
 ### Is there support for Multi-user setup?
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
-use single container for all users, however it's not really easy refer to [issue #136](https://github.com/ArabCoders/watchstate/issues/136). For `Jellyfin` and `Emby`, you can just generate new API tokens. and link the to users.
+use single container for all users, however it's not really easy refer to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
 
-> [!IMPORTANT]
-> for Plex home and managed users run the following command to extract each managed user access token.
+For `Jellyfin` and `Emby`, you can just generate new API tokens and link it to a user.
+
+For Plex, You should use your admin token and by running the `config:add` command and selecting a user the tool will attempt to generate a token for that user.
+
+> [!Note]
+> If the tool fails to generate a access token for the user, you can run the following command to generate the access token manually.
 
 ```bash
 $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
 ```
 
-You shouldn't attempt to manually generate access tokens, and rely on `config:add` to generate them by using `admin token`. However,
-If you face any auth issues, then generate the tokens manually.
-
 ----
 
 ### Does this tool require webhooks to work?
 
-No, You can use the task scheduler or on demand sync "manually running import and export" if you want.
+No, You can use the `task scheduler` or on `demand sync` if you want.
 
 ---
 
@@ -308,12 +309,13 @@ $ docker exec -ti watchstate console system:tasks
 To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be like this:
 
 Directly to container: `http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
+
 Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
 
 If your media backend support sending headers then remove query parameter `?apikey=[WEBHOOK_TOKEN]`, and add this header
 
 ```
-X-apikey: [WEBHOOK_TOKEN]
+x-apikey: [WEBHOOK_TOKEN]
 ```
 
 where `[WEBHOOK_TOKEN]` Should match the backend `webhook.token` value. To see your webhook token for each backend run:
