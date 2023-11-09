@@ -21,7 +21,8 @@ It will show you the relevant information regarding the command and some frequen
 
 ### How to turn on scheduled tasks for import/export?
 
-Scheduled tasks are configured via specific environment variables refers to [environment variables](#environment-variables) section, to turn on the import/export tasks add the following
+Scheduled tasks are configured via specific environment variables refers
+to [environment variables](#environment-variables) section, to turn on the import/export tasks add the following
 environment variables:
 
 * `WS_CRON_IMPORT=1`
@@ -136,14 +137,17 @@ database state back to the selected backend.
 ### Is there support for Multi-user setup?
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
-use single container for all users, however it's not really easy refer to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
+use single container for all users, however it's not really easy refer
+to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
 
 For `Jellyfin` and `Emby`, you can just generate new API tokens and link it to a user.
 
-For Plex, You should use your admin token and by running the `config:add` command and selecting a user the tool will attempt to generate a token for that user.
+For Plex, You should use your admin token and by running the `config:add` command and selecting a user the tool will
+attempt to generate a token for that user.
 
 > [!Note]
-> If the tool fails to generate a access token for the user, you can run the following command to generate the access token manually.
+> If the tool fails to generate a access token for the user, you can run the following command to generate the access
+> token manually.
 
 ```bash
 $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
@@ -232,8 +236,10 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
-* com.plexapp.agents.youtube://youtube|(seriesId)|(?<folder>\w)?/(?<season>\d)?(.+) [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) With [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
-* com.plexapp.agents.cmetadatadb://(id)?(.+) `(Custom metadata db agent)` Will release more information about it at later time.
+* com.plexapp.agents.youtube://youtube|(seriesId)|(?<folder>\w)?/(?<season>
+  \d)?(.+) [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle)
+  With [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
+* com.plexapp.agents.cmdb://(id)?(.+) `(Custom metadata db agent)` Will release more information about it at later time.
 
 ---
 
@@ -245,8 +251,10 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvmaze://(id)
 * tvrage://(id)
 * anidb://(id)
-* ytinforeader://(id) [jellyfin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin). A yt-dlp plugin for both emby & jellyfin.
-* cmetadatadb://(id) `(Custom metadata db agent)` Will release more information about it at later time.
+* ytinforeader://(
+  id) [jellyfin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin).
+  A yt-dlp plugin for both emby & jellyfin.
+* cmdb://(id) `(Custom metadata db agent)` Will release more information about it at later time.
 
 ---
 
@@ -285,7 +293,8 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_LIBRARY_SEGMENT       | integer | Paginate backend library items request. Per request get total X number. | `1000`             |
 
 > [!IMPORTANT]
-> for environment variables that has `{TASK}` tag, you **MUST** replace it with one of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
+> for environment variables that has `{TASK}` tag, you **MUST** replace it with one
+> of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
 
 ```bash
 $ docker exec -ti watchstate console system:tasks
@@ -306,7 +315,8 @@ $ docker exec -ti watchstate console system:tasks
 
 ### How to add webhooks?
 
-To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be like this:
+To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be
+like this:
 
 Directly to container: `http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
 
@@ -385,7 +395,8 @@ $ docker exec -ti watchstate console config:unify plex
 Plex global webhook API key is: [random_string]
 ```
 
-The reason is due to the way plex handle webhooks, And to know which webhook request belong to which backend we have to identify the backends.
+The reason is due to the way plex handle webhooks, And to know which webhook request belong to which backend we have to
+identify the backends.
 The unify command will do the necessary adjustments to handle multiple plex servers setup. for more information run.
 
 ```bash
@@ -393,7 +404,8 @@ $ docker exec -ti watchstate console help config:unify
 ```
 
 > [!IMPORTANT]
-> If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise their play state
+> If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise
+> their play state
 > will end up changing your play state. Plex will still send their events. But with match user id they will be ignored.
 
 -----
@@ -453,22 +465,28 @@ Those are some web hook limitations we discovered for the following media backen
 #### Emby
 
 * Emby does not send webhooks events for newly added items.
-  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~ implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
-* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
+  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
+  implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
+* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
+  played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
 #### Jellyfin
 
-* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you happen to enable `webhook.match.user` for jellyfin.
+* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you
+  happen to enable `webhook.match.user` for jellyfin.
 * Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
 * Even if you select user id, sometimes `itemAdd` event will fire without user data.
-* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set to `Use date scanned into library`. This happens if the media file has been replaced.
+* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set
+  to `Use date scanned into library`. This happens if the media file has been replaced.
 
 ---
 
 ### Sometimes newly added episodes or movies don't make it to webhook endpoint?
 
-As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to complement webhooks,
-you should enable import/export tasks by settings their respective environment variables in your `docker-compose.yaml` file.
+As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
+complement webhooks,
+you should enable import/export tasks by settings their respective environment variables in your `docker-compose.yaml`
+file.
 For more information run help on `system:env` command as well as `system:tasks` command.
 
 ---
@@ -516,23 +534,31 @@ location and delete the empty directories.
 ### How to get WatchState working with YouTube content/library?
 
 Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
-media agents. Please visit [this link](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin#usage) to know how to name your files. Please be aware these plugins and scanners `REQUIRE`
-that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you have `20231030 my awesome youtube video [youtube-RandomString].mkv`
-you should have `20231030 my awesome youtube video [youtube-RandomString].info.json` in the same directory. In the future, I plan to
+media agents. Please visit [this link](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin#usage) to know how to
+name your files. Please be aware these plugins and scanners `REQUIRE`
+that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you
+have `20231030 my awesome youtube video [youtube-RandomString].mkv`
+you should have `20231030 my awesome youtube video [youtube-RandomString].info.json` in the same directory. In the
+future, I plan to
 make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to work.
 
 #### Plex Setup
 
-* Download this agent [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) please follow the instructions on how to install it from the link itself.
-* Download my custom scanner [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) and save it into `[...]/Plex Media Server/Scanners/Series/jp_scanner.py` if you don't know there are more detailed guide at this link [How to install a Scanner](https://github.com/ZeroQI/Absolute-Series-Scanner#install--update).
+* Download this agent [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) please follow the
+  instructions on how to install it from the link itself.
+* Download my custom scanner [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) and
+  save it into `[...]/Plex Media Server/Scanners/Series/jp_scanner.py` if you don't know there are more detailed guide
+  at this link [How to install a Scanner](https://github.com/ZeroQI/Absolute-Series-Scanner#install--update).
 
 #### Jellyfin Setup
 
-* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
+* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin). Please
+  refer to the link on how to install it.
 
 ### Emby Setup
 
-* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
+* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin).
+  Please refer to the link on how to install it.
 
 If you media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
 jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the

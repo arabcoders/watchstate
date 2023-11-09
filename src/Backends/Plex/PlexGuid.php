@@ -20,8 +20,8 @@ final class PlexGuid implements iGuid
         'tvrage' => Guid::GUID_TVRAGE,
         'anidb' => Guid::GUID_ANIDB,
         'youtube' => Guid::GUID_YOUTUBE,
+        'cmdb' => Guid::GUID_CMDB,
     ];
-
     private const GUID_LEGACY = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
@@ -30,15 +30,14 @@ final class PlexGuid implements iGuid
         'com.plexapp.agents.xbmcnfotv',
         'com.plexapp.agents.thetvdb',
         'com.plexapp.agents.hama',
-        'com.plexapp.agents.youtube'
+        'com.plexapp.agents.youtube',
+        'com.plexapp.agents.cmdb',
     ];
-
     private const GUID_LOCAL = [
         'plex',
         'local',
         'com.plexapp.agents.none',
     ];
-
     private const GUID_LEGACY_REPLACER = [
         'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
         'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
@@ -48,7 +47,6 @@ final class PlexGuid implements iGuid
         // -- otherwise fallback to tmdb.
         'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.tmdb://',
     ];
-
     private Context|null $context = null;
 
     /**
