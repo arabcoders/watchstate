@@ -133,7 +133,7 @@ class PushCommand extends Command
                 continue;
             }
 
-            if (null === ($url = ag($backend, 'url')) || false === filter_var($url, FILTER_VALIDATE_URL)) {
+            if (null === ($url = ag($backend, 'url')) || true !== is_string(parse_url($url, PHP_URL_HOST))) {
                 $this->logger->error('SYSTEM: [{backend}] Invalid url.', [
                     'backend' => $backendName,
                     'url' => $url ?? 'None',

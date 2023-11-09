@@ -19,7 +19,7 @@ final class Guid implements JsonSerializable, Stringable
     public const GUID_TVRAGE = 'guid_tvrage';
     public const GUID_ANIDB = 'guid_anidb';
     public const GUID_YOUTUBE = 'guid_youtube';
-
+    public const GUID_CMDB = 'guid_cmdb';
     private const SUPPORTED = [
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
@@ -28,8 +28,8 @@ final class Guid implements JsonSerializable, Stringable
         Guid::GUID_TVRAGE => 'string',
         Guid::GUID_ANIDB => 'string',
         Guid::GUID_YOUTUBE => 'string',
+        Guid::GUID_CMDB => 'string',
     ];
-
     private const VALIDATE_GUID = [
         Guid::GUID_IMDB => [
             'pattern' => '/tt(\d+)/i',
@@ -56,11 +56,8 @@ final class Guid implements JsonSerializable, Stringable
             'example' => '(number)',
         ],
     ];
-
     private const LOOKUP_KEY = '{db}://{id}';
-
     private array $data = [];
-
     private static LoggerInterface|null $logger = null;
 
     /**
