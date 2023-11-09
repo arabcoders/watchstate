@@ -156,8 +156,11 @@ class PlexManage implements ManageInterface
             );
 
             $question->setValidator(function ($answer) {
-                if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new RuntimeException('Invalid URL was selected/given.');
+                $host = parse_url($answer, PHP_URL_HOST);
+                if (false === is_string($answer)) {
+                    throw new RuntimeException(
+                        'Invalid URL was selected/given. Expecting something like http://plex:32400.'
+                    );
                 }
                 return $answer;
             });

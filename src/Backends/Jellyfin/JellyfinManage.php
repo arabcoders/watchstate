@@ -37,8 +37,11 @@ class JellyfinManage implements ManageInterface
             );
 
             $question->setValidator(function ($answer) {
-                if (!filter_var($answer, FILTER_VALIDATE_URL)) {
-                    throw new RuntimeException('Invalid backend URL was given.');
+                $host = parse_url($answer, PHP_URL_HOST);
+                if (false === is_string($answer)) {
+                    throw new RuntimeException(
+                        'Invalid backend URL was given. Expecting something like http://example.com:8096/'
+                    );
                 }
                 return $answer;
             });
