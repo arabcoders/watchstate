@@ -165,6 +165,12 @@ trait PlexActionTrait
 
         if (true === $isPlayed) {
             $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)$date;
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = "0";
+        }
+
+        if (false === $isPlayed && null !== ($progress = ag($item, 'viewOffset', null))) {
+            // -- Plex reports play progress in milliseconds already no need to convert.
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)$progress;
         }
 
         unset($metadata, $metadataExtra);

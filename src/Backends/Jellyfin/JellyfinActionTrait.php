@@ -149,6 +149,13 @@ trait JellyfinActionTrait
 
         if (true === $isPlayed) {
             $metadata[iState::COLUMN_META_DATA_PLAYED_AT] = (string)makeDate($date)->getTimestamp();
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = "0";
+        }
+
+        if (false === $isPlayed && null !== ($progress = ag($item, 'UserData.PlaybackPositionTicks', null))) {
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
+                $progress / 1_00_00
+            ); // -- Convert to milliseconds.
         }
 
         unset($metadata, $metadataExtra);
