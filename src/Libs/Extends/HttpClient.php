@@ -17,6 +17,7 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
     private array $blacklisted = [
         'x-plex-token',
         'x-mediabrowser-token',
+        'authorization'
     ];
 
     private LoggerInterface|null $logger = null;

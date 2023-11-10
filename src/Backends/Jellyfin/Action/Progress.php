@@ -114,14 +114,14 @@ class Progress
 
             try {
                 $url = $context->backendUrl->withPath(
-                    r('/Users/{user_id}/PlayingItems/{item_id}/Progress', [
+                    r('/Users/{user_id}/PlayingItems/{item_id}', [
                         'user_id' => $context->backendUser,
                         'item_id' => $logContext['remote']['id'],
                     ])
                 )->withQuery(
                     http_build_query([
                         'mediaSourceId' => $logContext['remote']['id'],
-                        'positionTicks' => floor($entity->getPlayProgress() * 1_00_00),
+                        'positionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
                     ])
                 );
 
@@ -135,14 +135,9 @@ class Progress
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
-                            'POST',
+                            'DELETE',
                             (string)$url,
                             array_replace_recursive($context->backendHeaders, [
-                                'json' => [
-                                    'UserData' => [
-
-                                    ],
-                                ],
                                 'user_data' => [
                                     'id' => $key,
                                     'context' => $logContext + [

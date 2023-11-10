@@ -84,7 +84,17 @@ class EmbyClient implements iClient
             backendHeaders: array_replace_recursive([
                 'headers' => [
                     'Accept' => 'application/json',
-                    'X-MediaBrowser-Token' => $context->backendToken,
+                    'Authorization' => r(
+                        'MediaBrowser Token="{token}", Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}", UserId="{user}"',
+                        [
+                            'token' => $context->backendToken,
+                            'app' => Config::get('name') . '/' . static::CLIENT_NAME,
+                            'os' => PHP_OS,
+                            'id' => md5($context->backendUser),
+                            'version' => getAppVersion(),
+                            'user' => $context->backendUser,
+                        ]
+                    ),
                 ],
             ], ag($context->options, 'client', [])),
             trace: true === ag($context->options, Options::DEBUG_TRACE),

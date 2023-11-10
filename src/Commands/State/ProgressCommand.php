@@ -49,9 +49,11 @@ class ProgressCommand extends Command
             ->setHelp(
                 r(
                     <<<HELP
-
+                    =================================================================================
                     <error>***WARNING THIS COMMAND IS EXPERIMENTAL AND MAY NOT WORK AS EXPECTED***</error>
-                    <notice>THIS COMMAND ONLY WORKS CORRECTLY FOR PLEX AT THE MOMENT</notice>
+                    <notice>THIS COMMAND ONLY WORKS CORRECTLY FOR PLEX & EMBY AT THE MOMENT.</notice>
+                    =================================================================================
+                    Jellyfin API has a bug which i cannot do anything about.
 
                     This command push <notice>user</notice> watch progress to export enabled backends.
                     You should not run this manually and instead rely on scheduled task to run this command.
@@ -210,7 +212,10 @@ class ProgressCommand extends Command
                         continue;
                     }
 
-                    $this->logger->notice('SYSTEM: Updated [{backend}] [{item.title}] watch progress.', $context);
+                    $this->logger->notice('SYSTEM: Updated [{backend}] [{item.title}] watch progress.', [
+                        ...$context,
+                        'status_code' => $response->getStatusCode(),
+                    ]);
                 } catch (\Throwable $e) {
                     $this->logger->error(
                         'SYSTEM: Unhandled exception thrown during request to change watch progress of [{backend}] {item.type} [{item.title}].',
