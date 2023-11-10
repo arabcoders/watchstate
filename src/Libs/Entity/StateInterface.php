@@ -343,4 +343,13 @@ interface StateInterface extends LoggerAwareInterface
      * @return StateInterface
      */
     public function markAsUnplayed(StateInterface $backend): StateInterface;
+
+    /**
+     * Check item if it has play progress.
+     * This is used to determine if we should update the progress or not.
+     *
+     * @return bool
+     */
+    public function hasPlayProgress(): bool;
+
 }

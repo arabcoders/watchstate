@@ -392,6 +392,24 @@ final class StateEntity implements iState
         return $this;
     }
 
+    public function hasPlayProgress(): bool
+    {
+        if ($this->isWatched()) {
+            return false;
+        }
+
+        foreach ($this->getMetadata() as $metadata) {
+            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0)) {
+                continue;
+            }
+            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > 1000) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function isEqualValue(string $key, iState $entity): bool
     {
         if (iState::COLUMN_UPDATED === $key || iState::COLUMN_WATCHED === $key) {

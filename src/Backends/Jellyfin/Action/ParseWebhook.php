@@ -182,6 +182,12 @@ final class ParseWebhook
                 opts: ['override' => $fields, Options::DISABLE_GUID => $disableGuid],
             )->setIsTainted(isTainted: true === in_array($event, self::WEBHOOK_TAINTED_EVENTS));
 
+            if (false === $isPlayed && null !== ($progress = ag($json, 'PlaybackPositionTicks', null))) {
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
+                    $progress / 10_000
+                ); // -- Convert to milliseconds.
+            }
+
             if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
                 return new Response(
                     status: false,

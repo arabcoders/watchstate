@@ -191,6 +191,19 @@ final class ParseWebhook
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] = $path;
             }
 
+            if (false === $isPlayed && null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null))) {
+                $this->getLogger()->notice(
+                    'Progress was found in payload. Converting to milliseconds.',
+                    [
+                        'progress' => $progress,
+                        'context' => $logContext,
+                    ]
+                );
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
+                    $progress / 1_00_00
+                ); // -- Convert to milliseconds.
+            }
+
             $entity = $this->createEntity(
                 context: $context,
                 guid: $guid,
