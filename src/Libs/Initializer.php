@@ -385,9 +385,9 @@ final class Initializer
 
         $cache->set('requests', $items, new DateInterval('P3D'));
 
-        if (true === $entity->hasPlayProgress()) {
+        if (false === $metadataOnly && true === $entity->hasPlayProgress()) {
             $progress = $cache->get('progress', []);
-            $progress [$itemId] = $entity;
+            $progress[$itemId] = $entity;
             $cache->set('progress', $progress, new DateInterval('P1D'));
         }
 

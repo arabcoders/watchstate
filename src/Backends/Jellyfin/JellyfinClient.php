@@ -18,6 +18,7 @@ use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\Import;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\ParseWebhook;
+use App\Backends\Jellyfin\Action\Progress;
 use App\Backends\Jellyfin\Action\Push;
 use App\Backends\Jellyfin\Action\SearchId;
 use App\Backends\Jellyfin\Action\SearchQuery;
@@ -236,6 +237,26 @@ class JellyfinClient implements iClient
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Push::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            after: $after
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return [];
+    }
+
+    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    {
+        $response = Container::get(Progress::class)(
             context: $this->context,
             entities: $entities,
             queue: $queue,

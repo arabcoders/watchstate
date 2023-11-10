@@ -18,6 +18,7 @@ use App\Backends\Emby\Action\GetUsersList;
 use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
 use App\Backends\Emby\Action\ParseWebhook;
+use App\Backends\Emby\Action\Progress;
 use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
@@ -221,6 +222,26 @@ class EmbyClient implements iClient
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Push::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            after: $after
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return [];
+    }
+
+    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    {
+        $response = Container::get(Progress::class)(
             context: $this->context,
             entities: $entities,
             queue: $queue,

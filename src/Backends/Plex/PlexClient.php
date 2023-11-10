@@ -19,6 +19,7 @@ use App\Backends\Plex\Action\GetUserToken;
 use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
+use App\Backends\Plex\Action\Progress;
 use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
@@ -242,6 +243,26 @@ class PlexClient implements iClient
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Push::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            after: $after
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return [];
+    }
+
+    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    {
+        $response = Container::get(Progress::class)(
             context: $this->context,
             entities: $entities,
             queue: $queue,

@@ -352,4 +352,10 @@ interface StateInterface extends LoggerAwareInterface
      */
     public function hasPlayProgress(): bool;
 
+    /**
+     * Get play progress. If the item is watched and/or has no progress, then 0 will be returned. otherwise
+     * time in milliseconds will be returned.
+     * @return int
+     */
+    public function getPlayProgress(): int;
 }
