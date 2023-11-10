@@ -18,6 +18,7 @@ use App\Backends\Emby\Action\GetUsersList;
 use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
 use App\Backends\Emby\Action\ParseWebhook;
+use App\Backends\Emby\Action\Progress;
 use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
@@ -83,7 +84,17 @@ class EmbyClient implements iClient
             backendHeaders: array_replace_recursive([
                 'headers' => [
                     'Accept' => 'application/json',
-                    'X-MediaBrowser-Token' => $context->backendToken,
+                    'Authorization' => r(
+                        'MediaBrowser Token="{token}", Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}", UserId="{user}"',
+                        [
+                            'token' => $context->backendToken,
+                            'app' => Config::get('name') . '/' . static::CLIENT_NAME,
+                            'os' => PHP_OS,
+                            'id' => md5($context->backendUser),
+                            'version' => getAppVersion(),
+                            'user' => $context->backendUser,
+                        ]
+                    ),
                 ],
             ], ag($context->options, 'client', [])),
             trace: true === ag($context->options, Options::DEBUG_TRACE),
@@ -221,6 +232,26 @@ class EmbyClient implements iClient
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Push::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            after: $after
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return [];
+    }
+
+    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
+    {
+        $response = Container::get(Progress::class)(
             context: $this->context,
             entities: $entities,
             queue: $queue,

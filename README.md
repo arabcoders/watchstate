@@ -3,6 +3,29 @@
 This tool primary goal is to sync your backends play state without relying on third party services,
 out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
+## Feature updates
+
+### 2023-11-11
+
+We added new feature `watch progress tracking` YAY which works exclusively via webhooks at the moment to keep tracking of your play progress.
+As this feature is quite **EXPERIMENTAL** we have separate command and task for it `state:progress` will send back progress to your backends.
+However, Sadly this feature is not working at the moment with `Jellyfin` due to API bug. Once `Jellyfin` fixes the bug it will start working automatically
+as the codebase already has the required code in place. However, the feature works well with both `Plex` and `Emby`.
+
+We would like to support this feature via standard `import` & `export` routine, but sadly that proven to be quite difficult due to the early design of the tool.
+However, if i get enough time i will try to implement it. But for now, The progress tracking is done via webhooks. However, the `state:progress` command will
+push the update to all `export` enabled backends.
+
+This new feature is still experimental it's important to keep backup of your watch state, which can be done via `state:backup` command. we suggest enabling auto backup.
+
+This feature like other is disabled by default, and you can enable it via the env variable `WS_CRON_PROGRESS=1`.
+
+On another point, we have decided to enable backup by default. To disable it simply add new environment variable `WS_CRON_BACKUP=0`.
+
+### 2023-10-31
+
+We added new command called `db:parity` which will check if your backends are reporting the same data.
+
 # Features
 
 * Sync backends play state (from many to many).
@@ -11,7 +34,8 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 * Find `un-matched` or `mis-matched` items.
 * Search your backend for `title` or `item id`.
 * Display and filter your play state. Can be exported as `yaml` or `json`.
-* `db:parity` command to check if your backends are reporting the same data. Added `2023-10-31`
+* Check if your media servers reporting same data via the parity command.
+* Track your watch progress via webhooks.
 
 ----
 

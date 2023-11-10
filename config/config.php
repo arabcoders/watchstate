@@ -8,6 +8,7 @@ use App\Backends\Plex\PlexClient;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
+use App\Commands\State\ProgressCommand;
 use App\Commands\State\PushCommand;
 use App\Commands\State\RequestsCommand;
 use App\Commands\System\IndexCommand;
@@ -79,7 +80,6 @@ return (function () {
 
     $config['webhook'] = [
         'logfile' => ag($config, 'tmpDir') . '/logs/access.' . $logDateFormat . '.log',
-        'debug' => (bool)env('WS_WEBHOOK_DEBUG', false),
         'dumpRequest' => (bool)env('WS_WEBHOOK_DUMP_REQUEST', false),
         'tokenLength' => (int)env('WS_WEBHOOK_TOKEN_LENGTH', 16),
         'file_format' => (string)env('WS_WEBHOOK_LOG_FILE_FORMAT', 'webhook.{backend}.{event}.{id}.json'),
@@ -230,11 +230,19 @@ return (function () {
                 'timer' => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
                 'args' => env('WS_CRON_PUSH_ARGS', '-v'),
             ],
+            ProgressCommand::TASK_NAME => [
+                'command' => ProgressCommand::ROUTE,
+                'name' => ProgressCommand::TASK_NAME,
+                'info' => 'Push play progress to backends.',
+                'enabled' => (bool)env('WS_CRON_PROGRESS', false),
+                'timer' => (string)env('WS_CRON_PROGRESS_AT', '*/45 * * * *'),
+                'args' => env('WS_CRON_PROGRESS_ARGS', '-v'),
+            ],
             BackupCommand::TASK_NAME => [
                 'command' => BackupCommand::ROUTE,
                 'name' => BackupCommand::TASK_NAME,
                 'info' => 'Backup backends play states.',
-                'enabled' => (bool)env('WS_CRON_BACKUP', false),
+                'enabled' => (bool)env('WS_CRON_BACKUP', true),
                 'timer' => (string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'),
                 'args' => env('WS_CRON_BACKUP_ARGS', '-v'),
             ],

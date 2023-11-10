@@ -166,6 +166,7 @@ final class ParseWebhook
                             guids: ag($item, 'Guid', []),
                             context: $logContext
                         ),
+                        iState::COLUMN_META_DATA_PROGRESS => "0",
                     ]
                 ],
                 iState::COLUMN_EXTRA => [
@@ -185,6 +186,11 @@ final class ParseWebhook
                         ]
                     ],
                 ]);
+            }
+
+            if (false === $isPlayed && null !== ($progress = ag($item, 'viewOffset', null))) {
+                // -- Plex reports play progress in milliseconds already no need to convert.
+                $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)$progress;
             }
 
             $entity = $this->createEntity(

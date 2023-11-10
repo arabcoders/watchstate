@@ -111,6 +111,17 @@ interface ClientInterface
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
+     * Compare watch progress and push to backend.
+     *
+     * @param array<StateInterface> $entities
+     * @param QueueRequests $queue
+     * @param iDate|null $after
+     *
+     * @return array
+     */
+    public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array;
+
+    /**
      * Search backend libraries.
      *
      * @param string $query

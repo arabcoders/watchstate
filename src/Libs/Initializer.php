@@ -385,8 +385,15 @@ final class Initializer
 
         $cache->set('requests', $items, new DateInterval('P3D'));
 
+        if (false === $metadataOnly && true === $entity->hasPlayProgress()) {
+            $progress = $cache->get('progress', []);
+            $progress[$itemId] = $entity;
+            $cache->set('progress', $progress, new DateInterval('P1D'));
+        }
+
         $this->write($request, Level::Info, 'Queued [{backend}] {item.type} [{item.title}].', [
             'backend' => $entity->via,
+            'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
             'item' => [
                 'title' => $entity->getName(),
                 'type' => $entity->type,

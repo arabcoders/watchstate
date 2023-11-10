@@ -392,6 +392,69 @@ final class StateEntity implements iState
         return $this;
     }
 
+    public function hasPlayProgress(): bool
+    {
+        if ($this->isWatched()) {
+            return false;
+        }
+
+        foreach ($this->getMetadata() as $metadata) {
+            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0)) {
+                continue;
+            }
+            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > 1000) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getPlayProgress(): int
+    {
+        if ($this->isWatched()) {
+            return 0;
+        }
+
+        $compare = [];
+
+        foreach ($this->getMetadata() as $backend => $metadata) {
+            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0)) {
+                continue;
+            }
+
+            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > 1000) {
+                $compare[$backend] = [
+                    'progress' => (int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0),
+                    'datetime' => ag($this->getExtra($backend), iState::COLUMN_EXTRA_DATE, 0),
+                ];
+            }
+        }
+
+        $lastProgress = 0;
+        $lastDate = makeDate($this->updated - 1);
+
+        foreach ($compare as $data) {
+            if (null === ($progress = ag($data, 'progress', null))) {
+                continue;
+            }
+            if (null === ($datetime = ag($data, 'datetime', null))) {
+                continue;
+            }
+
+            if ($progress < 1000) {
+                continue;
+            }
+
+            if (makeDate($datetime) > $lastDate) {
+                $lastDate = makeDate($datetime);
+                $lastProgress = $progress;
+            }
+        }
+
+        return $lastProgress;
+    }
+
     private function isEqualValue(string $key, iState $entity): bool
     {
         if (iState::COLUMN_UPDATED === $key || iState::COLUMN_WATCHED === $key) {
