@@ -120,7 +120,6 @@ class Progress
                     ])
                 )->withQuery(
                     http_build_query([
-                        'mediaSourceId' => $logContext['remote']['id'],
                         'positionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
                     ])
                 );

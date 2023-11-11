@@ -9,7 +9,7 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 We added new feature `watch progress tracking` YAY which works exclusively via webhooks at the moment to keep tracking of your play progress.
 As this feature is quite **EXPERIMENTAL** we have separate command and task for it `state:progress` will send back progress to your backends.
-However, Sadly this feature is not working at the moment with `Jellyfin` due to API bug. Once `Jellyfin` fixes the bug it will start working automatically
+However, Sadly this feature is not working at the moment with `Jellyfin` due to API bug [#10567](https://github.com/jellyfin/jellyfin/issues/10567) . Once `Jellyfin` fixes the bug it will start working automatically
 as the codebase already has the required code in place. However, the feature works well with both `Plex` and `Emby`.
 
 We would like to support this feature via standard `import` & `export` routine, but sadly that proven to be quite difficult due to the early design of the tool.
