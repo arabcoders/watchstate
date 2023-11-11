@@ -298,7 +298,7 @@ class ImportCommand extends Command
                 continue;
             }
 
-            if (null === ($url = ag($backend, 'url')) || true !== is_string(parse_url($url, PHP_URL_HOST))) {
+            if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
                 $this->logger->error('SYSTEM: Ignoring [{backend}] because of invalid URL.', [
                     'backend' => $backendName,
                     'url' => $url ?? 'None',

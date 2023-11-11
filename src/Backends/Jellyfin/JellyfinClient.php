@@ -105,7 +105,7 @@ class JellyfinClient implements iClient
                             'token' => $context->backendToken,
                             'app' => Config::get('name') . '/' . static::CLIENT_NAME,
                             'os' => PHP_OS,
-                            'id' => md5($context->backendUser),
+                            'id' => md5(Config::get('name') . '/' . static::CLIENT_NAME . $context->backendUser),
                             'version' => getAppVersion(),
                             'user' => $context->backendUser,
                         ]
