@@ -70,7 +70,6 @@ final class ManageCommand extends Command
                     [
                         'cmd' => trim(commandContext()),
                         'route' => self::ROUTE,
-                        'backend' => $input->getArgument('backend'),
                     ]
                 )
 

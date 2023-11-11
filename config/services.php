@@ -11,6 +11,7 @@ use App\Libs\Entity\StateInterface;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
@@ -167,13 +168,26 @@ return (function (): array {
         ],
 
         MemoryMapper::class => [
-            'class' => function (iLogger $logger, iDB $db): iImport {
-                return (new MemoryMapper(logger: $logger, db: $db))
+            'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
+                return (new MemoryMapper(logger: $logger, db: $db, cache: $cache))
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
                 iLogger::class,
                 iDB::class,
+                CacheInterface::class
+            ],
+        ],
+
+        DirectMapper::class => [
+            'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
+                return (new DirectMapper(logger: $logger, db: $db, cache: $cache))
+                    ->setOptions(options: Config::get('mapper.import.opts', []));
+            },
+            'args' => [
+                iLogger::class,
+                iDB::class,
+                CacheInterface::class
             ],
         ],
 

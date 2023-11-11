@@ -10,10 +10,13 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
+use DateInterval;
 use DateTimeInterface as iDate;
 use Exception;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 
 final class DirectMapper implements iImport
 {
@@ -43,8 +46,12 @@ final class DirectMapper implements iImport
     protected array $options = [];
 
     protected bool $fullyLoaded = false;
+    /**
+     * @var array<string,iState> List of items with play progress.
+     */
+    protected array $progressItems = [];
 
-    public function __construct(protected iLogger $logger, protected iDB $db)
+    public function __construct(protected iLogger $logger, protected iDB $db, protected CacheInterface $cache)
     {
     }
 
@@ -297,8 +304,12 @@ final class DirectMapper implements iImport
                     return $this;
                 }
 
+                $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+                $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+                $playChanged = $newPlayProgress != $oldPlayProgress;
+
                 // -- this sometimes leads to never ending updates as data from backends conflicts.
-                if (true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+                if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                         try {
                             $local = $local->apply(
@@ -311,16 +322,30 @@ final class DirectMapper implements iImport
                             $changes = $local->diff(fields: $keys);
 
                             if (count($changes) >= 1) {
-                                $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
-                                    'id' => $cloned->id,
-                                    'backend' => $entity->via,
-                                    'title' => $cloned->getName(),
-                                    'changes' => $changes,
-                                ]);
+                                $this->logger->notice(
+                                    $playChanged ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
+                                    [
+                                        'id' => $cloned->id,
+                                        'backend' => $entity->via,
+                                        'title' => $cloned->getName(),
+                                        'changes' => $changes,
+                                    ]
+                                );
                             }
 
                             if (false === $inDryRunMode) {
                                 $this->db->update($local);
+
+                                if (true === $entity->hasPlayProgress()) {
+                                    $itemId = r('{type}://{id}:{tainted}@{backend}', [
+                                        'type' => $entity->type,
+                                        'backend' => $entity->via,
+                                        'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                                        'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                                    ]);
+
+                                    $this->progressItems[$itemId] = $entity;
+                                }
                             }
 
                             if (null === ($this->changed[$local->id] ?? null)) {
@@ -510,8 +535,19 @@ final class DirectMapper implements iImport
         return $this->db->remove($entity);
     }
 
-    public function commit(): mixed
+    public function commit(): array
     {
+        if (count($this->progressItems) >= 1) {
+            try {
+                $progress = $this->cache->get('progress', []);
+                foreach ($this->progressItems as $itemId => $entity) {
+                    $progress[$itemId] = $entity;
+                }
+                $this->cache->set('progress', $progress, new DateInterval('P1D'));
+            } catch (InvalidArgumentException) {
+            }
+        }
+
         $list = $this->actions;
 
         $this->reset();
@@ -532,7 +568,7 @@ final class DirectMapper implements iImport
         ];
 
         $this->fullyLoaded = false;
-        $this->changed = $this->objects = $this->pointers = [];
+        $this->changed = $this->objects = $this->pointers = $this->progressItems = [];
 
         return $this;
     }
