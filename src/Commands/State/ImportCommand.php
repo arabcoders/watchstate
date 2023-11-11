@@ -8,6 +8,7 @@ use App\Command;
 use App\Commands\Backend\Library\UnmatchedCommand;
 use App\Commands\Config\EditCommand;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
@@ -250,7 +251,7 @@ class ImportCommand extends Command
         }
 
         if ($input->getOption('direct-mapper')) {
-            $this->mapper = new DirectMapper(logger: $this->logger, db: $this->db);
+            $this->mapper = Container::get(DirectMapper::class);
         }
 
         if (!empty($mapperOpts)) {

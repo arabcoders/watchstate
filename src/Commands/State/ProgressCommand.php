@@ -53,7 +53,7 @@ class ProgressCommand extends Command
                     <error>***WARNING THIS COMMAND IS EXPERIMENTAL AND MAY NOT WORK AS EXPECTED***</error>
                     <notice>THIS COMMAND ONLY WORKS CORRECTLY FOR PLEX & EMBY AT THE MOMENT.</notice>
                     =================================================================================
-                    Jellyfin API has a bug which i cannot do anything about.
+                    Jellyfin API has a bug which I cannot do anything about.
 
                     This command push <notice>user</notice> watch progress to export enabled backends.
                     You should not run this manually and instead rely on scheduled task to run this command.
@@ -100,6 +100,9 @@ class ProgressCommand extends Command
         if (!empty($items)) {
             foreach ($items as $queueItem) {
                 $dbItem = $this->db->get($queueItem);
+                if ($dbItem->isWatched()) {
+                    continue;
+                }
                 $dbItem = $dbItem->apply($queueItem);
 
                 if (!$dbItem->hasPlayProgress()) {
