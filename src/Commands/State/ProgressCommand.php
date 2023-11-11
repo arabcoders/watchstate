@@ -6,7 +6,6 @@ namespace App\Commands\State;
 
 use App\Command;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
@@ -90,29 +89,30 @@ class ProgressCommand extends Command
             return self::SUCCESS;
         }
 
-        $entities = $items = [];
+        /** @var array<iState> $entities */
+        $entities = [];
 
-        foreach ($this->cache->get('progress', []) as $item) {
-            /** @var iState $item */
-            $items[] = Container::get(iState::class)::fromArray($item->getAll());
-        }
+        foreach ($this->cache->get('progress', []) as $queueItem) {
+            assert($queueItem instanceof iState);
 
-        if (!empty($items)) {
-            foreach ($items as $queueItem) {
-                $dbItem = $this->db->get($queueItem);
-                if ($dbItem->isWatched()) {
-                    continue;
-                }
-                $dbItem = $dbItem->apply($queueItem);
-
-                if (!$dbItem->hasPlayProgress()) {
-                    continue;
-                }
-                $entities[$dbItem->id] = $dbItem;
+            $dbItem = $this->db->get($queueItem);
+            if (null === $dbItem || $dbItem->isWatched() || $queueItem->isWatched()) {
+                continue;
             }
-        }
 
-        $items = null;
+            $dbItem = $dbItem->apply($queueItem);
+
+            if (!$dbItem->hasPlayProgress()) {
+                continue;
+            }
+
+            if (array_key_exists($dbItem->id, $entities) && $entities[$dbItem->id]->getPlayProgress(
+                ) > $dbItem->getPlayProgress()) {
+                continue;
+            }
+
+            $entities[$dbItem->id] = $dbItem;
+        }
 
         if (empty($entities)) {
             $this->cache->delete('progress');
