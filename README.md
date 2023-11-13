@@ -9,16 +9,15 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 We added new feature `watch progress tracking` YAY which works exclusively via webhooks at the moment to keep tracking of your play progress.
 As this feature is quite **EXPERIMENTAL** we have separate command and task for it `state:progress` will send back progress to your backends.
-However, Sadly this feature is not working at the moment with `Jellyfin` due to API bug [#10567](https://github.com/jellyfin/jellyfin/issues/10567) . Once `Jellyfin` fixes the bug it will start working automatically
-as the codebase already has the required code in place. However, the feature works well with both `Plex` and `Emby`.
+However, Sadly this feature is not working at the moment with `Jellyfin` once they accept my [PR #10573](https://github.com/jellyfin/jellyfin/pull/10573) i'll add support for it. However,
+The feature works well with both `Plex` and `Emby`.
 
-We would like to support this feature via standard `import` & `export` routine, but sadly that proven to be quite difficult due to the early design of the tool.
-However, if i get enough time i will try to implement it. But for now, The progress tracking is done via webhooks. However, the `state:progress` command will
-push the update to all `export` enabled backends.
+The support via `webhooks` is excellent, and it's the recommended way to track your progress. However, if you cant use webhooks, the `state:import` command
+will pull the progress from your backends. however at reduced rate due to the nature of the command. If you want faster progress tracking, you should use `webhooks`.
 
-This new feature is still experimental it's important to keep backup of your watch state, which can be done via `state:backup` command. we suggest enabling auto backup.
-
-This feature like other is disabled by default, and you can enable it via the env variable `WS_CRON_PROGRESS=1`.
+To sync the progress update, You have to use `state:progress` command, it will push the update to all `export` enabled backends.
+This feature is disabled by default like the other features. To enable it add new environment variable called`WS_CRON_PROGRESS=1`.
+We push progress update every `45 minutes`, to change it like other features add `WS_CRON_PROGRESS_AT="*/45 * * * *"` This is the default timer.
 
 On another point, we have decided to enable backup by default. To disable it simply add new environment variable `WS_CRON_BACKUP=0`.
 
