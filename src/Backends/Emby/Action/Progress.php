@@ -6,7 +6,9 @@ namespace App\Backends\Emby\Action;
 
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
+use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
+use App\Backends\Emby\EmbyActionTrait;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -18,6 +20,7 @@ use Throwable;
 class Progress
 {
     use CommonTrait;
+    use EmbyActionTrait;
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
@@ -27,6 +30,7 @@ class Progress
      * Push Play state.
      *
      * @param Context $context
+     * @param iGuid $guid
      * @param array<iState> $entities
      * @param QueueRequests $queue
      * @param DateTimeInterface|null $after
@@ -34,15 +38,23 @@ class Progress
      */
     public function __invoke(
         Context $context,
+        iGuid $guid,
         array $entities,
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $entities, $queue, $after));
+        return $this->tryResponse(context: $context, fn: fn() => $this->action(
+            $context,
+            $guid,
+            $entities,
+            $queue,
+            $after
+        ), action: 'emby.progress');
     }
 
     private function action(
         Context $context,
+        iGuid $guid,
         array $entities,
         QueueRequests $queue,
         DateTimeInterface|null $after = null
@@ -70,6 +82,14 @@ class Progress
                 ],
             ];
 
+            if ($context->backendName === $entity->via) {
+                $this->logger->info('Ignoring [{item.title}] for [{backend}]. Event originated from this backend.', [
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                ]);
+                continue;
+            }
+
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
                     'Ignoring [{item.title}] for [{backend}]. No metadata was found.',
@@ -81,26 +101,42 @@ class Progress
                 continue;
             }
 
-            if (null === ($senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE))) {
-                $this->logger->warning('Ignoring [{item.title}] for [{backend}]. No Sender has set no date.', [
+            $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
+            if (null === $senderDate) {
+                $this->logger->warning('Ignoring [{item.title}] for [{backend}]. Sender did not set a date.', [
                     'backend' => $context->backendName,
                     ...$logContext,
                 ]);
                 continue;
             }
+            $senderDate = makeDate($senderDate)->getTimestamp();
 
-            if ($context->backendName === $entity->via) {
-                $this->logger->debug('Ignoring event as it was originated from this backend.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+            $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
+            if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
+                $this->logger->warning(
+                    'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend date.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
 
-            if (null !== ($datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null))) {
-                if (false === $ignoreDate && makeDate($datetime) > makeDate($senderDate)) {
-                    $this->logger->warning(
-                        'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend date.',
+            $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
+
+            try {
+                $remoteItem = $this->createEntity(
+                    $context,
+                    $guid,
+                    $this->getItemDetails($context, $logContext['remote']['id'], [
+                        Options::NO_CACHE => true,
+                    ])
+                );
+
+                if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
+                    $this->logger->info(
+                        'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend item date.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -108,9 +144,34 @@ class Progress
                     );
                     continue;
                 }
-            }
 
-            $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
+                if ($remoteItem->isWatched()) {
+                    $this->logger->info(
+                        'Ignoring [{item.title}] for [{backend}]. The backend reported the item as watched.',
+                        [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                        ]
+                    );
+                    continue;
+                }
+            } catch (\RuntimeException $e) {
+                $this->logger->error(
+                    'Unhandled exception was thrown during request to get [{backend}] {item.type} [{item.title}] status.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $context->trace ? $e->getTrace() : [],
+                        ],
+                    ]
+                );
+                continue;
+            }
 
             try {
                 $url = $context->backendUrl->withPath(
