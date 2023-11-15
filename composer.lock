@@ -1036,16 +1036,16 @@
     },
     {
       "name": "symfony/cache-contracts",
-      "version": "v3.3.0",
+      "version": "v3.4.0",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/cache-contracts.git",
-        "reference": "ad945640ccc0ae6e208bcea7d7de4b39b569896b"
+        "reference": "1d74b127da04ffa87aa940abe15446fa89653778"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/cache-contracts/zipball/ad945640ccc0ae6e208bcea7d7de4b39b569896b",
-        "reference": "ad945640ccc0ae6e208bcea7d7de4b39b569896b",
+        "url": "https://api.github.com/repos/symfony/cache-contracts/zipball/1d74b127da04ffa87aa940abe15446fa89653778",
+        "reference": "1d74b127da04ffa87aa940abe15446fa89653778",
         "shasum": ""
       },
       "require": {
@@ -1092,7 +1092,7 @@
         "standards"
       ],
       "support": {
-        "source": "https://github.com/symfony/cache-contracts/tree/v3.3.0"
+        "source": "https://github.com/symfony/cache-contracts/tree/v3.4.0"
       },
       "funding": [
         {
@@ -1108,7 +1108,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-05-23T14:45:45+00:00"
+      "time": "2023-09-25T12:52:38+00:00"
     },
     {
       "name": "symfony/console",
@@ -1202,7 +1202,7 @@
     },
     {
       "name": "symfony/deprecation-contracts",
-      "version": "v3.3.0",
+      "version": "v3.4.0",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/deprecation-contracts.git",
@@ -1249,7 +1249,7 @@
       "description": "A generic function and convention to trigger deprecation notices",
       "homepage": "https://symfony.com",
       "support": {
-        "source": "https://github.com/symfony/deprecation-contracts/tree/v3.3.0"
+        "source": "https://github.com/symfony/deprecation-contracts/tree/v3.4.0"
       },
       "funding": [
         {
@@ -1435,16 +1435,16 @@
     },
     {
       "name": "symfony/http-client-contracts",
-      "version": "v3.3.0",
+      "version": "v3.4.0",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/http-client-contracts.git",
-        "reference": "3b66325d0176b4ec826bffab57c9037d759c31fb"
+        "reference": "1ee70e699b41909c209a0c930f11034b93578654"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/http-client-contracts/zipball/3b66325d0176b4ec826bffab57c9037d759c31fb",
-        "reference": "3b66325d0176b4ec826bffab57c9037d759c31fb",
+        "url": "https://api.github.com/repos/symfony/http-client-contracts/zipball/1ee70e699b41909c209a0c930f11034b93578654",
+        "reference": "1ee70e699b41909c209a0c930f11034b93578654",
         "shasum": ""
       },
       "require": {
@@ -1493,7 +1493,7 @@
         "standards"
       ],
       "support": {
-        "source": "https://github.com/symfony/http-client-contracts/tree/v3.3.0"
+        "source": "https://github.com/symfony/http-client-contracts/tree/v3.4.0"
       },
       "funding": [
         {
@@ -1509,7 +1509,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-05-23T14:45:45+00:00"
+      "time": "2023-07-30T20:28:31+00:00"
     },
     {
       "name": "symfony/lock",
@@ -1653,16 +1653,16 @@
     },
     {
       "name": "symfony/service-contracts",
-      "version": "v3.3.0",
+      "version": "v3.4.0",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/service-contracts.git",
-        "reference": "40da9cc13ec349d9e4966ce18b5fbcd724ab10a4"
+        "reference": "b3313c2dbffaf71c8de2934e2ea56ed2291a3838"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/service-contracts/zipball/40da9cc13ec349d9e4966ce18b5fbcd724ab10a4",
-        "reference": "40da9cc13ec349d9e4966ce18b5fbcd724ab10a4",
+        "url": "https://api.github.com/repos/symfony/service-contracts/zipball/b3313c2dbffaf71c8de2934e2ea56ed2291a3838",
+        "reference": "b3313c2dbffaf71c8de2934e2ea56ed2291a3838",
         "shasum": ""
       },
       "require": {
@@ -1715,7 +1715,7 @@
         "standards"
       ],
       "support": {
-        "source": "https://github.com/symfony/service-contracts/tree/v3.3.0"
+        "source": "https://github.com/symfony/service-contracts/tree/v3.4.0"
       },
       "funding": [
         {
@@ -1731,7 +1731,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-05-23T14:45:45+00:00"
+      "time": "2023-07-30T20:28:31+00:00"
     },
     {
       "name": "symfony/string",
@@ -2811,12 +2811,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "46ed208a0bc44f90d8248bc94adf8a490cff9ef1"
+        "reference": "b06feb3f7e6aaacf37e47bc0bf045e3baeb06374"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/46ed208a0bc44f90d8248bc94adf8a490cff9ef1",
-        "reference": "46ed208a0bc44f90d8248bc94adf8a490cff9ef1",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/b06feb3f7e6aaacf37e47bc0bf045e3baeb06374",
+        "reference": "b06feb3f7e6aaacf37e47bc0bf045e3baeb06374",
         "shasum": ""
       },
       "conflict": {
@@ -2930,8 +2930,10 @@
         "doctrine/orm": ">=2,<2.4.8|>=2.5,<2.5.1|>=2.8.3,<2.8.4",
         "dolibarr/dolibarr": "<18.0.2",
         "dompdf/dompdf": "<2.0.2|==2.0.2",
+        "doublethreedigital/guest-entries": "<3.1.2",
         "drupal/core": "<9.4.14|>=9.5,<9.5.8|>=10,<10.0.8",
         "drupal/drupal": ">=6,<6.38|>=7,<7.80|>=8,<8.9.16|>=9,<9.1.12|>=9.2,<9.2.4",
+        "duncanmcclean/guest-entries": "<3.1.2",
         "dweeves/magmi": "<=0.7.24",
         "ecodev/newsletter": "<=4",
         "ectouch/ectouch": "<=2.7.2",
@@ -3123,6 +3125,9 @@
         "mos/cimage": "<0.7.19",
         "movim/moxl": ">=0.8,<=0.10",
         "mpdf/mpdf": "<=7.1.7",
+        "munkireport/comment": "<4.1",
+        "munkireport/managedinstalls": "<2.6",
+        "munkireport/munkireport": ">=2.5.3,<5.6.3",
         "mustache/mustache": ">=2,<2.14.1",
         "namshi/jose": "<2.2",
         "neoan3-apps/template": "<1.1.1",
@@ -3191,15 +3196,16 @@
         "phpxmlrpc/extras": "<0.6.1",
         "phpxmlrpc/phpxmlrpc": "<4.9.2",
         "pi/pi": "<=2.5",
-        "pimcore/admin-ui-classic-bundle": "<1.2",
+        "pimcore/admin-ui-classic-bundle": "<1.2.1",
         "pimcore/customer-management-framework-bundle": "<3.4.2",
         "pimcore/data-hub": "<1.2.4",
         "pimcore/demo": "<10.3",
         "pimcore/perspective-editor": "<1.5.1",
-        "pimcore/pimcore": "<11.1",
+        "pimcore/pimcore": "<11.1.1",
         "pixelfed/pixelfed": "<=0.11.4",
         "pocketmine/bedrock-protocol": "<8.0.2",
         "pocketmine/pocketmine-mp": "<=4.23|>=5,<5.3.1",
+        "pocketmine/raklib": ">=0.14,<0.14.6|>=0.15,<0.15.1",
         "pressbooks/pressbooks": "<5.18",
         "prestashop/autoupgrade": ">=4,<4.10.1",
         "prestashop/blockreassurance": "<=5.1.3",
@@ -3289,7 +3295,7 @@
         "spoonity/tcpdf": "<6.2.22",
         "squizlabs/php_codesniffer": ">=1,<2.8.1|>=3,<3.0.1",
         "ssddanbrown/bookstack": "<22.02.3",
-        "statamic/cms": "<4.33",
+        "statamic/cms": "<4.34",
         "stormpath/sdk": "<9.9.99",
         "studio-42/elfinder": "<2.1.62",
         "subhh/libconnect": "<7.0.8|>=8,<8.1",
@@ -3352,7 +3358,7 @@
         "thinkcmf/thinkcmf": "<=5.1.7",
         "thorsten/phpmyfaq": "<3.2.2",
         "tikiwiki/tiki-manager": "<=17.1",
-        "tinymce/tinymce": "<5.10.8|>=6,<6.7.1",
+        "tinymce/tinymce": "<5.10.9|>=6,<6.7.3",
         "tinymighty/wiki-seo": "<1.2.2",
         "titon/framework": "<9.9.99",
         "tobiasbg/tablepress": "<=2.0.0.0-RC1",
@@ -3366,12 +3372,13 @@
         "twig/twig": "<1.44.7|>=2,<2.15.3|>=3,<3.4.3",
         "typo3/cms": "<9.5.29|>=10,<10.4.35|>=11,<11.5.23|>=12,<12.2",
         "typo3/cms-backend": ">=7,<=7.6.50|>=8,<=8.7.39|>=9,<=9.5.24|>=10,<=10.4.13|>=11,<=11.1",
-        "typo3/cms-core": "<8.7.51|>=9,<9.5.42|>=10,<10.4.39|>=11,<11.5.30|>=12,<12.4.4",
+        "typo3/cms-core": "<=8.7.54|>=9,<=9.5.43|>=10,<=10.4.40|>=11,<=11.5.32|>=12,<=12.4.7",
         "typo3/cms-extbase": "<6.2.24|>=7,<7.6.8|==8.1.1",
         "typo3/cms-form": ">=8,<=8.7.39|>=9,<=9.5.24|>=10,<=10.4.13|>=11,<=11.1",
+        "typo3/cms-install": ">=12.2,<12.4.8",
         "typo3/cms-rte-ckeditor": ">=9.5,<9.5.42|>=10,<10.4.39|>=11,<11.5.30",
         "typo3/flow": ">=1,<1.0.4|>=1.1,<1.1.1|>=2,<2.0.1|>=2.3,<2.3.16|>=3,<3.0.12|>=3.1,<3.1.10|>=3.2,<3.2.13|>=3.3,<3.3.13|>=4,<4.0.6",
-        "typo3/html-sanitizer": ">=1,<1.5.1|>=2,<2.1.2",
+        "typo3/html-sanitizer": ">=1,<=1.5.2|>=2,<=2.1.3",
         "typo3/neos": ">=1.1,<1.1.3|>=1.2,<1.2.13|>=2,<2.0.4|>=2.3,<2.3.99|>=3,<3.0.20|>=3.1,<3.1.18|>=3.2,<3.2.14|>=3.3,<3.3.23|>=4,<4.0.17|>=4.1,<4.1.16|>=4.2,<4.2.12|>=4.3,<4.3.3",
         "typo3/phar-stream-wrapper": ">=1,<2.1.1|>=3,<3.1.1",
         "typo3/swiftmailer": ">=4.1,<4.1.99|>=5.4,<5.4.5",
@@ -3412,7 +3419,7 @@
         "yetiforce/yetiforce-crm": "<=6.4",
         "yidashi/yii2cmf": "<=2",
         "yii2mod/yii2-cms": "<1.9.2",
-        "yiisoft/yii": "<1.1.27",
+        "yiisoft/yii": "<1.1.29",
         "yiisoft/yii2": "<2.0.38",
         "yiisoft/yii2-bootstrap": "<2.0.4",
         "yiisoft/yii2-dev": "<2.0.43",
@@ -3497,7 +3504,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-11-12T16:04:17+00:00"
+      "time": "2023-11-15T19:04:11+00:00"
     },
     {
       "name": "sebastian/cli-parser",

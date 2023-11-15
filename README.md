@@ -1,5 +1,9 @@
 # WatchState
 
+![Build Status](https://github.com/ArabCoders/WatchState/actions/workflows/build.yml/badge.svg)
+![MIT License](https://img.shields.io/github/license/ArabCoders/WatchState.svg)
+![Docker pull](https://img.shields.io/docker/pulls/arabcoders/watchstate.svg)
+
 This tool primary goal is to sync your backends play state without relying on third party services,
 out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
@@ -7,19 +11,28 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ### 2023-11-11
 
-We added new feature `watch progress tracking` YAY which works exclusively via webhooks at the moment to keep tracking of your play progress.
-As this feature is quite **EXPERIMENTAL** we have separate command and task for it `state:progress` will send back progress to your backends.
-However, Sadly this feature is not working at the moment with `Jellyfin` once they accept my [PR #10573](https://github.com/jellyfin/jellyfin/pull/10573) i'll add support for it. However,
+We added new feature `watch progress tracking` YAY which works exclusively via webhooks at the moment to keep tracking
+of your play progress.
+As this feature is quite **EXPERIMENTAL** we have separate command and task for it `state:progress` will send back
+progress to your backends.
+However, Sadly this feature is not working at the moment with `Jellyfin` once they accept
+my [PR #10573](https://github.com/jellyfin/jellyfin/pull/10573) i'll add support for it. However,
 The feature works well with both `Plex` and `Emby`.
 
-The support via `webhooks` is excellent, and it's the recommended way to track your progress. However, if you cant use webhooks, the `state:import` command
-will pull the progress from your backends. however at reduced rate due to the nature of the command. If you want faster progress tracking, you should use `webhooks`.
+The support via `webhooks` is excellent, and it's the recommended way to track your progress. However, if you cant use
+webhooks, the `state:import` command
+will pull the progress from your backends. however at reduced rate due to the nature of the command. If you want faster
+progress tracking, you should use `webhooks`.
 
-To sync the progress update, You have to use `state:progress` command, it will push the update to all `export` enabled backends.
-This feature is disabled by default like the other features. To enable it add new environment variable called`WS_CRON_PROGRESS=1`.
-We push progress update every `45 minutes`, to change it like other features add `WS_CRON_PROGRESS_AT="*/45 * * * *"` This is the default timer.
+To sync the progress update, You have to use `state:progress` command, it will push the update to all `export` enabled
+backends.
+This feature is disabled by default like the other features. To enable it add new environment variable
+called`WS_CRON_PROGRESS=1`.
+We push progress update every `45 minutes`, to change it like other features add `WS_CRON_PROGRESS_AT="*/45 * * * *"`
+This is the default timer.
 
-On another point, we have decided to enable backup by default. To disable it simply add new environment variable `WS_CRON_BACKUP=0`.
+On another point, we have decided to enable backup by default. To disable it simply add new environment
+variable `WS_CRON_BACKUP=0`.
 
 ### 2023-10-31
 
@@ -60,7 +73,8 @@ services:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```
 
-Create directory called `data` next to the `docker-compose.yaml` file. After creating your docker compose file, start the container.
+Create directory called `data` next to the `docker-compose.yaml` file. After creating your docker compose file, start
+the container.
 
 ```bash
 $ mkdir -p ./data && docker-compose pull && docker-compose up
@@ -89,7 +103,10 @@ $ mkdir -p ./data && docker-compose pull && docker-compose up
 After starting the container you should start adding your backends and to do so run the following command:
 
 > [!NOTE]
-> to get your plex token, please visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to know how to extract your plex token.
+> to get your plex token, please
+> visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to
+> know
+> how to extract your plex token.
 > For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api keys.
 
 ```bash
@@ -126,8 +143,10 @@ $ docker exec -ti watchstate console state:import -v --select-backends 'home_ple
 ```
 
 > [!NOTE]
-> Now that you have imported your current play state enable the import task by adding the following environment variables to
-> your `docker-compose.yaml` file `WS_CRON_IMPORT=1`. By default, we have it disabled. for more environment variables please
+> Now that you have imported your current play state enable the import task by adding the following environment
+> variables to
+> your `docker-compose.yaml` file `WS_CRON_IMPORT=1`. By default, we have it disabled. for more environment variables
+> please
 > refer to [Environment variables list](FAQ.md#environment-variables).
 
 ### Supported import methods
@@ -139,7 +158,8 @@ Out of the box, we support the following import methods:
 * Webhooks. `Receive events from backends and update the database accordingly.`
 
 > [!NOTE]
-> Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy relationship. and pick up any missed events.
+> Even if all your backends support webhooks, you should keep import task enabled. This help keep healthy relationship.
+> and pick up any missed events.
 
 ---
 
@@ -164,8 +184,10 @@ $ docker exec -ti watchstate console state:export -v --select-backends 'home_ple
 ```
 
 > [!NOTE]
-> Now that you have exported your current play state, enable the export task by adding the following environment variables to
-> your `docker-compose.yaml` file `WS_CRON_EXPORT=1`. By default, we have it disabled. for more environment variables please
+> Now that you have exported your current play state, enable the export task by adding the following environment
+> variables to
+> your `docker-compose.yaml` file `WS_CRON_EXPORT=1`. By default, we have it disabled. for more environment variables
+> please
 > refer to [Environment variables list](FAQ.md#environment-variables).
 
 ---
@@ -177,9 +199,12 @@ support and answers to many questions.
 
 # Social contact
 
-If you have short or quick questions, you are free to join my [discord server](https://discord.gg/haUXHJyj6Y) and ask the question. keep in mind it's solo project, as such it might take me a bit of time to reply.
+If you have short or quick questions, you are free to join my [discord server](https://discord.gg/haUXHJyj6Y) and ask
+the question. keep in mind it's solo project, as such it might take me a bit of time to reply.
 
 # Donate
 
-If you feel like donating and appreciate my work, you can do so by donating to children charity. For example [Make-A-Wish](https://worldwish.org).
-I Personally don't need the money, but I do appreciate the gesture. Making a child happy is the best thing you can do in this world.
+If you feel like donating and appreciate my work, you can do so by donating to children charity. For
+example [Make-A-Wish](https://worldwish.org).
+I Personally don't need the money, but I do appreciate the gesture. Making a child happy is the best thing you can do in
+this world.
