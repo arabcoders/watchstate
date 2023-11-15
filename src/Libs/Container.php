@@ -67,11 +67,25 @@ final class Container
         }
     }
 
+    /**
+     * Get Instance of requested class.
+     *
+     * @template T
+     * @param class-string<T> $id
+     * @return T
+     */
     public static function get($id)
     {
         return self::$container->get($id);
     }
 
+    /**
+     * Get Instance of requested class.
+     *
+     * @template T
+     * @param class-string<T> $id
+     * @return T
+     */
     public static function getNew($id)
     {
         return self::$container->getNew($id);

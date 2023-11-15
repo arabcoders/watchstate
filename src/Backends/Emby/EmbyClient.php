@@ -253,6 +253,7 @@ class EmbyClient implements iClient
     {
         $response = Container::get(Progress::class)(
             context: $this->context,
+            guid: $this->guid,
             entities: $entities,
             queue: $queue,
             after: $after
