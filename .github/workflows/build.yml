@@ -1,4 +1,4 @@
-name: Build Container Images
+name: Building
 
 on:
   workflow_dispatch:
@@ -128,3 +128,19 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
+
+  dockerhub-sync-readme:
+    needs: publish_docker_images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync README
+        uses: docker://lsiodev/readme-sync:latest
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+          GIT_REPOSITORY: ${{ github.repository }}
+          DOCKER_REPOSITORY: ${{ env.DOCKERHUB_SLUG }}
+          GIT_BRANCH: master
+        with:
+          entrypoint: node
+          args: /opt/docker-readme-sync/sync
