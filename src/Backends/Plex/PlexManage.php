@@ -6,6 +6,7 @@ namespace App\Backends\Plex;
 
 use App\Backends\Common\ManageInterface;
 use App\Libs\Options;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -23,6 +24,7 @@ class PlexManage implements ManageInterface
         private iHttp $http,
         private iOutput $output,
         private iInput $input,
+        protected iLogger $logger
     ) {
         $this->questionHelper = new QuestionHelper();
     }
@@ -342,36 +344,24 @@ class PlexManage implements ManageInterface
                 $user = $this->questionHelper->ask($this->input, $this->output, $question);
                 $backend = ag_set($backend, 'user', $map[$user]);
 
-                if (false === (bool)ag($userInfo[$map[$user]], 'admin')) {
-                    $this->output->writeln(
-                        r(
-                            <<<HELP
-                            The selected user [<value>{user}</value>] is not the <flag>main</flag> user of the server.
-                            Thus syncing the user watch state using the provided token is not possible, as <value>Plex</value>
-                            use tokens to identify users rather than user ids. We are going to attempt to generate access
-                            token for the [<value>{user}</value>] and replace the given token with it.
-                            ------------------
-                            <info>This might lead to some functionality to not work as expected, like listing backend users.
-                            this is expected as the managed user token is rather limited compared to the admin user token.</info>
-                            HELP,
-                            [
-                                'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
-                            ]
-                        )
+                $this->output->writeln(
+                    r('<info>Requesting plex token for [{user}] from plex.tv API.</info>', [
+                        'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
+                    ])
+                );
+
+                try {
+                    $userInfo[$map[$user]]['token'] = makeBackend($custom, ag($backend, 'name'))->getUserToken(
+                        ag($userInfo[$map[$user]], 'uuid', $map[$user]),
+                        $user
                     );
 
-                    try {
-                        $userInfo[$map[$user]]['token'] = makeBackend($custom, ag($backend, 'name'))->getUserToken(
-                            ag($userInfo[$map[$user]], 'uuid', $map[$user]),
-                            $user
-                        );
+                    if (null === ag($backend, 'options.' . Options::ADMIN_TOKEN)) {
                         $backend = ag_set($backend, 'options.' . Options::ADMIN_TOKEN, ag($backend, 'token'));
-                    } catch (RuntimeException $e) {
-                        $errorType = 'token';
-                        throw $e;
                     }
-                } else {
-                    $backend = ag_delete($backend, 'options.' . Options::ADMIN_TOKEN);
+                } catch (RuntimeException $e) {
+                    $errorType = 'token';
+                    throw $e;
                 }
 
                 if (null === ($userToken = ag($userInfo[$map[$user]], 'token'))) {
