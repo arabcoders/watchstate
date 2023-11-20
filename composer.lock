@@ -2811,12 +2811,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "b06feb3f7e6aaacf37e47bc0bf045e3baeb06374"
+        "reference": "ed4318ac306a1a1d467d19c1a768ff17e2d454b1"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/b06feb3f7e6aaacf37e47bc0bf045e3baeb06374",
-        "reference": "b06feb3f7e6aaacf37e47bc0bf045e3baeb06374",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/ed4318ac306a1a1d467d19c1a768ff17e2d454b1",
+        "reference": "ed4318ac306a1a1d467d19c1a768ff17e2d454b1",
         "shasum": ""
       },
       "conflict": {
@@ -2825,6 +2825,7 @@
         "adodb/adodb-php": "<=5.20.20|>=5.21,<=5.21.3",
         "aheinze/cockpit": "<2.2",
         "aimeos/aimeos-typo3": "<19.10.12|>=20,<20.10.5",
+        "airesvsg/acf-to-rest-api": "<=3.1",
         "akaunting/akaunting": "<2.1.13",
         "akeneo/pim-community-dev": "<5.0.119|>=6,<6.0.53",
         "alextselegidis/easyappointments": "<1.5",
@@ -2896,7 +2897,7 @@
         "codeigniter4/shield": "<1.0.0.0-beta4",
         "codiad/codiad": "<=2.8.4",
         "composer/composer": "<1.10.27|>=2,<2.2.22|>=2.3,<2.6.4",
-        "concrete5/concrete5": "<=9.2.1",
+        "concrete5/concrete5": "<9.2.2",
         "concrete5/core": "<8.5.8|>=9,<9.1",
         "contao-components/mediaelement": ">=2.14.2,<2.21.1",
         "contao/contao": ">=4,<4.4.56|>=4.5,<4.9.40|>=4.10,<4.11.7|>=4.13,<4.13.21|>=5.1,<5.1.4",
@@ -3504,7 +3505,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-11-15T19:04:11+00:00"
+      "time": "2023-11-17T23:04:10+00:00"
     },
     {
       "name": "sebastian/cli-parser",
@@ -4556,16 +4557,16 @@
     },
     {
       "name": "theseer/tokenizer",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "source": {
         "type": "git",
         "url": "https://github.com/theseer/tokenizer.git",
-        "reference": "34a41e998c2183e22995f158c581e7b5e755ab9e"
+        "reference": "b2ad5003ca10d4ee50a12da31de12a5774ba6b96"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/theseer/tokenizer/zipball/34a41e998c2183e22995f158c581e7b5e755ab9e",
-        "reference": "34a41e998c2183e22995f158c581e7b5e755ab9e",
+        "url": "https://api.github.com/repos/theseer/tokenizer/zipball/b2ad5003ca10d4ee50a12da31de12a5774ba6b96",
+        "reference": "b2ad5003ca10d4ee50a12da31de12a5774ba6b96",
         "shasum": ""
       },
       "require": {
@@ -4594,7 +4595,7 @@
       "description": "A small library for converting tokenized PHP source code into XML and potentially other formats",
       "support": {
         "issues": "https://github.com/theseer/tokenizer/issues",
-        "source": "https://github.com/theseer/tokenizer/tree/1.2.1"
+        "source": "https://github.com/theseer/tokenizer/tree/1.2.2"
       },
       "funding": [
         {
@@ -4602,7 +4603,7 @@
           "type": "github"
         }
       ],
-      "time": "2021-07-28T10:34:58+00:00"
+      "time": "2023-11-20T00:12:19+00:00"
     }
   ],
   "aliases": [],
