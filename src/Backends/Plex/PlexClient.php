@@ -11,11 +11,13 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Plex\Action\Backup;
 use App\Backends\Plex\Action\Export;
 use App\Backends\Plex\Action\GetIdentifier;
+use App\Backends\Plex\Action\GetInfo;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\GetUserToken;
+use App\Backends\Plex\Action\GetVersion;
 use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
@@ -394,6 +396,36 @@ class PlexClient implements iClient
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function getInfo(array $opts = []): array
+    {
+        $response = Container::get(GetInfo::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function getVersion(array $opts = []): string
+    {
+        $response = Container::get(GetVersion::class)(context: $this->context, opts: $opts);
 
         if ($response->hasError()) {
             $this->logger->log($response->error->level(), $response->error->message, $response->error->context);

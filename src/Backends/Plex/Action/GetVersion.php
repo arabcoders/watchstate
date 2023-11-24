@@ -11,11 +11,11 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class GetIdentifier
+final class GetVersion
 {
     use CommonTrait;
 
-    private string $action = 'unique identifier';
+    private string $action = 'get version';
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -43,7 +43,7 @@ final class GetIdentifier
                     return $info;
                 }
 
-                return new Response(status: true, response: ag($info->response, 'identifier'));
+                return new Response(status: true, response: ag($info->response, 'version'));
             },
             action: $this->action
         );

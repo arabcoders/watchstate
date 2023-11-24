@@ -11,6 +11,7 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Emby\Action\Backup;
 use App\Backends\Emby\Action\Export;
 use App\Backends\Emby\Action\GetIdentifier;
+use App\Backends\Emby\Action\GetInfo;
 use App\Backends\Emby\Action\GetLibrariesList;
 use App\Backends\Emby\Action\GetLibrary;
 use App\Backends\Emby\Action\GetMetaData;
@@ -22,6 +23,7 @@ use App\Backends\Emby\Action\Progress;
 use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
+use App\Backends\Jellyfin\Action\GetVersion;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -383,6 +385,36 @@ class EmbyClient implements iClient
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function getInfo(array $opts = []): array
+    {
+        $response = Container::get(GetInfo::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function getVersion(array $opts = []): string
+    {
+        $response = Container::get(GetVersion::class)(context: $this->context, opts: $opts);
 
         if ($response->hasError()) {
             $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
