@@ -211,4 +211,23 @@ interface ClientInterface
      * @return string|bool return user token as string or bool(FALSE) if not supported.
      */
     public function getUserToken(int|string $userId, string $username): string|bool;
+
+    /**
+     * Get Backend Info.
+     *
+     * @param array $opts
+     *
+     * @return array
+     */
+    public function getInfo(array $opts = []): array;
+
+    /**
+     * Get Backend Version.
+     *
+     * @param array $opts
+     *
+     * @return string
+     */
+    public function getVersion(array $opts = []): string;
+
 }

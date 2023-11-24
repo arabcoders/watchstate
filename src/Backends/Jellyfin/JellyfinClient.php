@@ -11,10 +11,12 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GetIdentifier;
+use App\Backends\Jellyfin\Action\GetInfo;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetLibrary;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Backends\Jellyfin\Action\GetUsersList;
+use App\Backends\Jellyfin\Action\GetVersion;
 use App\Backends\Jellyfin\Action\Import;
 use App\Backends\Jellyfin\Action\InspectRequest;
 use App\Backends\Jellyfin\Action\ParseWebhook;
@@ -398,6 +400,36 @@ class JellyfinClient implements iClient
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function getInfo(array $opts = []): array
+    {
+        $response = Container::get(GetInfo::class)(context: $this->context, opts: $opts);
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+        }
+
+        return $response->response;
+    }
+
+    public function getVersion(array $opts = []): string
+    {
+        $response = Container::get(GetVersion::class)(context: $this->context, opts: $opts);
 
         if ($response->hasError()) {
             $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
