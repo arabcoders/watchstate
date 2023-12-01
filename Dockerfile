@@ -34,6 +34,9 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
 #
 COPY ./ /opt/app
 
+# Link PHP if needed.
+RUN if [ ! -f /usr/bin/php ]; then ln -s /usr/bin/php${PHP_V:3} /usr/bin/php; fi
+
 # install composer & packages.
 #
 RUN echo '' && \
