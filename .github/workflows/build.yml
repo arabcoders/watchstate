@@ -131,12 +131,6 @@ jobs:
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
-      - uses: actions/delete-package-versions@v4
-        with:
-          package-name: "watchstate"
-          package-type: "container"
-          min-versions-to-keep: 10
-
   dockerhub-sync-readme:
     needs: publish_docker_images
     runs-on: ubuntu-latest
