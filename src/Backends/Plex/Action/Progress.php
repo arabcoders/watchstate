@@ -130,9 +130,13 @@ class Progress
                 $remoteItem = $this->createEntity(
                     $context,
                     $guid,
-                    $this->getItemDetails($context, $logContext['remote']['id'], [
-                        Options::NO_CACHE => true,
-                    ])
+                    ag(
+                        $this->getItemDetails($context, $logContext['remote']['id'], [
+                            Options::NO_CACHE => true,
+                        ]),
+                        'MediaContainer.Metadata.0',
+                        []
+                    )
                 );
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {

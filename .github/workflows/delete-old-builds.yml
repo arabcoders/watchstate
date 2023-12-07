@@ -23,4 +23,4 @@ jobs:
         with:
           package-name: "watchstate"
           package-type: "container"
-          min-versions-to-keep: 10
+          min-versions-to-keep: 50
