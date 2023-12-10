@@ -157,9 +157,16 @@ class Progress
                 }
             } catch (\RuntimeException $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during request to get [{backend}] {item.type} [{item.title}] status.',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] get {item.type} [{item.title}] status. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -210,9 +217,16 @@ class Progress
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during request to change [{backend}] {item.type} [{item.title}] watch progress.',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] change {item.type} [{item.title}] watch progress. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),

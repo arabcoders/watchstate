@@ -33,12 +33,18 @@ trait CommonTrait
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Unhandled exception was thrown in [{client}: {backend}] {action}. {message}',
+                    message: 'Exception [{error.kind}] was thrown unhandled in [{client}: {backend}] {action}. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [
                         'action' => $action ?? 'context',
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'message' => $e->getMessage(),
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),

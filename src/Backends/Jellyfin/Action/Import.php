@@ -71,9 +71,16 @@ class Import
                 logContext: $logContext
             ),
             error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                'Unhandled Exception was thrown during [{backend}] library [{library.title}] request.',
-                [
+                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] library [{library.title}] request. Error [{error.message} @ {error.file}:{error.line}].',
+                context: [
                     'backend' => $context->backendName,
+                    'client' => $context->clientName,
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
                     ...$logContext,
                     'exception' => [
                         'file' => $e->getFile(),
@@ -171,16 +178,26 @@ class Import
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         } catch (Throwable $e) {
-            $this->logger->error('Unhandled exception was thrown during request for [{backend}] libraries.', [
-                'backend' => $context->backendName,
-                'exception' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'message' => $e->getMessage(),
-                    'trace' => $context->trace ? $e->getTrace() : [],
-                ],
-            ]);
+            $this->logger->error(
+                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request for libraries. Error [{error.message} @ {error.file}:{error.line}].',
+                context: [
+                    'backend' => $context->backendName,
+                    'client' => $context->clientName,
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
+                    'exception' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'kind' => get_class($e),
+                        'message' => $e->getMessage(),
+                        'trace' => $context->trace ? $e->getTrace() : [],
+                    ],
+                ]
+            );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         }
@@ -257,9 +274,16 @@ class Import
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during [{backend}] [{library.title}] items count request.',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] [{library.title}] items count request. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -401,9 +425,16 @@ class Import
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during [{backend}] [{library.title}] series external ids request.',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] [{library.title}] series external ids request. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
@@ -530,9 +561,16 @@ class Import
                     continue;
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        'Unhandled exception was thrown during [{backend}] [{library.title}] [{segment.number}/{segment.of}] content list request.',
-                        [
+                        message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] [{library.title}] [{segment.number}/{segment.of}] content list request. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
                             'backend' => $context->backendName,
+                            'client' => $context->clientName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
                             ...$logContext,
                             'exception' => [
                                 'file' => $e->getFile(),
@@ -636,8 +674,8 @@ class Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during parsing of [{backend}] library [{library.title}] [{segment.number}/{segment.of}] response.',
-                [
+                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{library.title}] [{segment.number}/{segment.of}] response. Error [{error.message} @ {error.file}:{error.line}].',
+                context: [
                     'backend' => $context->backendName,
                     ...$logContext,
                     'exception' => [
@@ -851,9 +889,16 @@ class Import
             ]);
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during handling of [{backend}] [{library.title}] [{item.title}] import.',
-                [
+                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] [{library.title}] [{item.title}] import. Error [{error.message} @ {error.file}:{error.line}].',
+                context: [
                     'backend' => $context->backendName,
+                    'client' => $context->clientName,
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
                     ...$logContext,
                     'exception' => [
                         'file' => $e->getFile(),

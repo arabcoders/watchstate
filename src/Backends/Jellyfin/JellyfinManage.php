@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin;
 
 use App\Backends\Common\ManageInterface;
+use App\Libs\Options;
 use RuntimeException;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -87,7 +88,7 @@ class JellyfinManage implements ManageInterface
         $this->output->writeln('');
 
         // -- $backend.uuid
-        (function () use (&$backend) {
+        (function () use (&$backend, $opts) {
             try {
                 $this->output->writeln(
                     '<info>Attempting to automatically get the server unique identifier from API. Please wait...</info>'
@@ -96,8 +97,9 @@ class JellyfinManage implements ManageInterface
                 $custom = array_replace_recursive($backend, [
                     'options' => [
                         'client' => [
-                            'timeout' => 10
-                        ]
+                            'timeout' => 20
+                        ],
+                        Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
                     ]
                 ]);
 
@@ -166,7 +168,7 @@ class JellyfinManage implements ManageInterface
         $this->output->writeln('');
 
         // -- $backend.user
-        (function () use (&$backend) {
+        (function () use (&$backend, $opts) {
             $chosen = ag($backend, 'user');
 
             try {
@@ -175,7 +177,15 @@ class JellyfinManage implements ManageInterface
                 );
 
                 $list = $map = $ids = [];
-                $custom = array_replace_recursive($backend, ['options' => ['client' => ['timeout' => 5]]]);
+
+                $custom = array_replace_recursive($backend, [
+                    'options' => [
+                        'client' => [
+                            'timeout' => 20
+                        ],
+                        Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
+                    ]
+                ]);
 
                 $users = makeBackend($custom, ag($custom, 'name'))->getUsersList();
 

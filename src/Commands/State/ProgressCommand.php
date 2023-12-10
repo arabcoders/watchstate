@@ -221,8 +221,14 @@ class ProgressCommand extends Command
                     ]);
                 } catch (\Throwable $e) {
                     $this->logger->error(
-                        'SYSTEM: Unhandled exception thrown during request to change watch progress of [{backend}] {item.type} [{item.title}].',
-                        [
+                        message: 'SYSTEM: Exception [{error.kind}] was thrown unhandled during [{backend}] request to change watch progress of {item.type} [{item.title}]. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
                             ...$context,
                             'exception' => [
                                 'file' => $e->getFile(),

@@ -209,9 +209,16 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Unhandled exception was thrown during request for [{backend}] [{username}] access token.',
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request for [{username}] access token. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         'username' => $username,
                         'user_id' => $userId,
                         'exception' => [
