@@ -177,7 +177,7 @@ class PlexManage implements ManageInterface
         $this->output->writeln('');
 
         // -- $backend.uuid
-        (function () use (&$backend) {
+        (function () use (&$backend, $opts) {
             try {
                 $this->output->writeln(
                     '<info>Attempting to automatically get the server unique identifier from API. Please wait...</info>'
@@ -186,8 +186,9 @@ class PlexManage implements ManageInterface
                 $custom = array_replace_recursive($backend, [
                     'options' => [
                         'client' => [
-                            'timeout' => 10
-                        ]
+                            'timeout' => 20
+                        ],
+                        Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
                     ]
                 ]);
 
