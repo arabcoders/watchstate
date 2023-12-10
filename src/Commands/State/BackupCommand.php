@@ -241,7 +241,7 @@ class BackupCommand extends Command
                 'backend' => $name,
             ]);
 
-            if (null === ($fileName = $input->getOption('file'))) {
+            if (null === ($fileName = $input->getOption('file')) || empty($fileName)) {
                 $fileName = Config::get('path') . '/backup/{backend}.{date}.json';
             }
 
@@ -254,8 +254,8 @@ class BackupCommand extends Command
             }
 
             if (false === $input->getOption('dry-run')) {
-                $fileName = r($fileName, [
-                    'backend' => ag($backend, 'name'),
+                $fileName = r($fileName ?? Config::get('path') . '/backup/{backend}.{date}.json', [
+                    'backend' => ag($backend, 'name', 'Unknown??'),
                     'date' => makeDate()->format('Ymd'),
                 ]);
 
