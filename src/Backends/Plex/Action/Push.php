@@ -105,9 +105,16 @@ final class Push
                 );
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during request for [{backend}] {item.type} [{item.title}] metadata.',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request for {item.type} [{item.title}] metadata. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         ...$logContext,
                         'exception' => [
                             'file' => after($e->getFile(), ROOT_PATH),
@@ -291,9 +298,16 @@ final class Push
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    'Unhandled exception was thrown during handling of [{backend}] {item.type} [{item.title}].',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] push. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),

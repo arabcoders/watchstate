@@ -199,8 +199,14 @@ class PushCommand extends Command
                     $this->logger->notice('SYSTEM: Marked [{backend}] [{item.title}] as [{play_state}].', $context);
                 } catch (\Throwable $e) {
                     $this->logger->error(
-                        'SYSTEM: Unhandled exception thrown during request to change play state of [{backend}] {item.type} [{item.title}].',
-                        [
+                        message: 'SYSTEM: Exception [{error.kind}] was thrown unhandled during [{backend}] request to change play state of {item.type} [{item.title}]. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
                             ...$context,
                             'exception' => [
                                 'file' => $e->getFile(),

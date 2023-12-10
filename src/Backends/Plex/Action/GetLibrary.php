@@ -242,9 +242,16 @@ final class GetLibrary
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Unhandled exception was thrown during request for [{backend}] {item.type} [{item.title}] metadata.',
+                        message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request for {item.type} [{item.title}] metadata. Error [{error.message} @ {error.file}:{error.line}].',
                         context: [
                             'backend' => $context->backendName,
+                            'client' => $context->clientName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
                             'exception' => [
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),

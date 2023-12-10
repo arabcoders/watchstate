@@ -237,9 +237,16 @@ class Export extends Import
             );
         } catch (Throwable $e) {
             $this->logger->error(
-                'Unhandled exception was thrown during handling of [{backend}] [{library.title}] [{item.title}] export.',
-                [
+                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] export. Error [{error.message} @ {error.file}:{error.line}].',
+                context: [
                     'backend' => $context->backendName,
+                    'client' => $context->clientName,
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
                     ...$logContext,
                     'exception' => [
                         'file' => $e->getFile(),

@@ -232,9 +232,16 @@ final class ParseWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Unhandled exception was thrown during [{backend}] webhook event parsing.',
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] webhook event parsing. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [
                         'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),

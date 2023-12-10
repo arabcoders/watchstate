@@ -191,9 +191,16 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        'Unhandled exception was thrown in parsing of [{backend}] [{agent}] identifier.',
-                        [
+                        message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
                             'backend' => $this->context->backendName,
+                            'client' => $this->context->clientName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
                             'agent' => $val,
                             'exception' => [
                                 'file' => $e->getFile(),
@@ -292,9 +299,16 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    'Unhandled exception was thrown in parsing of [{backend}] legacy agent [{agent}] identifier.',
-                    [
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing legacy agent [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
                         'backend' => $this->context->backendName,
+                        'client' => $this->context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
                         'agent' => $guid,
                         'exception' => [
                             'file' => $e->getFile(),
