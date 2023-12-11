@@ -11,7 +11,7 @@ ini_set('display_errors', 'Off');
 require __DIR__ . '/../pre_init.php';
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    print 'Dependencies are missing please refer to https://github.com/ArabCoders/watchstate/blob/master/FAQ.md';
+    print 'Dependencies are missing please refer to https://github.com/arabcoders/watchstate/blob/master/FAQ.md';
     exit(Command::FAILURE);
 }
 
