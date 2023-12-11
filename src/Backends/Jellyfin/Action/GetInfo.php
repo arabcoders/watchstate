@@ -74,6 +74,23 @@ class GetInfo
                     );
                 }
 
+                if (empty($content)) {
+                    return new Response(
+                        status: false,
+                        error: new Error(
+                            message: 'Request for [{backend}] {action} returned with empty response. Please make sure the container can communicate with the backend.',
+                            context: [
+                                'action' => $this->action,
+                                'client' => $context->clientName,
+                                'backend' => $context->backendName,
+                                'url' => (string)$url,
+                                'response' => $content,
+                            ],
+                            level: Levels::ERROR
+                        )
+                    );
+                }
+
                 $item = json_decode(
                     json: $content,
                     associative: true,
