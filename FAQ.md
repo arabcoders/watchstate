@@ -555,11 +555,54 @@ make `.info.json` optional However at the moment the file is required for emby/j
 * Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please
   refer to the link on how to install it.
 
-### Emby Setup
+#### Emby Setup
 
 * Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
   Please refer to the link on how to install it.
 
 If your media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
 jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the
-relevant data if they are not matching correctly, and we hopefully can resolve it. 
+relevant data if they are not matching correctly, and we hopefully can resolve it.
+
+---
+
+### How to check if the container able to communicate with the media backends?
+
+If you having problem adding a backend to `WatchState`, it most likely network related problem, Where the container
+isn't able to communicate with the media backend. Thus, you will get errors. To make sure the container is able to
+communicate with the media backend, you can run the following command and check the output.
+
+If the command fails for any reason, then you most likely have network related problem.
+
+#### For Plex.
+
+```bash
+$ docker exec -ti watchstate bash
+$ curl -v -H "Accept: application/json" -H "X-Plex-Token: [PLEX_TOKEN]" http://[PLEX_URL]/library/sections
+```
+
+* Replace `[PLEX_TOKEN]` with your plex token.
+* Replace `[PLEX_URL]` with your plex url. The one you selected when prompted by the command.
+
+```
+{"MediaContainer":{"size":25,...}}
+```
+
+If everything is working correctly you should see something like this previous json output.
+
+#### For Jellyfin & Emby.
+
+```bash
+$ docker exec -ti watchstate bash
+$ curl -v -H "Accept: application/json" -H "X-MediaBrowser-Token: [BACKEND_API_KEY]" http://[BACKEND_HOST]/library/sections
+```
+
+* Replace `[BACKEND_API_KEY]` with your jellyfin/emby api key.
+* Replace `[BACKEND_HOST]` with your jellyfin/emby host. it can be a host or ip:port i.e. `jf.mydomain.ltd` or `172.23.0.11:8096`
+
+```
+{"OperatingSystemDisplayName":"Linux","HasPendingRestart":false,"IsShuttingDown":false,...}}
+```
+
+If everything is working correctly you should see something like this previous json output.
+
