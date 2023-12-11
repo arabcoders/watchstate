@@ -1,10 +1,10 @@
 blank_issues_enabled: false
 contact_links:
   - name: Feature request
-    url: https://github.com/ArabCoders/watchstate/discussions
+    url: https://github.com/arabcoders/watchstate/discussions
     about: Please use the discussions tab for features or enhancements requests.
   - name: Questions & Answers
-    url: https://github.com/ArabCoders/watchstate/discussions
+    url: https://github.com/arabcoders/watchstate/discussions
     about: Please use the discussions tab for long questions and general discussions.
   - name: Discord Link.
     url: https://discord.gg/haUXHJyj6Y

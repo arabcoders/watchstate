@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Update Version File
-        uses: ArabCoders/write-version-to-file@master
+        uses: arabcoders/write-version-to-file@master
         with:
           filename: '/config/config.php'
           placeholder: '$(version_via_ci)'
@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Update Version File
-        uses: ArabCoders/write-version-to-file@master
+        uses: arabcoders/write-version-to-file@master
         with:
           filename: '/config/config.php'
           placeholder: '$(version_via_ci)'

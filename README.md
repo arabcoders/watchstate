@@ -1,7 +1,7 @@
 # WatchState
 
-![Build Status](https://github.com/ArabCoders/WatchState/actions/workflows/build.yml/badge.svg)
-![MIT License](https://img.shields.io/github/license/ArabCoders/WatchState.svg)
+![Build Status](https://github.com/arabcoders/WatchState/actions/workflows/build.yml/badge.svg)
+![MIT License](https://img.shields.io/github/license/arabcoders/WatchState.svg)
 ![Docker pull](https://img.shields.io/docker/pulls/arabcoders/watchstate.svg)
 
 This tool primary goal is to sync your backends play state without relying on third party services,

@@ -138,7 +138,7 @@ database state back to the selected backend.
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
 use single container for all users, however it's not really easy refer
-to [issue #136](https://github.com/ArabCoders/watchstate/issues/136).
+to [issue #136](https://github.com/arabcoders/watchstate/issues/136).
 
 For `Jellyfin` and `Emby`, you can just generate new API tokens and link it to a user.
 
@@ -238,7 +238,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
 * com.plexapp.agents.youtube://youtube|(seriesId)|(?<folder>\w)?/(?<season>
   \d)?(.+) [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle)
-  With [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
+  With [jp_scanner.py](https://gist.github.com/arabcoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
 * com.plexapp.agents.cmdb://(id)?(.+) `(Custom metadata db agent)` Will release more information about it at later time.
 
 ---
@@ -252,7 +252,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvrage://(id)
 * anidb://(id)
 * ytinforeader://(
-  id) [jellyfin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin).
+  id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
   A yt-dlp plugin for both emby & jellyfin.
 * cmdb://(id) `(Custom metadata db agent)` Will release more information about it at later time.
 
@@ -534,7 +534,7 @@ location and delete the empty directories.
 ### How to get WatchState working with YouTube content/library?
 
 Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
-media agents. Please visit [this link](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin#usage) to know how to
+media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to
 name your files. Please be aware these plugins and scanners `REQUIRE`
 that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you
 have `20231030 my awesome youtube video [youtube-RandomString].mkv`
@@ -546,20 +546,20 @@ make `.info.json` optional However at the moment the file is required for emby/j
 
 * Download this agent [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) please follow the
   instructions on how to install it from the link itself.
-* Download my custom scanner [jp_scanner.py](https://gist.github.com/ArabCoders/ecb2755aa1d76dc89301ec44b8d367d5) and
+* Download my custom scanner [jp_scanner.py](https://gist.github.com/arabcoders/ecb2755aa1d76dc89301ec44b8d367d5) and
   save it into `[...]/Plex Media Server/Scanners/Series/jp_scanner.py` if you don't know there are more detailed guide
   at this link [How to install a Scanner](https://github.com/ZeroQI/Absolute-Series-Scanner#install--update).
 
 #### Jellyfin Setup
 
-* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/ArabCoders/jf-ytdlp-info-reader-plugin). Please
+* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please
   refer to the link on how to install it.
 
 ### Emby Setup
 
-* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/ArabCoders/emby-ytdlp-info-reader-plugin).
+* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
   Please refer to the link on how to install it.
 
-If you media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
+If your media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
 jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the
 relevant data if they are not matching correctly, and we hopefully can resolve it. 
