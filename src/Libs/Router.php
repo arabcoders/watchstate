@@ -107,22 +107,22 @@ final class Router
         $count = count($tokens);
 
         foreach ($tokens as $i => $iValue) {
-            if ($iValue->getTokenName() === 'T_NAMESPACE') {
+            if ('T_NAMESPACE' === $iValue->getTokenName()) {
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ($tokens[$j]->getTokenName() === 'T_NAME_QUALIFIED') {
+                    if ('T_NAME_QUALIFIED' === $tokens[$j]->getTokenName()) {
                         $namespace = $tokens[$j]->text;
                         break;
                     }
                 }
             }
 
-            if ($iValue->getTokenName() === 'T_CLASS') {
+            if ('T_CLASS' === $iValue->getTokenName()) {
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ($tokens[$j]->getTokenName() === 'T_WHITESPACE') {
+                    if ('T_WHITESPACE' === $tokens[$j]->getTokenName()) {
                         continue;
                     }
 
-                    if ($tokens[$j]->getTokenName() === 'T_STRING') {
+                    if ('T_STRING' === $tokens[$j]->getTokenName()) {
                         $classes[] = $namespace . '\\' . $tokens[$j]->text;
                     } else {
                         break;

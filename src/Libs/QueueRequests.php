@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Libs;
 
 use Countable;
+use Iterator;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-final class QueueRequests implements Countable, \Iterator
+final class QueueRequests implements Countable, Iterator
 {
     /**
      * @var array<ResponseInterface> Queued Requests.

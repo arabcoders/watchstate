@@ -7,16 +7,15 @@ namespace App\Libs;
 /**
  * Volatile messaging between classes.
  * This should not be used for anything important.
- * Data is mutable, and can be change by anything.
- * Messages are not persistent and will be removed
- * once the execution is done.
+ * Data is mutable, and can be changed by anything.
+ * Messages are not persistent and will be removed once the execution is done.
  */
 final class Message
 {
     private static array $data = [];
 
     /**
-     * Add Message to Store.
+     * Add message to store.
      *
      * @param string $key Message key.
      * @param mixed $value value.

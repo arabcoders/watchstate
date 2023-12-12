@@ -171,42 +171,54 @@ class Command extends BaseCommand
 
     protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void
     {
-        if ('json' === $mode) {
-            $output->writeln(
-                json_encode(
-                    value: $content,
-                    flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
-                )
-            );
-        } elseif ('table' === $mode) {
-            $list = [];
+        switch ($mode) {
+            case 'json':
+                $output->writeln(
+                    json_encode(
+                        value: $content,
+                        flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                    )
+                );
+                break;
+            case 'table':
+                $list = [];
 
-            foreach ($content as $_ => $item) {
-                if (false === is_array($item)) {
-                    $item = [$_ => $item];
-                }
-
-                $subItem = [];
-
-                foreach ($item as $key => $leaf) {
-                    if (true === is_array($leaf)) {
-                        continue;
+                foreach ($content as $_ => $item) {
+                    if (false === is_array($item)) {
+                        $item = [$_ => $item];
                     }
-                    $subItem[$key] = $leaf;
+
+                    $subItem = [];
+
+                    foreach ($item as $key => $leaf) {
+                        if (true === is_array($leaf)) {
+                            continue;
+                        }
+                        $subItem[$key] = $leaf;
+                    }
+
+                    $list[] = $subItem;
+                    $list[] = new TableSeparator();
                 }
 
-                $list[] = $subItem;
-                $list[] = new TableSeparator();
-            }
-
-            if (!empty($list)) {
-                array_pop($list);
-                (new Table($output))->setStyle('box')->setHeaders(
-                    array_map(fn($title) => is_string($title) ? ucfirst($title) : $title, array_keys($list[0]))
-                )->setRows($list)->render();
-            }
-        } else {
-            $output->writeln(Yaml::dump($content, 8, 2));
+                if (!empty($list)) {
+                    array_pop($list);
+                    (new Table($output))
+                        ->setStyle(name: 'box')
+                        ->setHeaders(
+                            array_map(
+                                callback: fn($title) => is_string($title) ? ucfirst($title) : $title,
+                                array: array_keys($list[0])
+                            )
+                        )
+                        ->setRows(rows: $list)
+                        ->render();
+                }
+                break;
+            case 'yaml':
+            default:
+                $output->writeln(Yaml::dump(input: $content, inline: 8, indent: 2));
+                break;
         }
     }
 

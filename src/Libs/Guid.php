@@ -61,9 +61,9 @@ final class Guid implements JsonSerializable, Stringable
     private static LoggerInterface|null $logger = null;
 
     /**
-     * Create List of db => external id list.
+     * Create list of db => external id list.
      *
-     * @param array $guids A Key/value pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
+     * @param array $guids A key/value a pair of db => external id. For example, [ "guid_imdb" => "tt123456789" ]
      * @param array $context
      */
     public function __construct(array $guids, array $context = [])
@@ -135,7 +135,7 @@ final class Guid implements JsonSerializable, Stringable
     }
 
     /**
-     * Set Logger.
+     * Set logger.
      *
      * @param LoggerInterface $logger
      * @return void
@@ -146,7 +146,7 @@ final class Guid implements JsonSerializable, Stringable
     }
 
     /**
-     * Get Supported External ids sources.
+     * Get supported external ids sources.
      *
      * @return array<string,string>
      */
@@ -171,7 +171,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * Validate id value against expected format.
      *
-     * @param string $db guid source
+     * @param string $db guid source.
      * @param string|int $id guid source id.
      *
      * @return bool
@@ -238,7 +238,7 @@ final class Guid implements JsonSerializable, Stringable
     }
 
     /**
-     * Get Instance of logger.
+     * Get instance of logger.
      *
      * @return LoggerInterface
      */

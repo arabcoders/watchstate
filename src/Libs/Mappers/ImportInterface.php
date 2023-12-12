@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 interface ImportInterface extends Countable
 {
     /**
-     * Initiate Mapper.
+     * Initiate mapper.
      *
      * @param array $options
      *
@@ -31,7 +31,7 @@ interface ImportInterface extends Countable
     public function loadData(DateTimeInterface|null $date = null): self;
 
     /**
-     * Add Entity. it has to search for
+     * Add entity. it has to search for
      * existing entity, and if found update it.
      *
      * @param StateInterface $entity Refers to the item state from backend.
@@ -42,7 +42,7 @@ interface ImportInterface extends Countable
     public function add(StateInterface $entity, array $opts = []): self;
 
     /**
-     * Get Entity.
+     * Get entity.
      *
      * @param StateInterface $entity
      *
@@ -51,7 +51,7 @@ interface ImportInterface extends Countable
     public function get(StateInterface $entity): null|StateInterface;
 
     /**
-     * Remove Entity.
+     * Remove entity.
      *
      * @param StateInterface $entity
      *
@@ -67,7 +67,7 @@ interface ImportInterface extends Countable
     public function commit(): mixed;
 
     /**
-     * Has Entity.
+     * Has entity.
      *
      * @param StateInterface $entity
      *
@@ -76,7 +76,7 @@ interface ImportInterface extends Countable
     public function has(StateInterface $entity): bool;
 
     /**
-     * Reset Mapper State.
+     * Reset mapper state.
      *
      * @return ImportInterface
      */
@@ -99,7 +99,7 @@ interface ImportInterface extends Countable
     public function getObjectsCount(): int;
 
     /**
-     * Inject Logger.
+     * Inject logger.
      *
      * @param LoggerInterface $logger
      *
@@ -130,14 +130,14 @@ interface ImportInterface extends Countable
     public function inTraceMode(): bool;
 
     /**
-     * Get List Of registered pointers.
+     * Get list of registered pointers.
      *
      * @return array
      */
     public function getPointersList(): array;
 
     /**
-     * Get List of changed items that changed.
+     * Get list of changed items that changed.
      *
      * @return array
      */
