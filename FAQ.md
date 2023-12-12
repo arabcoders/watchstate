@@ -303,13 +303,14 @@ $ docker exec -ti watchstate console system:tasks
 #### Container specific environment variables.
 
 > [!IMPORTANT]
-> These environment variables relates to the container itself, and must added via the `docker-compose.yaml` file.
+> These environment variables relates to the container itself, and must be added via the `docker-compose.yaml` file.
 
-| Key              | Type    | Description                        | Default |
-|------------------|---------|------------------------------------|---------|
-| WS_DISABLE_HTTP  | integer | Disable included `HTTP Server`.    | `0`     |
-| WS_DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`     |
-| WS_DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`     |
+| Key              | Type    | Description                        | Default  |
+|------------------|---------|------------------------------------|----------|
+| WS_DISABLE_HTTP  | integer | Disable included `HTTP Server`.    | `0`      |
+| WS_DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`      |
+| WS_DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`      |
+| HTTP_PORT        | string  | Change the `HTTP` listen port.     | `"8080"` |
 
 ---
 
@@ -598,7 +599,8 @@ $ curl -v -H "Accept: application/json" -H "X-MediaBrowser-Token: [BACKEND_API_K
 ```
 
 * Replace `[BACKEND_API_KEY]` with your jellyfin/emby api key.
-* Replace `[BACKEND_HOST]` with your jellyfin/emby host. it can be a host or ip:port i.e. `jf.mydomain.ltd` or `172.23.0.11:8096`
+* Replace `[BACKEND_HOST]` with your jellyfin/emby host. it can be a host or ip:port i.e. `jf.mydomain.ltd`
+  or `172.23.0.11:8096`
 
 ```
 {"OperatingSystemDisplayName":"Linux","HasPendingRestart":false,"IsShuttingDown":false,...}}

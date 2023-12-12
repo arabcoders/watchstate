@@ -54,9 +54,14 @@ require __DIR__ . '/../vendor/autoload.php';
 try {
     $app = (new App\Libs\Initializer())->boot();
 } catch (Throwable $e) {
-    $message = sprintf('%s: %s (%s:%d).', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+    $message = sprintf(
+            'Unhandled Exception [%s] was thrown. With message [%s] in [%s:%d].',
+            $e::class,
+            $e->getMessage(),
+            array_reverse(explode(ROOT_PATH, $e->getFile(), 2))[0],
+            $e->getLine()
+    );
     fwrite(STDERR, trim($message) . PHP_EOL);
-
     exit(503);
 }
 

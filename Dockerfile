@@ -13,6 +13,8 @@ ARG USER_ID=1000
 ENV IN_CONTAINER=1
 ENV PHP_INI_DIR=/etc/${PHP_V}
 ENV PATH=/opt/bin:${PATH}
+ENV HTTP_PORT="8080"
+ENV HTTPS_PORT="8443"
 
 # Setup the required environment.
 #

@@ -1,21 +1,34 @@
 <?php
 
+/**
+ * Last update: 2023-12-12
+ *
+ * servers.yaml backend spec.
+ * This file defines the backend spec.
+ * The dot (.) notation means the key is subarray of the parent key.
+ * the boolean at the end of the key means if the key should be visible in the config:edit/view command.
+ */
 return [
-    'name',
-    'type',
-    'url',
-    'token',
-    'uuid',
-    'user',
-    'import.enabled',
-    'import.lastSync',
-    'export.enabled',
-    'export.lastSync',
-    'webhook.import',
-    'webhook.push',
-    'webhook.match.user',
-    'webhook.match.uuid',
-    'webhook.token',
-    'options.ignore',
-    'options.DUMP_PAYLOAD',
+    'name' => true,
+    'type' => true,
+    'url' => true,
+    'token' => true,
+    'uuid' => true,
+    'user' => true,
+    'export.enabled' => true,
+    'export.lastSync' => true,
+    'import.enabled' => true,
+    'import.lastSync' => true,
+    'webhook.token' => true,
+    'webhook.match.user' => true,
+    'webhook.match.uuid' => true,
+    'options.ignore' => true,
+    'options.LIBRARY_SEGMENT' => true,
+    'options.ADMIN_TOKEN' => false,
+    'options.DUMP_PAYLOAD' => false,
+    'options.DEBUG_TRACE' => false,
+    'options.IMPORT_METADATA_ONLY' => false,
+    'options.DRY_RUN' => false,
+    'options.client.timeout' => false,
 ];
+
