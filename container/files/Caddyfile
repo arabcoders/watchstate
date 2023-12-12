@@ -1,6 +1,6 @@
 {
-    http_port 8080
-    https_port 8443
+    http_port {$HTTP_PORT}
+    https_port {$HTTPS_PORT}
 }
 
 http:// {

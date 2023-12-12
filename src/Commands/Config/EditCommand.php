@@ -63,8 +63,14 @@ final class EditCommand extends Command
                             ', ',
                             array_map(
                                 fn($val) => '<value>' . $val . '</value>',
-                                require __DIR__ . '/../../../config/backend.spec.php'
-                            )
+                                array_keys(
+                                    array_filter(
+                                        array: require __DIR__ . '/../../../config/backend.spec.php',
+                                        callback: fn($val, $key) => $val,
+                                        mode: ARRAY_FILTER_USE_BOTH
+                                    )
+                                )
+                            ),
                         )
                     ]
                 )
