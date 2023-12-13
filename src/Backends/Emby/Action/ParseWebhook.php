@@ -60,7 +60,11 @@ final class ParseWebhook
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->parse($context, $guid, $request),
+            action: 'emby.parse.webhook'
+        );
     }
 
     private function parse(Context $context, iGuid $guid, iRequest $request): Response
@@ -68,7 +72,10 @@ final class ParseWebhook
         if (null === ($json = $request->getParsedBody())) {
             return new Response(status: false, extra: [
                 'http_code' => 400,
-                'message' => $context->clientName . ': No payload.'
+                'message' => r('[{client}: {backend}] No payload was found in request body.', [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                ])
             ]);
         }
 
@@ -79,21 +86,33 @@ final class ParseWebhook
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             return new Response(status: false, extra: [
                 'http_code' => 200,
-                'message' => sprintf('%s: Webhook content type [%s] is not supported.', $context->backendName, $type)
+                'message' => r('[{client}: {backend}]: Webhook content type [{type}] is not supported.', [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'type' => $type
+                ])
             ]);
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             return new Response(status: false, extra: [
                 'http_code' => 200,
-                'message' => sprintf('%s: Webhook event type [%s] is not supported.', $context->backendName, $event)
+                'message' => r('[{client}: {backend}]: Webhook event type [{event}] is not supported.', [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'event' => $event,
+                ])
             ]);
         }
 
         if (null === $id) {
             return new Response(status: false, extra: [
                 'http_code' => 400,
-                'message' => $context->backendName . ': No item id was found in body.'
+                'message' => r('[{client}: {backend}]: No item id was found in request body.', [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'event' => $event,
+                ])
             ]);
         }
 
@@ -107,15 +126,11 @@ final class ParseWebhook
                 $isPlayed = 0;
                 $lastPlayedAt = makeDate(ag($json, 'Item.DateCreated'))->getTimestamp();
             } else {
-                $isPlayed = (int)(bool)ag(
-                    $json,
-                    [
-                        'Item.Played',
-                        'Item.PlayedToCompletion',
-                        'PlaybackInfo.PlayedToCompletion',
-                    ],
-                    false
-                );
+                $isPlayed = (int)(bool)ag($json, [
+                    'Item.Played',
+                    'Item.PlayedToCompletion',
+                    'PlaybackInfo.PlayedToCompletion',
+                ], false);
 
                 $lastPlayedAt = (0 === $isPlayed) ? makeDate(ag($json, 'Item.DateCreated'))->getTimestamp() : time();
             }
@@ -125,21 +140,21 @@ final class ParseWebhook
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
                     'title' => match (ag($obj, 'Type')) {
-                        EmbyClient::TYPE_MOVIE => sprintf(
-                            '%s (%s)',
-                            ag($obj, ['Name', 'OriginalTitle'], '??'),
-                            ag($obj, 'ProductionYear', '0000')
-                        ),
+                        EmbyClient::TYPE_MOVIE => r('{title} ({year})', [
+                            'title' => ag($obj, ['Name', 'OriginalTitle'], '??'),
+                            'year' => ag($obj, 'ProductionYear', '0000')
+                        ]),
                         EmbyClient::TYPE_EPISODE => trim(
-                            sprintf(
-                                '%s - (%sx%s)',
-                                ag($obj, 'SeriesName', '??'),
-                                str_pad((string)ag($obj, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
-                                str_pad((string)ag($obj, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
-                            )
+                            r('{title} - ({season}x{episode})', [
+                                'title' => ag($obj, 'SeriesName', '??'),
+                                'season' => str_pad((string)ag($obj, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
+                                'episode' => str_pad((string)ag($obj, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
+                            ])
                         ),
                         default => throw new InvalidArgumentException(
-                            r('Unexpected Content type [{type}] was received.', [
+                            r('[{client}: {backend}] Unexpected Content type [{type}] was received.', [
+                                'client' => $context->clientName,
+                                'backend' => $context->backendName,
                                 'type' => $type
                             ])
                         ),
@@ -192,9 +207,10 @@ final class ParseWebhook
             }
 
             if (false === $isPlayed && null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null))) {
+                // -- Convert to milliseconds.
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
                     $progress / 1_00_00
-                ); // -- Convert to milliseconds.
+                );
             }
 
             $entity = $this->createEntity(
@@ -208,8 +224,9 @@ final class ParseWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Ignoring [{backend}] [{title}] webhook event. No valid/supported external ids.',
+                        message: 'Ignoring [{client}: {backend}] [{title}] webhook event. No valid/supported external ids.',
                         context: [
+                            'client' => $context->clientName,
                             'backend' => $context->backendName,
                             'title' => $entity->getName(),
                             'context' => [
@@ -222,7 +239,10 @@ final class ParseWebhook
                     ),
                     extra: [
                         'http_code' => 200,
-                        'message' => $context->backendName . ': Import ignored. No valid/supported external ids.'
+                        'message' => r('[{client}: {backend}] Import ignored. No valid/supported external ids.', [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                        ])
                     ],
                 );
             }
@@ -258,7 +278,10 @@ final class ParseWebhook
                 ),
                 extra: [
                     'http_code' => 200,
-                    'message' => $context->backendName . ': Failed to handle payload. Check logs.'
+                    'message' => r('[{client}: {backend}] Failed to handle webhook event payload. Check logs.', [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                    ]),
                 ],
             );
         }
