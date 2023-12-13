@@ -8,25 +8,68 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use PDO;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use SplFileObject;
 
+/**
+ * Class PDOMigrations
+ *
+ * Provides functionality to handle database migrations using PDO.
+ */
 final class PDOMigrations
 {
+    /**
+     * The path to migrations directory.
+     *
+     * @var string
+     */
     private string $path;
+
+    /**
+     * The database driver.
+     *
+     * @var string
+     */
     private string $driver;
+
+    /**
+     * List of files in the migrations directory.
+     *
+     * @var array<string>
+     */
     private array $files = [];
 
+    /**
+     * Constructs a new instance of the class.
+     *
+     * @param PDO $pdo The database connection object.
+     * @param LoggerInterface $logger The logger instance.
+     *
+     * @return void
+     */
     public function __construct(private PDO $pdo, private LoggerInterface $logger)
     {
         $this->path = __DIR__ . '/../../../../migrations';
         $this->driver = $this->getDriver();
     }
 
+    /**
+     * Sets the logger instance.
+     *
+     * @param LoggerInterface $logger The logger instance.
+     *
+     * @return self The current instance of the class.
+     */
     public function setLogger(LoggerInterface $logger): self
     {
         $this->logger = $logger;
         return $this;
     }
 
+    /**
+     * Checks if all migration files have been successfully migrated up to the current version.
+     *
+     * @return bool Returns true if all migration has been applied. false otherwise.
+     */
     public function isMigrated(): bool
     {
         $version = $this->getVersion();
@@ -41,6 +84,16 @@ final class PDOMigrations
         return true;
     }
 
+    /**
+     * Applies migrations up to the current version.
+     *
+     * @param array $opts Options for the migration.
+     *                    Possible options:
+     *                    - fresh: If set to true, all migrations will be applied from the beginning.
+     *                    Defaults to false.
+     *
+     * @return int Returns 0 if the migrations were applied successfully.
+     */
     public function up(array $opts = []): int
     {
         if (true === ($opts['fresh'] ?? false)) {
@@ -84,6 +137,11 @@ final class PDOMigrations
         return 0;
     }
 
+    /**
+     * Logs a message indicating that the driver does not support down migrations and returns 0.
+     *
+     * @return int Returns 0.
+     */
     public function down(): int
     {
         $this->logger->info('This driver does not support down migrations at this time.');
@@ -91,6 +149,13 @@ final class PDOMigrations
         return 0;
     }
 
+    /**
+     * Creates a new migration file with the given name.
+     *
+     * @param string $name The name of the migration file.
+     *
+     * @return string The path of the newly created migration file.
+     */
     public function make(string $name): string
     {
         $name = str_replace(chr(040), '_', $name);
@@ -100,7 +165,7 @@ final class PDOMigrations
         $file = $this->path . '/' . $fileName;
 
         if (!touch($file)) {
-            throw new RuntimeException(sprintf('Unable to create new migration at \'%s\'.', $this->path));
+            throw new RuntimeException(r("Unable to create new migration at '{file}'.", ['file' => $this->path]));
         }
 
         file_put_contents(
@@ -117,13 +182,16 @@ final class PDOMigrations
         SQL
         );
 
-        $this->logger->info(
-            sprintf('Created new Migration file at \'%s\'.</>', $file)
-        );
+        $this->logger->info(r("Created new Migration file at '{file}'.", ['file' => $file]));
 
         return $file;
     }
 
+    /**
+     * Runs maintenance operations based on the database driver.
+     *
+     * @return int|bool return maintenance result or false if not supported.
+     */
     public function runMaintenance(): int|bool
     {
         if ('sqlite' === $this->driver) {
@@ -133,16 +201,33 @@ final class PDOMigrations
         return false;
     }
 
+    /**
+     * Retrieves the current version of the database schema.
+     *
+     * @return int Returns the current database schema version as an integer.
+     */
     private function getVersion(): int
     {
         return (int)$this->pdo->query('PRAGMA user_version')->fetchColumn();
     }
 
+    /**
+     * Sets the current version of the migration.
+     *
+     * @param int $version The version to set.
+     *
+     * @return void
+     */
     private function setVersion(int $version): void
     {
         $this->pdo->exec('PRAGMA user_version = ' . $version);
     }
 
+    /**
+     * Retrieves the driver name associated with the current PDO instance.
+     *
+     * @return string Returns the name of the driver as a lower case string.
+     */
     private function getDriver(): string
     {
         $driver = $this->pdo->getAttribute($this->pdo::ATTR_DRIVER_NAME);
@@ -154,6 +239,11 @@ final class PDOMigrations
         return strtolower($driver);
     }
 
+    /**
+     * Parses the migration files and returns an array of parsed migrations.
+     *
+     * @return array<array-key, array{type: string, id: int, name: string, up: string, down: string}> Returns an array of parsed migrations.
+     */
     private function parseFiles(): array
     {
         $migrations = [];
@@ -161,7 +251,7 @@ final class PDOMigrations
         foreach ($this->getFiles() as $file) {
             [$type, $id, $name] = (array)preg_split(
                 '#^(\w+)_(\d+)_(.+)\.sql$#',
-                basename($file),
+                $file->getBasename(),
                 -1,
                 PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
             );
@@ -174,7 +264,7 @@ final class PDOMigrations
 
             [$up, $down] = (array)preg_split(
                 '/^-- #\s+?migrate_down\b/im',
-                (string)file_get_contents($file),
+                (string)$file->fread($file->getSize()),
                 -1,
                 PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
             );
@@ -194,6 +284,11 @@ final class PDOMigrations
         return $migrations;
     }
 
+    /**
+     * Retrieves a list of all migration files in the specified path.
+     *
+     * @return array<SplFileObject> Returns an array of SplFileObject instances.
+     */
     private function getFiles(): array
     {
         if (!empty($this->files)) {
@@ -202,10 +297,10 @@ final class PDOMigrations
 
         foreach ((array)glob($this->path . '/*.sql') as $file) {
             if (!is_string($file) || false === ($f = realpath($file))) {
-                throw new RuntimeException(sprintf('Unable to get real path to \'%s\'', $file));
+                throw new RuntimeException(r("Unable to get real path to '{file}'.", ['file' => $file]));
             }
 
-            $this->files[] = $f;
+            $this->files[] = new SplFileObject($f);
         }
 
         return $this->files;

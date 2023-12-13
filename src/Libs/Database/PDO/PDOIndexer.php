@@ -13,6 +13,15 @@ use Psr\Log\LoggerInterface as iLogger;
 
 final class PDOIndexer
 {
+    /**
+     * A constant array that defines the columns to be ignored in the index.
+     *
+     * The array contains the predefined constants defined in the iState class,
+     * representing different columns such as COLUMN_ID, COLUMN_PARENT,
+     * COLUMN_GUIDS, COLUMN_EXTRA, and COLUMN_META_DATA.
+     *
+     * @var array
+     */
     private const INDEX_IGNORE_ON = [
         iState::COLUMN_ID,
         iState::COLUMN_PARENT,
@@ -21,16 +30,40 @@ final class PDOIndexer
         iState::COLUMN_META_DATA,
     ];
 
+    /**
+     * BACKEND_INDEXES constant representing an array of backend indexes.
+     *
+     * This constant contains backend indexes which are used to represent specific columns in the backend.
+     * It is an array of constants defined in the iState interface.
+     * The indexes in this array are used to access specific columns in the backend.
+     *
+     * @var array
+     */
     private const BACKEND_INDEXES = [
         iState::COLUMN_ID,
         iState::COLUMN_META_SHOW,
         iState::COLUMN_META_LIBRARY,
     ];
 
+    /**
+     * Class constructor.
+     *
+     * @param PDO $db The PDO object used for database connections and queries.
+     * @param iLogger $logger The logger object used for logging information.
+     */
     public function __construct(private PDO $db, private iLogger $logger)
     {
     }
 
+    /**
+     * Ensures the existence of required indexes in the "state" table.
+     *
+     * @param array $opts An optional array of additional options.
+     *   Supported options:
+     *     - force-reindex: Whether to force reindexing (default: false).
+     *
+     * @return bool Returns true if the indexes are successfully created or updated, false otherwise.
+     */
     public function ensureIndex(array $opts = []): bool
     {
         $queries = [];

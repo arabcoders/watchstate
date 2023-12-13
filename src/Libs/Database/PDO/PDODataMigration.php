@@ -10,6 +10,11 @@ use App\Libs\Guid;
 use PDO;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class PDODataMigration
+ *
+ * This class is responsible for migrating data from a old database schema to new versions.
+ */
 final class PDODataMigration
 {
     private readonly string $version;
@@ -17,18 +22,36 @@ final class PDODataMigration
 
     private int $jFlags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR;
 
+    /**
+     * Class constructor.
+     *
+     * @param PDO $pdo The PDO instance to use for database connection.
+     * @param LoggerInterface $logger The logger instance to use for logging.
+     */
     public function __construct(private PDO $pdo, private LoggerInterface $logger)
     {
         $this->version = Config::get('database.version');
         $this->dbPath = dirname(after(Config::get('database.dsn'), 'sqlite:'));
     }
 
+    /**
+     * Sets the logger instance for logging.
+     *
+     * @param LoggerInterface $logger The logger instance to use for logging.
+     *
+     * @return self The current instance.
+     */
     public function setLogger(LoggerInterface $logger): self
     {
         $this->logger = $logger;
         return $this;
     }
 
+    /**
+     * Get the result from the automatic method call based on the version variable.
+     *
+     * @return mixed The result from the automatic method call or an empty string if the method doesn't exist or the version variable doesn't match.
+     */
     public function automatic(): mixed
     {
         foreach (get_class_methods($this) as $method) {
@@ -75,13 +98,16 @@ final class PDODataMigration
 
         $this->logger->notice('Migrating database data from pre-alpha version to v0');
 
-        $oldDB = new PDO(dsn: sprintf('sqlite:%s', $automatic), options: [
-            PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::ATTR_STRINGIFY_FETCHES => false,
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY,
-        ]);
+        $oldDB = new PDO(
+            dsn: r('sqlite:{file}', ['file' => $automatic]),
+            options: [
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_STRINGIFY_FETCHES => false,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY,
+            ]
+        );
 
         if (!$this->pdo->inTransaction()) {
             $this->pdo->beginTransaction();
@@ -133,61 +159,59 @@ final class PDODataMigration
                 $metadata[iFace::COLUMN_YEAR] = '0000';
             }
 
-            $insert->execute(
-                [
-                    iFace::COLUMN_ID => $row[iFace::COLUMN_ID],
-                    iFace::COLUMN_TYPE => $row[iFace::COLUMN_TYPE],
-                    iFace::COLUMN_UPDATED => $row[iFace::COLUMN_UPDATED],
-                    iFace::COLUMN_WATCHED => $row[iFace::COLUMN_WATCHED],
-                    iFace::COLUMN_VIA => ag($row['meta'], iFace::COLUMN_VIA, 'before_v0'),
-                    iFace::COLUMN_TITLE => ag($row['meta'], ['series', iFace::COLUMN_TITLE], '??'),
-                    iFace::COLUMN_YEAR => $metadata[iFace::COLUMN_YEAR],
-                    iFace::COLUMN_SEASON => ag($row['meta'], iFace::COLUMN_SEASON, null),
-                    iFace::COLUMN_EPISODE => ag($row['meta'], iFace::COLUMN_EPISODE, null),
-                    iFace::COLUMN_PARENT => json_encode(
-                        value: array_intersect_key(
-                            $row,
-                            ag($row['meta'], iFace::COLUMN_PARENT, []),
-                            Guid::getSupported()
-                        ),
-                        flags: $this->jFlags
+            $insert->execute([
+                iFace::COLUMN_ID => $row[iFace::COLUMN_ID],
+                iFace::COLUMN_TYPE => $row[iFace::COLUMN_TYPE],
+                iFace::COLUMN_UPDATED => $row[iFace::COLUMN_UPDATED],
+                iFace::COLUMN_WATCHED => $row[iFace::COLUMN_WATCHED],
+                iFace::COLUMN_VIA => ag($row['meta'], iFace::COLUMN_VIA, 'before_v0'),
+                iFace::COLUMN_TITLE => ag($row['meta'], ['series', iFace::COLUMN_TITLE], '??'),
+                iFace::COLUMN_YEAR => $metadata[iFace::COLUMN_YEAR],
+                iFace::COLUMN_SEASON => ag($row['meta'], iFace::COLUMN_SEASON, null),
+                iFace::COLUMN_EPISODE => ag($row['meta'], iFace::COLUMN_EPISODE, null),
+                iFace::COLUMN_PARENT => json_encode(
+                    value: array_intersect_key(
+                        $row,
+                        ag($row['meta'], iFace::COLUMN_PARENT, []),
+                        Guid::getSupported()
                     ),
-                    iFace::COLUMN_GUIDS => json_encode(
-                        value: array_intersect_key($row, Guid::getSupported()),
-                        flags: $this->jFlags
-                    ),
-                    iFace::COLUMN_META_DATA => json_encode(
-                        value: (function () use ($metadata): array {
-                            $list = [];
+                    flags: $this->jFlags
+                ),
+                iFace::COLUMN_GUIDS => json_encode(
+                    value: array_intersect_key($row, Guid::getSupported()),
+                    flags: $this->jFlags
+                ),
+                iFace::COLUMN_META_DATA => json_encode(
+                    value: (function () use ($metadata): array {
+                        $list = [];
 
-                            foreach (Config::get('servers', []) as $name => $info) {
-                                if (true !== (bool)ag($info, 'import.enabled', false)) {
-                                    continue;
-                                }
-                                $list[$name] = $metadata;
+                        foreach (Config::get('servers', []) as $name => $info) {
+                            if (true !== (bool)ag($info, 'import.enabled', false)) {
+                                continue;
                             }
+                            $list[$name] = $metadata;
+                        }
 
-                            return $list;
-                        })(),
-                        flags: $this->jFlags
-                    ),
-                    iFace::COLUMN_EXTRA => json_encode(
-                        value: (function () use ($extra): array {
-                            $list = [];
+                        return $list;
+                    })(),
+                    flags: $this->jFlags
+                ),
+                iFace::COLUMN_EXTRA => json_encode(
+                    value: (function () use ($extra): array {
+                        $list = [];
 
-                            foreach (Config::get('servers', []) as $name => $info) {
-                                if (true !== (bool)ag($info, 'import.enabled', false)) {
-                                    continue;
-                                }
-                                $list[$name] = $extra;
+                        foreach (Config::get('servers', []) as $name => $info) {
+                            if (true !== (bool)ag($info, 'import.enabled', false)) {
+                                continue;
                             }
+                            $list[$name] = $extra;
+                        }
 
-                            return $list;
-                        })(),
-                        flags: $this->jFlags
-                    ),
-                ]
-            );
+                        return $list;
+                    })(),
+                    flags: $this->jFlags
+                ),
+            ]);
         }
 
         if ($this->pdo->inTransaction()) {
@@ -393,5 +417,4 @@ final class PDODataMigration
 
         return true;
     }
-
 }

@@ -19,113 +19,114 @@ interface DatabaseInterface
     public const MIGRATE_DOWN = 'down';
 
     /**
-     * Set db driver options.
+     * Set options
      *
-     * @param array $options
+     * @param array $options PDO options
+     *
      * @return self
      */
     public function setOptions(array $options): self;
 
     /**
-     * Insert Entity immediately.
+     * Insert entity immediately.
      *
-     * @param StateInterface $entity
+     * @param StateInterface $entity Entity to insert
      *
-     * @return StateInterface Return given entity with valid $id
+     * @return StateInterface Return given entity with valid primary key.
      */
     public function insert(StateInterface $entity): StateInterface;
 
     /**
-     * Get Entity.
+     * Get entity.
      *
-     * @param StateInterface $entity
+     * @param StateInterface $entity Item encoded in entity class to get.
      *
-     * @return StateInterface|null
+     * @return StateInterface|null Return null if not found.
      */
     public function get(StateInterface $entity): StateInterface|null;
 
     /**
-     * Load entities from backend.
+     * Load entities from database.
      *
      * @param DateTimeInterface|null $date Get Entities That has changed since given time, if null get all.
-     * @param array $opts
+     * @param array $opts (Optional) options.
      *
      * @return array<StateInterface>
      */
     public function getAll(DateTimeInterface|null $date = null, array $opts = []): array;
 
     /**
-     * Return Number of Items.
+     * Return number of items.
      *
      * @param DateTimeInterface|null $date if provided, it will return items changes since this date.
      *
-     * @return int
+     * @return int Number of items.
      */
     public function getCount(DateTimeInterface|null $date = null): int;
 
     /**
      * Return database records for given items.
      *
-     * @param array<StateInterface> $items
+     * @param array<StateInterface> $items Items to find.
      *
      * @return array<StateInterface>
      */
     public function find(StateInterface ...$items): array;
 
     /**
-     * Update Entity immediately.
+     * Update entity immediately.
      *
-     * @param StateInterface $entity
+     * @param StateInterface $entity Entity to update.
      *
-     * @return StateInterface Return the given entity.
+     * @return StateInterface Return the updated entity.
      */
     public function update(StateInterface $entity): StateInterface;
 
     /**
-     * Remove Entity.
+     * Remove entity.
      *
-     * @param StateInterface $entity
+     * @param StateInterface $entity Entity to remove.
      *
-     * @return bool
+     * @return bool Return true if removed, false if not found.
      */
     public function remove(StateInterface $entity): bool;
 
     /**
-     * Insert/Update Entities.
+     * Insert or update entities.
      *
-     * @param array<StateInterface> $entities
-     * @param array $opts
+     * @param array<StateInterface> $entities Entities to commit.
+     * @param array $opts (Optional) options.
      *
-     * @return array
+     * @return array{added: int, updated: int, failed: int} Return array with count for each operation.
      */
     public function commit(array $entities, array $opts = []): array;
 
     /**
      * Run database migrations.
      *
-     * @param string $dir direction {@see MIGRATE_UP}, {@see MIGRATE_DOWN}
-     * @param array $opts
+     * @param string $dir Migration direction (up|down).
+     * @param array $opts (Optional) options.
      *
-     * @return mixed
+     * @return mixed Return value depends on the driver.
      */
     public function migrations(string $dir, array $opts = []): mixed;
 
     /**
-     * Check Indexes.
+     * Ensure database has correct indexes.
      *
-     * @param array $opts
+     * @param array $opts (Optional) options.
      *
-     * @return mixed
+     * @return mixed Return value depends on the driver.
      */
     public function ensureIndex(array $opts = []): mixed;
 
     /**
-     * Migrate data from old database version.
+     * Migrate data from old database schema to new one.
      *
-     * @param string $version represent the new version.
-     * @param LoggerInterface|null $logger
+     * @param string $version Version to migrate to.
+     * @param LoggerInterface|null $logger Logger to use.
      *
-     * @return mixed
+     * @return mixed Return value depends on the driver.
      */
     public function migrateData(string $version, LoggerInterface|null $logger = null): mixed;
 
@@ -137,21 +138,21 @@ interface DatabaseInterface
     public function isMigrated(): bool;
 
     /**
-     * Run Maintenance tasks on database.
+     * Run maintenance tasks on database.
      *
-     * @param array $opts
-     * @return mixed
+     * @param array $opts (Optional) options.
+     *
+     * @return mixed Return value depends on the driver.
      */
     public function maintenance(array $opts = []): mixed;
 
     /**
-     * Make Migration.
+     * Make migration.
      *
      * @param string $name
      * @param array $opts
      *
-     * @return mixed can return migration file name in supported cases.
-     * @throws
+     * @return mixed can return migration filename in supported cases.
      */
     public function makeMigration(string $name, array $opts = []): mixed;
 
@@ -159,32 +160,35 @@ interface DatabaseInterface
      * Inject Logger.
      *
      * @param LoggerInterface $logger
+     *
      * @return $this
      */
     public function setLogger(LoggerInterface $logger): self;
 
     /**
-     * Get Underlying PDO Instance.
+     * Get PDO instance.
      *
      * @return PDO
+     *
      * @throws RuntimeException if PDO is not initialized yet.
      */
     public function getPDO(): PDO;
 
     /**
-     * Enable Single Transaction mode.
+     * Enable single transaction mode.
      *
      * @return bool
      */
     public function singleTransaction(): bool;
 
     /**
-     * Wrap Queries into single transaction.
+     * Wrap queries into single transaction.
      *
      * @param Closure(DatabaseInterface): mixed $callback
      *
-     * @return mixed
-     * @throws PDOException
+     * @return mixed Return value from callback.
+     *
+     * @throws PDOException if transaction fails.
      */
     public function transactional(Closure $callback): mixed;
 }
