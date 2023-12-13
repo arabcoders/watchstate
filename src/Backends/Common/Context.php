@@ -9,16 +9,16 @@ use Psr\Http\Message\UriInterface;
 class Context
 {
     /**
-     * Make Context for classes to work with.
+     * Make backend context for classes to work with.
      *
-     * @param string $clientName Backend Client Name
-     * @param string $backendName Backend Name
-     * @param UriInterface $backendUrl Backend Url
-     * @param Cache $cache A Global Cache for backend.
-     * @param string|int|null $backendId Backend Id.
+     * @param string $clientName Backend client name.
+     * @param string $backendName Backend name.
+     * @param UriInterface $backendUrl Backend URL.
+     * @param Cache $cache A global cache for backend.
+     * @param string|int|null $backendId Backend id.
      * @param string|int|null $backendToken Backend access token
      * @param string|int|null $backendUser Backend user id.
-     * @param array $backendHeaders Headers to pass for backend.
+     * @param array $backendHeaders Headers to pass for backend requests.
      * @param bool $trace Enable debug tracing mode.
      * @param array $options optional options.
      */

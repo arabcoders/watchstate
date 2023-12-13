@@ -11,10 +11,25 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 
+/**
+ * Class Cache
+ *
+ * Class to handle backend cache.
+ */
 final class Cache implements Countable
 {
+    /**
+     * @var array The data to be cached.
+     */
     private array $data = [];
+    /**
+     * @var string|null The key to identify the data in the cache.
+     */
     private string|null $key = null;
+
+    /**
+     * @var array The options for retrieving the data.
+     */
     private array $options = [];
 
     /**
@@ -27,6 +42,14 @@ final class Cache implements Countable
     {
     }
 
+    /**
+     * Clone the object with the data retrieved from the cache based on the key.
+     *
+     * @param string $key The key to identify the data in the cache.
+     * @param array $options options for retrieving the data.
+     *
+     * @return Cache The cloned object with the data.
+     */
     public function withData(string $key, array $options = []): self
     {
         $cloned = clone $this;
@@ -46,16 +69,39 @@ final class Cache implements Countable
         return $cloned;
     }
 
+    /**
+     * Checks if the given key exists in the cache.
+     *
+     * @param string $key The key to check.
+     *
+     * @return bool Returns true if the key exists, false otherwise.
+     */
     public function has(string $key): bool
     {
         return ag_exists($this->data, $key);
     }
 
+    /**
+     * Retrieves a value from the cache based on the given key.
+     *
+     * @param string $key The key used to retrieve the value from the cache.
+     * @param mixed $default Default value to return if the key is not found in the cache.
+     *
+     * @return mixed The value associated with the given key in the cache, or the default value if the key is not found.
+     */
     public function get(string $key, mixed $default = null): mixed
     {
         return ag($this->data, $key, $default);
     }
 
+    /**
+     * Sets a value in the cache based on the given key.
+     *
+     * @param string $key The key used to set the value in the cache.
+     * @param mixed $value The value to set in the cache.
+     *
+     * @return Cache Returns the current object.
+     */
     public function set(string $key, mixed $value): self
     {
         $this->data = ag_set($this->data, $key, $value);
@@ -63,6 +109,13 @@ final class Cache implements Countable
         return $this;
     }
 
+    /**
+     * Removes a value from the cache based on the given key.
+     *
+     * @param string $key The key used to remove the value from the cache.
+     *
+     * @return bool True if the value was successfully removed from the cache, false otherwise.
+     */
     public function remove(string $key): bool
     {
         if (false === ag_exists($this->data, $key)) {
@@ -73,6 +126,12 @@ final class Cache implements Countable
         return true;
     }
 
+    /**
+     * If key is set and there is a data within the data array and the dry run option is not set,
+     * then the data is flushed to the cache backend.
+     *
+     * @return void
+     */
     public function __destruct()
     {
         if (null === $this->key || $this->count() < 1 || true === (bool)ag($this->options, Options::DRY_RUN)) {
@@ -85,6 +144,11 @@ final class Cache implements Countable
         }
     }
 
+    /**
+     * Counts the number of elements in the data array.
+     *
+     * @return int The number of elements in the data array.
+     */
     public function count(): int
     {
         return count($this->data);

@@ -7,12 +7,12 @@ namespace App\Backends\Common;
 final class Response
 {
     /**
-     * Wrap Clients responses into easy to consume object.
+     * Wrap clients responses into easy to consume object.
      *
-     * @param bool $status Whether the operation is Successful.
-     * @param mixed $response the actual response.
-     * @param Error|null $error If the response has an error, populate it using {@see Error} object.
-     * @param mixed $extra an array that can contain anything.
+     * @param bool $status Whether the operation is successful.
+     * @param mixed $response The actual response.
+     * @param Error|null $error If the response has an error.
+     * @param mixed $extra An array that can contain anything. Should be rarely used.
      */
     public function __construct(
         public readonly bool $status,
@@ -24,6 +24,8 @@ final class Response
 
     /**
      * Does the response contain an error object?
+     *
+     * @return bool True if the response has an error.
      */
     public function hasError(): bool
     {
@@ -31,7 +33,9 @@ final class Response
     }
 
     /**
-     * Return Error response.
+     * Return error response.
+     *
+     * @return Error the error object if exists otherwise dummy error object is returned.
      */
     public function getError(): Error
     {
@@ -39,7 +43,9 @@ final class Response
     }
 
     /**
-     * Is the Operation Successful?
+     * Is the operation successful?
+     *
+     * @return bool true if the operation is successful.
      */
     public function isSuccessful(): bool
     {

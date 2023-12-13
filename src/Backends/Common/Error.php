@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
+use Stringable;
 use Throwable;
 
-final class Error implements \Stringable
+final class Error implements Stringable
 {
     /**
-     * Wrap Error in easy to consume way.
+     * Wrap error in easy to consume way.
      *
      * @param string $message Error message.
      * @param array $context Error message context.
@@ -66,16 +67,21 @@ final class Error implements \Stringable
             return $this->message;
         }
 
-        return r($this->message, $this->context, [
-            'log_behavior' => true
-        ]);
+        return r($this->message, $this->context, ['log_behavior' => true]);
     }
 
     public function __toString(): string
     {
-        return r('{ERROR}: {message}', [
-            'ERROR' => $this->level->value,
+        $params = [
+            'level' => $this->level->value,
             'message' => $this->format(),
-        ]);
+        ];
+
+        if ($this->hasException()) {
+            $params['line'] = $this->previous->getLine();
+            $params['file'] = after($this->previous->getFile(), ROOT_PATH);
+        }
+
+        return r('{level}: {message}' . ($this->hasException() ? '. In [{file}:{line}].' : ''), $params);
     }
 }
