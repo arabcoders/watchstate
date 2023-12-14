@@ -10,10 +10,32 @@ use Monolog\LogRecord;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * The ConsoleHandler class is responsible for handling log records and outputting them to the console.
+ *
+ * @extends AbstractProcessingHandler
+ */
 class ConsoleHandler extends AbstractProcessingHandler
 {
+    /**
+     * @var OutputInterface|null $output The console output interface to be used for printing log records
+     */
     private OutputInterface|null $output;
 
+    /**
+     * Maps verbosity levels from the OutputInterface to corresponding log levels.
+     *
+     * @var array $levelsMapper
+     *      The mapping of verbosity levels to log levels.
+     *      The verbosity levels are defined in the OutputInterface class and the log levels are defined in the Level class.
+     *      The keys of the array are the verbosity levels and the values are the corresponding log levels.
+     *      Example:
+     *      OutputInterface::VERBOSITY_QUIET => Level::Error,
+     *      OutputInterface::VERBOSITY_NORMAL => Level::Warning,
+     *      OutputInterface::VERBOSITY_VERBOSE => Level::Notice,
+     *      OutputInterface::VERBOSITY_VERY_VERBOSE => Level::Info,
+     *      OutputInterface::VERBOSITY_DEBUG => Level::Debug
+     */
     private array $levelsMapper = [
         OutputInterface::VERBOSITY_QUIET => Level::Error,
         OutputInterface::VERBOSITY_NORMAL => Level::Warning,
@@ -22,6 +44,13 @@ class ConsoleHandler extends AbstractProcessingHandler
         OutputInterface::VERBOSITY_DEBUG => Level::Debug,
     ];
 
+    /**
+     * Constructor for the class.
+     *
+     * @param OutputInterface|null $output The console output for determining verbosity
+     * @param bool $bubble Whether the log messages should bubble up the stack or not
+     * @param array $levelsMapper (Optional) An array mapping verbosity levels to logging levels
+     */
     public function __construct(OutputInterface|null $output = null, bool $bubble = true, array $levelsMapper = [])
     {
         parent::__construct(Level::Debug, $bubble);
@@ -33,11 +62,29 @@ class ConsoleHandler extends AbstractProcessingHandler
         }
     }
 
+    /**
+     * Determines if the log record is being handled by the handler.
+     *
+     * @param LogRecord $record The log record being evaluated
+     *
+     * @return bool Whether the handler is handling the log record
+     */
     public function isHandling(LogRecord $record): bool
     {
         return $this->updateLevel() && parent::isHandling($record);
     }
 
+    /**
+     * Handles a log record.
+     *
+     * This method calls the updateLevel() method to update the logging level
+     * based on the verbosity setting of the console output. It then calls the
+     * parent's handle() method to handle the log record.
+     *
+     * @param LogRecord $record The log record to handle
+     *
+     * @return bool Whether the log record was successfully handled
+     */
     public function handle(LogRecord $record): bool
     {
         // we have to update the logging level each time because the verbosity of the
@@ -46,13 +93,20 @@ class ConsoleHandler extends AbstractProcessingHandler
     }
 
     /**
-     * Sets the console output to use for printing logs.
+     * Sets the output interface to be used by the logger.
+     *
+     * @param OutputInterface $output The console output interface to be set
      */
     public function setOutput(OutputInterface $output): void
     {
         $this->output = $output;
     }
 
+    /**
+     * Writes a log record to the output.
+     *
+     * @param LogRecord $record The log record to be written
+     */
     protected function write(LogRecord $record): void
     {
         $date = $record['datetime'] ?? 'No date set';
@@ -61,12 +115,11 @@ class ConsoleHandler extends AbstractProcessingHandler
             $date = $date->format(DateTimeInterface::ATOM);
         }
 
-        $message = sprintf(
-            '[%s] %s: %s',
-            $date,
-            $record['level_name'] ?? $record['level'] ?? '??',
-            $record['message'],
-        );
+        $message = r('[{date}] {level}: {message}', [
+            'date' => $date,
+            'level' => $record['level_name'] ?? $record['level'] ?? '??',
+            'message' => $record['message'],
+        ]);
 
         if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
             $message .= ' { ' . arrayToString($record['context']) . ' }';
@@ -90,11 +143,7 @@ class ConsoleHandler extends AbstractProcessingHandler
 
         $verbosity = $this->output->getVerbosity();
 
-        if (isset($this->levelsMapper[$verbosity])) {
-            $this->setLevel($this->levelsMapper[$verbosity]);
-        } else {
-            $this->setLevel(Level::Debug);
-        }
+        $this->setLevel($this->levelsMapper[$verbosity] ?? Level::Debug);
 
         return true;
     }
