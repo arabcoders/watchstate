@@ -12,6 +12,9 @@ namespace App\Libs;
  */
 final class Message
 {
+    /**
+     * @var array $data holds the messages.
+     */
     private static array $data = [];
 
     /**
@@ -19,8 +22,6 @@ final class Message
      *
      * @param string $key Message key.
      * @param mixed $value value.
-     *
-     * @return void
      */
     public static function add(string $key, mixed $value): void
     {
@@ -28,7 +29,7 @@ final class Message
     }
 
     /**
-     * Get Message.
+     * Get message.
      *
      * @param string $key message key.
      * @param mixed|null $default default value
@@ -41,7 +42,7 @@ final class Message
     }
 
     /**
-     * Get All Stored Messages.
+     * Get all stored messages.
      *
      * @return array
      */
@@ -51,12 +52,10 @@ final class Message
     }
 
     /**
-     * increment key value increment parameter value.
+     * increment key value.
      *
      * @param string $key message key.
      * @param int $increment value. default to 1
-     *
-     * @return void
      */
     public static function increment(string $key, int $increment = 1): void
     {
@@ -64,9 +63,7 @@ final class Message
     }
 
     /**
-     * Reset Stored data.
-     *
-     * @return void
+     * Reset stored data.
      */
     public static function reset(): void
     {

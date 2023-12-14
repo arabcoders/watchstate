@@ -10,6 +10,15 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Stringable;
 
+/**
+ * The Guid class is the parser for external ids for different databases.
+ *
+ * This class provides methods to create and validate the list of external ids,
+ * retrieve the supported external id sources, and obtain the pointers linking the
+ * entity to the external ids.
+ *
+ * @implements JsonSerializable, Stringable
+ */
 final class Guid implements JsonSerializable, Stringable
 {
     public const GUID_IMDB = 'guid_imdb';
@@ -20,6 +29,13 @@ final class Guid implements JsonSerializable, Stringable
     public const GUID_ANIDB = 'guid_anidb';
     public const GUID_YOUTUBE = 'guid_youtube';
     public const GUID_CMDB = 'guid_cmdb';
+    /**
+     * Constant array of supported GUID types.
+     *
+     * This array contains the supported GUID types as keys and their respective data types as values.
+     *
+     * @var array
+     */
     private const SUPPORTED = [
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
@@ -30,6 +46,16 @@ final class Guid implements JsonSerializable, Stringable
         Guid::GUID_YOUTUBE => 'string',
         Guid::GUID_CMDB => 'string',
     ];
+    /**
+     * Constant array for validating GUIDs.
+     *
+     * This array contains the patterns and example formats for validating GUIDs of different types.
+     * Each GUID type is mapped to an array with two keys:
+     * - 'pattern' (string): The regular expression pattern to match against the GUID.
+     * - 'example' (string): An example format of the GUID value.
+     *
+     * @var array
+     */
     private const VALIDATE_GUID = [
         Guid::GUID_IMDB => [
             'pattern' => '/tt(\d+)/i',
@@ -56,8 +82,17 @@ final class Guid implements JsonSerializable, Stringable
             'example' => '(number)',
         ],
     ];
+    /**
+     * @var string LOOKUP_KEY is how we format external ids to look up a record.
+     */
     private const LOOKUP_KEY = '{db}://{id}';
+    /**
+     * @var array $data Holds the list of supported external ids.
+     */
     private array $data = [];
+    /**
+     * @var null|LoggerInterface $logger The logger instance used for logging.
+     */
     private static LoggerInterface|null $logger = null;
 
     /**
@@ -135,10 +170,9 @@ final class Guid implements JsonSerializable, Stringable
     }
 
     /**
-     * Set logger.
+     * Set the logger instance for the class.
      *
-     * @param LoggerInterface $logger
-     * @return void
+     * @param LoggerInterface $logger The logger instance to be set.
      */
     public static function setLogger(LoggerInterface $logger): void
     {
@@ -159,7 +193,7 @@ final class Guid implements JsonSerializable, Stringable
      * Create new instance from array.
      *
      * @param array $payload array of [ 'key' => 'value' ] pairs of [ 'db_source' => 'external id' ].
-     * @param array $context
+     * @param array $context context data.
      *
      * @return self
      */
@@ -251,11 +285,21 @@ final class Guid implements JsonSerializable, Stringable
         return self::$logger;
     }
 
+    /**
+     * Serialize the object to a JSON string.
+     *
+     * @return array The serialized data as an array.
+     */
     public function jsonSerialize(): array
     {
         return $this->getAll();
     }
 
+    /**
+     * Returns a JSON-encoded string representation of the object.
+     *
+     * @return string The JSON-encoded string representation of the object.
+     */
     public function __toString(): string
     {
         return json_encode($this->getAll());

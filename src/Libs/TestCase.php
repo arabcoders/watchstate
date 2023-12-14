@@ -10,6 +10,11 @@ class TestCase extends \PHPUnit\Framework\TestCase
 {
     protected TestHandler|null $handler = null;
 
+    /**
+     * Prints logs to the standard output.
+     *
+     * @return void
+     */
     protected function printLogs(): void
     {
         if (null === $this->handler) {
