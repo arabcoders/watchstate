@@ -16,24 +16,45 @@ use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Log\LoggerInterface as iLogger;
 
+/**
+ * Class RestoreMapper
+ *
+ * This class is responsible for mapping and manipulating entities during the restore backup process.
+ *
+ * @implements iImport
+ */
 final class RestoreMapper implements iImport
 {
     /**
-     * @var array<int,iState> Entities table.
+     * @var array<int,iState> In memory entities list.
      */
     protected array $objects = [];
 
     /**
-     * @var array<string,int> Map GUIDs to entities.
+     * @var array<string,int> Map entity pointers to object pointers.
      */
     protected array $pointers = [];
 
+    /**
+     * @var array<string,mixed> Mapper options.
+     */
     protected array $options = [];
 
+    /**
+     * Class constructor.
+     *
+     * @param iLogger $logger An instance of the iLogger interface.
+     * @param string $file The file to be used by the constructor.
+     *
+     * @return void
+     */
     public function __construct(private iLogger $logger, private string $file)
     {
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setOptions(array $options = []): iImport
     {
         $this->options = $options;
@@ -42,7 +63,8 @@ final class RestoreMapper implements iImport
     }
 
     /**
-     * @throws \JsonMachine\Exception\InvalidArgumentException
+     * @inheritdoc
+     * @throws \JsonMachine\Exception\InvalidArgumentException If unexpected things happen while loading the JSON file.
      */
     public function loadData(iDate|null $date = null): self
     {
@@ -75,6 +97,9 @@ final class RestoreMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
@@ -93,16 +118,25 @@ final class RestoreMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function get(iState $entity): null|iState
     {
         return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function remove(iState $entity): bool
     {
         return true;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function commit(): mixed
     {
         $this->reset();
@@ -110,11 +144,17 @@ final class RestoreMapper implements iImport
         return [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function has(iState $entity): bool
     {
         return null !== $this->get($entity);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reset(): self
     {
         $this->objects = $this->pointers = [];
@@ -122,42 +162,71 @@ final class RestoreMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getObjects(array $opts = []): array
     {
         return $this->objects;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getObjectsCount(): int
     {
         return count($this->objects);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function count(): int
     {
         return 0;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setDatabase(iDB $db): self
     {
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function inDryRunMode(): bool
     {
         return false;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function inTraceMode(): bool
     {
         return false;
     }
 
+    /**
+     * Add pointers for the given entity.
+     *
+     * @param iState $entity The entity for which to add pointers.
+     * @param string|int $pointer The pointer to database object id.
+     *
+     * @return iImport Returns the current iImport instance.
+     */
     protected function addPointers(iState $entity, string|int $pointer): iImport
     {
         foreach ($entity->getRelativePointers() as $key) {
@@ -171,6 +240,13 @@ final class RestoreMapper implements iImport
         return $this;
     }
 
+    /**
+     * Gets the pointer for a given entity.
+     *
+     * @param iState $entity The entity for which to get the pointer.
+     *
+     * @return int|string|bool Returns the pointer if found, otherwise returns false.
+     */
     protected function getPointer(iState $entity): int|string|bool
     {
         foreach ($entity->getRelativePointers() as $key) {
@@ -189,11 +265,17 @@ final class RestoreMapper implements iImport
         return false;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getPointersList(): array
     {
         return $this->pointers;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getChangedList(): array
     {
         return [];

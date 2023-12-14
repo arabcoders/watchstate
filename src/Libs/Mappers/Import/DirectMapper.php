@@ -18,6 +18,16 @@ use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 
+/**
+ * DirectMapper Class.
+ *
+ * This class is alternative implementation of the ImportInterface.
+ * The difference between this and the MemoryMapper is that this mapper uses direct 1:1 database mapping.
+ * Which leads to less memory usage overall and slower performance. This mapper should only be used when memory is a concern.
+ * The only thing kept in memory is the list of pointers to the database objects.
+ *
+ * @implements iImport
+ */
 final class DirectMapper implements iImport
 {
     /**
@@ -26,7 +36,7 @@ final class DirectMapper implements iImport
     protected array $objects = [];
 
     /**
-     * @var array<array-key,int>
+     * @var array<array-key,int> List of pointers.
      */
     protected array $pointers = [];
 
@@ -36,25 +46,42 @@ final class DirectMapper implements iImport
     protected array $changed = [];
 
     /**
-     * @var array<array-key,<string,int>>
+     * @var array<array-key,<string,int>> List of actions performed.
      */
     protected array $actions = [
         iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
         iState::TYPE_EPISODE => ['added' => 0, 'updated' => 0, 'failed' => 0],
     ];
 
+    /**
+     * @var array<string,mixed> Mapper options.
+     */
     protected array $options = [];
 
+    /**
+     * @var bool $fullyLoaded Indicates whether the entire database loaded.
+     */
     protected bool $fullyLoaded = false;
+
     /**
      * @var array<string,iState> List of items with play progress.
      */
     protected array $progressItems = [];
 
+    /**
+     * Class constructor.
+     *
+     * @param iLogger $logger The logger instance.
+     * @param iDB $db The database instance.
+     * @param CacheInterface $cache The cache instance.
+     */
     public function __construct(protected iLogger $logger, protected iDB $db, protected CacheInterface $cache)
     {
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setOptions(array $options = []): iImport
     {
         $this->options = $options;
@@ -62,6 +89,9 @@ final class DirectMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function loadData(iDate|null $date = null): self
     {
         $this->fullyLoaded = null === $date;
@@ -97,6 +127,9 @@ final class DirectMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function add(iState $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
@@ -181,11 +214,20 @@ final class DirectMapper implements iImport
             } catch (PDOException|Exception $e) {
                 $this->actions[$entity->type]['failed']++;
                 Message::increment("{$entity->via}.{$entity->type}.failed");
-                $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                    'state' => $entity->getAll()
-                ]);
+                $this->logger->error(
+                    message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'backend' => $entity->via,
+                        'title' => $entity->getName(),
+                        'state' => $entity->getAll()
+                    ]
+                );
             }
 
             return $this;
@@ -230,15 +272,24 @@ final class DirectMapper implements iImport
                 } catch (PDOException $e) {
                     $this->actions[$local->type]['failed']++;
                     Message::increment("{$entity->via}.{$local->type}.failed");
-                    $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                        'state' => [
-                            'database' => $cloned->getAll(),
-                            'backend' => $entity->getAll()
-                        ],
-                    ]);
+                    $this->logger->error(
+                        message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'state' => [
+                                'database' => $cloned->getAll(),
+                                'backend' => $entity->getAll()
+                            ],
+                        ]
+                    );
                 }
 
                 return $this;
@@ -290,15 +341,24 @@ final class DirectMapper implements iImport
                     } catch (PDOException $e) {
                         $this->actions[$local->type]['failed']++;
                         Message::increment("{$entity->via}.{$local->type}.failed");
-                        $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'title' => $cloned->getName(),
-                            'state' => [
-                                'database' => $cloned->getAll(),
-                                'backend' => $entity->getAll()
-                            ],
-                        ]);
+                        $this->logger->error(
+                            message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                            context: [
+                                'error' => [
+                                    'kind' => $e::class,
+                                    'line' => $e->getLine(),
+                                    'message' => $e->getMessage(),
+                                    'file' => after($e->getFile(), ROOT_PATH),
+                                ],
+                                'id' => $cloned->id,
+                                'backend' => $entity->via,
+                                'title' => $cloned->getName(),
+                                'state' => [
+                                    'database' => $cloned->getAll(),
+                                    'backend' => $entity->getAll()
+                                ],
+                            ]
+                        );
                     }
 
                     return $this;
@@ -357,14 +417,24 @@ final class DirectMapper implements iImport
                         } catch (PDOException $e) {
                             $this->actions[$local->type]['failed']++;
                             Message::increment("{$entity->via}.{$local->type}.failed");
-                            $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                                'id' => $cloned->id,
-                                'title' => $cloned->getName(),
-                                'state' => [
-                                    'database' => $cloned->getAll(),
-                                    'backend' => $entity->getAll()
-                                ],
-                            ]);
+                            $this->logger->error(
+                                message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                                context: [
+                                    'error' => [
+                                        'kind' => $e::class,
+                                        'line' => $e->getLine(),
+                                        'message' => $e->getMessage(),
+                                        'file' => after($e->getFile(), ROOT_PATH),
+                                    ],
+                                    'id' => $cloned->id,
+                                    'backend' => $entity->via,
+                                    'title' => $cloned->getName(),
+                                    'state' => [
+                                        'database' => $cloned->getAll(),
+                                        'backend' => $entity->getAll()
+                                    ],
+                                ]
+                            );
                         }
 
                         return $this;
@@ -471,15 +541,24 @@ final class DirectMapper implements iImport
             } catch (PDOException $e) {
                 $this->actions[$local->type]['failed']++;
                 Message::increment("{$entity->via}.{$local->type}.failed");
-                $this->logger->error(sprintf('MAPPER: %s', $e->getMessage()), [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                    'state' => [
-                        'database' => $cloned->getAll(),
-                        'backend' => $entity->getAll()
-                    ],
-                ]);
+                $this->logger->error(
+                    message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                        'state' => [
+                            'database' => $cloned->getAll(),
+                            'backend' => $entity->getAll()
+                        ],
+                    ]
+                );
             }
 
             return $this;
@@ -505,6 +584,9 @@ final class DirectMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function get(iState $entity): null|iState
     {
         if (false === ($pointer = $this->getPointer($entity))) {
@@ -520,6 +602,9 @@ final class DirectMapper implements iImport
         return $this->db->get($entity);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function remove(iState $entity): bool
     {
         $this->removePointers($entity);
@@ -535,6 +620,9 @@ final class DirectMapper implements iImport
         return $this->db->remove($entity);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function commit(): array
     {
         if (count($this->progressItems) >= 1) {
@@ -555,11 +643,17 @@ final class DirectMapper implements iImport
         return $list;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function has(iState $entity): bool
     {
         return null !== $this->get($entity);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reset(): self
     {
         $this->actions = [
@@ -573,6 +667,9 @@ final class DirectMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getObjects(array $opts = []): array
     {
         $list = [];
@@ -590,16 +687,25 @@ final class DirectMapper implements iImport
         return $this->db->find(...$list);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getObjectsCount(): int
     {
         return count($this->objects);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function count(): int
     {
         return count($this->changed);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
@@ -607,32 +713,55 @@ final class DirectMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setDatabase(iDB $db): self
     {
         $this->db = $db;
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function inDryRunMode(): bool
     {
         return true === (bool)ag($this->options, Options::DRY_RUN, false);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function inTraceMode(): bool
     {
         return true === (bool)ag($this->options, Options::DEBUG_TRACE, false);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getPointersList(): array
     {
         return $this->pointers;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getChangedList(): array
     {
         return $this->changed;
     }
 
+    /**
+     * Adds pointers to the entity.
+     *
+     * @param iState $entity The entity to extract the pointers from.
+     * @param string|int $pointer The pointer to database object id.
+     *
+     * @return iImport The updated import instance.
+     */
     protected function addPointers(iState $entity, string|int $pointer): iImport
     {
         foreach ($entity->getRelativePointers() as $key) {
@@ -647,9 +776,9 @@ final class DirectMapper implements iImport
     }
 
     /**
-     * Is the object already mapped?
+     * Get pointer for database entity if exists.
      *
-     * @param iState $entity
+     * @param iState $entity The entity to get the pointer for.
      *
      * @return iState|int|string|bool int|string pointer for the object, or false if not registered.
      */
@@ -683,6 +812,13 @@ final class DirectMapper implements iImport
         return false;
     }
 
+    /**
+     * Removes entity pointers from mapper.
+     *
+     * @param iState $entity The entity contains the pointers to remove.
+     *
+     * @return iImport The updated instance of the class.
+     */
     protected function removePointers(iState $entity): iImport
     {
         foreach ($entity->getPointers() as $key) {
