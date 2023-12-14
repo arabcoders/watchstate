@@ -13,16 +13,31 @@ use Symfony\Component\Console\Input\InputOption;
 
 class Cli extends Application
 {
+    /**
+     * Constructs a new instance of the class.
+     *
+     * @param PSRContainer $container The dependency injection container.
+     */
     public function __construct(protected PSRContainer $container)
     {
         parent::__construct(self::getAppName(), getAppVersion());
     }
 
+    /**
+     * Get the name of the application from the configuration.
+     *
+     * @return string The name of the application.
+     */
     public static function getAppName(): string
     {
         return Config::get('name');
     }
 
+    /**
+     * Get the default input definition for the command.
+     *
+     * @return InputDefinition The default input definition.
+     */
     protected function getDefaultInputDefinition(): InputDefinition
     {
         $definition = parent::getDefaultInputDefinition();
