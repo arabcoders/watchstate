@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Libs;
-
-use ErrorException;
+namespace App\Libs\Exceptions;
 
 /**
- * Class BackendException
+ * Class InvalidArgumentException
  *
  * This class represents an exception that is thrown by the backend logic.
  */
-class BackendException extends ErrorException
+class InvalidArgumentException extends BackendException
 {
 }
