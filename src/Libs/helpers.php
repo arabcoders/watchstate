@@ -1034,3 +1034,53 @@ if (false === function_exists('isValidURL')) {
         );
     }
 }
+
+
+if (false === function_exists('getSystemMemoryInfo')) {
+    /**
+     * Get system memory information.
+     *
+     * @return array{ MemTotal: float, MemFree: float, MemAvailable: float, SwapTotal: float, SwapFree: float }
+     */
+    function getSystemMemoryInfo(): array
+    {
+        $keys = [
+            'MemTotal' => 'mem_total',
+            'MemFree' => 'mem_free',
+            'MemAvailable' => 'mem_available',
+            'SwapTotal' => 'swap_total',
+            'SwapFree' => 'swap_free',
+        ];
+
+        $result = [];
+
+        if (!is_readable('/proc/meminfo')) {
+            return $result;
+        }
+
+        if (false === ($lines = @file('/proc/meminfo', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))) {
+            return $result;
+        }
+
+        foreach ($lines as $line) {
+            if (empty($line)) {
+                continue;
+            }
+
+            $line = explode(':', $line);
+            $key = trim($line[0]);
+
+            if (false === array_key_exists($key, $keys)) {
+                continue;
+            }
+
+            $val = trim(str_ireplace(' kB', '', $line[1]));
+
+            $value = 1000 * (float)$val;
+
+            $result[$keys[$key]] = $value;
+        }
+
+        return $result;
+    }
+}

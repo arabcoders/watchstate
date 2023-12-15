@@ -16,10 +16,28 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
+/**
+ * Class PlexManage
+ *
+ * This class is responsible for creating and managing Plex backends configuration.
+ *
+ * @implements ManageInterface.
+ */
 class PlexManage implements ManageInterface
 {
+    /**
+     * @var QuestionHelper The QuestionHelper object used for asking questions.
+     */
     private QuestionHelper $questionHelper;
 
+    /**
+     * Constructor for the class.
+     *
+     * @param iHttp $http The iHttp object used for HTTP requests.
+     * @param iOutput $output The iOutput object used for outputting data.
+     * @param iInput $input The iInput object used for retrieving user input.
+     * @param iLogger $logger The iLogger object used for logging.
+     */
     public function __construct(
         private iHttp $http,
         private iOutput $output,
@@ -29,6 +47,9 @@ class PlexManage implements ManageInterface
         $this->questionHelper = new QuestionHelper();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function manage(array $backend, array $opts = []): array
     {
         // -- $backend.token

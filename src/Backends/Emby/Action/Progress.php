@@ -83,7 +83,9 @@ class Progress
             ];
 
             if ($context->backendName === $entity->via) {
-                $this->logger->info('Ignoring [{item.title}] for [{client}: {backend}]. Event generator.', [
+                $this->logger->info(
+                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Event generator.',
+                    [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -93,21 +95,27 @@ class Progress
             }
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
-                $this->logger->warning('Ignoring [{item.title}] for [{client}: {backend}]. No metadata.', [
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->warning(
+                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. No metadata.',
+                    [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
 
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
-                $this->logger->warning('Ignoring [{item.title}] for [{client}: {backend}]. Sender date is not set.', [
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->warning(
+                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Sender date is not set.',
+                    [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
             $senderDate = makeDate($senderDate)->getTimestamp();
@@ -115,7 +123,7 @@ class Progress
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    'Ignoring [{item.title}] for [{client}: {backend}]. Sender date is older than recorded backend date.',
+                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Sender date is older than recorded backend date.',
                     [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
@@ -138,7 +146,7 @@ class Progress
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        'Ignoring [{item.title}] for [{client}: {backend}]. Sender date is older than backend remote item date.',
+                        'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Sender date is older than backend remote item date.',
                         [
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
@@ -150,7 +158,7 @@ class Progress
 
                 if ($remoteItem->isWatched()) {
                     $this->logger->info(
-                        'Ignoring [{item.title}] for [{client}: {backend}]. The backend reported the item as watched.',
+                        'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. The backend reported the item as watched.',
                         [
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
@@ -194,13 +202,16 @@ class Progress
 
                 $logContext['remote']['url'] = (string)$url;
 
-                $this->logger->debug('Updating [{client}: {backend}] {item.type} [{item.title}] watch progress.', [
-                    // -- convert time to ticks for emby to understand it.
-                    'time' => floor($entity->getPlayProgress() * 1_00_00),
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->debug(
+                    'Emby.Progress: Updating [{client}: {backend}] {item.type} [{item.title}] watch progress.',
+                    [
+                        // -- convert time to ticks for emby to understand it.
+                        'time' => floor($entity->getPlayProgress() * 1_00_00),
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
 
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(

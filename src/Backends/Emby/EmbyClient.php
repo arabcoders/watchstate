@@ -8,6 +8,7 @@ use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Response;
 use App\Backends\Emby\Action\Backup;
 use App\Backends\Emby\Action\Export;
 use App\Backends\Emby\Action\GetIdentifier;
@@ -42,8 +43,9 @@ use SplFileObject;
 /**
  * Class EmbyClient
  *
- * This class represents a client for the Emby backend.
- * It implements the iClient interface.
+ * This class is responsible for facilitating communication with Emby Server backend.
+ *
+ * @implements iClient
  */
 class EmbyClient implements iClient
 {
@@ -200,10 +202,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(
-                ag($response->extra, 'message', fn() => $response->error->format()),
-                ag($response->extra, 'http_code', 400),
-            );
+            $this->throwError($response, HttpException::class, ag($response->extra, 'http_code', 400));
         }
 
         return $response->response;
@@ -229,7 +228,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -252,7 +251,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -279,7 +278,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -302,7 +301,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return [];
@@ -326,7 +325,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return [];
@@ -349,7 +348,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -367,7 +366,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -385,7 +384,7 @@ class EmbyClient implements iClient
         );
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -403,7 +402,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -439,9 +438,7 @@ class EmbyClient implements iClient
                 $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
-            throw new RuntimeException(
-                ag($response->extra, 'message', fn() => $response->error->format())
-            );
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -475,7 +472,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -493,7 +490,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -511,7 +508,7 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -523,5 +520,22 @@ class EmbyClient implements iClient
     public static function manage(array $backend, array $opts = []): array
     {
         return Container::get(EmbyManage::class)->manage(backend: $backend, opts: $opts);
+    }
+
+    /**
+     * Throws an exception with the specified message and previous exception.
+     *
+     * @template T
+     * @param Response $response The response object containing the error details.
+     * @param class-string<T> $className The exception class name.
+     * @param int $code The exception code.
+     */
+    private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
+    {
+        throw new $className(
+            message: ag($response->extra, 'message', fn() => $response->error->format()),
+            code: $code,
+            previous: $response->error->previous
+        );
     }
 }

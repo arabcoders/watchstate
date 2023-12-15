@@ -12,6 +12,9 @@ use Throwable;
 
 final class PlexGuid implements iGuid
 {
+    /**
+     * @var array<string,string> Map plex guids to our guids.
+     */
     private const GUID_MAPPER = [
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
@@ -22,6 +25,10 @@ final class PlexGuid implements iGuid
         'youtube' => Guid::GUID_YOUTUBE,
         'cmdb' => Guid::GUID_CMDB,
     ];
+
+    /**
+     * @var array<array-key,string> List of legacy plex agents.
+     */
     private const GUID_LEGACY = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
@@ -33,11 +40,19 @@ final class PlexGuid implements iGuid
         'com.plexapp.agents.youtube',
         'com.plexapp.agents.cmdb',
     ];
+
+    /**
+     * @var array<array-key,string> List of local plex agents.
+     */
     private const GUID_LOCAL = [
         'plex',
         'local',
         'com.plexapp.agents.none',
     ];
+
+    /**
+     * @var array<string,string> Map guids to their replacement.
+     */
     private const GUID_LEGACY_REPLACER = [
         'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
         'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
@@ -47,17 +62,24 @@ final class PlexGuid implements iGuid
         // -- otherwise fallback to tmdb.
         'com.plexapp.agents.xbmcnfo://' => 'com.plexapp.agents.tmdb://',
     ];
+
+    /**
+     * @var Context|null Backend context.
+     */
     private Context|null $context = null;
 
     /**
-     * Class to handle Plex external ids Parsing.
+     * Class constructor.
      *
-     * @param LoggerInterface $logger
+     * @param LoggerInterface $logger Logger instance.
      */
     public function __construct(protected LoggerInterface $logger)
     {
     }
 
+    /**
+     * @inheritdoc
+     */
     public function withContext(Context $context): self
     {
         $cloned = clone $this;
@@ -66,16 +88,25 @@ final class PlexGuid implements iGuid
         return $cloned;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function parse(array $guids, array $context = []): array
     {
         return $this->ListExternalIds(guids: $guids, context: $context, log: false);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function get(array $guids, array $context = []): array
     {
         return $this->ListExternalIds(guids: $guids, context: $context, log: true);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function has(array $guids, array $context = []): bool
     {
         return count($this->ListExternalIds(guids: $guids, context: $context, log: false)) >= 1;
@@ -94,12 +125,13 @@ final class PlexGuid implements iGuid
     }
 
     /**
-     * List Supported External Ids.
+     * List supported external ids.
      *
-     * @param array $guids
-     * @param array $context
+     * @param array $guids List of guids.
+     * @param array $context Context data.
      * @param bool $log Log errors. default true.
-     * @return array
+     *
+     * @return array List of external ids.
      */
     private function ListExternalIds(array $guids, array $context = [], bool $log = true): array
     {
@@ -128,7 +160,7 @@ final class PlexGuid implements iGuid
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
                         $this->logger->info(
-                            'Unable to parse [{backend}] [{agent}] identifier.',
+                            'PlexGuid: Unable to parse [{backend}] [{agent}] identifier.',
                             [
                                 'backend' => $this->context->backendName,
                                 'agent' => $val,
@@ -149,7 +181,7 @@ final class PlexGuid implements iGuid
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            'Ignoring [{backend}] external id [{source}] for {item.type} [{item.title}] as requested.',
+                            'PlexGuid: Ignoring [{backend}] external id [{source}] for {item.type} [{item.title}] as requested.',
                             [
                                 'backend' => $this->context->backendName,
                                 'source' => $val,
@@ -168,7 +200,7 @@ final class PlexGuid implements iGuid
                 if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            '[{backend}] reported multiple ids for same data source [{key}: {ids}] for {item.type} [{item.title}].',
+                            'PlexGuid: [{backend}] reported multiple ids for same data source [{key}: {ids}] for {item.type} [{item.title}].',
                             [
                                 'backend' => $this->context->backendName,
                                 'key' => $key,
@@ -191,7 +223,7 @@ final class PlexGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
+                        message: 'PlexGuid: Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
                         context: [
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,
@@ -225,11 +257,11 @@ final class PlexGuid implements iGuid
     /**
      * Parse legacy plex agents.
      *
-     * @param string $guid
-     * @param array $context
+     * @param string $guid Guid to parse.
+     * @param array $context Context data.
      * @param bool $log Log errors. default true.
      *
-     * @return string
+     * @return string Parsed guid.
      * @see https://github.com/ZeroQI/Hama.bundle/issues/510
      */
     private function parseLegacyAgent(string $guid, array $context = [], bool $log = true): string
@@ -299,7 +331,7 @@ final class PlexGuid implements iGuid
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing legacy agent [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: 'PlexGuid: Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing legacy agent [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [
                         'backend' => $this->context->backendName,
                         'client' => $this->context->clientName,
