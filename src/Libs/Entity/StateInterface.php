@@ -12,6 +12,9 @@ interface StateInterface extends LoggerAwareInterface
     public const TYPE_EPISODE = 'episode';
     public const TYPE_SHOW = 'show';
 
+    /**
+     * @var array list of supported types.
+     */
     public const TYPES_LIST = [
         self::TYPE_MOVIE,
         self::TYPE_SHOW,

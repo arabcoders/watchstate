@@ -11,7 +11,9 @@ use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * The ConsoleHandler class is responsible for handling log records and outputting them to the console.
+ * Class ConsoleHandler
+ *
+ * This class is responsible for handling log records and outputting them to the console.
  *
  * @extends AbstractProcessingHandler
  */

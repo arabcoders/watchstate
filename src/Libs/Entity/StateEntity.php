@@ -9,6 +9,14 @@ use App\Libs\Guid;
 use Psr\Log\LoggerAwareTrait;
 use RuntimeException;
 
+/**
+ * Class StateEntity
+ *
+ * Represents an metadata as entity.
+ *
+ * @implements iState
+ * @uses LoggerAwareTrait
+ */
 final class StateEntity implements iState
 {
     use LoggerAwareTrait;
@@ -84,6 +92,13 @@ final class StateEntity implements iState
      */
     public array $extra = [];
 
+    /**
+     * Constructor for the StateEntity class
+     *
+     * @param array $data The data used to initialize the StateEntity object
+     *
+     * @throws RuntimeException If an unexpected type is given for the COLUMN_TYPE key
+     */
     public function __construct(array $data)
     {
         foreach ($data as $key => $val) {
@@ -93,7 +108,7 @@ final class StateEntity implements iState
 
             if (iState::COLUMN_TYPE === $key && self::TYPE_MOVIE !== $val && self::TYPE_EPISODE !== $val) {
                 throw new RuntimeException(
-                    r('Unexpected [{value}] type was given. Expecting [{types_list}].', [
+                    r('StateEntity: Unexpected [{value}] type was given. Expecting [{types_list}].', context: [
                         'value' => $val,
                         'types_list' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
                     ])
@@ -120,11 +135,17 @@ final class StateEntity implements iState
         $this->data = $this->getAll();
     }
 
+    /**
+     * @inheritdoc
+     */
     public static function fromArray(array $data): self
     {
         return new self($data);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function diff(array $fields = []): array
     {
         $changed = [];
@@ -152,6 +173,9 @@ final class StateEntity implements iState
         return $changed;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getName(bool $asMovie = false): string
     {
         $year = ag($this->data, iState::COLUMN_YEAR, $this->year);
@@ -176,6 +200,9 @@ final class StateEntity implements iState
         );
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getAll(): array
     {
         return [
@@ -195,11 +222,17 @@ final class StateEntity implements iState
         ];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isChanged(array $fields = []): bool
     {
         return count($this->diff($fields)) >= 1;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function hasGuids(): bool
     {
         $list = array_intersect_key($this->guids, Guid::getSupported());
@@ -208,13 +241,16 @@ final class StateEntity implements iState
     }
 
     /**
-     * @return array
+     * @inheritdoc
      */
     public function getGuids(): array
     {
         return $this->guids;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getPointers(array|null $guids = null): array
     {
         return Guid::fromArray(payload: array_intersect_key($this->guids, Guid::getSupported()), context: [
@@ -229,37 +265,58 @@ final class StateEntity implements iState
         ])->getPointers();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function hasParentGuid(): bool
     {
         $list = array_intersect_key($this->parent, Guid::getSupported());
         return count($list) >= 1;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getParentGuids(): array
     {
         return $this->parent;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isMovie(): bool
     {
         return iState::TYPE_MOVIE === $this->type;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isEpisode(): bool
     {
         return iState::TYPE_EPISODE === $this->type;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isWatched(): bool
     {
         return 1 === $this->watched;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function hasRelativeGuid(): bool
     {
         return $this->isEpisode() && !empty($this->parent) && null !== $this->season && null !== $this->episode;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getRelativeGuids(): array
     {
         if (!$this->isEpisode()) {
@@ -275,6 +332,9 @@ final class StateEntity implements iState
         return array_intersect_key($list, Guid::getSupported());
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getRelativePointers(): array
     {
         if (!$this->isEpisode()) {
@@ -301,6 +361,9 @@ final class StateEntity implements iState
         return $rPointers;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function apply(iState $entity, array $fields = []): self
     {
         if (!empty($fields)) {
@@ -324,28 +387,43 @@ final class StateEntity implements iState
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function updateOriginal(): iState
     {
         $this->data = $this->getAll();
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getOriginalData(): array
     {
         return $this->data;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setIsTainted(bool $isTainted): iState
     {
         $this->tainted = $isTainted;
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function isTainted(): bool
     {
         return $this->tainted;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getMetadata(string|null $via = null): array
     {
         if (null === $via) {
@@ -355,10 +433,13 @@ final class StateEntity implements iState
         return $this->metadata[$via] ?? [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setMetadata(array $metadata): StateInterface
     {
         if (empty($this->via)) {
-            throw new RuntimeException('No backend was set in $this->via parameter.');
+            throw new RuntimeException('StateEntity: No backend was set in $this->via parameter.');
         }
 
         $this->metadata[$this->via] = empty($metadata) ? [] : array_replace_recursive(
@@ -369,6 +450,9 @@ final class StateEntity implements iState
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getExtra(string|null $via = null): array
     {
         if (null === $via) {
@@ -378,10 +462,13 @@ final class StateEntity implements iState
         return $this->extra[$via] ?? [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setExtra(array $extra): StateInterface
     {
         if (empty($this->via)) {
-            throw new RuntimeException('No backend was set in $this->via parameter.');
+            throw new RuntimeException('StateEntity: No backend was set in $this->via parameter.');
         }
 
         $this->extra[$this->via] = empty($extra) ? [] : array_replace_recursive(
@@ -392,6 +479,9 @@ final class StateEntity implements iState
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function shouldMarkAsUnplayed(iState $backend): bool
     {
         // -- Condition: 1 & 2
@@ -434,6 +524,9 @@ final class StateEntity implements iState
         return true;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function markAsUnplayed(iState $backend): StateInterface
     {
         $this->watched = 0;
@@ -443,6 +536,9 @@ final class StateEntity implements iState
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function hasPlayProgress(): bool
     {
         if ($this->isWatched()) {
@@ -461,6 +557,9 @@ final class StateEntity implements iState
         return false;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getPlayProgress(): int
     {
         if ($this->isWatched()) {

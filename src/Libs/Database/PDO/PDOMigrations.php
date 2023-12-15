@@ -18,23 +18,17 @@ use SplFileObject;
 final class PDOMigrations
 {
     /**
-     * The path to migrations directory.
-     *
-     * @var string
+     * @var string The path to migrations directory.
      */
     private string $path;
 
     /**
-     * The database driver.
-     *
-     * @var string
+     * @var string The database driver.
      */
     private string $driver;
 
     /**
-     * List of files in the migrations directory.
-     *
-     * @var array<string>
+     * @var array<SplFileObject> List of migration files.
      */
     private array $files = [];
 
@@ -110,28 +104,33 @@ final class PDOMigrations
             }
 
             if (null === ag($migrate, iDB::MIGRATE_UP, null)) {
-                $this->logger->debug(
-                    sprintf(
-                        'Migration #%d - %s has no up path, Skipping.',
-                        ag($migrate, 'id'),
-                        ag($migrate, 'name')
-                    )
-                );
+                $this->logger->debug(r('PDOMigrations: Migration #{id} - {name} has no up path, Skipping.', context: [
+                    'id' => ag($migrate, 'id'),
+                    'name' => ag($migrate, 'name')
+                ]));
                 continue;
             }
 
             $run++;
 
-            $this->logger->info(sprintf('Applying Migration #%d - %s', ag($migrate, 'id'), ag($migrate, 'name')));
+            $this->logger->info(r('PDOMigrations: Applying Migration #{id} - {name}.', context: [
+                'id' => ag($migrate, 'id'),
+                'name' => ag($migrate, 'name')
+            ]));
 
             $this->pdo->exec((string)ag($migrate, iDB::MIGRATE_UP));
             $this->setVersion(ag($migrate, 'id'));
         }
 
         if (0 === $run) {
-            $this->logger->debug(sprintf('No migrations is needed. Version @ %d', $version));
+            $this->logger->debug(r('PDOMigrations: No migrations is needed. Version @ {version}', context: [
+                'version' => $version
+            ]));
         } else {
-            $this->logger->info(sprintf('Applied (%d) migrations. Version is at number %d', $run, $this->getVersion()));
+            $this->logger->info(r('PDOMigrations: Applied ({total}) migrations. Version is at number {number}.', [
+                'total' => $run,
+                'number' => $this->getVersion(),
+            ]));
         }
 
         return 0;
@@ -144,7 +143,7 @@ final class PDOMigrations
      */
     public function down(): int
     {
-        $this->logger->info('This driver does not support down migrations at this time.');
+        $this->logger->info('PDOMigrations: This driver does not support down migrations at this time.');
 
         return 0;
     }
@@ -165,7 +164,9 @@ final class PDOMigrations
         $file = $this->path . '/' . $fileName;
 
         if (!touch($file)) {
-            throw new RuntimeException(r("Unable to create new migration at '{file}'.", ['file' => $this->path]));
+            throw new RuntimeException(r("PDOMigrations: Unable to create new migration at '{file}'.", [
+                'file' => $this->path
+            ]));
         }
 
         file_put_contents(
@@ -182,7 +183,9 @@ final class PDOMigrations
         SQL
         );
 
-        $this->logger->info(r("Created new Migration file at '{file}'.", ['file' => $file]));
+        $this->logger->info(r("PDOMigrations: Created new Migration file at '{file}'.", [
+            'file' => $file
+        ]));
 
         return $file;
     }
@@ -297,7 +300,9 @@ final class PDOMigrations
 
         foreach ((array)glob($this->path . '/*.sql') as $file) {
             if (!is_string($file) || false === ($f = realpath($file))) {
-                throw new RuntimeException(r("Unable to get real path to '{file}'.", ['file' => $file]));
+                throw new RuntimeException(r("PDOMigrations: Unable to get real path to '{file}'.", [
+                    'file' => $file
+                ]));
             }
 
             $this->files[] = new SplFileObject($f);

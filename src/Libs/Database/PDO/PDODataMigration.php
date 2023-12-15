@@ -13,13 +13,29 @@ use Psr\Log\LoggerInterface;
 /**
  * Class PDODataMigration
  *
- * This class is responsible for migrating data from a old database schema to new versions.
+ * This class is responsible for migrating data from old database schema to new versions.
  */
 final class PDODataMigration
 {
+    /**
+     * @var string Declares the version of the software.
+     */
     private readonly string $version;
+
+    /**
+     * @var string $dbPath The path to the SQLite database file.
+     */
     private readonly string $dbPath;
 
+    /**
+     * Creates a variable $jFlags with the following JSON options:
+     * - JSON_UNESCAPED_SLASHES: don't escape slashes
+     * - JSON_UNESCAPED_UNICODE: encode multibyte Unicode characters literally
+     * - JSON_INVALID_UTF8_IGNORE: ignore invalid UTF-8 characters
+     * - JSON_THROW_ON_ERROR: throw an exception on JSON errors
+     *
+     * @var int $jFlags The bit mask that represents the JSON options
+     */
     private int $jFlags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR;
 
     /**
@@ -96,7 +112,7 @@ final class PDODataMigration
             return false;
         }
 
-        $this->logger->notice('Migrating database data from pre-alpha version to v0');
+        $this->logger->notice('PDODataMigration: Migrating database data from pre-alpha version to v0');
 
         $oldDB = new PDO(
             dsn: r('sqlite:{file}', ['file' => $automatic]),
@@ -225,7 +241,7 @@ final class PDODataMigration
             rename($automatic, $this->dbPath . '/archive/' . basename($automatic));
         }
 
-        $this->logger->notice('Database data migration is successful.');
+        $this->logger->notice('PDODataMigration: Database data migration is successful.');
 
         return true;
     }
@@ -264,7 +280,7 @@ final class PDODataMigration
             $this->v0();
         }
 
-        $this->logger->notice('Migrating database data from v0.0 version to v0.1');
+        $this->logger->notice('PDODataMigration: Migrating database data from v0.0 version to v0.1');
 
         $oldDB = new PDO(dsn: sprintf('sqlite:%s', $automatic), options: [
             PDO::ATTR_EMULATE_PREPARES => false,
@@ -413,7 +429,7 @@ final class PDODataMigration
             rename($automatic, $this->dbPath . '/archive/' . basename($automatic));
         }
 
-        $this->logger->notice('Database data migration is successful.');
+        $this->logger->notice('PDODataMigration: Database data migration is successful.');
 
         return true;
     }
