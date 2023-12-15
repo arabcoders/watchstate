@@ -31,12 +31,27 @@ use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+/**
+ * Class Initializer
+ *
+ * The Initializer class is responsible for bootstrapping the entire application, for both HTTP and CLI context.
+ *
+ * @package Your\Namespace
+ */
 final class Initializer
 {
     private Cli $cli;
     private ConsoleOutput $cliOutput;
     private LoggerInterface|null $accessLog = null;
 
+    /**
+     * Initializes the object.
+     *
+     * This method is used to load user custom environment variables, initialize the container,
+     * initialize the configuration, and add services to the container.
+     *
+     * @return void
+     */
     public function __construct()
     {
         // -- Load user custom environment variables.
@@ -65,6 +80,15 @@ final class Initializer
         $this->cli = new Cli(Container::getContainer());
     }
 
+    /**
+     * Bootstrap the application.
+     *
+     * This method is used to create directories, load configuration files, set the default timezone,
+     * setup error and exception handlers, and return the object.
+     *
+     * @return self
+     * @throws ErrorException If an error occurs.
+     */
     public function boot(): self
     {
         $this->createDirectories();
@@ -112,12 +136,13 @@ final class Initializer
 
         set_exception_handler(function (Throwable $e) {
             Container::get(LoggerInterface::class)->error(
-                r("{class}: {error} ({file}:{line})." . PHP_EOL, [
-                    'class' => get_class($e),
+                message: "{class}: {error} ({file}:{line})." . PHP_EOL,
+                context: [
+                    'class' => $e::class,
                     'error' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine()
-                ])
+                ]
             );
             exit(1);
         });
@@ -125,6 +150,9 @@ final class Initializer
         return $this;
     }
 
+    /**
+     * Run the application in CLI Context.
+     */
     public function console(): void
     {
         try {
@@ -146,11 +174,11 @@ final class Initializer
     }
 
     /**
-     * Handle HTTP Request.
+     * Run the application in HTTP Context.
      *
-     * @param iRequest|null $request
-     * @param iEmitter|null $emitter
-     * @param null|Closure(iRequest): ResponseInterface $fn
+     * @param iRequest|null $request If null, the request will be created from globals.
+     * @param iEmitter|null $emitter If null, the emitter will be created from globals.
+     * @param null|Closure(iRequest): ResponseInterface $fn If null, the default HTTP server will be used.
      */
     public function http(iRequest|null $request = null, iEmitter|null $emitter = null, Closure|null $fn = null): void
     {
@@ -168,27 +196,33 @@ final class Initializer
             $httpException = (true === ($e instanceof HttpException));
 
             if (false === $httpException || $e->getCode() !== 200) {
-                Container::get(LoggerInterface::class)->error($e->getMessage(), [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'kind' => get_class($e),
-                    'trace' => $e->getTrace(),
-                ]);
+                Container::get(LoggerInterface::class)->error(
+                    message: $e->getMessage(),
+                    context: [
+                        'kind' => $e::class,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTrace(),
+                    ]
+                );
             }
 
-            $response = new Response(
-                $httpException && $e->getCode() >= 200 && $e->getCode() <= 499 ? $e->getCode() : 500,
-                [
-                    'X-Error-Message' => $httpException ? $e->getMessage() : ''
-                ]
-            );
+            $statusCode = $httpException && $e->getCode() >= 200 && $e->getCode() <= 499 ? $e->getCode() : 500;
+            $response = new Response(status: $statusCode, headers: [
+                'X-Error-Message' => $httpException ? $e->getMessage() : ''
+            ]);
         }
 
         $emitter->emit($response);
     }
 
     /**
-     * @throws InvalidArgumentException
+     * Handle HTTP requests and process webhooks.
+     *
+     * @param iRequest $realRequest The incoming HTTP request.
+     *
+     * @return ResponseInterface The HTTP response.
+     * @throws InvalidArgumentException If an error occurs.
      */
     private function defaultHttpServer(iRequest $realRequest): ResponseInterface
     {
@@ -229,16 +263,27 @@ final class Initializer
             try {
                 $class = makeBackend($info, $name);
             } catch (RuntimeException $e) {
-                $this->write($request, Level::Error, 'An exception was thrown in [{backend}] instance creation.', [
-                    'backend' => $name,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
+                $this->write(
+                    request: $request,
+                    level: Level::Error,
+                    message: 'Exception [{error.kind}] was thrown unhandled in [{backend}] instance creation. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'backend' => $name,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ]
                     ]
-                ]);
+                );
                 continue;
             }
 
@@ -405,6 +450,11 @@ final class Initializer
         return new Response(200);
     }
 
+    /**
+     * Create directories based on configuration file.
+     *
+     * @throws RuntimeException If the necessary environment variables are not set or if there is an issue creating or accessing directories.
+     */
     private function createDirectories(): void
     {
         $dirList = __DIR__ . '/../../config/directories.php';
@@ -467,6 +517,14 @@ final class Initializer
         }
     }
 
+    /**
+     * Set up loggers for the application.
+     *
+     * @param Logger $logger The primary application logger.
+     * @param array $loggers An array of additional loggers and their configurations.
+     *
+     * @throws RuntimeException If a logger is missing the 'type' property.
+     */
     private function setupLoggers(Logger $logger, array $loggers): void
     {
         $inContainer = inContainer();
@@ -535,6 +593,14 @@ final class Initializer
         }
     }
 
+    /**
+     * Write a log entry to the access log.
+     *
+     * @param iRequest $request The incoming request object.
+     * @param int|string|Level $level The log level or priority.
+     * @param string $message The log message.
+     * @param array $context Additional data/context for the log entry.
+     */
     private function write(
         iRequest $request,
         int|string|Level $level,

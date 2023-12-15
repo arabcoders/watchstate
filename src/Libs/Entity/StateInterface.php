@@ -12,6 +12,9 @@ interface StateInterface extends LoggerAwareInterface
     public const TYPE_EPISODE = 'episode';
     public const TYPE_SHOW = 'show';
 
+    /**
+     * @var array list of supported types.
+     */
     public const TYPES_LIST = [
         self::TYPE_MOVIE,
         self::TYPE_SHOW,
@@ -99,144 +102,148 @@ interface StateInterface extends LoggerAwareInterface
     /**
      * Make new instance.
      *
-     * @param array $data
+     * @param array $data Data to set.
      *
-     * @return StateInterface
+     * @return StateInterface Return new instance.
      */
     public static function fromArray(array $data): self;
 
     /**
-     * Return An array of changed items.
+     * Return an array of changed items.
      *
-     * @param array $fields if omitted, will check all fields.
+     * @param array $fields if omitted, it will check all fields.
      *
-     * @return array
+     * @return array Return an array of changed items.
      */
     public function diff(array $fields = []): array;
 
     /**
-     * Get All Entity keys.
+     * Get all entity keys.
      *
-     * @return array
+     * @return array Return an array of all entity keys.
      */
     public function getAll(): array;
 
     /**
      * Has the entity changed?
      *
-     * @param array $fields
-     * @return bool
+     * @param array $fields if omitted, it will check all fields.
+     *
+     * @return bool Return true if the entity has changed.
      */
     public function isChanged(array $fields = []): bool;
 
     /**
      * Does the entity have external ids?
      *
-     * @return bool
+     * @return bool Return true if the entity has external ids.
      */
     public function hasGuids(): bool;
 
     /**
      * Get List of external ids.
      *
-     * @return array
+     * @return array Return an array of external ids.
      */
     public function getGuids(): array;
 
     /**
      * Does the entity have relative external ids?
      *
-     * @return bool
+     * @return bool Return true if the entity has relative external ids.
      */
     public function hasRelativeGuid(): bool;
 
     /**
      * Get Relative GUIDs.
      *
-     * @return array
+     * @return array Return an array of relative external ids.
      */
     public function getRelativeGuids(): array;
 
     /**
-     * Get Relative Pointers.
+     * Get relative pointers.
      *
-     * @return array
+     * @return array Return an array of relative pointers.
      */
     public function getRelativePointers(): array;
 
     /**
-     * Does the Entity have Parent external ids?
+     * Does the entity have parent external ids?
      *
-     * @return bool
+     * @return bool Return true if the entity has parent external ids.
      */
     public function hasParentGuid(): bool;
 
     /**
-     * Get Parent external ids.
+     * Get parent external ids.
      *
-     * @return array
+     * @return array Return an array of parent external ids.
      */
     public function getParentGuids(): array;
 
     /**
      * Is the entity of movie type?
      *
-     * @return bool
+     * @return bool Return true if the entity is of movie type.
      */
     public function isMovie(): bool;
 
     /**
      * Is the entity of episode type?
      *
-     * @return bool
+     * @return bool Return true if the entity is of episode type.
      */
     public function isEpisode(): bool;
 
     /**
      * Is entity marked as watched?
      *
-     * @return bool
+     * @return bool Return true if the entity is marked as watched.
      */
     public function isWatched(): bool;
 
     /**
-     * Get constructed name.
+     * Get constructed name. We Return the following format depending on the type:
+     * * For movies  : "Title (Year)"
+     * * For Episodes: "Title (Year) - Season(00) x Episode(000)"
      *
      * @param bool $asMovie Return episode title as movie format.
      *
-     * @return string
+     * @return string Return constructed name.
      */
     public function getName(bool $asMovie = false): string;
 
     /**
-     * Get external ids Pointers.
+     * Get external ids pointers.
      *
-     * @return array
+     * @return array Return an array of external ids pointers.
      */
     public function getPointers(): array;
 
     /**
      * Apply changes to entity.
      *
-     * @param StateInterface $entity
+     * @param StateInterface $entity The entity which contains the changes.
      * @param array $fields if omitted, it will apply all {@see StateInterface::ENTITY_KEYS} fields.
      *
-     * @return StateInterface
+     * @return StateInterface Return the updated entity.
      */
     public function apply(StateInterface $entity, array $fields = []): StateInterface;
 
     /**
-     * Update Original data. Please do not use this unless you know what you are doing
+     * Update Original data.
+     * Please do not use this unless you know what you are doing
      *
      * @return StateInterface
-     * @internal
+     * @internal This method is used internally.
      */
     public function updateOriginal(): StateInterface;
 
     /**
      * Get The Original data.
      *
-     * @return array
+     * @return array Return the original data.
      */
     public function getOriginalData(): array;
 
@@ -245,37 +252,37 @@ interface StateInterface extends LoggerAwareInterface
      * If the entity is not already stored in the database, then this flag is not used.
      * However, if the entity already exists and the flag is set to **true**, then
      * we will be checking **external ids** only, and if those differ {@see ENTITY_IGNORE_DIFF_CHANGES} will be updated
-     * as well, otherwise, nothing will be changed, This flag serve to update GUIDs via webhook unhelpful events like
-     * play/stop/resume.
+     * as well, otherwise, nothing will be changed, this flag serve to update item via webhook unhelpful events like
+     * play/stop/resume without alternating the play state.
      *
      * @param bool $isTainted
      *
-     * @return StateInterface
+     * @return StateInterface Return the updated entity.
      */
     public function setIsTainted(bool $isTainted): StateInterface;
 
     /**
-     * Whether the play state is tainted.
+     * Is the entity data tainted?
      *
-     * @return bool
+     * @return bool Return true if the entity data is tainted.
      */
     public function isTainted(): bool;
 
     /**
-     * Get Metadata
+     * Get metadata.
      *
      * @param string|null $via if via is omitted, the entire "metadata" will be returned.
      *
-     * @return array
+     * @return array Return an array of metadata.
      */
     public function getMetadata(string|null $via = null): array;
 
     /**
-     * Set Metadata related to {$this->via} backend
+     * Set metadata related to {$this->via} backend.
      *
-     * @param array $metadata metadata
+     * @param array $metadata Metadata
      *
-     * @return StateInterface
+     * @return StateInterface Return the updated entity.
      *
      * @throws \RuntimeException if no via is set.
      */
@@ -291,11 +298,11 @@ interface StateInterface extends LoggerAwareInterface
     public function getExtra(string|null $via = null): array;
 
     /**
-     * Set Extra related to {$this->via} backend
+     * Set Extra related to {$this->via} backend.
      *
      * @param array $extra Extra
      *
-     * @return StateInterface
+     * @return StateInterface Return the updated entity.
      *
      * @throws \RuntimeException if no via is set.
      */
@@ -311,21 +318,21 @@ interface StateInterface extends LoggerAwareInterface
      *
      * ----------------
      *
-     * * [1] **entity.watched** field **MUST** must be marked as unplayed.
-     * * [2] **db.item.watched** field **MUST** be set as played.
-     * * [3] **db.item.metadata** field **MUST** have pre-existing metadata from that backend.
+     * * [1] **entity.watched** field **MUST** must be set as **0** (unplayed).
+     * * [2] **db.item.watched** field **MUST** be set as **1** (played).
+     * * [3] **db.item.metadata** field **MUST** have pre-existing metadata from the backend that is asking to mark the item as unplayed.
      * * [4] **db.item.metadata.backend** JSON field **MUST** contain **watched**, **id**, **played_at** and **added_at** as keys with values.
-     * * [5] **db.item.metadata.backend.watched** field **MUST** be set as played.
+     * * [5] **db.item.metadata.backend.watched** field **MUST** be set as **1** (played).
      * * [6] **entity.metadata.backend.id** field **MUST** match **db.item.metadata.backend.id**.
      * * [7] **entity.updated** field **MUST** match **db.item.metadata.backend.added_at**.
      *
      * ----------------
      *
-     * Ref: **.db.item.[]** refers to local db data. **entity.[]** refers to the data being received from backend.
+     * Ref: **db.item.[]** refers to local db data. **entity.[]** refers to the data being received from backend.
      *
      * @param StateInterface $backend Backend object.
      *
-     * @return bool
+     * @return bool Return true if all conditions are met.
      */
     public function shouldMarkAsUnplayed(StateInterface $backend): bool;
 
@@ -340,7 +347,7 @@ interface StateInterface extends LoggerAwareInterface
      *
      * @param StateInterface $backend Backend object.
      *
-     * @return StateInterface
+     * @return StateInterface Return the updated entity.
      */
     public function markAsUnplayed(StateInterface $backend): StateInterface;
 
@@ -348,14 +355,15 @@ interface StateInterface extends LoggerAwareInterface
      * Check item if it has play progress.
      * This is used to determine if we should update the progress or not.
      *
-     * @return bool
+     * @return bool Return true if the item has play progress.
      */
     public function hasPlayProgress(): bool;
 
     /**
      * Get play progress. If the item is watched and/or has no progress, then 0 will be returned. otherwise
      * time in milliseconds will be returned.
-     * @return int
+     *
+     * @return int Return the play progress.
      */
     public function getPlayProgress(): int;
 }

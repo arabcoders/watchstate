@@ -9,7 +9,12 @@ use RuntimeException;
 use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 
-class Server
+/**
+ * Class Server
+ *
+ * This class can act as simple HTTP server for development purposes.
+ */
+final class Server
 {
     public const CONFIG_HOST = 'host';
     public const CONFIG_PORT = 'port';
@@ -20,20 +25,27 @@ class Server
     public const CONFIG_THREADS = 'threads';
 
     /**
-     * The default and user merged configuration array
+     * @var array $config The configuration settings for the server
      */
     private array $config = [];
 
     /**
-     * Indicate whether the server is currently running
+     * @var bool Indicate whether the server is currently running
      */
     private bool $running = false;
 
     /**
-     * The initiated process.
+     * @var Process|null The initiated process.
      */
     private Process|null $process = null;
 
+    /**
+     * Constructor
+     *
+     * @param array $config (optional) configuration options.
+     *
+     * @return void
+     */
     public function __construct(array $config = [])
     {
         $classExists = class_exists(PhpExecutableFinder::class);
@@ -88,11 +100,12 @@ class Server
     }
 
     /**
-     * Set Path to PHP binary.
+     * Set the PHP binary path for the server.
      *
-     * @param string $php
+     * @param string $php The path to the PHP binary.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the class with the PHP binary path set.
+     * @throws RuntimeException if the PHP binary is not executable.
      */
     public function withPHP(string $php): self
     {
@@ -114,11 +127,11 @@ class Server
     }
 
     /**
-     * Set Host to bind to.
+     * Update the host of the server instance.
      *
-     * @param string $host
+     * @param string $host The new host to be set for the server.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the server with the updated host.
      */
     public function withInterface(string $host): self
     {
@@ -137,11 +150,10 @@ class Server
     }
 
     /**
-     * Set Port.
+     * Set the port for the server.
      *
-     * @param int $port
-     *
-     * @return $this cloned instance.
+     * @param int $port The port number for the server.
+     * @return self Returns a new instance of the class with the updated port configuration.
      */
     public function withPort(int $port): self
     {
@@ -159,11 +171,11 @@ class Server
     }
 
     /**
-     * Set How many threads to use.
+     * Set the number of threads for the server.
      *
-     * @param int $threads
+     * @param int $threads The number of threads to set.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the class with the updated thread count.
      */
     public function withThreads(int $threads): self
     {
@@ -181,11 +193,12 @@ class Server
     }
 
     /**
-     * Set Root path.
+     * Set the root path for the server instance.
      *
-     * @param string $root
+     * @param string $root The root path for the server instance.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the server with the updated root path.
+     * @throws RuntimeException If the provided root path is not a directory.
      */
     public function withRoot(string $root): self
     {
@@ -207,11 +220,13 @@ class Server
     }
 
     /**
-     * Set PHP Router file.
+     * Set a new router file for the server instance.
      *
-     * @param string $router
+     * @param string $router The path to the router file.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the server with the updated router file.
+     * @throws RuntimeException If the specified router file does not exist.
+     *
      */
     public function withRouter(string $router): self
     {
@@ -233,12 +248,12 @@ class Server
     }
 
     /**
-     * Set Environment variables.
+     * Set environment variables and return a new instance of the current object.
      *
-     * @param array $vars key/value pair.
-     * @param bool $clear Clear Currently loaded environment.
+     * @param array<string,string|int|bool> $vars The variables to set in the environment.
+     * @param bool $clear Determines whether to clear the existing environment variables or not. Default is false.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the class with the updated environment variables.
      */
     public function withENV(array $vars, bool $clear = false): self
     {
@@ -255,11 +270,12 @@ class Server
     }
 
     /**
-     * Exclude environment variables from loaded list.
+     * Remove specified environment variables from the current configuration.
      *
-     * @param array $vars
+     * @param array<string,string|int|bool> $vars The array of environment variables to be removed.
      *
-     * @return $this cloned instance.
+     * @return self Returns a new instance of the class with the specified environment variables removed from the configuration.
+     *              If the configuration remains unchanged, returns the current instance.
      */
     public function withoutENV(array $vars): self
     {
@@ -278,7 +294,12 @@ class Server
     }
 
     /**
-     * Run Server in blocking mode.
+     * Runs the server process and waits for it.
+     *
+     * @param Closure|null $output The callback function to handle the process output.
+     *                             If not provided, the output will be discarded.
+     *
+     * @return int The exit code of the server process.
      */
     public function run(Closure|null $output = null): int
     {
@@ -288,7 +309,10 @@ class Server
     }
 
     /**
-     * Hang around until the server is killed.
+     * Waits for the server process to complete and returns the exit code.
+     *
+     * @return int The exit code of the server process.
+     * @throws RuntimeException If no server was started.
      */
     public function wait(): int
     {
@@ -300,7 +324,12 @@ class Server
     }
 
     /**
-     * Run server in background.
+     * Runs the server process in the background.
+     *
+     * @param Closure|null $output The callback function to handle the process output.
+     *                             If not provided, the output will be discarded.
+     *
+     * @return self Returns the current instance of the class.
      */
     public function runInBackground(Closure|null $output = null): self
     {
@@ -310,12 +339,12 @@ class Server
     }
 
     /**
-     * Stop currently running server.
+     * Stops the server process.
      *
-     * @param int $timeout kill process if it does not exist in given seconds.
-     * @param int|null $signal stop signal.
+     * @param int $timeout The number of seconds to wait for the process to stop. Default is 10 seconds.
+     * @param int|null $signal The signal to send to the process. If not provided, the default signal defined by the operating system will be used.
      *
-     * @return int return 20002 if the server is not running. otherwise process exit code will be returned.
+     * @return int The exit code of the server process, or 20002 if the process was not running.
      */
     public function stop(int $timeout = 10, int|null $signal = null): int
     {
@@ -330,18 +359,31 @@ class Server
         return $this->process->getExitCode();
     }
 
+    /**
+     * Retrieves the interface specified in the configuration.
+     *
+     * @return string The interface specified in the configuration.
+     */
     public function getInterface(): string
     {
         return $this->config[self::CONFIG_HOST];
     }
 
+    /**
+     * Retrieves the port number from the configuration.
+     * The port number is a required configuration parameter for the server.
+     *
+     * @return int The port number specified in the configuration.
+     */
     public function getPort(): int
     {
         return $this->config[self::CONFIG_PORT];
     }
 
     /**
-     * @return bool Whether the process is running.
+     * Checks if the server process is running.
+     *
+     * @return bool Whether the server process is running or not.
      */
     public function isRunning(): bool
     {
@@ -349,7 +391,10 @@ class Server
     }
 
     /**
-     * @return array Get loaded configuration.
+     * Retrieves the configuration array.
+     *
+     * @return array The configuration array containing various settings
+     *               for the application.
      */
     public function getConfig(): array
     {
@@ -357,13 +402,20 @@ class Server
     }
 
     /**
-     * @return Process|null Return server process or null if not initiated yet.
+     * Retrieve the server process instance.
+     *
+     * @return Process|null The server process instance or null if it does not exist.
      */
     public function getProcess(): Process|null
     {
         return $this->process;
     }
 
+    /**
+     * Builds the command to run the server process.
+     *
+     * @return array The command to run the server process.
+     */
     private function buildServeCommand(): array
     {
         $command = [
@@ -381,6 +433,14 @@ class Server
         return $command;
     }
 
+    /**
+     * Creates and starts the server process.
+     *
+     * @param Closure|null $output The callback function to handle the process output.
+     *                             If not provided, the output will be discarded.
+     *
+     * @return Process The server process instance.
+     */
     private function makeServer(Closure|null $output = null): Process
     {
         $env = $this->config[self::CONFIG_ENV];
@@ -402,6 +462,9 @@ class Server
         return $process;
     }
 
+    /**
+     * Destructor method that stops the server if it is running.
+     */
     public function __destruct()
     {
         if (true === $this->isRunning()) {

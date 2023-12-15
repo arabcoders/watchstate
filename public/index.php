@@ -47,7 +47,15 @@ try {
 } catch (Throwable $e) {
     fwrite(
         STDERR,
-        trim(sprintf("PANIC: %s: %s (%s:%d).", get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()))
+        trim(
+            sprintf(
+                'Unhandled Exception [%s] was thrown at HTTP boot context. With message [%s] in [%s:%d].',
+                $e::class,
+                $e->getMessage(),
+                array_reverse(explode(ROOT_PATH, $e->getFile(), 2))[0],
+                $e->getLine()
+            )
+        )
     );
 
     if (!headers_sent()) {

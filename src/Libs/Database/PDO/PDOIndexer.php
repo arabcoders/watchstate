@@ -11,8 +11,16 @@ use App\Libs\Options;
 use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 
+/**
+ * Class PDOIndexer
+ *
+ * The PDOIndexer class is responsible for ensuring the existence of required indexes.
+ */
 final class PDOIndexer
 {
+    /**
+     * @var array<string> An array of column names to be ignored in the index.
+     */
     private const INDEX_IGNORE_ON = [
         iState::COLUMN_ID,
         iState::COLUMN_PARENT,
@@ -20,17 +28,35 @@ final class PDOIndexer
         iState::COLUMN_EXTRA,
         iState::COLUMN_META_DATA,
     ];
-
+    /**
+     * @var array<string> Extra indexes for backend sub columns.
+     */
     private const BACKEND_INDEXES = [
         iState::COLUMN_ID,
         iState::COLUMN_META_SHOW,
         iState::COLUMN_META_LIBRARY,
     ];
 
+    /**
+     * Class constructor.
+     *
+     * @param PDO $db The PDO object used for database connections and queries.
+     * @param iLogger $logger The logger object used for logging information.
+     */
     public function __construct(private PDO $db, private iLogger $logger)
     {
     }
 
+    /**
+     * Ensures the existence of required indexes in the "state" table.
+     *
+     * @param array $opts An optional array of additional options.
+     *   Supported options:
+     *     - force-reindex: Whether to force reindexing (default: false).
+     *     - DRY_RUN: Whether to run in dry run mode (default: false).
+     *
+     * @return bool Returns true if the indexes are successfully created or updated, false otherwise.
+     */
     public function ensureIndex(array $opts = []): bool
     {
         $queries = [];
@@ -42,7 +68,7 @@ final class PDOIndexer
         $inDryRunMode = (bool)ag($opts, Options::DRY_RUN);
 
         if (true === $reindex) {
-            $this->logger->debug('Force reindex is called.');
+            $this->logger->debug('PDOIndexer: Force reindex is called.');
             $sql = "select name FROM sqlite_master WHERE tbl_name = 'state' AND type = 'index';";
 
             foreach ($this->db->query($sql) as $row) {
@@ -57,7 +83,7 @@ final class PDOIndexer
                         'tag_right' => '}'
                     ]
                 );
-                $this->logger->debug('Dropping Index [{index}].', [
+                $this->logger->debug('PDOIndexer: Dropping Index [{index}].', [
                     'index' => $name,
                     'query' => $query,
                 ]);
@@ -83,7 +109,7 @@ final class PDOIndexer
                 ]
             );
 
-            $this->logger->debug('Generating index on [{column}].', [
+            $this->logger->debug('PDOIndexer: Generating index on [{column}].', [
                 'column' => $column,
                 'query' => $query,
             ]);
@@ -103,7 +129,7 @@ final class PDOIndexer
                     opts: ['tag_left' => '${', 'tag_right' => '}']
                 );
 
-                $this->logger->debug('Generating index on {column} column [{key}] key.', [
+                $this->logger->debug('PDOIndexer: Generating index on {column} column [{key}] key.', [
                     'column' => $column,
                     'key' => $subKey,
                     'query' => $query,
@@ -125,7 +151,7 @@ final class PDOIndexer
                     opts: ['tag_left' => '${', 'tag_right' => '}']
                 );
 
-                $this->logger->debug('Generating index on [{backend}] metadata column [{key}] key.', [
+                $this->logger->debug('PDOIndexer: Generating index on [{backend}] metadata column [{key}] key.', [
                     'backend' => $backend,
                     'key' => $subKey,
                     'query' => $query,
@@ -147,7 +173,7 @@ final class PDOIndexer
         }
 
         foreach ($queries as $query) {
-            $this->logger->debug('Running query.', [
+            $this->logger->debug('PDOIndexer: Running query.', [
                 'query' => $query,
                 'start' => makeDate(),
             ]);

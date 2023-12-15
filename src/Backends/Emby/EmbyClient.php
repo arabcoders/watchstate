@@ -8,6 +8,7 @@ use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Response;
 use App\Backends\Emby\Action\Backup;
 use App\Backends\Emby\Action\Export;
 use App\Backends\Emby\Action\GetIdentifier;
@@ -39,6 +40,13 @@ use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use SplFileObject;
 
+/**
+ * Class EmbyClient
+ *
+ * This class is responsible for facilitating communication with Emby Server backend.
+ *
+ * @implements iClient
+ */
 class EmbyClient implements iClient
 {
     public const NAME = 'EmbyBackend';
@@ -54,11 +62,32 @@ class EmbyClient implements iClient
 
     public const EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
 
+    /**
+     * @var Context Backend context.
+     */
     private Context $context;
+    /**
+     * @var iGuid GUID parser.
+     */
     private iGuid $guid;
+    /**
+     * @var Cache The Cache store.
+     */
     private Cache $cache;
+    /**
+     * @var iLogger The logger object.
+     */
     private iLogger $logger;
 
+    /**
+     * Class constructor.
+     *
+     * @param Cache $cache The cache object.
+     * @param iLogger $logger The logger object.
+     * @param EmbyGuid $guid The EmbyGuid object.
+     *
+     * @return void
+     */
     public function __construct(Cache $cache, iLogger $logger, EmbyGuid $guid)
     {
         $this->logger = $logger;
@@ -72,6 +101,9 @@ class EmbyClient implements iClient
         $this->guid = $guid->withContext($this->context);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function withContext(Context $context): self
     {
         $cloned = clone $this;
@@ -114,16 +146,25 @@ class EmbyClient implements iClient
         return $cloned;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getContext(): Context
     {
         return $this->context;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getName(): string
     {
         return $this->context?->backendName ?? static::CLIENT_NAME;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
@@ -131,6 +172,9 @@ class EmbyClient implements iClient
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
         $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
@@ -142,6 +186,9 @@ class EmbyClient implements iClient
         return $response->isSuccessful() ? $response->response : $request;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function parseWebhook(ServerRequestInterface $request): iState
     {
         $response = Container::get(ParseWebhook::class)(
@@ -155,15 +202,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new HttpException(
-                ag($response->extra, 'message', fn() => $response->error->format()),
-                ag($response->extra, 'http_code', 400),
-            );
+            $this->throwError($response, HttpException::class, ag($response->extra, 'http_code', 400));
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function pull(iImport $mapper, iDate|null $after = null): array
     {
         $response = Container::get(Import::class)(
@@ -181,12 +228,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function backup(iImport $mapper, SplFileObject|null $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
@@ -201,12 +251,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Export::class)(
@@ -225,12 +278,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Push::class)(
@@ -245,12 +301,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Progress::class)(
@@ -266,12 +325,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function search(string $query, int $limit = 25, array $opts = []): array
     {
         $response = Container::get(SearchQuery::class)(
@@ -286,12 +348,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function searchId(string|int $id, array $opts = []): array
     {
         $response = Container::get(SearchId::class)(context: $this->context, id: $id, opts: $opts);
@@ -301,12 +366,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getMetadata(string|int $id, array $opts = []): array
     {
         $response = Container::get(GetMetaData::class)(
@@ -316,12 +384,15 @@ class EmbyClient implements iClient
         );
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getLibrary(string|int $id, array $opts = []): array
     {
         $response = Container::get(GetLibrary::class)(context: $this->context, guid: $this->guid, id: $id, opts: $opts);
@@ -331,12 +402,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getIdentifier(bool $forceRefresh = false): int|string|null
     {
         if (false === $forceRefresh && null !== $this->context->backendId) {
@@ -352,6 +426,9 @@ class EmbyClient implements iClient
         return $response->isSuccessful() ? $response->response : null;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
@@ -361,9 +438,7 @@ class EmbyClient implements iClient
                 $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
-            throw new RuntimeException(
-                ag($response->extra, 'message', fn() => $response->error->format())
-            );
+            $this->throwError($response);
         }
 
         return $response->response;
@@ -377,11 +452,17 @@ class EmbyClient implements iClient
      * @param string $username
      * @return string|bool
      */
+    /**
+     * @inheritdoc
+     */
     public function getUserToken(int|string $userId, string $username): string|bool
     {
         return $this->context->backendToken;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
@@ -391,12 +472,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getInfo(array $opts = []): array
     {
         $response = Container::get(GetInfo::class)(context: $this->context, opts: $opts);
@@ -406,12 +490,15 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getVersion(array $opts = []): string
     {
         $response = Container::get(GetVersion::class)(context: $this->context, opts: $opts);
@@ -421,14 +508,34 @@ class EmbyClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public static function manage(array $backend, array $opts = []): array
     {
         return Container::get(EmbyManage::class)->manage(backend: $backend, opts: $opts);
+    }
+
+    /**
+     * Throws an exception with the specified message and previous exception.
+     *
+     * @template T
+     * @param Response $response The response object containing the error details.
+     * @param class-string<T> $className The exception class name.
+     * @param int $code The exception code.
+     */
+    private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
+    {
+        throw new $className(
+            message: ag($response->extra, 'message', fn() => $response->error->format()),
+            code: $code,
+            previous: $response->error->previous
+        );
     }
 }

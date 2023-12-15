@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+/**
+ * Options class represents the list of options that can be passed to the different classes.
+ */
 final class Options
 {
     public const DRY_RUN = 'DRY_RUN';

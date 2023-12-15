@@ -16,22 +16,33 @@ use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 
+/**
+ * MemoryMapper Class
+ *
+ * This class is the default import mapper, it uses memory to store the entities. until they are committed.
+ * This leads to faster processing and less database calls overall in exchange for higher memory usage.
+ *
+ * @implements iImport
+ */
 final class MemoryMapper implements iImport
 {
+    /**
+     * @var string Local database GUID prefix.
+     */
     protected const GUID = 'local_db://';
 
     /**
-     * @var array<int,iState> Entities table.
+     * @var array<int,iState> In memory entities list.
      */
     protected array $objects = [];
 
     /**
-     * @var array<string,int> Map GUIDs to entities.
+     * @var array<string,int> Map entity pointers to object pointers.
      */
     protected array $pointers = [];
 
     /**
-     * @var array<int,int> List Changed Entities.
+     * @var array<int,int> Stores the pointers for the entities which has changed.
      */
     protected array $changed = [];
 
@@ -40,14 +51,27 @@ final class MemoryMapper implements iImport
      */
     protected array $progressItems = [];
 
+    /**
+     * @var array<int, mixed> Mapper options.
+     */
     protected array $options = [];
 
     protected bool $fullyLoaded = false;
 
+    /**
+     * Class Constructor.
+     *
+     * @param iLogger $logger The instance of the logger interface.
+     * @param iDB $db The instance of the database interface.
+     * @param CacheInterface $cache The instance of the cache interface.
+     */
     public function __construct(protected iLogger $logger, protected iDB $db, protected CacheInterface $cache)
     {
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setOptions(array $options = []): iImport
     {
         $this->options = $options;
@@ -55,6 +79,9 @@ final class MemoryMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function loadData(iDate|null $date = null): self
     {
         $this->fullyLoaded = null === $date;
@@ -70,7 +97,7 @@ final class MemoryMapper implements iImport
             $this->addPointers($this->objects[$pointer], $pointer);
         }
 
-        $this->logger->info('MAPPER: Preloaded [{pointers}] pointer and [{objects}] object into memory.', [
+        $this->logger->info('MAPPER: Preloaded [{pointers} pointers, and {objects} objects] into memory.', [
             'pointers' => number_format(count($this->pointers)),
             'objects' => number_format(count($this->objects)),
         ]);
@@ -78,6 +105,9 @@ final class MemoryMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
@@ -98,12 +128,15 @@ final class MemoryMapper implements iImport
         if (false === ($pointer = $this->getPointer($entity))) {
             if (true === $metadataOnly) {
                 Message::increment("{$entity->via}.{$entity->type}.failed");
-                $this->logger->notice('MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database.', [
-                    'metaOnly' => true,
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                    'data' => $entity->getAll(),
-                ]);
+                $this->logger->notice(
+                    'MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database. And backend set as metadata source only.',
+                    [
+                        'metaOnly' => true,
+                        'backend' => $entity->via,
+                        'title' => $entity->getName(),
+                        'data' => $entity->getAll(),
+                    ]
+                );
                 return $this;
             }
 
@@ -211,7 +244,7 @@ final class MemoryMapper implements iImport
                     );
 
                     if (count($changes) >= 1) {
-                        $this->logger->notice('MAPPER: [{backend}] marked [{title}] as unplayed.', [
+                        $this->logger->notice('MAPPER: [{backend}] marked [{title}] as [unplayed].', [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
@@ -377,11 +410,17 @@ final class MemoryMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function get(iState $entity): null|iState
     {
         return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function remove(iState $entity): bool
     {
         if (false === ($pointer = $this->getPointer($entity))) {
@@ -403,6 +442,9 @@ final class MemoryMapper implements iImport
         return true;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function commit(): mixed
     {
         if (true !== $this->inDryRunMode()) {
@@ -467,11 +509,17 @@ final class MemoryMapper implements iImport
         return $state;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function has(iState $entity): bool
     {
         return null !== $this->get($entity);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function reset(): self
     {
         $this->fullyLoaded = false;
@@ -480,21 +528,33 @@ final class MemoryMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getObjects(array $opts = []): array
     {
         return $this->objects;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getObjectsCount(): int
     {
         return count($this->objects);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function count(): int
     {
         return count($this->changed);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
@@ -502,12 +562,23 @@ final class MemoryMapper implements iImport
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setDatabase(iDB $db): self
     {
         $this->db = $db;
         return $this;
     }
 
+    /**
+     * Class Destructor
+     *
+     * This method is executed when an object of this class is destroyed.
+     * It checks if the mapper disable autocommit option is false and the count
+     * of objects is greater than or equal to 1. If both conditions are met,
+     * it calls the commit() method to commit any pending changes.
+     */
     public function __destruct()
     {
         if (false === (bool)ag($this->options, Options::MAPPER_DISABLE_AUTOCOMMIT) && $this->count() >= 1) {
@@ -515,26 +586,46 @@ final class MemoryMapper implements iImport
         }
     }
 
+    /**
+     * @inheritdoc
+     */
     public function inDryRunMode(): bool
     {
         return true === (bool)ag($this->options, Options::DRY_RUN, false);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function inTraceMode(): bool
     {
         return true === (bool)ag($this->options, Options::DEBUG_TRACE, false);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getPointersList(): array
     {
         return $this->pointers;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getChangedList(): array
     {
         return $this->changed;
     }
 
+    /**
+     * Add pointers to the pointer storage.
+     *
+     * @param iState $entity The entity containing the pointers.
+     * @param string|int $pointer The pointer to database object id.
+     *
+     * @return iImport The current instance of iImport.
+     */
     protected function addPointers(iState $entity, string|int $pointer): iImport
     {
         foreach ($entity->getRelativePointers() as $key) {
@@ -549,11 +640,11 @@ final class MemoryMapper implements iImport
     }
 
     /**
-     * Is the object already mapped?
+     * Get the pointer value for the given entity.
      *
-     * @param iState $entity
+     * @param iState $entity The entity object to get the pointer for.
      *
-     * @return int|string|bool int|string pointer for the object, or false if not registered.
+     * @return int|string|bool The pointer value if found, otherwise false.
      */
     protected function getPointer(iState $entity): int|string|bool
     {
@@ -585,6 +676,13 @@ final class MemoryMapper implements iImport
         return false;
     }
 
+    /**
+     * Removes pointers from the class's "pointers" array based on the given entity.
+     *
+     * @param iState $entity The entity object from which the pointers should be removed.
+     *
+     * @return iImport The current instance of iImport.
+     */
     protected function removePointers(iState $entity): iImport
     {
         foreach ($entity->getPointers() as $key) {

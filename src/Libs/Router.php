@@ -14,12 +14,25 @@ use RuntimeException;
 use SplFileInfo;
 use Throwable;
 
+/**
+ * Router class handles the generation of routes based on scanned directories and class attributes.
+ */
 final class Router
 {
+    /**
+     * Class constructor.
+     *
+     * @param array $dirs An optional array of directories.
+     */
     public function __construct(private readonly array $dirs = [])
     {
     }
 
+    /**
+     * Generates an array of routes by scanning directories.
+     *
+     * @return array The generated routes.
+     */
     public function generate(): array
     {
         $routes = [];
@@ -31,6 +44,13 @@ final class Router
         return $routes;
     }
 
+    /**
+     * Scans the given directory and returns an array of routes.
+     *
+     * @param string $dir The directory to scan for files.
+     *
+     * @return array An array of routes.
+     */
     private function scanDirectory(string $dir): array
     {
         $classes = $routes = [];
@@ -69,6 +89,13 @@ final class Router
         return $routes;
     }
 
+    /**
+     * Get the routes for a given class.
+     *
+     * @param ReflectionClass $class The reflection instance of given class to get the routes for.
+     *
+     * @return array The routes for the class.
+     */
     protected function getRoutes(ReflectionClass $class): array
     {
         $routes = [];
@@ -92,37 +119,46 @@ final class Router
         return $routes;
     }
 
+    /**
+     * Parses a file and extracts the namespaces and classes.
+     *
+     * @param string $file The path to the file to parse.
+     *
+     * @return array|false An array of fully qualified class names if classes are found, otherwise false.
+     * @throws RuntimeException If the file cannot be read.
+     */
     private function parseFile(string $file): array|false
     {
         $classes = [];
         $namespace = '';
 
         if (false === ($content = @file_get_contents($file))) {
-            throw new RuntimeException(
-                sprintf('Unable to read \'%s\' - \'%s\' .', $file, error_get_last()['message'] ?? 'unknown')
-            );
+            throw new RuntimeException(r("Unable to read '{file}' - '{message}'.", [
+                'file' => $file,
+                'message' => error_get_last()['message'] ?? 'unknown',
+            ]));
         }
 
         $tokens = PhpToken::tokenize($content);
         $count = count($tokens);
 
         foreach ($tokens as $i => $iValue) {
-            if ($iValue->getTokenName() === 'T_NAMESPACE') {
+            if ('T_NAMESPACE' === $iValue->getTokenName()) {
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ($tokens[$j]->getTokenName() === 'T_NAME_QUALIFIED') {
+                    if ('T_NAME_QUALIFIED' === $tokens[$j]->getTokenName()) {
                         $namespace = $tokens[$j]->text;
                         break;
                     }
                 }
             }
 
-            if ($iValue->getTokenName() === 'T_CLASS') {
+            if ('T_CLASS' === $iValue->getTokenName()) {
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ($tokens[$j]->getTokenName() === 'T_WHITESPACE') {
+                    if ('T_WHITESPACE' === $tokens[$j]->getTokenName()) {
                         continue;
                     }
 
-                    if ($tokens[$j]->getTokenName() === 'T_STRING') {
+                    if ('T_STRING' === $tokens[$j]->getTokenName()) {
                         $classes[] = $namespace . '\\' . $tokens[$j]->text;
                     } else {
                         break;

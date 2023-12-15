@@ -55,7 +55,7 @@ try {
     $app = (new App\Libs\Initializer())->boot();
 } catch (Throwable $e) {
     $message = sprintf(
-            'Unhandled Exception [%s] was thrown. With message [%s] in [%s:%d].',
+            'Unhandled Exception [%s] was thrown in CLI boot context. With message [%s] in [%s:%d].',
             $e::class,
             $e->getMessage(),
             array_reverse(explode(ROOT_PATH, $e->getFile(), 2))[0],

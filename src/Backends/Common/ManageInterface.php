@@ -7,12 +7,12 @@ namespace App\Backends\Common;
 interface ManageInterface
 {
     /**
-     * Add/Edit Backend.
+     * Add or edit backend.
      *
-     * @param array $backend
-     * @param array $opts
+     * @param array $backend Backend data.
+     * @param array $opts options.
      *
-     * @return array
+     * @return array return modified $backend data.
      */
     public function manage(array $backend, array $opts = []): array;
 }

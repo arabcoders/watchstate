@@ -18,147 +18,155 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 interface ClientInterface
 {
     /**
-     * Initiate Client with context. It **MUST** return new instance.
+     * Initiate client with context. It **MUST** return new instance.
      *
-     * @param Context $context
+     * @param Context $context client context.
      *
-     * @return ClientInterface
+     * @return ClientInterface new instance.
      */
     public function withContext(Context $context): ClientInterface;
 
     /**
      * Return client context.
      *
-     * @return Context
+     * @return Context client context.
      */
     public function getContext(): Context;
 
     /**
-     * Get Backend name.
+     * Get backend name.
      *
-     * @return string
+     * @return string backend name.
      */
     public function getName(): string;
 
     /**
      * Inject logger.
      *
-     * @param LoggerInterface $logger
+     * @param LoggerInterface $logger logger instance.
      *
-     * @return ClientInterface
+     * @return ClientInterface Returns same instance.
      */
     public function setLogger(LoggerInterface $logger): ClientInterface;
 
     /**
-     * Process The request For attributes extraction.
+     * Process the request for attributes extraction.
      *
-     * @param ServerRequestInterface $request
-     * @param array $opts
+     * @param ServerRequestInterface $request request to process.
+     * @param array $opts options for processing the request.
      *
-     * @return ServerRequestInterface
+     * @return ServerRequestInterface processed request.
      */
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
 
     /**
      * Parse backend webhook event.
      *
-     * @param ServerRequestInterface $request
-     * @return StateInterface
+     * @param ServerRequestInterface $request request to process.
+     *
+     * @return StateInterface state object.
      */
     public function parseWebhook(ServerRequestInterface $request): StateInterface;
 
     /**
-     * Import metadata & play state.
+     * Import play state and metadata from backend.
      *
-     * @param iImport $mapper
-     * @param iDate|null $after
+     * @param iImport $mapper mapper to use.
+     * @param iDate|null $after only import items after this date.
      *
-     * @return array<array-key,ResponseInterface>
+     * @return array<array-key,ResponseInterface> responses.
      */
     public function pull(iImport $mapper, iDate|null $after = null): array;
 
     /**
-     * Backup play state.
+     * Backup play state from backend.
      *
-     * @param iImport $mapper
-     * @param SplFileObject|null $writer
-     * @param array $opts
+     * @param iImport $mapper mapper to use.
+     * @param SplFileObject|null $writer writer to use.
+     * @param array $opts options for backup.
      *
-     * @return array<array-key,ResponseInterface>
+     * @return array<array-key,ResponseInterface> responses.
      */
     public function backup(iImport $mapper, SplFileObject|null $writer = null, array $opts = []): array;
 
     /**
-     * Compare play state and export.
+     * Export play state back to backend.
      *
-     * @param iImport $mapper
-     * @param QueueRequests $queue
-     * @param iDate|null $after
+     * @param iImport $mapper mapper to use.
+     * @param QueueRequests $queue queue to use.
+     * @param iDate|null $after only export items after this date.
      *
-     * @return array<array-key,ResponseInterface>
+     * @return array<array-key,ResponseInterface> responses.
      */
     public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
-     * Compare webhook queued events and push.
+     * Compare webhook queued events and push them to backend.
      *
-     * @param array<StateInterface> $entities
-     * @param QueueRequests $queue
-     * @param iDate|null $after
+     * @param array<StateInterface> $entities entities to push.
+     * @param QueueRequests $queue queue to use.
+     * @param iDate|null $after only push items after this date.
      *
-     * @return array
+     * @return array empty array. The data is pushed to the queue.
      */
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
      * Compare watch progress and push to backend.
      *
-     * @param array<StateInterface> $entities
-     * @param QueueRequests $queue
-     * @param iDate|null $after
+     * @param array<StateInterface> $entities entities to push.
+     * @param QueueRequests $queue queue to use.
+     * @param iDate|null $after only push items after this date.
      *
-     * @return array
+     * @return array empty array. The data is pushed to the queue.
      */
     public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array;
 
     /**
      * Search backend libraries.
      *
-     * @param string $query
-     * @param int $limit
-     * @param array $opts
+     * @param string $query search query.
+     * @param int $limit limit results.
+     * @param array $opts options.
      *
-     * @return array
+     * @return array<array{
+     *    id: string|int,
+     *    type: string,
+     *    title: string|null,
+     *    year: int|null,
+     *    addedAt: string|null,
+     *    watchedAt: string|null,
+     * }>.
      */
     public function search(string $query, int $limit = 25, array $opts = []): array;
 
     /**
      * Search backend for item id.
      *
-     * @param string|int $id
-     * @param array $opts
+     * @param string|int $id item id.
+     * @param array $opts options.
      *
-     * @return array
+     * @return array empty array if not found.
      */
     public function searchId(string|int $id, array $opts = []): array;
 
     /**
-     * Get Specific item metadata.
+     * Search backend for specific item metadata.
      *
-     * @param string|int $id
-     * @param array $opts
+     * @param string|int $id item id.
+     * @param array $opts options.
      *
-     * @return array
+     * @return array empty array if not found.
      */
     public function getMetadata(string|int $id, array $opts = []): array;
 
     /**
      * Get Library content.
      *
-     * @param string|int $id
-     * @param array $opts
+     * @param string|int $id library id.
+     * @param array $opts options.
      *
-     * @return array
+     * @return array empty array if no items found.
      */
     public function getLibrary(string|int $id, array $opts = []): array;
 
@@ -167,16 +175,16 @@ interface ClientInterface
      *
      * @param bool $forceRefresh force reload from backend.
      *
-     * @return int|string|null
+     * @return int|string|null return backend unique id or null if not supported.
      */
     public function getIdentifier(bool $forceRefresh = false): int|string|null;
 
     /**
      * Return list of backend users.
      *
-     * @param array $opts
+     * @param array $opts options.
      *
-     * @return array empty error if not supported.
+     * @return array empty array if not supported.
      *
      * @throws JsonException May throw if json decoding fails.
      * @throws ExceptionInterface May be thrown if there is HTTP request errors.
@@ -186,7 +194,7 @@ interface ClientInterface
     /**
      * Return list of backend libraries.
      *
-     * @param array $opts
+     * @param array $opts options.
      *
      * @return array
      */
@@ -195,38 +203,38 @@ interface ClientInterface
     /**
      * Add/Edit Backend.
      *
-     * @param array $backend
-     * @param array $opts
+     * @param array $backend backend data.
+     * @param array $opts options.
      *
-     * @return array
+     * @return array Returns backend with appended backend specific data.
      */
     public static function manage(array $backend, array $opts = []): array;
 
     /**
      * Return user access token.
      *
-     * @param int|string $userId
-     * @param string $username
+     * @param int|string $userId user id.
+     * @param string $username username.
      *
-     * @return string|bool return user token as string or bool(FALSE) if not supported.
+     * @return string|bool return user token as string or bool(false) if not supported.
      */
     public function getUserToken(int|string $userId, string $username): string|bool;
 
     /**
-     * Get Backend Info.
+     * Get backend info.
      *
-     * @param array $opts
+     * @param array $opts options.
      *
      * @return array
      */
     public function getInfo(array $opts = []): array;
 
     /**
-     * Get Backend Version.
+     * Get backend version.
      *
-     * @param array $opts
+     * @param array $opts options.
      *
-     * @return string
+     * @return string backend version.
      */
     public function getVersion(array $opts = []): string;
 

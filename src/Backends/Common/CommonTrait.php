@@ -11,13 +11,15 @@ use Throwable;
 trait CommonTrait
 {
     /**
-     * Wrap Closure into try catch response.
+     * Wrap closure into try catch response.
      *
      * @param Context $context Context to associate the call with.
      * @param callable():Response $fn Closure
-     * @param string|null $action the action name to personalize the message.
+     * @param string|null $action the action name to make error message more clear.
      *
-     * @return Response We should Expand the catch to include common http errors. json decode failing.
+     * @return Response Response object.
+     * @todo Expand the catch to include common http errors. json decode failing.
+     * @todo raise the log level to error instead of warning as it's currently doing, warning imply it's ok to ignore.
      */
     protected function tryResponse(Context $context, callable $fn, string|null $action = null): Response
     {
@@ -35,7 +37,7 @@ trait CommonTrait
                 error: new Error(
                     message: 'Exception [{error.kind}] was thrown unhandled in [{client}: {backend}] {action}. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [
-                        'action' => $action ?? 'context',
+                        'action' => $action ?? 'not_set',
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'message' => $e->getMessage(),
@@ -60,6 +62,11 @@ trait CommonTrait
         }
     }
 
+    /**
+     * Get Logger.
+     *
+     * @return LoggerInterface Return the logger.
+     */
     protected function getLogger(): LoggerInterface
     {
         return Container::get(LoggerInterface::class);

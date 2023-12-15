@@ -24,6 +24,14 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 if (!function_exists('env')) {
+    /**
+     * Get the value of an environment variable.
+     *
+     * @param string $key The key of the environment variable.
+     * @param mixed $default The default value to return if the environment variable is not found.
+     *
+     * @return mixed The value of the environment variable, or the default value if not found.
+     */
     function env(string $key, mixed $default = null): mixed
     {
         if (false === ($value = $_ENV[$key] ?? getenv($key))) {
@@ -41,6 +49,13 @@ if (!function_exists('env')) {
 }
 
 if (!function_exists('getValue')) {
+    /**
+     * Get the value of a variable.
+     *
+     * @param mixed $var The variable to get the value from.
+     *
+     * @return mixed The value of the variable.
+     */
     function getValue(mixed $var): mixed
     {
         return ($var instanceof Closure) ? $var() : $var;
@@ -49,7 +64,7 @@ if (!function_exists('getValue')) {
 
 if (!function_exists('makeDate')) {
     /**
-     * Make Date Time Object.
+     * Make date time object.
      *
      * @param string|int|DateTimeInterface $date Defaults to now
      * @param string|DateTimeZone|null $tz For given $date, not for display.
@@ -79,6 +94,16 @@ if (!function_exists('makeDate')) {
 }
 
 if (!function_exists('ag')) {
+    /**
+     * Get value from array or object using dot notation.
+     *
+     * @param array|object $array The array or object to search in.
+     * @param string|array|int|null $path The key path to get the value from.
+     * @param mixed $default The default value to return if the key path doesn't exist.
+     * @param string $separator The separator used in the key path (default is '.').
+     *
+     * @return mixed The value at the specified key path, or the default value if not found.
+     */
     function ag(array|object $array, string|array|int|null $path, mixed $default = null, string $separator = '.'): mixed
     {
         if (empty($path)) {
@@ -163,11 +188,11 @@ if (!function_exists('ag_exists')) {
     /**
      * Determine if the given key exists in the provided array.
      *
-     * @param array $array
-     * @param string|int $path
-     * @param string $separator
+     * @param array $array The array to search in.
+     * @param string|int $path The key path to check for.
+     * @param string $separator The separator used in the key path (default is '.').
      *
-     * @return bool
+     * @return bool True if the key path exists, false otherwise.
      */
     function ag_exists(array $array, string|int $path, string $separator = '.'): bool
     {
@@ -191,10 +216,11 @@ if (!function_exists('ag_delete')) {
     /**
      * Delete given key path.
      *
-     * @param array $array
-     * @param int|string $path
-     * @param string $separator
-     * @return array
+     * @param array $array The array to search in.
+     * @param int|string $path The key path to delete.
+     * @param string $separator The separator used in the key path (default is '.').
+     *
+     * @return array The modified array.
      */
     function ag_delete(array $array, string|int $path, string $separator = '.'): array
     {
@@ -234,6 +260,13 @@ if (!function_exists('ag_delete')) {
 }
 
 if (!function_exists('fixPath')) {
+    /**
+     * Fix the given file path by removing any trailing directory separators.
+     *
+     * @param string $path The file path to fix.
+     *
+     * @return string The fixed file path.
+     */
     function fixPath(string $path): string
     {
         return rtrim(implode(DIRECTORY_SEPARATOR, explode(DIRECTORY_SEPARATOR, $path)), DIRECTORY_SEPARATOR);
@@ -241,6 +274,16 @@ if (!function_exists('fixPath')) {
 }
 
 if (!function_exists('fsize')) {
+    /**
+     * Calculate the file size in human-readable format.
+     *
+     * @param int|string $bytes The size of the file in bytes (default is 0).
+     * @param bool $showUnit Whether to include the unit in the result (default is true).
+     * @param int $decimals The number of decimal places to round the result (default is 2).
+     * @param int $mod The base value used for conversion (default is 1000).
+     *
+     * @return string The file size in a human-readable format.
+     */
     function fsize(string|int $bytes = 0, bool $showUnit = true, int $decimals = 2, int $mod = 1000): string
     {
         $sz = 'BKMGTP';
@@ -357,7 +400,16 @@ if (!function_exists('saveRequestPayload')) {
 }
 
 if (!function_exists('jsonResponse')) {
-    function jsonResponse(int $status, array $body, $headers = []): ResponseInterface
+    /**
+     * Create a JSON response.
+     *
+     * @param int $status The HTTP status code.
+     * @param array $body The JSON data to include in the response body.
+     * @param array $headers Optional. Additional headers to include in the response (default is an empty array).
+     *
+     * @return ResponseInterface A PSR-7 compatible response object.
+     */
+    function jsonResponse(int $status, array $body, array $headers = []): ResponseInterface
     {
         $headers['Content-Type'] = 'application/json';
 
@@ -374,12 +426,13 @@ if (!function_exists('jsonResponse')) {
 
 if (!function_exists('httpClientChunks')) {
     /**
-     * Handle Response Stream as Chunks
+     * Handle response stream as chunks.
      *
-     * @param ResponseStreamInterface $stream
-     * @return Generator
+     * @param ResponseStreamInterface $stream Response stream.
      *
-     * @throws TransportExceptionInterface
+     * @return Generator Generator that yields chunks.
+     *
+     * @throws TransportExceptionInterface if stream is not readable.
      */
     function httpClientChunks(ResponseStreamInterface $stream): Generator
     {
@@ -390,6 +443,14 @@ if (!function_exists('httpClientChunks')) {
 }
 
 if (!function_exists('queuePush')) {
+    /**
+     * Pushes the entity to the queue.
+     *
+     * This method adds the entity to the queue for further processing.
+     *
+     * @param iFace $entity The entity to push to the queue.
+     * @param bool $remove (optional) Whether to remove the entity from the queue if it already exists (default is false).
+     */
     function queuePush(iFace $entity, bool $remove = false): void
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
@@ -409,12 +470,34 @@ if (!function_exists('queuePush')) {
 
             $cache->set('queue', $list, new DateInterval('P7D'));
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-            Container::get(LoggerInterface::class)->error($e->getMessage(), $e->getTrace());
+            Container::get(LoggerInterface::class)->error(
+                message: 'Exception [{error.kind}] was thrown unhandled during saving [{backend} - {title}} into queue. Error [{error.message} @ {error.file}:{error.line}].',
+                context: [
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
+                    'trace' => $e->getTrace(),
+                ],
+            );
         }
     }
 }
 
 if (!function_exists('afterLast')) {
+    /**
+     * Get the substring after the last occurrence of a search string.
+     *
+     * @param string $subject The string to search in.
+     * @param string $search The string to search for.
+     *
+     * @return string The substring after the last occurrence of the search string.
+     *                If the search string is empty or not found in the subject string, the subject string is returned.
+     */
     function afterLast(string $subject, string $search): string
     {
         if (empty($search)) {
@@ -432,6 +515,15 @@ if (!function_exists('afterLast')) {
 }
 
 if (!function_exists('before')) {
+    /**
+     * Get the substring before the first occurrence of a search string.
+     *
+     * @param string $subject The subject string to search in.
+     * @param string $search The search string.
+     *
+     * @return string The substring before the first occurrence of the search string.
+     *                If the search string is empty or not found in the subject string, the subject string is returned.
+     */
     function before(string $subject, string $search): string
     {
         return $search === '' ? $subject : explode($search, $subject)[0];
@@ -439,6 +531,15 @@ if (!function_exists('before')) {
 }
 
 if (!function_exists('after')) {
+    /**
+     * Get the string after first occurrence of a search string.
+     *
+     * @param string $subject The original string.
+     * @param string $search The search string.
+     *
+     * @return string The string after the first occurrence of the search string.
+     *                If the search string is empty or not found in the subject string, an empty string is returned.
+     */
     function after(string $subject, string $search): string
     {
         return empty($search) ? $subject : array_reverse(explode($search, $subject, 2))[0];
@@ -447,13 +548,12 @@ if (!function_exists('after')) {
 
 if (!function_exists('makeBackend')) {
     /**
-     * Create new Backend Client instance.
+     * Create new backend client instance.
      *
      * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $backend
      * @param string|null $name server name.
      *
-     * @return iClient
-     *
+     * @return iClient backend client instance.
      * @throws RuntimeException if configuration is wrong.
      */
     function makeBackend(array $backend, string|null $name = null): iClient
@@ -463,7 +563,7 @@ if (!function_exists('makeBackend')) {
         }
 
         if (null === ag($backend, 'url')) {
-            throw new RuntimeException('No Backend url was set.');
+            throw new RuntimeException('No backend url was set.');
         }
 
         if (null === ($class = Config::get("supported.{$backendType}", null))) {
@@ -492,6 +592,14 @@ if (!function_exists('makeBackend')) {
 }
 
 if (!function_exists('arrayToString')) {
+    /**
+     * Convert an array to a string representation.
+     *
+     * @param array $arr The array to convert.
+     * @param string $separator The separator used to concatenate the elements (default is ', ').
+     *
+     * @return string The string representation of the array.
+     */
     function arrayToString(array $arr, string $separator = ', '): string
     {
         $list = [];
@@ -523,6 +631,11 @@ if (!function_exists('arrayToString')) {
 }
 
 if (!function_exists('commandContext')) {
+    /**
+     * Returns the command context based on the environment.
+     *
+     * @return string The command context string.
+     */
     function commandContext(): string
     {
         if (inContainer()) {
@@ -537,6 +650,11 @@ if (!function_exists('commandContext')) {
 }
 
 if (!function_exists('getAppVersion')) {
+    /**
+     * Get the current version of the application.
+     *
+     * @return string The application version.
+     */
     function getAppVersion(): string
     {
         $version = Config::get('version', 'dev-master');
@@ -562,11 +680,13 @@ if (!function_exists('getAppVersion')) {
 
 if (!function_exists('isValidName')) {
     /**
-     * Allow only [Aa-Zz][0-9][_] in server names.
+     * Check if the given name is valid.
      *
-     * @param string $name
+     * The name must contain only alphanumeric characters and underscores.
      *
-     * @return bool
+     * @param string $name The name to validate.
+     *
+     * @return bool True if the name is valid, false otherwise.
      */
     function isValidName(string $name): bool
     {
@@ -575,6 +695,13 @@ if (!function_exists('isValidName')) {
 }
 
 if (false === function_exists('formatDuration')) {
+    /**
+     * Format duration in milliseconds to HH:MM:SS format.
+     *
+     * @param int|float $milliseconds The duration in milliseconds.
+     *
+     * @return string The formatted duration in HH:MM:SS format.
+     */
     function formatDuration(int|float $milliseconds): string
     {
         $seconds = floor($milliseconds / 1000);
@@ -594,7 +721,8 @@ if (false === function_exists('array_keys_diff')) {
      * @param array $base array containing all keys.
      * @param array $list list of keys that you want to filter based on.
      * @param bool $has Whether to get keys that exist in $list or exclude them.
-     * @return array
+     *
+     * @return array The filtered array.
      */
     function array_keys_diff(array $base, array $list, bool $has = true): array
     {
@@ -603,6 +731,11 @@ if (false === function_exists('array_keys_diff')) {
 }
 
 if (false === function_exists('getMemoryUsage')) {
+    /**
+     * Get the current memory usage.
+     *
+     * @return string The memory usage in human-readable format.
+     */
     function getMemoryUsage(): string
     {
         return fsize(memory_get_usage() - BASE_MEMORY);
@@ -610,6 +743,11 @@ if (false === function_exists('getMemoryUsage')) {
 }
 
 if (false === function_exists('getPeakMemoryUsage')) {
+    /**
+     * Get the peak memory usage of the script.
+     *
+     * @return string The peak memory usage in human-readable format.
+     */
     function getPeakMemoryUsage(): string
     {
         return fsize(memory_get_peak_usage() - BASE_PEAK_MEMORY);
@@ -617,6 +755,13 @@ if (false === function_exists('getPeakMemoryUsage')) {
 }
 
 if (false === function_exists('makeIgnoreId')) {
+    /**
+     * Make ignore id from given URL.
+     *
+     * @param string $url The URL to manipulate.
+     *
+     * @return UriInterface The modified URI.
+     */
     function makeIgnoreId(string $url): UriInterface
     {
         static $filterQuery = null;
@@ -646,6 +791,18 @@ if (false === function_exists('makeIgnoreId')) {
 }
 
 if (false === function_exists('isIgnoredId')) {
+    /**
+     * Check if an ID is ignored.
+     *
+     * @param string $backend The backend.
+     * @param string $type The type.
+     * @param string $db The database.
+     * @param int|string $id The ID.
+     * @param int|string|null $backendId The backend ID (optional).
+     *
+     * @return bool Returns true if the ID is ignored, false otherwise.
+     * @throws RuntimeException Throws an exception if an invalid context type is given.
+     */
     function isIgnoredId(
         string $backend,
         string $type,
@@ -763,6 +920,11 @@ if (false === function_exists('r_array')) {
 }
 
 if (false === function_exists('generateRoutes')) {
+    /**
+     * Generate routes based on the available commands.
+     *
+     * @return array The generated routes.
+     */
     function generateRoutes(): array
     {
         $dirs = [
@@ -795,6 +957,13 @@ if (false === function_exists('generateRoutes')) {
 }
 
 if (!function_exists('getClientIp')) {
+    /**
+     * Get the client IP address.
+     *
+     * @param ServerRequestInterface|null $request (optional) The request object.
+     *
+     * @return string The client IP address.
+     */
     function getClientIp(?ServerRequestInterface $request = null): string
     {
         $params = $request?->getServerParams() ?? $_SERVER;
@@ -829,6 +998,11 @@ if (!function_exists('getClientIp')) {
 }
 
 if (false === function_exists('inContainer')) {
+    /**
+     * Check if the code is running within a container.
+     *
+     * @return bool True if the code is running within a container, false otherwise.
+     */
     function inContainer(): bool
     {
         if (true === (bool)env('IN_CONTAINER')) {
@@ -845,11 +1019,11 @@ if (false === function_exists('inContainer')) {
 
 if (false === function_exists('isValidURL')) {
     /**
-     * Validate URL - RFC 3987 (IRI)
+     * Validate URL per RFC3987 (IRI)
      *
-     * @param string $url
+     * @param string $url The URL to validate.
      *
-     * @return bool
+     * @return bool True if the URL is valid, false otherwise.
      */
     function isValidURL(string $url): bool
     {
@@ -858,5 +1032,55 @@ if (false === function_exists('isValidURL')) {
             '/^[a-z](?:[-a-z0-9\+\.])*:(?:\/\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:])*@)?(?:\[(?:(?:(?:[0-9a-f]{1,4}:){6}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|::(?:[0-9a-f]{1,4}:){5}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:[0-9a-f]{1,4}:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+[-a-z0-9\._~!\$&\'\(\)\*\+,;=:]+)\]|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3}|(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=@])*)(?::[0-9]*)?(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*|\/(?:(?:(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))+)(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*)?|(?:(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))+)(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*|(?!(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])))(?:\?(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])|[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}|\x{100000}-\x{10FFFD}\/\?])*)?(?:\#(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])|[\/\?])*)?$/iu',
             $url
         );
+    }
+}
+
+
+if (false === function_exists('getSystemMemoryInfo')) {
+    /**
+     * Get system memory information.
+     *
+     * @return array{ MemTotal: float, MemFree: float, MemAvailable: float, SwapTotal: float, SwapFree: float }
+     */
+    function getSystemMemoryInfo(): array
+    {
+        $keys = [
+            'MemTotal' => 'mem_total',
+            'MemFree' => 'mem_free',
+            'MemAvailable' => 'mem_available',
+            'SwapTotal' => 'swap_total',
+            'SwapFree' => 'swap_free',
+        ];
+
+        $result = [];
+
+        if (!is_readable('/proc/meminfo')) {
+            return $result;
+        }
+
+        if (false === ($lines = @file('/proc/meminfo', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))) {
+            return $result;
+        }
+
+        foreach ($lines as $line) {
+            if (empty($line)) {
+                continue;
+            }
+
+            $line = explode(':', $line);
+            $key = trim($line[0]);
+
+            if (false === array_key_exists($key, $keys)) {
+                continue;
+            }
+
+            $val = trim(str_ireplace(' kB', '', $line[1]));
+
+            $value = 1000 * (float)$val;
+
+            $result[$keys[$key]] = $value;
+        }
+
+        return $result;
     }
 }
