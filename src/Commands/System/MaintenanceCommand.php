@@ -10,16 +10,29 @@ use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class MaintenanceCommand
+ *
+ * Runs maintenance tasks on the database.
+ */
 #[Routable(command: self::ROUTE)]
 final class MaintenanceCommand extends Command
 {
     public const ROUTE = 'system:db:maintenance';
 
+    /**
+     * Class constructor.
+     *
+     * @param iDB $db The database connection object.
+     */
     public function __construct(private iDB $db)
     {
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -35,6 +48,14 @@ final class MaintenanceCommand extends Command
             );
     }
 
+    /**
+     * Runs the command.
+     *
+     * @param InputInterface $input The input interface object.
+     * @param OutputInterface $output The output interface object.
+     *
+     * @return int Returns the exit code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $this->db->maintenance();

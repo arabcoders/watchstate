@@ -12,6 +12,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class IndexCommand
+ *
+ * This command ensures that the database has correct indexes.
+ */
 #[Routable(command: self::ROUTE)]
 final class IndexCommand extends Command
 {
@@ -19,11 +24,21 @@ final class IndexCommand extends Command
 
     public const TASK_NAME = 'indexes';
 
+    /**
+     * Class constructor.
+     *
+     * @param iDB $db An instance of the iDB class.
+     */
     public function __construct(private iDB $db)
     {
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     *
+     * @return void
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -56,6 +71,14 @@ final class IndexCommand extends Command
             );
     }
 
+    /**
+     * Run a command.
+     *
+     * @param InputInterface $input An instance of the InputInterface interface.
+     * @param OutputInterface $output An instance of the OutputInterface interface.
+     *
+     * @return int The status code indicating the success or failure of the command execution.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $this->db->ensureIndex([

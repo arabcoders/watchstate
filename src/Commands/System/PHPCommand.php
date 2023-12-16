@@ -11,11 +11,22 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class PHPCommand
+ *
+ * This command is used to generate expected values for php.ini and fpm pool worker.
+ * To generate fpm values, use the "--fpm" option.
+ */
 #[Routable(command: self::ROUTE)]
 final class PHPCommand extends Command
 {
     public const ROUTE = 'system:php';
 
+    /**
+     * Configures the command.
+     *
+     * @return void
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -40,11 +51,25 @@ final class PHPCommand extends Command
             );
     }
 
+    /**
+     * Runs the command based on the input options.
+     *
+     * @param InputInterface $input The input options.
+     * @param OutputInterface $output The output interface for displaying messages.
+     * @return int The exit code of the command execution.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         return $input->getOption('fpm') ? $this->makeFPM($output) : $this->makeConfig($output);
     }
 
+    /**
+     * Print the php.ini configuration.
+     *
+     * @param OutputInterface $output The OutputInterface object to write the configuration to.
+     *
+     * @return int The status code indicating the success of the method.
+     */
     protected function makeConfig(OutputInterface $output): int
     {
         $config = Config::get('php.ini', []);
@@ -56,6 +81,13 @@ final class PHPCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Print the PHP-FPM configuration.
+     *
+     * @param OutputInterface $output The OutputInterface object to write the configuration to.
+     *
+     * @return int The status code indicating the success of the method.
+     */
     protected function makeFPM(OutputInterface $output): int
     {
         $config = Config::get('php.fpm', []);
@@ -70,6 +102,13 @@ final class PHPCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Escape the given value.
+     *
+     * @param mixed $val The value to escape.
+     *
+     * @return mixed The escaped value.
+     */
     private function escapeValue(mixed $val): mixed
     {
         if (is_bool($val) || is_int($val)) {

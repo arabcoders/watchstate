@@ -13,6 +13,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class PruneCommand
+ *
+ * This command removes automatically generated files like logs and backups.
+ * It provides an option to run in dry-run mode to see what files will be removed without actually removing them.
+ */
 #[Routable(command: self::ROUTE)]
 final class PruneCommand extends Command
 {
@@ -20,11 +26,19 @@ final class PruneCommand extends Command
 
     public const TASK_NAME = 'prune';
 
+    /**
+     * Class Constructor.
+     *
+     * @param LoggerInterface $logger The logger implementation used for logging.
+     */
     public function __construct(private LoggerInterface $logger)
     {
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -49,6 +63,14 @@ final class PruneCommand extends Command
             );
     }
 
+    /**
+     * Executes the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit status code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $time = time();
@@ -139,5 +161,4 @@ final class PruneCommand extends Command
 
         return self::SUCCESS;
     }
-
 }

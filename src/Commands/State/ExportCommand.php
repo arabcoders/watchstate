@@ -17,13 +17,19 @@ use App\Libs\Routable;
 use App\Libs\Stream;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+/**
+ * Class ExportCommand
+ *
+ * Command for exporting play state to backends.
+ *
+ * @package App\Console\Commands\State
+ */
 #[Routable(command: self::ROUTE)]
 class ExportCommand extends Command
 {
@@ -31,6 +37,14 @@ class ExportCommand extends Command
 
     public const TASK_NAME = 'export';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iDB $db The instance of the iDB class.
+     * @param DirectMapper $mapper The instance of the DirectMapper class.
+     * @param QueueRequests $queue The instance of the QueueRequests class.
+     * @param iLogger $logger The instance of the iLogger class.
+     */
     public function __construct(
         private iDB $db,
         private DirectMapper $mapper,
@@ -43,6 +57,9 @@ class ExportCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -100,15 +117,30 @@ class ExportCommand extends Command
             );
     }
 
+    /**
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input object containing the command data.
+     * @param OutputInterface $output The output object for displaying command output.
+     *
+     * @return int The exit code of the command execution.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         return $this->single(fn(): int => $this->process($input, $output), $output);
     }
 
+    /**
+     * Process the command by pulling and comparing status and then pushing.
+     *
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
-            $this->logger->pushHandler(new StreamLogHandler(new Stream(fopen($logfile, 'a')), $output));
+            $this->logger->pushHandler(new StreamLogHandler(new Stream($logfile, 'a'), $output));
         }
 
         // -- Use Custom servers.yaml file.
@@ -116,7 +148,7 @@ class ExportCommand extends Command
             try {
                 $custom = true;
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
@@ -448,13 +480,22 @@ class ExportCommand extends Command
                 copy($config, $config . '.bak');
             }
 
-            file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
+            $stream = new Stream($config, 'w');
+            $stream->write(Yaml::dump(Config::get('servers', []), 8, 2));
+            $stream->close();
         }
-
 
         return self::SUCCESS;
     }
 
+    /**
+     * Push entities to backends if applicable.
+     *
+     * @param array $backends An array of backends.
+     * @param array $entities An array of entities to be pushed.
+     *
+     * @return int The success status code.
+     */
     protected function push(array $backends, array $entities): int
     {
         $this->logger->notice('Push mode start.', [
@@ -477,10 +518,10 @@ class ExportCommand extends Command
     }
 
     /**
-     * Pull and compare status and then push.
+     * Fallback to export mode if push mode is not supported for the backend.
      *
-     * @param array $backends
-     * @param InputInterface $input
+     * @param array $backends An array of backends to export data to.
+     * @param InputInterface $input The input containing export options.
      */
     protected function export(array $backends, InputInterface $input): void
     {

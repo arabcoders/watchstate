@@ -10,11 +10,19 @@ use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class EnvCommand
+ *
+ * This command displays the environment variables that were loaded during the execution of the tool.
+ */
 #[Routable(command: self::ROUTE)]
 final class EnvCommand extends Command
 {
     public const ROUTE = 'system:env';
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -78,13 +86,21 @@ final class EnvCommand extends Command
             );
     }
 
+    /**
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
         $keys = [];
 
         foreach (getenv() as $key => $val) {
-            if (false === str_starts_with($key, 'WS_')) {
+            if (false === str_starts_with($key, 'WS_') && $key !== 'HTTP_PORT') {
                 continue;
             }
 

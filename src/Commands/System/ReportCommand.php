@@ -11,8 +11,8 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\Routable;
+use App\Libs\Stream;
 use Cron\CronExpression;
-use Exception;
 use LimitIterator;
 use SplFileObject;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -20,16 +20,31 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Throwable;
 
+/**
+ * Class ReportCommand
+ *
+ * Show basic information for diagnostics.
+ */
 #[Routable(command: self::ROUTE)]
 final class ReportCommand extends Command
 {
     public const ROUTE = 'system:report';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iDB $db An instance of the iDB class used for database operations.
+     *
+     * @return void
+     */
     public function __construct(private iDB $db)
     {
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -54,6 +69,14 @@ final class ReportCommand extends Command
             );
     }
 
+    /**
+     * Display basic information for diagnostics.
+     *
+     * @param iInput $input An instance of the iInput class used for command input.
+     * @param iOutput $output An instance of the iOutput class used for command output.
+     *
+     * @return int Returns the command execution status code.
+     */
     protected function runCommand(iInput $input, iOutput $output): int
     {
         $output->writeln('<info>[ Basic Report ]</info>' . PHP_EOL);
@@ -82,7 +105,7 @@ final class ReportCommand extends Command
                         }
 
                         try {
-                            $pid = trim(file_get_contents($pidFile));
+                            $pid = trim((string)(new Stream($pidFile)));
                         } catch (Throwable $e) {
                             return $e->getMessage();
                         }
@@ -111,6 +134,14 @@ final class ReportCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Get backends and display information about each backend.
+     *
+     * @param iInput $input An instance of the iInput class used for input operations.
+     * @param iOutput $output An instance of the iOutput class used for output operations.
+     *
+     * @return void
+     */
     private function getBackends(iInput $input, iOutput $output): void
     {
         $includeSample = (bool)$input->getOption('include-db-sample');
@@ -239,6 +270,13 @@ final class ReportCommand extends Command
         }
     }
 
+    /**
+     * Retrieves the tasks and displays information about each task.
+     *
+     * @param iOutput $output An instance of the iOutput class used for displaying output.
+     *
+     * @return void
+     */
     private function getTasks(iOutput $output): void
     {
         foreach (Config::get('tasks.list', []) as $task) {
@@ -274,7 +312,7 @@ final class ReportCommand extends Command
                             'answer' => gmdate(Date::ATOM, $timer->getNextRunDate()->getTimestamp()),
                         ])
                     );
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
                     $output->writeln(
                         r('Next Run scheduled failed. <error>{answer}</error>', [
                             'answer' => $e->getMessage(),
@@ -288,6 +326,12 @@ final class ReportCommand extends Command
         }
     }
 
+    /**
+     * Get logs.
+     *
+     * @param iInput $input An instance of the iInput class used for input operations.
+     * @param iOutput $output An instance of the iOutput class used for output operations.
+     */
     private function getLogs(iInput $input, iOutput $output): void
     {
         $todayAffix = makeDate()->format('Ymd');
@@ -307,6 +351,16 @@ final class ReportCommand extends Command
         }
     }
 
+    /**
+     * Get last X lines from log file.
+     *
+     * @param iOutput $output An instance of the iOutput class used for displaying output.
+     * @param string $type The type of the log.
+     * @param string|int $date The date of the log file.
+     * @param int|string $limit The maximum number of lines to display.
+     *
+     * @return void
+     */
     private function handleLog(iOutput $output, string $type, string|int $date, int|string $limit): void
     {
         $logFile = Config::get('tmpDir') . '/logs/' . r(

@@ -6,8 +6,8 @@ namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Routable;
-use Exception;
 use LimitIterator;
 use SplFileObject;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -17,19 +17,33 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
+/**
+ * Class LogsCommand.
+ *
+ * This class is used to view and clear log files.
+ */
 #[Routable(command: self::ROUTE)]
 final class LogsCommand extends Command
 {
     public const ROUTE = 'system:logs';
 
+    /**
+     * @var array Constant array containing names of supported log files.
+     */
     private const LOG_FILES = [
         'app',
         'access',
         'task'
     ];
 
+    /**
+     * @var int The default limit of how many lines to show.
+     */
     public const DEFAULT_LIMIT = 50;
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $defaultDate = makeDate()->format('Ymd');
@@ -121,7 +135,15 @@ final class LogsCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit code of the command.
+     *
+     * @throws InvalidArgumentException If the log type is not one of the supported log files.
+     * @throws InvalidArgumentException If the log date is not in the correct format.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -132,7 +154,7 @@ final class LogsCommand extends Command
         $type = $input->getOption('type');
 
         if (false === in_array($type, self::LOG_FILES)) {
-            throw new \RuntimeException(
+            throw new InvalidArgumentException(
                 sprintf('Log type has to be one of the supported log files [%s].', implode(', ', self::LOG_FILES))
             );
         }
@@ -140,12 +162,15 @@ final class LogsCommand extends Command
         $date = $input->getOption('date');
 
         if (1 !== preg_match('/^\d{8}$/', $date)) {
-            throw new \RuntimeException('Log date must be in [YYYYMMDD] format. For example [20220622].');
+            throw new InvalidArgumentException('Log date must be in [YYYYMMDD] format. For example [20220622].');
         }
 
         $limit = (int)$input->getOption('limit');
 
-        $file = sprintf(Config::get('tmpDir') . '/logs/%s.%s.log', $type, $date);
+        $file = r(text: Config::get('tmpDir') . '/logs/{type}.{date}.log', context: [
+            'type' => $type,
+            'date' => $date
+        ]);
 
         if (false === file_exists($file) || filesize($file) < 1) {
             $output->writeln(
@@ -226,6 +251,14 @@ final class LogsCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Lists the logs.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit code.
+     */
     private function listLogs(InputInterface $input, OutputInterface $output): int
     {
         $path = fixPath(Config::get('tmpDir') . '/logs');
@@ -259,6 +292,15 @@ final class LogsCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Clears the contents of a log file.
+     *
+     * @param SplFileObject $file The log file object.
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit code.
+     */
     private function handleClearLog(SplFileObject $file, InputInterface $input, OutputInterface $output): int
     {
         $logfile = after($file->getRealPath(), Config::get('tmpDir') . '/');
@@ -310,6 +352,12 @@ final class LogsCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Complete the suggestions for the given input.
+     *
+     * @param CompletionInput $input The completion input.
+     * @param CompletionSuggestions $suggestions The completion suggestions.
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);
@@ -329,6 +377,11 @@ final class LogsCommand extends Command
         }
     }
 
+    /**
+     * Retrieve the types of log files.
+     *
+     * @return array The array of available log file types.
+     */
     public static function getTypes(): array
     {
         return self::LOG_FILES;

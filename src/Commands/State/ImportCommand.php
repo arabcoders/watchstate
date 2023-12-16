@@ -20,7 +20,6 @@ use App\Libs\Routable;
 use App\Libs\Stream;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
@@ -30,6 +29,11 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
+/**
+ * Class ImportCommand
+ *
+ * This command imports metadata and play state of items from backends and updates the local database.
+ */
 #[Routable(command: self::ROUTE)]
 class ImportCommand extends Command
 {
@@ -37,6 +41,13 @@ class ImportCommand extends Command
 
     public const TASK_NAME = 'import';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iDB $db The database interface object.
+     * @param iImport $mapper The import interface object.
+     * @param iLogger $logger The logger interface object.
+     */
     public function __construct(private iDB $db, private iImport $mapper, private iLogger $logger)
     {
         set_time_limit(0);
@@ -45,6 +56,9 @@ class ImportCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the method.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -201,15 +215,31 @@ class ImportCommand extends Command
             );
     }
 
+    /**
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input interface object.
+     * @param OutputInterface $output The output interface object.
+     *
+     * @return int The status code of the command execution.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         return $this->single(fn(): int => $this->process($input, $output), $output);
     }
 
+    /**
+     * Import the state from the backends.
+     *
+     * @param InputInterface $input The input interface object.
+     * @param OutputInterface $output The output interface object.
+     *
+     * @return int The return status code.
+     */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
-            $this->logger->pushHandler(new StreamLogHandler(new Stream(fopen($logfile, 'a')), $output));
+            $this->logger->pushHandler(new StreamLogHandler(new Stream($logfile, 'a'), $output));
         }
 
         // -- Use Custom servers.yaml file.
@@ -217,7 +247,7 @@ class ImportCommand extends Command
             try {
                 $custom = true;
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
@@ -482,7 +512,9 @@ class ImportCommand extends Command
                 copy($config, $config . '.bak');
             }
 
-            file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
+            $stream = new Stream($config, 'w');
+            $stream->write(Yaml::dump(Config::get('servers', []), 8, 2));
+            $stream->close();
         }
 
         if ($input->getOption('show-messages')) {
