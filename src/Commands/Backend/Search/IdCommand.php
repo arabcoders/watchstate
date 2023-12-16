@@ -8,25 +8,33 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 
+/**
+ * IdCommand
+ *
+ * This class represents a command for getting backend metadata related to a specific id.
+ */
 #[Routable(command: self::ROUTE)]
 final class IdCommand extends Command
 {
     public const ROUTE = 'backend:search:id';
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
             ->setDescription('Get backend metadata related to specific id.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends')
             ->addArgument('id', InputArgument::REQUIRED, 'Backend item id.')
             ->setHelp(
                 r(
@@ -49,64 +57,78 @@ final class IdCommand extends Command
             );
     }
 
+    /**
+     * Runs the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The command exit code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
         $id = $input->getArgument('id');
 
+        if (null === ($name = $input->getOption('select-backends'))) {
+            $output->writeln(
+                r('<error>ERROR: You must select a backend using [-s, --select-backends] option.</error>')
+            );
+            return self::FAILURE;
+        } else {
+            $name = explode(',', $name)[0];
+        }
+
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $arr = [
-                    'error' => $e->getMessage()
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
+        }
+
+        if (null === ag(Config::get('servers', []), $name, null)) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
+
+        $backendOpts = [];
+        $opts = [
+            Options::NO_CACHE => true,
+        ];
+
+        if ($input->getOption('trace')) {
+            $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+        }
+
+        $backend = $this->getBackend($name, $backendOpts);
+
+        if ($input->getOption('include-raw-response')) {
+            $opts[Options::RAW_RESPONSE] = true;
         }
 
         try {
-            $backendOpts = [];
-            $opts = [
-                Options::NO_CACHE => true,
-            ];
-
-            if ($input->getOption('trace')) {
-                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
-            }
-
-            $backend = $this->getBackend($input->getArgument('backend'), $backendOpts);
-
-            if ($input->getOption('include-raw-response')) {
-                $opts[Options::RAW_RESPONSE] = true;
-            }
-
-            $results = $backend->searchId(id: $id, opts: $opts);
-
-            if (count($results) < 1) {
-                $arr = [
-                    'info' => sprintf('%s: No results were found for this id #\'%s\' .', $backend->getName(), $id),
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-                return self::FAILURE;
-            }
-
-            $this->displayContent('table' === $mode ? [$results] : $results, $output, $mode);
-
-            return self::SUCCESS;
-        } catch (RuntimeException $e) {
-            $arr = ['error' => $e->getMessage(),];
-            if ('table' !== $mode) {
-                $arr += [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ];
-            }
-
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+            $results = $backend->searchId(id: $id, opts: $opts + [Options::NO_LOGGING => true]);
+        } catch (Throwable $e) {
+            $output->writeln(r('<error>{kind}: {message}</error>', [
+                'kind' => $e::class,
+                'message' => $e->getMessage()
+            ]));
             return self::FAILURE;
         }
+
+        if (count($results) < 1) {
+            $output->writeln(r("{backend}: No results were found for this id #'{id}'.", [
+                'backend' => $backend->getName(),
+                'query' => $id
+            ]));
+            return self::FAILURE;
+        }
+
+        $this->displayContent('table' === $mode ? [$results] : $results, $output, $mode);
+
+        return self::SUCCESS;
     }
 }

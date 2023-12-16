@@ -8,18 +8,25 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class ListCommand
+ *
+ * This command list the backend libraries. This help you to know which library are supported.
+ */
 #[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'backend:library:list';
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -37,6 +44,14 @@ final class ListCommand extends Command
             );
     }
 
+    /**
+     * Executes the command.
+     *
+     * @param InputInterface $input The input instance.
+     * @param OutputInterface $output The output instance.
+     *
+     * @return int The command exit code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
@@ -46,67 +61,55 @@ final class ListCommand extends Command
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $arr = [
-                    'error' => $e->getMessage()
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
         }
 
-        try {
-            $opts = $backendOpts = [];
+        if (null === ag(Config::get('servers', []), $backend, null)) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
+            return self::FAILURE;
+        }
 
-            if ($input->getOption('include-raw-response')) {
-                $opts[Options::RAW_RESPONSE] = true;
-            }
+        $opts = $backendOpts = [];
 
-            if ($input->getOption('trace')) {
-                $backendOpts = ag_set($backendOpts, 'options.' . Options::DEBUG_TRACE, true);
-            }
+        if ($input->getOption('include-raw-response')) {
+            $opts[Options::RAW_RESPONSE] = true;
+        }
 
-            $libraries = $this->getBackend($backend, $backendOpts)->listLibraries(opts: $opts);
+        if ($input->getOption('trace')) {
+            $backendOpts = ag_set($backendOpts, 'options.' . Options::DEBUG_TRACE, true);
+        }
 
-            if (count($libraries) < 1) {
-                $arr = [
-                    'info' => sprintf('%s: No libraries were found.', $backend),
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-                return self::FAILURE;
-            }
+        $libraries = $this->getBackend($backend, $backendOpts)->listLibraries(opts: $opts);
 
-            if ('table' === $mode) {
-                $list = [];
-
-                foreach ($libraries as $item) {
-                    foreach ($item as $key => $val) {
-                        if (false === is_bool($val)) {
-                            continue;
-                        }
-                        $item[$key] = $val ? 'Yes' : 'No';
-                    }
-                    $list[] = $item;
-                }
-
-                $libraries = $list;
-            }
-
-            $this->displayContent($libraries, $output, $mode);
-
-            return self::SUCCESS;
-        } catch (RuntimeException $e) {
+        if (count($libraries) < 1) {
             $arr = [
-                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
+                'info' => sprintf('%s: No libraries were found.', $backend),
             ];
-            if ('table' !== $mode) {
-                $arr += [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ];
-            }
             $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
             return self::FAILURE;
         }
+
+        if ('table' === $mode) {
+            $list = [];
+
+            foreach ($libraries as $item) {
+                foreach ($item as $key => $val) {
+                    if (false === is_bool($val)) {
+                        continue;
+                    }
+                    $item[$key] = $val ? 'Yes' : 'No';
+                }
+                $list[] = $item;
+            }
+
+            $libraries = $list;
+        }
+
+        $this->displayContent($libraries, $output, $mode);
+
+        return self::SUCCESS;
     }
 }

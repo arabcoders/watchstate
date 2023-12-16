@@ -23,13 +23,24 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+/**
+ * Class RestoreCommand
+ *
+ * Command used to restore a backend's play state from a backup file.
+ */
 #[Routable(command: self::ROUTE)]
 class RestoreCommand extends Command
 {
     public const ROUTE = 'backend:restore';
 
-    public const TASK_NAME = 'export';
-
+    /**
+     * Class constructor.
+     *
+     * @param QueueRequests $queue The queue object.
+     * @param iLogger $logger The logger object.
+     *
+     * @return void
+     */
     public function __construct(private QueueRequests $queue, private iLogger $logger)
     {
         set_time_limit(0);
@@ -38,6 +49,9 @@ class RestoreCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -113,10 +127,13 @@ class RestoreCommand extends Command
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @return int
-     * @throws \JsonMachine\Exception\InvalidArgumentException
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input interface containing the command arguments and options.
+     * @param OutputInterface $output The output interface for displaying command output.
+     *
+     * @return int The exit code of the command.
+     * @throws \JsonMachine\Exception\InvalidArgumentException If the file is not readable.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -124,7 +141,13 @@ class RestoreCommand extends Command
     }
 
     /**
-     * @throws \JsonMachine\Exception\InvalidArgumentException
+     * Execute the command.
+     *
+     * @param InputInterface $input The input interface object.
+     * @param OutputInterface $output The output interface object.
+     *
+     * @return int The exit code indicating the success or failure of the process.
+     * @throws \JsonMachine\Exception\InvalidArgumentException If the file is not readable.
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
@@ -135,7 +158,9 @@ class RestoreCommand extends Command
             $newFile = Config::get('path') . '/backup/' . $file;
 
             if (false === file_exists($newFile) || false === is_readable($newFile)) {
-                $output->writeln(sprintf('<error>ERROR: Unable to find or read backup file \'%s\'.</error>', $file));
+                $output->writeln(r('<error>ERROR: Unable to find or read backup file \'{file}\'.</error>', [
+                    'file' => $file
+                ]));
                 return self::FAILURE;
             }
 
@@ -146,18 +171,18 @@ class RestoreCommand extends Command
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
             } catch (RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
         }
 
         if (null === ($backend = ag(Config::get('servers', []), $name, null))) {
-            $output->writeln(sprintf('<error>ERROR: Backend \'%s\' not found.</error>', $name));
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 
         if (false === (bool)ag($backend, 'export.enabled')) {
-            $output->writeln(sprintf('<error>ERROR: Export to \'%s\' are disabled.</error>', $name));
+            $output->writeln(r("<error>ERROR: Export to '{backend}' are disabled.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 
@@ -293,6 +318,12 @@ class RestoreCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Completes the input with suggestions for the 'file' argument.
+     *
+     * @param CompletionInput $input The completion input object.
+     * @param CompletionSuggestions $suggestions The completion suggestions object.
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);
@@ -315,5 +346,4 @@ class RestoreCommand extends Command
             $suggestions->suggestValues($suggest);
         }
     }
-
 }

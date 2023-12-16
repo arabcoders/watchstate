@@ -8,7 +8,6 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -16,8 +15,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Throwable;
 
+/**
+ * Class MismatchCommand
+ *
+ * Find possible mis-matched item in a libraries.
+ */
 #[Routable(command: self::ROUTE)]
 final class MismatchCommand extends Command
 {
@@ -56,6 +59,9 @@ final class MismatchCommand extends Command
 
     private const CUTOFF = 30;
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -89,7 +95,7 @@ final class MismatchCommand extends Command
 
                     This command require <notice>Plex Naming Standard</notice> and assume the reported [<value>title</value>, <value>year</value>] somewhat matches the reported media path.
 
-                    We remove text contained within <value>{}</value> and <value>[]</value> brackets, as well as this characters:
+                    We remove text contained within <value>{}</value> and <value>[]</value> brackets, as well as these characters:
                     [{removedList}]
 
                     Plex naming standard for <notice>Movies</notice> is:
@@ -140,6 +146,14 @@ final class MismatchCommand extends Command
             );
     }
 
+    /**
+     * Run a command.
+     *
+     * @param InputInterface $input The input object.
+     * @param OutputInterface $output The output object.
+     *
+     * @return int The exit code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
@@ -153,78 +167,58 @@ final class MismatchCommand extends Command
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $arr = [
-                    'error' => $e->getMessage()
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
         }
 
-        try {
-            $backendOpts = $opts = $list = [];
-
-            if ($input->getOption('timeout')) {
-                $backendOpts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
-            }
-
-            if ($input->getOption('trace')) {
-                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
-            }
-
-            if ($input->getOption('include-raw-response')) {
-                $opts[Options::RAW_RESPONSE] = true;
-            }
-
-            $opts[Options::MISMATCH_DEEP_SCAN] = true;
-
-            $client = $this->getBackend($backend, $backendOpts);
-
-            $ids = [];
-
-            if (null !== $id) {
-                $ids[] = $id;
-            } else {
-                foreach ($client->listLibraries() as $library) {
-                    if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
-                        continue;
-                    }
-                    $ids[] = ag($library, 'id');
-                }
-            }
-
-            foreach ($ids as $libraryId) {
-                foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
-                    $processed = $this->compare(item: $item, method: $input->getOption('method'));
-
-                    if (!$showAll && (empty($processed) || $processed['percent'] >= (float)$percentage)) {
-                        continue;
-                    }
-
-                    $list[] = $processed;
-                }
-            }
-        } catch (Throwable $e) {
-            $arr = [
-                'error' => $e->getMessage(),
-            ];
-
-            if ('table' !== $mode) {
-                $arr['exception'] = [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'item' => $item ?? [],
-                ];
-
-                if (!empty($item)) {
-                    $arr['item'] = $item;
-                }
-            }
-
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-
+        if (null === ag(Config::get('servers', []), $backend, null)) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
             return self::FAILURE;
+        }
+
+        $backendOpts = $opts = $list = [];
+
+        if ($input->getOption('timeout')) {
+            $backendOpts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
+        }
+
+        if ($input->getOption('trace')) {
+            $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+        }
+
+        if ($input->getOption('include-raw-response')) {
+            $opts[Options::RAW_RESPONSE] = true;
+        }
+
+        $opts[Options::MISMATCH_DEEP_SCAN] = true;
+
+        $client = $this->getBackend($backend, $backendOpts);
+
+        $ids = [];
+
+        if (null !== $id) {
+            $ids[] = $id;
+        } else {
+            foreach ($client->listLibraries() as $library) {
+                if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
+                    continue;
+                }
+                $ids[] = ag($library, 'id');
+            }
+        }
+
+        foreach ($ids as $libraryId) {
+            foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
+                $processed = $this->compare(item: $item, method: $input->getOption('method'));
+
+                if (!$showAll && (empty($processed) || $processed['percent'] >= (float)$percentage)) {
+                    continue;
+                }
+
+                $list[] = $processed;
+            }
         }
 
         if (empty($list)) {
@@ -271,6 +265,13 @@ final class MismatchCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Compares an array item with a given method.
+     *
+     * @param array $item The array item to compare.
+     * @param string $method The method to use for comparison (similarity or levenshtein).
+     * @return array The updated array item with comparison results.
+     */
     private function compare(array $item, string $method): array
     {
         if (empty($item)) {
@@ -373,6 +374,13 @@ final class MismatchCommand extends Command
         return $item;
     }
 
+    /**
+     * Completes the input with suggestion values for methods.
+     *
+     * @param CompletionInput $input The completion input object.
+     * @param CompletionSuggestions $suggestions The completion suggestions object.
+     * @return void
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);
@@ -392,6 +400,13 @@ final class MismatchCommand extends Command
         }
     }
 
+    /**
+     * Formats the given name.
+     *
+     * @param string $name The name to format.
+     *
+     * @return string The formatted name.
+     */
     private function formatName(string $name): string
     {
         $name = preg_replace('#[\[{].+?[]}]#', '', $name);
@@ -463,7 +478,15 @@ final class MismatchCommand extends Command
         return $similarity;
     }
 
-    private function mb_levenshtein(string $str1, string $str2)
+    /**
+     * Implementation levenshtein distance algorithm.
+     *
+     * @param string $str1 The first string.
+     * @param string $str2 The second string.
+     *
+     * @return int The Levenshtein distance between the two strings.
+     */
+    private function mb_levenshtein(string $str1, string $str2): int
     {
         $length1 = mb_strlen($str1, 'UTF-8');
         $length2 = mb_strlen($str2, 'UTF-8');
@@ -500,7 +523,17 @@ final class MismatchCommand extends Command
         return $prevRow[$length2];
     }
 
-    private function toPercentage($base, $str1, $str2, bool $isASCII = false): float
+    /**
+     * How much percentage is the base value of the lengths of the strings.
+     *
+     * @param int $base The base value.
+     * @param string $str1 The first string.
+     * @param string $str2 The second string.
+     * @param bool $isASCII Whether to consider ASCII characters only. Default is false.
+     *
+     * @return float The percentage value calculated based on the base value and the lengths of the strings.
+     */
+    private function toPercentage(int $base, string $str1, string $str2, bool $isASCII = false): float
     {
         $length = fn(string $text) => $isASCII ? mb_strlen($text, 'UTF-8') : strlen($text);
 
