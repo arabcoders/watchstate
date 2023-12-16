@@ -7,7 +7,7 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
-use RuntimeException;
+use App\Libs\Stream;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -17,11 +17,19 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+/**
+ * Class EditCommand
+ *
+ * This class allows the user to edit backend config settings inline.
+ */
 #[Routable(command: self::ROUTE)]
 final class EditCommand extends Command
 {
     public const ROUTE = 'config:edit';
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -77,6 +85,15 @@ final class EditCommand extends Command
             );
     }
 
+    /**
+     * Runs the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     * @param null|array $rerun The rerun array. Default is null.
+     *
+     * @return int The command status code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
         // -- Use Custom servers.yaml file.
@@ -84,7 +101,7 @@ final class EditCommand extends Command
             try {
                 $custom = true;
                 $backends = Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(r('<error>{error}</error>', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }
@@ -149,7 +166,8 @@ final class EditCommand extends Command
             }
 
             if (null === $value && !$input->getOption('delete')) {
-                $output->writeln(ag($backend, $key));
+                $val = ag($backend, $key, '[No value]');
+                $output->writeln(is_scalar($val) ? (string)$val : r('type: {type}', ['type' => gettype($val)]));
                 return self::SUCCESS;
             }
 
@@ -172,7 +190,7 @@ final class EditCommand extends Command
                 $backend = ag_set($backend, $key, $value);
 
                 $output->writeln(
-                    r('<info>{name}: Updated \'{key}\' key value to \'{value}\'.</info>', [
+                    r("<info>{name}: Updated '{key}' key value to '{value}'.</info>", [
                         'name' => $name,
                         'key' => $key,
                         'value' => is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
@@ -183,7 +201,7 @@ final class EditCommand extends Command
             if ($input->getOption('delete')) {
                 if (false === ag_exists($backend, $key)) {
                     $output->writeln(
-                        r('<error>{name}: \'{key}\' key does not exists.</error>', [
+                        r("<error>{name}: '{key}' key does not exist.</error>", [
                             'name' => $name,
                             'key' => $key
                         ])
@@ -193,7 +211,7 @@ final class EditCommand extends Command
 
                 $backend = ag_delete($backend, $key);
                 $output->writeln(
-                    r('<info>{name}: Removed \'{key}\' key.</info>', [
+                    r("<info>{name}: Removed '{key}' key.</info>", [
                         'name' => $name,
                         'key' => $key
                     ])
@@ -205,11 +223,21 @@ final class EditCommand extends Command
             copy($config, $config . '.bak');
         }
 
-        file_put_contents($config, Yaml::dump(ag_set($backends, $name, $backend), 8, 2));
+        $stream = Stream::make($config, 'w');
+        $stream->write(Yaml::dump(ag_set($backends, $name, $backend), 8, 2));
+        $stream->close();
 
         return self::SUCCESS;
     }
 
+    /**
+     * This method completes the suggestions for a given input based on certain conditions.
+     *
+     * @param CompletionInput $input The completion input object.
+     * @param CompletionSuggestions $suggestions The completion suggestions object.
+     *
+     * @return void
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);
@@ -219,7 +247,11 @@ final class EditCommand extends Command
 
             $suggest = [];
 
-            foreach (require __DIR__ . '/../../../config/backend.spec.php' as $name) {
+            foreach (require __DIR__ . '/../../../config/backend.spec.php' as $name => $val) {
+                if (false === $val) {
+                    continue;
+                }
+
                 if (empty($currentValue) || str_starts_with($name, $currentValue)) {
                     $suggest[] = $name;
                 }

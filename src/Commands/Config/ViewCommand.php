@@ -6,10 +6,9 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Config;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use App\Libs\Routable;
-use Exception;
-use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
@@ -20,17 +19,28 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class ViewCommand
+ *
+ * This command display all backend's information. User can select and/or filter the displayed information.
+ */
 #[Routable(command: self::ROUTE)]
 final class ViewCommand extends Command
 {
+    public const ROUTE = 'config:view';
+
+    /**
+     * @var array Keys to be hidden from general view.
+     */
     private array $hidden = [
         'token',
         'webhook.token',
         'options.' . Options::ADMIN_TOKEN
     ];
 
-    public const ROUTE = 'config:view';
-
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -48,7 +58,7 @@ final class ViewCommand extends Command
                 r(
                     <<<HELP
 
-                    This command display all of your backends information.
+                    This command display all of your backend's information.
                     You can select and/or filter the displayed information.
 
                     -------
@@ -80,7 +90,12 @@ final class ViewCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * Run the command.
+     *
+     * @param InputInterface $input The input object.
+     * @param OutputInterface $output The output object.
+     *
+     * @return int The exit code.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -149,6 +164,12 @@ final class ViewCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Completes the suggestion for filter input.
+     *
+     * @param CompletionInput $input The input for completion.
+     * @param CompletionSuggestions $suggestions The completion suggestions.
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);
@@ -168,6 +189,15 @@ final class ViewCommand extends Command
         }
     }
 
+    /**
+     * Filters the given backend data based on the provided filter and expose parameters.
+     *
+     * @param array $backend The backend data to filter.
+     * @param string|null $filter The filter criteria.
+     * @param bool $expose Whether to expose hidden values or not.
+     *
+     * @return string The filtered data in YAML format.
+     */
     private function filterData(array $backend, string|null $filter = null, bool $expose = false): string
     {
         if (null === $filter && true !== $expose) {

@@ -7,7 +7,6 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -17,11 +16,21 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+/**
+ * Class UnifyCommand
+ *
+ * UnifyCommand is a command that unifies the webhook tokens of backend types.
+ *
+ * @package Your\Namespace
+ */
 #[Routable(command: self::ROUTE)]
 final class UnifyCommand extends Command
 {
     public const ROUTE = 'config:unify';
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -65,6 +74,14 @@ final class UnifyCommand extends Command
             );
     }
 
+    /**
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int Returns the exit code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
@@ -72,7 +89,7 @@ final class UnifyCommand extends Command
             try {
                 $custom = true;
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }
@@ -87,11 +104,10 @@ final class UnifyCommand extends Command
         $type = strtolower((string)$input->getArgument('type'));
 
         if (!array_key_exists($type, Config::get('supported', []))) {
-            $message = sprintf(
-                '<error>Invalid type was given. Expecting one of [%s] but got \'%s\' instead.',
-                implode('|', array_keys(Config::get('supported', []))),
-                $type
-            );
+            $message = r("<error>Invalid type was given. Expecting one of [{backends}] but got '{backend}' instead.", [
+                'backends' => implode('|', array_keys(Config::get('supported', []))),
+                'backend' => $type,
+            ]);
 
             $output->writeln($message);
             return self::FAILURE;
@@ -218,6 +234,12 @@ final class UnifyCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Completes the input with suggestions based on the "type" argument.
+     *
+     * @param CompletionInput $input The completion input object.
+     * @param CompletionSuggestions $suggestions The completion suggestions object.
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);

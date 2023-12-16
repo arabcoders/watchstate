@@ -9,8 +9,6 @@ use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
 use DateTimeInterface;
-use Exception;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -21,6 +19,9 @@ final class ListCommand extends Command
 {
     public const ROUTE = 'config:list';
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -36,7 +37,12 @@ final class ListCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * Runs the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The command exit code.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -44,7 +50,7 @@ final class ListCommand extends Command
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
                 return self::FAILURE;
             }

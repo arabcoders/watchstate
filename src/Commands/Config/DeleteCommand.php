@@ -8,8 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Routable;
-use RuntimeException;
-use Symfony\Component\Console\Exception\ExceptionInterface;
+use PDO;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -17,12 +16,26 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class DeleteCommand
+ *
+ * This command allows you to delete local backend data from the database.
+ *
+ * @package App\Command
+ */
 #[Routable(command: self::ROUTE)]
 final class DeleteCommand extends Command
 {
     public const ROUTE = 'config:delete';
-    private \PDO $pdo;
+    private PDO $pdo;
 
+    /**
+     * Class constructor.
+     *
+     * @param iDB $db The iDB instance used for database interaction.
+     *
+     * @return void
+     */
     public function __construct(private iDB $db)
     {
         $this->pdo = $this->db->getPDO();
@@ -30,6 +43,9 @@ final class DeleteCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -64,7 +80,12 @@ final class DeleteCommand extends Command
     }
 
     /**
-     * @throws ExceptionInterface
+     * Runs the command to remove a backend from the database.
+     *
+     * @param InputInterface $input The input interface instance for retrieving command input.
+     * @param OutputInterface $output The output interface instance for displaying command output.
+     *
+     * @return int The status code indicating the success or failure of the command execution.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -102,7 +123,7 @@ final class DeleteCommand extends Command
             try {
                 $custom = true;
                 $backends = (array)Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(r('<error>ERROR:</error> {error}', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }

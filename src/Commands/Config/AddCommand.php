@@ -6,8 +6,6 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Routable;
-use RuntimeException;
-use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -16,11 +14,21 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 
+/**
+ * Class AddCommand.
+ *
+ * This command allow you to add new backend. This command is mainly proxy to config:manage command.
+ * And act as shortcut for running the following command:
+ * config:manage --add -- backend_name
+ */
 #[Routable(command: self::ROUTE)]
 final class AddCommand extends Command
 {
     public const ROUTE = 'config:add';
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -49,7 +57,13 @@ final class AddCommand extends Command
     }
 
     /**
-     * @throws ExceptionInterface
+     * Executes the command.
+     *
+     * @param InputInterface $input The input object.
+     * @param OutputInterface $output The output object.
+     *
+     * @return int The exit code.
+     * @throws \Symfony\Component\Console\Exception\ExceptionInterface If an error occurs during command execution.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -112,10 +126,10 @@ final class AddCommand extends Command
 
                 $question->setValidator(function ($answer) {
                     if (empty($answer)) {
-                        throw new RuntimeException('Backend Name cannot be empty.');
+                        throw new \RuntimeException('Backend Name cannot be empty.');
                     }
                     if (!isValidName($answer) || strtolower($answer) !== $answer) {
-                        throw new RuntimeException(
+                        throw new \RuntimeException(
                             r(
                                 '<error>ERROR:</error> Invalid [<value>{name}</value>] name was given. Only [<value>a-z, 0-9, _</value>] are allowed.',
                                 [
