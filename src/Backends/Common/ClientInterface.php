@@ -10,8 +10,8 @@ use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
-use SplFileObject;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -82,12 +82,12 @@ interface ClientInterface
      * Backup play state from backend.
      *
      * @param iImport $mapper mapper to use.
-     * @param SplFileObject|null $writer writer to use.
+     * @param StreamInterface|null $writer writer to use.
      * @param array $opts options for backup.
      *
      * @return array<array-key,ResponseInterface> responses.
      */
-    public function backup(iImport $mapper, SplFileObject|null $writer = null, array $opts = []): array;
+    public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array;
 
     /**
      * Export play state back to backend.

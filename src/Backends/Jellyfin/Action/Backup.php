@@ -11,7 +11,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use InvalidArgumentException;
-use SplFileObject;
+use Psr\Http\Message\StreamInterface;
 use Throwable;
 
 class Backup extends Import
@@ -79,6 +79,7 @@ class Backup extends Import
                 item: $item,
                 opts: $opts + ['library' => ag($logContext, 'library.id')]
             );
+
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,
                 iState::COLUMN_WATCHED => (int)$entity->isWatched(),
@@ -105,7 +106,6 @@ class Backup extends Import
 
             $arr[iState::COLUMN_YEAR] = $entity->year;
 
-
             $arr[iState::COLUMN_GUIDS] = array_filter(
                 $entity->getGuids(),
                 fn($key) => str_contains($key, 'guid_'),
@@ -117,6 +117,10 @@ class Backup extends Import
                     fn($key) => str_contains($key, 'guid_'),
                     ARRAY_FILTER_USE_KEY
                 );
+            }
+
+            if ($entity->hasPlayProgress()) {
+                $arr[iState::COLUMN_META_DATA_PROGRESS] = $entity->getPlayProgress();
             }
 
             if (true !== (bool)ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
@@ -140,8 +144,8 @@ class Backup extends Import
                 }
             }
 
-            if (($writer instanceof SplFileObject) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
-                $writer->fwrite(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
+            if (($writer instanceof StreamInterface) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
+                $writer->write(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
             }
         } catch (Throwable $e) {
             $this->logger->error(

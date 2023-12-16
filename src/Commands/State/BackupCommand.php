@@ -9,8 +9,9 @@ use App\Libs\Config;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Routable;
+use App\Libs\Stream;
+use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
-use SplFileObject;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -18,6 +19,11 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
+/**
+ * Class BackupCommand
+ *
+ * Generate portable backup of backends play state.
+ */
 #[Routable(command: self::ROUTE)]
 class BackupCommand extends Command
 {
@@ -25,16 +31,23 @@ class BackupCommand extends Command
 
     public const TASK_NAME = 'backup';
 
-    public function __construct(
-        private DirectMapper $mapper,
-        private LoggerInterface $logger
-    ) {
+    /**
+     * Constructs a new instance of the class.
+     *
+     * @param DirectMapper $mapper The direct mapper instance.
+     * @param LoggerInterface $logger The logger instance.
+     */
+    public function __construct(private DirectMapper $mapper, private LoggerInterface $logger)
+    {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
         parent::__construct();
     }
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -103,7 +116,7 @@ class BackupCommand extends Command
                     Backup names are something tricky, however it's possible to choose the backup filename if the total number
                     of backed up backends are 1. So, in essence you have to combine two flags [<flag>-s</flag>, <flag>--select-backends</flag>] and [<flag>--file</flag>].
 
-                    For example, to backup [<value>backend_name</value>] backend data to [<value>/tmp/backend_name.json</value>] do the following:
+                    For example, to back up [<value>backend_name</value>] backend data to [<value>/tmp/backend_name.json</value>] do the following:
 
                     {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>backend_name</value> <flag>--file</flag> <value>/tmp/my_backend.json</value>
 
@@ -118,11 +131,27 @@ class BackupCommand extends Command
             );
     }
 
+    /**
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input interface instance.
+     * @param OutputInterface $output The output interface instance.
+     *
+     * @return int The exit code of the command.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         return $this->single(fn(): int => $this->process($input, $output), $output);
     }
 
+    /**
+     * Execute the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The integer result.
+     */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         // -- Use Custom servers.yaml file.
@@ -263,8 +292,8 @@ class BackupCommand extends Command
                     touch($fileName);
                 }
 
-                $backend['fp'] = new SplFileObject($fileName, 'wb+');
-                $backend['fp']->fwrite('[');
+                $backend['fp'] = new Stream($fileName, 'wb+');
+                $backend['fp']->write('[');
             }
 
             array_push(
@@ -313,11 +342,11 @@ class BackupCommand extends Command
                 continue;
             }
 
-            assert($backend['fp'] instanceof SplFileObject);
+            assert($backend['fp'] instanceof StreamInterface);
 
             if (false === $input->getOption('dry-run')) {
-                $backend['fp']->fseek(-1, SEEK_END);
-                $backend['fp']->fwrite(PHP_EOL . ']');
+                $backend['fp']->seek(-1, SEEK_END);
+                $backend['fp']->write(PHP_EOL . ']');
             }
         }
 
