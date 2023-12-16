@@ -16,16 +16,29 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class ParityCommand
+ *
+ * This command helps find possible conflicting records that are being reported by backends.
+ */
 #[Routable(command: self::ROUTE)]
 final class ParityCommand extends Command
 {
     public const ROUTE = 'db:parity';
 
+    /**
+     * Class constructor.
+     *
+     * @param iDB $db The iDB instance to be injected.
+     */
     public function __construct(private iDB $db)
     {
         parent::__construct();
     }
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -75,7 +88,7 @@ final class ParityCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--minimum</flag> <value>3</value>
 
-                    <question># I fixed the records how do i remove them from database?</question>
+                    <question># I fixed the records how do I remove them from database?</question>
 
                     You can use the [<flag>--prune</flag>] flag to remove all matching records from database. For Example,
                     {cmd} <cmd>{route}</cmd> <flag>--prune</flag>
@@ -93,6 +106,14 @@ final class ParityCommand extends Command
             );
     }
 
+    /**
+     * Run a command.
+     *
+     * @param InputInterface $input The input instance.
+     * @param OutputInterface $output The output instance.
+     *
+     * @return int The execution status of the command.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $countRequest = (bool)$input->getOption('count');
