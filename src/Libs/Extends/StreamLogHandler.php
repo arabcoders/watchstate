@@ -5,7 +5,7 @@ namespace App\Libs\Extends;
 use App\Libs\Config;
 use DateTimeInterface;
 use Monolog\LogRecord;
-use Nyholm\Psr7\Stream;
+use Psr\Http\Message\StreamInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -17,7 +17,7 @@ class StreamLogHandler extends ConsoleHandler
     /**
      * Constructor method for the class.
      *
-     * @param Stream $stream The Stream object used for logging.
+     * @param StreamInterface $stream The Stream object used for logging.
      * @param OutputInterface|null $output (optional) The OutputInterface object to handle the output. Default is null.
      * @param bool $bubble (optional) Flag to determine if the log messages should bubble up the logging hierarchy. Default is true.
      * @param array $levelsMapper (optional) An array that maps log levels to specific handlers. Default is an empty array.
@@ -25,7 +25,7 @@ class StreamLogHandler extends ConsoleHandler
      * @return void
      */
     public function __construct(
-        private Stream $stream,
+        private StreamInterface $stream,
         OutputInterface|null $output = null,
         bool $bubble = true,
         array $levelsMapper = []

@@ -27,7 +27,7 @@ use App\Backends\Jellyfin\Action\SearchQuery;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HttpException;
+use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;

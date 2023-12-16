@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use InvalidArgumentException;
+use App\Libs\Exceptions\InvalidArgumentException;
 use JsonSerializable;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Stringable;
 
 /**
@@ -17,7 +16,8 @@ use Stringable;
  * retrieve the supported external id sources, and obtain the pointers linking the
  * entity to the external ids.
  *
- * @implements JsonSerializable, Stringable
+ * @implements JsonSerializable
+ * @implements Stringable
  */
 final class Guid implements JsonSerializable, Stringable
 {
@@ -210,8 +210,7 @@ final class Guid implements JsonSerializable, Stringable
      *
      * @return bool
      *
-     * @throws RuntimeException When source db not supported.
-     * @throws InvalidArgumentException When id validation fails.
+     * @throws InvalidArgumentException if the db source is not supported or the value validation fails.
      */
     public static function validate(string $db, string|int $id): bool
     {
@@ -220,7 +219,7 @@ final class Guid implements JsonSerializable, Stringable
         $lookup = 'guid_' . $db;
 
         if (false === array_key_exists($lookup, self::SUPPORTED)) {
-            throw new RuntimeException(
+            throw new InvalidArgumentException(
                 r('Invalid db [{db}] source was given. Expecting [{db_list}].', [
                     'db' => $db,
                     'db_list' => implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::SUPPORTED))),
@@ -232,7 +231,7 @@ final class Guid implements JsonSerializable, Stringable
             return true;
         }
 
-        if (1 !== preg_match(self::VALIDATE_GUID[$lookup]['pattern'], $id)) {
+        if (1 !== @preg_match(self::VALIDATE_GUID[$lookup]['pattern'], $id)) {
             throw new InvalidArgumentException(
                 r('Invalid [{value}] value for [{db}]. Expecting [{example}].', [
                     'db' => $db,

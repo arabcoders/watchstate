@@ -1,4 +1,5 @@
 /.idea/*
 /vendor/*
 /.env
-.phpunit.result.cache
+/.phpunit.result.cache
+/.vscode

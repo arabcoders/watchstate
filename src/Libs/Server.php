@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Libs\Exceptions\RuntimeException;
 use Closure;
-use RuntimeException;
 use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 

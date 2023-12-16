@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Libs\Exceptions\InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
 use Stringable;
 
@@ -154,7 +155,7 @@ final class Uri implements UriInterface, Stringable
     public function withScheme($scheme): self
     {
         if (!\is_string($scheme)) {
-            throw new \InvalidArgumentException('Scheme must be a string');
+            throw new InvalidArgumentException('Scheme must be a string');
         }
 
         if ($this->scheme === $scheme = \strtr($scheme, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
@@ -188,7 +189,7 @@ final class Uri implements UriInterface, Stringable
     public function withHost($host): self
     {
         if (!\is_string($host)) {
-            throw new \InvalidArgumentException('Host must be a string');
+            throw new InvalidArgumentException('Host must be a string');
         }
 
         if ($this->host === $host = \strtr($host, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
@@ -312,7 +313,7 @@ final class Uri implements UriInterface, Stringable
 
         $port = (int)$port;
         if (0 > $port || 0xFFFF < $port) {
-            throw new \InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
+            throw new InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
         }
 
         return self::isNonStandardPort($this->scheme, $port) ? $port : null;
@@ -321,7 +322,7 @@ final class Uri implements UriInterface, Stringable
     private function filterPath($path): string
     {
         if (!is_string($path)) {
-            throw new \InvalidArgumentException('Path must be a string');
+            throw new InvalidArgumentException('Path must be a string');
         }
 
         return preg_replace_callback(
@@ -334,7 +335,7 @@ final class Uri implements UriInterface, Stringable
     private function filterQueryAndFragment($str): string
     {
         if (!is_string($str)) {
-            throw new \InvalidArgumentException('Query and fragment must be a string');
+            throw new InvalidArgumentException('Query and fragment must be a string');
         }
 
         return preg_replace_callback(

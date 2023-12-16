@@ -13,16 +13,14 @@ use Attribute;
  * The attribute can be repeated, and it can target a class.
  */
 #[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
-final class Routable
+final readonly class Routable
 {
     /**
      * Class constructor.
      *
      * @param string $command The command string.
-     *
-     * @return void
      */
-    public function __construct(public readonly string $command)
+    public function __construct(public string $command)
     {
     }
 }

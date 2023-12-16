@@ -8,6 +8,7 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;

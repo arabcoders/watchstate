@@ -6,9 +6,9 @@ namespace App;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
+use App\Libs\Exceptions\RuntimeException;
 use Closure;
 use DirectoryIterator;
-use RuntimeException;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Completion\CompletionInput;

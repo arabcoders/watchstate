@@ -4,27 +4,30 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Libs\Exceptions\RuntimeException;
 use FilesystemIterator;
 use PhpToken;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionClass;
-use RuntimeException;
 use SplFileInfo;
 use Throwable;
 
 /**
- * Router class handles the generation of routes based on scanned directories and class attributes.
+ * Class Router
+ *
+ * The Router class is responsible for generating an array of routes by scanning directories.
+ * It parses PHP files to extract namespaces and classes, and retrieves routes using reflection.
  */
-final class Router
+final readonly class Router
 {
     /**
-     * Class constructor.
+     * Class Constructor.
      *
-     * @param array $dirs An optional array of directories.
+     * @param array $dirs An array containing directory names.
      */
-    public function __construct(private readonly array $dirs = [])
+    public function __construct(private array $dirs)
     {
     }
 
@@ -132,14 +135,7 @@ final class Router
         $classes = [];
         $namespace = '';
 
-        if (false === ($content = @file_get_contents($file))) {
-            throw new RuntimeException(r("Unable to read '{file}' - '{message}'.", [
-                'file' => $file,
-                'message' => error_get_last()['message'] ?? 'unknown',
-            ]));
-        }
-
-        $tokens = PhpToken::tokenize($content);
+        $tokens = PhpToken::tokenize((string)(new Stream($file, 'r')));
         $count = count($tokens);
 
         foreach ($tokens as $i => $iValue) {
