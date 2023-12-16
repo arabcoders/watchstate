@@ -37,7 +37,8 @@
         "nyholm/psr7-server": "^1.0.2",
         "laminas/laminas-httphandlerrunner": "^2.1",
         "dragonmantank/cron-expression": "^3.3.2",
-        "halaxa/json-machine": "^1.1.1"
+        "halaxa/json-machine": "^1.1.1",
+        "psy/psysh": "^0.11.22"
     },
     "suggest": {
         "ext-sockets": "For UDP commincations.",
