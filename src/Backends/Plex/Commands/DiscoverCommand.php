@@ -6,6 +6,7 @@ namespace App\Backends\Plex\Commands;
 
 use App\Backends\Plex\PlexClient;
 use App\Command;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
@@ -66,6 +67,7 @@ final class DiscoverCommand extends Command
      * @throws RedirectionExceptionInterface
      * @throws ClientExceptionInterface
      * @throws ServerExceptionInterface
+     * @throws RuntimeException
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {

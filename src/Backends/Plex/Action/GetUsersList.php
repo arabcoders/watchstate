@@ -20,6 +20,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class GetUsersList
 {
     private int $maxRetry = 3;
+    private string $action = 'plex.getUsersList';
 
     use CommonTrait;
 
@@ -37,7 +38,11 @@ final class GetUsersList
      */
     public function __invoke(Context $context, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->getUsers($context, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->getUsers($context, $opts),
+            action: $this->action
+        );
     }
 
     /**

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Backends\Plex;
 
 use App\Backends\Common\ManageInterface;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;

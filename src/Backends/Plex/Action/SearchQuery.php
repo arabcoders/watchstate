@@ -19,6 +19,8 @@ final class SearchQuery
 {
     use CommonTrait;
 
+    private string $action = 'plex.searchQuery';
+
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
@@ -35,14 +37,18 @@ final class SearchQuery
      */
     public function __invoke(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->search($context, $query, $limit, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->search($context, $query, $limit, $opts),
+            action: $this->action
+        );
     }
 
     /**
      * Search Backend Titles.
      *
-     * @throws ExceptionInterface
-     * @throws JsonException
+     * @throws ExceptionInterface if the request failed
+     * @throws JsonException if the response cannot be parsed
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {

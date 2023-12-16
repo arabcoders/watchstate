@@ -29,6 +29,7 @@ use App\Backends\Plex\Action\SearchQuery;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -38,7 +39,9 @@ use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -377,7 +380,7 @@ class PlexClient implements iClient
     {
         $response = Container::get(SearchId::class)(context: $this->context, id: $id, opts: $opts);
 
-        if ($response->hasError()) {
+        if ($response->hasError() && false === (bool)ag($opts, Options::NO_LOGGING, false)) {
             $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
         }
 
@@ -544,8 +547,11 @@ class PlexClient implements iClient
      * @param array $opts (Optional) options.
      *
      * @return array The list of Plex servers.
-     * @throws RuntimeException When an unexpected status code is returned or a network-related exception occurs.
      *
+     * @throws RuntimeException When an unexpected status code is returned or a network-related exception occurs.
+     * @throws ClientExceptionInterface When a client error is encountered.
+     * @throws RedirectionExceptionInterface When a redirection error is encountered.
+     * @throws ServerExceptionInterface When a server error is encountered.
      */
     public static function discover(HttpClientInterface $http, string $token, array $opts = []): array
     {

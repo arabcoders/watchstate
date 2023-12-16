@@ -19,6 +19,8 @@ final class Push
 {
     use CommonTrait;
 
+    private string $action = 'plex.push';
+
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
@@ -38,7 +40,11 @@ final class Push
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $entities, $queue, $after));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->action($context, $entities, $queue, $after),
+            action: $this->action
+        );
     }
 
     private function action(

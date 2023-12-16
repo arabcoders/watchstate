@@ -18,6 +18,7 @@ use Throwable;
 final class GetUserToken
 {
     private int $maxRetry = 3;
+    private string $action = 'plex.getUserToken';
 
     use CommonTrait;
 
@@ -39,7 +40,8 @@ final class GetUserToken
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->getUserToken($context, $userId, $username)
+            fn: fn() => $this->getUserToken($context, $userId, $username),
+            action: $this->action,
         );
     }
 

@@ -6,15 +6,16 @@ namespace App\Backends\Plex;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Response;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetMetaData;
 use App\Libs\Container;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
-use InvalidArgumentException;
-use RuntimeException;
 
 trait PlexActionTrait
 {
@@ -33,6 +34,8 @@ trait PlexActionTrait
      * @param array $opts options
      *
      * @return iState Return object on successful creation.
+     * @throws InvalidArgumentException if no date was set on object.
+     * @throws RuntimeException if request failed.
      */
     protected function createEntity(Context $context, iGuid $guid, array $item, array $opts = []): iState
     {
@@ -46,7 +49,7 @@ trait PlexActionTrait
         }
 
         if (null === $date) {
-            throw new RuntimeException('No date was set on object.');
+            throw new InvalidArgumentException('No date was set on object.');
         }
 
         $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
@@ -195,17 +198,32 @@ trait PlexActionTrait
      * @param Context $context
      * @param string|int $id
      * @param array $opts
+     *
      * @return array
+     * @throws RuntimeException if request failed.
      */
     protected function getItemDetails(Context $context, string|int $id, array $opts = []): array
     {
-        $response = Container::get(GetMetaData::class)(context: $context, id: $id, opts: $opts);
+        $response = $this->getItemInfo(context: $context, id: $id, opts: $opts);
 
         if ($response->isSuccessful()) {
             return $response->response;
         }
 
         throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+    }
+
+    /**
+     * Get item details.
+     *
+     * @param Context $context
+     * @param string|int $id
+     * @param array $opts
+     * @return Response
+     */
+    protected function getItemInfo(Context $context, string|int $id, array $opts = []): Response
+    {
+        return Container::get(GetMetaData::class)(context: $context, id: $id, opts: $opts);
     }
 
     /**
@@ -217,6 +235,7 @@ trait PlexActionTrait
      * @param array $logContext
      *
      * @return array
+     * @throws RuntimeException
      */
     protected function getEpisodeParent(Context $context, iGuid $guid, int|string $id, array $logContext = []): array
     {
@@ -278,6 +297,7 @@ trait PlexActionTrait
 
     /**
      * Get Backend Libraries details.
+     * @throws RuntimeException
      */
     protected function getBackendLibraries(Context $context, array $opts = []): array
     {

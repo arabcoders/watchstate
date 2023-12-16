@@ -13,6 +13,8 @@ final class InspectRequest
 {
     use CommonTrait;
 
+    private string $action = 'plex.inspectRequest';
+
     public function __invoke(Context $context, ServerRequestInterface $request): Response
     {
         return $this->tryResponse(
@@ -59,7 +61,8 @@ final class InspectRequest
                 }
 
                 return new Response(status: true, response: $alteredRequest);
-            }
+            },
+            action: $this->action
         );
     }
 }
