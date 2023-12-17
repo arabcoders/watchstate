@@ -6,46 +6,45 @@ declare(strict_types=1);
 use App\Command;
 
 error_reporting(E_ALL);
+ini_set('error_reporting', 'On');
 ini_set('display_errors', 'On');
 
 require __DIR__ . '/../pre_init.php';
 
-set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
+/**
+ * Throws an exception based on an error code.
+ *
+ * @param int $number The error code.
+ * @param mixed $error The error message.
+ * @param mixed $file The file where the error occurred.
+ * @param int $line The line number where the error occurred.
+ *
+ * @throws ErrorException When the error code is not suppressed by error_reporting.
+ */
+$errorHandler = function (int $number, mixed $error, mixed $file, int $line) {
     $errno = $number & error_reporting();
-    static $errorLevels = [
-            E_ERROR => 'Error',
-            E_WARNING => 'Warning',
-            E_PARSE => 'Parser Error',
-            E_NOTICE => 'Notice',
-            E_CORE_ERROR => 'Core Error',
-            E_CORE_WARNING => 'Core Warning',
-            E_COMPILE_ERROR => 'Compile Error',
-            E_COMPILE_WARNING => 'Compile Warning',
-            E_USER_ERROR => 'User Error',
-            E_USER_WARNING => 'User Warning',
-            E_USER_NOTICE => 'User notice',
-            E_STRICT => 'Strict Notice',
-            E_RECOVERABLE_ERROR => 'Recoverable Error'
-    ];
-
     if (0 === $errno) {
         return;
     }
 
-    $message = sprintf('%s: %s (%s:%d).', $errorLevels[$number] ?? (string)$number, $error, $file, $line);
-    fwrite(STDERR, trim($message) . PHP_EOL);
-
-    exit(501);
-});
+    throw new ErrorException($error, $number, 1, $file, $line);
+};
+set_error_handler($errorHandler);
 
 set_exception_handler(function (Throwable $e) {
-    $message = sprintf('%s: %s (%s:%d).', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
-    fwrite(STDERR, trim($message) . PHP_EOL);
+    $message = strtr('{kind}: {message} ({file}:{line}).', [
+            '{kind}' => $e::class,
+            '{line}' => $e->getLine(),
+            '{message}' => $e->getMessage(),
+            '{file}' => after($e->getFile(), ROOT_PATH),
+    ]);
+
+    fwrite(STDERR, $message . PHP_EOL);
     exit(502);
 });
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    fwrite(STDERR, 'Dependencies are missing.' . PHP_EOL);
+    print 'Dependencies are missing please refer to https://github.com/arabcoders/watchstate/blob/master/FAQ.md';
     exit(Command::FAILURE);
 }
 
@@ -54,14 +53,16 @@ require __DIR__ . '/../vendor/autoload.php';
 try {
     $app = (new App\Libs\Initializer())->boot();
 } catch (Throwable $e) {
-    $message = sprintf(
-            'Unhandled Exception [%s] was thrown in CLI boot context. With message [%s] in [%s:%d].',
-            $e::class,
-            $e->getMessage(),
-            array_reverse(explode(ROOT_PATH, $e->getFile(), 2))[0],
-            $e->getLine()
+    $message = strtr(
+            'CLI: Exception [{kind}] was thrown unhandled during CLI boot context. Error [{message} @ {file}:{line}].',
+            [
+                    '{kind}' => $e::class,
+                    '{line}' => $e->getLine(),
+                    '{message}' => $e->getMessage(),
+                    '{file}' => array_reverse(explode(ROOT_PATH, $e->getFile(), 2))[0],
+            ]
     );
-    fwrite(STDERR, trim($message) . PHP_EOL);
+    fwrite(STDERR, $message . PHP_EOL);
     exit(503);
 }
 

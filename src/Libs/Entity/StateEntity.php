@@ -572,13 +572,14 @@ final class StateEntity implements iState
             if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0)) {
                 continue;
             }
-
-            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > 1000) {
-                $compare[$backend] = [
-                    'progress' => (int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0),
-                    'datetime' => ag($this->getExtra($backend), iState::COLUMN_EXTRA_DATE, 0),
-                ];
+            if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) < 1000) {
+                continue;
             }
+
+            $compare[$backend] = [
+                'progress' => (int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0),
+                'datetime' => ag($this->getExtra($backend), iState::COLUMN_EXTRA_DATE, 0),
+            ];
         }
 
         $lastProgress = 0;
@@ -592,14 +593,12 @@ final class StateEntity implements iState
                 continue;
             }
 
-            if ($progress < 1000) {
+            if ($progress < 1000 || $lastDate->getTimestamp() > makeDate($datetime)->getTimestamp()) {
                 continue;
             }
 
-            if (makeDate($datetime) > $lastDate) {
-                $lastDate = makeDate($datetime);
-                $lastProgress = $progress;
-            }
+            $lastDate = makeDate($datetime);
+            $lastProgress = $progress;
         }
 
         return $lastProgress;

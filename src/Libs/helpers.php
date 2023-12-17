@@ -8,15 +8,18 @@ use App\Backends\Common\Context;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\Router;
+use App\Libs\Stream;
 use App\Libs\Uri;
 use Monolog\Utils;
 use Nyholm\Psr7\Response;
-use Nyholm\Psr7\Stream;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -300,9 +303,9 @@ if (!function_exists('saveWebhookPayload')) {
      *
      * @param iFace $entity Entity object.
      * @param ServerRequestInterface $request Request object.
-     * @param Stream|null $file When given a stream, it will be used to write payload.
+     * @param StreamInterface|null $file When given a stream, it will be used to write payload.
      */
-    function saveWebhookPayload(iFace $entity, ServerRequestInterface $request, Stream|null $file = null): void
+    function saveWebhookPayload(iFace $entity, ServerRequestInterface $request, StreamInterface|null $file = null): void
     {
         $content = [
             'request' => [
@@ -315,38 +318,27 @@ if (!function_exists('saveWebhookPayload')) {
             'entity' => $entity->getAll(),
         ];
 
-        $closeStream = false;
-        if (null === $file) {
-            $fp = @fopen(
-                r('{path}/webhooks/' . Config::get('webhook.file_format', 'webhook.{backend}.{event}.{id}.json'), [
-                    'path' => Config::get('tmpDir'),
-                    'time' => (string)time(),
-                    'backend' => $entity->via,
-                    'event' => ag($entity->getExtra($entity->via), 'event', 'unknown'),
-                    'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
-                    'date' => makeDate('now')->format('Ymd'),
-                    'context' => $content,
-                ]),
-                'w'
-            );
+        $stream = $file ?? new Stream(
+            r('{path}/webhooks/' . Config::get('webhook.file_format', 'webhook.{backend}.{event}.{id}.json'), [
+                'path' => Config::get('tmpDir'),
+                'time' => (string)time(),
+                'backend' => $entity->via,
+                'event' => ag($entity->getExtra($entity->via), 'event', 'unknown'),
+                'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
+                'date' => makeDate('now')->format('Ymd'),
+                'context' => $content,
+            ]), 'w'
+        );
 
-            if (false === $fp) {
-                throw new Error(ag(error_get_last(), 'message', ''));
-            }
-
-            $file = new Stream($fp);
-            $closeStream = true;
-        }
-
-        $file->write(
+        $stream->write(
             json_encode(
                 value: $content,
                 flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
             )
         );
 
-        if ($closeStream) {
-            $file->close();
+        if (null === $file) {
+            $stream->close();
         }
     }
 }
@@ -356,9 +348,9 @@ if (!function_exists('saveRequestPayload')) {
      * Save request payload to stream.
      *
      * @param ServerRequestInterface $request Request object.
-     * @param Stream|null $file When given a stream, it will be used to write payload.
+     * @param StreamInterface|null $file When given a stream, it will be used to write payload.
      */
-    function saveRequestPayload(ServerRequestInterface $request, Stream|null $file = null): void
+    function saveRequestPayload(ServerRequestInterface $request, StreamInterface|null $file = null): void
     {
         $content = [
             'query' => $request->getQueryParams(),
@@ -368,33 +360,20 @@ if (!function_exists('saveRequestPayload')) {
             'attributes' => $request->getAttributes(),
         ];
 
-        $closeStream = false;
-        if (null === $file) {
-            $fp = @fopen(
-                r('{path}/debug/request.{id}.json', [
-                    'path' => Config::get('tmpDir'),
-                    'id' => ag($request->getServerParams(), 'X_REQUEST_ID', (string)time()),
-                ]),
-                'w'
-            );
+        $stream = $file ?? new Stream(r('{path}/debug/request.{id}.json', [
+            'path' => Config::get('tmpDir'),
+            'id' => ag($request->getServerParams(), 'X_REQUEST_ID', (string)time()),
+        ]), 'w');
 
-            if (false === $fp) {
-                throw new Error(ag(error_get_last(), 'message', ''));
-            }
-
-            $file = new Stream($fp);
-            $closeStream = true;
-        }
-
-        $file->write(
+        $stream->write(
             json_encode(
                 value: $content,
                 flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_UNICODE
             )
         );
 
-        if ($closeStream) {
-            $file->close();
+        if (null === $file) {
+            $stream->close();
         }
     }
 }
@@ -554,20 +533,20 @@ if (!function_exists('makeBackend')) {
      * @param string|null $name server name.
      *
      * @return iClient backend client instance.
-     * @throws RuntimeException if configuration is wrong.
+     * @throws InvalidArgumentException if configuration is wrong.
      */
     function makeBackend(array $backend, string|null $name = null): iClient
     {
         if (null === ($backendType = ag($backend, 'type'))) {
-            throw new RuntimeException('No backend type was set.');
+            throw new InvalidArgumentException('No backend type was set.');
         }
 
         if (null === ag($backend, 'url')) {
-            throw new RuntimeException('No backend url was set.');
+            throw new InvalidArgumentException('No backend url was set.');
         }
 
         if (null === ($class = Config::get("supported.{$backendType}", null))) {
-            throw new RuntimeException(
+            throw new InvalidArgumentException(
                 r('Unexpected client type [{type}] was given. Expecting [{list}]', [
                     'type' => $backendType,
                     'list' => array_keys(Config::get('supported', [])),
@@ -645,7 +624,7 @@ if (!function_exists('commandContext')) {
             ]);
         }
 
-        return ($_SERVER['argv'][0] ?? 'php console') . ' ';
+        return ($_SERVER['argv'][0] ?? 'php bin/console') . ' ';
     }
 }
 
@@ -801,7 +780,7 @@ if (false === function_exists('isIgnoredId')) {
      * @param int|string|null $backendId The backend ID (optional).
      *
      * @return bool Returns true if the ID is ignored, false otherwise.
-     * @throws RuntimeException Throws an exception if an invalid context type is given.
+     * @throws InvalidArgumentException Throws an exception if an invalid context type is given.
      */
     function isIgnoredId(
         string $backend,
@@ -811,7 +790,7 @@ if (false === function_exists('isIgnoredId')) {
         string|int|null $backendId = null
     ): bool {
         if (false === in_array($type, iFace::TYPES_LIST)) {
-            throw new RuntimeException(sprintf('Invalid context type \'%s\' was given.', $type));
+            throw new InvalidArgumentException(sprintf('Invalid context type \'%s\' was given.', $type));
         }
 
         $list = Config::get('ignore', []);

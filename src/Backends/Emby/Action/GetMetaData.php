@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 class GetMetaData extends \App\Backends\Jellyfin\Action\GetMetaData
 {
+    protected string $action = 'emby.getMetadata';
 }

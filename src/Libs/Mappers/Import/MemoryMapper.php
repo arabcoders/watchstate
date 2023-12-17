@@ -13,8 +13,7 @@ use DateInterval;
 use DateTimeInterface as iDate;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface;
-use Psr\SimpleCache\InvalidArgumentException;
+use Psr\SimpleCache\CacheInterface as iCache;
 
 /**
  * MemoryMapper Class
@@ -63,9 +62,9 @@ final class MemoryMapper implements iImport
      *
      * @param iLogger $logger The instance of the logger interface.
      * @param iDB $db The instance of the database interface.
-     * @param CacheInterface $cache The instance of the cache interface.
+     * @param iCache $cache The instance of the cache interface.
      */
-    public function __construct(protected iLogger $logger, protected iDB $db, protected CacheInterface $cache)
+    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache)
     {
     }
 
@@ -455,7 +454,7 @@ final class MemoryMapper implements iImport
                         $progress[$itemId] = $entity;
                     }
                     $this->cache->set('progress', $progress, new DateInterval('P1D'));
-                } catch (InvalidArgumentException) {
+                } catch (\Psr\SimpleCache\InvalidArgumentException) {
                 }
             }
         }

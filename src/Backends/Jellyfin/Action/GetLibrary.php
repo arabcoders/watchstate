@@ -12,8 +12,8 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
-use JsonMachine\Exception\InvalidArgumentException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -22,17 +22,30 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class GetLibrary
+ *
+ * This class retrieves library content from jellyfin API.
+ */
 class GetLibrary
 {
     use CommonTrait;
     use JellyfinActionTrait;
 
+    protected string $action = 'jellyfin.getLibrary';
+
+    /**
+     * Class constructor
+     *
+     * @param HttpClientInterface $http The HTTP client object.
+     * @param LoggerInterface $logger The logger object.
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
     /**
-     * Get Library content.
+     * Get library content.
      *
      * @param Context $context
      * @param iGuid $guid
@@ -43,12 +56,24 @@ class GetLibrary
      */
     public function __invoke(Context $context, iGuid $guid, string|int $id, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $id, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->action($context, $id, $opts),
+            action: $this->action
+        );
     }
 
     /**
-     * @throws ExceptionInterface
-     * @throws InvalidArgumentException
+     * Fetches library content from the backend.
+     *
+     * @param Context $context Backend context.
+     * @param string|int $id The library id.
+     * @param array $opts (optional) Options.
+     *
+     * @return Response The response object containing the library content.
+     * @throws ExceptionInterface If the backend request fails.
+     * @throws RuntimeException When the API call was not successful.
+     * @throws \JsonMachine\Exception\InvalidArgumentException If the backend response is not a valid JSON.
      */
     private function action(Context $context, string|int $id, array $opts = []): Response
     {
@@ -188,6 +213,16 @@ class GetLibrary
         return new Response(status: true, response: $list);
     }
 
+    /**
+     * Process the given item.
+     *
+     * @param Context $context The context object.
+     * @param array $item The item to be processed.
+     * @param array $log (optional) The log array.
+     * @param array $opts (optional) The options array.
+     *
+     * @return array<string,mixed> The processed metadata.
+     */
     private function process(Context $context, array $item, array $log = [], array $opts = []): array
     {
         $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/%s', $context->backendUser, ag($item, 'Id')));

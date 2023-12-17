@@ -13,11 +13,21 @@ use App\Libs\QueueRequests;
 use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
+/**
+ * Class ProgressCommand
+ *
+ * This command is used to push user watch progress to export enabled backends.
+ * It should not be run manually and should be scheduled to run as a task.
+ *
+ * This command requires the watch progress metadata to be already saved in the database.
+ * If no metadata is available for a backend,
+ * the watch progress update won't be sent to that backend
+ */
 #[Routable(command: self::ROUTE)]
 class ProgressCommand extends Command
 {
@@ -25,6 +35,14 @@ class ProgressCommand extends Command
 
     public const TASK_NAME = 'progress';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iLogger $logger The logger instance.
+     * @param iCache $cache The cache instance.
+     * @param iDB $db The database instance.
+     * @param QueueRequests $queue The queue requests instance.
+     */
     public function __construct(
         private iLogger $logger,
         private iCache $cache,
@@ -37,6 +55,9 @@ class ProgressCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -69,10 +90,12 @@ class ProgressCommand extends Command
     }
 
     /**
+     * Make sure the command is not running in parallel.
+     *
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return int
-     * @throws InvalidArgumentException
+     * @throws \Psr\Cache\InvalidArgumentException if the cache key is not a legal value
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -80,7 +103,12 @@ class ProgressCommand extends Command
     }
 
     /**
-     * @throws InvalidArgumentException
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     * @return int Returns the status code.
+     * @throws \Psr\Cache\InvalidArgumentException if the cache key is not a legal value
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
@@ -219,7 +247,7 @@ class ProgressCommand extends Command
                         ...$context,
                         'status_code' => $response->getStatusCode(),
                     ]);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->logger->error(
                         message: 'SYSTEM: Exception [{error.kind}] was thrown unhandled during [{backend}] request to change watch progress of {item.type} [{item.title}]. Error [{error.message} @ {error.file}:{error.line}].',
                         context: [
@@ -266,12 +294,13 @@ class ProgressCommand extends Command
     }
 
     /**
-     * List Items.
+     * Renders and displays a list of items based on the specified output mode.
      *
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @param array<iState> $items
-     * @return int
+     * @param InputInterface $input The input interface object.
+     * @param OutputInterface $output The output interface object.
+     * @param array $items An array of items to be listed.
+     *
+     * @return int The status code indicating the success of the method execution.
      */
     private function listItems(InputInterface $input, OutputInterface $output, array $items): int
     {

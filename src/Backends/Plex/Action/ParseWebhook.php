@@ -46,6 +46,8 @@ final class ParseWebhook
         'media.pause',
     ];
 
+    private string $action = 'plex.parseWebhook';
+
     /**
      * Parse Webhook payload.
      *
@@ -57,7 +59,11 @@ final class ParseWebhook
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->parse($context, $guid, $request),
+            action: $this->action
+        );
     }
 
     private function parse(Context $context, iGuid $guid, iRequest $request): Response

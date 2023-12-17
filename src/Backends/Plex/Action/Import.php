@@ -11,13 +11,13 @@ use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface as iDate;
-use InvalidArgumentException;
 use JsonException;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
@@ -34,6 +34,8 @@ class Import
 {
     use CommonTrait;
     use PlexActionTrait;
+
+    private string $action = 'plex.import';
 
     public function __construct(protected iHttp $http, protected iLogger $logger)
     {
@@ -55,42 +57,46 @@ class Import
         iDate|null $after = null,
         array $opts = []
     ): Response {
-        return $this->tryResponse($context, fn() => $this->getLibraries(
+        return $this->tryResponse(
             context: $context,
-            handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
+            fn: fn() => $this->getLibraries(
                 context: $context,
-                response: $response,
-                callback: fn(array $item, array $logContext = []) => $this->process(
+                handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
                     context: $context,
-                    guid: $guid,
-                    mapper: $mapper,
-                    item: $item,
-                    logContext: $logContext,
-                    opts: $opts + ['after' => $after],
+                    response: $response,
+                    callback: fn(array $item, array $logContext = []) => $this->process(
+                        context: $context,
+                        guid: $guid,
+                        mapper: $mapper,
+                        item: $item,
+                        logContext: $logContext,
+                        opts: $opts + ['after' => $after],
+                    ),
+                    logContext: $logContext
                 ),
-                logContext: $logContext
+                error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] library [{library.title}] request. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
+                    ]
+                ),
             ),
-            error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] library [{library.title}] request. Error [{error.message} @ {error.file}:{error.line}].',
-                context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
-                    ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ],
-                ]
-            ),
-        ));
+            action: $this->action
+        );
     }
 
     protected function getLibraries(Context $context, Closure $handle, Closure $error): array

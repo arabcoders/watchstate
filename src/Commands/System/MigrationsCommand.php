@@ -11,16 +11,30 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class MigrationsCommand
+ *
+ * Database migrations runner.
+ */
 #[Routable(command: self::ROUTE)]
 final class MigrationsCommand extends Command
 {
     public const ROUTE = 'system:db:migrations';
 
+    /**
+     * Class Constructor.
+     *
+     * @param iDB $db The database connection object.
+     *
+     */
     public function __construct(private iDB $db)
     {
         parent::__construct();
     }
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -37,7 +51,27 @@ final class MigrationsCommand extends Command
             );
     }
 
+    /**
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input object containing the command data.
+     * @param OutputInterface $output The output object for displaying command output.
+     *
+     * @return int The exit code of the command execution.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
+    {
+        return $this->single(fn(): int => $this->process($input), $output);
+    }
+
+    /**
+     * Run the command to migrate the database.
+     *
+     * @param InputInterface $input The input object representing the command inputs.
+     *
+     * @return int The exit code of the command execution.
+     */
+    protected function process(InputInterface $input): int
     {
         $opts = [];
 

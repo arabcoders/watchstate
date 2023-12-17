@@ -19,6 +19,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class ListCommand
+ *
+ * Represents a command for listing ignored external ids.
+ */
 #[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
@@ -28,6 +33,11 @@ final class ListCommand extends Command
 
     private PDO $db;
 
+    /**
+     * Class Constructor.
+     *
+     * @param iDB $db The database object to be injected
+     */
     public function __construct(iDB $db)
     {
         $this->db = $db->getPDO();
@@ -35,6 +45,9 @@ final class ListCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -71,6 +84,14 @@ final class ListCommand extends Command
             );
     }
 
+    /**
+     * Execute the command.
+     *
+     * @param InputInterface $input The input object
+     * @param OutputInterface $output The output object
+     *
+     * @return int The exit status code.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $path = Config::get('path') . '/config/ignore.yaml';
@@ -155,6 +176,13 @@ final class ListCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Gets information about the ignore id.
+     *
+     * @param UriInterface $uri Ignore ID encoded as URL.
+     *
+     * @return string|null Return the name of the item or null if not found.
+     */
     private function getInfo(UriInterface $uri): string|null
     {
         if (empty($uri->getQuery())) {
@@ -192,6 +220,14 @@ final class ListCommand extends Command
         return $this->cache[$key];
     }
 
+    /**
+     * Completes the suggestions for the given input.
+     *
+     * @param CompletionInput $input The input object representing the completion request
+     * @param CompletionSuggestions $suggestions The object responsible for suggesting values
+     *
+     * @return void
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         if ($input->mustSuggestOptionValuesFor('backend')) {

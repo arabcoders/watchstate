@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 class GetLibrary extends \App\Backends\Jellyfin\Action\GetLibrary
 {
+    protected string $action = 'emby.getLibrary';
 }

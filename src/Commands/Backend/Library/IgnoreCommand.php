@@ -8,7 +8,7 @@ use App\Command;
 use App\Commands\Config\EditCommand;
 use App\Libs\Config;
 use App\Libs\Routable;
-use Exception;
+use App\Libs\Stream;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -16,11 +16,19 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class IgnoreCommand
+ *
+ * This class represents a command for managing ignored libraries in the Backend.
+ */
 #[Routable(command: self::ROUTE)]
 final class IgnoreCommand extends Command
 {
     public const ROUTE = 'backend:library:ignore';
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -65,7 +73,13 @@ final class IgnoreCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     * @param null|array $rerun The rerun option.
+     *
+     * @return int The command status code.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
@@ -74,8 +88,8 @@ final class IgnoreCommand extends Command
             try {
                 $custom = true;
                 $backends = Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
         } else {
@@ -86,19 +100,19 @@ final class IgnoreCommand extends Command
 
         $name = $input->getArgument('backend');
 
-        if (null === ag($backends, $name)) {
-            $output->writeln(r('<error>ERROR: Backend [{backend}] not found.</error>', ['backend' => $name]));
+        if (null === ag(Config::get('servers', []), $name, null)) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 
-        $backend = makeBackend(ag($backends, $name), $name);
+        $backend = $this->getBackend($name, $backends);
 
         $list = $backend->listLibraries();
 
         if (empty($list)) {
-            $output->writeln(
-                r('<error>ERROR: Could not find any library for [{backend}].</error>', ['backend' => $name])
-            );
+            $output->writeln(r('<error>ERROR: Could not find any library for [{backend}].</error>', [
+                'backend' => $name
+            ]));
             return self::FAILURE;
         }
 
@@ -172,7 +186,9 @@ TEXT,
             copy($config, $config . '.bak');
         }
 
-        file_put_contents($config, Yaml::dump($backends, 8, 2));
+        $stream = new Stream($config, 'w');
+        $stream->write(Yaml::dump($backends, 8, 2));
+        $stream->close();
 
         return self::SUCCESS;
     }

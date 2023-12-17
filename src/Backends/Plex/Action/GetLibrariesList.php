@@ -20,6 +20,8 @@ final class GetLibrariesList
 {
     use CommonTrait;
 
+    private string $action = 'plex.getLibrariesList';
+
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
@@ -34,7 +36,7 @@ final class GetLibrariesList
      */
     public function __invoke(Context $context, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $opts));
+        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $opts), action: $this->action);
     }
 
     /**

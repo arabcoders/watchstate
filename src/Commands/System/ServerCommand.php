@@ -11,16 +11,35 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class ServerCommand
+ *
+ * This class represents a command that starts a minimal HTTP server.
+ *
+ * @package YourPackage
+ */
 #[Routable(command: self::ROUTE)]
 final class ServerCommand extends Command
 {
     public const ROUTE = 'system:server';
 
+    /**
+     * Class Constructor.
+     *
+     * @param Server $server The server object to be injected.
+     *
+     * @return void
+     */
     public function __construct(private Server $server)
     {
         parent::__construct();
     }
 
+    /**
+     * Configure the command options and description.
+     *
+     * @return void
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -37,6 +56,14 @@ final class ServerCommand extends Command
             );
     }
 
+    /**
+     * Runs Server.
+     *
+     * @param InputInterface $input The input interface object containing command input options.
+     * @param OutputInterface $output The output interface object used to display command output.
+     *
+     * @return int Returns the exit code of the command.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $host = $input->getOption('interface');

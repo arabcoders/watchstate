@@ -14,21 +14,37 @@ use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Options;
-use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
+/**
+ * Class ParseWebhook
+ *
+ * This class is responsible for parsing a webhook payload from jellyfin backend.
+ */
 final class ParseWebhook
 {
     use CommonTrait;
     use JellyfinActionTrait;
 
+    /**
+     * @var string Action name
+     */
+    protected string $action = 'jellyfin.parseWebhook';
+
+    /**
+     * @var array<string> Supported entity types.
+     */
     protected const WEBHOOK_ALLOWED_TYPES = [
         JFC::TYPE_MOVIE,
         JFC::TYPE_EPISODE,
     ];
 
+    /**
+     * @var array<string> Supported webhook events.
+     */
     protected const WEBHOOK_ALLOWED_EVENTS = [
         'ItemAdded',
         'UserDataSaved',
@@ -36,6 +52,9 @@ final class ParseWebhook
         'PlaybackStop',
     ];
 
+    /**
+     * @var array<string> Events that should be marked as tainted.
+     */
     protected const WEBHOOK_TAINTED_EVENTS = [
         'PlaybackStart',
         'PlaybackStop',
@@ -43,19 +62,28 @@ final class ParseWebhook
     ];
 
     /**
-     * Parse Webhook payload.
+     * Wrap the parser in try response block.
      *
-     * @param Context $context
-     * @param iGuid $guid
-     * @param iRequest $request
+     * @param Context $context Backend context.
+     * @param iGuid $guid GUID parser.
+     * @param iRequest $request Request object.
      *
-     * @return Response
+     * @return Response The response.
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
         return $this->tryResponse(context: $context, fn: fn() => $this->parse($context, $guid, $request));
     }
 
+    /**
+     * Parse the Jellyfin webhook payload.
+     *
+     * @param Context $context Backend context.
+     * @param iGuid $guid GUID parser.
+     * @param iRequest $request Request object.
+     *
+     * @return Response The response.
+     */
     private function parse(Context $context, iGuid $guid, iRequest $request): Response
     {
         if (null === ($json = $request->getParsedBody())) {

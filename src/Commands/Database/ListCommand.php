@@ -9,12 +9,11 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Routable;
-use Exception;
 use PDO;
-use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,11 +22,19 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class ListCommand
+ *
+ * This class act as frontend for the state table, it allows the user to see and manipulate view of state table.
+ */
 #[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'db:list';
 
+    /**
+     * @var array The array containing the names of the columns that can be modified for viewing purposes.
+     */
     private const COLUMNS_CHANGEABLE = [
         iState::COLUMN_WATCHED,
         iState::COLUMN_VIA,
@@ -38,6 +45,9 @@ final class ListCommand extends Command
         iState::COLUMN_UPDATED,
     ];
 
+    /**
+     * @var array The array containing the names of the columns that the list can be sorted by.
+     */
     private const COLUMNS_SORTABLE = [
         iState::COLUMN_ID,
         iState::COLUMN_TYPE,
@@ -52,6 +62,14 @@ final class ListCommand extends Command
 
     private PDO $pdo;
 
+    /**
+     * Class constructor.
+     *
+     * @param iDB $db The database object.
+     * @param DirectMapper $mapper The direct mapper object.
+     *
+     * @return void
+     */
     public function __construct(private iDB $db, private DirectMapper $mapper)
     {
         $this->pdo = $this->db->getPDO();
@@ -59,6 +77,9 @@ final class ListCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $list = [];
@@ -195,7 +216,12 @@ final class ListCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * Runs a command and returns the number of rows affected.
+     *
+     * @param InputInterface $input The input object.
+     * @param OutputInterface $output The output object.
+     *
+     * @return int The number of rows affected.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -477,7 +503,7 @@ final class ListCommand extends Command
                 return self::FAILURE;
             }
 
-            foreach ($rows ?? [] as $row) {
+            foreach ($rows as $row) {
                 $entity = $this->mapper->get(
                     Container::get(iState::class)->fromArray([iState::COLUMN_ID => $row['id']])
                 );
@@ -505,6 +531,14 @@ final class ListCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Completes the given suggestions for a specific input.
+     *
+     * @param CompletionInput $input The completion input object.
+     * @param CompletionSuggestions $suggestions The completion suggestions object.
+     *
+     * @return void
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);

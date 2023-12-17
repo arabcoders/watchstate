@@ -15,22 +15,36 @@ use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Options;
-use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
+/**
+ * Class ParseWebhook
+ *
+ * This class is responsible for parsing a webhook payload from Emby backend.
+ */
 final class ParseWebhook
 {
     use CommonTrait;
     use EmbyActionTrait;
     use JellyfinActionTrait;
 
+    /**
+     * @var string $action Action name
+     */
+    protected string $action = 'emby.parseWebhook';
+    /**
+     * @var array<string> Supported entity types.
+     */
     protected const WEBHOOK_ALLOWED_TYPES = [
         EmbyClient::TYPE_MOVIE,
         EmbyClient::TYPE_EPISODE,
     ];
-
+    /**
+     * @var array<string> Supported webhook events.
+     */
     protected const WEBHOOK_ALLOWED_EVENTS = [
         'item.markplayed',
         'item.markunplayed',
@@ -41,7 +55,9 @@ final class ParseWebhook
         'playback.stop',
         'library.new',
     ];
-
+    /**
+     * @var array<string> Events that should be marked as tainted.
+     */
     protected const WEBHOOK_TAINTED_EVENTS = [
         'playback.pause',
         'playback.unpause',
@@ -50,23 +66,32 @@ final class ParseWebhook
     ];
 
     /**
-     * Parse Plex Webhook payload.
+     * Wrap the parser in try response block.
      *
-     * @param Context $context
-     * @param iGuid $guid
-     * @param iRequest $request
+     * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
+     * @param iRequest $request The request object.
      *
-     * @return Response
+     * @return Response The response object.
      */
     public function __invoke(Context $context, iGuid $guid, iRequest $request): Response
     {
         return $this->tryResponse(
             context: $context,
             fn: fn() => $this->parse($context, $guid, $request),
-            action: 'emby.parse.webhook'
+            action: $this->action,
         );
     }
 
+    /**
+     * Parse the Emby webhook payload.
+     *
+     * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
+     * @param iRequest $request The request object.
+     *
+     * @return Response The response object.
+     */
     private function parse(Context $context, iGuid $guid, iRequest $request): Response
     {
         if (null === ($json = $request->getParsedBody())) {

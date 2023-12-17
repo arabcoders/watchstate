@@ -12,6 +12,7 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonException;
 use JsonMachine\Exception\InvalidArgumentException;
@@ -20,7 +21,6 @@ use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -29,6 +29,8 @@ final class GetLibrary
 {
     use CommonTrait;
     use PlexActionTrait;
+
+    private string $action = 'plex.getLibrary';
 
     public function __construct(protected iHttp $http, protected iLogger $logger)
     {
@@ -46,12 +48,17 @@ final class GetLibrary
      */
     public function __invoke(Context $context, iGuid $guid, string|int $id, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $guid, $id, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->action($context, $guid, $id, $opts),
+            action: $this->action
+        );
     }
 
     /**
      * @throws ExceptionInterface
      * @throws InvalidArgumentException
+     * @throws RuntimeException
      */
     private function action(Context $context, iGuid $guid, string|int $id, array $opts = []): Response
     {
@@ -101,14 +108,14 @@ final class GetLibrary
             );
         }
 
-        $url = $context->backendUrl->withPath(
-            r('/library/sections/{library_id}/all', ['library_id' => $id])
-        )->withQuery(
-            http_build_query([
-                'type' => PlexClient::TYPE_MOVIE === ag($logContext, 'library.type') ? 1 : 2,
-                'includeGuids' => 1,
-            ])
-        );
+        $url = $context->backendUrl
+            ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $id]))
+            ->withQuery(
+                http_build_query([
+                    'type' => PlexClient::TYPE_MOVIE === ag($logContext, 'library.type') ? 1 : 2,
+                    'includeGuids' => 1,
+                ])
+            );
 
         $logContext['library']['url'] = (string)$url;
 
@@ -271,6 +278,18 @@ final class GetLibrary
         return new Response(status: true, response: $list);
     }
 
+    /**
+     * Process a single item.
+     *
+     * @param Context $context The context object.
+     * @param iGuid $guid The GUID object.
+     * @param array $item The item array.
+     * @param array $log The log array. Default is an empty array.
+     * @param array $opts The options array. Default is an empty array.
+     *
+     * @return array Returns an array containing the processed metadata.
+     * @throws RuntimeException Throws a RuntimeException if an unexpected item type is encountered while parsing the library.
+     */
     private function process(Context $context, iGuid $guid, array $item, array $log = [], array $opts = []): array
     {
         $url = $context->backendUrl->withPath(r('/library/metadata/{item_id}', ['item_id' => ag($item, 'ratingKey')]));

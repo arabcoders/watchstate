@@ -10,7 +10,6 @@ use App\Commands\System\IndexCommand;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -22,6 +21,11 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
+/**
+ * Class ManageCommand
+ *
+ * This class allows the user to manage backend settings interactively.
+ */
 #[Routable(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
@@ -47,7 +51,14 @@ final class ManageCommand extends Command
     }
 
     /**
-     * @throws ExceptionInterface
+     * Execute the command.
+     *
+     * @param InputInterface $input The input interface for the command.
+     * @param OutputInterface $output The output interface for the command.
+     * @param null|array $rerun An optional rerun parameter.
+     *
+     * @return int The exit code for the command.
+     * @throws ExceptionInterface When an error occurs while running the subcommands.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
@@ -84,7 +95,7 @@ final class ManageCommand extends Command
             try {
                 $custom = true;
                 $backends = (array)Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
                 $output->writeln(r('<error>ERROR:</error> {error}', ['error' => $e->getMessage()]));
                 return self::FAILURE;
             }

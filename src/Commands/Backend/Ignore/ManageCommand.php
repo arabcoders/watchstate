@@ -7,21 +7,28 @@ namespace App\Commands\Backend\Ignore;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Routable;
-use InvalidArgumentException;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class ManageCommand
+ * This class is responsible for adding or removing an external id from the ignore list.
+ */
 #[Routable(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
     public const ROUTE = 'backend:ignore:manage';
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -100,6 +107,15 @@ final class ManageCommand extends Command
             );
     }
 
+    /**
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The command status code.
+     * @throws InvalidArgumentException if the "id" argument is missing.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $path = Config::get('path') . '/config/ignore.yaml';
@@ -111,7 +127,7 @@ final class ManageCommand extends Command
         $id = $input->getArgument('id');
 
         if (empty($id)) {
-            throw new InvalidArgumentException('Not enough arguments (missing: "id").');
+            throw new InvalidArgumentException('ID argument cannot be empty.');
         }
 
         $list = Config::get('ignore', []);
@@ -166,6 +182,13 @@ final class ManageCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Check if the given GUID is valid and meets the expected format.
+     *
+     * @param string $guid The GUID to check.
+     *
+     * @throws RuntimeException If any of the checks fail.
+     */
     private function checkGuid(string $guid): void
     {
         $urlParts = parse_url($guid);

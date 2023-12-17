@@ -10,7 +10,6 @@ use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -79,10 +78,15 @@ final class AccessTokenCommand extends Command
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $this->logger->error($e->getMessage());
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
+        }
+
+        if (null === ag(Config::get('servers', []), $backend, null)) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
+            return self::FAILURE;
         }
 
         $opts = $backendOpts = [];

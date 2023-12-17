@@ -8,18 +8,29 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Class InfoCommand
+ *
+ * This command retrieves and displays backend product information.
+ *
+ * @Routable(command: self::ROUTE)
+ */
 #[Routable(command: self::ROUTE)]
 class InfoCommand extends Command
 {
     public const ROUTE = 'backend:info';
 
+    /**
+     * Configures the command.
+     *
+     * @return void
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -29,6 +40,13 @@ class InfoCommand extends Command
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name to restore.');
     }
 
+    /**
+     * Executes the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     * @return int The exit code. 0 for success, 1 for failure.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $name = $input->getArgument('backend');
@@ -38,14 +56,14 @@ class InfoCommand extends Command
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
         }
 
         if (null === ag(Config::get('servers', []), $name, null)) {
-            $output->writeln(sprintf('<error>ERROR: Backend \'%s\' not found.</error>', $name));
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 
@@ -58,7 +76,7 @@ class InfoCommand extends Command
         $info = $backend->getInfo($opts);
 
         if ('table' === $mode) {
-            foreach ($info as $_ => &$val) {
+            foreach ($info as &$val) {
                 if (false === is_bool($val)) {
                     continue;
                 }

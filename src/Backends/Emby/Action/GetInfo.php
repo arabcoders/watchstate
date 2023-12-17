@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 class GetInfo extends \App\Backends\Jellyfin\Action\GetInfo
 {
+    protected string $action = 'emby.getInfo';
 }

@@ -15,7 +15,7 @@ final class GetIdentifier
 {
     use CommonTrait;
 
-    private string $action = 'unique identifier';
+    private string $action = 'plex.getIdentifier';
 
     public function __construct(
         protected HttpClientInterface $http,

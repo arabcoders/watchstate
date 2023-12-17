@@ -6,6 +6,9 @@ namespace App\Libs;
 
 use App\Cli;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\RuntimeException;
+use App\Libs\Exceptions\HttpException;
+use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use Closure;
@@ -24,8 +27,6 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
-use Psr\SimpleCache\InvalidArgumentException;
-use RuntimeException;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
 use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\Yaml\Yaml;
@@ -129,7 +130,6 @@ final class Initializer
                 if (!(error_reporting() & $severity)) {
                     return;
                 }
-                /** @noinspection PhpUnhandledExceptionInspection */
                 throw new ErrorException($message, 0, $severity, $file, $line);
             }
         );
@@ -222,7 +222,8 @@ final class Initializer
      * @param iRequest $realRequest The incoming HTTP request.
      *
      * @return ResponseInterface The HTTP response.
-     * @throws InvalidArgumentException If an error occurs.
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException If an error occurs.
      */
     private function defaultHttpServer(iRequest $realRequest): ResponseInterface
     {
@@ -262,7 +263,7 @@ final class Initializer
 
             try {
                 $class = makeBackend($info, $name);
-            } catch (RuntimeException $e) {
+            } catch (InvalidArgumentException $e) {
                 $this->write(
                     request: $request,
                     level: Level::Error,

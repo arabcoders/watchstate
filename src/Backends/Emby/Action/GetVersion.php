@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 class GetVersion extends \App\Backends\Jellyfin\Action\GetVersion
 {
+    protected string $action = 'emby.getVersion';
 }

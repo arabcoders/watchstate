@@ -12,13 +12,19 @@ use App\Libs\Options;
 use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class RequestsCommand
+ *
+ * This class is responsible for processing queued HTTP requests.
+ *
+ * @package Your\Namespace
+ */
 #[Routable(command: self::ROUTE)]
 class RequestsCommand extends Command
 {
@@ -26,6 +32,13 @@ class RequestsCommand extends Command
 
     public const TASK_NAME = 'requests';
 
+    /**
+     * Class constructor.
+     *
+     * @param iLogger $logger The logger object.
+     * @param iCache $cache The cache object.
+     * @param DirectMapper $mapper The DirectMapper object.
+     */
     public function __construct(private iLogger $logger, private iCache $cache, private DirectMapper $mapper)
     {
         set_time_limit(0);
@@ -34,6 +47,9 @@ class RequestsCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -46,10 +62,13 @@ class RequestsCommand extends Command
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @return int
-     * @throws InvalidArgumentException
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit code of the command.
+     * @throws \Psr\Cache\InvalidArgumentException if the $key string is not a legal value
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -57,7 +76,13 @@ class RequestsCommand extends Command
     }
 
     /**
-     * @throws InvalidArgumentException
+     * Run the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit code of the command.
+     * @throws \Psr\Cache\InvalidArgumentException if the $key string is not a legal value
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
@@ -155,12 +180,13 @@ class RequestsCommand extends Command
     }
 
     /**
-     * List Items.
+     * Lists items based on the provided input and output.
      *
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @param array $requests
-     * @return int
+     * @param InputInterface $input The input interface object.
+     * @param OutputInterface $output The output interface object.
+     * @param array $requests The array of requests.
+     *
+     * @return int Returns the success status code.
      */
     private function listItems(InputInterface $input, OutputInterface $output, array $requests): int
     {

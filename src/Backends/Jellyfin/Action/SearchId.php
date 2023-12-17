@@ -8,33 +8,64 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class SearchId
+ *
+ * SearchId class is responsible for searching and retrieving details about an item with a given ID from the Jellyfin API.
+ */
 class SearchId
 {
     use CommonTrait;
     use JellyfinActionTrait;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.searchId';
+
+    /**
+     * Class Constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client.
+     * @param LoggerInterface $logger The logger.
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
     /**
-     * Search Backend for ID.
+     * Wrap the operation in a try response block.
      *
-     * @param Context $context
-     * @param string|int $id
-     * @param array $opts optional options.
+     * @param Context $context Backend context.
+     * @param string|int $id The ID of the item to search for.
+     * @param array $opts (optional) options.
      *
-     * @return Response
+     * @return Response The response.
      */
     public function __invoke(Context $context, string|int $id, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->search($context, $id, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->search($context, $id, $opts),
+            action: $this->action
+        );
     }
 
+    /**
+     * Fetch details about ID from jellyfin API.
+     *
+     * @param Context $context Backend context.
+     * @param string|int $id The ID of the item to search for.
+     * @param array $opts (Optional) options.
+     *
+     * @return Response The response.
+     * @throws RuntimeException When API call was not successful.
+     */
     private function search(Context $context, string|int $id, array $opts = []): Response
     {
         $item = $this->getItemDetails($context, $id, $opts);

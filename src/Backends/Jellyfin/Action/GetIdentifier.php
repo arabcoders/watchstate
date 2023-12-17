@@ -11,12 +11,28 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class GetIdentifier
+ *
+ * This class is responsible for retrieving the jellyfin instance unique identifier.
+ */
 class GetIdentifier
 {
     use CommonTrait;
 
-    private string $action = 'unique identifier';
+    /**
+     * @var string Action name
+     */
+    protected string $action = 'jellyfin.getIdentifier';
 
+    /**
+     * Class constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client instance to use.
+     * @param LoggerInterface $logger The logger instance to use.
+     * @param CacheInterface $cache The cache instance to use.
+     * @return void
+     */
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
@@ -25,10 +41,10 @@ class GetIdentifier
     }
 
     /**
-     * Get Backend unique identifier.
+     * Get backend unique identifier.
      *
-     * @param Context $context
-     * @param array $opts optional options.
+     * @param Context $context Backend context.
+     * @param array $opts (Optional) options.
      *
      * @return Response
      */

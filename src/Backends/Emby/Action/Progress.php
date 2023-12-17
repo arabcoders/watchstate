@@ -22,6 +22,8 @@ class Progress
     use CommonTrait;
     use EmbyActionTrait;
 
+    protected string $action = 'emby.progress';
+
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
@@ -43,13 +45,11 @@ class Progress
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action(
-            $context,
-            $guid,
-            $entities,
-            $queue,
-            $after
-        ), action: 'emby.progress');
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->action($context, $guid, $entities, $queue, $after),
+            action: $this->action
+        );
     }
 
     private function action(

@@ -6,6 +6,7 @@ namespace Tests\Libs;
 
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\TestCase;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -273,7 +274,7 @@ class HelpersTest extends TestCase
             'saveWebhookPayload() should save webhook payload into given stream if it is provided otherwise it should save it into default stream.'
         );
 
-        $this->expectException(\Error::class);
+        $this->expectException(RuntimeException::class);
         saveWebhookPayload(entity: $entity, request: $request);
     }
 
@@ -311,7 +312,7 @@ class HelpersTest extends TestCase
         $this->assertSame($request->getAttributes(), $fromFile->getAttributes());
         $this->assertSame($request->getParsedBody(), $fromFile->getParsedBody());
 
-        $this->expectException(\Error::class);
+        $this->expectException(RuntimeException::class);
         saveRequestPayload(request: $request);
     }
 

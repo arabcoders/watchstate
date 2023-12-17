@@ -26,6 +26,8 @@ final class Options
     public const STATE_UPDATE_EVENT = 'STATE_UPDATE_EVENT';
     public const DUMP_PAYLOAD = 'DUMP_PAYLOAD';
     public const ADMIN_TOKEN = 'ADMIN_TOKEN';
+    public const NO_THROW = 'NO_THROW';
+    public const NO_LOGGING = 'NO_LOGGING';
 
     private function __construct()
     {

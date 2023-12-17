@@ -16,30 +16,49 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class GetLibrariesList
+ *
+ * A class for getting the backend libraries list.
+ */
 class GetLibrariesList
 {
     use CommonTrait;
 
+    protected string $action = 'jellyfin.getLibrariesList';
+
+    /**
+     * Class constructor
+     *
+     * @param HttpClientInterface $http The HTTP client object.
+     * @param LoggerInterface $logger The logger object.
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
     /**
-     * Get Backend libraries list.
+     * Get backend libraries list.
      *
-     * @param Context $context
-     * @param array $opts optional options.
+     * @param Context $context Backend context.
+     * @param array $opts (Optional) options.
      *
      * @return Response
      */
     public function __invoke(Context $context, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $opts));
+        return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $opts), action: $this->action);
     }
 
     /**
-     * @throws ExceptionInterface
-     * @throws JsonException
+     * Fetches libraries from the backend.
+     *
+     * @param Context $context Backend context.
+     * @param array $opts (optional) Options.
+     *
+     * @return Response The response object containing the fetched libraries.
+     * @throws JsonException If the response body is not a valid JSON.
+     * @throws ExceptionInterface If the request failed.
      */
     private function action(Context $context, array $opts = []): Response
     {

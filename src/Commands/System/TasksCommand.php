@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Routable;
+use App\Libs\Stream;
 use Cron\CronExpression;
 use Exception;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -17,7 +18,13 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Process\Process;
+use Throwable;
 
+/**
+ * Class TasksCommand
+ *
+ * Automates the runs of scheduled tasks.
+ */
 #[Routable(command: self::ROUTE)]
 final class TasksCommand extends Command
 {
@@ -26,6 +33,9 @@ final class TasksCommand extends Command
     private array $logs = [];
     private array $taskOutput = [];
 
+    /**
+     * Class Constructor.
+     */
     public function __construct()
     {
         set_time_limit(0);
@@ -34,6 +44,9 @@ final class TasksCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $tasksName = implode(
@@ -109,7 +122,12 @@ final class TasksCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * If the run option is set, run the tasks, otherwise list available tasks.
+     *
+     * @param iInput $input The input instance.
+     * @param iOutput $output The output instance.
+     *
+     * @return int Returns the exit code of the command.
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
@@ -117,10 +135,34 @@ final class TasksCommand extends Command
             return $this->runTasks($input, $output);
         }
 
-        $this->listTasks($input, $output);
+        $list = [];
+
+        $mode = $input->getOption('output');
+
+        foreach ($this->getTasks() as $task) {
+            $list[] = [
+                'name' => $task['name'],
+                'command' => $task['command'],
+                'options' => $task['args'] ?? '',
+                'timer' => $task['timer']->getExpression(),
+                'description' => $task['description'] ?? '',
+                'NextRun' => $task['next'],
+            ];
+        }
+
+        $this->displayContent($list, $output, $mode);
+
         return self::SUCCESS;
     }
 
+    /**
+     * Runs the tasks.
+     *
+     * @param iInput $input The input object.
+     * @param iOutput $output The output object.
+     *
+     * @return int The exit code of the command.
+     */
     private function runTasks(iInput $input, iOutput $output): int
     {
         $run = [];
@@ -232,15 +274,35 @@ final class TasksCommand extends Command
         }
 
         if ($input->getOption('save-log') && count($this->logs) >= 1) {
-            if (false !== ($fp = @fopen(Config::get('tasks.logfile'), 'a'))) {
-                fwrite($fp, preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
-                fclose($fp);
+            try {
+                $stream = new Stream(Config::get('tasks.logfile'), 'a');
+                $stream->write(preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
+                $stream->close();
+            } catch (Throwable $e) {
+                $this->write(r('<error>Failed to open log file [{file}]. Error [{message}].</error>', [
+                    'file' => Config::get('tasks.logfile'),
+                    'message' => $e->getMessage(),
+                ]), $input, $output);
+
+                return self::INVALID;
             }
         }
 
         return self::SUCCESS;
     }
 
+    /**
+     * Write method.
+     *
+     * Writes a given text to the output with the specified level.
+     * Optionally if the 'save-log' option is set to true, the output will be saved to the logs array.
+     * The logs array will be saved to the log file at the end of the command execution.
+     *
+     * @param string $text The text to write to output.
+     * @param iInput $input The input object.
+     * @param iOutput $output The output object.
+     * @param int $level The level of the output (default: iOutput::OUTPUT_NORMAL).
+     */
     private function write(string $text, iInput $input, iOutput $output, int $level = iOutput::OUTPUT_NORMAL): void
     {
         assert($output instanceof ConsoleOutput);
@@ -252,28 +314,10 @@ final class TasksCommand extends Command
     }
 
     /**
-     * @throws Exception
+     * Get the list of tasks.
+     *
+     * @return array<string, array{name: string, command: string, args: string, description: string, enabled: bool, timer: CronExpression, next: string }> The list of tasks.
      */
-    private function listTasks(iInput $input, iOutput $output): void
-    {
-        $list = [];
-
-        $mode = $input->getOption('output');
-
-        foreach ($this->getTasks() as $task) {
-            $list[] = [
-                'name' => $task['name'],
-                'command' => $task['command'],
-                'options' => $task['args'] ?? '',
-                'timer' => $task['timer']->getExpression(),
-                'description' => $task['description'] ?? '',
-                'NextRun' => $task['next'],
-            ];
-        }
-
-        $this->displayContent($list, $output, $mode);
-    }
-
     private function getTasks(): array
     {
         $list = [];
@@ -302,6 +346,12 @@ final class TasksCommand extends Command
         return $list;
     }
 
+    /**
+     * Complete the input with suggestions if necessary.
+     *
+     * @param CompletionInput $input The completion input object.
+     * @param CompletionSuggestions $suggestions The completion suggestions object.
+     */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         parent::complete($input, $suggestions);

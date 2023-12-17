@@ -14,11 +14,17 @@ use App\Libs\QueueRequests;
 use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
+/**
+ * Class PushCommand
+ *
+ * This class represents a command that pushes webhook queued events.
+ * It sends change play state requests to the supported backends.
+ */
 #[Routable(command: self::ROUTE)]
 class PushCommand extends Command
 {
@@ -26,6 +32,16 @@ class PushCommand extends Command
 
     public const TASK_NAME = 'push';
 
+    /**
+     * Constructor for the given class.
+     *
+     * @param iLogger $logger The logger instance.
+     * @param iCache $cache The cache instance.
+     * @param iDB $db The database instance.
+     * @param QueueRequests $queue The queue instance.
+     *
+     * @return void
+     */
     public function __construct(
         private iLogger $logger,
         private iCache $cache,
@@ -38,6 +54,9 @@ class PushCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -68,10 +87,13 @@ class PushCommand extends Command
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @return int
-     * @throws InvalidArgumentException
+     * Make sure the command is not running in parallel.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int Returns the process result status code.
+     * @throws \Psr\SimpleCache\InvalidArgumentException if the cache key is not a legal value.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -79,7 +101,12 @@ class PushCommand extends Command
     }
 
     /**
-     * @throws InvalidArgumentException
+     * Process the queue items and send change play state requests to the supported backends.
+     *
+     * @param InputInterface $input The input interface.
+     *
+     * @return int Returns the process result status code.
+     * @throws \Psr\SimpleCache\InvalidArgumentException if the cache key is not a legal value.
      */
     protected function process(InputInterface $input): int
     {
@@ -197,7 +224,7 @@ class PushCommand extends Command
                     }
 
                     $this->logger->notice('SYSTEM: Marked [{backend}] [{item.title}] as [{play_state}].', $context);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->logger->error(
                         message: 'SYSTEM: Exception [{error.kind}] was thrown unhandled during [{backend}] request to change play state of {item.type} [{item.title}]. Error [{error.message} @ {error.file}:{error.line}].',
                         context: [

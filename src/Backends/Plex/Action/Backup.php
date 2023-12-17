@@ -8,10 +8,10 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
-use InvalidArgumentException;
-use SplFileObject;
+use Psr\Http\Message\StreamInterface;
 use Throwable;
 
 final class Backup extends Import
@@ -82,7 +82,16 @@ final class Backup extends Import
                 context: $context,
                 guid: $guid,
                 item: $item,
-                opts: $opts
+                opts: array_replace_recursive($opts, [
+                    'override' => [
+                        iState::COLUMN_EXTRA => [
+                            $context->backendName => [
+                                iState::COLUMN_EXTRA_EVENT => 'task.backup',
+                                iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                            ],
+                        ],
+                    ]
+                ])
             );
 
             $arr = [
@@ -124,6 +133,10 @@ final class Backup extends Import
                 );
             }
 
+            if ($entity->hasPlayProgress()) {
+                $arr[iState::COLUMN_META_DATA_PROGRESS] = $entity->getPlayProgress();
+            }
+
             if (true !== (bool)ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
                 $arr[iState::COLUMN_GUIDS] = array_replace_recursive(
                     array_filter(
@@ -145,8 +158,8 @@ final class Backup extends Import
                 }
             }
 
-            if (($writer instanceof SplFileObject) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
-                $writer->fwrite(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
+            if (($writer instanceof StreamInterface) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
+                $writer->write(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
             }
         } catch (Throwable $e) {
             $this->logger->error(

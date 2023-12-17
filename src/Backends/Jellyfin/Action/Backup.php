@@ -8,16 +8,38 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
-use InvalidArgumentException;
-use SplFileObject;
+use Psr\Http\Message\StreamInterface;
 use Throwable;
 
+/**
+ * Class Backup
+ *
+ * This class is responsible for performing backup operations on Jellyfin backend.
+ *
+ * @extends Import
+ */
 class Backup extends Import
 {
     private const JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.backup';
+
+    /**
+     * Process given item.
+     *
+     * @param Context $context The context object
+     * @param iGuid $guid The GUID object
+     * @param iImport $mapper The import object
+     * @param array $item The item to process
+     * @param array $logContext The log context (optional)
+     * @param array $opts The options (optional)
+     */
     protected function process(
         Context $context,
         iGuid $guid,
@@ -79,6 +101,7 @@ class Backup extends Import
                 item: $item,
                 opts: $opts + ['library' => ag($logContext, 'library.id')]
             );
+
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,
                 iState::COLUMN_WATCHED => (int)$entity->isWatched(),
@@ -105,7 +128,6 @@ class Backup extends Import
 
             $arr[iState::COLUMN_YEAR] = $entity->year;
 
-
             $arr[iState::COLUMN_GUIDS] = array_filter(
                 $entity->getGuids(),
                 fn($key) => str_contains($key, 'guid_'),
@@ -117,6 +139,10 @@ class Backup extends Import
                     fn($key) => str_contains($key, 'guid_'),
                     ARRAY_FILTER_USE_KEY
                 );
+            }
+
+            if ($entity->hasPlayProgress()) {
+                $arr[iState::COLUMN_META_DATA_PROGRESS] = $entity->getPlayProgress();
             }
 
             if (true !== (bool)ag($opts, 'no_enhance') && null !== ($fromDb = $mapper->get($entity))) {
@@ -140,8 +166,8 @@ class Backup extends Import
                 }
             }
 
-            if (($writer instanceof SplFileObject) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
-                $writer->fwrite(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
+            if (($writer instanceof StreamInterface) && false === (bool)ag($opts, Options::DRY_RUN, false)) {
+                $writer->write(PHP_EOL . json_encode($arr, self::JSON_FLAGS) . ',');
             }
         } catch (Throwable $e) {
             $this->logger->error(

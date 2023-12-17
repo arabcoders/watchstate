@@ -114,13 +114,10 @@ class JellyfinManage implements ManageInterface
                 );
             } catch (Throwable $e) {
                 $this->output->writeln('<error>Failed to get the backend unique identifier.</error>');
-                $this->output->writeln(
-                    sprintf(
-                        '<error>ERROR - %s: %s.</error>' . PHP_EOL,
-                        afterLast(get_class($e), '\\'),
-                        $e->getMessage()
-                    )
-                );
+                $this->output->writeln(r('<error>ERROR - {kind}: {message}.</error>' . PHP_EOL, [
+                    'kind' => afterLast($e::class, '\\'),
+                    'message' => $e->getMessage(),
+                ]));
                 $chosen = null;
             }
 
@@ -152,7 +149,7 @@ class JellyfinManage implements ManageInterface
                 if (!is_string($answer) && !is_int($answer)) {
                     throw new RuntimeException(
                         r(
-                            'Backend unique identifier is invalid. Expecting string or integer, but got \'{type}\' instead.',
+                            "Backend unique identifier is invalid. Expecting string or integer, but got '{type}' instead.",
                             [
                                 'type' => get_debug_type($answer)
                             ]

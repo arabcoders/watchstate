@@ -29,16 +29,16 @@ use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HttpException;
+use App\Libs\Exceptions\Backends\RuntimeException;
+use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
-use SplFileObject;
 
 /**
  * Class EmbyClient
@@ -237,13 +237,16 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function backup(iImport $mapper, SplFileObject|null $writer = null, array $opts = []): array
+    public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: $opts + ['writer' => $writer]
+            opts: $opts + [
+                'writer' => $writer,
+                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+            ]
         );
 
         if ($response->hasError()) {

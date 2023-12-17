@@ -18,7 +18,7 @@ final class GetInfo
 {
     use CommonTrait;
 
-    private string $action = 'get info';
+    private string $action = 'plex.getInfo';
 
     public function __construct(
         protected HttpClientInterface $http,

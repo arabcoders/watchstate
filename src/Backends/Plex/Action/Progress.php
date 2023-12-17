@@ -10,6 +10,8 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -21,6 +23,8 @@ class Progress
 {
     use CommonTrait;
     use PlexActionTrait;
+
+    private string $action = 'plex.progress';
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
@@ -43,13 +47,11 @@ class Progress
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action(
-            $context,
-            $guid,
-            $entities,
-            $queue,
-            $after
-        ), action: 'plex.progress');
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->action($context, $guid, $entities, $queue, $after),
+            action: $this->action
+        );
     }
 
     private function action(
@@ -160,7 +162,7 @@ class Progress
                     );
                     continue;
                 }
-            } catch (\RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request to get {item.type} [{item.title}] status. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [

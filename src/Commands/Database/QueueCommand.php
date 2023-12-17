@@ -10,16 +10,28 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Routable;
 use Psr\SimpleCache\CacheInterface;
-use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class QueueCommand
+ *
+ * This command is used to show webhook queued events.
+ *
+ * @package YourPackageNamespace
+ */
 #[Routable(command: self::ROUTE)]
 class QueueCommand extends Command
 {
     public const ROUTE = 'db:queue';
 
+    /**
+     * Class constructor.
+     *
+     * @param CacheInterface $cache The cache object to be injected.
+     * @param iDB $db The database object to be injected.
+     */
     public function __construct(private CacheInterface $cache, private iDB $db)
     {
         set_time_limit(0);
@@ -28,6 +40,9 @@ class QueueCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configure the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -52,10 +67,13 @@ class QueueCommand extends Command
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @return int
-     * @throws InvalidArgumentException
+     * Execute the command.
+     *
+     * @param InputInterface $input The input object.
+     * @param OutputInterface $output The output object.
+     *
+     * @return int The command's exit code.
+     * @throws \Psr\Cache\InvalidArgumentException If the cache key is invalid.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {

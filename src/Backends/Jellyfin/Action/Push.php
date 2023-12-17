@@ -17,22 +17,39 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
+/**
+ * Class Push
+ *
+ * This class is responsible for pushing the play state to jellyfin API.
+ */
 class Push
 {
     use CommonTrait;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.push';
+
+    /**
+     * Class constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client.
+     * @param LoggerInterface $logger The logger.
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
     /**
-     * Push Play state.
+     * Wrap the operation in try response block.
      *
-     * @param Context $context
-     * @param array<iState> $entities
-     * @param QueueRequests $queue
-     * @param DateTimeInterface|null $after
-     * @return Response
+     * @param Context $context Backend context.
+     * @param array<iState> $entities Entities to process.
+     * @param QueueRequests $queue The requests queue.
+     * @param DateTimeInterface|null $after Only process entities updated after this date.
+     *
+     * @return Response the response.
      */
     public function __invoke(
         Context $context,
@@ -43,6 +60,16 @@ class Push
         return $this->tryResponse(context: $context, fn: fn() => $this->action($context, $entities, $queue, $after));
     }
 
+    /**
+     * Push the play state to jellyfin API.
+     *
+     * @param Context $context Backend context.
+     * @param array<iState> $entities Entities to process.
+     * @param QueueRequests $queue The request queue.
+     * @param DateTimeInterface|null $after (optional) Only process entities updated after this date.
+     *
+     * @return Response The response.
+     */
     private function action(
         Context $context,
         array $entities,

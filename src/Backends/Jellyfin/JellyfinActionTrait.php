@@ -10,22 +10,29 @@ use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetMetaData;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
-use InvalidArgumentException;
-use RuntimeException;
 
+/**
+ * Trait JellyfinActionTrait
+ *
+ * Common methods for interacting with Jellyfin API.
+ */
 trait JellyfinActionTrait
 {
     /**
      * Create {@see iState} Object based on given data.
      *
-     * @param Context $context
-     * @param iGuid $guid
+     * @param Context $context Context object.
+     * @param iGuid $guid Guid object.
      * @param array $item Jellyfin/emby API item.
-     * @param array $opts options
+     * @param array $opts (Optional) options.
      *
      * @return iState Return object on successful creation.
+     * @throws InvalidArgumentException When no date was set on object.
+     * @throws RuntimeException When API call was not successful.
      */
     protected function createEntity(Context $context, iGuid $guid, array $item, array $opts = []): iState
     {
@@ -39,7 +46,7 @@ trait JellyfinActionTrait
         }
 
         if (null === $date) {
-            throw new RuntimeException('No date was set on object.');
+            throw new InvalidArgumentException('No date was set on object.');
         }
 
         $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
@@ -180,7 +187,9 @@ trait JellyfinActionTrait
      * @param Context $context
      * @param string|int $id
      * @param array $opts
+     *
      * @return array
+     * @throws RuntimeException When API call was not successful.
      */
     protected function getItemDetails(Context $context, string|int $id, array $opts = []): array
     {
@@ -193,6 +202,17 @@ trait JellyfinActionTrait
         throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
     }
 
+    /**
+     * Retrieves the parent of an episode from the cache or makes a request to obtain it.
+     *
+     * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
+     * @param int|string $id The id of the episode.
+     * @param array $logContext Additional log context (optional).
+     *
+     * @return array The parent of the episode as an array.
+     * @throws RuntimeException When API call was not successful.
+     */
     protected function getEpisodeParent(Context $context, iGuid $guid, int|string $id, array $logContext = []): array
     {
         $cacheKey = JellyfinClient::TYPE_SHOW . '.' . $id;
@@ -240,7 +260,13 @@ trait JellyfinActionTrait
     }
 
     /**
-     * Get Backend Libraries details.
+     * Retrieves the backend libraries from the cache or makes a request to obtain them.
+     *
+     * @param Context $context The context object.
+     * @param array $opts (optional) options.
+     *
+     * @return array The backend libraries as an associative array, where the key is the library ID and the value is the raw library data.
+     * @throws RuntimeException When the API call was not successful.
      */
     protected function getBackendLibraries(Context $context, array $opts = []): array
     {

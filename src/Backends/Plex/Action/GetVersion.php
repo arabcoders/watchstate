@@ -15,7 +15,7 @@ final class GetVersion
 {
     use CommonTrait;
 
-    private string $action = 'get version';
+    private string $action = 'plex.getVersion';
 
     public function __construct(
         protected HttpClientInterface $http,

@@ -17,6 +17,8 @@ final class SearchId
     use CommonTrait;
     use PlexActionTrait;
 
+    private string $action = 'plex.searchId';
+
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
@@ -32,12 +34,22 @@ final class SearchId
      */
     public function __invoke(Context $context, string|int $id, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->search($context, $id, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->search($context, $id, $opts),
+            action: $this->action
+        );
     }
 
     private function search(Context $context, string|int $id, array $opts = []): Response
     {
-        $item = $this->getItemDetails($context, $id, $opts);
+        $item = $this->getItemInfo($context, $id, $opts + [Options::NO_THROW => true]);
+
+        if (!$item->isSuccessful()) {
+            return $item;
+        }
+
+        $item = $item->response;
 
         $metadata = ag($item, 'MediaContainer.Metadata.0', []);
 

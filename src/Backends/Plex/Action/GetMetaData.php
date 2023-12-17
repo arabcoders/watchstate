@@ -18,6 +18,8 @@ final class GetMetaData
 {
     use CommonTrait;
 
+    private string $action = 'plex.getMetadata';
+
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
@@ -111,6 +113,7 @@ final class GetMetaData
 
                 return new Response(status: true, response: $item, extra: ['cached' => $fromCache]);
             },
+            action: $this->action
         );
     }
 }

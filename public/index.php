@@ -17,23 +17,35 @@ if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
 
 require __DIR__ . '/../vendor/autoload.php';
 
-set_error_handler(function (int $number, mixed $error, mixed $file, int $line) {
+/**
+ * Throws an exception based on an error code.
+ *
+ * @param int $number The error code.
+ * @param mixed $error The error message.
+ * @param mixed $file The file where the error occurred.
+ * @param int $line The line number where the error occurred.
+ *
+ * @throws ErrorException When the error code is not suppressed by error_reporting.
+ */
+$errorHandler = function (int $number, mixed $error, mixed $file, int $line) {
     $errno = $number & error_reporting();
     if (0 === $errno) {
         return;
     }
 
-    $message = trim(sprintf('%s: %s (%s:%d)', $number, $error, $file, $line));
-    $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
-    $out($message);
+    throw new ErrorException($error, $number, 1, $file, $line);
+};
 
-    exit(Command::FAILURE);
-});
+set_error_handler($errorHandler);
 
 set_exception_handler(function (Throwable $e) {
-    $message = trim(sprintf("%s: %s (%s:%d).", get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()));
     $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
-    $out($message);
+    $out(r(text: '{kind}: {message} ({file}:{line}).', context: [
+        'kind' => $e::class,
+        'line' => $e->getLine(),
+        'message' => $e->getMessage(),
+        'file' => after($e->getFile(), ROOT_PATH),
+    ]));
     exit(Command::FAILURE);
 });
 
@@ -45,16 +57,17 @@ try {
 
     $app = (new App\Libs\Initializer())->boot();
 } catch (Throwable $e) {
-    fwrite(
-        STDERR,
-        trim(
-            sprintf(
-                'Unhandled Exception [%s] was thrown at HTTP boot context. With message [%s] in [%s:%d].',
-                $e::class,
-                $e->getMessage(),
-                array_reverse(explode(ROOT_PATH, $e->getFile(), 2))[0],
-                $e->getLine()
-            )
+    $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+
+    $out(
+        r(
+            text: 'HTTP: Exception [{kind}] was thrown unhandled during HTTP boot context. Error [{message} @ {file}:{line}].',
+            context: [
+                'kind' => $e::class,
+                'line' => $e->getLine(),
+                'message' => $e->getMessage(),
+                'file' => after($e->getFile(), ROOT_PATH),
+            ]
         )
     );
 

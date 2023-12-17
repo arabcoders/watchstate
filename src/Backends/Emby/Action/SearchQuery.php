@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 class SearchQuery extends \App\Backends\Jellyfin\Action\SearchQuery
 {
+    protected string $action = 'emby.searchQuery';
 }

@@ -9,19 +9,27 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Throwable;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
+/**
+ * Class ListCommand
+ *
+ * This command lists the users from the backend. The configured backend token should have access to do so otherwise,
+ * or an error will be thrown. This mainly concerns plex managed users as their tokens are limited.
+ */
 #[Routable(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'backend:users:list';
 
+    /**
+     * Configures the command.
+     */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
@@ -52,7 +60,7 @@ final class ListCommand extends Command
                     {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
 
                     <notice>Notice: If you have many plex users and request tokens for all of them you may get rate-limited by plex api,
-                    you shouldn't do this unless you have good reason. In most cases you dont need to, and can use
+                    you shouldn't do this unless you have good reason. In most cases you don't need to, and can use
                     <cmd>{plex_accesstoken_command}</cmd> command to generate tokens for specific user. for example:</notice>
 
                     {cmd} <cmd>{plex_accesstoken_command}</cmd> -- <value>backend_name plex_user_uuid</value>
@@ -81,6 +89,16 @@ final class ListCommand extends Command
             );
     }
 
+    /**
+     * Runs the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     *
+     * @return int The exit status code.
+     * @throws ExceptionInterface When the request fails.
+     * @throws \JsonException When the response cannot be parsed.
+     */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
@@ -90,75 +108,60 @@ final class ListCommand extends Command
         if (($config = $input->getOption('config'))) {
             try {
                 Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $arr = [
-                    'error' => $e->getMessage()
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+            } catch (\App\Libs\Exceptions\RuntimeException $e) {
+                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
                 return self::FAILURE;
             }
         }
 
-        try {
-            $opts = $backendOpts = [];
-
-            if ($input->getOption('with-tokens')) {
-                $opts['tokens'] = true;
-            }
-
-            if ($input->getOption('include-raw-response')) {
-                $opts[Options::RAW_RESPONSE] = true;
-            }
-
-            if ($input->getOption('use-token')) {
-                $backendOpts = ag_set($backendOpts, 'token', $input->getOption('use-token'));
-            }
-
-            if ($input->getOption('trace')) {
-                $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
-            }
-
-            $libraries = $this->getBackend($backend, $backendOpts)->getUsersList(opts: $opts);
-
-            if (count($libraries) < 1) {
-                $arr = [
-                    'info' => sprintf('%s: No libraries were found.', $backend),
-                ];
-                $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
-                return self::FAILURE;
-            }
-
-            if ('table' === $mode) {
-                $list = [];
-
-                foreach ($libraries as $item) {
-                    foreach ($item as $key => $val) {
-                        if (false === is_bool($val)) {
-                            continue;
-                        }
-                        $item[$key] = $val ? 'Yes' : 'No';
-                    }
-                    $list[] = $item;
-                }
-
-                $libraries = $list;
-            }
-
-            $this->displayContent($libraries, $output, $mode);
-
-            return self::SUCCESS;
-        } catch (Throwable $e) {
-            $arr = [
-                'error' => sprintf('%s: %s', $backend, $e->getMessage()),
-            ];
-            if ('table' !== $mode) {
-                $arr += [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ];
-            }
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+        if (null === ag(Config::get('servers', []), $backend, null)) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
             return self::FAILURE;
         }
+
+        $opts = $backendOpts = [];
+
+        if ($input->getOption('with-tokens')) {
+            $opts['tokens'] = true;
+        }
+
+        if ($input->getOption('include-raw-response')) {
+            $opts[Options::RAW_RESPONSE] = true;
+        }
+
+        if ($input->getOption('use-token')) {
+            $backendOpts = ag_set($backendOpts, 'token', $input->getOption('use-token'));
+        }
+
+        if ($input->getOption('trace')) {
+            $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+        }
+
+        $users = $this->getBackend($backend, $backendOpts)->getUsersList(opts: $opts);
+
+        if (count($users) < 1) {
+            $output->writeln(r("<error>ERROR: No users found for '{backend}'.</error>", ['backend' => $backend]));
+            return self::FAILURE;
+        }
+
+        if ('table' === $mode) {
+            $list = [];
+
+            foreach ($users as $item) {
+                foreach ($item as $key => $val) {
+                    if (false === is_bool($val)) {
+                        continue;
+                    }
+                    $item[$key] = $val ? 'Yes' : 'No';
+                }
+                $list[] = $item;
+            }
+
+            $users = $list;
+        }
+
+        $this->displayContent($users, $output, $mode);
+
+        return self::SUCCESS;
     }
 }
