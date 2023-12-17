@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Backends\Common;
+namespace Tests\Backends\Common;
 
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;

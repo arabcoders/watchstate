@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Database;
 
-use App\Libs\Database\DatabaseException as DBException;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
+use App\Libs\Exceptions\DatabaseException as DBException;
 use App\Libs\Guid;
 use App\Libs\TestCase;
 use DateTimeImmutable;

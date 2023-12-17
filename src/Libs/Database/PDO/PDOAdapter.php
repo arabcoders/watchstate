@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Libs\Database\PDO;
 
 use App\Libs\Container;
-use App\Libs\Database\DatabaseException as DBException;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\DatabaseException as DBException;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface;
