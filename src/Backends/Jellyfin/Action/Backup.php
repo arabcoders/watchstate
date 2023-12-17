@@ -8,16 +8,38 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
-use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
 use Throwable;
 
+/**
+ * Class Backup
+ *
+ * This class is responsible for performing backup operations on Jellyfin backend.
+ *
+ * @extends Import
+ */
 class Backup extends Import
 {
     private const JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.backup';
+
+    /**
+     * Process given item.
+     *
+     * @param Context $context The context object
+     * @param iGuid $guid The GUID object
+     * @param iImport $mapper The import object
+     * @param array $item The item to process
+     * @param array $logContext The log context (optional)
+     * @param array $opts The options (optional)
+     */
     protected function process(
         Context $context,
         iGuid $guid,

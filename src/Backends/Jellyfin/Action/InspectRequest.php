@@ -9,10 +9,28 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Class InspectRequest
+ *
+ * Check if the request originated from emby backend.
+ */
 final class InspectRequest
 {
     use CommonTrait;
 
+    /**
+     * @var string Action name
+     */
+    protected string $action = 'jellyfin.inspectRequest';
+
+    /**
+     * Wrap the inspector in try response block.
+     *
+     * @param Context $context Backend context.
+     * @param ServerRequestInterface $request Request object.
+     *
+     * @return Response The response.
+     */
     public function __invoke(Context $context, ServerRequestInterface $request): Response
     {
         return $this->tryResponse(
@@ -59,7 +77,8 @@ final class InspectRequest
                 }
 
                 return new Response(status: true, response: $alteredRequest);
-            }
+            },
+            action: $this->action
         );
     }
 }

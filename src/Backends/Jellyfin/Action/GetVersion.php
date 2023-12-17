@@ -11,12 +11,27 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class GetVersion
+ *
+ * Represents a class that retrieves the version of jellyfin server.
+ */
 class GetVersion
 {
     use CommonTrait;
 
-    private string $action = 'get version';
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.getVersion';
 
+    /**
+     * Class Constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client instance.
+     * @param LoggerInterface $logger The logger instance.
+     * @param CacheInterface $cache The cache instance.
+     */
     public function __construct(
         protected HttpClientInterface $http,
         protected LoggerInterface $logger,
@@ -25,12 +40,12 @@ class GetVersion
     }
 
     /**
-     * Get Backend unique identifier.
+     * Get Jellyfin server version.
      *
-     * @param Context $context
-     * @param array $opts optional options.
+     * @param Context $context The context instance.
+     * @param array $opts The options array.
      *
-     * @return Response
+     * @return Response The response.
      */
     public function __invoke(Context $context, array $opts = []): Response
     {

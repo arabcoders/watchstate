@@ -30,21 +30,42 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
+/**
+ * Class Import
+ *
+ * This class is responsible for importing data from Jellyfin API.
+ *
+ * This class is very central To processing the backend library data. Any class that needs to process the
+ * entire backend data should extend this class and override the process method.
+ */
 class Import
 {
     use CommonTrait;
     use JellyfinActionTrait;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.import';
+
+    /**
+     * Constructor method for the class.
+     *
+     * @param iHttp $http The HTTP client instance.
+     * @param iLogger $logger The logger instance.
+     */
     public function __construct(protected iHttp $http, protected iLogger $logger)
     {
     }
 
     /**
-     * @param Context $context
-     * @param iGuid $guid
-     * @param iImport $mapper
-     * @param iDate|null $after
-     * @param array $opts
+     * Wrap the import process in try response block.
+     *
+     * @param Context $context Backend context.
+     * @param iGuid $guid Guid instance.
+     * @param iImport $mapper Mapper instance.
+     * @param iDate|null $after Process items after this date.
+     * @param array $opts (Optional) Options.
      *
      * @return Response
      */
@@ -55,44 +76,57 @@ class Import
         iDate|null $after = null,
         array $opts = []
     ): Response {
-        return $this->tryResponse($context, fn() => $this->getLibraries(
+        return $this->tryResponse(
             context: $context,
-            handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
+            fn: fn() => $this->getLibraries(
                 context: $context,
-                response: $response,
-                callback: fn(array $item, array $logContext = []) => $this->process(
+                handle: fn(array $logContext = []) => fn(iResponse $response) => $this->handle(
                     context: $context,
-                    guid: $guid,
-                    mapper: $mapper,
-                    item: $item,
-                    logContext: $logContext,
-                    opts: $opts + ['after' => $after],
+                    response: $response,
+                    callback: fn(array $item, array $logContext = []) => $this->process(
+                        context: $context,
+                        guid: $guid,
+                        mapper: $mapper,
+                        item: $item,
+                        logContext: $logContext,
+                        opts: $opts + ['after' => $after],
+                    ),
+                    logContext: $logContext
                 ),
-                logContext: $logContext
+                error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] library [{library.title}] request. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ],
+                    ]
+                ),
             ),
-            error: fn(array $logContext = []) => fn(Throwable $e) => $this->logger->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] library [{library.title}] request. Error [{error.message} @ {error.file}:{error.line}].',
-                context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
-                    ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ],
-                ]
-            ),
-        ));
+            action: $this->action,
+        );
     }
 
+    /**
+     * Retrieves the libraries for a given context.
+     *
+     * @param Context $context Backend context.
+     * @param Closure $handle The closure to handle a successful response.
+     * @param Closure $error The closure to handle an error response.
+     *
+     * @return array The array of libraries retrieved from the backend.
+     */
     protected function getLibraries(Context $context, Closure $handle, Closure $error): array
     {
         try {
@@ -604,7 +638,14 @@ class Import
     }
 
     /**
-     * @throws TransportExceptionInterface
+     * Method to handle the library response.
+     *
+     * @param Context $context Backend context.
+     * @param iResponse $response The response object.
+     * @param Closure $callback The callback function to be executed for each item.
+     * @param array $logContext (optional) logging context.
+     *
+     * @throws TransportExceptionInterface When the transport fails.
      */
     protected function handle(Context $context, iResponse $response, Closure $callback, array $logContext = []): void
     {
@@ -706,6 +747,14 @@ class Import
         Message::increment('response.size', (int)$response->getInfo('size_download'));
     }
 
+    /**
+     * Process TV Show details.
+     *
+     * @param Context $context Backend context.
+     * @param iGuid $guid The GUID object.
+     * @param array $item The item array.
+     * @param array $logContext (optional) log context.
+     */
     protected function processShow(Context $context, iGuid $guid, array $item, array $logContext = []): void
     {
         $logContext['item'] = [
@@ -756,6 +805,16 @@ class Import
         );
     }
 
+    /**
+     * Process each item.
+     *
+     * @param Context $context Backend context.
+     * @param iGuid $guid GUID Parser.
+     * @param iImport $mapper Mapper instance.
+     * @param array $item The input item array.
+     * @param array $logContext (Optional) log context.
+     * @param array $opts (Optional) options.
+     */
     protected function process(
         Context $context,
         iGuid $guid,

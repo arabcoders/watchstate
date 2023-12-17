@@ -10,6 +10,8 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -17,17 +19,35 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
+/**
+ * Class Progress
+ *
+ * This class is responsible for pushing play progress back to jellyfin API.
+ */
 class Progress
 {
     use CommonTrait;
     use JellyfinActionTrait;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.progress';
+
+    /**
+     * Class constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client.
+     * @param LoggerInterface $logger The logger.
+     *
+     * @return void
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
     /**
-     * Push Play state.
+     * Wrap the operation in try response block.
      *
      * @param Context $context
      * @param iGuid $guid
@@ -43,15 +63,26 @@ class Progress
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
-        return $this->tryResponse(context: $context, fn: fn() => $this->action(
-            $context,
-            $guid,
-            $entities,
-            $queue,
-            $after
-        ), action: 'jellyfin.progress');
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->action($context, $guid, $entities, $queue, $after),
+            action: $this->action
+        );
     }
 
+    /**
+     * Push play progress to the backend.
+     *
+     * @param Context $context Backend context.
+     * @param iGuid $guid GUID Parser.
+     * @param array $entities An array of entities.
+     * @param QueueRequests $queue The queue object.
+     * @param DateTimeInterface|null $after (Optional) The date after which to perform the action.
+     *
+     * @return Response The response.
+     * @throws InvalidArgumentException If no date is provided.
+     * @throws RuntimeException When API call fails.
+     */
     private function action(
         Context $context,
         iGuid $guid,

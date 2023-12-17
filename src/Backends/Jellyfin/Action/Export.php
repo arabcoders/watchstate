@@ -9,17 +9,37 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Container;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\Date;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
-use InvalidArgumentException;
 use Throwable;
 
+/**
+ * Class Export
+ *
+ * Represents a class for exporting data to Jellyfin.
+ *
+ * @extends Import
+ */
 class Export extends Import
 {
+    protected string $action = 'jellyfin.export';
+
+    /**
+     * Process given item.
+     *
+     * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
+     * @param iImport $mapper The mapper object.
+     * @param array $item The item to be processed.
+     * @param array $logContext The log context (optional).
+     * @param array $opts The options (optional).
+     * @return void
+     */
     protected function process(
         Context $context,
         iGuid $guid,

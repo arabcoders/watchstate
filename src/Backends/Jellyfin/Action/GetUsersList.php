@@ -15,10 +15,26 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class GetUsersList
+ *
+ * This class is responsible for retrieving the users list from Jellyfin API.
+ */
 class GetUsersList
 {
     use CommonTrait;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.getUsersList';
+
+    /**
+     * Class Constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client instance.
+     * @param LoggerInterface $logger The logger instance.
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
@@ -26,21 +42,25 @@ class GetUsersList
     /**
      * Get Users list.
      *
-     * @param Context $context
-     * @param array $opts optional options.
+     * @param Context $context The context instance.
+     * @param array $opts Additional options.
      *
-     * @return Response
+     * @return Response The response received.
      */
     public function __invoke(Context $context, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->getUsers($context, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->getUsers($context, $opts),
+            action: $this->action
+        );
     }
 
     /**
-     * Get Users list.
+     * Fetch the users list from Jellyfin API.
      *
-     * @throws ExceptionInterface
-     * @throws JsonException
+     * @throws ExceptionInterface When the request fails.
+     * @throws JsonException When the response is not a valid JSON.
      */
     private function getUsers(Context $context, array $opts = []): Response
     {

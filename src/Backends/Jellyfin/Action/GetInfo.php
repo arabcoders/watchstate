@@ -14,11 +14,16 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class GetInfo
+ *
+ * This class retrieves information from a jellyfin backend.
+ */
 class GetInfo
 {
     use CommonTrait;
 
-    private string $action = 'get info';
+    protected string $action = 'jellyfin.getInfo';
 
     public function __construct(
         protected HttpClientInterface $http,
@@ -28,9 +33,9 @@ class GetInfo
     }
 
     /**
-     * Get Backend unique identifier.
+     * Get backend information.
      *
-     * @param Context $context
+     * @param Context $context Backend context.
      * @param array $opts optional options.
      *
      * @return Response

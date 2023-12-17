@@ -8,6 +8,7 @@ use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Response;
 use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
 use App\Backends\Jellyfin\Action\GetIdentifier;
@@ -27,6 +28,7 @@ use App\Backends\Jellyfin\Action\SearchQuery;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -36,21 +38,27 @@ use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 
+/**
+ * Class JellyfinClient
+ *
+ * This class is responsible for facilitating communication with jellyfin Server backend.
+ *
+ * @implements iClient
+ */
 class JellyfinClient implements iClient
 {
-    public const NAME = 'JellyfinBackend';
-
     public const CLIENT_NAME = 'Jellyfin';
 
     public const TYPE_MOVIE = 'Movie';
     public const TYPE_SHOW = 'Series';
     public const TYPE_EPISODE = 'Episode';
-
     public const COLLECTION_TYPE_SHOWS = 'tvshows';
     public const COLLECTION_TYPE_MOVIES = 'movies';
 
+    /**
+     * @var array<string> This constant represents a list of extra fields tobe included in the request.
+     */
     public const EXTRA_FIELDS = [
         'ProviderIds',
         'DateCreated',
@@ -62,18 +70,38 @@ class JellyfinClient implements iClient
         'Path',
         'UserDataLastPlayedDate',
     ];
-
+    /**
+     * @var array<string> Map the Jellyfin types to our own types.
+     */
     public const TYPE_MAPPER = [
         JellyfinClient::TYPE_SHOW => iState::TYPE_SHOW,
         JellyfinClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         JellyfinClient::TYPE_EPISODE => iState::TYPE_EPISODE,
     ];
-
+    /**
+     * @var Context Backend context.
+     */
     private Context $context;
+    /**
+     * @var iGuid Guid parser.
+     */
     private iGuid $guid;
+    /**
+     * @var iLogger Logger instance.
+     */
     private iLogger $logger;
+    /**
+     * @var Cache Cache instance.
+     */
     private Cache $cache;
 
+    /**
+     * Class constructor.
+     *
+     * @param Cache $cache The cache instance.
+     * @param iLogger $logger The logger instance.
+     * @param JellyfinGuid $guid The Jellyfin GUID instance.
+     */
     public function __construct(Cache $cache, iLogger $logger, JellyfinGuid $guid)
     {
         $this->cache = $cache;
@@ -87,6 +115,9 @@ class JellyfinClient implements iClient
         $this->guid = $guid->withContext($this->context);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function withContext(Context $context): self
     {
         $cloned = clone $this;
@@ -129,16 +160,25 @@ class JellyfinClient implements iClient
         return $cloned;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getContext(): Context
     {
         return $this->context;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getName(): string
     {
         return $this->context?->backendName ?? static::CLIENT_NAME;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setLogger(iLogger $logger): self
     {
         $this->logger = $logger;
@@ -146,6 +186,9 @@ class JellyfinClient implements iClient
         return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
     {
         $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
@@ -157,6 +200,9 @@ class JellyfinClient implements iClient
         return $response->isSuccessful() ? $response->response : $request;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function parseWebhook(ServerRequestInterface $request): iState
     {
         $response = Container::get(ParseWebhook::class)(
@@ -179,6 +225,9 @@ class JellyfinClient implements iClient
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function pull(iImport $mapper, iDate|null $after = null): array
     {
         $response = Container::get(Import::class)(
@@ -196,12 +245,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
@@ -219,12 +271,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function export(iImport $mapper, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Export::class)(
@@ -243,12 +298,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function push(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Push::class)(
@@ -263,12 +321,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
         $response = Container::get(Progress::class)(
@@ -284,12 +345,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return [];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function search(string $query, int $limit = 25, array $opts = []): array
     {
         $response = Container::get(SearchQuery::class)(
@@ -304,12 +368,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function searchId(string|int $id, array $opts = []): array
     {
         $response = Container::get(SearchId::class)(context: $this->context, id: $id, opts: $opts);
@@ -319,12 +386,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getMetadata(string|int $id, array $opts = []): array
     {
         $response = Container::get(GetMetaData::class)(
@@ -334,12 +404,15 @@ class JellyfinClient implements iClient
         );
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getLibrary(string|int $id, array $opts = []): array
     {
         $response = Container::get(GetLibrary::class)(context: $this->context, guid: $this->guid, id: $id, opts: $opts);
@@ -349,12 +422,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getIdentifier(bool $forceRefresh = false): int|string|null
     {
         if (false === $forceRefresh && null !== $this->context->backendId) {
@@ -370,6 +446,9 @@ class JellyfinClient implements iClient
         return $response->isSuccessful() ? $response->response : null;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
@@ -379,27 +458,23 @@ class JellyfinClient implements iClient
                 $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
             }
 
-            throw new RuntimeException(
-                ag($response->extra, 'message', fn() => $response->error->format())
-            );
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
     /**
-     * For Jellyfin we do not generate api access token, thus we simply return
-     * the given the access token.
-     *
-     * @param int|string $userId
-     * @param string $username
-     * @return string|bool
+     * @inheritdoc
      */
     public function getUserToken(int|string $userId, string $username): string|bool
     {
         return $this->context->backendToken;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function listLibraries(array $opts = []): array
     {
         $response = Container::get(GetLibrariesList::class)(context: $this->context, opts: $opts);
@@ -409,12 +484,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getInfo(array $opts = []): array
     {
         $response = Container::get(GetInfo::class)(context: $this->context, opts: $opts);
@@ -424,12 +502,15 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function getVersion(array $opts = []): string
     {
         $response = Container::get(GetVersion::class)(context: $this->context, opts: $opts);
@@ -439,14 +520,36 @@ class JellyfinClient implements iClient
         }
 
         if (false === $response->isSuccessful()) {
-            throw new RuntimeException(ag($response->extra, 'message', fn() => $response->error->format()));
+            $this->throwError($response);
         }
 
         return $response->response;
     }
 
+    /**
+     * @inheritdoc
+     */
     public static function manage(array $backend, array $opts = []): array
     {
         return Container::get(JellyfinManage::class)->manage(backend: $backend, opts: $opts);
+    }
+
+    /**
+     * Throws an exception with the specified message and previous exception.
+     *
+     * @template T
+     * @param Response $response The response object containing the error details.
+     * @param class-string<T> $className The exception class name.
+     * @param int $code The exception code.
+     *
+     * @throws T Always throws the specified exception.
+     */
+    private function throwError(Response $response, string $className = RuntimeException::class, int $code = 0): void
+    {
+        throw new $className(
+            message: ag($response->extra, 'message', fn() => $response->error->format()),
+            code: $code,
+            previous: $response->error->previous
+        );
     }
 }

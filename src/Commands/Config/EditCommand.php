@@ -167,7 +167,7 @@ final class EditCommand extends Command
 
             if (null === $value && !$input->getOption('delete')) {
                 $val = ag($backend, $key, '[No value]');
-                $output->writeln(is_scalar($val) ? (string)$val : r('type: {type}', ['type' => gettype($val)]));
+                $output->writeln(is_scalar($val) ? (string)$val : r('Type({type})', ['type' => get_debug_type($val)]));
                 return self::SUCCESS;
             }
 

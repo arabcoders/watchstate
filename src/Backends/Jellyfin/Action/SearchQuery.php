@@ -16,34 +16,59 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class SearchQuery
+ *
+ * This class is responsible for performing search queries on jellyfin API.
+ */
 class SearchQuery
 {
     use CommonTrait;
 
+    /**
+     * @var string Action name.
+     */
+    protected string $action = 'jellyfin.searchQuery';
+
+    /**
+     * Class Constructor.
+     *
+     * @param HttpClientInterface $http The HTTP client.
+     * @param LoggerInterface $logger The logger.
+     */
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
     {
     }
 
     /**
-     * Get Users list.
+     * Wrap the operation in a try response block.
      *
-     * @param Context $context
-     * @param string $query
-     * @param int $limit
-     * @param array $opts optional options.
+     * @param Context $context Backend context.
+     * @param string $query The query to search for.
+     * @param int $limit The maximum number of results to return.
+     * @param array $opts (optional) options.
      *
-     * @return Response
+     * @return Response The response.
      */
     public function __invoke(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
-        return $this->tryResponse(context: $context, fn: fn() => $this->search($context, $query, $limit, $opts));
+        return $this->tryResponse(
+            context: $context,
+            fn: fn() => $this->search($context, $query, $limit, $opts),
+            action: $this->action
+        );
     }
 
     /**
-     * Search Backend Titles.
+     * Perform search query on jellyfin API.
      *
-     * @throws ExceptionInterface
-     * @throws JsonException
+     * @param Context $context Backend context.
+     * @param string $query The query to search for.
+     * @param int $limit The maximum number of results to return.
+     * @param array $opts (optional) options.
+     *
+     * @throws ExceptionInterface When the request fails.
+     * @throws JsonException When the response is not valid JSON.
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
