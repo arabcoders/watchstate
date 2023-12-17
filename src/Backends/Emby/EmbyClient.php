@@ -29,6 +29,7 @@ use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -38,7 +39,6 @@ use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 
 /**
  * Class EmbyClient

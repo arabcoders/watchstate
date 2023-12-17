@@ -9,10 +9,28 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Class InspectRequest
+ *
+ * Check if the request originated from emby backend.
+ */
 class InspectRequest
 {
     use CommonTrait;
 
+    /**
+     * @var string Action name
+     */
+    protected string $action = 'emby.inspectRequest';
+
+    /**
+     * Wrap the inspector in try response block.
+     *
+     * @param Context $context The context object.
+     * @param ServerRequestInterface $request The server request object.
+     *
+     * @return Response The response object.
+     */
     public function __invoke(Context $context, ServerRequestInterface $request): Response
     {
         return $this->tryResponse(
@@ -59,7 +77,8 @@ class InspectRequest
                 }
 
                 return new Response(status: true, response: $alteredRequest);
-            }
+            },
+            action: $this->action
         );
     }
 }

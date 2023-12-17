@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 class Export extends \App\Backends\Jellyfin\Action\Export
 {
+    protected string $action = 'emby.export';
 }

@@ -6,4 +6,5 @@ namespace App\Backends\Emby\Action;
 
 final class GetUsersList extends \App\Backends\Jellyfin\Action\GetUsersList
 {
+    protected string $action = 'emby.getUsersList';
 }
