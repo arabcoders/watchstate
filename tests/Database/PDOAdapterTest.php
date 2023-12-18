@@ -17,7 +17,9 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class PDOAdapterTest extends TestCase
 {
@@ -26,6 +28,8 @@ class PDOAdapterTest extends TestCase
 
     private iDB|null $db = null;
     protected TestHandler|null $handler = null;
+    protected OutputInterface|null $output = null;
+    protected InputInterface|null $input = null;
 
     public function setUp(): void
     {

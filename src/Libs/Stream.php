@@ -6,7 +6,6 @@ namespace App\Libs;
 
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
-use GdImage;
 use Psr\Http\Message\StreamInterface;
 use Stringable;
 use Throwable;
@@ -56,7 +55,7 @@ final class Stream implements StreamInterface, Stringable
 
         if ($error) {
             throw new RuntimeException(r('Stream: Invalid stream reference provided. Error {error}.', [
-                'error' => ag(error_get_last(), 'message', '??'),
+                'error' => ag(error_get_last() ?? [], 'message', '??'),
             ]));
         }
 
@@ -366,7 +365,7 @@ final class Stream implements StreamInterface, Stringable
             return in_array(get_resource_type($resource), self::ALLOWED_STREAM_RESOURCE_TYPES, true);
         }
 
-        if (PHP_VERSION_ID >= 80000 && $resource instanceof GdImage) {
+        if (extension_loaded('gd') && PHP_VERSION_ID >= 80000 && $resource instanceof \GdImage) {
             return true;
         }
 
