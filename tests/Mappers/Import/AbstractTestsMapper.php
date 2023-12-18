@@ -18,7 +18,9 @@ use PDO;
 use Psr\Log\LoggerInterface;
 use Random\RandomException;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 
 abstract class AbstractTestsMapper extends TestCase
 {
@@ -29,6 +31,8 @@ abstract class AbstractTestsMapper extends TestCase
     protected iDB|null $db = null;
     protected TestHandler|null $handler = null;
     protected LoggerInterface|null $logger = null;
+    protected OutputInterface|null $output = null;
+    protected InputInterface|null $input = null;
 
     abstract protected function setupMapper(): ImportInterface;
 

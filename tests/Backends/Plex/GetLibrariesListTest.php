@@ -23,7 +23,8 @@ class GetLibrariesListTest extends TestCase
 {
     protected TestHandler|null $handler = null;
     protected LoggerInterface|null $logger = null;
-
+    protected Context|null $context = null;
+    
     public function setUp(): void
     {
         $this->handler = new TestHandler();

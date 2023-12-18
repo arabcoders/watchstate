@@ -22,6 +22,8 @@ class CacheTest extends TestCase
     private Cache|null $cache = null;
     private PSRCache|null $psrCache = null;
 
+    private Logger|null $logger = null;
+
     protected function setUp(): void
     {
         $this->psrCache = new PSRCache();
