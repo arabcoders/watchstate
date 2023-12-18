@@ -16,6 +16,7 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
 use Psr\Log\LoggerInterface;
+use Random\RandomException;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -52,6 +53,9 @@ abstract class AbstractTestsMapper extends TestCase
         Message::reset();
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_loadData_null_date_conditions(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
@@ -75,6 +79,9 @@ abstract class AbstractTestsMapper extends TestCase
         );
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_loadData_date_conditions(): void
     {
         $time = time();
@@ -299,6 +306,9 @@ abstract class AbstractTestsMapper extends TestCase
         );
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_get_conditions(): void
     {
         $movie = $this->testMovie;
@@ -341,6 +351,9 @@ abstract class AbstractTestsMapper extends TestCase
         );
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_get_fully_loaded_conditions(): void
     {
         $time = time();
@@ -424,6 +437,9 @@ abstract class AbstractTestsMapper extends TestCase
         );
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_has_conditions(): void
     {
         $testEpisode = new StateEntity($this->testEpisode);
@@ -438,6 +454,9 @@ abstract class AbstractTestsMapper extends TestCase
         );
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_has_fully_loaded_conditions(): void
     {
         $time = time();
@@ -471,6 +490,9 @@ abstract class AbstractTestsMapper extends TestCase
         $this->assertCount(0, $this->mapper, 'Mapper should be empty as we have called reset on the mapper.');
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_getObjects_conditions(): void
     {
         $testMovie = new StateEntity($this->testMovie);

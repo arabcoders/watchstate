@@ -22,7 +22,7 @@ final class PlexGuid implements iGuid
         'tvmaze' => Guid::GUID_TVMAZE,
         'tvrage' => Guid::GUID_TVRAGE,
         'anidb' => Guid::GUID_ANIDB,
-        'youtube' => Guid::GUID_YOUTUBE,
+        'ytinforeader' => Guid::GUID_YOUTUBE,
         'cmdb' => Guid::GUID_CMDB,
     ];
 
@@ -37,7 +37,7 @@ final class PlexGuid implements iGuid
         'com.plexapp.agents.xbmcnfotv',
         'com.plexapp.agents.thetvdb',
         'com.plexapp.agents.hama',
-        'com.plexapp.agents.youtube',
+        'com.plexapp.agents.ytinforeader',
         'com.plexapp.agents.cmdb',
     ];
 
@@ -149,8 +149,7 @@ final class PlexGuid implements iGuid
 
                 if (true === str_starts_with($val, 'com.plexapp.agents.')) {
                     // -- DO NOT accept plex relative unique ids, we generate our own.
-                    // -- exception for youtube agent, as it is a mess.
-                    if (false === str_contains($val, '.youtube') && substr_count($val, '/') >= 3) {
+                    if (substr_count($val, '/') >= 3) {
                         continue;
                     }
 
@@ -271,43 +270,6 @@ final class PlexGuid implements iGuid
         }
 
         try {
-            /**
-             * YouTube agent IDs are a mess, and hard to parse, so we have to use fallback system,
-             * series id usually looks like
-             * com.plexapp.agents.youtube://youtube|UCIfuY0NRq1szr_6tzFy23NF|Season 2022?lang=xn
-             * and season looks like
-             * com.plexapp.agents.youtube://youtube|UCIfuY0NRq1szr_6tzFy23NF|Season 2023/2015?lang=xn
-             * and episodes looks like
-             * com.plexapp.agents.youtube://youtube|UCIfuY0NRq1szr_6tzFy23NF|Season 2022/2018/1102421482?lang=xn
-             *
-             * So the order of parsing is from episode to channel.
-             */
-            if (true === str_starts_with($guid, 'com.plexapp.agents.youtube')) {
-                $af = after($guid, '://');
-
-                // -- Check for episode id.
-                $iRegex = '/^youtube\|(?<channel>PL[^\[\]]{16}|PL[^\[\]]{32}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)\/(?<season>\d+)\/(?<episode>\d+)\?.+$/is';
-                if (1 === preg_match($iRegex, $af, $matches)) {
-                    return r('{agent}://{channel}/{season}/{episode}', [
-                        'agent' => 'youtube',
-                        'channel' => ag($matches, 'channel'),
-                        'season' => ag($matches, 'season'),
-                        'episode' => ag($matches, 'episode'),
-                    ]);
-                }
-
-                // -- fallback to channel if episode match fails.
-                $pRegex = '/^youtube\|(?<channel>PL[^\[\]]{32}|PL[^\[\]]{16}|(UC|HC|UU|FL|LP|RD)[^\[\]]{22})(?<folder>\|?.+)?/is';
-                if (1 === preg_match($pRegex, $af, $matches)) {
-                    return r('{agent}://{channel}', [
-                        'agent' => 'youtube',
-                        'channel' => ag($matches, 'channel'),
-                    ]);
-                }
-
-                return $guid;
-            }
-
             // -- Handle hama plex agent. This is multi source agent.
             if (true === str_starts_with($guid, 'com.plexapp.agents.hama')) {
                 $hamaRegex = '/(?P<source>(anidb|tvdb|tmdb|tsdb|imdb))\d?-(?P<id>[^\[\]]*)/';

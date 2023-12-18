@@ -236,10 +236,11 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
-* com.plexapp.agents.youtube://youtube|(seriesId)|(?<folder>\w)?/(?<season>
-  \d)?(.+) [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle)
+* com.plexapp.agents.ytinforeader://(id)
+  ?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent)
   With [jp_scanner.py](https://gist.github.com/arabcoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
-* com.plexapp.agents.cmdb://(id)?(.+) `(Custom metadata db agent)` Will release more information about it at later time.
+* com.plexapp.agents.cmdb://(id)?lang=en [Custom metadata db agent](https://github.com/arabcoders/cmdb.bundle) User
+  created metadata database.
 
 ---
 
@@ -544,11 +545,9 @@ make `.info.json` optional However at the moment the file is required for emby/j
 
 #### Plex Setup
 
-* Download this agent [YouTube-Agent.bundle](https://github.com/ZeroQI/YouTube-Agent.bundle) please follow the
-  instructions on how to install it from the link itself.
-* Download my custom scanner [jp_scanner.py](https://gist.github.com/arabcoders/ecb2755aa1d76dc89301ec44b8d367d5) and
-  save it into `[...]/Plex Media Server/Scanners/Series/jp_scanner.py` if you don't know there are more detailed guide
-  at this link [How to install a Scanner](https://github.com/ZeroQI/Absolute-Series-Scanner#install--update).
+* Download this agent [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent) please follow
+  the instructions on how to install it from the link itself. It's important to use the specified scanner otherwise the
+  syncing will not work.
 
 #### Jellyfin Setup
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Backends\Plex;
+namespace Tests\Backends\Plex;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
@@ -52,8 +52,7 @@ class GetLibrariesListTest extends TestCase
         ]);
 
         $client = new MockHttpClient($resp);
-        $list = new GetLibrariesList($client, $this->logger);
-        $response = $list($this->context);
+        $response = (new GetLibrariesList($client, $this->logger))($this->context);
 
         $this->assertTrue($response->status);
         $this->assertNull($response->error);
