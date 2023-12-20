@@ -582,8 +582,6 @@ class HelpersTest extends TestCase
             'When request is passed, it returns client ip.'
         );
 
-        Config::init(['trust' => ['proxy' => true]]);
-
         $factory = new Psr17Factory();
         $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
             ->fromArrays([
@@ -592,10 +590,84 @@ class HelpersTest extends TestCase
                 'HTTP_X_FORWARDED_FOR' => '4.3.2.1',
             ]);
 
+        $this->assertSame('1.2.3.4', getClientIp($request), 'When trust proxy is disabled, it returns client ip.');
+
+        Config::init(['trust' => ['proxy' => true]]);
+
         $this->assertSame(
             '4.3.2.1',
             getClientIp($request),
             'When request is passed, it returns client ip.'
         );
+    }
+
+    public function test_getClientIp_SERVER(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '1.2.3.4';
+
+        $this->assertSame('1.2.3.4', getClientIp(), 'When request is passed, it returns client ip.');
+
+        Config::init([]);
+
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '4.3.2.1';
+        $this->assertSame('1.2.3.4', getClientIp(), 'When trust proxy is disabled, it returns client ip.');
+
+        Config::init(['trust' => ['proxy' => true]]);
+
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '4.3.2.1';
+
+        $this->assertSame('4.3.2.1', getClientIp(), 'When request is passed, it returns client ip.');
+
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '1.2.3.4';
+
+        $this->assertSame('1.2.3.4', getClientIp(), 'When trust proxy is enabled, and ip is the same return it');
+
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = ',4.3.2.1';
+        $this->assertSame(
+            '1.2.3.4',
+            getClientIp(),
+            'When trust proxy is enabled, And first ip is empty return real ip.'
+        );
+
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = 'garbage,4.3.2.1';
+        $this->assertSame(
+            '1.2.3.4',
+            getClientIp(),
+            'When trust proxy is enabled, first ip is garbage return real ip.'
+        );
+    }
+
+    public function test_inContainer()
+    {
+        $this->assertFalse(inContainer(), 'When not in container, false is returned.');
+
+        $_ENV['IN_CONTAINER'] = true;
+        $this->assertTrue(inContainer(), 'When in container, true is returned.');
+
+
+        putenv('IN_CONTAINER=true');
+        $this->assertTrue(inContainer(), 'When in container, true is returned.');
+    }
+
+    public function test_isValidURL(): void
+    {
+        $this->assertTrue(isValidURL('http://example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('https://example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('http://example.com/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('https://example.com/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('http://www.example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('https://www.example.com'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('http://www.example.com/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('https://www.example.com/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('http://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('https://127.0.0.1/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('http://localhost:1337/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertTrue(isValidURL('https://localhost:1337/foo/bar'), 'When valid url is passed, true is returned.');
+        $this->assertFalse(
+            isValidURL('example.com/foo/bar?foo=bar&baz'),
+            'When invalid url is passed, false is returned.'
+        );
+        $this->assertFalse(isValidURL('example.com'), 'When invalid url is passed, false is returned.');
     }
 }

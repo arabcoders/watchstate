@@ -797,4 +797,64 @@ class StateEntityTest extends TestCase
             'When markAsUnplayed() is called, three mandatory fields are updated: (updated, watched and via)'
         );
     }
+
+    public function test_hasPlayProgress(): void
+    {
+        $entity = new StateEntity($this->testMovie);
+        $this->assertFalse(
+            $entity->hasPlayProgress(),
+            'When hasPlayProgress() when valid play progress is set, but the entity is marked as watched returns false'
+        );
+
+        $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
+        $testData = ag_set($testData, 'metadata.home_plex.watched', 1);
+        $entity = new StateEntity($testData);
+
+        $this->assertFalse(
+            $entity->hasPlayProgress(),
+            'When hasPlayProgress() when valid play progress is set, but the entity server metadata is marked as watched returns false'
+        );
+
+        $testData = ag_set($this->testMovie, 'metadata.home_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.home_plex.progress', 999);
+        $entity = new StateEntity($testData);
+        $this->assertFalse(
+            $entity->hasPlayProgress(),
+            'When hasPlayProgress() when all conditions are met except play progress is less than 1s, returns false'
+        );
+
+        $testData = ag_set($this->testMovie, 'watched', 0);
+        $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.home_plex.progress', 5000);
+        $entity = new StateEntity($testData);
+
+        $this->assertTrue(
+            $entity->hasPlayProgress(),
+            'When hasPlayProgress() when valid play progress is set, returns true'
+        );
+    }
+
+    public function test_getPlayProgress(): void
+    {
+        $testData = ag_set($this->testMovie, 'watched', 0);
+        $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
+        $entity = new StateEntity($testData);
+        $this->assertSame(
+            5000,
+            $entity->getPlayProgress(),
+            'When hasPlayProgress() when valid play progress is set, returns true'
+        );
+
+        $testData = ag_set($this->testMovie, 'watched', 0);
+        $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.home_plex', []));
+        $testData = ag_set($testData, 'metadata.test.progress', 999);
+
+        $entity = new StateEntity($testData);
+        $this->assertSame(
+            5000,
+            $entity->getPlayProgress(),
+            'When hasPlayProgress() when valid play progress is set, returns true'
+        );
+    }
 }
