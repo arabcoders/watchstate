@@ -7,7 +7,9 @@ namespace App\Backends\Jellyfin;
 use App\Backends\Common\Cache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Backends\Common\Error;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\Action\Backup;
 use App\Backends\Jellyfin\Action\Export;
@@ -29,6 +31,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\RuntimeException;
+use App\Libs\Exceptions\Backends\UnexpectedVersionException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
@@ -332,6 +335,27 @@ class JellyfinClient implements iClient
      */
     public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array
     {
+        $version = $this->getVersion();
+
+        if (false === version_compare($version, '10.8.14', '>=')) {
+            $this->throwError(
+                response: new Response(
+                    status: false,
+                    error: new Error(
+                        message: 'Jellyfin play progress support works on Jellyfin version {version.required} and above. You are currently running {version.current}.',
+                        context: [
+                            'version' => [
+                                'current' => $version,
+                                'required' => '10.8.14',
+                            ],
+                        ],
+                        level: Levels::ERROR,
+                    )
+                ),
+                className: UnexpectedVersionException::class
+            );
+        }
+
         $response = Container::get(Progress::class)(
             context: $this->context,
             guid: $this->guid,

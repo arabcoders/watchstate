@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\UnexpectedVersionException;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Routable;
@@ -195,24 +196,66 @@ class ProgressCommand extends Command
         }
 
         foreach ($list as $name => &$backend) {
-            $opts = ag($backend, 'options', []);
+            try {
+                $opts = ag($backend, 'options', []);
 
-            if ($input->getOption('ignore-date')) {
-                $opts[Options::IGNORE_DATE] = true;
+                if ($input->getOption('ignore-date')) {
+                    $opts[Options::IGNORE_DATE] = true;
+                }
+
+                if ($input->getOption('dry-run')) {
+                    $opts[Options::DRY_RUN] = true;
+                }
+
+                if ($input->getOption('trace')) {
+                    $opts[Options::DEBUG_TRACE] = true;
+                }
+
+                $backend['options'] = $opts;
+                $backend['class'] = $this->getBackend(name: $name, config: $backend);
+                
+                $backend['class']->progress(entities: $entities, queue: $this->queue);
+            } /** @noinspection PhpRedundantCatchClauseInspection */
+            catch (UnexpectedVersionException $e) {
+                $this->logger->notice(
+                    'SYSTEM: Sync play progress is not supported for [{backend}]. Error [{error.message} @ {error.file}:{error.line}].',
+                    [
+                        'backend' => $name,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
+                    ]
+                );
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    message: 'SYSTEM: Exception [{error.kind}] was thrown unhandled during [{backend}] request to sync progress. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
+                    ]
+                );
             }
-
-            if ($input->getOption('dry-run')) {
-                $opts[Options::DRY_RUN] = true;
-            }
-
-            if ($input->getOption('trace')) {
-                $opts[Options::DEBUG_TRACE] = true;
-            }
-
-            $backend['options'] = $opts;
-            $backend['class'] = $this->getBackend(name: $name, config: $backend);
-
-            $backend['class']->progress(entities: $entities, queue: $this->queue);
         }
 
         unset($backend);

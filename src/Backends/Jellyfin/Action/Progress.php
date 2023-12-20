@@ -114,16 +114,19 @@ class Progress
             ];
 
             if ($context->backendName === $entity->via) {
-                $this->logger->info('Ignoring [{item.title}] for [{backend}]. Event originated from this backend.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->info(
+                    'Jellyfin.Progress: Ignoring [{item.title}] for [{backend}]. Event originated from this backend.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    'Ignoring [{item.title}] for [{backend}]. No metadata was found.',
+                    'Jellyfin.Progress: Ignoring [{item.title}] for [{backend}]. No metadata was found.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -134,10 +137,13 @@ class Progress
 
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
-                $this->logger->warning('Ignoring [{item.title}] for [{backend}]. Sender did not set a date.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->warning(
+                    'Jellyfin.Progress: Ignoring [{item.title}] for [{backend}]. Sender did not set a date.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
             $senderDate = makeDate($senderDate)->getTimestamp();
@@ -145,7 +151,7 @@ class Progress
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend date.',
+                    'Jellyfin.Progress: Ignoring [{item.title}] for [{backend}]. Sender date is older than backend date.',
                     [
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -167,7 +173,7 @@ class Progress
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend item date.',
+                        'Jellyfin.Progress: Ignoring [{item.title}] for [{backend}]. Sender date is older than backend item date.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -178,7 +184,7 @@ class Progress
 
                 if ($remoteItem->isWatched()) {
                     $this->logger->info(
-                        'Ignoring [{item.title}] for [{backend}]. The backend reported the item as watched.',
+                        'Jellyfin.Progress: Ignoring [{item.title}] for [{backend}]. The backend reported the item as watched.',
                         [
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -213,29 +219,37 @@ class Progress
 
             try {
                 $url = $context->backendUrl->withPath(
-                    r('/Users/{user_id}/PlayingItems/{item_id}', [
+                    r('/Users/{user_id}/Items/{item_id}/UserData', [
                         'user_id' => $context->backendUser,
                         'item_id' => $logContext['remote']['id'],
-                    ])
-                )->withQuery(
-                    http_build_query([
-                        'positionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
                     ])
                 );
 
                 $logContext['remote']['url'] = (string)$url;
 
-                $this->logger->debug('Updating [{backend}] {item.type} [{item.title}] watch progress.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->debug(
+                    'Jellyfin.Progress: Updating [{client}: {backend}] {item.type} [{item.title}] watch progress.',
+                    [
+                        // -- convert time to ticks for emby to understand it.
+                        'time' => floor($entity->getPlayProgress() * 1_00_00),
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
 
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
-                            'DELETE',
+                            'POST',
                             (string)$url,
                             array_replace_recursive($context->backendHeaders, [
+                                'headers' => [
+                                    'Content-Type' => 'application/json',
+                                ],
+                                'json' => [
+                                    'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
+                                ],
                                 'user_data' => [
                                     'id' => $key,
                                     'context' => $logContext + [

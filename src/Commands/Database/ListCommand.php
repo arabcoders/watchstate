@@ -476,6 +476,7 @@ final class ListCommand extends Command
                     'via' => $entity->via ?? '??',
                     'date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
                     'played' => $entity->isWatched() ? 'Yes' : 'No',
+                    'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : 'None',
                     'event' => ag($entity->extra[$entity->via] ?? [], iState::COLUMN_EXTRA_EVENT, '-'),
                 ];
             }
