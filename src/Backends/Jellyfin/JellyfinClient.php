@@ -337,7 +337,7 @@ class JellyfinClient implements iClient
     {
         $version = $this->getVersion();
 
-        if (false === version_compare($version, '10.8.14', '>=')) {
+        if (false === version_compare($version, '10.9', '>=')) {
             $this->throwError(
                 response: new Response(
                     status: false,
@@ -346,7 +346,7 @@ class JellyfinClient implements iClient
                         context: [
                             'version' => [
                                 'current' => $version,
-                                'required' => '10.8.14',
+                                'required' => '10.9.x',
                             ],
                         ],
                         level: Levels::ERROR,
