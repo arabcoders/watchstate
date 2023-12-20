@@ -41,7 +41,7 @@ if (!function_exists('env')) {
             return getValue($default);
         }
 
-        return match (strtolower($value)) {
+        return match (is_string($value) ? strtolower($value) : $value) {
             'true', '(true)' => true,
             'false', '(false)' => false,
             'empty', '(empty)' => '',
@@ -962,7 +962,7 @@ if (!function_exists('getClientIp')) {
             return $realIp;
         }
 
-        if (null === ($firstIp = explode(',', $forwardIp)[0] ?? null)) {
+        if (null === ($firstIp = explode(',', $forwardIp)[0] ?? null) || empty($firstIp)) {
             return $realIp;
         }
 

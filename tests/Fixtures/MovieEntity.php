@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 
 return [
-    iFace::COLUMN_ID => null,
-    iFace::COLUMN_TYPE => iFace::TYPE_MOVIE,
-    iFace::COLUMN_UPDATED => 1,
-    iFace::COLUMN_WATCHED => 1,
-    iFace::COLUMN_VIA => 'home_plex',
-    iFace::COLUMN_TITLE => 'Movie Title',
-    iFace::COLUMN_YEAR => 2020,
-    iFace::COLUMN_SEASON => null,
-    iFace::COLUMN_EPISODE => null,
-    iFace::COLUMN_PARENT => [],
-    iFace::COLUMN_GUIDS => [
+    iState::COLUMN_ID => null,
+    iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+    iState::COLUMN_UPDATED => 1,
+    iState::COLUMN_WATCHED => 1,
+    iState::COLUMN_VIA => 'home_plex',
+    iState::COLUMN_TITLE => 'Movie Title',
+    iState::COLUMN_YEAR => 2020,
+    iState::COLUMN_SEASON => null,
+    iState::COLUMN_EPISODE => null,
+    iState::COLUMN_PARENT => [],
+    iState::COLUMN_GUIDS => [
         Guid::GUID_IMDB => 'tt1100',
         Guid::GUID_TVDB => '1200',
         Guid::GUID_TMDB => '1300',
@@ -24,23 +24,24 @@ return [
         Guid::GUID_TVRAGE => '1500',
         Guid::GUID_ANIDB => '1600',
     ],
-    iFace::COLUMN_META_DATA => [
+    iState::COLUMN_META_DATA => [
         'home_plex' => [
-            iFace::COLUMN_ID => 121,
-            iFace::COLUMN_TYPE => iFace::TYPE_MOVIE,
-            iFace::COLUMN_WATCHED => 1,
-            iFace::COLUMN_YEAR => '2020',
-            iFace::COLUMN_META_DATA_EXTRA => [
-                iFace::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
+            iState::COLUMN_ID => 121,
+            iState::COLUMN_TYPE => iState::TYPE_MOVIE,
+            iState::COLUMN_WATCHED => 1,
+            iState::COLUMN_YEAR => '2020',
+            iState::COLUMN_META_DATA_EXTRA => [
+                iState::COLUMN_META_DATA_EXTRA_DATE => '2020-01-03',
             ],
-            iFace::COLUMN_META_DATA_ADDED_AT => 1,
-            iFace::COLUMN_META_DATA_PLAYED_AT => 2,
+            iState::COLUMN_META_DATA_PROGRESS => 5000,
+            iState::COLUMN_META_DATA_ADDED_AT => 1,
+            iState::COLUMN_META_DATA_PLAYED_AT => 2,
         ],
     ],
-    iFace::COLUMN_EXTRA => [
+    iState::COLUMN_EXTRA => [
         'home_plex' => [
-            iFace::COLUMN_EXTRA_EVENT => 'media.scrobble',
-            iFace::COLUMN_EXTRA_DATE => 1,
+            iState::COLUMN_EXTRA_EVENT => 'media.scrobble',
+            iState::COLUMN_EXTRA_DATE => 2,
         ],
     ],
 ];
