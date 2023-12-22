@@ -155,6 +155,26 @@ $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
 
 ----
 
+### How do i migrate invited friends i.e. (external user) data from from plex to emby/jellyfin?
+
+As this tool is designed to work with single user, You have to treat each invited friend as a separate user. what is
+needed, you need to contact that friend of yours and ask him to give you a copy of his [X-Plex-Token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/),
+then create new container and add the backend with the token you got from your friend.
+
+After that, add your other backends like emby/jellyfin using your regular API key. jellyfin/emby differentiate between users by using the userId which
+you should select at the start of the add process.
+
+After that. run the `state:import -f -s [plex_server_name]` command to import the user watch state. After that, you can run the `state:export -fi -s [emby/jellyfin_server_name]` to export the
+watch state to the new backend.
+
+You have to repeat these steps for each user you want to migrate their data off the plex server.
+
+> [!IMPORTANT]
+> YOU MUST always start with fresh data for **EACH USER**, otherwise unexpected things might happen.
+> Make sure to delete docker-compose.yaml `./data` directory. to start fresh
+
+----
+
 ### Does this tool require webhooks to work?
 
 No, You can use the `task scheduler` or on `demand sync` if you want.

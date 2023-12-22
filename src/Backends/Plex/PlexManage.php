@@ -59,9 +59,9 @@ class PlexManage implements ManageInterface
             $question = new Question(
                 r(
                     <<<HELP
-                    <question>Enter [<value>{name}</value>] Plex admin token</question>. {default}
+                    
+                    <question>Enter [<value>{name}</value>] X-Plex-Token</question>. {default}
                     ------------------
-                    <info>Please log in your main plex account to extract the admin token.</info>
                     to find your plex token. follow the steps described in the following link.
                     <href={url}>{url}</>
                     ------------------
@@ -119,7 +119,7 @@ class PlexManage implements ManageInterface
                         throw new RuntimeException('Plex API returned empty list of servers.');
                     }
 
-                    $list = $map = [];
+                    $list = $map = $uuid = [];
 
                     foreach ($backends as $server) {
                         $val = r('{name} - {uri}', [
@@ -129,6 +129,7 @@ class PlexManage implements ManageInterface
 
                         $list[] = $val;
                         $map[$val] = ag($server, 'uri');
+                        $uuid[$val] = ag($server, 'identifier');
                     }
 
                     $list[] = 'Other. Enter manually.';
@@ -147,6 +148,7 @@ class PlexManage implements ManageInterface
 
                     if (true === ag_exists($map, $server)) {
                         $backend = ag_set($backend, 'url', ag($map, $server));
+                        $backend = ag_set($backend, 'uuid', ag($uuid, $server));
                         return;
                     }
                 }
@@ -232,11 +234,7 @@ class PlexManage implements ManageInterface
                         <<<ERROR
                         <error>Failed to automatically get server unique identifier.</error>
                         ------------------
-                        <notice>This most likely means the token that was given doesn't have access to the selected server.
-                        Or the token is for invited friend i.e. (external user), which the token doesn't have access to the
-                        internal settings, Thus the tool cannot get the server unique identifier.</notice>
-                        <comment>If that's the case, you san safely ignore this error and put random string in the next step.</comment>
-                        <comment>However, keep in mind webhooks will not work without correct backend unique identifier.</comment>
+                        <notice>This most likely means the token that was given doesn't have access to the selected server.</notice>
                         ------------------
                         {class}: {error}
                         ERROR,
