@@ -89,5 +89,11 @@ class ErrorTest extends TestCase
             $error->hasException(),
             'hasException() should return true if previous exception is set.'
         );
+
+        $this->assertStringContainsString(
+            'message with no tags',
+            $error->__toString(),
+            '__toString() should return the message.'
+        );
     }
 }
