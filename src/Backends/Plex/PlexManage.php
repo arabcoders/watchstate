@@ -214,21 +214,29 @@ class PlexManage implements ManageInterface
                 ]);
 
                 $chosen = ag($backend, 'uuid', fn() => makeBackend($custom, ag($custom, 'name'))->getIdentifier(true));
-                $this->output->writeln(
-                    r(
-                        '<notice>Backend responded with [{id}] as it\'s unique identifier. setting it as default value.</notice>',
-                        [
-                            'id' => $chosen
-                        ]
-                    )
-                );
+                if (null !== $chosen) {
+                    $this->output->writeln(
+                        r(
+                            '<notice>Backend responded with [{id}] as it\'s unique identifier. setting it as default value.</notice>',
+                            [
+                                'id' => $chosen
+                            ]
+                        )
+                    );
+                } else {
+                    throw new RuntimeException('Empty backend unique identifier was returned.');
+                }
             } catch (Throwable $e) {
                 $this->output->writeln(
                     r(
                         <<<ERROR
                         <error>Failed to automatically get server unique identifier.</error>
                         ------------------
-                        This most likely means the token that was given doesn't have access to the selected server.
+                        <notice>This most likely means the token that was given doesn't have access to the selected server.
+                        Or the token is for invited friend i.e. (external user), which the token doesn't have access to the
+                        internal settings, Thus the tool cannot get the server unique identifier.</notice>
+                        <comment>If that's the case, you san safely ignore this error and put random string in the next step.</comment>
+                        <comment>However, keep in mind webhooks will not work without correct backend unique identifier.</comment>
                         ------------------
                         {class}: {error}
                         ERROR,
