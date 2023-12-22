@@ -194,7 +194,7 @@ final class UnifyCommand extends Command
 
             $client = makeBackend(Config::get($ref), $backendName);
 
-            $uuid = $client->getIdentifier(true);
+            $uuid = $client->getContext()->backendId ?? $client->getIdentifier(true);
 
             if (empty($uuid)) {
                 $output->writeln(
