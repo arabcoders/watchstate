@@ -7,6 +7,7 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Config;
 use App\Libs\Routable;
+use App\Libs\Stream;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -225,7 +226,9 @@ final class UnifyCommand extends Command
             copy($config, $config . '.bak');
         }
 
-        file_put_contents($config, Yaml::dump(Config::get('servers', []), 8, 2));
+        $stream = new Stream($config, 'w');
+        $stream->write(Yaml::dump(Config::get('servers', []), 8, 2));
+        $stream->close();
 
         $output->writeln(
             sprintf('<comment>Unified the webhook token of %d %s backends.</comment>', count($list), $type)

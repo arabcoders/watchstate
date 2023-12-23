@@ -10,6 +10,7 @@ use App\Commands\System\IndexCommand;
 use App\Libs\Config;
 use App\Libs\Options;
 use App\Libs\Routable;
+use App\Libs\Stream;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -397,7 +398,9 @@ final class ManageCommand extends Command
 
         $backends = ag_set($backends, $name, $u);
 
-        file_put_contents($config, Yaml::dump($backends, 8, 2));
+        $stream = new Stream($config, 'w');
+        $stream->write(Yaml::dump($backends, 8, 2));
+        $stream->close();
 
         $output->writeln('<info>Config updated.</info>');
 

@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Stream;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use Monolog\Handler\TestHandler;
@@ -24,11 +25,16 @@ class GetLibrariesListTest extends TestCase
     protected TestHandler|null $handler = null;
     protected LoggerInterface|null $logger = null;
     protected Context|null $context = null;
-    
+    protected array $data = [];
+
     public function setUp(): void
     {
         $this->handler = new TestHandler();
         $this->logger = new Logger('test', [$this->handler], [new LogMessageProcessor()]);
+        $this->data = json_decode(
+            json: (string)Stream::make(__DIR__ . '/../../Fixtures/plex_data.json', 'r'),
+            associative: true
+        );
 
         $this->context = new Context(
             clientName: PlexClient::CLIENT_NAME,
@@ -43,9 +49,7 @@ class GetLibrariesListTest extends TestCase
 
     public function test_correct_response(): void
     {
-        $data = json_decode(file_get_contents(__DIR__ . '/../../Fixtures/plex_data.json'), true);
-
-        $json = ag($data, 'sections_get_200');
+        $json = ag($this->data, 'sections_get_200');
 
         $resp = new MockResponse(json_encode(ag($json, 'response.body')), [
             'http_code' => (int)ag($json, 'response.http_code'),
@@ -90,11 +94,9 @@ class GetLibrariesListTest extends TestCase
         }
     }
 
-    public function test_401_response(): void
+    public function test_401_response_with_invalid_token(): void
     {
-        $data = json_decode(file_get_contents(__DIR__ . '/../../Fixtures/plex_data.json'), true);
-
-        $json = ag($data, 'sections_get_401');
+        $json = ag($this->data, 'sections_get_401');
 
         $resp = new MockResponse(json_encode(ag($json, 'response.body')), [
             'http_code' => (int)ag($json, 'response.http_code'),
