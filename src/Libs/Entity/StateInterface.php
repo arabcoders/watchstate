@@ -42,6 +42,7 @@ interface StateInterface extends LoggerAwareInterface
     public const COLUMN_META_DATA_ADDED_AT = 'added_at';
     public const COLUMN_META_DATA_PLAYED_AT = 'played_at';
     public const COLUMN_META_DATA_PROGRESS = 'progress';
+    public const COLUMN_META_DATA_RATING = 'rating';
     public const COLUMN_META_DATA_EXTRA = 'extra';
     public const COLUMN_META_DATA_EXTRA_TITLE = 'title';
     public const COLUMN_META_DATA_EXTRA_DATE = 'date';
