@@ -544,6 +544,8 @@ something like `redis://redis:6379?password=my_secert_password&db=8`. We only su
 
 Once that done, restart the container.
 
+---
+
 ### There are weirdly named directories in my data path?
 
 Unfortunately, That was due to a bug introduced in (2023-09-12 877a41a) and was fixed in (2023-09-19 a2f8c8a), if you
@@ -551,6 +553,8 @@ have happened to installation or update during this period, you will have those 
 can simply delete those folders `%(tmpDir)` `%(path)` `{path}` `{tmpDir}`. I decided to not do it automatically to avoid
 any data loss. you should check the directories to make sure they are empty. if not copy the directories to the correct
 location and delete the empty directories.
+
+---
 
 ### How to get WatchState working with YouTube content/library?
 
@@ -597,7 +601,7 @@ If the command fails for any reason, then you most likely have network related p
 
 ```bash
 $ docker exec -ti watchstate bash
-$ curl -v -H "Accept: application/json" -H "X-Plex-Token: [PLEX_TOKEN]" http://[PLEX_URL]/library/sections
+$ curl -H "Accept: application/json" -H "X-Plex-Token: [PLEX_TOKEN]" http://[PLEX_URL]/
 ```
 
 * Replace `[PLEX_TOKEN]` with your plex token.
@@ -613,7 +617,7 @@ If everything is working correctly you should see something like this previous j
 
 ```bash
 $ docker exec -ti watchstate bash
-$ curl -v -H "Accept: application/json" -H "X-MediaBrowser-Token: [BACKEND_API_KEY]" http://[BACKEND_HOST]/library/sections
+$ curl -v -H "Accept: application/json" -H "X-MediaBrowser-Token: [BACKEND_API_KEY]" http://[BACKEND_HOST]/System/Info
 ```
 
 * Replace `[BACKEND_API_KEY]` with your jellyfin/emby api key.

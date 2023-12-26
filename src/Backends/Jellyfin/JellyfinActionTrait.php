@@ -45,6 +45,13 @@ trait JellyfinActionTrait
             $date = ag($item, true === $isPlayed ? ['UserData.LastPlayedDate', 'DateCreated'] : 'DateCreated');
         }
 
+        // -- For Progress action we need to use the latest date.
+        if (true === (bool)($opts['latest_date'] ?? false)) {
+            if (null !== ($_lastPlayed = ag($item, 'UserData.LastPlayedDate'))) {
+                $date = $_lastPlayed;
+            }
+        }
+
         if (null === $date) {
             throw new InvalidArgumentException('No date was set on object.');
         }

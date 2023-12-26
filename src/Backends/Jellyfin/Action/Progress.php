@@ -30,6 +30,11 @@ class Progress
     use JellyfinActionTrait;
 
     /**
+     * @var int Default time drift in seconds.
+     */
+    private const DEFAULT_TIME_DRIFT = 30;
+
+    /**
      * @var string Action name.
      */
     protected string $action = 'jellyfin.progress';
@@ -80,8 +85,6 @@ class Progress
      * @param DateTimeInterface|null $after (Optional) The date after which to perform the action.
      *
      * @return Response The response.
-     * @throws InvalidArgumentException If no date is provided.
-     * @throws RuntimeException When API call fails.
      */
     private function action(
         Context $context,
@@ -147,6 +150,7 @@ class Progress
                 continue;
             }
             $senderDate = makeDate($senderDate)->getTimestamp();
+            $senderDate = $senderDate - (int)ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
 
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
@@ -168,7 +172,10 @@ class Progress
                     $guid,
                     $this->getItemDetails($context, $logContext['remote']['id'], [
                         Options::NO_CACHE => true,
-                    ])
+                    ]),
+                    [
+                        'latest_date' => true,
+                    ]
                 );
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
@@ -192,7 +199,7 @@ class Progress
                     );
                     continue;
                 }
-            } catch (\RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] get {item.type} [{item.title}] status. Error [{error.message} @ {error.file}:{error.line}].',
                     context: [

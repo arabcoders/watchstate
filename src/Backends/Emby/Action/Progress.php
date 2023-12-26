@@ -10,6 +10,8 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Emby\EmbyActionTrait;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
@@ -21,6 +23,11 @@ class Progress
 {
     use CommonTrait;
     use EmbyActionTrait;
+
+    /**
+     * @var int Default time drift in seconds.
+     */
+    private const DEFAULT_TIME_DRIFT = 30;
 
     protected string $action = 'emby.progress';
 
@@ -119,6 +126,7 @@ class Progress
                 continue;
             }
             $senderDate = makeDate($senderDate)->getTimestamp();
+            $senderDate = $senderDate - (int)ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
 
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
@@ -139,9 +147,10 @@ class Progress
                 $remoteItem = $this->createEntity(
                     $context,
                     $guid,
-                    $this->getItemDetails($context, $logContext['remote']['id'], [
-                        Options::NO_CACHE => true,
-                    ])
+                    $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]),
+                    [
+                        'latest_date' => true,
+                    ]
                 );
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
@@ -167,7 +176,7 @@ class Progress
                     );
                     continue;
                 }
-            } catch (\RuntimeException $e) {
+            } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
                     message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] get {item.type} [{item.title}] status. Error [{error.message} @ {error.file}:{error.line}].',
                     contexT: [

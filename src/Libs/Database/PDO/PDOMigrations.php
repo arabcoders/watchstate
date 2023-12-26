@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Database\PDO;
 
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Stream;
 use PDO;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -169,8 +170,8 @@ final class PDOMigrations
             ]));
         }
 
-        file_put_contents(
-            $file,
+        $stream = new Stream($file, 'w');
+        $stream->write(
             <<<SQL
         -- # migrate_up
 
@@ -182,6 +183,7 @@ final class PDOMigrations
 
         SQL
         );
+        $stream->close();
 
         $this->logger->info(r("PDOMigrations: Created new Migration file at '{file}'.", [
             'file' => $file

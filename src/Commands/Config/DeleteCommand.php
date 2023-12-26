@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Routable;
+use App\Libs\Stream;
 use PDO;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -245,7 +246,9 @@ final class DeleteCommand extends Command
 
         $backends = ag_delete($backends, $name);
 
-        file_put_contents($config, Yaml::dump($backends, 8, 2));
+        $stream = new Stream($config, 'w');
+        $stream->write(Yaml::dump($backends, 8, 2));
+        $stream->close();
 
         $output->writeln('<info>Config updated.</info>');
 

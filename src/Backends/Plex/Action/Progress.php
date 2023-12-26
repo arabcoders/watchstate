@@ -24,6 +24,11 @@ class Progress
     use CommonTrait;
     use PlexActionTrait;
 
+    /**
+     * @var int Default time drift in seconds.
+     */
+    private const DEFAULT_TIME_DRIFT = 30;
+
     private string $action = 'plex.progress';
 
     public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
@@ -112,6 +117,8 @@ class Progress
                 continue;
             }
             $senderDate = makeDate($senderDate)->getTimestamp();
+            $senderDate = $senderDate - (int)ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
+
 
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
 
@@ -129,17 +136,15 @@ class Progress
             $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
 
             try {
-                $remoteItem = $this->createEntity(
-                    $context,
-                    $guid,
-                    ag(
-                        $this->getItemDetails($context, $logContext['remote']['id'], [
-                            Options::NO_CACHE => true,
-                        ]),
-                        'MediaContainer.Metadata.0',
-                        []
-                    )
+                $remoteData = ag(
+                    $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]),
+                    'MediaContainer.Metadata.0',
+                    []
                 );
+
+                $remoteItem = $this->createEntity($context, $guid, $remoteData, [
+                    'latest_date' => true,
+                ]);
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
@@ -188,14 +193,20 @@ class Progress
             }
 
             try {
-                $url = $context->backendUrl->withPath('/:/progress/')->withQuery(
-                    http_build_query([
-                        'key' => $logContext['remote']['id'],
-                        'identifier' => 'com.plexapp.plugins.library',
-                        'state' => 'stopped',
-                        'time' => $entity->getPlayProgress(),
-                    ])
-                );
+                $url = $context->backendUrl
+                    ->withPath('/:/timeline/')
+                    ->withQuery(
+                        http_build_query([
+                            'ratingKey' => $logContext['remote']['id'],
+                            'key' => '/library/metadata/' . $logContext['remote']['id'],
+                            'identifier' => 'com.plexapp.plugins.library',
+                            'state' => 'stopped',
+                            'time' => $entity->getPlayProgress(),
+                            // -- Without duration & client identifier ignore the update.
+                            'duration' => ag($remoteData, 'duration', 0),
+                            'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
+                        ])
+                    );
 
                 $logContext['remote']['url'] = (string)$url;
 

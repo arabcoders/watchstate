@@ -11,6 +11,7 @@ use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Routable;
+use App\Libs\Stream;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -177,7 +178,10 @@ final class ManageCommand extends Command
         }
 
         @copy($path, $path . '.bak');
-        @file_put_contents($path, Yaml::dump($list, 8, 2));
+
+        $stream = new Stream($path, 'w');
+        $stream->write(Yaml::dump($list, 8, 2));
+        $stream->close();
 
         return self::SUCCESS;
     }

@@ -48,6 +48,11 @@ trait PlexActionTrait
             $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
         }
 
+        // -- For Progress action we need to use the latest date.
+        if (true === (bool)($opts['latest_date'] ?? false)) {
+            $date = max(ag($item, 'lastViewedAt', 0), ag($item, 'addedAt', 0), ag($item, 'updatedAt', 0));
+        }
+
         if (null === $date) {
             throw new InvalidArgumentException('No date was set on object.');
         }
@@ -113,10 +118,8 @@ trait PlexActionTrait
                     iState::COLUMN_WATCHED => true === $isPlayed ? '1' : '0',
                     iState::COLUMN_VIA => $context->backendName,
                     iState::COLUMN_TITLE => ag($item, ['title', 'originalTitle'], '??'),
-                    iState::COLUMN_GUIDS => $guid->parse(
-                        guids: ag($item, 'Guid', []),
-                        context: $logContext
-                    ),
+                    iState::COLUMN_GUIDS => $guid->parse(guids: ag($item, 'Guid', []), context: $logContext),
+                    iState::COLUMN_META_DATA_RATING => (string)ag($item, 'userRating', '0'),
                     iState::COLUMN_META_DATA_ADDED_AT => (string)ag($item, 'addedAt'),
                 ],
             ],
