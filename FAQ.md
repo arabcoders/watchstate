@@ -630,3 +630,21 @@ $ curl -v -H "Accept: application/json" -H "X-MediaBrowser-Token: [BACKEND_API_K
 
 If everything is working correctly you should see something like this previous json output.
 
+----
+
+### I keep receiving this warning in log `INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
+
+We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see this,
+this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to 4 episodes.
+
+If this is not enough for your library content. fear not we have you covered you can increase the limit by running the following command:
+
+```bash 
+$ docker exec -ti watchstate console config:edit --key options.MAX_EPISODE_RANGE --set 10 -- [BACKEND_NAME] 
+```
+
+where `10` is the new limit. You can set it to any number you want. However, Please do inspect the reported records as
+it most likely you have incorrect metadata in your library.
+
+In the future, we plan to reduce the log level to `DEBUG` instead of `INFO`. However, for now, we will keep it as is.
+to inform you about the issue. 
