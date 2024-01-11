@@ -28,6 +28,7 @@ final class Options
     public const ADMIN_TOKEN = 'ADMIN_TOKEN';
     public const NO_THROW = 'NO_THROW';
     public const NO_LOGGING = 'NO_LOGGING';
+    public const MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';
 
     private function __construct()
     {

@@ -704,10 +704,49 @@ class Import
                 }
 
                 // -- Handle multi episode entries.
-                if (null !== ($indexNumberEnd = ag($entity, 'IndexNumberEnd'))) {
-                    foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
-                        $entity['IndexNumber'] = $i;
+                $indexNumber = ag($entity, 'IndexNumber');
+                $indexNumberEnd = ag($entity, 'IndexNumberEnd');
+                if (null !== $indexNumberEnd && $indexNumberEnd > $indexNumber) {
+                    $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 3);
+                    $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
+                    if (count($range) > $episodeRangeLimit) {
+                        $this->logger->info(
+                            'Ignoring [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] Episode range, and treating it as single episode. Backend says it covers [{item.indexNumber}-{item.indexNumberEnd}] [{item.rangeCount}].',
+                            [
+                                'backend' => $context->backendName,
+                                ...$logContext,
+                                'item' => [
+                                    'id' => ag($entity, 'Id'),
+                                    'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
+                                    'type' => ag($entity, 'Type'),
+                                    'rangeCount' => count($range),
+                                    'indexNumber' => ag($entity, 'IndexNumber'),
+                                    'indexNumberEnd' => $indexNumberEnd,
+                                ],
+                            ]
+                        );
                         $callback(item: $entity, logContext: $logContext);
+                    } else {
+                        $indexNumber = ag($entity, 'IndexNumber');
+                        foreach ($range as $i) {
+                            $this->logger->debug(
+                                'Making virtual episode [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] [{item.indexNumber} => {item.i} of {item.indexNumberEnd}]',
+                                [
+                                    'backend' => $context->backendName,
+                                    ...$logContext,
+                                    'item' => [
+                                        'id' => ag($entity, 'Id'),
+                                        'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
+                                        'type' => ag($entity, 'Type'),
+                                        'i' => $i,
+                                        'indexNumber' => $indexNumber,
+                                        'indexNumberEnd' => $indexNumberEnd,
+                                    ],
+                                ]
+                            );
+                            $entity['IndexNumber'] = $i;
+                            $callback(item: $entity, logContext: $logContext);
+                        }
                     }
                 } else {
                     $callback(item: $entity, logContext: $logContext);
