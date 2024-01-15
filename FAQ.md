@@ -256,11 +256,8 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
-* com.plexapp.agents.ytinforeader://(id)
-  ?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent)
-  With [jp_scanner.py](https://gist.github.com/arabcoders/ecb2755aa1d76dc89301ec44b8d367d5) as scanner.
-* com.plexapp.agents.cmdb://(id)?lang=en [Custom metadata db agent](https://github.com/arabcoders/cmdb.bundle) User
-  created metadata database.
+* com.plexapp.agents.ytinforeader://(id)?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent) With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
+* com.plexapp.agents.cmdb://(id)?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
 
 ---
 
@@ -272,10 +269,8 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvmaze://(id)
 * tvrage://(id)
 * anidb://(id)
-* ytinforeader://(
-  id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
-  A yt-dlp plugin for both emby & jellyfin.
-* cmdb://(id) `(Custom metadata db agent)` Will release more information about it at later time.
+* ytinforeader://(id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). `(A yt-dlp info reader plugin)`.
+* cmdb://(id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db). `(User custom metadata database)`.
 
 ---
 
@@ -486,29 +481,23 @@ Those are some web hook limitations we discovered for the following media backen
 #### Emby
 
 * Emby does not send webhooks events for newly added items.
-  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
-  implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
-* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
-  played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
+  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~ implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
+* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
 #### Jellyfin
 
-* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you
-  happen to enable `webhook.match.user` for jellyfin.
+* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you happen to enable `webhook.match.user` for jellyfin.
 * Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
 * Even if you select user id, sometimes `itemAdd` event will fire without user data.
-* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set
-  to `Use date scanned into library`. This happens if the media file has been replaced.
+* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set to `Use date scanned into library`. This happens if the media file has been replaced.
 
 ---
 
 ### Sometimes newly added episodes or movies don't make it to webhook endpoint?
 
 As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
-complement webhooks,
-you should enable import/export tasks by settings their respective environment variables in your `docker-compose.yaml`
-file.
-For more information run help on `system:env` command as well as `system:tasks` command.
+complement webhooks, you should enable import/export tasks by settings their respective environment variables in
+your `docker-compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks` command.
 
 ---
 
@@ -559,13 +548,10 @@ location and delete the empty directories.
 ### How to get WatchState working with YouTube content/library?
 
 Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
-media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to
-name your files. Please be aware these plugins and scanners `REQUIRE`
-that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you
-have `20231030 my awesome youtube video [youtube-RandomString].mkv`
+media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to name your files. Please be aware these plugins and scanners `REQUIRE`
+that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you have `20231030 my awesome youtube video [youtube-RandomString].mkv`
 you should have `20231030 my awesome youtube video [youtube-RandomString].info.json` in the same directory. In the
-future, I plan to
-make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to work.
+future, I plan to make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to work.
 
 #### Plex Setup
 
@@ -575,13 +561,11 @@ make `.info.json` optional However at the moment the file is required for emby/j
 
 #### Jellyfin Setup
 
-* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please
-  refer to the link on how to install it.
+* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
 
 #### Emby Setup
 
-* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
-  Please refer to the link on how to install it.
+* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
 
 If your media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
 jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the
