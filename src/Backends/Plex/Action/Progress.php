@@ -193,21 +193,29 @@ class Progress
             }
 
             try {
-                $url = $context->backendUrl
-                    ->withPath('/:/timeline/')
-                    ->withQuery(
-                        http_build_query([
-                            'ratingKey' => $logContext['remote']['id'],
-                            'key' => '/library/metadata/' . $logContext['remote']['id'],
-                            'identifier' => 'com.plexapp.plugins.library',
-                            'state' => 'stopped',
-                            'time' => $entity->getPlayProgress(),
-                            // -- Without duration & client identifier ignore the update.
-                            'duration' => ag($remoteData, 'duration', 0),
-                            'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
-                        ])
-                    );
+//                $url = $context->backendUrl
+//                    ->withPath('/:/timeline/')
+//                    ->withQuery(
+//                        http_build_query([
+//                            'ratingKey' => $logContext['remote']['id'],
+//                            'key' => '/library/metadata/' . $logContext['remote']['id'],
+//                            'identifier' => 'com.plexapp.plugins.library',
+//                            'state' => 'stopped',
+//                            'time' => $entity->getPlayProgress(),
+//                            // -- Without duration & client identifier plex ignore watch progress update.
+//                            'duration' => ag($remoteData, 'duration', 0),
+//                            'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
+//                        ])
+//                    );
 
+                $url = $context->backendUrl->withPath('/:/progress/')->withQuery(
+                    http_build_query([
+                        'key' => $logContext['remote']['id'],
+                        'identifier' => 'com.plexapp.plugins.library',
+                        'state' => 'stopped',
+                        'time' => $entity->getPlayProgress(),
+                    ])
+                );
                 $logContext['remote']['url'] = (string)$url;
 
                 $this->logger->debug('Updating [{backend}] {item.type} [{item.title}] watch progress.', [
