@@ -16,6 +16,7 @@ use App\Backends\Plex\Action\GetInfo;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\Action\GetLibrary;
 use App\Backends\Plex\Action\GetMetaData;
+use App\Backends\Plex\Action\GetSessions;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\GetUserToken;
 use App\Backends\Plex\Action\GetVersion;
@@ -447,6 +448,24 @@ class PlexClient implements iClient
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getSessions(array $opts = []): array
+    {
+        $response = Container::get(GetSessions::class)($this->context, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {

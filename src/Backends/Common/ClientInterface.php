@@ -211,6 +211,14 @@ interface ClientInterface
     public static function manage(array $backend, array $opts = []): array;
 
     /**
+     * Return list of active sessions.
+     *
+     * @param array $opts (Optional) options.
+     * @return array{sessions: array<array>}
+     */
+    public function getSessions(array $opts = []): array;
+
+    /**
      * Return user access token.
      *
      * @param int|string $userId user id.
