@@ -122,7 +122,7 @@ final class GetSessions
                     ) ? $matches[1] : null;
 
                     $item = [
-                        'user_uid' => (int)ag($session, 'User.id'),
+                        'user_id' => (int)ag($session, 'User.id'),
                         'user_name' => ag($session, 'User.title'),
                         'user_uuid' => $uuid,
                         'item_id' => (int)ag($session, 'ratingKey'),

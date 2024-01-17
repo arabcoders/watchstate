@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
@@ -93,8 +94,27 @@ class Progress
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
+        $sessions = [];
         $ignoreDate = (bool)ag($context->options, Options::IGNORE_DATE, false);
 
+        try {
+            $remoteSessions = Container::get(GetSessions::class)($context);
+            if (true === $remoteSessions->status) {
+                foreach (ag($remoteSessions->response, 'sessions', []) as $session) {
+                    $user_id = ag($session, 'user_id', null);
+
+                    $uid = $user_id && $context->backendUser === $user_id;
+
+                    if (true !== $uid) {
+                        continue;
+                    }
+
+                    $sessions[ag($session, 'item_id')] = ag($session, 'item_offset_at', 0);
+                }
+            }
+        } catch (Throwable) {
+            // simply ignore this error as it's not important enough to interrupt the whole process.
+        }
         foreach ($entities as $key => $entity) {
             if (true !== ($entity instanceof iState)) {
                 continue;
@@ -165,6 +185,17 @@ class Progress
             }
 
             $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
+
+            if (array_key_exists($logContext['remote']['id'], $sessions)) {
+                $this->logger->notice(
+                    'Ignoring [{item.title}] watch progress update for [{backend}]. The item is being played right now.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
+                continue;
+            }
 
             try {
                 $remoteItem = $this->createEntity(

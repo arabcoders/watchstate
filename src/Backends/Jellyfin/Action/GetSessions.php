@@ -127,7 +127,7 @@ class GetSessions
 
                 foreach ($filtered as $item) {
                     $ret['sessions'][] = [
-                        'user_uid' => ag($item, 'UserId'),
+                        'user_id' => ag($item, 'UserId'),
                         'user_name' => ag($item, 'UserName'),
                         'item_id' => ag($item, 'NowPlayingItem.Id'),
                         'item_title' => ag($item, 'NowPlayingItem.Name'),
