@@ -282,6 +282,43 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
+     * @throws RandomException
+     */
+    public function findByBackendId(string $backend, int|string $id, string|null $type = null): iState|null
+    {
+        $key = $backend . '.' . iState::COLUMN_ID;
+        $cond = [
+            'id' => $id
+        ];
+
+        $type_sql = '';
+        if (null !== $type) {
+            $type_sql = iState::COLUMN_TYPE . ' = :type AND ';
+            $cond['type'] = $type;
+        }
+
+        $sql = "SELECT * FROM state WHERE {$type_sql} JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = :id LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+
+        if (false === $this->execute($stmt, $cond)) {
+            throw new DBException(
+                r('PDOAdapter: Failed to execute sql query. Statement [{sql}], Conditions [{cond}].', [
+                    'sql' => $sql,
+                    'cond' => arrayToString($cond),
+                ]), 61
+            );
+        }
+
+        if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
+            return null;
+        }
+
+        return Container::get(iState::class)::fromArray($row);
+    }
+
+
+    /**
+     * @inheritdoc
      * @throws RandomException if an error occurs while generating a random number.
      */
     public function update(iState $entity): iState
@@ -670,10 +707,15 @@ final class PDOAdapter implements iDB
         $sqlEpisode = '';
 
         if (true === $entity->isEpisode()) {
-            $sqlEpisode = ' AND ' . iState::COLUMN_SEASON . ' = :season AND ' . iState::COLUMN_EPISODE . ' = :episode ';
+            if (null !== $entity->season) {
+                $sqlEpisode .= ' AND ' . iState::COLUMN_SEASON . ' = :season ';
+                $cond['season'] = $entity->season;
+            }
 
-            $cond['season'] = $entity->season;
-            $cond['episode'] = $entity->episode;
+            if (null !== $entity->episode) {
+                $sqlEpisode .= ' AND ' . iState::COLUMN_EPISODE . ' = :episode ';
+                $cond['episode'] = $entity->episode;
+            }
 
             foreach ($entity->getParentGuids() as $key => $val) {
                 if (empty($val)) {
