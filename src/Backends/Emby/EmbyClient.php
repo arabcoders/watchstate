@@ -16,6 +16,7 @@ use App\Backends\Emby\Action\GetInfo;
 use App\Backends\Emby\Action\GetLibrariesList;
 use App\Backends\Emby\Action\GetLibrary;
 use App\Backends\Emby\Action\GetMetaData;
+use App\Backends\Emby\Action\GetSessions;
 use App\Backends\Emby\Action\GetUsersList;
 use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
@@ -435,6 +436,24 @@ class EmbyClient implements iClient
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getSessions(array $opts = []): array
+    {
+        $response = Container::get(GetSessions::class)($this->context, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {

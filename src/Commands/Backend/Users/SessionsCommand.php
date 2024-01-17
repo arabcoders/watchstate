@@ -10,15 +10,14 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\Routable;
+use DateTimeInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /**
- * Class ListCommand
- *
+ * Get backend active sessions.
  */
 #[Routable(command: self::ROUTE)]
 final class SessionsCommand extends Command
@@ -26,15 +25,12 @@ final class SessionsCommand extends Command
     public const ROUTE = 'backend:users:sessions';
 
     private const REMAP_FIELDS = [
-        'user_uid' => 'User ID',
-        'user_uuid' => 'User UUID',
-        'item_id' => 'Item ID',
+        'user_name' => 'User',
         'item_title' => 'Title',
         'item_type' => 'Type',
         'item_offset_at' => 'Progress',
-        'session_id' => 'Session ID',
-        'session_updated_at' => 'Session Activity',
-        'session_state' => 'Play State',
+        'session_updated_at' => 'Last Activity',
+        'session_state' => 'State',
     ];
 
     public function __construct(private iDB $db)
@@ -51,7 +47,7 @@ final class SessionsCommand extends Command
             ->setDescription('Get backend active sessions.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -82,21 +78,9 @@ final class SessionsCommand extends Command
      * @param OutputInterface $output The output interface.
      *
      * @return int The exit status code.
-     * @throws ExceptionInterface When the request fails.
-     * @throws \JsonException When the response cannot be parsed.
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $mode = $input->getOption('output');
-        $backend = $input->getOption('select-backends');
-
-        if (null === $backend) {
-            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backends].</error>'));
-            return self::FAILURE;
-        }
-
-        $backend = explode(',', $backend, 1)[0];
-
         // -- Use Custom servers.yaml file.
         if (($config = $input->getOption('config'))) {
             try {
@@ -106,6 +90,15 @@ final class SessionsCommand extends Command
                 return self::FAILURE;
             }
         }
+
+        $mode = $input->getOption('output');
+
+        if (null === ($backend = $input->getOption('select-backend'))) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backends].</error>'));
+            return self::FAILURE;
+        }
+
+        $backend = explode(',', $backend, 2)[0];
 
         if (null === ag(Config::get('servers', []), $backend, null)) {
             $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
@@ -151,7 +144,15 @@ final class SessionsCommand extends Command
                 $i = [];
 
                 foreach ($item as $key => $val) {
-                    $i[self::REMAP_FIELDS[$key] ?? $key] = $val;
+                    if (!array_key_exists($key, self::REMAP_FIELDS)) {
+                        continue;
+                    }
+
+                    if ('session_updated_at' === $key) {
+                        $val = $this->format_date($val);
+                    }
+
+                    $i[self::REMAP_FIELDS[$key]] = $val;
                 }
 
                 $items[] = $i;
@@ -163,6 +164,46 @@ final class SessionsCommand extends Command
         $this->displayContent($sessions, $output, $mode);
 
         return self::SUCCESS;
+    }
+
+    private function format_date(DateTimeInterface $date): string
+    {
+        $seconds = time() - $date->getTimestamp();
+
+        if ($seconds < 1) {
+            return '0s';
+        }
+
+        $string = "";
+
+        $years = (int)($seconds / 31536000);
+        $months = (int)($seconds / 2678400);
+        $days = (int)($seconds / (3600 * 24));
+        $hours = (int)($seconds / 3600) % 24;
+        $minutes = (int)($seconds / 60) % 60;
+        $seconds = $seconds % 60;
+
+        if ($years > 0) {
+            $string .= "{$days}y ";
+        }
+
+        if ($months > 0) {
+            $string .= "{$days}d ";
+        }
+
+        if ($hours > 0) {
+            $string .= "{$hours}h ";
+        }
+
+        if ($days < 1 && $minutes > 0) {
+            $string .= "{$minutes}m ";
+        }
+
+        if ($minutes < 1 && $seconds > 0) {
+            $string .= "{$seconds}s";
+        }
+
+        return $string;
     }
 
 }

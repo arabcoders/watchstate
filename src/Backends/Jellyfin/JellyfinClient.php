@@ -18,6 +18,7 @@ use App\Backends\Jellyfin\Action\GetInfo;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetLibrary;
 use App\Backends\Jellyfin\Action\GetMetaData;
+use App\Backends\Jellyfin\Action\GetSessions;
 use App\Backends\Jellyfin\Action\GetUsersList;
 use App\Backends\Jellyfin\Action\GetVersion;
 use App\Backends\Jellyfin\Action\Import;
@@ -476,6 +477,24 @@ class JellyfinClient implements iClient
     public function getUsersList(array $opts = []): array
     {
         $response = Container::get(GetUsersList::class)($this->context, $opts);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getSessions(array $opts = []): array
+    {
+        $response = Container::get(GetSessions::class)($this->context, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {
