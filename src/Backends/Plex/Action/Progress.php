@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
@@ -66,7 +67,37 @@ class Progress
         QueueRequests $queue,
         DateTimeInterface|null $after = null
     ): Response {
+        $sessions = [];
         $ignoreDate = (bool)ag($context->options, Options::IGNORE_DATE, false);
+
+        /**
+         * as plex act weird if we change the progress of a watched item while the item is playing,
+         * we need to check if the item is watched before changing its progress.
+         */
+        try {
+            $remoteSessions = Container::get(GetSessions::class)($context);
+            if (true === $remoteSessions->status) {
+                foreach (ag($remoteSessions->response, 'sessions', []) as $session) {
+                    $user_id = ag($session, 'user_id', null);
+                    $user_uuid = ag($session, 'user_uuid', null);
+
+                    /**
+                     * Plex is back at it again reporting admin user id as 1.
+                     * So, we have to resort to use the user uuid to identify the user.
+                     */
+                    $uid = $user_id && $context->backendUser === $user_id;
+                    $uuid = $user_uuid && ag($context->options, 'plex_user_uuid', 'non_set') === $user_uuid;
+
+                    if (true !== ($uid || $uuid)) {
+                        continue;
+                    }
+
+                    $sessions[ag($session, 'item_id')] = ag($session, 'item_offset_at', 0);
+                }
+            }
+        } catch (Throwable) {
+            // simply ignore this error as it's not important enough to interrupt the whole process.
+        }
 
         foreach ($entities as $key => $entity) {
             if (true !== ($entity instanceof iState)) {
@@ -119,7 +150,6 @@ class Progress
             $senderDate = makeDate($senderDate)->getTimestamp();
             $senderDate = $senderDate - (int)ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
 
-
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
 
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
@@ -134,6 +164,17 @@ class Progress
             }
 
             $logContext['remote']['id'] = ag($metadata, iState::COLUMN_ID);
+
+            if (array_key_exists($logContext['remote']['id'], $sessions)) {
+                $this->logger->notice(
+                    'Ignoring [{item.title}] watch progress update for [{backend}]. The item is being played right now.',
+                    [
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
+                continue;
+            }
 
             try {
                 $remoteData = ag(
@@ -193,21 +234,29 @@ class Progress
             }
 
             try {
-                $url = $context->backendUrl
-                    ->withPath('/:/timeline/')
-                    ->withQuery(
-                        http_build_query([
-                            'ratingKey' => $logContext['remote']['id'],
-                            'key' => '/library/metadata/' . $logContext['remote']['id'],
-                            'identifier' => 'com.plexapp.plugins.library',
-                            'state' => 'stopped',
-                            'time' => $entity->getPlayProgress(),
-                            // -- Without duration & client identifier ignore the update.
-                            'duration' => ag($remoteData, 'duration', 0),
-                            'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
-                        ])
-                    );
+//                $url = $context->backendUrl
+//                    ->withPath('/:/timeline/')
+//                    ->withQuery(
+//                        http_build_query([
+//                            'ratingKey' => $logContext['remote']['id'],
+//                            'key' => '/library/metadata/' . $logContext['remote']['id'],
+//                            'identifier' => 'com.plexapp.plugins.library',
+//                            'state' => 'stopped',
+//                            'time' => $entity->getPlayProgress(),
+//                            // -- Without duration & client identifier plex ignore watch progress update.
+//                            'duration' => ag($remoteData, 'duration', 0),
+//                            'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
+//                        ])
+//                    );
 
+                $url = $context->backendUrl->withPath('/:/progress/')->withQuery(
+                    http_build_query([
+                        'key' => $logContext['remote']['id'],
+                        'identifier' => 'com.plexapp.plugins.library',
+                        'state' => 'stopped',
+                        'time' => $entity->getPlayProgress(),
+                    ])
+                );
                 $logContext['remote']['url'] = (string)$url;
 
                 $this->logger->debug('Updating [{backend}] {item.type} [{item.title}] watch progress.', [

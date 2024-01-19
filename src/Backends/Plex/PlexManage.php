@@ -59,7 +59,7 @@ class PlexManage implements ManageInterface
             $question = new Question(
                 r(
                     <<<HELP
-                    
+
                     <question>Enter [<value>{name}</value>] X-Plex-Token</question>. {default}
                     ------------------
                     to find your plex token. follow the steps described in the following link.
@@ -300,7 +300,7 @@ class PlexManage implements ManageInterface
                     '<info>Attempting to get users list from plex.tv API. Please wait...</info>'
                 );
 
-                $list = $map = $ids = $userInfo = [];
+                $list = $map = $ids = $uuid = $userInfo = [];
 
                 $custom = array_replace_recursive($backend, [
                     'options' => [
@@ -345,6 +345,7 @@ class PlexManage implements ManageInterface
                     $list[] = $val;
                     $ids[$uid] = $val;
                     $map[$val] = $uid;
+                    $uuid[$val] = ag($user, 'uuid', null);
                     $userInfo[$uid] = $user;
                 }
 
@@ -371,6 +372,7 @@ class PlexManage implements ManageInterface
 
                 $user = $this->questionHelper->ask($this->input, $this->output, $question);
                 $backend = ag_set($backend, 'user', $map[$user]);
+                $backend = ag_set($backend, 'options.plex_user_uuid', $uuid[$user]);
 
                 $this->output->writeln(
                     r('<info>Requesting plex token for [{user}] from plex.tv API.</info>', [

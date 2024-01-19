@@ -638,6 +638,10 @@ final class Initializer
             $context['attributes'] = $attributes;
         }
 
-        $this->accessLog->log($level, $message, $context);
+        if (true === (bool)Config::get('logs.context')) {
+            $this->accessLog->log($level, $message, $context);
+        } else {
+            $this->accessLog->log($level, r($message, $context));
+        }
     }
 }

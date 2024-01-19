@@ -74,6 +74,17 @@ interface DatabaseInterface
     public function find(StateInterface ...$items): array;
 
     /**
+     * Find database item using backend name and id.
+     *
+     * @param string $backend Backend name.
+     * @param int|string $id Backend id.
+     * @param string|null $type (Optional) Type of item will speed up lookups.
+     *
+     * @return StateInterface|null Return null if not found.
+     */
+    public function findByBackendId(string $backend, int|string $id, string|null $type = null): StateInterface|null;
+
+    /**
      * Update entity immediately.
      *
      * @param StateInterface $entity Entity to update.

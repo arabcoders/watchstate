@@ -297,7 +297,10 @@ class Command extends BaseCommand
             $suggestions->suggestValues($suggest);
         }
 
-        if ($input->mustSuggestOptionValuesFor('select-backends') || $input->mustSuggestArgumentValuesFor('backend')) {
+        if (
+            $input->mustSuggestOptionValuesFor('select-backends') ||
+            $input->mustSuggestOptionValuesFor('select-backend') ||
+            $input->mustSuggestArgumentValuesFor('backend')) {
             $currentValue = $input->getCompletionValue();
 
             $suggest = [];
