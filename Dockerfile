@@ -15,6 +15,8 @@ ENV PHP_INI_DIR=/etc/${PHP_V}
 ENV PATH=/opt/bin:${PATH}
 ENV HTTP_PORT="8080"
 ENV HTTPS_PORT="8443"
+ENV WS_DATA_PATH=/config
+ENV WS_TZ=UTC
 
 # Setup the required environment.
 #
@@ -78,6 +80,10 @@ ENTRYPOINT ["/opt/bin/init-container"]
 # Change working directory.
 #
 WORKDIR /config
+
+# Declare the config directory as a volume.
+#
+VOLUME ["/config"]
 
 # Switch to user
 #
