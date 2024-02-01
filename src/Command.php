@@ -48,6 +48,16 @@ class Command extends BaseCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        if ($input->hasOption('debug') && $input->getOption('debug')) {
+            $input->setOption('context', true);
+            $input->setOption('trace', true);
+            $input->setOption('verbose', true);
+            if (function_exists('putenv')) {
+                @putenv('SHELL_VERBOSITY=3');
+            }
+            $output->setVerbosity(OutputInterface::VERBOSITY_DEBUG);
+        }
+
         if ($input->hasOption('context') && true === $input->getOption('context')) {
             Config::save('logs.context', true);
         }
