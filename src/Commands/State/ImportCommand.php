@@ -239,7 +239,7 @@ class ImportCommand extends Command
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
-            $this->logger->pushHandler(new StreamLogHandler(new Stream($logfile, 'a'), $output));
+            $this->logger->setHandlers([new StreamLogHandler(new Stream($logfile, 'w'), $output)]);
         }
 
         // -- Use Custom servers.yaml file.

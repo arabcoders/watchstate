@@ -77,6 +77,15 @@ class Cli extends Application
             )
         );
 
+        $definition->addOption(
+            new InputOption(
+                'debug',
+                null,
+                InputOption::VALUE_NONE,
+                'Turn on the <comment>-vvv --context --trace</comment> flags.'
+            )
+        );
+
         return $definition;
     }
 }
