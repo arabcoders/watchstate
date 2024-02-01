@@ -1,4 +1,5 @@
 {
+    persist_config off
     http_port {$HTTP_PORT}
     https_port {$HTTPS_PORT}
 }

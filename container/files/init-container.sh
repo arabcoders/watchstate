@@ -23,6 +23,10 @@ if [ ! -w "${DATA_PATH}" ]; then
   exit 1
 fi
 
+export XDG_DATA_HOME=${DATA_PATH}
+export XDG_CACHE_HOME=/tmp
+export XDG_RUNTIME_DIR=/tmp
+
 if [ -f "${ENV_FILE}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: Loading environment variables from [${ENV_FILE}]."
   while read -r LINE; do
