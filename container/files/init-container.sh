@@ -56,6 +56,11 @@ fi
 
 if [ 0 = "${WS_DISABLE_HTTP}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Starting HTTP Server."
+  _CADDY_UUID_FILE="${XDG_DATA_HOME}/caddy/instance.uuid"
+  if [ ! -f "${_CADDY_UUID_FILE}" ]; then
+    mkdir -p "${XDG_DATA_HOME}/caddy"
+    printf '%s' "$(cat /proc/sys/kernel/random/uuid)" > "${_CADDY_UUID_FILE}"
+  fi
   caddy start --config /opt/config/Caddyfile
 fi
 
