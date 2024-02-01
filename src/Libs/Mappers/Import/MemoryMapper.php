@@ -110,7 +110,7 @@ final class MemoryMapper implements iImport
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->warning('MAPPER: Ignoring [{backend}] [{title}] no valid/supported external ids.', [
+            $this->logger->warning('MAPPER: Ignoring [{backend}] [{title}]. No valid/supported external ids.', [
                 'id' => $entity->id,
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -186,7 +186,7 @@ final class MemoryMapper implements iImport
         $cloned = clone $this->objects[$pointer];
 
         /**
-         * ONLY update backend metadata as requested by caller.
+         * ONLY update backend metadata
          * if metadataOnly is set or the event is tainted.
          */
         if (true === $metadataOnly || true === $entity->isTainted()) {
@@ -211,6 +211,31 @@ final class MemoryMapper implements iImport
                         'changes' => $changes,
                     ]);
                 }
+                return $this;
+            }
+
+            if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
+                $reasons = [];
+
+                if (true === $entity->isTainted()) {
+                    $reasons[] = 'event marked as tainted';
+                }
+                if (true === $metadataOnly) {
+                    $reasons[] = 'Mapper is in metadata only mode';
+                }
+
+                $this->logger->notice(
+                    'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the following reason ({reason}) it was not considered as valid state.',
+                    [
+                        'id' => $this->objects[$pointer]->id,
+                        'backend' => $entity->via,
+                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
+                        'title' => $entity->getName(),
+                        'reasons' => implode(', ', $reasons),
+                    ]
+                );
+
                 return $this;
             }
 
@@ -300,6 +325,24 @@ final class MemoryMapper implements iImport
                     }
                 }
 
+                Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
+
+                if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
+                    $this->logger->notice(
+                        'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due the remote item date [{remote_date}] being older than the last backend sync date [{local_date}]. it was not considered as valid state.',
+                        [
+                            'id' => $this->objects[$pointer]->id,
+                            'backend' => $entity->via,
+                            'remote_date' => makeDate($entity->updated),
+                            'local_date' => makeDate($opts['after']),
+                            'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                            'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
+                            'title' => $entity->getName(),
+                        ]
+                    );
+                    return $this;
+                }
+
                 if ($this->inTraceMode()) {
                     $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
                         'id' => $cloned->id,
@@ -308,13 +351,13 @@ final class MemoryMapper implements iImport
                     ]);
                 }
 
-                Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
                 return $this;
             }
         }
 
         /**
-         * Fix for #329
+         * Fix for #329 {@see https://github.com/arabcoders/watchstate/issues/329}
+         *
          * This conditional block should proceed only if specific conditions are met.
          * 1- the backend state is [unwatched] while the db state is [watched]
          * 2- if the db.metadata.backend.played_at is equal to entity.updated or the db.metadata has no data.
