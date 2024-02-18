@@ -110,7 +110,7 @@ The likely cause of this problem is date related problem, as we check the date o
 date in local database, to make sure this is the error you are facing please do the following.
 
 ```
-$ docker exec -ti watchstate console state:export -vvv --trace --context -s new_backend_name > backend.log
+$ docker exec -ti watchstate console state:export -s new_backend_name --debug --logfile /config/export.txt
 ```
 
 After running the command, open the log file and look for episode and movie that has the problem and read the text next

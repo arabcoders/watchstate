@@ -198,7 +198,7 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'No permanent access token was found for [{username}] in [{backend}] response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [-vvv --trace --context] flags for more information.',
+                    message: 'No permanent access token was found for [{username}] in [{backend}] response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [--debug] flag for more information.',
                     context: [
                         'backend' => $context->backendName,
                         'username' => $username,
