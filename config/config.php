@@ -226,7 +226,7 @@ return (function () {
                 'command' => PushCommand::ROUTE,
                 'name' => PushCommand::TASK_NAME,
                 'info' => 'Push Webhook play states to backends.',
-                'enabled' => (bool)env('WS_CRON_PUSH', false),
+                'enabled' => (bool)env('WS_CRON_PUSH', true),
                 'timer' => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
                 'args' => env('WS_CRON_PUSH_ARGS', '-v'),
             ],

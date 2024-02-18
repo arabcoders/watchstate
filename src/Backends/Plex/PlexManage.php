@@ -397,7 +397,7 @@ class PlexManage implements ManageInterface
                 if (null === ($userToken = ag($userInfo[$map[$user]], 'token'))) {
                     $this->output->writeln(
                         r(
-                            '<error>Unable to get [{user}] access token. rerun the command with [-vvv --context --trace] flags for more info or check logs.</error>',
+                            '<error>Unable to get [{user}] access token. rerun the command with [--debug] flags for more info or check logs.</error>',
                             [
                                 'user' => $user
                             ]
