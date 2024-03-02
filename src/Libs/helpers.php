@@ -385,14 +385,16 @@ if (!function_exists('api_response')) {
      *
      * @param array $body The JSON data to include in the response body.
      * @param HTTP_STATUS $status Optional. The HTTP status code. Default is {@see HTTP_STATUS::HTTP_OK}.
-     * @param array $headers Optional. Additional headers to include in the response (default is an empty array).
+     * @param array $headers Optional. Additional headers to include in the response.
+     * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
      *
      * @return ResponseInterface A PSR-7 compatible response object.
      */
     function api_response(
         array $body,
         HTTP_STATUS $status = HTTP_STATUS::HTTP_OK,
-        array $headers = []
+        array $headers = [],
+        string|null $reason = null
     ): ResponseInterface {
         return (new Response(
             status: $status->value,
@@ -400,8 +402,9 @@ if (!function_exists('api_response')) {
             body: json_encode(
                 $body,
                 JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-            )
-        ))->withHeader('Content-Type', 'application/json');
+            ),
+            reason: $reason,
+        ))->withHeader('Content-Type', 'application/json')->withHeader('X-Application-Version', getAppVersion());
     }
 }
 
@@ -411,7 +414,7 @@ if (!function_exists('api_error')) {
      *
      * @param string $message The error message.
      * @param HTTP_STATUS $httpCode Optional. The HTTP status code. Default is {@see HTTP_STATUS::HTTP_BAD_REQUEST}.
-     * @param array $fields Optional. Additional fields to include in the response body.
+     * @param array $body Optional. Additional fields to include in the response body.
      * @param array $opts Optional. Additional options.
      *
      * @return ResponseInterface A PSR-7 compatible response object.
@@ -419,27 +422,28 @@ if (!function_exists('api_error')) {
     function api_error(
         string $message,
         HTTP_STATUS $httpCode = HTTP_STATUS::HTTP_BAD_REQUEST,
-        array $fields = [],
+        array $body = [],
+        array $headers = [],
+        string|null $reason = null,
         array $opts = []
     ): ResponseInterface {
         $response = api_response(
-            array_replace_recursive($fields, [
+            body: array_replace_recursive($body, [
                 'error' => [
                     'code' => $httpCode->value,
                     'message' => $message
                 ]
             ]),
-            $httpCode,
+            status: $httpCode,
+            reason: $reason
         );
+
+        foreach ($headers as $key => $val) {
+            $response = $response->withHeader($key, $val);
+        }
 
         if (array_key_exists('callback', $opts) && ($opts['callback'] instanceof Closure)) {
             $response = $opts['callback']($response);
-        }
-
-        if (array_key_exists('headers', $opts)) {
-            foreach ($opts['headers'] as $key => $val) {
-                $response = $response->withHeader($key, $val);
-            }
         }
 
         return $response;

@@ -41,10 +41,10 @@ class Route
         string|int|null $port = null,
         array $opts = []
     ) {
-        $this->methods = $methods;
-        $this->pattern = $pattern;
-        $this->middleware = is_string($middleware) ? [$middleware] : $middleware;
         $this->name = $name;
+        $this->methods = $methods;
+        $this->pattern = $this->fromConfig($pattern);
+        $this->middleware = is_string($middleware) ? [$middleware] : $middleware;
         $this->port = null !== $port ? $this->fromConfig($port) : $port;
         $this->scheme = null !== $scheme ? $this->fromConfig($scheme) : $scheme;
         $this->host = null !== $host ? $this->fromConfig($host, fn($v) => parse_url($v, PHP_URL_HOST)) : $host;
@@ -54,9 +54,9 @@ class Route
 
     private function fromConfig(mixed $value, Closure|null $callback = null): mixed
     {
-        if (is_string($value) && preg_match('#%{(.+?)}#s', $value, $match)) {
-            $config = Config::get($match[1]);
-            return null !== $callback && null !== $config ? $callback($config) : $config;
+        if (is_string($value) && preg_match('#%{(.+?)}#s', $value)) {
+            $val = preg_replace_callback('#%{(.+?)}#s', fn($match) => Config::get($match[1], $match[1]), $value);
+            return null !== $callback && null !== $val ? $callback($val) : $val;
         }
 
         return $value;

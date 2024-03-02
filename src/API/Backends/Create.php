@@ -9,15 +9,13 @@ use App\Libs\HTTP_STATUS;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-#[Post(pattern: self::URL)]
+#[Post(self::URL, name: 'backends.create')]
 final class Create
 {
-    public const URL = '/api/backends';
+    public const URL = '%{api.prefix}/backends';
 
     public function __invoke(ServerRequestInterface $request, array $args = []): ResponseInterface
     {
-        return api_response([
-            'message' => 'Create'
-        ], HTTP_STATUS::HTTP_OK);
+        return api_error('Not yet implemented', HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE);
     }
 }
