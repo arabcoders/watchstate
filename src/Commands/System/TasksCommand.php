@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Extends\ConsoleOutput;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Cron\CronExpression;
 use Exception;
@@ -25,7 +25,7 @@ use Throwable;
  *
  * Automates the runs of scheduled tasks.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class TasksCommand extends Command
 {
     public const ROUTE = 'system:tasks';

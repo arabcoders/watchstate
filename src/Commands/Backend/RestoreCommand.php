@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Commands\Backend;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Mappers\Import\RestoreMapper;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
-use App\Libs\Routable;
 use DirectoryIterator;
 use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
@@ -28,7 +28,7 @@ use Throwable;
  *
  * Command used to restore a backend's play state from a backup file.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class RestoreCommand extends Command
 {
     public const ROUTE = 'backend:restore';

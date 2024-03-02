@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -22,7 +22,7 @@ use Throwable;
  *
  * This class allows the user to edit backend config settings inline.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class EditCommand extends Command
 {
     public const ROUTE = 'config:edit';

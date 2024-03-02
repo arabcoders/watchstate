@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Cron\CronExpression;
 use LimitIterator;
@@ -25,7 +25,7 @@ use Throwable;
  *
  * Show basic information for diagnostics.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ReportCommand extends Command
 {
     public const ROUTE = 'system:report';

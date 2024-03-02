@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
-use App\Libs\Routable;
+use App\Libs\Attributes\Route\Cli;
 use Psy\Configuration;
 use Psy\Shell;
 use Psy\VersionUpdater\Checker;
@@ -19,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
  *
  * Interactive shell command to manually write scripts.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class TinkerCommand extends Command
 {
     public const ROUTE = 'system:tinker';

@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use App\Libs\Routable;
 use DateTimeInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'config:list';

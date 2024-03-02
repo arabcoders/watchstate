@@ -160,11 +160,14 @@ final class Initializer
 
             $cache = Container::get(CacheInterface::class);
 
-            $routes = false === $cache->has('routes') ? generateRoutes() : $cache->get('routes', []);
+            $routes = [];
+            $loader = false === $cache->has('routes_cli') ? generateRoutes() : $cache->get('routes_cli', []);
 
-            $this->cli->setCommandLoader(
-                new ContainerCommandLoader(Container::getContainer(), $routes)
-            );
+            foreach ($loader as $route) {
+                $routes[ag($route, 'path')] = ag($route, 'callable');
+            }
+
+            $this->cli->setCommandLoader(new ContainerCommandLoader(Container::getContainer(), $routes));
 
             $this->cli->run(output: $this->cliOutput);
         } catch (Throwable $e) {

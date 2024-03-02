@@ -6,9 +6,9 @@ namespace App\Backends\Plex\Commands;
 
 use App\Backends\Plex\PlexClient;
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +19,7 @@ use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class DiscoverCommand extends Command
 {
     public const ROUTE = 'plex:discover';

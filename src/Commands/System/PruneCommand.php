@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Routable;
 use Psr\Log\LoggerInterface;
 use SplFileInfo;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  * This command removes automatically generated files like logs and backups.
  * It provides an option to run in dry-run mode to see what files will be removed without actually removing them.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class PruneCommand extends Command
 {
     public const ROUTE = 'system:prune';

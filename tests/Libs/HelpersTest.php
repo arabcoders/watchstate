@@ -7,6 +7,7 @@ namespace Tests\Libs;
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\HTTP_STATUS;
 use App\Libs\TestCase;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -319,7 +320,7 @@ class HelpersTest extends TestCase
     public function test_jsonResponse(): void
     {
         $data = ['foo' => 'bar'];
-        $response = jsonResponse(200, $data);
+        $response = api_response($data, HTTP_STATUS::HTTP_OK);
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));

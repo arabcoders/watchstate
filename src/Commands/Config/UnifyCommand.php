@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -24,7 +24,7 @@ use Throwable;
  *
  * @package Your\Namespace
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class UnifyCommand extends Command
 {
     public const ROUTE = 'config:unify';

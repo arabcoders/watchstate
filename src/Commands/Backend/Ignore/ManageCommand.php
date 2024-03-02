@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Commands\Backend\Ignore;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,7 +22,7 @@ use Symfony\Component\Yaml\Yaml;
  * Class ManageCommand
  * This class is responsible for adding or removing an external id from the ignore list.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
     public const ROUTE = 'backend:ignore:manage';

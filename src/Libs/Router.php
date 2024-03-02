@@ -4,56 +4,45 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Attributes\Route\Route;
 use FilesystemIterator;
+use InvalidArgumentException;
 use PhpToken;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionClass;
+use RuntimeException;
 use SplFileInfo;
 use Throwable;
 
-/**
- * Class Router
- *
- * The Router class is responsible for generating an array of routes by scanning directories.
- * It parses PHP files to extract namespaces and classes, and retrieves routes using reflection.
- */
 final readonly class Router
 {
     /**
-     * Class Constructor.
-     *
-     * @param array $dirs An array containing directory names.
+     * @param array $dirs List of directories to scan for php files.
      */
-    public function __construct(private array $dirs)
+    public function __construct(private array $dirs = [])
     {
     }
 
-    /**
-     * Generates an array of routes by scanning directories.
-     *
-     * @return array The generated routes.
-     */
+    public function getDirs(): array
+    {
+        return $this->dirs;
+    }
+
     public function generate(): array
     {
         $routes = [];
 
         foreach ($this->dirs as $path) {
-            $routes += $this->scanDirectory($path);
+            array_push($routes, ...$this->scanDirectory($path));
         }
+
+        usort($routes, fn($a, $b) => strlen($a['path']) < strlen($b['path']) ? -1 : 1);
 
         return $routes;
     }
 
-    /**
-     * Scans the given directory and returns an array of routes.
-     *
-     * @param string $dir The directory to scan for files.
-     *
-     * @return array An array of routes.
-     */
     private function scanDirectory(string $dir): array
     {
         $classes = $routes = [];
@@ -86,75 +75,130 @@ final readonly class Router
                 continue;
             }
 
-            $routes += $this->getRoutes(new ReflectionClass($className));
+            array_push($routes, ...$this->getRoutes(new ReflectionClass($className)));
         }
 
         return $routes;
     }
 
-    /**
-     * Get the routes for a given class.
-     *
-     * @param ReflectionClass $class The reflection instance of given class to get the routes for.
-     *
-     * @return array The routes for the class.
-     */
     protected function getRoutes(ReflectionClass $class): array
     {
         $routes = [];
 
-        $attributes = $class->getAttributes(Routable::class, ReflectionAttribute::IS_INSTANCEOF);
+        $attributes = $class->getAttributes(Route::class, ReflectionAttribute::IS_INSTANCEOF);
+
+        $invokable = false;
+
+        foreach ($class->getMethods() as $method) {
+            if ($method->getName() === '__invoke') {
+                $invokable = true;
+            }
+        }
 
         foreach ($attributes as $attribute) {
             try {
                 $attributeClass = $attribute->newInstance();
+
+                if (!$attributeClass instanceof Route) {
+                    continue;
+                }
             } catch (Throwable) {
                 continue;
             }
 
-            if (!$attributeClass instanceof Routable) {
-                continue;
+            if (false === $invokable && !$attributeClass->isCli) {
+                throw new InvalidArgumentException(
+                    r(
+                        'Trying to route \'{route}\' to un-invokable class/method \'{callable}\'.',
+                        [
+                            'route' => $attributeClass->pattern,
+                            'callable' => $class->getName()
+                        ]
+                    )
+                );
             }
 
-            $routes[$attributeClass->command] = $class->getName();
+            $routes[] = [
+                'path' => $attributeClass->pattern,
+                'method' => $attributeClass->methods,
+                'callable' => $class->getName(),
+                'host' => $attributeClass->host,
+                'middlewares' => $attributeClass->middleware,
+                'name' => $attributeClass->name,
+                'port' => $attributeClass->port,
+                'scheme' => $attributeClass->scheme,
+            ];
+        }
+
+        foreach ($class->getMethods() as $method) {
+            $attributes = $method->getAttributes(Route::class, ReflectionAttribute::IS_INSTANCEOF);
+
+            foreach ($attributes as $attribute) {
+                try {
+                    $attributeClass = $attribute->newInstance();
+                    if (!$attributeClass instanceof Route) {
+                        continue;
+                    }
+                } catch (Throwable) {
+                    continue;
+                }
+
+                $call = $method->getName() === '__invoke' ? $class->getName() : [$class->getName(), $method->getName()];
+
+                $routes[] = [
+                    'path' => $attributeClass->pattern,
+                    'method' => $attributeClass->methods,
+                    'callable' => $call,
+                    'host' => $attributeClass->host,
+                    'middlewares' => $attributeClass->middleware,
+                    'name' => $attributeClass->name,
+                    'port' => $attributeClass->port,
+                    'scheme' => $attributeClass->scheme,
+                ];
+            }
         }
 
         return $routes;
     }
 
-    /**
-     * Parses a file and extracts the namespaces and classes.
-     *
-     * @param string $file The path to the file to parse.
-     *
-     * @return array|false An array of fully qualified class names if classes are found, otherwise false.
-     * @throws RuntimeException If the file cannot be read.
-     */
     private function parseFile(string $file): array|false
     {
         $classes = [];
         $namespace = '';
 
-        $tokens = PhpToken::tokenize((string)(new Stream($file, 'r')));
+        try {
+            $stream = new Stream($file, 'r');
+            $content = $stream->getContents();
+            $stream->close();
+        } catch (InvalidArgumentException $e) {
+            throw new RuntimeException(
+                r('Unable to read \'{file}\'. {error}', [
+                    'file' => $file,
+                    'error' => $e->getMessage(),
+                ])
+            );
+        }
+
+        $tokens = PhpToken::tokenize($content);
         $count = count($tokens);
 
         foreach ($tokens as $i => $iValue) {
-            if ('T_NAMESPACE' === $iValue->getTokenName()) {
+            if ($iValue->getTokenName() === 'T_NAMESPACE') {
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ('T_NAME_QUALIFIED' === $tokens[$j]->getTokenName()) {
+                    if ($tokens[$j]->getTokenName() === 'T_NAME_QUALIFIED') {
                         $namespace = $tokens[$j]->text;
                         break;
                     }
                 }
             }
 
-            if ('T_CLASS' === $iValue->getTokenName()) {
+            if ($iValue->getTokenName() === 'T_CLASS') {
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ('T_WHITESPACE' === $tokens[$j]->getTokenName()) {
+                    if ($tokens[$j]->getTokenName() === 'T_WHITESPACE') {
                         continue;
                     }
 
-                    if ('T_STRING' === $tokens[$j]->getTokenName()) {
+                    if ($tokens[$j]->getTokenName() === 'T_STRING') {
                         $classes[] = $namespace . '\\' . $tokens[$j]->text;
                     } else {
                         break;

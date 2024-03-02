@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
-use App\Libs\Routable;
+use App\Libs\Attributes\Route\Cli;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * This command is used to generate routes for commands. It is automatically run on container startup.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class RoutesCommand extends Command
 {
     public const ROUTE = 'system:routes';
@@ -25,11 +25,11 @@ final class RoutesCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Generate commands routes.')->setHelp(
+            ->setDescription('Generate routes')->setHelp(
                 <<<HELP
 
-                This command force routes <notice>regeneration</notice> for commands.
-                You do not need to run this command unless told by the team.
+                This command force routes <notice>regeneration</notice> for commands & API endpoint.
+                You do not need to run this command unless told by the devs.
                 This is done automatically on container startup.
 
                 HELP

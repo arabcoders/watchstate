@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Commands\Backend\Search;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -21,7 +21,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * @note Investigate the possibility of using the command to search all backends at once.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class QueryCommand extends Command
 {
     public const ROUTE = 'backend:search:query';

@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
-use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Input\InputInterface;
@@ -25,7 +25,7 @@ use Throwable;
  * This class represents a command that pushes webhook queued events.
  * It sends change play state requests to the supported backends.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class PushCommand extends Command
 {
     public const ROUTE = 'state:push';

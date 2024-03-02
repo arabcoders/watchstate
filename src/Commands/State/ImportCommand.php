@@ -7,6 +7,7 @@ namespace App\Commands\State;
 use App\Command;
 use App\Commands\Backend\Library\UnmatchedCommand;
 use App\Commands\Config\EditCommand;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
@@ -16,7 +17,6 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
@@ -34,7 +34,7 @@ use Throwable;
  *
  * This command imports metadata and play state of items from backends and updates the local database.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class ImportCommand extends Command
 {
     public const ROUTE = 'state:import';
