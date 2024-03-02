@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * This class represents a command to create a database schema migration file.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class MakeCommand extends Command
 {
     public const ROUTE = 'system:db:make';

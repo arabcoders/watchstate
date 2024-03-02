@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
@@ -24,7 +24,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * This command display all backend's information. User can select and/or filter the displayed information.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ViewCommand extends Command
 {
     public const ROUTE = 'config:view';

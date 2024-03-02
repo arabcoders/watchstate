@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Exceptions\InvalidArgumentException;
-use App\Libs\Routable;
 use LimitIterator;
 use SplFileObject;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -22,7 +22,7 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
  *
  * This class is used to view and clear log files.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class LogsCommand extends Command
 {
     public const ROUTE = 'system:logs';

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Commands\Backend\Library;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,7 +21,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * Find possible mis-matched item in a libraries.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class MismatchCommand extends Command
 {
     public const ROUTE = 'backend:library:mismatch';

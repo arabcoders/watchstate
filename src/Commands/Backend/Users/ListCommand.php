@@ -6,9 +6,9 @@ namespace App\Commands\Backend\Users;
 
 use App\Backends\Plex\Commands\AccessTokenCommand;
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -22,7 +22,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
  * This command lists the users from the backend. The configured backend token should have access to do so otherwise,
  * or an error will be thrown. This mainly concerns plex managed users as their tokens are limited.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'backend:users:list';

@@ -7,9 +7,9 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Commands\State\ImportCommand;
 use App\Commands\System\IndexCommand;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -27,7 +27,7 @@ use Throwable;
  *
  * This class allows the user to manage backend settings interactively.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
     public const ROUTE = 'config:manage';

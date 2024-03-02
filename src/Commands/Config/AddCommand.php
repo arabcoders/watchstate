@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
-use App\Libs\Routable;
+use App\Libs\Attributes\Route\Cli;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,7 +21,7 @@ use Symfony\Component\Console\Question\Question;
  * And act as shortcut for running the following command:
  * config:manage --add -- backend_name
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class AddCommand extends Command
 {
     public const ROUTE = 'config:add';

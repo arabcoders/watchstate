@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\Backend;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -18,7 +18,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * The VersionCommand class is used to retrieve the backend product version.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class VersionCommand extends Command
 {
     public const ROUTE = 'backend:version';

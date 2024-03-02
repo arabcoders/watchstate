@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Commands\Backend\Search;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -20,7 +20,7 @@ use Throwable;
  *
  * This class represents a command for getting backend metadata related to a specific id.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class IdCommand extends Command
 {
     public const ROUTE = 'backend:search:id';

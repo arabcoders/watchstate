@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
-use App\Libs\Routable;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Server;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -18,7 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * @package YourPackage
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ServerCommand extends Command
 {
     public const ROUTE = 'system:server';

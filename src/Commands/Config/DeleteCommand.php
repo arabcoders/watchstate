@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use PDO;
 use Symfony\Component\Console\Input\InputArgument;
@@ -24,7 +24,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * @package App\Command
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class DeleteCommand extends Command
 {
     public const ROUTE = 'config:delete';

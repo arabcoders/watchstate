@@ -11,11 +11,15 @@ use App\Libs\Exceptions\HttpException;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\Extends\RouterStrategy;
 use Closure;
 use DateInterval;
 use ErrorException;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface as iEmitter;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
+use League\Route\Http\Exception as RouterHttpException;
+use League\Route\RouteGroup;
+use League\Route\Router as APIRouter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Level;
@@ -160,11 +164,14 @@ final class Initializer
 
             $cache = Container::get(CacheInterface::class);
 
-            $routes = false === $cache->has('routes') ? generateRoutes() : $cache->get('routes', []);
+            $routes = [];
+            $loader = false === $cache->has('routes_cli') ? generateRoutes() : $cache->get('routes_cli', []);
 
-            $this->cli->setCommandLoader(
-                new ContainerCommandLoader(Container::getContainer(), $routes)
-            );
+            foreach ($loader as $route) {
+                $routes[ag($route, 'path')] = ag($route, 'callable');
+            }
+
+            $this->cli->setCommandLoader(new ContainerCommandLoader(Container::getContainer(), $routes));
 
             $this->cli->run(output: $this->cliOutput);
         } catch (Throwable $e) {
@@ -191,7 +198,9 @@ final class Initializer
 
         try {
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
-            $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
+            if (false === $response->hasHeader('X-Application-Version')) {
+                $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
+            }
         } catch (Throwable $e) {
             $httpException = (true === ($e instanceof HttpException));
 
@@ -235,6 +244,11 @@ final class Initializer
         // -- health endpoint.
         if (true === str_starts_with($request->getUri()->getPath(), '/healthcheck')) {
             return new Response(200);
+        }
+
+        // -- Forward requests to API server.
+        if (str_starts_with($request->getUri()->getPath(), Config::get('api.prefix', '????'))) {
+            return $this->defaultAPIServer($realRequest);
         }
 
         // -- Save request payload.
@@ -452,6 +466,74 @@ final class Initializer
     }
 
     /**
+     * Default API server Responder.
+     *
+     * @param iRequest $realRequest The incoming HTTP request.
+     *
+     * @return ResponseInterface The HTTP response.
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException If an error occurs.
+     */
+    private function defaultAPIServer(iRequest $realRequest): ResponseInterface
+    {
+        $router = new APIRouter();
+        $strategy = new RouterStrategy();
+        $strategy->setContainer(Container::getContainer());
+        $router->setStrategy($strategy);
+
+        $mw = require __DIR__ . '/../../config/Middlewares.php';
+        $middlewares = (array)$mw(Container::getContainer());
+
+        foreach ($middlewares as $middleware) {
+            $router->middleware($middleware(Container::getContainer()));
+        }
+
+        $fn = static function (APIRouter|RouteGroup $r, array $route): void {
+            foreach ($route['method'] as $method) {
+                $f = $r->map($method, $route['path'], $route['callable']);
+
+                if (!empty($route['lazymiddlewares'])) {
+                    $f->lazyMiddlewares($route['lazymiddlewares']);
+                }
+
+                if (!empty($route['middlewares'])) {
+                    $f->middlewares($route['middlewares']);
+                }
+
+                if (!empty($route['host'])) {
+                    $f->setHost($route['host']);
+                }
+
+                if (!empty($route['port'])) {
+                    $f->setPort($route['port']);
+                }
+
+                if (!empty($route['scheme'])) {
+                    $f->setScheme($route['scheme']);
+                }
+            }
+        };
+
+        // -- Register HTTP API routes.
+        (function () use ($fn, $router) {
+            $cache = Container::get(CacheInterface::class);
+            foreach ($cache->has('routes_http') ? $cache->get('routes_http') : generateRoutes('http') as $route) {
+                if (!empty($route['middlewares'])) {
+                    $route['lazymiddlewares'] = $route['middlewares'];
+                    unset($route['middlewares']);
+                }
+                $fn($router, $route);
+            }
+        })();
+
+        try {
+            return $router->dispatch($realRequest);
+        } catch (RouterHttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getStatusCode());
+        }
+    }
+
+    /**
      * Create directories based on configuration file.
      *
      * @throws RuntimeException If the necessary environment variables are not set or if there is an issue creating or accessing directories.
@@ -532,7 +614,7 @@ final class Initializer
 
         if (null !== ($logfile = Config::get('webhook.logfile'))) {
             $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
-            $this->accessLog = $logger->withName(name: 'webhook')
+            $this->accessLog = $logger->withName(name: 'http')
                 ->pushHandler(new StreamHandler($logfile, $level, true));
 
             if (true === $inContainer) {

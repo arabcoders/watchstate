@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
@@ -13,7 +14,6 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
@@ -30,7 +30,7 @@ use Throwable;
  *
  * @package App\Console\Commands\State
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class ExportCommand extends Command
 {
     public const ROUTE = 'state:export';

@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\UnexpectedVersionException;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
-use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Input\InputInterface;
@@ -29,7 +29,7 @@ use Throwable;
  * If no metadata is available for a backend,
  * the watch progress update won't be sent to that backend
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class ProgressCommand extends Command
 {
     public const ROUTE = 'state:progress';
@@ -213,7 +213,7 @@ class ProgressCommand extends Command
 
                 $backend['options'] = $opts;
                 $backend['class'] = $this->getBackend(name: $name, config: $backend);
-                
+
                 $backend['class']->progress(entities: $entities, queue: $this->queue);
             } /** @noinspection PhpRedundantCatchClauseInspection */
             catch (UnexpectedVersionException $e) {

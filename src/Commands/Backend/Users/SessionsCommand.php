@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Commands\Backend\Users;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
-use App\Libs\Routable;
 use DateTimeInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -19,7 +19,7 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * Get backend active sessions.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class SessionsCommand extends Command
 {
     public const ROUTE = 'backend:users:sessions';

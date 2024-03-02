@@ -11,6 +11,7 @@ use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
+use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
 use App\Libs\Router;
 use App\Libs\Stream;
@@ -378,28 +379,74 @@ if (!function_exists('saveRequestPayload')) {
     }
 }
 
-if (!function_exists('jsonResponse')) {
+if (!function_exists('api_response')) {
     /**
-     * Create a JSON response.
+     * Create a API response.
      *
-     * @param int $status The HTTP status code.
      * @param array $body The JSON data to include in the response body.
-     * @param array $headers Optional. Additional headers to include in the response (default is an empty array).
+     * @param HTTP_STATUS $status Optional. The HTTP status code. Default is {@see HTTP_STATUS::HTTP_OK}.
+     * @param array $headers Optional. Additional headers to include in the response.
+     * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
      *
      * @return ResponseInterface A PSR-7 compatible response object.
      */
-    function jsonResponse(int $status, array $body, array $headers = []): ResponseInterface
-    {
-        $headers['Content-Type'] = 'application/json';
-
-        return new Response(
-            status: $status,
+    function api_response(
+        array $body,
+        HTTP_STATUS $status = HTTP_STATUS::HTTP_OK,
+        array $headers = [],
+        string|null $reason = null
+    ): ResponseInterface {
+        return (new Response(
+            status: $status->value,
             headers: $headers,
             body: json_encode(
                 $body,
                 JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-            )
+            ),
+            reason: $reason,
+        ))->withHeader('Content-Type', 'application/json')->withHeader('X-Application-Version', getAppVersion());
+    }
+}
+
+if (!function_exists('api_error')) {
+    /**
+     * Create a API error response.
+     *
+     * @param string $message The error message.
+     * @param HTTP_STATUS $httpCode Optional. The HTTP status code. Default is {@see HTTP_STATUS::HTTP_BAD_REQUEST}.
+     * @param array $body Optional. Additional fields to include in the response body.
+     * @param array $opts Optional. Additional options.
+     *
+     * @return ResponseInterface A PSR-7 compatible response object.
+     */
+    function api_error(
+        string $message,
+        HTTP_STATUS $httpCode = HTTP_STATUS::HTTP_BAD_REQUEST,
+        array $body = [],
+        array $headers = [],
+        string|null $reason = null,
+        array $opts = []
+    ): ResponseInterface {
+        $response = api_response(
+            body: array_replace_recursive($body, [
+                'error' => [
+                    'code' => $httpCode->value,
+                    'message' => $message
+                ]
+            ]),
+            status: $httpCode,
+            reason: $reason
         );
+
+        foreach ($headers as $key => $val) {
+            $response = $response->withHeader($key, $val);
+        }
+
+        if (array_key_exists('callback', $opts) && ($opts['callback'] instanceof Closure)) {
+            $response = $opts['callback']($response);
+        }
+
+        return $response;
     }
 }
 
@@ -902,14 +949,13 @@ if (false === function_exists('generateRoutes')) {
     /**
      * Generate routes based on the available commands.
      *
+     * @param string $type The type of routes to return. defaults to is cli.
+     *
      * @return array The generated routes.
      */
-    function generateRoutes(): array
+    function generateRoutes(string $type = 'cli'): array
     {
-        $dirs = [
-            __DIR__ . '/../Commands',
-        ];
-
+        $dirs = [__DIR__ . '/../Commands'];
         foreach (array_keys(Config::get('supported', [])) as $backend) {
             $dir = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
 
@@ -920,18 +966,23 @@ if (false === function_exists('generateRoutes')) {
             $dirs[] = $dir;
         }
 
-        $routes = (new Router($dirs))->generate();
+        $routes_cli = (new Router($dirs))->generate();
+
+        $cache = Container::get(CacheInterface::class);
 
         try {
-            Container::get(CacheInterface::class)->set(
-                'routes',
-                $routes,
-                new DateInterval('PT1H')
-            );
+            $cache->set('routes_cli', $routes_cli, new DateInterval('PT1H'));
         } catch (\Psr\SimpleCache\InvalidArgumentException) {
         }
 
-        return $routes;
+        $routes_http = (new Router([__DIR__ . '/../API']))->generate();
+
+        try {
+            $cache->set('routes_http', $routes_http, new DateInterval('P1D'));
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+        }
+
+        return 'http' === $type ? $routes_http : $routes_cli;
     }
 }
 

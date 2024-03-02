@@ -29,6 +29,10 @@ return (function () {
                 'after' => env('WS_LOGS_PRUNE_AFTER', '-3 DAYS'),
             ],
         ],
+        'api' => [
+            'prefix' => '/v1/api',
+            'key' => env('WS_API_KEY', null),
+        ],
         'database' => [
             'version' => 'v01',
         ],

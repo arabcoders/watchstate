@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Commands\Backend\Ignore;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
-use App\Libs\Routable;
 use PDO;
 use Psr\Http\Message\UriInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -24,7 +24,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * Represents a command for listing ignored external ids.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'backend:ignore:list';

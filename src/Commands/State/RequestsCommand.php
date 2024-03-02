@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
-use App\Libs\Routable;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Helper\Table;
@@ -25,7 +25,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * @package Your\Namespace
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class RequestsCommand extends Command
 {
     public const ROUTE = 'state:requests';

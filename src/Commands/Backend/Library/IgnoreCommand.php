@@ -6,8 +6,8 @@ namespace App\Commands\Backend\Library;
 
 use App\Command;
 use App\Commands\Config\EditCommand;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,7 +21,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * This class represents a command for managing ignored libraries in the Backend.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class IgnoreCommand extends Command
 {
     public const ROUTE = 'backend:library:ignore';

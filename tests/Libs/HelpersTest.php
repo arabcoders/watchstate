@@ -7,6 +7,7 @@ namespace Tests\Libs;
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\HTTP_STATUS;
 use App\Libs\TestCase;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -316,12 +317,23 @@ class HelpersTest extends TestCase
         saveRequestPayload(request: $request);
     }
 
-    public function test_jsonResponse(): void
+    public function test_api_response(): void
     {
         $data = ['foo' => 'bar'];
-        $response = jsonResponse(200, $data);
-        $this->assertSame(200, $response->getStatusCode());
+        $response = api_response($data, HTTP_STATUS::HTTP_OK);
+        $this->assertSame(HTTP_STATUS::HTTP_OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
+        $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
+    }
+
+    public function test_error_response(): void
+    {
+        $data = ['error' => ['code' => HTTP_STATUS::HTTP_BAD_REQUEST->value, 'message' => 'error message']];
+        $response = api_error('error message', HTTP_STATUS::HTTP_BAD_REQUEST);
+        $this->assertSame(HTTP_STATUS::HTTP_BAD_REQUEST->value, $response->getStatusCode());
+        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
     }
 

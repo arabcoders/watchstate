@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Commands\State;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
-use App\Libs\Routable;
 use App\Libs\Stream;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
@@ -24,7 +24,7 @@ use Throwable;
  *
  * Generate portable backup of backends play state.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 class BackupCommand extends Command
 {
     public const ROUTE = 'state:backup';

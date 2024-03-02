@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands\Database;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
@@ -12,7 +13,6 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Routable;
 use PDO;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -27,7 +27,7 @@ use Symfony\Component\Yaml\Yaml;
  *
  * This class act as frontend for the state table, it allows the user to see and manipulate view of state table.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
     public const ROUTE = 'db:list';

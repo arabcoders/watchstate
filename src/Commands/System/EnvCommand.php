@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Routable;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  *
  * This command displays the environment variables that were loaded during the execution of the tool.
  */
-#[Routable(command: self::ROUTE)]
+#[Cli(command: self::ROUTE)]
 final class EnvCommand extends Command
 {
     public const ROUTE = 'system:env';
