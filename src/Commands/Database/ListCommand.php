@@ -35,7 +35,7 @@ final class ListCommand extends Command
     /**
      * @var array The array containing the names of the columns that can be modified for viewing purposes.
      */
-    private const COLUMNS_CHANGEABLE = [
+    public const COLUMNS_CHANGEABLE = [
         iState::COLUMN_WATCHED,
         iState::COLUMN_VIA,
         iState::COLUMN_TITLE,
@@ -48,7 +48,7 @@ final class ListCommand extends Command
     /**
      * @var array The array containing the names of the columns that the list can be sorted by.
      */
-    private const COLUMNS_SORTABLE = [
+    public const COLUMNS_SORTABLE = [
         iState::COLUMN_ID,
         iState::COLUMN_TYPE,
         iState::COLUMN_UPDATED,
