@@ -135,7 +135,7 @@ final class Index
                 );
             }
 
-            if (preg_match('/[^a-zA-Z0-9_]/', $sField)) {
+            if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
                     HTTP_STATUS::HTTP_BAD_REQUEST
@@ -166,7 +166,7 @@ final class Index
                 );
             }
 
-            if (preg_match('/[^a-zA-Z0-9_]/', $sField)) {
+            if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
                     HTTP_STATUS::HTTP_BAD_REQUEST
