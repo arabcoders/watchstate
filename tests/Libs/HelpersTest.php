@@ -320,7 +320,7 @@ class HelpersTest extends TestCase
     public function test_api_response(): void
     {
         $data = ['foo' => 'bar'];
-        $response = api_response($data, HTTP_STATUS::HTTP_OK);
+        $response = api_response(HTTP_STATUS::HTTP_OK, $data);
         $this->assertSame(HTTP_STATUS::HTTP_OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
         $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
