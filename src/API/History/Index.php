@@ -135,7 +135,7 @@ final class Index
                 );
             }
 
-            if (preg_match('/[^a-zA-Z0-9_]/', $sField)) {
+            if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
                     HTTP_STATUS::HTTP_BAD_REQUEST
@@ -166,7 +166,7 @@ final class Index
                 );
             }
 
-            if (preg_match('/[^a-zA-Z0-9_]/', $sField)) {
+            if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
                     HTTP_STATUS::HTTP_BAD_REQUEST
@@ -267,7 +267,6 @@ final class Index
         );
 
         $response = [
-            '@self' => (string)$getUri,
             'paging' => [
                 'total' => (int)$total,
                 'perpage' => $perpage,
@@ -276,26 +275,17 @@ final class Index
                 'next_page' => $page < @ceil($total / $perpage) ? $page + 1 : null,
                 'prev_page' => !empty($total) && $page > 1 ? $page - 1 : null,
                 'last_page' => @ceil($total / $perpage),
-                'urls' => [
-                    'first_url' => $firstUrl,
-                    'next_url' => $nextUrl,
-                    'prev_url' => $prevUrl,
-                    'last_url' => $lastUrl,
-                ],
             ],
             'filters' => $filters,
-            'data' => [],
+            'history' => [],
+            'links' => [
+                'self' => (string)$getUri,
+                'first_url' => $firstUrl,
+                'next_url' => $nextUrl,
+                'prev_url' => $prevUrl,
+                'last_url' => $lastUrl,
+            ],
         ];
-
-        if (0 === $stmt->rowCount()) {
-            $response['error'] = [
-                'message' => 'No Results.',
-            ];
-
-            if (true === count($response['filters']) >= 1) {
-                $response['error']['message'] .= ' Probably invalid filters values were used.';
-            }
-        }
 
         while ($row = $stmt->fetch()) {
             $entity = Container::get(iState::class)->fromArray($row);
@@ -312,11 +302,16 @@ final class Index
                 unset($item[iState::COLUMN_EXTRA]);
             }
 
-            $response['data'][] = [
-                    '@self' => (string)(new Uri())->withPath(
+            $item = [
+                ...$item,
+                'links' => [
+                    'self' => (string)(new Uri())->withPath(
                         rtrim($request->getUri()->getPath(), '/') . '/' . $entity->id
                     )->withQuery(http_build_query($currentQuery)),
-                ] + $item;
+                ],
+            ];
+
+            $response['history'][] = $item;
         }
 
         return api_response($response, HTTP_STATUS::HTTP_OK, []);
