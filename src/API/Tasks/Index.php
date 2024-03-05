@@ -53,6 +53,10 @@ final class Index
             'args' => ag($task, 'args'),
         ];
 
+        if (!is_string($item['command'])) {
+            $item['command'] = get_debug_type($item['command']);
+        }
+
         if ($isEnabled) {
             $item['next_run'] = makeDate(ag($task, 'timer')->getNextRunDate());
             $item['prev_run'] = makeDate(ag($task, 'timer')->getPreviousRunDate());

@@ -25,11 +25,6 @@ final class View
             return api_error('Task not found.', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $response = [
-            '@self' => parseConfigValue(Index::URL . '/' . $id),
-            ...Index::formatTask($task)
-        ];
-
-        return api_response($response, HTTP_STATUS::HTTP_OK);
+        return api_response(Index::formatTask($task), HTTP_STATUS::HTTP_OK);
     }
 }
