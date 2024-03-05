@@ -383,7 +383,7 @@ if (!function_exists('api_response')) {
     /**
      * Create a API response.
      *
-     * @param array $body The JSON data to include in the response body.
+     * @param array|null $body The JSON data to include in the response body.
      * @param HTTP_STATUS $status Optional. The HTTP status code. Default is {@see HTTP_STATUS::HTTP_OK}.
      * @param array $headers Optional. Additional headers to include in the response.
      * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
@@ -391,7 +391,7 @@ if (!function_exists('api_response')) {
      * @return ResponseInterface A PSR-7 compatible response object.
      */
     function api_response(
-        array $body,
+        array|null $body,
         HTTP_STATUS $status = HTTP_STATUS::HTTP_OK,
         array $headers = [],
         string|null $reason = null
@@ -399,10 +399,10 @@ if (!function_exists('api_response')) {
         return (new Response(
             status: $status->value,
             headers: $headers,
-            body: json_encode(
+            body: $body ? json_encode(
                 $body,
                 JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-            ),
+            ) : null,
             reason: $reason,
         ))->withHeader('Content-Type', 'application/json')->withHeader('X-Application-Version', getAppVersion());
     }
