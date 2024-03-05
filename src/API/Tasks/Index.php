@@ -21,7 +21,7 @@ final class Index
         $urlPath = rtrim($request->getUri()->getPath(), '/');
 
         $response = [
-            'data' => [],
+            'tasks' => [],
             'links' => [
                 'self' => (string)$apiUrl,
             ],
@@ -33,12 +33,12 @@ final class Index
                 fn($k) => false === in_array($k, ['command', 'args']),
                 ARRAY_FILTER_USE_KEY
             );
-            
+
             $task['links'] = [
                 'self' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name')),
             ];
 
-            $response['data'][] = $task;
+            $response['tasks'][] = $task;
         }
 
         return api_response($response, HTTP_STATUS::HTTP_OK, []);

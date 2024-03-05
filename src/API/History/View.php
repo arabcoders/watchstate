@@ -46,6 +46,6 @@ final readonly class View
             ],
         ];
 
-        return api_response($item, HTTP_STATUS::HTTP_OK, []);
+        return api_response(['history' => $item], HTTP_STATUS::HTTP_OK, []);
     }
 }

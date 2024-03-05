@@ -28,7 +28,7 @@ final class Index
         $urlPath = $request->getUri()->getPath();
 
         $response = [
-            'data' => [],
+            'backends' => [],
             'links' => [
                 'self' => (string)$apiUrl,
             ],
@@ -45,7 +45,7 @@ final class Index
                 'self' => (string)$apiUrl->withPath($urlPath . '/' . $backend['name']),
             ];
 
-            $response['data'][] = $backend;
+            $response['backends'][] = $backend;
         }
 
         return api_response($response, HTTP_STATUS::HTTP_OK, []);

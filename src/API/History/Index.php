@@ -277,7 +277,7 @@ final class Index
                 'last_page' => @ceil($total / $perpage),
             ],
             'filters' => $filters,
-            'data' => [],
+            'history' => [],
             'links' => [
                 'self' => (string)$getUri,
                 'first_url' => $firstUrl,
@@ -311,7 +311,7 @@ final class Index
                 ],
             ];
 
-            $response['data'][] = $item;
+            $response['history'][] = $item;
         }
 
         return api_response($response, HTTP_STATUS::HTTP_OK, []);

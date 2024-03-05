@@ -35,8 +35,8 @@ final class View
                 'list' => (string)$apiUrl->withPath(parseConfigValue(self::URL)),
             ],
         ];
-
-        return api_response($response, HTTP_STATUS::HTTP_OK, []);
+        
+        return api_response(['backend' => $response], HTTP_STATUS::HTTP_OK, []);
     }
 
 }
