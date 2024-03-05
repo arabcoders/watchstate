@@ -199,6 +199,11 @@ final class Initializer
             if (false === $response->hasHeader('X-Application-Version')) {
                 $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
             }
+
+            if ($response->hasHeader('X-Log-Response')) {
+                $this->write($request, Level::Info, $this->formatLog($request, $response));
+                $response = $response->withoutHeader('X-Log-Response');
+            }
         } catch (Throwable $e) {
             $httpException = (true === ($e instanceof HttpException));
 
@@ -240,19 +245,21 @@ final class Initializer
         $request = $realRequest;
         $requestPath = $request->getUri()->getPath();
 
-
         // -- health endpoint.
         if (true === str_starts_with($requestPath, '/healthcheck')) {
             return api_response(HTTP_STATUS::HTTP_OK);
         }
 
-        // -- favicon endpoint.
+        // -- favicon.
         if (true === str_starts_with($requestPath, '/favicon.ico')) {
-            return api_response(HTTP_STATUS::HTTP_NO_CONTENT);
+            return api_response(HTTP_STATUS::HTTP_NOT_FOUND)
+                ->withoutHeader('Content-Type')
+                ->withHeader('Cache-Control', 'public, max-age=604800, immutable')
+                ->withHeader('Content-Type', 'image/x-icon');
         }
 
         // -- Forward requests to API server.
-        if (str_starts_with($request->getUri()->getPath(), Config::get('api.prefix', '????'))) {
+        if (true === str_starts_with($requestPath, Config::get('api.prefix', '????'))) {
             return $this->defaultAPIServer($realRequest);
         }
 
@@ -264,12 +271,13 @@ final class Initializer
         $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
 
         if (empty($apikey)) {
-            $this->write($request, Level::Info, 'No webhook token was found in header or query.', [
-                'uri' => (string)$request->getUri(),
-                'headers' => $request->getHeaders(),
-                'query' => $request->getQueryParams(),
-            ], true);
-            return api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+            $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+            $this->write(
+                $request,
+                Level::Info,
+                $this->formatLog($request, $response, 'No webhook token was found in header or query.')
+            );
+            return $response;
         }
 
         $validUser = $validUUid = null;
@@ -536,12 +544,7 @@ final class Initializer
         })();
 
         try {
-            $response = $router->dispatch($realRequest);
-            $this->write($realRequest, Level::Info, 'HTTP: [{status}] \'{uri}\' {method}', [
-                'status' => $response->getStatusCode(),
-                'method' => $realRequest->getMethod(),
-            ], true);
-            return $response;
+            return $router->dispatch($realRequest)->withHeader('X-Log-Response', '1');
         } /** @noinspection PhpRedundantCatchClauseInspection */
         catch (RouterHttpException $e) {
             throw new HttpException($e->getMessage(), $e->getStatusCode());
@@ -737,10 +740,33 @@ final class Initializer
             $context['attributes'] = $attributes;
         }
 
-        if (true === ((bool)Config::get('logs.context') || $forceContext)) {
+        if (true === (Config::get('logs.context') || $forceContext)) {
             $this->accessLog->log($level, $message, $context);
         } else {
             $this->accessLog->log($level, r($message, $context));
         }
+    }
+
+    private function formatLog(iRequest $request, ResponseInterface $response, string|null $message = null)
+    {
+        $refer = '-';
+
+        if (true === ag_exists($request->getServerParams(), 'HTTP_REFERER')) {
+            $refer = (new Uri(ag($request->getServerParams(), 'HTTP_REFERER')))
+                ->withQuery('')->withFragment('')->withUserInfo('');
+        }
+
+        return r('{ip} - "{method} {uri} {protocol}" {status} {size} "{refer}" "{agent}" "{message}"', [
+            'ip' => getClientIp($request),
+            'user' => ag($request->getServerParams(), 'REMOTE_USER', '-'),
+            'method' => $request->getMethod(),
+            'uri' => $request->getUri()->getPath(),
+            'protocol' => 'HTTP/' . $request->getProtocolVersion(),
+            'status' => $response->getStatusCode(),
+            'size' => $response->getBody()->getSize(),
+            'agent' => ag($request->getServerParams(), 'HTTP_USER_AGENT', '-'),
+            'refer' => (string)$refer,
+            'message' => $message ?? '-',
+        ]);
     }
 }
