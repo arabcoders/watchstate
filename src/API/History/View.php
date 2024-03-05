@@ -31,10 +31,20 @@ final readonly class View
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
+        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
+
         $item = array_pop($item)->getAll();
 
         $item[iState::COLUMN_WATCHED] = $entity->isWatched();
         $item[iState::COLUMN_UPDATED] = makeDate($entity->updated);
+
+        $item = [
+            ...$item,
+            'links' => [
+                'self' => (string)$apiUrl,
+                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
+            ],
+        ];
 
         return api_response($item, HTTP_STATUS::HTTP_OK, []);
     }

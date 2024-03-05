@@ -17,22 +17,28 @@ final class Index
 
     public function __invoke(ServerRequestInterface $request, array $args = []): ResponseInterface
     {
-        $response = [
-            'data' => [],
-        ];
-
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
         $urlPath = rtrim($request->getUri()->getPath(), '/');
 
+        $response = [
+            'data' => [],
+            'links' => [
+                'self' => (string)$apiUrl,
+            ],
+        ];
+
         foreach (TasksCommand::getTasks() as $task) {
-            $response['data'][] = [
-                '@self' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name')),
-                ...array_filter(
-                    self::formatTask($task),
-                    fn($k) => false === in_array($k, ['command', 'args']),
-                    ARRAY_FILTER_USE_KEY
-                )
+            $task = array_filter(
+                self::formatTask($task),
+                fn($k) => false === in_array($k, ['command', 'args']),
+                ARRAY_FILTER_USE_KEY
+            );
+            
+            $task['links'] = [
+                'self' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name')),
             ];
+
+            $response['data'][] = $task;
         }
 
         return api_response($response, HTTP_STATUS::HTTP_OK, []);

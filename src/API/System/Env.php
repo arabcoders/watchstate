@@ -27,8 +27,10 @@ final class Env
     public function __invoke(ServerRequestInterface $request, array $args = []): ResponseInterface
     {
         $response = [
-            '@self' => (string)$request->getUri()->withHost('')->withPort(0)->withScheme(''),
             'data' => [],
+            'links' => [
+                'self' => (string)$request->getUri()->withHost('')->withPort(0)->withScheme(''),
+            ],
         ];
 
         foreach ($_ENV as $key => $val) {

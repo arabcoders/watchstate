@@ -267,7 +267,6 @@ final class Index
         );
 
         $response = [
-            '@self' => (string)$getUri,
             'paging' => [
                 'total' => (int)$total,
                 'perpage' => $perpage,
@@ -276,15 +275,16 @@ final class Index
                 'next_page' => $page < @ceil($total / $perpage) ? $page + 1 : null,
                 'prev_page' => !empty($total) && $page > 1 ? $page - 1 : null,
                 'last_page' => @ceil($total / $perpage),
-                'urls' => [
-                    'first_url' => $firstUrl,
-                    'next_url' => $nextUrl,
-                    'prev_url' => $prevUrl,
-                    'last_url' => $lastUrl,
-                ],
             ],
             'filters' => $filters,
             'data' => [],
+            'links' => [
+                'self' => (string)$getUri,
+                'first_url' => $firstUrl,
+                'next_url' => $nextUrl,
+                'prev_url' => $prevUrl,
+                'last_url' => $lastUrl,
+            ],
         ];
 
         while ($row = $stmt->fetch()) {
@@ -302,11 +302,16 @@ final class Index
                 unset($item[iState::COLUMN_EXTRA]);
             }
 
-            $response['data'][] = [
-                    '@self' => (string)(new Uri())->withPath(
+            $item = [
+                ...$item,
+                'links' => [
+                    'self' => (string)(new Uri())->withPath(
                         rtrim($request->getUri()->getPath(), '/') . '/' . $entity->id
                     )->withQuery(http_build_query($currentQuery)),
-                ] + $item;
+                ],
+            ];
+
+            $response['data'][] = $item;
         }
 
         return api_response($response, HTTP_STATUS::HTTP_OK, []);
