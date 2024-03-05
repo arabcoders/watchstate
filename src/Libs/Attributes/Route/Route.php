@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Attributes\Route;
 
-use App\Libs\Config;
 use Attribute;
-use Closure;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
 class Route
@@ -43,22 +41,12 @@ class Route
     ) {
         $this->name = $name;
         $this->methods = $methods;
-        $this->pattern = $this->fromConfig($pattern);
+        $this->pattern = parseConfigValue($pattern);
         $this->middleware = is_string($middleware) ? [$middleware] : $middleware;
-        $this->port = null !== $port ? $this->fromConfig($port) : $port;
-        $this->scheme = null !== $scheme ? $this->fromConfig($scheme) : $scheme;
-        $this->host = null !== $host ? $this->fromConfig($host, fn($v) => parse_url($v, PHP_URL_HOST)) : $host;
+        $this->port = null !== $port ? parseConfigValue($port) : $port;
+        $this->scheme = null !== $scheme ? parseConfigValue($scheme) : $scheme;
+        $this->host = null !== $host ? parseConfigValue($host, fn($v) => parse_url($v, PHP_URL_HOST)) : $host;
 
         $this->isCli = true === (bool)ag($opts, 'cli', false);
-    }
-
-    private function fromConfig(mixed $value, Closure|null $callback = null): mixed
-    {
-        if (is_string($value) && preg_match('#%{(.+?)}#s', $value)) {
-            $val = preg_replace_callback('#%{(.+?)}#s', fn($match) => Config::get($match[1], $match[1]), $value);
-            return null !== $callback && null !== $val ? $callback($val) : $val;
-        }
-
-        return $value;
     }
 }

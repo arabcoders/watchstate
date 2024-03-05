@@ -287,16 +287,6 @@ final class Index
             'data' => [],
         ];
 
-        if (0 === $stmt->rowCount()) {
-            $response['error'] = [
-                'message' => 'No Results.',
-            ];
-
-            if (true === count($response['filters']) >= 1) {
-                $response['error']['message'] .= ' Probably invalid filters values were used.';
-            }
-        }
-
         while ($row = $stmt->fetch()) {
             $entity = Container::get(iState::class)->fromArray($row);
             $item = $entity->getAll();

@@ -1114,3 +1114,15 @@ if (false === function_exists('getSystemMemoryInfo')) {
         return $result;
     }
 }
+
+if (!function_exists('parseConfigValue')) {
+    function parseConfigValue(mixed $value, Closure|null $callback = null): mixed
+    {
+        if (is_string($value) && preg_match('#%{(.+?)}#s', $value)) {
+            $val = preg_replace_callback('#%{(.+?)}#s', fn($match) => Config::get($match[1], $match[1]), $value);
+            return null !== $callback && null !== $val ? $callback($val) : $val;
+        }
+
+        return $value;
+    }
+}

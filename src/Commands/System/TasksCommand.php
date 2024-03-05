@@ -139,7 +139,7 @@ final class TasksCommand extends Command
 
         $mode = $input->getOption('output');
 
-        foreach ($this->getTasks() as $task) {
+        foreach (self::getTasks() as $task) {
             $list[] = [
                 'name' => $task['name'],
                 'command' => $task['command'],
@@ -166,7 +166,7 @@ final class TasksCommand extends Command
     private function runTasks(iInput $input, iOutput $output): int
     {
         $run = [];
-        $tasks = $this->getTasks();
+        $tasks = self::getTasks();
 
         if (null !== ($task = $input->getOption('task'))) {
             $task = strtolower($task);
@@ -316,9 +316,11 @@ final class TasksCommand extends Command
     /**
      * Get the list of tasks.
      *
+     * @param string|null $name The name of the task to get.
+     *
      * @return array<string, array{name: string, command: string, args: string, description: string, enabled: bool, timer: CronExpression, next: string }> The list of tasks.
      */
-    private function getTasks(): array
+    public static function getTasks(string|null $name = null): array
     {
         $list = [];
 
@@ -341,6 +343,10 @@ final class TasksCommand extends Command
             } catch (Exception $e) {
                 $list[$task['name']]['next'] = $e->getMessage();
             }
+        }
+
+        if (null !== $name) {
+            return ag($list, $name, []);
         }
 
         return $list;
