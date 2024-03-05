@@ -243,12 +243,12 @@ final class Initializer
 
         // -- health endpoint.
         if (true === str_starts_with($requestPath, '/healthcheck')) {
-            return api_response(HTTP_STATUS::HTTP_OK, []);
+            return api_response(HTTP_STATUS::HTTP_OK);
         }
 
         // -- favicon endpoint.
         if (true === str_starts_with($requestPath, '/favicon.ico')) {
-            return api_response(HTTP_STATUS::HTTP_NO_CONTENT, []);
+            return api_response(HTTP_STATUS::HTTP_NO_CONTENT);
         }
 
         // -- Forward requests to API server.
@@ -269,7 +269,7 @@ final class Initializer
                 'headers' => $request->getHeaders(),
                 'query' => $request->getQueryParams(),
             ], true);
-            return api_response(HTTP_STATUS::HTTP_UNAUTHORIZED, []);
+            return api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
         }
 
         $validUser = $validUUid = null;
@@ -371,7 +371,7 @@ final class Initializer
             }
 
             $this->write($request, $loglevel ?? Level::Error, $message, ['messages' => $log]);
-            return api_response(HTTP_STATUS::HTTP_UNAUTHORIZED, []);
+            return api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
         }
 
         // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
@@ -388,7 +388,7 @@ final class Initializer
                 'backend' => $class->getName()
             ]);
 
-            return api_response(HTTP_STATUS::HTTP_NOT_ACCEPTABLE, []);
+            return api_response(HTTP_STATUS::HTTP_NOT_ACCEPTABLE);
         }
 
         $entity = $class->parseWebhook($request);
@@ -412,7 +412,7 @@ final class Initializer
                 ]
             );
 
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED, []);
+            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
         if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
@@ -431,7 +431,7 @@ final class Initializer
                 ]
             );
 
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED, []);
+            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
         $cache = Container::get(CacheInterface::class);
@@ -471,7 +471,7 @@ final class Initializer
             ]
         ]);
 
-        return api_response(HTTP_STATUS::HTTP_OK, []);
+        return api_response(HTTP_STATUS::HTTP_OK);
     }
 
     /**

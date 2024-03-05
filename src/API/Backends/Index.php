@@ -48,7 +48,7 @@ final class Index
             $response['backends'][] = $backend;
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response, []);
+        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 
     public static function getBackends(string|null $name = null, bool $blacklist = false): array

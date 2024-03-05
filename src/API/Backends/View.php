@@ -36,7 +36,7 @@ final class View
             ],
         ];
 
-        return api_response(HTTP_STATUS::HTTP_OK, ['backend' => $response], []);
+        return api_response(HTTP_STATUS::HTTP_OK, ['backend' => $response]);
     }
 
 }

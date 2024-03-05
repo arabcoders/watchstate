@@ -314,6 +314,6 @@ final class Index
             $response['history'][] = $item;
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response, []);
+        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 }
