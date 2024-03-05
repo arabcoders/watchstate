@@ -378,8 +378,16 @@ final class Initializer
                 $message = 'Invalid token was given.';
             }
 
-            $this->write($request, $loglevel ?? Level::Error, $message, ['messages' => $log]);
-            return api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+            $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+
+            $this->write(
+                $request,
+                $loglevel ?? Level::Error,
+                $this->formatLog($request, $response, $message),
+                ['messages' => $log],
+            );
+
+            return $response;
         }
 
         // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
@@ -392,11 +400,18 @@ final class Initializer
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
-            $this->write($request, Level::Error, 'Import are disabled for [{backend}].', [
-                'backend' => $class->getName()
-            ]);
+            $response = api_response(HTTP_STATUS::HTTP_NOT_ACCEPTABLE);
+            $this->write(
+                $request,
+                Level::Error,
+                $this->formatLog($request, $response, 'Import are disabled for [{backend}].'),
+                [
+                    'backend' => $class->getName(),
+                ],
+                forceContext: true
+            );
 
-            return api_response(HTTP_STATUS::HTTP_NOT_ACCEPTABLE);
+            return $response;
         }
 
         $entity = $class->parseWebhook($request);
