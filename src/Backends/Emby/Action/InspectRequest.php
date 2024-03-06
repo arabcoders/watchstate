@@ -36,16 +36,12 @@ class InspectRequest
         return $this->tryResponse(
             context: $context,
             fn: function () use ($request) {
-                $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
-
-                if (false === str_starts_with($userAgent, 'Emby Server/')) {
-                    return new Response(status: false);
+                if (null === ($payload = ag($request->getParsedBody() ?? [], 'data', null))) {
+                    return new Response(status: false, response: $request);
                 }
 
-                $payload = (string)ag($request->getParsedBody() ?? [], 'data', null);
-
                 $json = json_decode(
-                    json: $payload,
+                    json: (string)$payload,
                     associative: true,
                     flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
                 );
@@ -56,8 +52,8 @@ class InspectRequest
                     'backend' => [
                         'id' => ag($json, 'Server.Id', ''),
                         'name' => ag($json, 'Server.Name'),
-                        'client' => before($userAgent, '/'),
-                        'version' => ag($json, 'Server.Version', fn() => afterLast($userAgent, '/')),
+                        'client' => 'Emby',
+                        'version' => ag($json, 'Server.Version', ''),
                     ],
                     'user' => [
                         'id' => ag($json, 'User.Id', ''),

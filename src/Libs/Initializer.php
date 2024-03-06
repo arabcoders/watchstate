@@ -260,12 +260,12 @@ final class Initializer
 
         // -- Forward requests to API server.
         if (true === str_starts_with($requestPath, Config::get('api.prefix', '????'))) {
-            return $this->defaultAPIServer($realRequest);
+            return $this->defaultAPIServer(clone $realRequest);
         }
 
         // -- Save request payload.
         if (true === Config::get('webhook.dumpRequest')) {
-            saveRequestPayload($realRequest);
+            saveRequestPayload(clone $realRequest);
         }
 
         $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
@@ -384,7 +384,8 @@ final class Initializer
                 $request,
                 $loglevel ?? Level::Error,
                 $this->formatLog($request, $response, $message),
-                ['messages' => $log],
+                ['messages' => $log, 'attr' => $attr ?? []],
+                forceContext: true
             );
 
             return $response;
