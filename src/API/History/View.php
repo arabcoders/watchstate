@@ -27,13 +27,13 @@ final readonly class View
 
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
-        if (null === ($item = $this->db->find($entity))) {
+        if (null === ($item = $this->db->get($entity))) {
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
 
-        $item = array_pop($item)->getAll();
+        $item = $item->getAll();
 
         $item[iState::COLUMN_WATCHED] = $entity->isWatched();
         $item[iState::COLUMN_UPDATED] = makeDate($entity->updated);
@@ -46,6 +46,6 @@ final readonly class View
             ],
         ];
 
-        return api_response(['history' => $item], HTTP_STATUS::HTTP_OK, []);
+        return api_response(HTTP_STATUS::HTTP_OK, ['history' => $item]);
     }
 }

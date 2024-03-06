@@ -15,8 +15,6 @@ use App\Libs\Extends\RouterStrategy;
 use Closure;
 use DateInterval;
 use ErrorException;
-use Laminas\HttpHandlerRunner\Emitter\EmitterInterface as iEmitter;
-use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use League\Route\Http\Exception as RouterHttpException;
 use League\Route\RouteGroup;
 use League\Route\Router as APIRouter;
@@ -184,12 +182,12 @@ final class Initializer
      * Run the application in HTTP Context.
      *
      * @param iRequest|null $request If null, the request will be created from globals.
-     * @param iEmitter|null $emitter If null, the emitter will be created from globals.
+     * @param callable(ResponseInterface):void|null $emitter If null, the emitter will be created from globals.
      * @param null|Closure(iRequest): ResponseInterface $fn If null, the default HTTP server will be used.
      */
-    public function http(iRequest|null $request = null, iEmitter|null $emitter = null, Closure|null $fn = null): void
+    public function http(iRequest|null $request = null, callable|null $emitter = null, Closure|null $fn = null): void
     {
-        $emitter = $emitter ?? new SapiEmitter();
+        $emitter = $emitter ?? new Emitter();
 
         if (null === $request) {
             $factory = new Psr17Factory();
@@ -200,6 +198,11 @@ final class Initializer
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
             if (false === $response->hasHeader('X-Application-Version')) {
                 $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
+            }
+
+            if ($response->hasHeader('X-Log-Response')) {
+                $this->write($request, Level::Info, $this->formatLog($request, $response));
+                $response = $response->withoutHeader('X-Log-Response');
             }
         } catch (Throwable $e) {
             $httpException = (true === ($e instanceof HttpException));
@@ -222,7 +225,7 @@ final class Initializer
             ]);
         }
 
-        $emitter->emit($response);
+        $emitter($response);
     }
 
     /**
@@ -240,27 +243,41 @@ final class Initializer
         $class = null;
 
         $request = $realRequest;
+        $requestPath = $request->getUri()->getPath();
 
         // -- health endpoint.
-        if (true === str_starts_with($request->getUri()->getPath(), '/healthcheck')) {
-            return new Response(200);
+        if (true === str_starts_with($requestPath, '/healthcheck')) {
+            return api_response(HTTP_STATUS::HTTP_OK);
+        }
+
+        // -- favicon.
+        if (true === str_starts_with($requestPath, '/favicon.ico')) {
+            return api_response(HTTP_STATUS::HTTP_NOT_FOUND)
+                ->withoutHeader('Content-Type')
+                ->withHeader('Cache-Control', 'public, max-age=604800, immutable')
+                ->withHeader('Content-Type', 'image/x-icon');
         }
 
         // -- Forward requests to API server.
-        if (str_starts_with($request->getUri()->getPath(), Config::get('api.prefix', '????'))) {
-            return $this->defaultAPIServer($realRequest);
+        if (true === str_starts_with($requestPath, Config::get('api.prefix', '????'))) {
+            return $this->defaultAPIServer(clone $realRequest);
         }
 
         // -- Save request payload.
         if (true === Config::get('webhook.dumpRequest')) {
-            saveRequestPayload($realRequest);
+            saveRequestPayload(clone $realRequest);
         }
 
         $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
 
         if (empty($apikey)) {
-            $this->write($request, Level::Info, 'No webhook token was found in header or query.');
-            return new Response(401);
+            $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+            $this->write(
+                $request,
+                Level::Info,
+                $this->formatLog($request, $response, 'No webhook token was found in header or query.')
+            );
+            return $response;
         }
 
         $validUser = $validUUid = null;
@@ -361,8 +378,17 @@ final class Initializer
                 $message = 'Invalid token was given.';
             }
 
-            $this->write($request, $loglevel ?? Level::Error, $message, ['messages' => $log]);
-            return new Response(401);
+            $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+
+            $this->write(
+                $request,
+                $loglevel ?? Level::Error,
+                $this->formatLog($request, $response, $message),
+                ['messages' => $log, 'attr' => $attr ?? []],
+                forceContext: true
+            );
+
+            return $response;
         }
 
         // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
@@ -375,11 +401,18 @@ final class Initializer
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
-            $this->write($request, Level::Error, 'Import are disabled for [{backend}].', [
-                'backend' => $class->getName()
-            ]);
+            $response = api_response(HTTP_STATUS::HTTP_NOT_ACCEPTABLE);
+            $this->write(
+                $request,
+                Level::Error,
+                $this->formatLog($request, $response, 'Import are disabled for [{backend}].'),
+                [
+                    'backend' => $class->getName(),
+                ],
+                forceContext: true
+            );
 
-            return new Response(406);
+            return $response;
         }
 
         $entity = $class->parseWebhook($request);
@@ -403,7 +436,7 @@ final class Initializer
                 ]
             );
 
-            return new Response(304);
+            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
         if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
@@ -422,7 +455,7 @@ final class Initializer
                 ]
             );
 
-            return new Response(304);
+            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
         $cache = Container::get(CacheInterface::class);
@@ -462,7 +495,7 @@ final class Initializer
             ]
         ]);
 
-        return new Response(200);
+        return api_response(HTTP_STATUS::HTTP_OK);
     }
 
     /**
@@ -527,8 +560,9 @@ final class Initializer
         })();
 
         try {
-            return $router->dispatch($realRequest);
-        } catch (RouterHttpException $e) {
+            return $router->dispatch($realRequest)->withHeader('X-Log-Response', '1');
+        } /** @noinspection PhpRedundantCatchClauseInspection */
+        catch (RouterHttpException $e) {
             throw new HttpException($e->getMessage(), $e->getStatusCode());
         }
     }
@@ -689,6 +723,7 @@ final class Initializer
         int|string|Level $level,
         string $message,
         array $context = [],
+        bool $forceContext = false
     ): void {
         if (null === $this->accessLog) {
             return;
@@ -709,6 +744,7 @@ final class Initializer
 
         $context = array_replace_recursive([
             'request' => [
+                'method' => $request->getMethod(),
                 'id' => ag($params, 'X_REQUEST_ID'),
                 'ip' => getClientIp($request),
                 'agent' => ag($params, 'HTTP_USER_AGENT'),
@@ -720,10 +756,33 @@ final class Initializer
             $context['attributes'] = $attributes;
         }
 
-        if (true === (bool)Config::get('logs.context')) {
+        if (true === (Config::get('logs.context') || $forceContext)) {
             $this->accessLog->log($level, $message, $context);
         } else {
             $this->accessLog->log($level, r($message, $context));
         }
+    }
+
+    private function formatLog(iRequest $request, ResponseInterface $response, string|null $message = null)
+    {
+        $refer = '-';
+
+        if (true === ag_exists($request->getServerParams(), 'HTTP_REFERER')) {
+            $refer = (new Uri(ag($request->getServerParams(), 'HTTP_REFERER')))
+                ->withQuery('')->withFragment('')->withUserInfo('');
+        }
+
+        return r('{ip} - "{method} {uri} {protocol}" {status} {size} "{refer}" "{agent}" "{message}"', [
+            'ip' => getClientIp($request),
+            'user' => ag($request->getServerParams(), 'REMOTE_USER', '-'),
+            'method' => $request->getMethod(),
+            'uri' => $request->getUri()->getPath(),
+            'protocol' => 'HTTP/' . $request->getProtocolVersion(),
+            'status' => $response->getStatusCode(),
+            'size' => $response->getBody()->getSize(),
+            'agent' => ag($request->getServerParams(), 'HTTP_USER_AGENT', '-'),
+            'refer' => (string)$refer,
+            'message' => $message ?? '-',
+        ]);
     }
 }

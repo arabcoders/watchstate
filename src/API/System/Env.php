@@ -71,6 +71,6 @@ final class Env
             ];
         }
 
-        return api_response($response, HTTP_STATUS::HTTP_OK, []);
+        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 }

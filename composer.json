@@ -36,7 +36,6 @@
         "psr/http-server-middleware": "^1.0.1",
         "nyholm/psr7": "^1.5.1",
         "nyholm/psr7-server": "^1.0.2",
-        "laminas/laminas-httphandlerrunner": "^2.1",
         "dragonmantank/cron-expression": "^3.3.2",
         "halaxa/json-machine": "^1.1.1",
         "league/route": "^5.1.2",

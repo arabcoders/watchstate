@@ -35,6 +35,6 @@ final class View
             ],
         ];
 
-        return api_response(['task' => $response], HTTP_STATUS::HTTP_OK);
+        return api_response(HTTP_STATUS::HTTP_OK, ['task' => $response]);
     }
 }

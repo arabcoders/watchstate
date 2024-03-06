@@ -7,7 +7,9 @@ namespace App\Backends\Emby\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
+use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
 
 /**
  * Class InspectRequest
@@ -36,28 +38,49 @@ class InspectRequest
         return $this->tryResponse(
             context: $context,
             fn: function () use ($request) {
-                $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+                $parsed = $request->getParsedBody();
 
-                if (false === str_starts_with($userAgent, 'Emby Server/')) {
-                    return new Response(status: false);
+                // -- backwards compatibility for emby 4.8.x
+                if (is_array($parsed) && false !== ag_exists($parsed, 'data')) {
+                    $payload = ag($request->getParsedBody(), 'data', null);
+                    if (empty($payload)) {
+                        return new Response(status: false, response: $request);
+                    }
+                } else {
+                    $payload = (string)$request->getBody();
                 }
 
-                $payload = (string)ag($request->getParsedBody() ?? [], 'data', null);
+                if (empty($payload)) {
+                    return new Response(status: false, response: $request);
+                }
 
-                $json = json_decode(
-                    json: $payload,
-                    associative: true,
-                    flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
-                );
+                try {
+                    $json = json_decode(
+                        json: $payload,
+                        associative: true,
+                        flags: JSON_INVALID_UTF8_IGNORE | JSON_THROW_ON_ERROR
+                    );
 
-                $alteredRequest = $request->withParsedBody($json);
+
+                    if (empty($json)) {
+                        throw new RuntimeException('invalid json content');
+                    }
+
+                    $request = $request->withParsedBody($json);
+                } catch (JsonException|RuntimeException) {
+                    return new Response(status: false, response: $request);
+                }
+
+                if (null === ($json = $request->getParsedBody())) {
+                    return new Response(status: false, response: $request);
+                }
 
                 $attributes = [
                     'backend' => [
                         'id' => ag($json, 'Server.Id', ''),
                         'name' => ag($json, 'Server.Name'),
-                        'client' => before($userAgent, '/'),
-                        'version' => ag($json, 'Server.Version', fn() => afterLast($userAgent, '/')),
+                        'client' => 'Emby',
+                        'version' => ag($json, 'Server.Version', ''),
                     ],
                     'user' => [
                         'id' => ag($json, 'User.Id', ''),
@@ -73,10 +96,10 @@ class InspectRequest
                 ];
 
                 foreach ($attributes as $key => $val) {
-                    $alteredRequest = $alteredRequest->withAttribute($key, $val);
+                    $request = $request->withAttribute($key, $val);
                 }
 
-                return new Response(status: true, response: $alteredRequest);
+                return new Response(status: true, response: $request);
             },
             action: $this->action
         );
