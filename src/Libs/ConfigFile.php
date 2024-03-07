@@ -21,8 +21,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
     private const CONTENT_TYPES = ['yaml', 'json'];
     private array $data = [];
     private array $operations = [];
-    private int $file_mtime = 0;
-    private int $file_size = 0;
+    private string $file_hash = '';
 
     private LoggerInterface|null $logger = null;
 
@@ -155,23 +154,22 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             return $this;
         }
 
-        clearstatcache(true, $this->file);
-        if (!$override && (filemtime($this->file) > $this->file_mtime || filesize($this->file) !== $this->file_size)) {
-            $this->logger?->warning(
-                'File \'{file}\' has been modified since last load. re-applying changes on top of the new data.',
-                [
-                    'file' => $this->file,
-                    'mtime' => [
-                        'new' => filemtime($this->file),
-                        'old' => $this->file_mtime
-                    ],
-                    'size' => [
-                        'new' => filesize($this->file),
-                        'old' => $this->file_size
+        if (false === $override) {
+            clearstatcache(true, $this->file);
+            $newHash = $this->getFileHash();
+            if ($newHash !== $this->file_hash) {
+                $this->logger?->warning(
+                    'File \'{file}\' has been modified since last load. re-applying changes on top of the new data.',
+                    [
+                        'file' => $this->file,
+                        'hash' => [
+                            'new' => $newHash,
+                            'old' => $this->file_hash
+                        ],
                     ]
-                ]
-            );
-            $this->loadData();
+                );
+                $this->loadData();
+            }
         }
 
         $json_encode = JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT;
@@ -190,7 +188,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         $stream = new Stream($this->file, 'w');
         $stream->write(
             match ($this->type) {
-                'yaml' => Yaml::dump($this->data, inline: 4, indent: 2),
+                'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
                 'json' => json_encode($this->data, flags: $json_encode),
                 default => throw new RuntimeException(r('Invalid content type \'{type}\'.', [
                     'type' => $this->type
@@ -200,8 +198,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         $stream->close();
 
         $this->operations = [];
-        $this->file_mtime = filemtime($this->file);
-        $this->file_size = filesize($this->file);
+        $this->file_hash = $this->getFileHash();
 
         return $this;
     }
@@ -254,10 +251,9 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             $stream->seek(0);
         }
 
-        $content = $stream->getContents();
+        $this->file_hash = $this->getFileHash();
 
-        $this->file_size = filesize($this->file);
-        $this->file_mtime = filemtime($this->file);
+        $content = $stream->getContents();
         $this->data = [];
 
         if (!empty($content)) {
@@ -337,5 +333,10 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         }
 
         return $merged;
+    }
+
+    private function getFileHash(): string
+    {
+        return hash_file('sha256', $this->file);
     }
 }
