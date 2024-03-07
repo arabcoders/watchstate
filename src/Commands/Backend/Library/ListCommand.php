@@ -31,7 +31,8 @@ final class ListCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Get Backend libraries list.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
+            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 <<<HELP
 
@@ -52,8 +53,23 @@ final class ListCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        if (null !== ($name = $input->getOption('select-backend'))) {
+            $name = explode(',', $name, 2)[0];
+        }
+
+        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
+            $name = $input->getArgument('backend');
+            $output->writeln(
+                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
+            );
+        }
+
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
+        }
+
         $mode = $input->getOption('output');
-        $name = $input->getArgument('backend');
 
         $opts = $backendOpts = [];
 

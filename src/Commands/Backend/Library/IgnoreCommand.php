@@ -13,6 +13,7 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
@@ -38,7 +39,8 @@ final class IgnoreCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Manage Backend ignored libraries.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
+            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -54,7 +56,7 @@ final class IgnoreCommand extends Command
 
                     Yes, First get your libraries ids by running this command:
 
-                    {cmd} <cmd>{library_list}</cmd> -- <value>backend_name</value>
+                    {cmd} <cmd>{library_list}</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     You are mainly interested in the <notice>Id</notice> column, once you have list of your ids,
                     you can run the following command to update the backend ignorelist.
@@ -87,7 +89,21 @@ final class IgnoreCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        $name = $input->getArgument('backend');
+        if (null !== ($name = $input->getOption('select-backend'))) {
+            $name = explode(',', $name, 2)[0];
+        }
+
+        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
+            $name = $input->getArgument('backend');
+            $output->writeln(
+                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
+            );
+        }
+
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
+        }
 
         try {
             $backend = $this->getBackend($name);

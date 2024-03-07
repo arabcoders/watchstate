@@ -12,7 +12,6 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DirectoryIterator;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
@@ -20,7 +19,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
@@ -58,9 +56,8 @@ class RestoreCommand extends Command
             ->setDescription('Restore backend play state from backup file.')
             ->addOption('execute', null, InputOption::VALUE_NONE, 'Commit the changes to backend.')
             ->addOption('assume-yes', null, InputOption::VALUE_NONE, 'Answer yes to understanding the risks.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name to restore.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->addArgument('file', InputArgument::REQUIRED, 'Backup file to restore from')
             ->setHelp(
                 r(
@@ -90,7 +87,7 @@ class RestoreCommand extends Command
 
                     For example,
 
-                    {cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv</flag> -- <value>backend_name</value> <value>{backupDir}/backup_file.json</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv</flag> -s <value>backend_name</value> -- <value>{backupDir}/backup_file.json</value>
 
                     -------
                     <notice>[ FAQ ]</notice>
@@ -151,7 +148,13 @@ class RestoreCommand extends Command
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
-        $name = $input->getArgument('backend');
+        if (null === ($name = $input->getOption('select-backend'))) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backends].</error>'));
+            return self::FAILURE;
+        }
+
+        $name = explode(',', $name, 2)[0];
+
         $file = $input->getArgument('file');
 
         if (false === file_exists($file) || false === is_readable($file)) {
@@ -165,15 +168,6 @@ class RestoreCommand extends Command
             }
 
             $file = $newFile;
-        }
-
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
         }
 
         if (null === ($backend = ag(Config::get('servers', []), $name, null))) {
@@ -211,7 +205,6 @@ class RestoreCommand extends Command
                 return self::SUCCESS;
             }
         }
-
 
         $this->logger->notice('SYSTEM: Loading restore data.', [
             'memory' => [

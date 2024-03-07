@@ -34,7 +34,7 @@ final class QueryCommand extends Command
             ->setDescription('Search backend libraries for specific title keyword.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit returned results.', 25)
-            ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->addArgument('query', InputArgument::REQUIRED, 'Search query.')
             ->setHelp(
                 r(
@@ -70,7 +70,7 @@ final class QueryCommand extends Command
         $mode = $input->getOption('output');
         $query = $input->getArgument('query');
 
-        if (null === ($name = $input->getOption('select-backends'))) {
+        if (null === ($name = $input->getOption('select-backend'))) {
             $output->writeln(
                 r('<error>ERROR: You must select a backend using [-s, --select-backends] option.</error>')
             );

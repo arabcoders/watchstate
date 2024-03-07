@@ -85,7 +85,8 @@ final class MismatchCommand extends Command
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('cutoff', null, InputOption::VALUE_REQUIRED, 'Increase title cutoff', self::CUTOFF)
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'backend Library id.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
+            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -119,11 +120,11 @@ final class MismatchCommand extends Command
                     You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
                     id you get from [<cmd>{library_list}</cmd>] command.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> <flag>-s</flag> <value>backend_name</value>
 
                     <question># I want to show all items regardless of the status?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <flag>-s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -155,10 +156,25 @@ final class MismatchCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
+        if (null !== ($name = $input->getOption('select-backend'))) {
+            $name = explode(',', $name, 2)[0];
+        }
+
+        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
+            $name = $input->getArgument('backend');
+            $output->writeln(
+                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
+            );
+        }
+
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
+        }
+
         $mode = $input->getOption('output');
         $showAll = $input->getOption('show-all');
         $percentage = $input->getOption('percentage');
-        $name = $input->getArgument('backend');
         $id = $input->getOption('id');
         $cutoff = (int)$input->getOption('cutoff');
 

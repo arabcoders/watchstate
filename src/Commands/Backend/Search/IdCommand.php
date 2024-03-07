@@ -32,7 +32,7 @@ final class IdCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Get backend metadata related to specific id.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
-            ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->addArgument('id', InputArgument::REQUIRED, 'Backend item id.')
             ->setHelp(
                 r(
@@ -68,7 +68,7 @@ final class IdCommand extends Command
         $mode = $input->getOption('output');
         $id = $input->getArgument('id');
 
-        if (null === ($name = $input->getOption('select-backends'))) {
+        if (null === ($name = $input->getOption('select-backend'))) {
             $output->writeln(
                 r('<error>ERROR: You must select a backend using [-s, --select-backends] option.</error>')
             );
