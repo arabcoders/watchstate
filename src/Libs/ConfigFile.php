@@ -6,6 +6,8 @@ namespace App\Libs;
 
 use ArrayAccess;
 use InvalidArgumentException;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -14,13 +16,15 @@ use Symfony\Component\Yaml\Yaml;
  *
  * The ConfigFile class represents a configuration file.
  */
-final class ConfigFile implements ArrayAccess
+final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 {
     private const CONTENT_TYPES = ['yaml', 'json'];
     private array $data = [];
     private array $operations = [];
     private int $file_mtime = 0;
     private int $file_size = 0;
+
+    private LoggerInterface|null $logger = null;
 
     /**
      * ConfigFile constructor.
@@ -38,6 +42,7 @@ final class ConfigFile implements ArrayAccess
         private readonly string $type = 'yaml',
         private readonly bool $autoSave = true,
         private readonly bool $autoCreate = false,
+        private readonly bool $autoBackup = true,
         private readonly array $opts = [],
     ) {
         if (!in_array($this->type, self::CONTENT_TYPES)) {
@@ -57,6 +62,17 @@ final class ConfigFile implements ArrayAccess
         }
 
         $this->loadData();
+    }
+
+    public static function open(
+        string $file,
+        string $type = 'yaml',
+        bool $autoSave = true,
+        bool $autoCreate = false,
+        bool $autoBackup = true,
+        array $opts = []
+    ): self {
+        return new self($file, $type, $autoSave, $autoCreate, $autoBackup, $opts);
     }
 
     /**
@@ -125,7 +141,22 @@ final class ConfigFile implements ArrayAccess
             return $this;
         }
 
+        clearstatcache(true, $this->file);
         if (!$override && (filemtime($this->file) > $this->file_mtime || filesize($this->file) !== $this->file_size)) {
+            $this->logger?->warning(
+                'File \'{file}\' has been modified since last load. re-applying changes on top of the new data.',
+                [
+                    'file' => $this->file,
+                    'mtime' => [
+                        'new' => filemtime($this->file),
+                        'old' => $this->file_mtime
+                    ],
+                    'size' => [
+                        'new' => filesize($this->file),
+                        'old' => $this->file_size
+                    ]
+                ]
+            );
             $this->loadData();
         }
 
@@ -134,10 +165,18 @@ final class ConfigFile implements ArrayAccess
             $json_encode = $this->opts['json_encode'];
         }
 
+        if (true === $this->autoBackup) {
+            try {
+                copy($this->file, $this->file . '.bak');
+            } catch (\Exception) {
+                // Do nothing
+            }
+        }
+
         $stream = new Stream($this->file, 'w');
         $stream->write(
             match ($this->type) {
-                'yaml' => Yaml::dump($this->data),
+                'yaml' => Yaml::dump($this->data, inline: 4, indent: 2),
                 'json' => json_encode($this->data, flags: $json_encode),
                 default => throw new RuntimeException(r('Invalid content type \'{type}\'.', [
                     'type' => $this->type
@@ -244,5 +283,10 @@ final class ConfigFile implements ArrayAccess
     public function offsetUnset(mixed $offset): void
     {
         $this->delete($offset);
+    }
+
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 }
