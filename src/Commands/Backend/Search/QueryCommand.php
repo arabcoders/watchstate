@@ -6,13 +6,12 @@ namespace App\Commands\Backend\Search;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
 use App\Libs\Options;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class QueryCommand
@@ -35,9 +34,9 @@ final class QueryCommand extends Command
             ->setDescription('Search backend libraries for specific title keyword.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit returned results.', 25)
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends')
-            ->addArgument('query', InputArgument::REQUIRED, 'Search query.')->setHelp(
+            ->addArgument('query', InputArgument::REQUIRED, 'Search query.')
+            ->setHelp(
                 r(
                     <<<HELP
 
@@ -80,21 +79,6 @@ final class QueryCommand extends Command
             $name = explode(',', $name)[0];
         }
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
-
-        if (null === ag(Config::get('servers', []), $name, null)) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
-            return self::FAILURE;
-        }
-
         $opts = $backendOpts = [];
 
         if ($input->getOption('include-raw-response')) {
@@ -105,7 +89,12 @@ final class QueryCommand extends Command
             $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
         }
 
-        $backend = $this->getBackend($name, $backendOpts);
+        try {
+            $backend = $this->getBackend($name, $backendOpts);
+        } catch (RuntimeException) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
 
         $results = $backend->search(
             query: $query,
