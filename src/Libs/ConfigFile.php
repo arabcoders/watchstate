@@ -127,6 +127,11 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         return $this;
     }
 
+    public function has(string|int $key): bool
+    {
+        return ag_exists($this->data, $key);
+    }
+
     private function _set(string $key, mixed $value): void
     {
         if (ag_exists($this->data, $key) && is_array($this->data[$key]) && is_array($value)) {
@@ -282,7 +287,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 
     public function offsetExists(mixed $offset): bool
     {
-        return ag_exists($this->data, $offset);
+        return $this->has($offset);
     }
 
     public function offsetGet(mixed $offset): mixed
