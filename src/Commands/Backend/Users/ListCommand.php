@@ -7,13 +7,12 @@ namespace App\Commands\Backend\Users;
 use App\Backends\Plex\Commands\AccessTokenCommand;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
 use App\Libs\Options;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /**
@@ -42,7 +41,6 @@ final class ListCommand extends Command
             )
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Use this given token.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
             ->setHelp(
                 r(
@@ -102,22 +100,7 @@ final class ListCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
-        $backend = $input->getArgument('backend');
-
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
-
-        if (null === ag(Config::get('servers', []), $backend, null)) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
-            return self::FAILURE;
-        }
+        $name = $input->getArgument('backend');
 
         $opts = $backendOpts = [];
 
@@ -137,10 +120,17 @@ final class ListCommand extends Command
             $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
         }
 
-        $users = $this->getBackend($backend, $backendOpts)->getUsersList(opts: $opts);
+        try {
+            $backend = $this->getBackend($name, $backendOpts);
+        } catch (RuntimeException) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
+
+        $users = $backend->getUsersList(opts: $opts);
 
         if (count($users) < 1) {
-            $output->writeln(r("<error>ERROR: No users found for '{backend}'.</error>", ['backend' => $backend]));
+            $output->writeln(r("<error>ERROR: No users found for '{backend}'.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 

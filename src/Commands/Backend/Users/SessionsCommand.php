@@ -6,15 +6,14 @@ namespace App\Commands\Backend\Users;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use DateTimeInterface;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Get backend active sessions.
@@ -46,7 +45,6 @@ final class SessionsCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Get backend active sessions.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->setHelp(
                 r(
@@ -81,29 +79,14 @@ final class SessionsCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
-
         $mode = $input->getOption('output');
 
-        if (null === ($backend = $input->getOption('select-backend'))) {
+        if (null === ($name = $input->getOption('select-backend'))) {
             $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backends].</error>'));
             return self::FAILURE;
         }
 
-        $backend = explode(',', $backend, 2)[0];
-
-        if (null === ag(Config::get('servers', []), $backend, null)) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
-            return self::FAILURE;
-        }
+        $name = explode(',', $name, 2)[0];
 
         $opts = $backendOpts = [];
 
@@ -115,11 +98,18 @@ final class SessionsCommand extends Command
             $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
         }
 
-        $sessions = $this->getBackend($backend, $backendOpts)->getSessions(opts: $opts);
+        try {
+            $backend = $this->getBackend($name, $backendOpts);
+        } catch (RuntimeException) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
+
+        $sessions = $backend->getSessions(opts: $opts);
 
         if (count($sessions) < 1) {
             $output->writeln(
-                r("<notice>No active sessions were found for '{backend}'.</notice>", ['backend' => $backend])
+                r("<notice>No active sessions were found for '{backend}'.</notice>", ['backend' => $name])
             );
             return self::FAILURE;
         }
@@ -132,7 +122,7 @@ final class SessionsCommand extends Command
                 $item['item_type'] = ucfirst($item['item_type']);
 
                 $entity = $this->db->findByBackendId(
-                    backend: $backend,
+                    backend: $name,
                     id: $item['item_id'],
                     type: 'Episode' === $item['item_type'] ? iState::TYPE_EPISODE : iState::TYPE_MOVIE
                 );
