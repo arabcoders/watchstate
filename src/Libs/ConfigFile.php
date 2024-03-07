@@ -104,7 +104,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             'value' => $value
         ];
 
-        $this->data = ag_set($this->data, $key, $value);
+        $this->_set($key, $value);
 
         return $this;
     }
@@ -123,9 +123,23 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             'key' => $key
         ];
 
-        $this->data = ag_delete($this->data, $key);
+        $this->_delete($key);
 
         return $this;
+    }
+
+    private function _set(string $key, mixed $value): void
+    {
+        if (ag_exists($this->data, $key) && is_array($this->data[$key]) && is_array($value)) {
+            $value = $this->mergeData($this->data[$key], $value);
+        }
+
+        $this->data = ag_set($this->data, $key, $value);
+    }
+
+    private function _delete(string|int $key): void
+    {
+        $this->data = ag_delete($this->data, $key);
     }
 
     /**
@@ -255,13 +269,18 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         }
 
         foreach ($this->operations as $operation) {
-            $this->data = match ($operation['type']) {
-                'set' => ag_set($this->data, $operation['key'], $operation['value']),
-                'delete' => ag_delete($this->data, $operation['key']),
-                default => throw new RuntimeException(
-                    r('Invalid operation type \'{type}\'.', ['type' => $operation['type']])
-                )
-            };
+            switch ($operation['type']) {
+                case 'set':
+                    $this->_set($operation['key'], $operation['value']);
+                    break;
+                case 'delete':
+                    $this->_delete($operation['key']);
+                    break;
+                default:
+                    throw new RuntimeException(
+                        r('Invalid operation type \'{type}\'.', ['type' => $operation['type']])
+                    );
+            }
         }
     }
 
@@ -288,5 +307,35 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
+    }
+
+    private function mergeData(array $array1, array $array2, array ...$arrays): array
+    {
+        array_unshift($arrays, $array2);
+        array_unshift($arrays, $array1);
+
+        $merged = [];
+
+        while ($arrays) {
+            $array = array_shift($arrays);
+            assert(is_array($array));
+            if (!$array) {
+                continue;
+            }
+
+            foreach ($array as $key => $value) {
+                if (is_string($key)) {
+                    if (is_array($value) && array_key_exists($key, $merged) && is_array($merged[$key])) {
+                        $merged[$key] = $this->mergeData($merged[$key], $value);
+                    } else {
+                        $merged[$key] = $value;
+                    }
+                } else {
+                    $merged[] = $value;
+                }
+            }
+        }
+
+        return $merged;
     }
 }

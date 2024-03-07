@@ -58,7 +58,7 @@ return (function () {
         ],
     ];
 
-    $config['backends_file'] = fixPath(ag($config, 'path') . '/config/servers.yaml');
+    $config['backends_file'] = fixPath(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
 
     date_default_timezone_set(ag($config, 'tz', 'UTC'));
     $logDateFormat = makeDate()->format('Ymd');
