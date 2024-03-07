@@ -7,14 +7,14 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Stream;
+use App\Libs\ConfigFile;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
@@ -27,6 +27,11 @@ final class EditCommand extends Command
 {
     public const ROUTE = 'config:edit';
 
+    public function __construct(private LoggerInterface $logger)
+    {
+        parent::__construct();
+    }
+
     /**
      * Configures the command.
      */
@@ -36,10 +41,11 @@ final class EditCommand extends Command
             ->setDescription('Edit backend settings inline.')
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
-            ->addOption('set', 's', InputOption::VALUE_REQUIRED, 'Value to set.')
+            ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
+            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name')
             ->setHelp(
                 r(
                     <<<HELP
@@ -56,11 +62,11 @@ final class EditCommand extends Command
 
                     <question># How to edit config setting?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--key</flag> <value>key</value> <flag>--set</flag> <value>value</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--key</flag> <value>key</value> <flag>--set</flag> <value>value</value> <flag>-s</flag> <value>backend_name</value>
 
-                    <question># How to change the webhook token?</question>
+                    <question># How to change the re-generate webhook token?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--regenerate-webhook-token</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-g -s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -96,25 +102,21 @@ final class EditCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                $backends = Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{error}</error>', ['error' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        } else {
-            $custom = false;
-            $config = Config::get('path') . '/config/servers.yaml';
-            if (!file_exists($config)) {
-                touch($config);
-            }
-            $backends = (array)Config::get('servers', []);
+        if (null !== ($name = $input->getOption('select-backend'))) {
+            $name = explode(',', $name, 2)[0];
         }
 
-        $name = $input->getArgument('backend');
+        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
+            $name = $input->getArgument('backend');
+            $output->writeln(
+                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
+            );
+        }
+
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
+        }
 
         if (!isValidName($name) || strtolower($name) !== $name) {
             $output->writeln(
@@ -128,7 +130,10 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        if (null === ($backend = ag($backends, $name, null))) {
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
+
+        if (null === $configFile->get("{$name}.type", null)) {
             $output->writeln(r('<error>ERROR: Backend \'{name}\' not found.</error>', ['name' => $name]));
             return self::FAILURE;
         }
@@ -137,14 +142,12 @@ final class EditCommand extends Command
             try {
                 $webhookToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
 
-                $output->writeln(
-                    r('<info>The webhook token for \'{name}\' is: \'{token}\'.</info>', [
-                        'name' => $name,
-                        'token' => $webhookToken
-                    ])
-                );
+                $output->writeln(r('<info>The webhook token for \'{name}\' is: \'{token}\'.</info>', [
+                    'name' => $name,
+                    'token' => $webhookToken
+                ]));
 
-                $backend = ag_set($backend, 'webhook.token', $webhookToken);
+                $configFile->set("{$name}.webhook.token", $webhookToken);
             } catch (Throwable $e) {
                 $output->writeln(r('<error>ERROR: {error}</error>', ['error' => $e->getMessage()]));
                 return self::FAILURE;
@@ -166,7 +169,12 @@ final class EditCommand extends Command
             }
 
             if (null === $value && !$input->getOption('delete')) {
-                $val = ag($backend, $key, '[No value]');
+                if ($configFile->has("{$name}.{$key}")) {
+                    $val = $configFile->get("{$name}.{$key}", '[No value]');
+                } else {
+                    $val = '[Not set]';
+                }
+
                 $output->writeln(is_scalar($val) ? (string)$val : r('Type({type})', ['type' => get_debug_type($val)]));
                 return self::SUCCESS;
             }
@@ -182,50 +190,38 @@ final class EditCommand extends Command
                     $value = (string)$value;
                 }
 
-                if ($value === ag($backend, $key, null)) {
+                if ($value === $configFile->get("{$name}.{$key}", null)) {
                     $output->writeln('<comment>Not updating. Value already matches.</comment>');
                     return self::SUCCESS;
                 }
 
-                $backend = ag_set($backend, $key, $value);
+                $configFile->set("{$name}.{$key}", $value);
 
-                $output->writeln(
-                    r("<info>{name}: Updated '{key}' key value to '{value}'.</info>", [
-                        'name' => $name,
-                        'key' => $key,
-                        'value' => is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
-                    ])
-                );
+                $output->writeln(r("<info>{name}: Updated '{key}' key value to '{value}'.</info>", [
+                    'name' => $name,
+                    'key' => $key,
+                    'value' => is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
+                ]));
             }
 
             if ($input->getOption('delete')) {
-                if (false === ag_exists($backend, $key)) {
-                    $output->writeln(
-                        r("<error>{name}: '{key}' key does not exist.</error>", [
-                            'name' => $name,
-                            'key' => $key
-                        ])
-                    );
+                if (false === $configFile->has("{$name}.{$key}")) {
+                    $output->writeln(r("<error>{name}: '{key}' key does not exist.</error>", [
+                        'name' => $name,
+                        'key' => $key
+                    ]));
                     return self::FAILURE;
                 }
 
-                $backend = ag_delete($backend, $key);
-                $output->writeln(
-                    r("<info>{name}: Removed '{key}' key.</info>", [
-                        'name' => $name,
-                        'key' => $key
-                    ])
-                );
+                $configFile->delete("{$name}.{$key}");
+                $output->writeln(r("<info>{name}: Removed '{key}' key.</info>", [
+                    'name' => $name,
+                    'key' => $key
+                ]));
             }
         }
 
-        if (false === $custom) {
-            copy($config, $config . '.bak');
-        }
-
-        $stream = Stream::make($config, 'w');
-        $stream->write(Yaml::dump(ag_set($backends, $name, $backend), 8, 2));
-        $stream->close();
+        $configFile->persist();
 
         return self::SUCCESS;
     }

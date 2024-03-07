@@ -7,15 +7,15 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Stream;
 use PDO;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class DeleteCommand
@@ -30,16 +30,9 @@ final class DeleteCommand extends Command
     public const ROUTE = 'config:delete';
     private PDO $pdo;
 
-    /**
-     * Class constructor.
-     *
-     * @param iDB $db The iDB instance used for database interaction.
-     *
-     * @return void
-     */
-    public function __construct(private iDB $db)
+    public function __construct(private LoggerInterface $logger, iDB $db)
     {
-        $this->pdo = $this->db->getPDO();
+        $this->pdo = $db->getPDO();
 
         parent::__construct();
     }
@@ -51,8 +44,8 @@ final class DeleteCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Delete Local backend data.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
+            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -117,26 +110,21 @@ final class DeleteCommand extends Command
             return self::FAILURE;
         }
 
-        $custom = false;
-
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                $backends = (array)Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>ERROR:</error> {error}', ['error' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        } else {
-            $config = Config::get('path') . '/config/servers.yaml';
-            if (!file_exists($config)) {
-                touch($config);
-            }
-            $backends = (array)Config::get('servers', []);
+        if (null !== ($name = $input->getOption('select-backend'))) {
+            $name = explode(',', $name, 2)[0];
         }
 
-        $name = $input->getArgument('backend');
+        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
+            $name = $input->getArgument('backend');
+            $output->writeln(
+                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
+            );
+        }
+
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
+        }
 
         if (!isValidName($name) || strtolower($name) !== $name) {
             $output->writeln(
@@ -150,7 +138,10 @@ final class DeleteCommand extends Command
             return self::FAILURE;
         }
 
-        if (null === ag($backends, "{$name}.type", null)) {
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
+
+        if (null === $configFile->get("{$name}.type", null)) {
             $output->writeln(
                 r('<error>ERROR:</error> No backend named [<value>{backend}</value>] was found.', [
                     'backend' => $name,
@@ -164,7 +155,7 @@ final class DeleteCommand extends Command
         $question = new ConfirmationQuestion(
             r(
                 <<<HELP
-                    <question>Are you sure you want to remove [<value>{name}</value>] data?</question>? {default}
+                    <question>Are you sure you want to remove [<value>{name}</value>] data?</question> {default}
                     ------------------
                     <notice>WARNING:</notice> This command will remove entries from database related to the backend.
                     Database records will be removed if [<value>{name}</value>] was the only backend referencing them.
@@ -240,15 +231,7 @@ final class DeleteCommand extends Command
             );
         }
 
-        if (false === $custom) {
-            copy($config, $config . '.bak');
-        }
-
-        $backends = ag_delete($backends, $name);
-
-        $stream = new Stream($config, 'w');
-        $stream->write(Yaml::dump($backends, 8, 2));
-        $stream->close();
+        $configFile->delete($name)->persist();
 
         $output->writeln('<info>Config updated.</info>');
 

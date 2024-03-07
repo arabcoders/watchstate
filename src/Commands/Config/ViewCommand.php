@@ -45,9 +45,8 @@ final class ViewCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('View Backends settings.')
-            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
+            ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends. comma , seperated.')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose the secret tokens in the view.')
             ->addArgument(
                 'filter',
@@ -99,16 +98,6 @@ final class ViewCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
-                return self::FAILURE;
-            }
-        }
-
         $selectBackends = (string)$input->getOption('select-backends');
 
         $list = [];
@@ -118,10 +107,9 @@ final class ViewCommand extends Command
 
         foreach (Config::get('servers', []) as $backendName => $backend) {
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $output->writeln(
-                    sprintf('%s: Ignoring backend as requested by [-s, --select-backends].', $backendName),
-                    OutputInterface::VERBOSITY_VERY_VERBOSE
-                );
+                $output->writeln(r('Ignoring backend \'{backend}\' as requested by [-s, --select-backends].', [
+                    'backend' => $backendName
+                ]), OutputInterface::VERBOSITY_VERY_VERBOSE);
                 continue;
             }
 
@@ -154,7 +142,7 @@ final class ViewCommand extends Command
 
         if ('table' === $mode) {
             (new Table($output))->setStyle('box')
-                ->setHeaders(['Backend', 'Filter: ' . (empty($filter) ? 'None' : $filter)]
+                ->setHeaders(['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')']
                 )->setRows($rows)
                 ->render();
         } else {

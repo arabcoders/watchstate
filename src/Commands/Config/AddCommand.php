@@ -33,8 +33,8 @@ final class AddCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Add new backend.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name', null)
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -44,7 +44,7 @@ final class AddCommand extends Command
 
                     This command is shortcut for running the following command:
 
-                    {cmd} <cmd>{manage_route}</cmd> --add -- <value>backend_name</value>
+                    {cmd} <cmd>{manage_route}</cmd> <flag>--add -s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -103,10 +103,19 @@ final class AddCommand extends Command
             $opts['--' . $option] = $val;
         }
 
-        $backend = $input->getArgument('backend');
+        if (null !== ($name = $input->getOption('select-backend'))) {
+            $name = explode(',', $name, 2)[0];
+        }
 
-        if (null !== $backend) {
-            $opts['backend'] = strtolower($backend);
+        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
+            $name = $input->getArgument('backend');
+            $output->writeln(
+                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
+            );
+        }
+
+        if (null !== $name) {
+            $opts['backend'] = strtolower($name);
         } else {
             // -- $backend.token
             $opts['backend'] = (function () use (&$opts, $input, $output) {
@@ -144,7 +153,7 @@ final class AddCommand extends Command
                 return (new QuestionHelper())->ask($input, $output, $question);
             })();
             $output->writeln('');
-            $opts['backend'] = strtolower($opts['backend']);
+            $opts['--select-backend'] = strtolower($opts['backend']);
         }
 
         return $this->getApplication()?->find(ManageCommand::ROUTE)->run(new ArrayInput($opts), $output) ?? 1;
