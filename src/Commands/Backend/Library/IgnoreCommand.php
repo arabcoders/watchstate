@@ -8,13 +8,13 @@ use App\Command;
 use App\Commands\Config\EditCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Stream;
+use App\Libs\ConfigFile;
+use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class IgnoreCommand
@@ -26,6 +26,11 @@ final class IgnoreCommand extends Command
 {
     public const ROUTE = 'backend:library:ignore';
 
+    public function __construct(private LoggerInterface $logger)
+    {
+        parent::__construct();
+    }
+
     /**
      * Configure the command.
      */
@@ -33,7 +38,6 @@ final class IgnoreCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Manage Backend ignored libraries.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
             ->setHelp(
                 r(
@@ -83,29 +87,14 @@ final class IgnoreCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                $backends = Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        } else {
-            $custom = false;
-            $config = Config::get('path') . '/config/servers.yaml';
-            $backends = Config::get('servers', []);
-        }
-
         $name = $input->getArgument('backend');
 
-        if (null === ag(Config::get('servers', []), $name, null)) {
+        try {
+            $backend = $this->getBackend($name);
+        } catch (RuntimeException) {
             $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
-
-        $backend = $this->getBackend($name, $backends);
 
         $list = $backend->listLibraries();
 
@@ -172,23 +161,19 @@ TEXT,
 
         $ignored = implode(',', array_keys($newList));
 
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
+
         if (empty($ignored)) {
-            $backends = ag_delete($backends, "{$name}.options.ignore");
-            if (count(ag($backends, "{$name}.options", [])) < 1) {
-                $backends = ag_delete($backends, "{$name}.options");
+            $configFile->delete("{$name}.options.ignore");
+            if (count($configFile->get("{$name}.options")) < 1) {
+                $configFile->delete("{$name}.options");
             }
-            $backends = ag_delete($backends, "{$name}.options.ignore");
         } else {
-            $backends = ag_set($backends, "{$name}.options.ignore", $ignored);
+            $configFile->set("{$name}.options.ignore", $ignored);
         }
 
-        if (false === $custom) {
-            copy($config, $config . '.bak');
-        }
-
-        $stream = new Stream($config, 'w');
-        $stream->write(Yaml::dump($backends, 8, 2));
-        $stream->close();
+        $configFile->persist();
 
         return self::SUCCESS;
     }
