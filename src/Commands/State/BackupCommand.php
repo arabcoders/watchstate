@@ -15,7 +15,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
@@ -68,7 +67,6 @@ class BackupCommand extends Command
                 InputOption::VALUE_NONE,
                 'Do not enhance the backup data using local db info.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption(
                 'file',
                 null,
@@ -141,24 +139,18 @@ class BackupCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input), $output);
     }
 
     /**
      * Execute the command.
      *
      * @param InputInterface $input The input interface.
-     * @param OutputInterface $output The output interface.
      *
      * @return int The integer result.
      */
-    protected function process(InputInterface $input, OutputInterface $output): int
+    protected function process(InputInterface $input): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-        }
-
         $list = [];
         $selectBackends = (string)$input->getOption('select-backends');
         $selected = explode(',', $selectBackends);
@@ -168,8 +160,7 @@ class BackupCommand extends Command
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed.</info>');
-
+            $this->logger->notice('SYSTEM: Dry run mode. No changes will be committed.');
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
@@ -219,7 +210,9 @@ class BackupCommand extends Command
         }
 
         if (empty($list)) {
-            $this->logger->warning('No backends were found.');
+            $this->logger->warning(
+                $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
+            );
             return self::FAILURE;
         }
 
@@ -246,7 +239,7 @@ class BackupCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+        $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
 
         foreach ($list as $name => &$backend) {
             $opts = ag($backend, 'options', []);

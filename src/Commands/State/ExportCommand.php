@@ -7,6 +7,7 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
@@ -20,7 +21,6 @@ use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
@@ -70,7 +70,6 @@ class ExportCommand extends Command
             ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
@@ -143,19 +142,8 @@ class ExportCommand extends Command
             $this->logger->setHandlers([new StreamLogHandler(new Stream($logfile, 'w'), $output)]);
         }
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
-                return self::FAILURE;
-            }
-        } else {
-            $custom = false;
-            $config = Config::get('path') . '/config/servers.yaml';
-        }
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
 
         $selectBackends = (string)$input->getOption('select-backends');
 
@@ -166,41 +154,40 @@ class ExportCommand extends Command
         $export = $push = $entities = [];
 
         if (true === $input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed to backends.</info>');
+            $this->logger->notice('Dry run mode. No changes will be committed to backends.');
         }
 
         foreach (Config::get('servers', []) as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info(
-                    sprintf('%s: Ignoring backend as requested by [-s, --select-backends].', $backendName)
-                );
+                $this->logger->info('{backend}: Ignoring backend as requested by [-s, --select-backends].', [
+                    'backend' => $backendName
+                ]);
                 continue;
             }
 
             if (true !== ag($backend, 'export.enabled')) {
-                $this->logger->info(sprintf('%s: Ignoring backend as requested by user config.', $backendName));
+                $this->logger->info('{backend}: Ignoring backend as requested by user config.', [
+                    'backend' => $backendName
+                ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error(
-                    sprintf(
-                        '%s: Unexpected type. Expecting \'%s\' but got \'%s\'.',
-                        $backendName,
-                        implode(', ', array_keys($supported)),
-                        $type
-                    )
-                );
+                $this->logger->error('{backend}: Is using unexpected type \'{type}\'. Expecting \'{types}\'.', [
+                    'type' => $type,
+                    'backend' => $backendName,
+                    'types' => implode(', ', array_keys($supported)),
+                ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error(
-                    sprintf('%s: Backend does not have valid url.', $backendName),
-                    ['url' => $url ?? 'None']
-                );
+                $this->logger->error('{backend}: Backend does not have valid url.', [
+                    'url' => $url ?? 'None',
+                    $backendName,
+                ]);
                 continue;
             }
 
@@ -209,11 +196,8 @@ class ExportCommand extends Command
         }
 
         if (empty($backends)) {
-            $output->writeln(
-                sprintf(
-                    '<error>%s</error>',
-                    $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
-                )
+            $this->logger->warning(
+                $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
             );
             return self::FAILURE;
         }
@@ -401,7 +385,7 @@ class ExportCommand extends Command
         }
 
         if (count($export) >= 1) {
-            $this->export($export, $input);
+            $this->export($export, $input, $configFile);
         }
 
         $total = count($this->queue->getQueue());
@@ -453,7 +437,7 @@ class ExportCommand extends Command
                 'total' => $total
             ]);
 
-            $this->logger->notice(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+            $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');
         }
@@ -465,7 +449,7 @@ class ExportCommand extends Command
                 }
 
                 if (false === (bool)Message::get("{$name}.has_errors", false)) {
-                    Config::save(sprintf('servers.%s.export.lastSync', $name), time());
+                    $configFile->set("{$name}.export.lastSync", time());
                 } else {
                     $this->logger->warning(
                         'SYSTEM: Not updating last export date for [{backend}]. Backend reported an error.',
@@ -476,13 +460,7 @@ class ExportCommand extends Command
                 }
             }
 
-            if (false === $custom && is_writable(dirname($config))) {
-                copy($config, $config . '.bak');
-            }
-
-            $stream = new Stream($config, 'w');
-            $stream->write(Yaml::dump(Config::get('servers', []), 8, 2));
-            $stream->close();
+            $configFile->persist();
         }
 
         return self::SUCCESS;
@@ -522,8 +500,9 @@ class ExportCommand extends Command
      *
      * @param array $backends An array of backends to export data to.
      * @param InputInterface $input The input containing export options.
+     * @param ConfigFile $configFile The instance of the ConfigFile class.
      */
-    protected function export(array $backends, InputInterface $input): void
+    protected function export(array $backends, InputInterface $input, ConfigFile $configFile): void
     {
         $this->logger->notice('Export mode start.', [
             'backends' => implode(', ', array_keys($backends)),
@@ -592,7 +571,7 @@ class ExportCommand extends Command
                         'backend' => $name,
                     ]);
                 } else {
-                    Config::save("servers.{$name}.export.lastSync", time());
+                    $configFile->set("{$name}.export.lastSync", time());
                 }
             }
         }

@@ -110,6 +110,7 @@ class ProgressCommand extends Command
      * @param OutputInterface $output The output interface.
      * @return int Returns the status code.
      * @throws \Psr\Cache\InvalidArgumentException if the cache key is not a legal value
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
@@ -215,8 +216,7 @@ class ProgressCommand extends Command
                 $backend['class'] = $this->getBackend(name: $name, config: $backend);
 
                 $backend['class']->progress(entities: $entities, queue: $this->queue);
-            } /** @noinspection PhpRedundantCatchClauseInspection */
-            catch (UnexpectedVersionException $e) {
+            } catch (UnexpectedVersionException $e) {
                 $this->logger->notice(
                     'SYSTEM: Sync play progress is not supported for [{backend}]. Error [{error.message} @ {error.file}:{error.line}].',
                     [
@@ -324,7 +324,7 @@ class ProgressCommand extends Command
                 ],
             ]);
 
-            $this->logger->notice(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+            $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');
         }

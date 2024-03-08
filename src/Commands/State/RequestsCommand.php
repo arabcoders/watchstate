@@ -53,12 +53,12 @@ class RequestsCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Process queued requests.')
+            ->setDescription('Process queued webhook requests.')
             ->addOption('keep', 'k', InputOption::VALUE_NONE, 'Do not expunge queue after run is complete.')
             ->addOption('list', 'l', InputOption::VALUE_NONE, 'List queued requests.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption('no-stats', null, InputOption::VALUE_NONE, 'Do not display end of run stats.')
-            ->setHelp('This command process <notice>queued</notice> http requests.');
+            ->setHelp('This command process <notice>queued</notice> webhook requests.');
     }
 
     /**

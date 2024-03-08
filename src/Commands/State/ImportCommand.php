@@ -9,6 +9,7 @@ use App\Commands\Backend\Library\UnmatchedCommand;
 use App\Commands\Config\EditCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
@@ -25,7 +26,6 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
@@ -87,7 +87,6 @@ class ImportCommand extends Command
                 'Mapper option. Always update the locally stored metadata from backend.'
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
@@ -242,19 +241,8 @@ class ImportCommand extends Command
             $this->logger->setHandlers([new StreamLogHandler(new Stream($logfile, 'w'), $output)]);
         }
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
-                return self::FAILURE;
-            }
-        } else {
-            $custom = false;
-            $config = Config::get('path') . '/config/servers.yaml';
-        }
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
 
         $list = [];
 
@@ -266,8 +254,7 @@ class ImportCommand extends Command
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed.</info>');
-
+            $this->logger->notice('Dry run mode. No changes will be committed.');
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
@@ -342,14 +329,16 @@ class ImportCommand extends Command
         }
 
         if (empty($list)) {
-            $this->logger->warning('No backends were found');
+            $this->logger->warning(
+                $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
+            );
             return self::FAILURE;
         }
 
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+        $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
 
         $this->logger->notice('SYSTEM: Preloading {mapper} data.', [
             'mapper' => afterLast($this->mapper::class, '\\'),
@@ -422,7 +411,7 @@ class ImportCommand extends Command
                         'backend' => $name,
                     ]);
                 } else {
-                    Config::save("servers.{$name}.import.lastSync", time());
+                    $configFile->set("{$name}.import.lastSync", time());
                 }
             }
         }
@@ -508,13 +497,7 @@ class ImportCommand extends Command
         (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
 
         if (false === $input->getOption('dry-run')) {
-            if (false === $custom && is_writable(dirname($config))) {
-                copy($config, $config . '.bak');
-            }
-
-            $stream = new Stream($config, 'w');
-            $stream->write(Yaml::dump(Config::get('servers', []), 8, 2));
-            $stream->close();
+            $configFile->persist();
         }
 
         if ($input->getOption('show-messages')) {

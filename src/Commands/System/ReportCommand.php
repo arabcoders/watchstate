@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\System;
 
+use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
@@ -231,7 +232,11 @@ final class ReportCommand extends Command
             );
 
             $opts = ag($backend, 'options', []);
-            $opts = ag_delete($opts, 'options.' . Options::ADMIN_TOKEN);
+            foreach (Index::BLACK_LIST as $hideValue) {
+                if (true === ag_exists($opts, $hideValue)) {
+                    $opts = ag_set($opts, $hideValue, '__hidden__');
+                }
+            }
 
             $output->writeln(
                 r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
