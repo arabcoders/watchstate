@@ -15,7 +15,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
@@ -60,15 +59,19 @@ class BackupCommand extends Command
             )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'No actions will be committed.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
+            ->addOption(
+                'select-backend',
+                's',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
+                'Select backend.',
+            )
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption(
                 'no-enhance',
                 null,
                 InputOption::VALUE_NONE,
                 'Do not enhance the backup data using local db info.'
             )
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption(
                 'file',
                 null,
@@ -90,7 +93,7 @@ class BackupCommand extends Command
                     Backups generated without [<flag>-k</flag>, <flag>--keep</flag>] flag are subject to be <notice>REMOVED</notice> during system:prune run.
                     To keep permanent copy of your backups you can use the [<flag>-k</flag>, </flag>--keep</info>] flag. For example:
 
-                    {cmd} <cmd>{route}</cmd> <info>--keep</info> [<flag>--select-backends</flag> <value>backend_name</value>]
+                    {cmd} <cmd>{route}</cmd> <info>--keep</info> [<flag>--select-backend</flag> <value>backend_name</value>]
 
                     Backups generated with [<flag>-k</flag>, <flag>--keep</flag>] flag will not contain a date and will be named [<value>backend_name.json</value>]
                     where automated backups will be named [<value>backend_name.00000000{date}.json</value>]
@@ -114,11 +117,11 @@ class BackupCommand extends Command
                     <question># I want different file name for my backup?</question>
 
                     Backup names are something tricky, however it's possible to choose the backup filename if the total number
-                    of backed up backends are 1. So, in essence you have to combine two flags [<flag>-s</flag>, <flag>--select-backends</flag>] and [<flag>--file</flag>].
+                    of backed up backends are 1. So, in essence you have to combine two flags [<flag>-s</flag>, <flag>--select-backend</flag>] and [<flag>--file</flag>].
 
                     For example, to back up [<value>backend_name</value>] backend data to [<value>/tmp/backend_name.json</value>] do the following:
 
-                    {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>backend_name</value> <flag>--file</flag> <value>/tmp/my_backend.json</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--select-backend</flag> <value>backend_name</value> <flag>--file</flag> <value>/tmp/my_backend.json</value>
 
                     HELP,
                     [
@@ -141,35 +144,27 @@ class BackupCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input), $output);
     }
 
     /**
      * Execute the command.
      *
      * @param InputInterface $input The input interface.
-     * @param OutputInterface $output The output interface.
      *
      * @return int The integer result.
      */
-    protected function process(InputInterface $input, OutputInterface $output): int
+    protected function process(InputInterface $input): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-        }
-
         $list = [];
-        $selectBackends = (string)$input->getOption('select-backends');
-        $selected = explode(',', $selectBackends);
-        $isCustom = !empty($selectBackends) && count($selected) >= 1;
+        $selected = $input->getOption('select-backend');
+        $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed.</info>');
-
+            $this->logger->notice('SYSTEM: Dry run mode. No changes will be committed.');
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
@@ -219,7 +214,9 @@ class BackupCommand extends Command
         }
 
         if (empty($list)) {
-            $this->logger->warning('No backends were found.');
+            $this->logger->warning(
+                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
+            );
             return self::FAILURE;
         }
 
@@ -246,7 +243,7 @@ class BackupCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+        $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
 
         foreach ($list as $name => &$backend) {
             $opts = ag($backend, 'options', []);

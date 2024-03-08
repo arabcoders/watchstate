@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\System;
 
+use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
@@ -130,6 +131,7 @@ final class ReportCommand extends Command
         $this->getTasks($output);
         $output->writeln('<info>[ Logs ]</info>' . PHP_EOL);
         $this->getLogs($input, $output);
+        $this->printFooter($output);
 
         return self::SUCCESS;
     }
@@ -231,7 +233,11 @@ final class ReportCommand extends Command
             );
 
             $opts = ag($backend, 'options', []);
-            $opts = ag_delete($opts, 'options.' . Options::ADMIN_TOKEN);
+            foreach (Index::BLACK_LIST as $hideValue) {
+                if (true === ag_exists($opts, $hideValue)) {
+                    $opts = ag_set($opts, $hideValue, '__hidden__');
+                }
+            }
 
             $output->writeln(
                 r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
@@ -401,5 +407,21 @@ final class ReportCommand extends Command
 
             $output->writeln($line);
         }
+    }
+
+    private function printFooter(iOutput $output)
+    {
+        $output->writeln('<info>[ Notice ]</info>');
+        $output->writeln(
+            trim(
+                <<<FOOTER
+            <value>
+            Beware, while we try to make sure no sensitive information is leaked, it's possible
+            that some private information might be leaked via the logs section.
+            Please review the report before posting it.
+            </value>
+            FOOTER
+            )
+        );
     }
 }

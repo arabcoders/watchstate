@@ -51,10 +51,15 @@ final class ListCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->addOption('type', null, InputOption::VALUE_REQUIRED, 'Filter based on type.')
-            ->addOption('backend', null, InputOption::VALUE_REQUIRED, 'Filter based on backend.')
-            ->addOption('db', null, InputOption::VALUE_REQUIRED, 'Filter based on db.')
-            ->addOption('id', null, InputOption::VALUE_REQUIRED, 'Filter based on id.')
+            ->addOption(
+                'select-backend',
+                's',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
+                'Filter based on backend.'
+            )
+            ->addOption('type', 't', InputOption::VALUE_REQUIRED, 'Filter based on type.')
+            ->addOption('db', 'd', InputOption::VALUE_REQUIRED, 'Filter based on db.')
+            ->addOption('id', 'i', InputOption::VALUE_REQUIRED, 'Filter based on id.')
             ->setDescription('List Ignored external ids.')
             ->setHelp(
                 r(
@@ -69,11 +74,11 @@ final class ListCommand extends Command
 
                     <question># List all ignore rules that relate to specific backend.</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     <question># Appending more filters to narrow down list</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--backend</flag> <value>backend_name</value> <flag>--db</flag> <value>tvdb</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>backend_name</value> <flag>-d</flag> <value>tvdb</value>
 
                     HELP,
                     [
@@ -102,10 +107,10 @@ final class ListCommand extends Command
 
         $list = [];
 
-        $fBackend = $input->getOption('backend');
         $fType = $input->getOption('type');
         $fDb = $input->getOption('db');
         $fId = $input->getOption('id');
+        $backends = $input->getOption('select-backend');
 
         $ids = Config::get('ignore', []);
 
@@ -118,19 +123,40 @@ final class ListCommand extends Command
             $id = ag($urlParts, 'pass');
             $scope = ag($urlParts, 'query');
 
-            if (null !== $fBackend && $backend !== $fBackend) {
+            if (!empty($backends) && !in_array($backend, $backends)) {
+                if (true === str_contains($backend, ',')) {
+                    throw new \RuntimeException(
+                        'The option [-s --select-backend] does not support comma separated values. it should be used multiple times.'
+                    );
+                }
+                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-s, --select-backend].</comment>', [
+                    'rule' => $guid,
+                    'backend' => $backend
+                ]), OutputInterface::VERBOSITY_DEBUG);
                 continue;
             }
 
             if (null !== $fType && $type !== $fType) {
+                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-t, --type].</comment>', [
+                    'rule' => $guid,
+                    'type' => $type
+                ]), OutputInterface::VERBOSITY_DEBUG);
                 continue;
             }
 
             if (null !== $fDb && $db !== $fDb) {
+                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-d, --db].</comment>', [
+                    'rule' => $guid,
+                    'db' => $db
+                ]), OutputInterface::VERBOSITY_DEBUG);
                 continue;
             }
 
             if (null !== $fId && $id !== $fId) {
+                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-i, --id].</comment>', [
+                    'rule' => $guid,
+                    'id' => $id
+                ]), OutputInterface::VERBOSITY_DEBUG);
                 continue;
             }
 

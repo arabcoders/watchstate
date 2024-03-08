@@ -158,13 +158,16 @@ $ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
 ### How do i migrate invited friends i.e. (external user) data from from plex to emby/jellyfin?
 
 As this tool is designed to work with single user, You have to treat each invited friend as a separate user. what is
-needed, you need to contact that friend of yours and ask him to give you a copy of his [X-Plex-Token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/),
+needed, you need to contact that friend of yours and ask him to give you a copy of
+his [X-Plex-Token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/),
 then create new container and add the backend with the token you got from your friend.
 
-After that, add your other backends like emby/jellyfin using your regular API key. jellyfin/emby differentiate between users by using the userId which
+After that, add your other backends like emby/jellyfin using your regular API key. jellyfin/emby differentiate between
+users by using the userId which
 you should select at the start of the add process.
 
-After that. run the `state:import -f -s [plex_server_name]` command to import the user watch state. After that, you can run the `state:export -fi -s [emby/jellyfin_server_name]` to export the
+After that. run the `state:import -f -s [plex_server_name]` command to import the user watch state. After that, you can
+run the `state:export -fi -s [emby/jellyfin_server_name]` to export the
 watch state to the new backend.
 
 You have to repeat these steps for each user you want to migrate their data off the plex server.
@@ -256,8 +259,11 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
-* com.plexapp.agents.ytinforeader://(id)?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent) With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
-* com.plexapp.agents.cmdb://(id)?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
+* com.plexapp.agents.ytinforeader://(id)
+  ?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent)
+  With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
+* com.plexapp.agents.cmdb://(id)
+  ?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
 
 ---
 
@@ -269,8 +275,10 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvmaze://(id)
 * tvrage://(id)
 * anidb://(id)
-* ytinforeader://(id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). `(A yt-dlp info reader plugin)`.
-* cmdb://(id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db). `(User custom metadata database)`.
+* ytinforeader://(
+  id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). `(A yt-dlp info reader plugin)`.
+* cmdb://(
+  id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db). `(User custom metadata database)`.
 
 ---
 
@@ -295,7 +303,7 @@ These environment variables relates to the tool itself, you can load them via th
 |-------------------------|---------|-------------------------------------------------------------------------|--------------------|
 | WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var` |
 | WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`  |
-| WS_TZ                   | string  | Set timezone.                                                           | `UTC`              |
+| WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`              |
 | WS_CRON_{TASK}          | bool    | Enable {task} task. Value casted to bool.                               | `false`            |
 | WS_CRON_{TASK}_AT       | string  | When to run {task} task. Valid Cron Expression Expected.                | `*/1 * * * *`      |
 | WS_CRON_{TASK}_ARGS     | string  | Flags to pass to the {task} command.                                    | `-v`               |
@@ -481,15 +489,19 @@ Those are some web hook limitations we discovered for the following media backen
 #### Emby
 
 * Emby does not send webhooks events for newly added items.
-  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~ implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
-* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
+  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
+  implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
+* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
+  played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
 #### Jellyfin
 
-* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you happen to enable `webhook.match.user` for jellyfin.
+* If you don't select a user id, the plugin will send `itemAdd` event without user data, and will fail the check if you
+  happen to enable `webhook.match.user` for jellyfin.
 * Sometimes jellyfin will fire webhook `itemAdd` event without the item being matched.
 * Even if you select user id, sometimes `itemAdd` event will fire without user data.
-* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set to `Use date scanned into library`. This happens if the media file has been replaced.
+* Items might be marked as unplayed if Libraries > Display - `Date added behavior for new content:` is set
+  to `Use date scanned into library`. This happens if the media file has been replaced.
 
 ---
 
@@ -497,7 +509,8 @@ Those are some web hook limitations we discovered for the following media backen
 
 As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
 complement webhooks, you should enable import/export tasks by settings their respective environment variables in
-your `docker-compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks` command.
+your `docker-compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks`
+command.
 
 ---
 
@@ -548,10 +561,13 @@ location and delete the empty directories.
 ### How to get WatchState working with YouTube content/library?
 
 Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
-media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to name your files. Please be aware these plugins and scanners `REQUIRE`
-that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you have `20231030 my awesome youtube video [youtube-RandomString].mkv`
+media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to
+name your files. Please be aware these plugins and scanners `REQUIRE`
+that you have a `yt-dlp` `.info.json` files named exactly as your media file. For example, if you
+have `20231030 my awesome youtube video [youtube-RandomString].mkv`
 you should have `20231030 my awesome youtube video [youtube-RandomString].info.json` in the same directory. In the
-future, I plan to make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to work.
+future, I plan to make `.info.json` optional However at the moment the file is required for emby/jellyfin plugin to
+work.
 
 #### Plex Setup
 
@@ -561,11 +577,13 @@ future, I plan to make `.info.json` optional However at the moment the file is r
 
 #### Jellyfin Setup
 
-* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
+* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please
+  refer to the link on how to install it.
 
 #### Emby Setup
 
-* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
+* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
+  Please refer to the link on how to install it.
 
 If your media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
 jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the
@@ -618,10 +636,12 @@ If everything is working correctly you should see something like this previous j
 
 ### I keep receiving this warning in log `INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
 
-We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see this,
+We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
+this,
 this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to 4 episodes.
 
-If this is not enough for your library content. fear not we have you covered you can increase the limit by running the following command:
+If this is not enough for your library content. fear not we have you covered you can increase the limit by running the
+following command:
 
 ```bash 
 $ docker exec -ti watchstate console config:edit --key options.MAX_EPISODE_RANGE --set 10 -- [BACKEND_NAME] 

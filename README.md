@@ -7,7 +7,21 @@
 This tool primary goal is to sync your backends play state without relying on third party services,
 out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
-## Feature updates
+## updates
+
+### 2024-03-08
+
+This update include breaking changes to how we process commands, we have streamlined the command interface to accept
+some consistent flags and options. Notably, we have added `-s, --select-backend` flag to all commands that accept it.
+commands that were accepting comma separated list of backends now needs to be separate option call for example
+`--select-backend home_plex --select-backend home_jellyfin` instead of `--select-backend home_plex,home_jellyfin`.
+
+All commands that was accepting backend name as argument now accepts `-s, --select-backend` flag. This change is to make
+the
+command interface more consistent and easier to use.
+
+We started working no a `Web API` which hopefully will lead to a `web frontend` to manage the tool. This is a long
+term goal, and it's not expected to be ready soon. However, the `Web API` is expected within 3rd quarter of 2024.
 
 ### 2023-11-11
 
@@ -136,10 +150,10 @@ $ docker exec -ti watchstate console state:import -v
 ```
 
 This command will pull your play state from all your backends. To import from specific backends use
-the `[-s, --select-backends]` flag which accept comma seperated list of backend names. For example,
+the `[-s, --select-backend]` flag. For example,
 
 ```bash
-$ docker exec -ti watchstate console state:import -v --select-backends 'home_plex,home_jellyfin' 
+$ docker exec -ti watchstate console state:import -v -s home_plex -s home_jellyfin 
 ```
 
 > [!NOTE]
@@ -176,11 +190,10 @@ $ docker exec -ti watchstate console state:export -v
 ```
 
 This command will export your current play state to all of your export enabled backends. To export to
-specific backends use the `[-s, --select-backends]` flag which accept comma seperated list of backend names. For
-example,
+specific backends use the `[-s, --select-backend]`flag. For example,
 
 ```bash
-$ docker exec -ti watchstate console state:export -v --select-backends 'home_plex,home_jellyfin' 
+$ docker exec -ti watchstate console state:export -v -s home_plex -s home_jellyfin 
 ```
 
 > [!NOTE]

@@ -6,12 +6,10 @@ namespace App\Commands\Backend;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
-use Symfony\Component\Console\Input\InputArgument;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class VersionCommand
@@ -30,8 +28,7 @@ class VersionCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Get backend product version.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name to restore.');
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.');
     }
 
     /**
@@ -44,23 +41,20 @@ class VersionCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $name = $input->getArgument('backend');
-
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
+        $name = $input->getOption('select-backend');
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
         }
 
-        if (null === ag(Config::get('servers', []), $name, null)) {
+        try {
+            $backend = $this->getBackend($name);
+        } catch (RuntimeException) {
             $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 
-        $output->writeln($this->getBackend($name)->getVersion());
+        $output->writeln($backend->getVersion());
 
         return self::SUCCESS;
     }

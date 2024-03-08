@@ -9,6 +9,7 @@ use App\Commands\Backend\Library\UnmatchedCommand;
 use App\Commands\Config\EditCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
@@ -25,7 +26,6 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
@@ -66,8 +66,13 @@ class ImportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
+            ->addOption(
+                'select-backend',
+                's',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
+                'Select backend.'
+            )
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption(
                 'direct-mapper',
                 null,
@@ -87,7 +92,6 @@ class ImportCommand extends Command
                 'Mapper option. Always update the locally stored metadata from backend.'
             )
             ->addOption('show-messages', null, InputOption::VALUE_NONE, 'Show internal messages.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
@@ -107,7 +111,7 @@ class ImportCommand extends Command
 
                     <question># How to import from specific backend?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     <question># How to Import the metadata only?</question>
 
@@ -117,7 +121,7 @@ class ImportCommand extends Command
 
                     If you want to permanently increase the <notice>timeout</notice> for specific backend, you can do the following
 
-                    {cmd} <cmd>{config_edit}</cmd> <flag>--key</flag> <value>options.client.timeout</value> <flag>--set</flag> <value>600.0</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{config_edit}</cmd> <flag>-k</flag> <value>options.client.timeout</value> <flag>-e</flag> <value>600.0</value> <flag>-s</flag> <value>backend_name</value>
 
                     <value>600.0</value> seconds is equal to 10 minutes before the timeout handler kicks in. Alternatively, you can also increase the
                     timeout temporarily by using the [<flag>--timeout</flag>] flag. It will increase the timeout for all backends during this run.
@@ -143,8 +147,8 @@ class ImportCommand extends Command
 
                     By default commands only show log level <value>WARNING</value> and higher, to see more verbose output
                     You can use the [<flag>-v|-vv|-vvv</flag>] flag to signal that you want more output. And you can enable
-                    even more info by using [<flag>--trace</flag>] and [<flag>--context</flag>] flags. Be warned the output using all those flags
-                    is quite excessive and shouldn't be used unless told by the team.
+                    even more info by using [<flag>--debug</flag>] flag. Be warned the output is quite excessive
+                    and shouldn't be used unless told by the team.
 
                     {cmd} <cmd>{route}</cmd> <flag>-vvv --trace --context</flag>
 
@@ -171,7 +175,7 @@ class ImportCommand extends Command
 
                     or you could use the built-in unmatched checker.
 
-                    {cmd} <cmd>{unmatched_route}</cmd> -- <value>backend_name</value>
+                    {cmd} <cmd>{unmatched_route}</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     If you don't have any unmatched items, this likely means you are using unsupported external db ids.
 
@@ -202,7 +206,7 @@ class ImportCommand extends Command
                     Running this command will force full export your current database state to the selected backend. Once that done you can
                     turn on import from the new backend. by editing the backend setting:
 
-                    {cmd} <cmd>config:manage</cmd> <value>backend_name</value>
+                    {cmd} <cmd>config:manage</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -242,32 +246,19 @@ class ImportCommand extends Command
             $this->logger->setHandlers([new StreamLogHandler(new Stream($logfile, 'w'), $output)]);
         }
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
-                return self::FAILURE;
-            }
-        } else {
-            $custom = false;
-            $config = Config::get('path') . '/config/servers.yaml';
-        }
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
 
         $list = [];
 
-        $selectBackends = (string)$input->getOption('select-backends');
-        $selected = explode(',', $selectBackends);
-        $isCustom = !empty($selectBackends) && count($selected) >= 1;
+        $selected = $input->getOption('select-backend');
+        $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
 
         if ($input->getOption('dry-run')) {
-            $output->writeln('<info>Dry run mode. No changes will be committed.</info>');
-
+            $this->logger->notice('Dry run mode. No changes will be committed.');
             $mapperOpts[Options::DRY_RUN] = true;
         }
 
@@ -342,14 +333,16 @@ class ImportCommand extends Command
         }
 
         if (empty($list)) {
-            $this->logger->warning('No backends were found');
+            $this->logger->warning(
+                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
+            );
             return self::FAILURE;
         }
 
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->info(sprintf('Using WatchState Version - \'%s\'.', getAppVersion()));
+        $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
 
         $this->logger->notice('SYSTEM: Preloading {mapper} data.', [
             'mapper' => afterLast($this->mapper::class, '\\'),
@@ -422,7 +415,7 @@ class ImportCommand extends Command
                         'backend' => $name,
                     ]);
                 } else {
-                    Config::save("servers.{$name}.import.lastSync", time());
+                    $configFile->set("{$name}.import.lastSync", time());
                 }
             }
         }
@@ -508,13 +501,7 @@ class ImportCommand extends Command
         (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
 
         if (false === $input->getOption('dry-run')) {
-            if (false === $custom && is_writable(dirname($config))) {
-                copy($config, $config . '.bak');
-            }
-
-            $stream = new Stream($config, 'w');
-            $stream->write(Yaml::dump(Config::get('servers', []), 8, 2));
-            $stream->close();
+            $configFile->persist();
         }
 
         if ($input->getOption('show-messages')) {

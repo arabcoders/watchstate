@@ -10,9 +10,7 @@ use App\Libs\Config;
 use App\Libs\Options;
 use DateTimeInterface;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 #[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
@@ -25,15 +23,8 @@ final class ListCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->setDescription('List Added backends.')
-            ->setHelp(
-                <<<HELP
-
-                This command list your configured backends.
-
-                HELP
-            );
+            ->setHelp('This command list your configured backends.');
     }
 
     /**
@@ -46,16 +37,6 @@ final class ListCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
-                return self::FAILURE;
-            }
-        }
-
         $list = [];
 
         foreach (Config::get('servers', []) as $name => $backend) {

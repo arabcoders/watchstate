@@ -20,6 +20,8 @@ final class EnvCommand extends Command
 {
     public const ROUTE = 'system:env';
 
+    private const EXEMPT_KEYS = ['HTTP_PORT', 'TZ'];
+
     /**
      * Configure the command.
      */
@@ -43,6 +45,8 @@ final class EnvCommand extends Command
                     * the key SHOULD attempt to mirror the key path in default config, If not applicable or otherwise impossible it
                     should then use an approximate path.
 
+                    * The following keys are exempt from the rules: [<flag>{exempt_keys}</flag>].
+
                     -------
                     <notice>[ FAQ ]</notice>
                     -------
@@ -57,7 +61,6 @@ final class EnvCommand extends Command
                     For example, to enable import task, do the following:
 
                     -------------------------------
-                    version: '3.3'
                     services:
                       watchstate:
                         image: ghcr.io/arabcoders/watchstate:latest
@@ -80,7 +83,8 @@ final class EnvCommand extends Command
 
                     HELP,
                     [
-                        'path' => after(Config::get('path') . '/config', ROOT_PATH)
+                        'path' => after(Config::get('path') . '/config', ROOT_PATH),
+                        'exempt_keys' => implode(', ', self::EXEMPT_KEYS),
                     ]
                 )
             );
@@ -100,7 +104,7 @@ final class EnvCommand extends Command
         $keys = [];
 
         foreach (getenv() as $key => $val) {
-            if (false === str_starts_with($key, 'WS_') && $key !== 'HTTP_PORT') {
+            if (false === str_starts_with($key, 'WS_') && in_array($key, self::EXEMPT_KEYS)) {
                 continue;
             }
 

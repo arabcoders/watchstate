@@ -9,11 +9,11 @@ use App\Commands\State\ImportCommand;
 use App\Commands\System\IndexCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Options;
-use App\Libs\Stream;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -32,13 +32,17 @@ final class ManageCommand extends Command
 {
     public const ROUTE = 'config:manage';
 
+    public function __construct(private LoggerInterface $logger)
+    {
+        parent::__construct();
+    }
+
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
             ->setDescription('Manage backend settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -89,27 +93,17 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        $custom = false;
+        $name = $input->getOption('select-backend');
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                $custom = true;
-                $backends = (array)Yaml::parseFile($this->checkCustomBackendsFile($config));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>ERROR:</error> {error}', ['error' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        } else {
-            $config = Config::get('path') . '/config/servers.yaml';
-            if (!file_exists($config)) {
-                touch($config);
-            }
-            $backends = (array)Config::get('servers', []);
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
+            return self::FAILURE;
         }
 
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        $configFile->setLogger($this->logger);
+
         $add = $input->getOption('add');
-        $name = $input->getArgument('backend');
 
         if (!isValidName($name) || strtolower($name) !== $name) {
             $output->writeln(
@@ -124,7 +118,7 @@ final class ManageCommand extends Command
         }
 
         if (true === $add) {
-            if (null !== ag($backends, "{$name}.type", null)) {
+            if (null !== $configFile->get("{$name}.type", null)) {
                 $output->writeln(
                     r(
                         '<error>ERROR:</error> Backend with [<value>{backend}</value>] name already exists. Omit the [<flag>--add</flag>] flag if you want to edit the backend settings.',
@@ -135,7 +129,7 @@ final class ManageCommand extends Command
                 );
                 return self::FAILURE;
             }
-        } elseif (null === ag($backends, "{$name}.type", null)) {
+        } elseif (null === $configFile->get("{$name}.type", null)) {
             $output->writeln(
                 r(
                     '<error>ERROR:</error> No backend named [<value>{backend}</value>] was found. Append [<flag>--add</flag>] to add as new backend.',
@@ -147,7 +141,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        $u = $rerun ?? ag($backends, $name, []);
+        $u = $rerun ?? $configFile->get($name, []);
         $u['name'] = $name;
 
         $output->writeln('');
@@ -392,19 +386,11 @@ final class ManageCommand extends Command
             return $this->runCommand($input, $output, $u);
         }
 
-        if (false === $custom) {
-            copy($config, $config . '.bak');
-        }
-
-        $backends = ag_set($backends, $name, $u);
-
-        $stream = new Stream($config, 'w');
-        $stream->write(Yaml::dump($backends, 8, 2));
-        $stream->close();
+        $configFile->set($name, $u)->persist();
 
         $output->writeln('<info>Config updated.</info>');
 
-        if (false === $custom && $input->getOption('add')) {
+        if ($input->getOption('add')) {
             $helper = $this->getHelper('question');
             $text =
                 <<<TEXT
@@ -452,15 +438,9 @@ final class ManageCommand extends Command
                             'type' => $importType
                         ])
                     );
+
                     $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
-                    $cmd->run(
-                        new ArrayInput([
-                            '--quiet',
-                            '--config' => $config,
-                            '--select-backends' => $name
-                        ]),
-                        $output
-                    );
+                    $cmd->run(new ArrayInput(['--quiet', '--select-backend' => $name]), $output);
                 }
 
                 $output->writeln('<info>Import complete</info>');

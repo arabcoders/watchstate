@@ -7,13 +7,11 @@ namespace App\Commands\Backend\Users;
 use App\Backends\Plex\Commands\AccessTokenCommand;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
 use App\Libs\Options;
-use Symfony\Component\Console\Input\InputArgument;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /**
@@ -42,8 +40,7 @@ final class ListCommand extends Command
             )
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Use this given token.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend')
             ->setHelp(
                 r(
                     <<<HELP
@@ -57,19 +54,19 @@ final class ListCommand extends Command
 
                     <question># How to get user tokens?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens -s</flag> <value>backend_name</value>
 
                     <notice>Notice: If you have many plex users and request tokens for all of them you may get rate-limited by plex api,
                     you shouldn't do this unless you have good reason. In most cases you don't need to, and can use
                     <cmd>{plex_accesstoken_command}</cmd> command to generate tokens for specific user. for example:</notice>
 
-                    {cmd} <cmd>{plex_accesstoken_command}</cmd> -- <value>backend_name plex_user_uuid</value>
+                    {cmd} <cmd>{plex_accesstoken_command}</cmd> <flag>-s</flag> <value>backend_name</value> -- plex_user_uuid</value>
 
                     plex_user_uuid: is what can be seen using this list command.
 
                     <question># How to see the raw response?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response -s</flag> <value>backend_name</value>
 
                     <question># My Plex backend report only one user?</question>
 
@@ -77,7 +74,7 @@ final class ListCommand extends Command
                     work for managed user we have to use the managed user token instead of the admin user token due to
                     plex api limitation. To see list of your users you can do the following.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--use-token</flag> <value>PLEX_TOKEN</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--use-token</flag> <value>PLEX_ADMIN_TOKEN</value> <flag>-s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -102,20 +99,10 @@ final class ListCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
-        $backend = $input->getArgument('backend');
+        $name = $input->getOption('select-backend');
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
-
-        if (null === ag(Config::get('servers', []), $backend, null)) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
 
@@ -137,10 +124,17 @@ final class ListCommand extends Command
             $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
         }
 
-        $users = $this->getBackend($backend, $backendOpts)->getUsersList(opts: $opts);
+        try {
+            $backend = $this->getBackend($name, $backendOpts);
+        } catch (RuntimeException) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
+
+        $users = $backend->getUsersList(opts: $opts);
 
         if (count($users) < 1) {
-            $output->writeln(r("<error>ERROR: No users found for '{backend}'.</error>", ['backend' => $backend]));
+            $output->writeln(r("<error>ERROR: No users found for '{backend}'.</error>", ['backend' => $name]));
             return self::FAILURE;
         }
 

@@ -21,7 +21,7 @@ return (function () {
     $config = [
         'name' => 'WatchState',
         'version' => '$(version_via_ci)',
-        'tz' => env('WS_TZ', 'UTC'),
+        'tz' => env('WS_TZ', env('TZ', 'UTC')),
         'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
             'context' => (bool)env('WS_LOGS_CONTEXT', false),
@@ -57,6 +57,8 @@ return (function () {
             'header' => (string)env('WS_TRUST_HEADER', 'X-Forwarded-For'),
         ],
     ];
+
+    $config['backends_file'] = fixPath(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
 
     date_default_timezone_set(ag($config, 'tz', 'UTC'));
     $logDateFormat = makeDate()->format('Ymd');

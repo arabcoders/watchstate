@@ -11,6 +11,8 @@ use Stringable;
 
 final class Date extends DateTimeImmutable implements Stringable, JsonSerializable
 {
+    public const ATOM = DateTimeInterface::ATOM;
+
     public function __toString(): string
     {
         return $this->format(DateTimeInterface::ATOM);

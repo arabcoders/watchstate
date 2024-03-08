@@ -6,13 +6,11 @@ namespace App\Commands\Backend;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
 use App\Libs\Options;
-use Symfony\Component\Console\Input\InputArgument;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class InfoCommand
@@ -36,8 +34,7 @@ class InfoCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Get backend product info.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name to restore.');
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.');
     }
 
     /**
@@ -49,29 +46,26 @@ class InfoCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $name = $input->getArgument('backend');
         $mode = $input->getOption('output');
-        $opts = [];
+        $name = $input->getOption('select-backend');
 
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
-
-        if (null === ag(Config::get('servers', []), $name, null)) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
+
+        $opts = [];
 
         if ($input->getOption('include-raw-response')) {
             $opts[Options::RAW_RESPONSE] = true;
         }
 
-        $backend = $this->getBackend($name);
+        try {
+            $backend = $this->getBackend($name);
+        } catch (RuntimeException) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
 
         $info = $backend->getInfo($opts);
 

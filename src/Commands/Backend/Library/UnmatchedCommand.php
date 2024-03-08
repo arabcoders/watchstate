@@ -8,11 +8,10 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Options;
-use Symfony\Component\Console\Input\InputArgument;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class UnmatchedCommand
@@ -43,9 +42,8 @@ final class UnmatchedCommand extends Command
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('cutoff', null, InputOption::VALUE_REQUIRED, 'Increase title cutoff', self::CUTOFF)
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('id', null, InputOption::VALUE_REQUIRED, 'backend Library id.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Backend name.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -61,11 +59,11 @@ final class UnmatchedCommand extends Command
                     You can do that by using [<flag>--id</flag>] flag, change the <value>backend_library_id</value> to the library
                     id you get from [<cmd>{library_list}</cmd>] command.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> <flag>-s</flag> <value>backend_name</value>
 
                     <question># I want to show all items regardless of the status?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <flag>-s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -89,22 +87,12 @@ final class UnmatchedCommand extends Command
     {
         $mode = $input->getOption('output');
         $showAll = $input->getOption('show-all');
-        $backend = $input->getArgument('backend');
         $id = $input->getOption('id');
         $cutoff = (int)$input->getOption('cutoff');
+        $name = $input->getOption('select-backend');
 
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
-
-        if (null === ag(Config::get('servers', []), $backend, null)) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
 
@@ -122,13 +110,18 @@ final class UnmatchedCommand extends Command
             $opts[Options::RAW_RESPONSE] = true;
         }
 
-        $client = $this->getBackend($backend, $backendOpts);
+        try {
+            $backend = $this->getBackend($name, $backendOpts);
+        } catch (RuntimeException) {
+            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+            return self::FAILURE;
+        }
 
         $ids = [];
         if (null !== $id) {
             $ids[] = $id;
         } else {
-            foreach ($client->listLibraries() as $library) {
+            foreach ($backend->listLibraries() as $library) {
                 if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
                     continue;
                 }
@@ -137,7 +130,7 @@ final class UnmatchedCommand extends Command
         }
 
         foreach ($ids as $libraryId) {
-            foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
+            foreach ($backend->getLibrary(id: $libraryId, opts: $opts) as $item) {
                 if (true === $showAll) {
                     $list[] = $item;
                     continue;

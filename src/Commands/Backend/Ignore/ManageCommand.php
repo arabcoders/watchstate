@@ -33,7 +33,7 @@ final class ManageCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Add/Remove external id from ignore list.')
+            ->setDescription('Add or remove external id from ignore list.')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove id from ignore list.')
             ->addArgument('id', InputArgument::REQUIRED, 'id.')
             ->setHelp(
