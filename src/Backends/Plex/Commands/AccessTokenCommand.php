@@ -14,7 +14,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -33,7 +32,7 @@ final class AccessTokenCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Generate Access tokens for plex backend users.')
-            ->addArgument('backend', InputArgument::REQUIRED, 'Already Added Plex server with plex admin token.')
+            ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->addArgument(
                 'uuid',
                 InputArgument::REQUIRED,
@@ -41,7 +40,6 @@ final class AccessTokenCommand extends Command
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Override backend token with this one.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -53,7 +51,7 @@ final class AccessTokenCommand extends Command
                     -------
                     <question># How to see the raw response?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value> <value>plex_user_uuid</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response -s</flag> <value>backend_name</value> -- <value>plex_user_uuid</value>
 
                     HELP,
                     [
@@ -72,17 +70,7 @@ final class AccessTokenCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
         $uuid = $input->getArgument('uuid');
-        $backend = $input->getArgument('backend');
-
-        // -- Use Custom servers.yaml file.
-        if (($config = $input->getOption('config'))) {
-            try {
-                Config::save('servers', Yaml::parseFile($this->checkCustomBackendsFile($config)));
-            } catch (\App\Libs\Exceptions\RuntimeException $e) {
-                $output->writeln(r('<error>{message}</error>', ['message' => $e->getMessage()]));
-                return self::FAILURE;
-            }
-        }
+        $backend = $input->getOption('select-backend');
 
         if (null === ag(Config::get('servers', []), $backend, null)) {
             $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));

@@ -18,7 +18,7 @@ use Symfony\Component\Console\Question\Question;
  *
  * This command allow you to add new backend. This command is mainly proxy to config:manage command.
  * And act as shortcut for running the following command:
- * config:manage --add -- backend_name
+ * config:manage --add -s backend_name
  */
 #[Cli(command: self::ROUTE)]
 final class AddCommand extends Command

@@ -91,7 +91,7 @@ Create directory called `data` next to the `docker-compose.yaml` file. After cre
 the container.
 
 ```bash
-$ mkdir -p ./data && docker-compose pull && docker-compose up
+$ mkdir -p ./data && docker-compose pull && docker-compose up -d
 ```
 
 > [!IMPORTANT]
@@ -124,7 +124,7 @@ After starting the container you should start adding your backends and to do so 
 > For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api keys.
 
 ```bash
-$ docker exec -ti watchstate console config:add [BACKEND_NAME]
+$ docker exec -ti watchstate console config:add
 ```
 
 This command is interactive and will ask you for some questions to add your backend.
@@ -134,7 +134,7 @@ This command is interactive and will ask you for some questions to add your back
 To edit backend settings run
 
 ```bash
-$ docker exec -ti watchstate console config:manage [BACKEND_NAME]
+$ docker exec -ti watchstate console config:manage -s backend_name
 ```
 
 # Importing play state.
