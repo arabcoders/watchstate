@@ -100,7 +100,7 @@ $ docker exec -ti watchstate console state:export -vvif -s new_backend_name
 
 Running this command will force full export your current database state to the selected backend. Once that done you can
 turn on import from the new backend. by editing the backend setting
-via `docker exec -ti watchstate console config:manage backend_name`
+via `docker exec -ti watchstate console config:manage -s backend_name`
 
 ----
 
@@ -146,11 +146,11 @@ For Plex, You should use your admin token and by running the `config:add` comman
 attempt to generate a token for that user.
 
 > [!Note]
-> If the tool fails to generate a access token for the user, you can run the following command to generate the access
+> If the tool fails to generate an access token for the user, you can run the following command to generate the access
 > token manually.
 
 ```bash
-$ docker exec -ti console backend:users:list --with-tokens -- [BACKEND_NAME]
+$ docker exec -ti console backend:users:list -s backend_name --with-tokens
 ```
 
 ----
@@ -203,7 +203,7 @@ after that you can do `./ws command` for example, `./ws db:list`
 Sometimes there are problems related to HTTP/2, so before reporting bug please try running the following command:
 
 ```bash
-$ docker exec -ti watchstate console config:edit --key options.client.http_version --set 1.0 -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.client.http_version --set 1.0 -s backend_name 
 ```
 
 This will force set the internal http client to use http v1 if it does not fix your problem, please open bug report
@@ -216,7 +216,7 @@ about it.
 If you want to increase the timeout for specific backend you can run the following command:
 
 ```bash
-$ docker exec -ti watchstate console config:edit --key options.client.timeout --set 600 -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.client.timeout --set 600 -s backend_name
 ```
 
 where `600` is the number of secs before the timeout handler will kill the request.
@@ -361,7 +361,7 @@ $ docker exec -ti watchstate console config:view webhook.token
 If you see 'Not configured, or invalid key.' or empty value. run the following command
 
 ```bash
-$ docker exec -ti watchstate console config:edit --regenerate-webhook-token -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --regenerate-webhook-token -s backend_name 
 ```
 
 -----
@@ -644,7 +644,7 @@ If this is not enough for your library content. fear not we have you covered you
 following command:
 
 ```bash 
-$ docker exec -ti watchstate console config:edit --key options.MAX_EPISODE_RANGE --set 10 -- [BACKEND_NAME] 
+$ docker exec -ti watchstate console config:edit --key options.MAX_EPISODE_RANGE --set 10 -s backend_name 
 ```
 
 where `10` is the new limit. You can set it to any number you want. However, Please do inspect the reported records as

@@ -34,8 +34,8 @@ final class DiscoverCommand extends Command
         $this->setName(self::ROUTE)
             ->setDescription('Discover servers linked to plex token.')
             ->addOption('with-tokens', 't', InputOption::VALUE_NONE, 'Include access tokens in response.')
-            ->addArgument('token', InputArgument::REQUIRED, 'Plex token')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
+            ->addArgument('token', InputArgument::REQUIRED, 'Plex token')
             ->setHelp(
                 r(
                     <<<HELP
@@ -48,11 +48,11 @@ final class DiscoverCommand extends Command
 
                     <question># How to get list servers associated with token?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> -- <value>plex_token</value>
 
                     <question># How to see the raw response?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>plex_token</value>
 
                     HELP,
                     [
