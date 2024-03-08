@@ -44,7 +44,7 @@ final class IdCommand extends Command
                     [<flag>--output</flag>] flag to [<value>json</value> or <value>yaml</value>] and use the [<flag>--include-raw-response</flag>] flag.
                     For example,
 
-                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> -- <value>backend_name</value> <value>backend_item_id</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response -s</flag> <value>backend_name</value> <value>backend_item_id</value>
 
                     HELP,
                     [
@@ -67,14 +67,11 @@ final class IdCommand extends Command
     {
         $mode = $input->getOption('output');
         $id = $input->getArgument('id');
+        $name = $input->getOption('select-backend');
 
-        if (null === ($name = $input->getOption('select-backend'))) {
-            $output->writeln(
-                r('<error>ERROR: You must select a backend using [-s, --select-backends] option.</error>')
-            );
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
-        } else {
-            $name = explode(',', $name)[0];
         }
 
         $backendOpts = [];

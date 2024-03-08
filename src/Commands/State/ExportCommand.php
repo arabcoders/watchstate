@@ -67,8 +67,13 @@ class ExportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
+            ->addOption(
+                'select-backend',
+                's',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
+                'Select backend.'
+            )
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
@@ -84,15 +89,15 @@ class ExportCommand extends Command
 
                     <question># How to force export play state to a backend?</question>
 
-                    You have to use the following flags [<flag>-f</flag>, <flag>--force-full</flag>] and [<flag>-i</flag>, <flag>--ignore-date</flag>]. For example,
+                    You have to use the following flags [<flag>-f</flag>, <flag>-f</flag>] and [<flag>-i</flag>, <flag>-i</flag>]. For example,
 
-                    {cmd} <cmd>{route}</cmd> <flag>-fi</flag> <flag>--select-backends</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-fi</flag> <flag>-s</flag> <value>backend_name</value>
 
                     <question># how to see what will be changed without committing them?</question>
 
                     You have to use the [<flag>--dry-run</flag>]. For example,
 
-                    {cmd} <cmd>{route}</cmd> <flag>-v --dry-run</flag> <flag>--select-backends</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-v --dry-run -s</flag> <value>backend_name</value>
 
                     <question># Ignoring [backend_name] [item_title]. [Movie|Episode] Is not imported yet.</question>
 
@@ -145,11 +150,9 @@ class ExportCommand extends Command
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
         $configFile->setLogger($this->logger);
 
-        $selectBackends = (string)$input->getOption('select-backends');
-
         $backends = [];
-        $selected = explode(',', $selectBackends);
-        $isCustom = !empty($selectBackends) && count($selected) >= 1;
+        $selected = $input->getOption('select-backend');
+        $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
         $export = $push = $entities = [];
 
@@ -161,7 +164,7 @@ class ExportCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info('{backend}: Ignoring backend as requested by [-s, --select-backends].', [
+                $this->logger->info('{backend}: Ignoring backend as requested by [-s, --select-backend].', [
                     'backend' => $backendName
                 ]);
                 continue;
@@ -197,7 +200,7 @@ class ExportCommand extends Command
 
         if (empty($backends)) {
             $this->logger->warning(
-                $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
+                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
             );
             return self::FAILURE;
         }

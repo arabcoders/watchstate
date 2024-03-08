@@ -47,13 +47,7 @@ final class ServerCommand extends Command
             ->addOption('interface', 'i', InputOption::VALUE_REQUIRED, 'Bind to interface.', '0.0.0.0')
             ->addOption('port', 'p', InputOption::VALUE_REQUIRED, 'Bind to port.', 8080)
             ->addOption('threads', 't', InputOption::VALUE_REQUIRED, 'How many threads to use.', 1)
-            ->setHelp(
-                <<<HELP
-
-                This server is not meant to be used in production. It is mainly for testing purposes.
-
-                HELP
-            );
+            ->setHelp('This server is not meant to be used in production. It is mainly for testing purposes.');
     }
 
     /**

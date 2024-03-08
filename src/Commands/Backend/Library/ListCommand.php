@@ -8,7 +8,6 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Options;
 use RuntimeException;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -32,7 +31,6 @@ final class ListCommand extends Command
             ->setDescription('Get Backend libraries list.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
-            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 <<<HELP
 
@@ -53,23 +51,13 @@ final class ListCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        if (null !== ($name = $input->getOption('select-backend'))) {
-            $name = explode(',', $name, 2)[0];
-        }
-
-        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
-            $name = $input->getArgument('backend');
-            $output->writeln(
-                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
-            );
-        }
+        $mode = $input->getOption('output');
+        $name = $input->getOption('select-backend');
 
         if (empty($name)) {
             $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
-
-        $mode = $input->getOption('output');
 
         $opts = $backendOpts = [];
 

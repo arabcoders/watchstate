@@ -11,7 +11,6 @@ use App\Libs\ConfigFile;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -45,14 +44,13 @@ final class EditCommand extends Command
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
             ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
-            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name')
             ->setHelp(
                 r(
                     <<<HELP
 
                     This command allow you to <notice>edit</notice> backend config settings <notice>inline</notice>.
 
-                    The [<flag>--key</flag>] accept string value. the list of officially supported keys are:
+                    The [<flag>-k, --key</flag>] accept string value. the list of officially supported keys are:
 
                     [{keyNames}]
 
@@ -62,7 +60,7 @@ final class EditCommand extends Command
 
                     <question># How to edit config setting?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--key</flag> <value>key</value> <flag>--set</flag> <value>value</value> <flag>-s</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-k</flag> <value>key</value> <flag>-e</flag> <value>value</value> <flag>-s</flag> <value>backend_name</value>
 
                     <question># How to change the re-generate webhook token?</question>
 
@@ -102,16 +100,7 @@ final class EditCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output, null|array $rerun = null): int
     {
-        if (null !== ($name = $input->getOption('select-backend'))) {
-            $name = explode(',', $name, 2)[0];
-        }
-
-        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
-            $name = $input->getArgument('backend');
-            $output->writeln(
-                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
-            );
-        }
+        $name = $input->getOption('select-backend');
 
         if (empty($name)) {
             $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));

@@ -80,13 +80,11 @@ final class SessionsCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
-
-        if (null === ($name = $input->getOption('select-backend'))) {
-            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backends].</error>'));
+        $name = $input->getOption('select-backend');
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
-
-        $name = explode(',', $name, 2)[0];
 
         $opts = $backendOpts = [];
 

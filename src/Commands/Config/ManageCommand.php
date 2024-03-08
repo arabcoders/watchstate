@@ -14,7 +14,6 @@ use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -44,7 +43,6 @@ final class ManageCommand extends Command
             ->setDescription('Manage backend settings.')
             ->addOption('add', 'a', InputOption::VALUE_NONE, 'Add Backend.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
-            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -95,16 +93,7 @@ final class ManageCommand extends Command
             return self::FAILURE;
         }
 
-        if (null !== ($name = $input->getOption('select-backend'))) {
-            $name = explode(',', $name, 2)[0];
-        }
-
-        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
-            $name = $input->getArgument('backend');
-            $output->writeln(
-                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
-            );
-        }
+        $name = $input->getOption('select-backend');
 
         if (empty($name)) {
             $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
@@ -451,7 +440,7 @@ final class ManageCommand extends Command
                     );
 
                     $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
-                    $cmd->run(new ArrayInput(['--quiet', '--select-backends' => $name]), $output);
+                    $cmd->run(new ArrayInput(['--quiet', '--select-backend' => $name]), $output);
                 }
 
                 $output->writeln('<info>Import complete</info>');

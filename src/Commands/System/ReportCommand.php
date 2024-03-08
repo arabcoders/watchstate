@@ -131,6 +131,7 @@ final class ReportCommand extends Command
         $this->getTasks($output);
         $output->writeln('<info>[ Logs ]</info>' . PHP_EOL);
         $this->getLogs($input, $output);
+        $this->printFooter($output);
 
         return self::SUCCESS;
     }
@@ -406,5 +407,21 @@ final class ReportCommand extends Command
 
             $output->writeln($line);
         }
+    }
+
+    private function printFooter(iOutput $output)
+    {
+        $output->writeln('<info>[ Notice ]</info>');
+        $output->writeln(
+            trim(
+                <<<FOOTER
+            <value>
+            Beware, while we try to make sure no sensitive information is leaked, it's possible
+            that some private information might be leaked via the logs section.
+            Please review the report before posting it.
+            </value>
+            FOOTER
+            )
+        );
     }
 }

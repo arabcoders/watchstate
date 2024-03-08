@@ -9,7 +9,6 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Options;
 use RuntimeException;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -42,7 +41,6 @@ final class ListCommand extends Command
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Use this given token.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend')
-            ->addArgument('backend', InputArgument::OPTIONAL, 'Backend name.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -56,7 +54,7 @@ final class ListCommand extends Command
 
                     <question># How to get user tokens?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens</flag> <flag>-s</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--with-tokens -s</flag> <value>backend_name</value>
 
                     <notice>Notice: If you have many plex users and request tokens for all of them you may get rate-limited by plex api,
                     you shouldn't do this unless you have good reason. In most cases you don't need to, and can use
@@ -68,7 +66,7 @@ final class ListCommand extends Command
 
                     <question># How to see the raw response?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response</flag> <flag>-s</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--output</flag> <value>yaml</value> <flag>--include-raw-response -s</flag> <value>backend_name</value>
 
                     <question># My Plex backend report only one user?</question>
 
@@ -76,7 +74,7 @@ final class ListCommand extends Command
                     work for managed user we have to use the managed user token instead of the admin user token due to
                     plex api limitation. To see list of your users you can do the following.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--use-token</flag> <value>PLEX_TOKEN</value> <flag>-s</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--use-token</flag> <value>PLEX_ADMIN_TOKEN</value> <flag>-s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -100,23 +98,13 @@ final class ListCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        if (null !== ($name = $input->getOption('select-backend'))) {
-            $name = explode(',', $name, 2)[0];
-        }
-
-        if (empty($name) && null !== ($name = $input->getArgument('backend'))) {
-            $name = $input->getArgument('backend');
-            $output->writeln(
-                '<notice>WARNING: The use of backend name as argument is deprecated and will be removed from future versions. Please use [-s, --select-backend] option instead.</notice>'
-            );
-        }
+        $mode = $input->getOption('output');
+        $name = $input->getOption('select-backend');
 
         if (empty($name)) {
             $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
-
-        $mode = $input->getOption('output');
 
         $opts = $backendOpts = [];
 

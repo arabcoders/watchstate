@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Commands\Config;
 
+use App\API\Backends\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Options;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
@@ -30,23 +29,19 @@ final class ViewCommand extends Command
     public const ROUTE = 'config:view';
 
     /**
-     * @var array Keys to be hidden from general view.
-     */
-    private array $hidden = [
-        'token',
-        'webhook.token',
-        'options.' . Options::ADMIN_TOKEN
-    ];
-
-    /**
      * Configure the command.
      */
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
             ->setDescription('View Backends settings.')
-            ->addOption('select-backends', 's', InputOption::VALUE_REQUIRED, 'Select backends. comma , seperated.')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
+            ->addOption(
+                'select-backend',
+                's',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
+                'Select backend.'
+            )
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose the secret tokens in the view.')
             ->addArgument(
                 'filter',
@@ -66,11 +61,11 @@ final class ViewCommand extends Command
 
                     <question># How to show one backend information?</question>
 
-                    The flag [<flag>-s, --select-backends</flag>] accept comma seperated list of backends name, Using the flag
-                    in combination with [<flag>--exclude</flag>] flag will flip the logic to exclude the selected backends
-                    rather than include them.
+                    The flag [<flag>-s, --select-backend</flag>] is array option with can accept many backends names,
+                    Using the flag in combination with [<flag>--exclude</flag>] flag will flip the logic to exclude
+                    the selected backends rather than include them.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>my_backend</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>my_backend</value>
 
                     <question># How to show specific <value>key</value>?</question>
 
@@ -98,16 +93,14 @@ final class ViewCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $selectBackends = (string)$input->getOption('select-backends');
-
         $list = [];
-        $selected = array_map('trim', explode(',', $selectBackends));
-        $isCustom = !empty($selectBackends) && count($selected) >= 1;
+        $selected = $input->getOption('select-backend');
+        $isCustom = count($selected) > 0;
         $filter = $input->getArgument('filter');
 
         foreach (Config::get('servers', []) as $backendName => $backend) {
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $output->writeln(r('Ignoring backend \'{backend}\' as requested by [-s, --select-backends].', [
+                $output->writeln(r('Ignoring backend \'{backend}\' as requested by [-s, --select-backend].', [
                     'backend' => $backendName
                 ]), OutputInterface::VERBOSITY_VERY_VERBOSE);
                 continue;
@@ -117,9 +110,10 @@ final class ViewCommand extends Command
         }
 
         if (empty($list)) {
-            throw new RuntimeException(
-                $isCustom ? '[-s, --select-backends] did not return any backend.' : 'No backends were found.'
-            );
+            $output->writeln(r('<error>{error}</error>', [
+                'error' => $isCustom ? '[-s, --select-backend] did not return any backend.' : 'No backends were found.'
+            ]));
+            return self::FAILURE;
         }
 
         $x = 0;
@@ -189,7 +183,7 @@ final class ViewCommand extends Command
     private function filterData(array $backend, string|null $filter = null, bool $expose = false): string
     {
         if (null === $filter && true !== $expose) {
-            foreach ($this->hidden as $hideValue) {
+            foreach (Index::BLACK_LIST as $hideValue) {
                 if (true === ag_exists($backend, $hideValue)) {
                     $backend = ag_set($backend, $hideValue, '*HIDDEN*');
                 }

@@ -66,8 +66,13 @@ class ImportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('select-backends', 's', InputOption::VALUE_OPTIONAL, 'Select backends. comma , seperated.', '')
-            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backends logic.')
+            ->addOption(
+                'select-backend',
+                's',
+                InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL,
+                'Select backend.'
+            )
+            ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption(
                 'direct-mapper',
                 null,
@@ -106,7 +111,7 @@ class ImportCommand extends Command
 
                     <question># How to import from specific backend?</question>
 
-                    {cmd} <cmd>{route}</cmd> <flag>--select-backends</flag> <value>backend_name</value>
+                    {cmd} <cmd>{route}</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     <question># How to Import the metadata only?</question>
 
@@ -116,7 +121,7 @@ class ImportCommand extends Command
 
                     If you want to permanently increase the <notice>timeout</notice> for specific backend, you can do the following
 
-                    {cmd} <cmd>{config_edit}</cmd> <flag>--key</flag> <value>options.client.timeout</value> <flag>--set</flag> <value>600.0</value> -- <value>backend_name</value>
+                    {cmd} <cmd>{config_edit}</cmd> <flag>-k</flag> <value>options.client.timeout</value> <flag>-e</flag> <value>600.0</value> <flag>-s</flag> <value>backend_name</value>
 
                     <value>600.0</value> seconds is equal to 10 minutes before the timeout handler kicks in. Alternatively, you can also increase the
                     timeout temporarily by using the [<flag>--timeout</flag>] flag. It will increase the timeout for all backends during this run.
@@ -142,8 +147,8 @@ class ImportCommand extends Command
 
                     By default commands only show log level <value>WARNING</value> and higher, to see more verbose output
                     You can use the [<flag>-v|-vv|-vvv</flag>] flag to signal that you want more output. And you can enable
-                    even more info by using [<flag>--trace</flag>] and [<flag>--context</flag>] flags. Be warned the output using all those flags
-                    is quite excessive and shouldn't be used unless told by the team.
+                    even more info by using [<flag>--debug</flag>] flag. Be warned the output is quite excessive
+                    and shouldn't be used unless told by the team.
 
                     {cmd} <cmd>{route}</cmd> <flag>-vvv --trace --context</flag>
 
@@ -170,7 +175,7 @@ class ImportCommand extends Command
 
                     or you could use the built-in unmatched checker.
 
-                    {cmd} <cmd>{unmatched_route}</cmd> -- <value>backend_name</value>
+                    {cmd} <cmd>{unmatched_route}</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     If you don't have any unmatched items, this likely means you are using unsupported external db ids.
 
@@ -201,7 +206,7 @@ class ImportCommand extends Command
                     Running this command will force full export your current database state to the selected backend. Once that done you can
                     turn on import from the new backend. by editing the backend setting:
 
-                    {cmd} <cmd>config:manage</cmd> <value>backend_name</value>
+                    {cmd} <cmd>config:manage</cmd> <flag>-s</flag> <value>backend_name</value>
 
                     HELP,
                     [
@@ -246,9 +251,8 @@ class ImportCommand extends Command
 
         $list = [];
 
-        $selectBackends = (string)$input->getOption('select-backends');
-        $selected = explode(',', $selectBackends);
-        $isCustom = !empty($selectBackends) && count($selected) >= 1;
+        $selected = $input->getOption('select-backend');
+        $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
 
         $mapperOpts = [];
@@ -330,7 +334,7 @@ class ImportCommand extends Command
 
         if (empty($list)) {
             $this->logger->warning(
-                $isCustom ? '[-s, --select-backends] flag did not match any backend.' : 'No backends were found.'
+                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
             );
             return self::FAILURE;
         }

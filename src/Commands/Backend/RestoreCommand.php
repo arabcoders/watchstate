@@ -87,7 +87,7 @@ class RestoreCommand extends Command
 
                     For example,
 
-                    {cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv</flag> -s <value>backend_name</value> -- <value>{backupDir}/backup_file.json</value>
+                    {cmd} <cmd>{route}</cmd> <flag>--execute</flag> <flag>-vv -s</flag> <value>backend_name</value> -- <value>{backupDir}/backup_file.json</value>
 
                     -------
                     <notice>[ FAQ ]</notice>
@@ -148,12 +148,12 @@ class RestoreCommand extends Command
      */
     protected function process(InputInterface $input, OutputInterface $output): int
     {
-        if (null === ($name = $input->getOption('select-backend'))) {
-            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backends].</error>'));
+        $name = $input->getOption('select-backend');
+
+        if (empty($name)) {
+            $output->writeln(r('<error>ERROR: Backend not specified. Please use [-s, --select-backend].</error>'));
             return self::FAILURE;
         }
-
-        $name = explode(',', $name, 2)[0];
 
         $file = $input->getArgument('file');
 

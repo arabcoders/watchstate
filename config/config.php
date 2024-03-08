@@ -21,7 +21,7 @@ return (function () {
     $config = [
         'name' => 'WatchState',
         'version' => '$(version_via_ci)',
-        'tz' => env('WS_TZ', 'UTC'),
+        'tz' => env('WS_TZ', env('TZ', 'UTC')),
         'path' => fixPath(env('WS_DATA_PATH', fn() => $inContainer ? '/config' : __DIR__ . '/../var')),
         'logs' => [
             'context' => (bool)env('WS_LOGS_CONTEXT', false),
