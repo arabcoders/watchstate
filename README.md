@@ -17,10 +17,15 @@ commands that were accepting comma separated list of backends now needs to be se
 `--select-backend home_plex --select-backend home_jellyfin` instead of `--select-backend home_plex,home_jellyfin`.
 
 All commands that was accepting backend name as argument now accepts `-s, --select-backend` flag. This change is to make
-the
-command interface more consistent and easier to use.
+the command interface more consistent and easier to use.
 
-We started working no a `Web API` which hopefully will lead to a `web frontend` to manage the tool. This is a long
+Another breaking change is the removal of the `-c, --config` flag from all commands that was accepting it. This flag was
+used to override the default `servers.yaml` file. This was not working as expected as there are more than just the `servers.yaml`
+to consider like, the state of cache, and the state of the database. As such, we have removed this flag. However, we have
+added a new environment variable called `WS_BACKENDS_FILE` which can be used to override the default `servers.yaml` file.
+We strongly recommend not to use it as it might lead to unexpected behavior.
+
+We started working on a `Web API` which hopefully will lead to a `web frontend` to manage the tool. This is a long
 term goal, and it's not expected to be ready soon. However, the `Web API` is expected within 3rd quarter of 2024.
 
 ### 2023-11-11
