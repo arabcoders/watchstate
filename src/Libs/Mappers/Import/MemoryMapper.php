@@ -289,6 +289,15 @@ final class MemoryMapper implements iImport
                         $this->changed[$pointer] = $pointer;
                         Message::increment("{$entity->via}.{$entity->type}.updated");
 
+                        // -- Reset backend watched metadata watch state to be the same as the local state.
+                        $entity->setMetadata(
+                            ag_set(
+                                $entity->getMetadata($entity->via),
+                                iState::COLUMN_WATCHED,
+                                $this->objects[$pointer]->watched
+                            )
+                        );
+
                         $this->objects[$pointer] = $this->objects[$pointer]->apply(
                             entity: $entity,
                             fields: array_merge($keys, [iState::COLUMN_EXTRA])
