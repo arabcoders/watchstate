@@ -149,10 +149,22 @@ final class ReportCommand extends Command
         $includeSample = (bool)$input->getOption('include-db-sample');
 
         foreach (Config::get('servers', []) as $name => $backend) {
+            try {
+                $version = $this->getBackend($name, $backend)->getVersion();
+            } catch (Throwable) {
+                $version = 'Unknown';
+            }
+
+            foreach (Index::BLACK_LIST as $hideValue) {
+                if (true === ag_exists($backend, $hideValue)) {
+                    $backend = ag_set($backend, $hideValue, '**HIDDEN**');
+                }
+            }
             $output->writeln(
-                r('[ <value>{type} ==> {name}</value> ]' . PHP_EOL, [
+                r('[ <value>{type} ({version}) ==> {name}</value> ]' . PHP_EOL, [
                     'name' => $name,
                     'type' => ucfirst(ag($backend, 'type')),
+                    'version' => $version,
                 ])
             );
 
@@ -233,12 +245,6 @@ final class ReportCommand extends Command
             );
 
             $opts = ag($backend, 'options', []);
-            foreach (Index::BLACK_LIST as $hideValue) {
-                if (true === ag_exists($opts, $hideValue)) {
-                    $opts = ag_set($opts, $hideValue, '__hidden__');
-                }
-            }
-
             $output->writeln(
                 r('Has custom options? <flag>{answer}</flag>' . PHP_EOL . '{opts}', [
                     'answer' => count($opts) >= 1 ? 'Yes' : 'No',
@@ -270,9 +276,9 @@ final class ReportCommand extends Command
                         ) : '{}',
                     ])
                 );
-
-                $output->writeln('');
             }
+
+            $output->writeln('');
         }
     }
 
@@ -409,19 +415,18 @@ final class ReportCommand extends Command
         }
     }
 
-    private function printFooter(iOutput $output)
+    private function printFooter(iOutput $output): void
     {
-        $output->writeln('<info>[ Notice ]</info>');
+        $output->writeln('<info><!-- Notice</info>');
         $output->writeln(
-            trim(
-                <<<FOOTER
+            <<<FOOTER
             <value>
             Beware, while we try to make sure no sensitive information is leaked, it's possible
             that some private information might be leaked via the logs section.
-            Please review the report before posting it.
-            </value>
+            Please review the report before posting it.</value>
+            -->
+
             FOOTER
-            )
         );
     }
 }

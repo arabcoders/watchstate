@@ -134,7 +134,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 
     private function _set(string $key, mixed $value): void
     {
-        if (ag_exists($this->data, $key) && is_array($this->data[$key]) && is_array($value)) {
+        if (isset($this->data[$key]) && is_array($this->data[$key]) && is_array($value)) {
             $value = $this->mergeData($this->data[$key], $value);
         }
 
@@ -206,6 +206,16 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         $this->file_hash = $this->getFileHash();
 
         return $this;
+    }
+
+    /**
+     * Get all the data.
+     *
+     * @return array All the data.
+     */
+    public function getAll(): array
+    {
+        return $this->data;
     }
 
     /**

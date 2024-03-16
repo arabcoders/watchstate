@@ -29,6 +29,7 @@ final class Options
     public const NO_THROW = 'NO_THROW';
     public const NO_LOGGING = 'NO_LOGGING';
     public const MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';
+    public const NO_PROGRESS_UPDATE = 'NO_PROGRESS_UPDATE';
 
     private function __construct()
     {

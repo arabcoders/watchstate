@@ -279,7 +279,7 @@ class ImportCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        foreach (Config::get('servers', []) as $backendName => $backend) {
+        foreach ($configFile->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
             $metadata = false;
 

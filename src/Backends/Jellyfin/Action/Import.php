@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
+use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
@@ -981,10 +982,16 @@ class Import
                 return;
             }
 
-            $mapper->add(entity: $entity, opts: [
+            $opts = [
                 'after' => ag($opts, 'after', null),
                 Options::IMPORT_METADATA_ONLY => true === (bool)ag($context->options, Options::IMPORT_METADATA_ONLY),
-            ]);
+            ];
+
+            if ($context->clientName === JellyfinClient::CLIENT_NAME) {
+                $opts[Options::NO_PROGRESS_UPDATE] = true;
+            }
+
+            $mapper->add(entity: $entity, opts: $opts);
         } catch (Throwable $e) {
             $this->logger->error(
                 message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] [{library.title}] [{item.title}] import. Error [{error.message} @ {error.file}:{error.line}].',
