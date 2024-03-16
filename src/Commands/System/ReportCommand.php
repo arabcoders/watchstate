@@ -234,6 +234,7 @@ final class ReportCommand extends Command
 
             $opts = ag($backend, 'options', []);
             foreach (Index::BLACK_LIST as $hideValue) {
+                $hideValue = str_replace('options.', '', $hideValue);
                 if (true === ag_exists($opts, $hideValue)) {
                     $opts = ag_set($opts, $hideValue, '__hidden__');
                 }
