@@ -399,15 +399,6 @@ final class DirectMapper implements iImport
                 if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                         try {
-                            // -- Reset backend watched metadata watch state to be the same as the local state.
-                            $entity->setMetadata(
-                                ag_set(
-                                    $entity->getMetadata($entity->via),
-                                    iState::COLUMN_WATCHED,
-                                    $local->watched
-                                )
-                            );
-
                             $local = $local->apply(
                                 entity: $entity,
                                 fields: array_merge($keys, [iState::COLUMN_EXTRA])

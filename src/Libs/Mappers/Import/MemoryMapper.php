@@ -281,22 +281,16 @@ final class MemoryMapper implements iImport
 
                 $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
                 $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-                $playChanged = $newPlayProgress != $oldPlayProgress;
+                $playChanged = $newPlayProgress != $oldPlayProgress && true === (bool)ag(
+                        $this->options,
+                        Options::NO_PROGRESS_UPDATE
+                    );
 
                 // -- this sometimes leads to never ending updates as data from backends conflicts.
                 if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
                     if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                         $this->changed[$pointer] = $pointer;
                         Message::increment("{$entity->via}.{$entity->type}.updated");
-
-                        // -- Reset backend watched metadata watch state to be the same as the local state.
-                        $entity->setMetadata(
-                            ag_set(
-                                $entity->getMetadata($entity->via),
-                                iState::COLUMN_WATCHED,
-                                $this->objects[$pointer]->watched
-                            )
-                        );
 
                         $this->objects[$pointer] = $this->objects[$pointer]->apply(
                             entity: $entity,
