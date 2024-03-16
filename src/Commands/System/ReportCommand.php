@@ -149,16 +149,22 @@ final class ReportCommand extends Command
         $includeSample = (bool)$input->getOption('include-db-sample');
 
         foreach (Config::get('servers', []) as $name => $backend) {
+            try {
+                $version = $this->getBackend($name, $backend)->getVersion();
+            } catch (Throwable) {
+                $version = 'Unknown';
+            }
+
             foreach (Index::BLACK_LIST as $hideValue) {
                 if (true === ag_exists($backend, $hideValue)) {
                     $backend = ag_set($backend, $hideValue, '**HIDDEN**');
                 }
             }
-
             $output->writeln(
-                r('[ <value>{type} ==> {name}</value> ]' . PHP_EOL, [
+                r('[ <value>{type} ({version}) ==> {name}</value> ]' . PHP_EOL, [
                     'name' => $name,
                     'type' => ucfirst(ag($backend, 'type')),
+                    'version' => $version,
                 ])
             );
 
@@ -270,9 +276,9 @@ final class ReportCommand extends Command
                         ) : '{}',
                     ])
                 );
-
-                $output->writeln('');
             }
+
+            $output->writeln('');
         }
     }
 
