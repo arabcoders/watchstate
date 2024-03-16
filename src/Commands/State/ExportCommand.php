@@ -160,7 +160,7 @@ class ExportCommand extends Command
             $this->logger->notice('Dry run mode. No changes will be committed to backends.');
         }
 
-        foreach (Config::get('servers', []) as $backendName => $backend) {
+        foreach ($configFile->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {

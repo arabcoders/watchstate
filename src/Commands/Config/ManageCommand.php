@@ -440,7 +440,7 @@ final class ManageCommand extends Command
                     );
 
                     $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
-                    $cmd->run(new ArrayInput(['--quiet', '--select-backend' => $name]), $output);
+                    $cmd->run(new ArrayInput(['--quiet', '--select-backend' => [$name]]), $output);
                 }
 
                 $output->writeln('<info>Import complete</info>');

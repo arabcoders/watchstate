@@ -209,6 +209,16 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
     }
 
     /**
+     * Get all the data.
+     *
+     * @return array All the data.
+     */
+    public function getAll(): array
+    {
+        return $this->data;
+    }
+
+    /**
      * Override the file.
      *
      * This method will override the file with the current loaded data. regardless of the state of the file at save
