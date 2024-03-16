@@ -106,6 +106,22 @@ final class ViewCommand extends Command
                 continue;
             }
 
+            if (null === $filter && true !== $input->getOption('expose')) {
+                foreach (Index::BLACK_LIST as $hideValue) {
+                    if (true === ag_exists($backend, $hideValue)) {
+                        $backend = ag_set($backend, $hideValue, '*HIDDEN*');
+                    }
+                }
+            }
+
+            if ($importLastSync = ag($backend, 'import.lastSync')) {
+                $backend = ag_set($backend, 'import.lastSync', (string)makeDate($importLastSync));
+            }
+
+            if ($exportLastSync = ag($backend, 'export.lastSync')) {
+                $backend = ag_set($backend, 'export.lastSync', (string)makeDate($exportLastSync));
+            }
+
             $list[$backendName] = ['name' => $backendName, ...$backend];
         }
 
@@ -124,7 +140,7 @@ final class ViewCommand extends Command
             $x++;
             $rows[] = [
                 $backendName,
-                $this->filterData($backend, $filter, $input->getOption('expose'))
+                $this->filterData($backend, $filter)
             ];
 
             if ($x < $count) {
@@ -176,20 +192,11 @@ final class ViewCommand extends Command
      *
      * @param array $backend The backend data to filter.
      * @param string|null $filter The filter criteria.
-     * @param bool $expose Whether to expose hidden values or not.
      *
      * @return string The filtered data in YAML format.
      */
-    private function filterData(array $backend, string|null $filter = null, bool $expose = false): string
+    private function filterData(array $backend, string|null $filter = null): string
     {
-        if (null === $filter && true !== $expose) {
-            foreach (Index::BLACK_LIST as $hideValue) {
-                if (true === ag_exists($backend, $hideValue)) {
-                    $backend = ag_set($backend, $hideValue, '*HIDDEN*');
-                }
-            }
-        }
-
         if (null === $filter || false === str_contains($filter, ',')) {
             return trim(Yaml::dump(ag($backend, $filter, 'Not configured, or invalid key.'), 8, 2));
         }
