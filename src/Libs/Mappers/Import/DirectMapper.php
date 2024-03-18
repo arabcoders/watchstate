@@ -393,7 +393,7 @@ final class DirectMapper implements iImport
 
                 $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
                 $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-                $playChanged = $newPlayProgress != $oldPlayProgress && true === (bool)ag(
+                $playChanged = $newPlayProgress != $oldPlayProgress && false === (bool)ag(
                         $this->options,
                         Options::NO_PROGRESS_UPDATE
                     );
