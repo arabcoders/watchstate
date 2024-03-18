@@ -149,6 +149,23 @@ class PlexManage implements ManageInterface
                     if (true === ag_exists($map, $server)) {
                         $backend = ag_set($backend, 'url', ag($map, $server));
                         $backend = ag_set($backend, 'uuid', ag($uuid, $server));
+
+                        try {
+                            $this->output->writeln(
+                                r(
+                                    '<info>Successfully contacted the Backed. It responded with [{version}] as it\'s version.</info>',
+                                    [
+                                        'version' => makeBackend(ag_set($backend, 'user', '1'))->getVersion()
+                                    ]
+                                )
+                            );
+                        } catch (Throwable $e) {
+                            $this->output->writeln(r('<error>Unable to contact [{url}]. {error}</error>', [
+                                'url' => ag($backend, 'url'),
+                                'error' => $e->getMessage()
+                            ]));
+                            goto re_select;
+                        }
                         return;
                     }
                 }
@@ -180,18 +197,36 @@ class PlexManage implements ManageInterface
                 $chosen
             );
 
-            $question->setValidator(function ($answer) {
+            $question->setValidator(function ($answer) use ($backend) {
                 if (false === isValidURL($answer)) {
                     throw new RuntimeException(
                         'Invalid URL was selected/given. Expecting something like http://plex:32400.'
                     );
                 }
+
                 return $answer;
             });
 
             $url = $this->questionHelper->ask($this->input, $this->output, $question);
             if (null === $url || 'http://choose' === $url) {
                 $chosen = $url;
+                goto re_select;
+            }
+
+            try {
+                $this->output->writeln(
+                    r(
+                        '<info>Successfully contacted the Backed. It responded with [{version}] as it\'s version.</info>',
+                        [
+                            'version' => makeBackend(ag_set(ag_set($backend, 'url', $url), 'user', '1'))->getVersion()
+                        ]
+                    )
+                );
+            } catch (Throwable $e) {
+                $this->output->writeln(r('<error>Unable to contact {url}. {error}</error>', [
+                    'url' => $url,
+                    'error' => $e->getMessage()
+                ]));
                 goto re_select;
             }
 
