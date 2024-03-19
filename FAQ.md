@@ -651,4 +651,14 @@ where `10` is the new limit. You can set it to any number you want. However, Ple
 it most likely you have incorrect metadata in your library.
 
 In the future, we plan to reduce the log level to `DEBUG` instead of `INFO`. However, for now, we will keep it as is.
-to inform you about the issue. 
+to inform you about the issue.
+
+---
+
+### I Keep receiving [jellyfin] item [id: name] is marked as [played] vs local state [unplayed], However due to the remote item date [date] being older than the last backend sync date [date]. it was not considered as valid state.
+
+Sadly, this is due to bug in jellyfin, where it marks the item as played without updating the LastPlayedDate, and as such, watchstate doesn't really know the item has changed since last sync.  
+Unfortunately, there is no way to fix this issue from our side for the `state:import` task as it working as intended.
+
+However, we managed to somewhat implement a workaround for this issue using the webhooks feature as temporary fix. Until jellyfin devs fixes the issue. Please take look at
+the webhooks section to enable it.

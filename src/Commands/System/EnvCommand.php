@@ -104,7 +104,7 @@ final class EnvCommand extends Command
         $keys = [];
 
         foreach (getenv() as $key => $val) {
-            if (false === str_starts_with($key, 'WS_') && in_array($key, self::EXEMPT_KEYS)) {
+            if (false === str_starts_with($key, 'WS_') && false === in_array($key, self::EXEMPT_KEYS)) {
                 continue;
             }
 
