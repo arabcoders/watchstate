@@ -334,30 +334,106 @@ final class DirectMapper implements iImport
         }
 
         // -- Item date is older than recorded last sync date logic handling.
-        if (null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof iDate)) {
-            if ($opts['after']->getTimestamp() >= $entity->updated) {
-                // -- Handle mark as unplayed logic.
-                if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
+        $hasAfter = null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof iDate);
+        if (true === $hasAfter && $opts['after']->getTimestamp() >= $entity->updated) {
+            // -- Handle mark as unplayed logic.
+            if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
+                try {
+                    $local = $local->apply(
+                        entity: $entity,
+                        fields: array_merge($keys, [iState::COLUMN_EXTRA])
+                    )->markAsUnplayed($entity);
+
+                    if (false === $inDryRunMode) {
+                        $this->db->update($local);
+
+                        if (null !== $onStateUpdate) {
+                            $onStateUpdate($local);
+                        }
+                    }
+
+                    $this->logger->notice('MAPPER: [{backend}] marked [{title}] as [unplayed].', [
+                        'id' => $cloned->id,
+                        'backend' => $entity->via,
+                        'title' => $cloned->getName(),
+                        'changes' => $local->diff(),
+                    ]);
+
+                    if (null === ($this->changed[$local->id] ?? null)) {
+                        $this->actions[$local->type]['updated']++;
+                        Message::increment("{$entity->via}.{$local->type}.updated");
+                    }
+
+                    $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
+                } catch (PDOException $e) {
+                    $this->actions[$local->type]['failed']++;
+                    Message::increment("{$entity->via}.{$local->type}.failed");
+                    $this->logger->error(
+                        message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'state' => [
+                                'database' => $cloned->getAll(),
+                                'backend' => $entity->getAll()
+                            ],
+                        ]
+                    );
+                }
+
+                return $this;
+            }
+
+            $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+            $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+            $playChanged = $newPlayProgress != $oldPlayProgress;
+
+            // -- this sometimes leads to never ending updates as data from backends conflicts.
+            if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+                if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                     try {
                         $local = $local->apply(
                             entity: $entity,
                             fields: array_merge($keys, [iState::COLUMN_EXTRA])
-                        )->markAsUnplayed($entity);
+                        );
+
+                        $this->removePointers($cloned)->addPointers($local, $local->id);
+
+                        $changes = $local->diff(fields: $keys);
+
+                        if (count($changes) >= 1) {
+                            $this->logger->notice(
+                                $playChanged ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
+                                [
+                                    'id' => $cloned->id,
+                                    'backend' => $entity->via,
+                                    'title' => $cloned->getName(),
+                                    'changes' => $changes,
+                                ]
+                            );
+                        }
 
                         if (false === $inDryRunMode) {
                             $this->db->update($local);
 
-                            if (null !== $onStateUpdate) {
-                                $onStateUpdate($local);
+                            if (true === $entity->hasPlayProgress()) {
+                                $itemId = r('{type}://{id}:{tainted}@{backend}', [
+                                    'type' => $entity->type,
+                                    'backend' => $entity->via,
+                                    'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                                    'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                                ]);
+
+                                $this->progressItems[$itemId] = $entity;
                             }
                         }
-
-                        $this->logger->notice('MAPPER: [{backend}] marked [{title}] as unplayed.', [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'title' => $cloned->getName(),
-                            'changes' => $local->diff(),
-                        ]);
 
                         if (null === ($this->changed[$local->id] ?? null)) {
                             $this->actions[$local->type]['updated']++;
@@ -390,115 +466,35 @@ final class DirectMapper implements iImport
 
                     return $this;
                 }
+            }
 
-                $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-                $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-                $playChanged = $newPlayProgress != $oldPlayProgress && false === (bool)ag(
-                        $this->options,
-                        Options::NO_PROGRESS_UPDATE
-                    );
+            Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
 
-                // -- this sometimes leads to never ending updates as data from backends conflicts.
-                if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
-                    if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                        try {
-                            $local = $local->apply(
-                                entity: $entity,
-                                fields: array_merge($keys, [iState::COLUMN_EXTRA])
-                            );
-
-                            $this->removePointers($cloned)->addPointers($local, $local->id);
-
-                            $changes = $local->diff(fields: $keys);
-
-                            if (count($changes) >= 1) {
-                                $this->logger->notice(
-                                    $playChanged ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
-                                    [
-                                        'id' => $cloned->id,
-                                        'backend' => $entity->via,
-                                        'title' => $cloned->getName(),
-                                        'changes' => $changes,
-                                    ]
-                                );
-                            }
-
-                            if (false === $inDryRunMode) {
-                                $this->db->update($local);
-
-                                if (true === $entity->hasPlayProgress()) {
-                                    $itemId = r('{type}://{id}:{tainted}@{backend}', [
-                                        'type' => $entity->type,
-                                        'backend' => $entity->via,
-                                        'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-                                        'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-                                    ]);
-
-                                    $this->progressItems[$itemId] = $entity;
-                                }
-                            }
-
-                            if (null === ($this->changed[$local->id] ?? null)) {
-                                $this->actions[$local->type]['updated']++;
-                                Message::increment("{$entity->via}.{$local->type}.updated");
-                            }
-
-                            $this->changed[$local->id] = $this->objects[$local->id] = $local->id;
-                        } catch (PDOException $e) {
-                            $this->actions[$local->type]['failed']++;
-                            Message::increment("{$entity->via}.{$local->type}.failed");
-                            $this->logger->error(
-                                message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
-                                context: [
-                                    'error' => [
-                                        'kind' => $e::class,
-                                        'line' => $e->getLine(),
-                                        'message' => $e->getMessage(),
-                                        'file' => after($e->getFile(), ROOT_PATH),
-                                    ],
-                                    'id' => $cloned->id,
-                                    'backend' => $entity->via,
-                                    'title' => $cloned->getName(),
-                                    'state' => [
-                                        'database' => $cloned->getAll(),
-                                        'backend' => $entity->getAll()
-                                    ],
-                                ]
-                            );
-                        }
-
-                        return $this;
-                    }
-                }
-
-                Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
-
-                if ($entity->isWatched() !== $local->isWatched()) {
-                    $this->logger->notice(
-                        'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due the remote item date [{remote_date}] being older than the last backend sync date [{local_date}]. it was not considered as valid state.',
-                        [
-                            'id' => $cloned->id,
-                            'backend' => $entity->via,
-                            'remote_date' => makeDate($entity->updated),
-                            'local_date' => makeDate($opts['after']),
-                            'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                            'local_state' => $local->isWatched() ? 'played' : 'unplayed',
-                            'title' => $entity->getName(),
-                        ]
-                    );
-                    return $this;
-                }
-
-                if ($this->inTraceMode()) {
-                    $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
+            if ($entity->isWatched() !== $local->isWatched()) {
+                $this->logger->notice(
+                    'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the remote item date [{remote_date}] being older than the last backend sync date [{local_date}]. it was not considered as valid state.',
+                    [
                         'id' => $cloned->id,
                         'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                    ]);
-                }
-
+                        'remote_date' => makeDate($entity->updated),
+                        'local_date' => makeDate($opts['after']),
+                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        'local_state' => $local->isWatched() ? 'played' : 'unplayed',
+                        'title' => $entity->getName(),
+                    ]
+                );
                 return $this;
             }
+
+            if ($this->inTraceMode()) {
+                $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                ]);
+            }
+
+            return $this;
         }
 
         /**

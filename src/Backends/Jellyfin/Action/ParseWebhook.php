@@ -128,7 +128,7 @@ final class ParseWebhook
             $obj = $this->getItemDetails(context: $context, id: $id);
 
             $isPlayed = (bool)ag($json, 'Played');
-            $lastPlayedAt = true === $isPlayed ? ag($json, 'LastPlayedDate') : null;
+            $lastPlayedAt = true === $isPlayed ? makeDate() : null;
 
             $logContext = [
                 'item' => [
@@ -192,9 +192,8 @@ final class ParseWebhook
             ];
 
             if (true === $isPlayed && null !== $lastPlayedAt) {
-                $lastPlayedAt = makeDate($lastPlayedAt)->getTimestamp();
                 $fields = array_replace_recursive($fields, [
-                    iState::COLUMN_UPDATED => $lastPlayedAt,
+                    iState::COLUMN_UPDATED => $lastPlayedAt->getTimestamp(),
                     iState::COLUMN_META_DATA => [
                         $context->backendName => [
                             iState::COLUMN_META_DATA_PLAYED_AT => (string)$lastPlayedAt,
