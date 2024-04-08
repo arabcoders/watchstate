@@ -14,13 +14,12 @@ use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Uri;
 use PDO;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 
-#[Get(self::URL . '[/]', name: 'history.index')]
 final class Index
 {
-    public const URL = '%{api.prefix}/history';
+    public const string URL = '%{api.prefix}/history';
     private PDO $pdo;
 
     public function __construct(private readonly iDB $db)
@@ -28,7 +27,8 @@ final class Index
         $this->pdo = $this->db->getPDO();
     }
 
-    public function __invoke(ServerRequestInterface $request, array $args = []): ResponseInterface
+    #[Get(self::URL . '[/]', name: 'history.index')]
+    public function historyIndex(iRequest $request): iResponse
     {
         $es = fn(string $val) => $this->db->identifier($val);
         $data = DataUtil::fromArray($request->getQueryParams());
@@ -316,4 +316,36 @@ final class Index
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
+
+    #[Get(self::URL . '/{id:\d+}[/]', name: 'history.view')]
+    public function historyView(iRequest $request, array $args = []): iResponse
+    {
+        if (null === ($id = ag($args, 'id'))) {
+            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $this->db->get($entity))) {
+            return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
+        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
+
+        $item = $item->getAll();
+
+        $item[iState::COLUMN_WATCHED] = $entity->isWatched();
+        $item[iState::COLUMN_UPDATED] = makeDate($entity->updated);
+
+        $item = [
+            ...$item,
+            'links' => [
+                'self' => (string)$apiUrl,
+                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
+            ],
+        ];
+
+        return api_response(HTTP_STATUS::HTTP_OK, ['history' => $item]);
+    }
+
 }

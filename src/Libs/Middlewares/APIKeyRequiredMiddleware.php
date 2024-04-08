@@ -14,7 +14,7 @@ use Random\RandomException;
 
 final class APIKeyRequiredMiddleware implements MiddlewareInterface
 {
-    public const KEY_NAME = 'apikey';
+    public const string KEY_NAME = 'apikey';
 
     /**
      * @throws RandomException if random_bytes() fails
