@@ -18,7 +18,7 @@ use Symfony\Component\Yaml\Yaml;
  */
 final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 {
-    private const CONTENT_TYPES = ['yaml', 'json'];
+    private const array CONTENT_TYPES = ['yaml', 'json'];
     private array $data = [];
     private array $operations = [];
     private string $file_hash = '';
