@@ -539,9 +539,9 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(ServerRequestInterface $request): Context
+    public function fromRequest(ServerRequestInterface $request): array
     {
-        return $this->context;
+        return [];
     }
 
     /**
@@ -549,7 +549,7 @@ class EmbyClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return true;
+        return false;
     }
 
     /**

@@ -29,6 +29,7 @@ use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
@@ -553,9 +554,21 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(ServerRequestInterface $request): Context
+    public function fromRequest(ServerRequestInterface $request): array
     {
-        return $this->context;
+        $params = DataUtil::fromArray($request->getParsedBody());
+
+        $opts = [];
+
+        if (null !== ($uuid = $params->get('plex_user_uuid'))) {
+            $opts['plex_user_uuid'] = $uuid;
+        }
+
+        if (null !== ($adminToken = $params->get(Options::ADMIN_TOKEN))) {
+            $opts[Options::ADMIN_TOKEN] = $adminToken;
+        }
+
+        return $opts;
     }
 
     /**
@@ -563,7 +576,7 @@ class PlexClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return true;
+        return false;
     }
 
     /**
