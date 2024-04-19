@@ -32,6 +32,9 @@ return (function () {
         'api' => [
             'prefix' => '/v1/api',
             'key' => env('WS_API_KEY', null),
+            'pattern_match' => [
+                'backend' => '[a-zA-Z0-9_-]+',
+            ],
         ],
         'database' => [
             'version' => 'v01',

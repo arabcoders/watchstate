@@ -510,6 +510,9 @@ final class Initializer
     private function defaultAPIServer(iRequest $realRequest): ResponseInterface
     {
         $router = new APIRouter();
+        foreach (Config::get('api.pattern_match', []) as $_key => $_value) {
+            $router->addPatternMatcher($_key, $_value);
+        }
         $strategy = new RouterStrategy();
         $strategy->setContainer(Container::getContainer());
         $router->setStrategy($strategy);

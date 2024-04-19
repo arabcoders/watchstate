@@ -52,7 +52,7 @@ final class Index
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 
-    #[Get(self::URL . '/{id:[a-zA-Z0-9_-]+}[/]', name: 'backends.view')]
+    #[Get(self::URL . '/{id:backend}[/]', name: 'backends.view')]
     public function backendsView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {

@@ -23,10 +23,10 @@ final class GenerateAccessToken
     {
     }
 
-    #[Post(self::URL . '/{backend:\w+}[/]', name: 'backends.plex.accesstoken')]
+    #[Post(self::URL . '/{id:backend}[/]', name: 'backends.plex.accesstoken')]
     public function gAccesstoken(iRequest $request, array $args = []): iResponse
     {
-        $backend = ag($args, 'backend');
+        $backend = ag($args, 'id');
 
         $data = DataUtil::fromArray($request->getParsedBody());
 
