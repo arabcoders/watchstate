@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends\Plex;
+namespace App\API\Plex;
 
 use App\Backends\Plex\PlexClient;
 use App\Libs\Attributes\Route\Post;
@@ -14,13 +14,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class Discover
 {
-    public const string URL = '%{api.prefix}/backends/plex/discover';
+    public const string URL = '%{api.prefix}/plex/discover';
 
     public function __construct(private iHttp $http)
     {
     }
 
-    #[Post(self::URL . '[/]', name: 'backends.plex.discover')]
+    #[Post(self::URL . '[/]', name: 'plex.discover')]
     public function plexDiscover(iRequest $request): iResponse
     {
         $data = DataUtil::fromArray($request->getParsedBody());

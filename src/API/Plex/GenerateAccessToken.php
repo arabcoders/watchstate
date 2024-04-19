@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends\Plex;
+namespace App\API\Plex;
 
 use App\Libs\Attributes\Route\Post;
 use App\Libs\DataUtil;
@@ -17,13 +17,13 @@ final class GenerateAccessToken
 {
     use APITraits;
 
-    public const string URL = '%{api.prefix}/backends/plex/accesstoken';
+    public const string URL = '%{api.prefix}/plex/accesstoken';
 
     public function __construct(private iHttp $http)
     {
     }
 
-    #[Post(self::URL . '/{id:backend}[/]', name: 'backends.plex.accesstoken')]
+    #[Post(self::URL . '/{id:backend}[/]', name: 'plex.accesstoken')]
     public function gAccesstoken(iRequest $request, array $args = []): iResponse
     {
         $backend = ag($args, 'id');
