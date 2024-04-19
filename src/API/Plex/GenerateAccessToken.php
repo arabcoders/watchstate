@@ -35,7 +35,7 @@ final class GenerateAccessToken
         }
 
         try {
-            $client = $this->getBackend($backend);
+            $client = $this->getClient($backend);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }

@@ -201,6 +201,24 @@ interface ClientInterface
     public function listLibraries(array $opts = []): array;
 
     /**
+     * Parse backend config from request context.
+     *
+     * @param ServerRequestInterface $request request to parse.
+     * @return Context Returns a valid {@see Context} instance.
+     */
+    public function fromRequest(ServerRequestInterface $request): Context;
+
+    /**
+     * Validate backend context.
+     *
+     * @param Context $context context to validate.
+     *
+     * @return bool Returns true if context is valid.
+     * @throws
+     */
+    public function validateContext(Context $context): bool;
+
+    /**
      * Add/Edit Backend.
      *
      * @param array $backend backend data.

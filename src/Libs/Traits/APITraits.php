@@ -20,7 +20,7 @@ trait APITraits
      * @return iClient The backend client instance.
      * @throws RuntimeException If no backend with the specified name is found.
      */
-    protected function getBackend(string $name, array $config = []): iClient
+    protected function getClient(string $name, array $config = []): iClient
     {
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
 
@@ -32,5 +32,35 @@ trait APITraits
         $default['name'] = $name;
 
         return makeBackend(array_replace_recursive($default, $config), $name);
+    }
+
+    /**
+     * Get the list of backends.
+     *
+     * @param string|null $name Filter result by backend name.
+     * @return array The list of backends.
+     */
+    protected function getBackends(string|null $name = null): array
+    {
+        $backends = [];
+
+        foreach (ConfigFile::open(Config::get('backends_file'), 'yaml')->getAll() as $backendName => $backend) {
+            $backend = ['name' => $backendName, ...$backend];
+
+            if (null !== ag($backend, 'import.lastSync')) {
+                $backend = ag_set($backend, 'import.lastSync', makeDate(ag($backend, 'import.lastSync')));
+            }
+
+            if (null !== ag($backend, 'export.lastSync')) {
+                $backend = ag_set($backend, 'export.lastSync', makeDate(ag($backend, 'export.lastSync')));
+            }
+
+            $backends[] = $backend;
+        }
+
+        if (null !== $name) {
+            return array_filter($backends, fn($backend) => $backend['name'] === $name);
+        }
+        return $backends;
     }
 }

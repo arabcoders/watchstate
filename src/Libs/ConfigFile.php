@@ -45,7 +45,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         private readonly array $opts = [],
     ) {
         if (!in_array($this->type, self::CONTENT_TYPES)) {
-            throw new InvalidArgumentException(r('Invalid content type \'{type}\'. Expecting \'{types}\'.', [
+            throw new InvalidArgumentException(r("Invalid content type '{type}'. Expecting '{types}'.", [
                 'type' => $type,
                 'types' => implode(', ', self::CONTENT_TYPES)
             ]));
@@ -53,10 +53,10 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 
         if (!file_exists($this->file)) {
             if (false === $this->autoCreate) {
-                throw new InvalidArgumentException(r('File \'{file}\' does not exist.', ['file' => $file]));
+                throw new InvalidArgumentException(r("File '{file}' does not exist.", ['file' => $file]));
             }
             if (false === @touch($this->file)) {
-                throw new InvalidArgumentException(r('File \'{file}\' could not be created.', ['file' => $file]));
+                throw new InvalidArgumentException(r("File '{file}' could not be created.", ['file' => $file]));
             }
         }
 
@@ -164,7 +164,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             $newHash = $this->getFileHash();
             if ($newHash !== $this->file_hash) {
                 $this->logger?->warning(
-                    'File \'{file}\' has been modified since last load. re-applying changes on top of the new data.',
+                    "File '{file}' has been modified since last load. re-applying changes on top of the new data.",
                     [
                         'file' => $this->file,
                         'hash' => [
@@ -195,7 +195,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             match ($this->type) {
                 'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
                 'json' => json_encode($this->data, flags: $json_encode),
-                default => throw new RuntimeException(r('Invalid content type \'{type}\'.', [
+                default => throw new RuntimeException(r("Invalid content type '{type}'.", [
                     'type' => $this->type
                 ])),
             }
@@ -275,7 +275,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
             $this->data = match ($this->type) {
                 'yaml' => Yaml::parse($content),
                 'json' => json_decode($content, true, flags: $jsonOpts),
-                default => throw new RuntimeException(r('Invalid content type \'{type}\'.', ['type' => $this->type])),
+                default => throw new RuntimeException(r("Invalid content type '{type}'.", ['type' => $this->type])),
             };
         }
 
@@ -289,7 +289,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
                     break;
                 default:
                     throw new RuntimeException(
-                        r('Invalid operation type \'{type}\'.', ['type' => $operation['type']])
+                        r("Invalid operation type '{type}'.", ['type' => $operation['type']])
                     );
             }
         }

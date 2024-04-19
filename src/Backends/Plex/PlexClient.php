@@ -55,18 +55,18 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 class PlexClient implements iClient
 {
-    public const NAME = 'PlexBackend';
+    public const string NAME = 'PlexBackend';
 
-    public const CLIENT_NAME = 'Plex';
+    public const string CLIENT_NAME = 'Plex';
 
-    public const TYPE_SHOW = 'show';
-    public const TYPE_MOVIE = 'movie';
-    public const TYPE_EPISODE = 'episode';
+    public const string TYPE_SHOW = 'show';
+    public const string TYPE_MOVIE = 'movie';
+    public const string TYPE_EPISODE = 'episode';
 
     /**
      * @var array Map plex types to iState types.
      */
-    public const TYPE_MAPPER = [
+    public const array TYPE_MAPPER = [
         PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
         PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
@@ -75,7 +75,7 @@ class PlexClient implements iClient
     /**
      * @var array List of supported agents.
      */
-    public const SUPPORTED_AGENTS = [
+    public const array SUPPORTED_AGENTS = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
         'com.plexapp.agents.themoviedb',
@@ -548,6 +548,22 @@ class PlexClient implements iClient
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function fromRequest(ServerRequestInterface $request): Context
+    {
+        return $this->context;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateContext(Context $context): bool
+    {
+        return true;
     }
 
     /**
