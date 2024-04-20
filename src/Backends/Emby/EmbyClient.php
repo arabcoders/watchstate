@@ -539,9 +539,9 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(ServerRequestInterface $request): array
+    public function fromRequest(array $config, ServerRequestInterface $request): array
     {
-        return [];
+        return $config;
     }
 
     /**

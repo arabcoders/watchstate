@@ -554,21 +554,23 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(ServerRequestInterface $request): array
+    public function fromRequest(array $config, ServerRequestInterface $request): array
     {
         $params = DataUtil::fromArray($request->getParsedBody());
 
-        $opts = [];
-
-        if (null !== ($uuid = $params->get('plex_user_uuid'))) {
-            $opts['plex_user_uuid'] = $uuid;
+        if (null !== ($uuid = $params->get('options.' . Options::PLEX_USER_UUID))) {
+            $config = ag_set($config, 'options.' . Options::PLEX_USER_UUID, $uuid);
         }
 
-        if (null !== ($adminToken = $params->get(Options::ADMIN_TOKEN))) {
-            $opts[Options::ADMIN_TOKEN] = $adminToken;
+        if (null !== ($adminToken = $params->get('options.' . Options::ADMIN_TOKEN))) {
+            $config = ag_set($config, 'options.' . Options::ADMIN_TOKEN, $adminToken);
         }
 
-        return $opts;
+        if (null !== ($userId = ag($config, 'user')) && !is_int($userId)) {
+            $config = ag_set($config, 'user', (int)$userId);
+        }
+
+        return $config;
     }
 
     /**
@@ -576,7 +578,7 @@ class PlexClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return false;
+        return Container::get(PlexValidateContext::class)($context);
     }
 
     /**

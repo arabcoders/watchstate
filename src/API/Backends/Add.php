@@ -20,14 +20,24 @@ use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Random\RandomException;
 
 final class Add
 {
     use APITraits;
 
+    /**
+     * @throws RandomException
+     */
     #[Post(Index::URL . '[/]', name: 'backends.add')]
     public function BackendAdd(iRequest $request): iResponse
     {
+        $requestData = $request->getParsedBody();
+
+        if (!is_array($requestData)) {
+            return api_error('Invalid request data.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
         $data = DataUtil::fromArray($request->getParsedBody());
 
         if (null === ($type = $data->get('type'))) {
@@ -44,6 +54,18 @@ final class Add
             return api_error(r("Backend '{backend}' already exists.", [
                 'backend' => $name
             ]), HTTP_STATUS::HTTP_CONFLICT);
+        }
+
+        if (false === isValidName($name)) {
+            return api_error('Invalid name was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if (null === ($url = $data->get('url'))) {
+            return api_error('No url was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if (false === isValidUrl($url)) {
+            return api_error('Invalid url was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         if (null === ($class = Config::get("supported.{$type}", null))) {
@@ -70,22 +92,29 @@ final class Add
             );
 
             if (false === $instance->validateContext($context)) {
-                return api_error('Invalid context information was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+                return api_error('Context information validation failed.', HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
-            $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
-            $configFile->set($name, $config);
-            $configFile->persist();
+            if (!$config->has('webhook.token')) {
+                $config = $config->with('webhook.token', bin2hex(random_bytes(Config::get('webhook.tokenLength'))));
+            }
+
+            ConfigFile::open(Config::get('backends_file'), 'yaml')
+                ->set($name, $config->getAll())
+                ->persist();
         } catch (InvalidContextException $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $response = [
-            'backends' => [],
-            'links' => [],
-        ];
+        $data = $this->getBackends(name: $name);
+        $data = array_pop($data);
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(HTTP_STATUS::HTTP_CREATED, [
+            ...$data,
+            'links' => [
+                'self' => parseConfigValue(Index::URL) . '/' . $name,
+            ],
+        ]);
     }
 
     private function fromRequest(string $type, iRequest $request, ClientInterface|null $client = null): array
@@ -123,7 +152,7 @@ final class Add
         ];
 
         foreach ($optionals as $key => $type) {
-            if (null !== ($value = $data->get($key))) {
+            if (null !== ($value = $data->get('options.' . $key))) {
                 $val = $data->get($value, $type);
                 settype($val, $type);
                 $config = ag_set($config, "options.{$key}", $val);
@@ -131,7 +160,7 @@ final class Add
         }
 
         if (null !== $client) {
-            $config = ag_set($config, 'options', $client->fromRequest($request));
+            $config = $client->fromRequest($config, $request);
         }
 
         return $config;

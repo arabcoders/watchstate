@@ -202,12 +202,14 @@ interface ClientInterface
     public function listLibraries(array $opts = []): array;
 
     /**
-     * Parse client specific options.
+     * Parse client specific options from request.
      *
+     * @param array $config The already pre-filled config.
      * @param ServerRequestInterface $request request to parse.
-     * @return array parsed options.
+     *
+     * @return array Return updated config.
      */
-    public function fromRequest(ServerRequestInterface $request): array;
+    public function fromRequest(array $config, ServerRequestInterface $request): array;
 
     /**
      * Validate backend context.
