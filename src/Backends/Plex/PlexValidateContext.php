@@ -37,7 +37,7 @@ final readonly class PlexValidateContext
             throw new InvalidContextException('Failed to get backend id.');
         }
 
-        if ($backendId !== $context->backendId) {
+        if (null !== $context->backendId && $backendId !== $context->backendId) {
             throw new InvalidContextException(
                 r("Backend id mismatch. Expected '{expected}', server responded with '{actual}'.", [
                     'expected' => $context->backendId,

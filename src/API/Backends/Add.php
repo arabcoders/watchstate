@@ -68,6 +68,10 @@ final class Add
             return api_error('Invalid url was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        if (null === ($token = $data->get('token'))) {
+            return api_error('No access token was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
         if (null === ($class = Config::get("supported.{$type}", null))) {
             throw api_error(r("Unexpected client type '{type}' was given.", [
                 'type' => $type
@@ -86,13 +90,17 @@ final class Add
                 backendUrl: new Uri($config->get('url')),
                 cache: Container::get(BackendCache::class),
                 backendId: $config->get('uuid', null),
-                backendToken: $config->get('token'),
+                backendToken: $token,
                 backendUser: $config->get('user', null),
                 options: $config->get('options', []),
             );
 
             if (false === $instance->validateContext($context)) {
                 return api_error('Context information validation failed.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            }
+
+            if (!$config->get('uuid')) {
+                $config = $config->with('uuid', $instance->withContext($context)->getIdentifier());
             }
 
             if (!$config->has('webhook.token')) {
