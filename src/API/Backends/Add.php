@@ -44,8 +44,14 @@ final class Add
             return api_error('No type was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        $type = strtolower($type);
+
         if (null === ($name = $data->get('name'))) {
             return api_error('No name was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if (false === isValidName($name)) {
+            return api_error('Invalid name was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $backend = $this->getBackends(name: $name);
@@ -54,10 +60,6 @@ final class Add
             return api_error(r("Backend '{backend}' already exists.", [
                 'backend' => $name
             ]), HTTP_STATUS::HTTP_CONFLICT);
-        }
-
-        if (false === isValidName($name)) {
-            return api_error('Invalid name was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         if (null === ($url = $data->get('url'))) {
@@ -73,9 +75,8 @@ final class Add
         }
 
         if (null === ($class = Config::get("supported.{$type}", null))) {
-            throw api_error(r("Unexpected client type '{type}' was given.", [
-                'type' => $type
-            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error(r("Unexpected client type '{type}' was given.", ['type' => $type]),
+                HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $instance = Container::getNew($class);

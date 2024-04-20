@@ -582,7 +582,7 @@ class JellyfinClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return false;
+        return Container::get(JellyfinValidateContext::class)($context);
     }
 
     /**

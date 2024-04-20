@@ -11,9 +11,9 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Options;
 use JsonException;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetUsersList
@@ -32,10 +32,10 @@ class GetUsersList
     /**
      * Class Constructor.
      *
-     * @param HttpClientInterface $http The HTTP client instance.
-     * @param LoggerInterface $logger The logger instance.
+     * @param iHttp $http The HTTP client instance.
+     * @param iLogger $logger The logger instance.
      */
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    public function __construct(protected iHttp $http, protected iLogger $logger)
     {
     }
 
@@ -71,7 +71,17 @@ class GetUsersList
             'url' => (string)$url,
         ]);
 
-        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
+        $headers = $context->backendHeaders;
+
+        if (empty($headers)) {
+            $headers = [
+                'headers' => [
+                    'X-MediaBrowser-Token' => $context->backendToken,
+                ],
+            ];
+        }
+
+        $response = $this->http->request('GET', (string)$url, $headers);
 
         if (200 !== $response->getStatusCode()) {
             return new Response(

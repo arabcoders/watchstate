@@ -549,7 +549,7 @@ class EmbyClient implements iClient
      */
     public function validateContext(Context $context): bool
     {
-        return false;
+        return Container::get(EmbyValidateContext::class)($context);
     }
 
     /**
