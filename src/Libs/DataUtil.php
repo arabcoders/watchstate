@@ -6,6 +6,7 @@ namespace App\Libs;
 
 use Closure;
 use JsonSerializable;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Stringable;
 
 final readonly class DataUtil implements JsonSerializable, Stringable
@@ -20,6 +21,17 @@ final readonly class DataUtil implements JsonSerializable, Stringable
     public static function fromArray(array $data): self
     {
         return new self($data);
+    }
+
+    public static function fromRequest(iRequest $request, bool $includeQueryParams = false): self
+    {
+        $params = $includeQueryParams ? $request->getQueryParams() : [];
+
+        if (null !== ($data = $request->getParsedBody())) {
+            $params = array_replace_recursive($params, is_object($data) ? (array)$data : $data);
+        }
+
+        return new self($params);
     }
 
     public function get(string $key, mixed $default = null): mixed
