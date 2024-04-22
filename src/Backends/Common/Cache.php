@@ -7,8 +7,8 @@ namespace App\Backends\Common;
 use App\Libs\Options;
 use Countable;
 use DateInterval;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 
 /**
@@ -22,6 +22,7 @@ final class Cache implements Countable
      * @var array The data to be cached.
      */
     private array $data = [];
+
     /**
      * @var string|null The key to identify the data in the cache.
      */
@@ -35,10 +36,10 @@ final class Cache implements Countable
     /**
      * Class to handle backends cache.
      *
-     * @param LoggerInterface $logger
-     * @param CacheInterface $cache
+     * @param iLogger $logger
+     * @param iCache $cache
      */
-    public function __construct(private LoggerInterface $logger, private CacheInterface $cache)
+    public function __construct(private iLogger $logger, private iCache $cache)
     {
     }
 
@@ -142,6 +143,16 @@ final class Cache implements Countable
             $this->cache->set($this->key, $this->data, new DateInterval('P3D'));
         } catch (InvalidArgumentException) {
         }
+    }
+
+    /**
+     * Return the underlying cache interface.
+     *
+     * @return iCache The cache interface.
+     */
+    public function getInterface(): iCache
+    {
+        return $this->cache;
     }
 
     /**
