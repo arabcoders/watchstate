@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\TestCase;
 use App\Libs\Uri;
@@ -105,7 +106,7 @@ class GetLibrariesListTest extends TestCase
 
         $client = new MockHttpClient($resp);
         $list = new GetLibrariesList($client, $this->logger);
-        $response = $list($this->context);
+        $response = $list($this->context, [Options::NO_CACHE => true]);
 
         $this->assertFalse($response->status);
         $this->assertNotNull($response->error);

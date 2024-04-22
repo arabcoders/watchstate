@@ -10,7 +10,9 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexClient;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
+use DateInterval;
 use JsonException;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -40,51 +42,31 @@ final class GetLibrariesList
     }
 
     /**
-     * @throws ExceptionInterface
-     * @throws JsonException
+     * Fetches libraries from the backend.
+     *
+     * @param Context $context Backend context.
+     * @param array $opts (optional) Options.
+     *
+     * @return Response The response object containing the fetched libraries.
+     *
+     * @throws ExceptionInterface when an error happens during the request.
+     * @throws JsonException when the response is not a valid JSON.
      */
     private function action(Context $context, array $opts = []): Response
     {
-        $url = $context->backendUrl->withPath('/library/sections');
+        try {
+            $cls = fn() => $this->real_request($context);
 
-        $this->logger->debug('Requesting [{backend}] libraries list.', [
-            'backend' => $context->backendName,
-            'url' => (string)$url
-        ]);
-
-        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
-
-        $payload = $response->getContent(false);
-
-        if ($context->trace) {
-            $this->logger->debug('Processing [{backend}] response.', [
-                'backend' => $context->backendName,
-                'url' => (string)$url,
-                'response' => $payload,
-            ]);
-        }
-
-        if (200 !== $response->getStatusCode()) {
-            return new Response(
-                status: false,
-                error: new Error(
-                    message: 'Request for [{backend}] libraries returned with unexpected [{status_code}] status code.',
-                    context: [
-                        'backend' => $context->backendName,
-                        'status_code' => $response->getStatusCode(),
-                    ],
-                    level: Levels::ERROR
-                ),
+            $json = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
+                $context,
+                'libraries_list',
+                $cls,
+                new DateInterval('PT1M'),
+                $this->logger
             );
+        } catch (RuntimeException $e) {
+            return new Response(status: false, error: new Error(message: $e->getMessage(), level: Levels::ERROR));
         }
-
-        $json = json_decode(
-            json: $payload,
-            associative: true,
-            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
-        );
-
-        unset($payload);
 
         if ($context->trace) {
             $this->logger->debug('Parsing [{backend}] libraries payload.', [
@@ -141,5 +123,53 @@ final class GetLibrariesList
         }
 
         return new Response(status: true, response: $list);
+    }
+
+    /**
+     * Fetches the libraries from the backend.
+     *
+     * @return array The fetched libraries.
+     *
+     * @throws ExceptionInterface when an error happens during the request.
+     * @throws JsonException when the response is not a valid JSON.
+     */
+    private function real_request(Context $context): array
+    {
+        $url = $context->backendUrl->withPath('/library/sections');
+
+        $this->logger->debug('Requesting [{backend}] libraries list.', [
+            'backend' => $context->backendName,
+            'url' => (string)$url
+        ]);
+
+        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
+
+        $payload = $response->getContent(false);
+
+        if ($context->trace) {
+            $this->logger->debug('Processing [{backend}] response.', [
+                'backend' => $context->backendName,
+                'url' => (string)$url,
+                'response' => $payload,
+            ]);
+        }
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException(
+                r(
+                    'Request for [{backend}] libraries returned with unexpected [{status_code}] status code.',
+                    [
+                        'backend' => $context->backendName,
+                        'status_code' => $response->getStatusCode(),
+                    ]
+                )
+            );
+        }
+
+        return json_decode(
+            json: $payload,
+            associative: true,
+            flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
+        );
     }
 }
