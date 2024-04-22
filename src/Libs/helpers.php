@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUnhandledExceptionInspection, PhpDocMissingThrowsInspection */
 
 declare(strict_types=1);
 
@@ -18,12 +19,12 @@ use App\Libs\Stream;
 use App\Libs\Uri;
 use Monolog\Utils;
 use Nyholm\Psr7\Response;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
+use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Http\Message\StreamInterface as iStream;
+use Psr\Http\Message\UriInterface as iUri;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
@@ -303,10 +304,10 @@ if (!function_exists('saveWebhookPayload')) {
      * Save webhook payload to stream.
      *
      * @param iFace $entity Entity object.
-     * @param ServerRequestInterface $request Request object.
-     * @param StreamInterface|null $file When given a stream, it will be used to write payload.
+     * @param iRequest $request Request object.
+     * @param iStream|null $file When given a stream, it will be used to write payload.
      */
-    function saveWebhookPayload(iFace $entity, ServerRequestInterface $request, StreamInterface|null $file = null): void
+    function saveWebhookPayload(iFace $entity, iRequest $request, iStream|null $file = null): void
     {
         $content = [
             'request' => [
@@ -348,10 +349,10 @@ if (!function_exists('saveRequestPayload')) {
     /**
      * Save request payload to stream.
      *
-     * @param ServerRequestInterface $request Request object.
-     * @param StreamInterface|null $file When given a stream, it will be used to write payload.
+     * @param iRequest $request Request object.
+     * @param iStream|null $file When given a stream, it will be used to write payload.
      */
-    function saveRequestPayload(ServerRequestInterface $request, StreamInterface|null $file = null): void
+    function saveRequestPayload(iRequest $request, iStream|null $file = null): void
     {
         $content = [
             'query' => $request->getQueryParams(),
@@ -388,14 +389,14 @@ if (!function_exists('api_response')) {
      * @param array $headers Optional. Additional headers to include in the response.
      * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
      *
-     * @return ResponseInterface A PSR-7 compatible response object.
+     * @return iResponse A PSR-7 compatible response object.
      */
     function api_response(
         HTTP_STATUS $status = HTTP_STATUS::HTTP_OK,
         array|null $body = null,
         array $headers = [],
         string|null $reason = null
-    ): ResponseInterface {
+    ): iResponse {
         return (new Response(
             status: $status->value,
             headers: $headers,
@@ -417,7 +418,7 @@ if (!function_exists('api_error')) {
      * @param array $body Optional. Additional fields to include in the response body.
      * @param array $opts Optional. Additional options.
      *
-     * @return ResponseInterface A PSR-7 compatible response object.
+     * @return iResponse A PSR-7 compatible response object.
      */
     function api_error(
         string $message,
@@ -426,7 +427,7 @@ if (!function_exists('api_error')) {
         array $headers = [],
         string|null $reason = null,
         array $opts = []
-    ): ResponseInterface {
+    ): iResponse {
         $response = api_response(
             status: $httpCode,
             body: array_replace_recursive($body, [
@@ -485,7 +486,7 @@ if (!function_exists('queuePush')) {
         }
 
         try {
-            $cache = Container::get(CacheInterface::class);
+            $cache = Container::get(iCache::class);
 
             $list = $cache->get('queue', []);
 
@@ -497,7 +498,7 @@ if (!function_exists('queuePush')) {
 
             $cache->set('queue', $list, new DateInterval('P7D'));
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-            Container::get(LoggerInterface::class)->error(
+            Container::get(iLogger::class)->error(
                 message: 'Exception [{error.kind}] was thrown unhandled during saving [{backend} - {title}} into queue. Error [{error.message} @ {error.file}:{error.line}].',
                 context: [
                     'backend' => $entity->via,
@@ -787,9 +788,9 @@ if (false === function_exists('makeIgnoreId')) {
      *
      * @param string $url The URL to manipulate.
      *
-     * @return UriInterface The modified URI.
+     * @return iUri The modified URI.
      */
-    function makeIgnoreId(string $url): UriInterface
+    function makeIgnoreId(string $url): iUri
     {
         static $filterQuery = null;
 
@@ -969,7 +970,7 @@ if (false === function_exists('generateRoutes')) {
 
         $routes_cli = (new Router($dirs))->generate();
 
-        $cache = Container::get(CacheInterface::class);
+        $cache = Container::get(iCache::class);
 
         try {
             $cache->set('routes_cli', $routes_cli, new DateInterval('PT1H'));
@@ -991,11 +992,11 @@ if (!function_exists('getClientIp')) {
     /**
      * Get the client IP address.
      *
-     * @param ServerRequestInterface|null $request (optional) The request object.
+     * @param iRequest|null $request (optional) The request object.
      *
      * @return string The client IP address.
      */
-    function getClientIp(?ServerRequestInterface $request = null): string
+    function getClientIp(?iRequest $request = null): string
     {
         $params = $request?->getServerParams() ?? $_SERVER;
 
@@ -1055,12 +1056,11 @@ if (false === function_exists('isValidURL')) {
      * @param string $url The URL to validate.
      *
      * @return bool True if the URL is valid, false otherwise.
-     * @noinspection PhpArgumentWithoutNamedIdentifierInspection
+     * @SuppressWarnings
      */
     function isValidURL(string $url): bool
     {
         // RFC 3987 For absolute IRIs (internationalized):
-        /** @SuppressWarnings */
         return (bool)@preg_match(
             '/^[a-z](?:[-a-z0-9\+\.])*:(?:\/\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:])*@)?(?:\[(?:(?:(?:[0-9a-f]{1,4}:){6}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|::(?:[0-9a-f]{1,4}:){5}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:[0-9a-f]{1,4}:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3})|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+[-a-z0-9\._~!\$&\'\(\)\*\+,;=:]+)\]|(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(?:\.(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3}|(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=@])*)(?::[0-9]*)?(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*|\/(?:(?:(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))+)(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*)?|(?:(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))+)(?:\/(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@]))*)*|(?!(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])))(?:\?(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])|[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}|\x{100000}-\x{10FFFD}\/\?])*)?(?:\#(?:(?:%[0-9a-f][0-9a-f]|[-a-z0-9\._~\x{A0}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFEF}\x{10000}-\x{1FFFD}\x{20000}-\x{2FFFD}\x{30000}-\x{3FFFD}\x{40000}-\x{4FFFD}\x{50000}-\x{5FFFD}\x{60000}-\x{6FFFD}\x{70000}-\x{7FFFD}\x{80000}-\x{8FFFD}\x{90000}-\x{9FFFD}\x{A0000}-\x{AFFFD}\x{B0000}-\x{BFFFD}\x{C0000}-\x{CFFFD}\x{D0000}-\x{DFFFD}\x{E1000}-\x{EFFFD}!\$&\'\(\)\*\+,;=:@])|[\/\?])*)?$/iu',
             $url
@@ -1127,5 +1127,42 @@ if (!function_exists('parseConfigValue')) {
         }
 
         return $value;
+    }
+}
+
+
+if (!function_exists('tryCache')) {
+    /**
+     * Try to get a value from the cache, if it does not exist, call the callback and cache the result.
+     *
+     * @param iCache $cache The cache instance.
+     * @param string $key The cache key.
+     * @param Closure $callback The callback to call if the key does not exist.
+     * @param DateInterval $ttl The time to live for the cache.
+     * @param iLogger|null $logger The logger instance (optional).
+     *
+     * @return mixed The value from the cache or the callback.
+     */
+    function tryCache(
+        iCache $cache,
+        string $key,
+        Closure $callback,
+        DateInterval $ttl,
+        iLogger|null $logger = null
+    ): mixed {
+        if (true === $cache->has($key)) {
+            $logger?->debug("Cache hit for key '{key}'.", ['key' => $key]);
+            return $cache->get($key);
+        }
+
+        $data = $callback();
+
+        try {
+            $cache->set($key, $data, $ttl);
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+            $logger?->error("Failed to cache data for key '{key}'.", ['key' => $key]);
+        }
+
+        return $data;
     }
 }

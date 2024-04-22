@@ -61,6 +61,7 @@ trait APITraits
         if (null !== $name) {
             return array_filter($backends, fn($backend) => $backend['name'] === $name);
         }
+
         return $backends;
     }
 }
