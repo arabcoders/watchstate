@@ -22,7 +22,7 @@ final class Stream implements StreamInterface, Stringable
     /**
      * @var array<string> A list of allowed stream resource types that are allowed to instantiate a stream
      */
-    private const ALLOWED_STREAM_RESOURCE_TYPES = ['gd', 'stream'];
+    private const array ALLOWED_STREAM_RESOURCE_TYPES = ['gd', 'stream'];
 
     /**
      * @var resource|null The underlying stream resource.
