@@ -104,6 +104,248 @@ final class MemoryMapper implements iImport
         return $this;
     }
 
+
+    /**
+     * Add new item to the mapper.
+     *
+     * @param iState $entity The entity to add.
+     * @param array $opts Additional options.
+     *
+     * @return self
+     */
+    private function addNewItem(iState $entity, array $opts = []): self
+    {
+        if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY)) {
+            Message::increment("{$entity->via}.{$entity->type}.failed");
+            $this->logger->notice(
+                'MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database. And backend set as metadata source only.',
+                [
+                    'metaOnly' => true,
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                    'data' => $entity->getAll(),
+                ]
+            );
+            return $this;
+        }
+
+        $this->objects[] = $entity;
+        $pointer = array_key_last($this->objects);
+
+        $this->changed[$pointer] = $pointer;
+
+        Message::increment("{$entity->via}.{$entity->type}.added");
+        $this->addPointers($this->objects[$pointer], $pointer);
+
+        if (true === $this->inTraceMode()) {
+            $data = $entity->getAll();
+            unset($data['id']);
+            $data[iState::COLUMN_UPDATED] = makeDate($data[iState::COLUMN_UPDATED]);
+            $data[iState::COLUMN_WATCHED] = 0 === $data[iState::COLUMN_WATCHED] ? 'No' : 'Yes';
+            if ($entity->isMovie()) {
+                unset($data[iState::COLUMN_SEASON], $data[iState::COLUMN_EPISODE], $data[iState::COLUMN_PARENT]);
+            }
+        } else {
+            $data = [
+                iState::COLUMN_META_DATA => [
+                    $entity->via => [
+                        iState::COLUMN_ID => ag($entity->getMetadata($entity->via), iState::COLUMN_ID),
+                        iState::COLUMN_UPDATED => makeDate($entity->updated),
+                        iState::COLUMN_GUIDS => $entity->getGuids(),
+                        iState::COLUMN_PARENT => $entity->getParentGuids(),
+                    ]
+                ],
+            ];
+        }
+
+        $this->logger->notice('MAPPER: [{backend}] added [{title}] as new item.', [
+            'backend' => $entity->via,
+            'title' => $entity->getName(),
+            true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Handle tainted entities.
+     *
+     * @param string|int $pointer The pointer to the entity.
+     * @param iState $cloned The cloned entity.
+     * @param iState $entity The entity to handle.
+     * @param array $opts Additional options.
+     *
+     * @return self
+     */
+    private function handleTainted(string|int $pointer, iState $cloned, iState $entity, array $opts = []): self
+    {
+        $keys = [iState::COLUMN_META_DATA];
+
+        if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+            $this->changed[$pointer] = $pointer;
+            Message::increment("{$entity->via}.{$entity->type}.updated");
+
+            $this->objects[$pointer] = $this->objects[$pointer]->apply(
+                entity: $entity,
+                fields: array_merge($keys, [iState::COLUMN_EXTRA])
+            );
+
+            $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
+
+            $changes = $this->objects[$pointer]->diff(fields: $keys);
+
+            if (count($changes) >= 1) {
+                $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'changes' => $changes,
+                ]);
+            }
+            return $this;
+        }
+
+        if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
+            $reasons = [];
+
+            if (true === $entity->isTainted()) {
+                $reasons[] = 'event marked as tainted';
+            }
+            if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY)) {
+                $reasons[] = 'Mapper is in metadata only mode';
+            }
+
+            $this->logger->notice(
+                'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the following reason ({reason}) it was not considered as valid state.',
+                [
+                    'id' => $this->objects[$pointer]->id,
+                    'backend' => $entity->via,
+                    'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                    'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
+                    'title' => $entity->getName(),
+                    'reasons' => implode(', ', $reasons),
+                ]
+            );
+
+            return $this;
+        }
+
+        if (true === $this->inTraceMode()) {
+            $this->logger->info('MAPPER: [{backend}] [{title}] No metadata changes detected.', [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $cloned->getName(),
+            ]);
+        }
+
+        return $this;
+    }
+
+    private function handleOldEntity(string|int $pointer, iState $cloned, iState $entity, array $opts = []): self
+    {
+        $keys = [iState::COLUMN_META_DATA];
+
+        // -- Handle mark as unplayed logic.
+        if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
+            $this->changed[$pointer] = $pointer;
+            Message::increment("{$entity->via}.{$entity->type}.updated");
+
+            $this->objects[$pointer] = $this->objects[$pointer]->apply(
+                entity: $entity,
+                fields: array_merge($keys, [iState::COLUMN_EXTRA])
+            )->markAsUnplayed(backend: $entity);
+
+            $changes = $this->objects[$pointer]->diff(
+                array_merge($keys, [iState::COLUMN_WATCHED, iState::COLUMN_UPDATED])
+            );
+
+            if (count($changes) >= 1) {
+                $this->logger->notice('MAPPER: [{backend}] marked [{title}] as [unplayed].', [
+                    'id' => $cloned->id,
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                    'changes' => $changes,
+                ]);
+            }
+
+            return $this;
+        }
+
+        $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+        $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+        $playChanged = $newPlayProgress != $oldPlayProgress;
+
+        // -- this sometimes leads to never ending updates as data from backends conflicts.
+        if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+            if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+                $this->changed[$pointer] = $pointer;
+                Message::increment("{$entity->via}.{$entity->type}.updated");
+
+                $this->objects[$pointer] = $this->objects[$pointer]->apply(
+                    entity: $entity,
+                    fields: array_merge($keys, [iState::COLUMN_EXTRA])
+                );
+
+                $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
+
+                $changes = $this->objects[$pointer]->diff(fields: $keys);
+
+                if (count($changes) >= 1) {
+                    $this->logger->notice(
+                        $playChanged ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
+                        [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'changes' => $changes,
+                            'fields' => implode(',', $keys),
+                        ]
+                    );
+                    if (true === $entity->hasPlayProgress()) {
+                        $itemId = r('{type}://{id}:{tainted}@{backend}', [
+                            'type' => $entity->type,
+                            'backend' => $entity->via,
+                            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                        ]);
+
+                        $this->progressItems[$itemId] = $entity;
+                    }
+                }
+
+                return $this;
+            }
+        }
+
+        Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
+
+        if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
+            $this->logger->notice(
+                'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the remote item date [{remote_date}] being older than the last backend sync date [{local_date}]. it was not considered as valid state.',
+                [
+                    'id' => $this->objects[$pointer]->id,
+                    'backend' => $entity->via,
+                    'remote_date' => makeDate($entity->updated),
+                    'local_date' => makeDate($opts['after']),
+                    'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                    'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
+                    'title' => $entity->getName(),
+                ]
+            );
+            return $this;
+        }
+
+        if ($this->inTraceMode()) {
+            $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $cloned->getName(),
+            ]);
+        }
+
+        return $this;
+    }
+
     /**
      * @inheritdoc
      */
@@ -121,238 +363,30 @@ final class MemoryMapper implements iImport
 
         $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
 
-        /**
-         * Handle new item logic here.
-         */
         if (false === ($pointer = $this->getPointer($entity))) {
-            if (true === $metadataOnly) {
-                Message::increment("{$entity->via}.{$entity->type}.failed");
-                $this->logger->notice(
-                    'MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database. And backend set as metadata source only.',
-                    [
-                        'metaOnly' => true,
-                        'backend' => $entity->via,
-                        'title' => $entity->getName(),
-                        'data' => $entity->getAll(),
-                    ]
-                );
-                return $this;
-            }
-
-            $this->objects[] = $entity;
-            $pointer = array_key_last($this->objects);
-
-            $this->changed[$pointer] = $pointer;
-
-            Message::increment("{$entity->via}.{$entity->type}.added");
-            $this->addPointers($this->objects[$pointer], $pointer);
-
-            if (true === $this->inTraceMode()) {
-                $data = $entity->getAll();
-                unset($data['id']);
-                $data[iState::COLUMN_UPDATED] = makeDate($data[iState::COLUMN_UPDATED]);
-                $data[iState::COLUMN_WATCHED] = 0 === $data[iState::COLUMN_WATCHED] ? 'No' : 'Yes';
-                if ($entity->isMovie()) {
-                    unset($data[iState::COLUMN_SEASON], $data[iState::COLUMN_EPISODE], $data[iState::COLUMN_PARENT]);
-                }
-            } else {
-                $data = [
-                    iState::COLUMN_META_DATA => [
-                        $entity->via => [
-                            iState::COLUMN_ID => ag($entity->getMetadata($entity->via), iState::COLUMN_ID),
-                            iState::COLUMN_UPDATED => makeDate($entity->updated),
-                            iState::COLUMN_GUIDS => $entity->getGuids(),
-                            iState::COLUMN_PARENT => $entity->getParentGuids(),
-                        ]
-                    ],
-                ];
-            }
-
-            $this->logger->notice('MAPPER: [{backend}] added [{title}] as new item.', [
-                'backend' => $entity->via,
-                'title' => $entity->getName(),
-                true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
-            ]);
-
-            return $this;
+            // -- A new entry with no previous data was found.
+            return $this->addNewItem($entity, $opts);
         }
-
-        $keys = [iState::COLUMN_META_DATA];
-
-        /**
-         * DO NOT operate directly on this object it should be cloned.
-         * It should maintain pristine condition until changes are committed.
-         */
-        $cloned = clone $this->objects[$pointer];
 
         /**
          * ONLY update backend metadata
          * if metadataOnly is set or the event is tainted.
          */
         if (true === $metadataOnly || true === $entity->isTainted()) {
-            if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                $this->changed[$pointer] = $pointer;
-                Message::increment("{$entity->via}.{$entity->type}.updated");
-
-                $this->objects[$pointer] = $this->objects[$pointer]->apply(
-                    entity: $entity,
-                    fields: array_merge($keys, [iState::COLUMN_EXTRA])
-                );
-
-                $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
-
-                $changes = $this->objects[$pointer]->diff(fields: $keys);
-
-                if (count($changes) >= 1) {
-                    $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                        'changes' => $changes,
-                    ]);
-                }
-                return $this;
-            }
-
-            if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
-                $reasons = [];
-
-                if (true === $entity->isTainted()) {
-                    $reasons[] = 'event marked as tainted';
-                }
-                if (true === $metadataOnly) {
-                    $reasons[] = 'Mapper is in metadata only mode';
-                }
-
-                $this->logger->notice(
-                    'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the following reason ({reason}) it was not considered as valid state.',
-                    [
-                        'id' => $this->objects[$pointer]->id,
-                        'backend' => $entity->via,
-                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                        'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
-                        'title' => $entity->getName(),
-                        'reasons' => implode(', ', $reasons),
-                    ]
-                );
-
-                return $this;
-            }
-
-            if (true === $this->inTraceMode()) {
-                $this->logger->info('MAPPER: [{backend}] [{title}] No metadata changes detected.', [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                ]);
-            }
-
-            return $this;
+            return $this->handleTainted($pointer, clone $this->objects[$pointer], $entity, $opts);
         }
 
         // -- Item date is older than recorded last sync date logic handling.
         $hasAfter = null !== ($opts['after'] ?? null) && true === ($opts['after'] instanceof iDate);
         if (true === $hasAfter && $opts['after']->getTimestamp() >= $entity->updated) {
-            // -- Handle mark as unplayed logic.
-            if (false === $entity->isWatched() && true === $cloned->shouldMarkAsUnplayed(backend: $entity)) {
-                $this->changed[$pointer] = $pointer;
-                Message::increment("{$entity->via}.{$entity->type}.updated");
-
-                $this->objects[$pointer] = $this->objects[$pointer]->apply(
-                    entity: $entity,
-                    fields: array_merge($keys, [iState::COLUMN_EXTRA])
-                )->markAsUnplayed(backend: $entity);
-
-                $changes = $this->objects[$pointer]->diff(
-                    array_merge($keys, [iState::COLUMN_WATCHED, iState::COLUMN_UPDATED])
-                );
-
-                if (count($changes) >= 1) {
-                    $this->logger->notice('MAPPER: [{backend}] marked [{title}] as [unplayed].', [
-                        'id' => $cloned->id,
-                        'backend' => $entity->via,
-                        'title' => $cloned->getName(),
-                        'changes' => $changes,
-                    ]);
-                }
-
-                return $this;
-            }
-
-            $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-            $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-            $playChanged = $newPlayProgress != $oldPlayProgress;
-
-            // -- this sometimes leads to never ending updates as data from backends conflicts.
-            if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
-                if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
-                    $this->changed[$pointer] = $pointer;
-                    Message::increment("{$entity->via}.{$entity->type}.updated");
-
-                    $this->objects[$pointer] = $this->objects[$pointer]->apply(
-                        entity: $entity,
-                        fields: array_merge($keys, [iState::COLUMN_EXTRA])
-                    );
-
-                    $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
-
-                    $changes = $this->objects[$pointer]->diff(fields: $keys);
-
-                    if (count($changes) >= 1) {
-                        $this->logger->notice(
-                            $playChanged ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
-                            [
-                                'id' => $cloned->id,
-                                'backend' => $entity->via,
-                                'title' => $cloned->getName(),
-                                'changes' => $changes,
-                                'fields' => implode(',', $keys),
-                            ]
-                        );
-                        if (true === $entity->hasPlayProgress()) {
-                            $itemId = r('{type}://{id}:{tainted}@{backend}', [
-                                'type' => $entity->type,
-                                'backend' => $entity->via,
-                                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-                                'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-                            ]);
-
-                            $this->progressItems[$itemId] = $entity;
-                        }
-                    }
-
-                    return $this;
-                }
-            }
-
-            Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
-
-            if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
-                $this->logger->notice(
-                    'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the remote item date [{remote_date}] being older than the last backend sync date [{local_date}]. it was not considered as valid state.',
-                    [
-                        'id' => $this->objects[$pointer]->id,
-                        'backend' => $entity->via,
-                        'remote_date' => makeDate($entity->updated),
-                        'local_date' => makeDate($opts['after']),
-                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                        'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
-                        'title' => $entity->getName(),
-                    ]
-                );
-                return $this;
-            }
-
-            if ($this->inTraceMode()) {
-                $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $cloned->getName(),
-                ]);
-            }
-
-            return $this;
+            return $this->handleOldEntity($pointer, clone $this->objects[$pointer], $entity, $opts);
         }
+
+        /**
+         * DO NOT operate directly on this object it should be cloned.
+         * It should maintain pristine condition until changes are committed.
+         */
+        $cloned = clone $this->objects[$pointer];
 
         /**
          * Fix for #329 {@see https://github.com/arabcoders/watchstate/issues/329}

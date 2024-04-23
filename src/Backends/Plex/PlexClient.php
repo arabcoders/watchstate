@@ -29,6 +29,7 @@ use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
@@ -55,18 +56,18 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 class PlexClient implements iClient
 {
-    public const NAME = 'PlexBackend';
+    public const string NAME = 'PlexBackend';
 
-    public const CLIENT_NAME = 'Plex';
+    public const string CLIENT_NAME = 'Plex';
 
-    public const TYPE_SHOW = 'show';
-    public const TYPE_MOVIE = 'movie';
-    public const TYPE_EPISODE = 'episode';
+    public const string TYPE_SHOW = 'show';
+    public const string TYPE_MOVIE = 'movie';
+    public const string TYPE_EPISODE = 'episode';
 
     /**
      * @var array Map plex types to iState types.
      */
-    public const TYPE_MAPPER = [
+    public const array TYPE_MAPPER = [
         PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
         PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE => iState::TYPE_EPISODE,
@@ -75,7 +76,7 @@ class PlexClient implements iClient
     /**
      * @var array List of supported agents.
      */
-    public const SUPPORTED_AGENTS = [
+    public const array SUPPORTED_AGENTS = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
         'com.plexapp.agents.themoviedb',
@@ -548,6 +549,36 @@ class PlexClient implements iClient
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function fromRequest(array $config, ServerRequestInterface $request): array
+    {
+        $params = DataUtil::fromArray($request->getParsedBody());
+
+        if (null !== ($uuid = $params->get('options.' . Options::PLEX_USER_UUID))) {
+            $config = ag_set($config, 'options.' . Options::PLEX_USER_UUID, $uuid);
+        }
+
+        if (null !== ($adminToken = $params->get('options.' . Options::ADMIN_TOKEN))) {
+            $config = ag_set($config, 'options.' . Options::ADMIN_TOKEN, $adminToken);
+        }
+
+        if (null !== ($userId = ag($config, 'user')) && !is_int($userId)) {
+            $config = ag_set($config, 'user', (int)$userId);
+        }
+
+        return $config;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateContext(Context $context): bool
+    {
+        return Container::get(PlexValidateContext::class)($context);
     }
 
     /**

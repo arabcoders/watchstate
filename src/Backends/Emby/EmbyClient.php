@@ -50,18 +50,18 @@ use Psr\Log\LoggerInterface as iLogger;
  */
 class EmbyClient implements iClient
 {
-    public const NAME = 'EmbyBackend';
+    public const string NAME = 'EmbyBackend';
 
-    public const CLIENT_NAME = 'Emby';
+    public const string CLIENT_NAME = 'Emby';
 
-    public const TYPE_MOVIE = JellyfinClient::TYPE_MOVIE;
-    public const TYPE_SHOW = JellyfinClient::TYPE_SHOW;
-    public const TYPE_EPISODE = JellyfinClient::TYPE_EPISODE;
+    public const string TYPE_MOVIE = JellyfinClient::TYPE_MOVIE;
+    public const string TYPE_SHOW = JellyfinClient::TYPE_SHOW;
+    public const string TYPE_EPISODE = JellyfinClient::TYPE_EPISODE;
 
-    public const COLLECTION_TYPE_SHOWS = JellyfinClient::COLLECTION_TYPE_SHOWS;
-    public const COLLECTION_TYPE_MOVIES = JellyfinClient::COLLECTION_TYPE_MOVIES;
+    public const string COLLECTION_TYPE_SHOWS = JellyfinClient::COLLECTION_TYPE_SHOWS;
+    public const string COLLECTION_TYPE_MOVIES = JellyfinClient::COLLECTION_TYPE_MOVIES;
 
-    public const EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
+    public const array EXTRA_FIELDS = JellyfinClient::EXTRA_FIELDS;
 
     /**
      * @var Context Backend context.
@@ -534,6 +534,22 @@ class EmbyClient implements iClient
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function fromRequest(array $config, ServerRequestInterface $request): array
+    {
+        return $config;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateContext(Context $context): bool
+    {
+        return Container::get(EmbyValidateContext::class)($context);
     }
 
     /**

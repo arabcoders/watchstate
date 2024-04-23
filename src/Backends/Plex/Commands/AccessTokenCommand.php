@@ -21,7 +21,7 @@ use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 #[Cli(command: self::ROUTE)]
 final class AccessTokenCommand extends Command
 {
-    public const ROUTE = 'plex:accesstoken';
+    public const string ROUTE = 'plex:accesstoken';
 
     public function __construct(protected iLogger $logger)
     {

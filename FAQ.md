@@ -299,21 +299,22 @@ $ docker exec -ti watchstate console system:env
 
 These environment variables relates to the tool itself, you can load them via the recommended methods.
 
-| Key                     | Type    | Description                                                             | Default            |
-|-------------------------|---------|-------------------------------------------------------------------------|--------------------|
-| WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var` |
-| WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`  |
-| WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`              |
-| WS_CRON_{TASK}          | bool    | Enable {task} task. Value casted to bool.                               | `false`            |
-| WS_CRON_{TASK}_AT       | string  | When to run {task} task. Valid Cron Expression Expected.                | `*/1 * * * *`      |
-| WS_CRON_{TASK}_ARGS     | string  | Flags to pass to the {task} command.                                    | `-v`               |
-| WS_LOGS_CONTEXT         | bool    | Add context to console output messages.                                 | `false`            |
-| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                      | `true`             |
-| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                      | `ERROR`            |
-| WS_WEBHOOK_DUMP_REQUEST | bool    | If enabled, will dump all received requests.                            | `false`            |
-| WS_TRUST_PROXY          | bool    | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                       | `false`            |
-| WS_TRUST_HEADER         | string  | Which header contain user true IP.                                      | `X-Forwarded-For`  |
-| WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`             |
+| Key                     | Type    | Description                                                             | Default                  |
+|-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
+| WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var`       |
+| WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`        |
+| WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`                    |
+| WS_CRON_{TASK}          | bool    | Enable {task} task. Value casted to bool.                               | `false`                  |
+| WS_CRON_{TASK}_AT       | string  | When to run {task} task. Valid Cron Expression Expected.                | `*/1 * * * *`            |
+| WS_CRON_{TASK}_ARGS     | string  | Flags to pass to the {task} command.                                    | `-v`                     |
+| WS_LOGS_CONTEXT         | bool    | Add context to console output messages.                                 | `false`                  |
+| WS_LOGGER_FILE_ENABLE   | bool    | Save logs to file.                                                      | `true`                   |
+| WS_LOGGER_FILE_LEVEL    | string  | File Logger Level.                                                      | `ERROR`                  |
+| WS_WEBHOOK_DUMP_REQUEST | bool    | If enabled, will dump all received requests.                            | `false`                  |
+| WS_TRUST_PROXY          | bool    | Trust `WS_TRUST_HEADER` ip. Value casted to bool.                       | `false`                  |
+| WS_TRUST_HEADER         | string  | Which header contain user true IP.                                      | `X-Forwarded-For`        |
+| WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`                   |
+| WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
 
 > [!IMPORTANT]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one
@@ -662,3 +663,65 @@ Unfortunately, there is no way to fix this issue from our side for the `state:im
 
 However, we managed to somewhat implement a workaround for this issue using the webhooks feature as temporary fix. Until jellyfin devs fixes the issue. Please take look at
 the webhooks section to enable it.
+
+---
+
+### Bare metal installation
+
+#### Requirements
+
+* [PHP](http://https://www.php.net/downloads.php) 8.3+ with fpm installed. with the following extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`
+* [Composer](https://getcomposer.org/download/) for dependency management.
+* [Redis-server](https://redis.io/) for caching or a compatible implementation that works with [php-redis](https://github.com/phpredis/phpredis).
+* [Caddy](https://caddyserver.com/) for frontend handling. However, you can use whatever you like. As long as it has support for fastcgi.
+
+#### Installation
+
+1. Clone the repository.
+
+```bash
+$ git clone https://github.com/arabcoders/watchstate.git
+```
+
+2. Install the dependencies.
+
+```bash
+$ cd watchstate
+$ composer install --no-dev 
+```
+
+3. Create `.env` inside `./var/config/` if you need to change any of the environment variables refer to[Tool specific environment variables](#tool-specific-environment-variables) for more information. For example,
+   if you `redis` server is not on the same server or requires a password you can add the following to the `.env` file.
+
+```dotenv
+WS_CACHE_URL="redis://127.0.0.1:6379?password=your_password"
+```
+
+4. link the app to the frontend proxy. For caddy, you can use the following configuration.
+
+> [!NOTE]
+> frontend server is only needed for `webhooks` and the upcoming `API` & `Web UI`.
+
+```Caddyfile
+http://watchstate.example.org {
+    # Change "[user]" to your user name.
+    root * /home/[user]/watchstate/public
+        
+    # Change "unix//var/run/php/php8.3-fpm.sock" to your php-fpm socket.
+    php_fastcgi unix//var/run/php/php8.3-fpm.sock
+}
+```
+
+5. To access the console you can run the following command.
+
+```bash
+$ /home/[user]/watchstate/bin/console help
+```
+
+6. To make the tasks scheduler work you need to add the following to your crontab.
+
+```crontab
+* * * * * /home/[user]/watchstate/bin/console system:tasks --run --save-log
+```
+
+For more information, please refer to the [Dockerfile](/Dockerfile). On how we do things to get the tool running.

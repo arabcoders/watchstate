@@ -52,18 +52,18 @@ use Psr\Log\LoggerInterface as iLogger;
  */
 class JellyfinClient implements iClient
 {
-    public const CLIENT_NAME = 'Jellyfin';
+    public const string CLIENT_NAME = 'Jellyfin';
 
-    public const TYPE_MOVIE = 'Movie';
-    public const TYPE_SHOW = 'Series';
-    public const TYPE_EPISODE = 'Episode';
-    public const COLLECTION_TYPE_SHOWS = 'tvshows';
-    public const COLLECTION_TYPE_MOVIES = 'movies';
+    public const string TYPE_MOVIE = 'Movie';
+    public const string TYPE_SHOW = 'Series';
+    public const string TYPE_EPISODE = 'Episode';
+    public const string COLLECTION_TYPE_SHOWS = 'tvshows';
+    public const string COLLECTION_TYPE_MOVIES = 'movies';
 
     /**
      * @var array<string> This constant represents a list of extra fields tobe included in the request.
      */
-    public const EXTRA_FIELDS = [
+    public const array EXTRA_FIELDS = [
         'ProviderIds',
         'DateCreated',
         'OriginalTitle',
@@ -77,7 +77,7 @@ class JellyfinClient implements iClient
     /**
      * @var array<string> Map the Jellyfin types to our own types.
      */
-    public const TYPE_MAPPER = [
+    public const array TYPE_MAPPER = [
         JellyfinClient::TYPE_SHOW => iState::TYPE_SHOW,
         JellyfinClient::TYPE_MOVIE => iState::TYPE_MOVIE,
         JellyfinClient::TYPE_EPISODE => iState::TYPE_EPISODE,
@@ -567,6 +567,22 @@ class JellyfinClient implements iClient
         }
 
         return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function fromRequest(array $config, ServerRequestInterface $request): array
+    {
+        return $config;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function validateContext(Context $context): bool
+    {
+        return Container::get(JellyfinValidateContext::class)($context);
     }
 
     /**

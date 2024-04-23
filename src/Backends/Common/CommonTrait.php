@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Backends\Common;
 
 use App\Libs\Container;
-use Psr\Log\LoggerInterface;
+use DateInterval;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 trait CommonTrait
@@ -63,12 +64,33 @@ trait CommonTrait
     }
 
     /**
+     * Try to cache the result of a function.
+     *
+     * @param Context $context Context to associate the call with.
+     * @param string $key Cache key. The key will be prefixed with the backend name.
+     * @param callable():mixed $fn Function to cache.
+     * @param DateInterval $ttl Time to live.
+     * @param iLogger|null $logger Logger to use.
+     *
+     * @return mixed result of the closure.
+     */
+    protected function tryCache(
+        Context $context,
+        string $key,
+        callable $fn,
+        DateInterval $ttl,
+        iLogger|null $logger = null
+    ): mixed {
+        return tryCache($context->cache->getInterface(), $context->backendName . '_' . $key, $fn, $ttl, $logger);
+    }
+
+    /**
      * Get Logger.
      *
-     * @return LoggerInterface Return the logger.
+     * @return iLogger Return the logger.
      */
-    protected function getLogger(): LoggerInterface
+    protected function getLogger(): iLogger
     {
-        return Container::get(LoggerInterface::class);
+        return Container::get(iLogger::class);
     }
 }

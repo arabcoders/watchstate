@@ -14,7 +14,7 @@
         "test": "vendor/bin/phpunit"
     },
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
         "ext-mbstring": "*",
@@ -76,6 +76,7 @@
         "symfony/polyfill-php81": "*",
         "symfony/polyfill-php82": "*",
         "symfony/polyfill-php83": "*",
+        "symfony/polyfill-php84": "*",
         "symfony/polyfill-ctype": "*",
         "symfony/polyfill-mbstring": "*",
         "symfony/polyfill-intl-normalizer": "*",

@@ -14,11 +14,13 @@ use Throwable;
 #[Get(self::URL . '[/]', name: 'system.env')]
 final class Env
 {
-    public const URL = '%{api.prefix}/system/env';
-    private const BLACKLIST = [
+    public const string URL = '%{api.prefix}/system/env';
+
+    private const array BLACKLIST = [
         'WS_API_KEY'
     ];
-    private const BLACKLIST_PARSE_URL = [
+
+    private const array BLACKLIST_PARSE_URL = [
         'WS_CACHE_URL' => [
             'password',
         ],

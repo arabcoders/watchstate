@@ -7,7 +7,7 @@ namespace App\Backends\Common;
 use Stringable;
 use Throwable;
 
-final class Error implements Stringable
+final readonly class Error implements Stringable
 {
     /**
      * Wrap error in easy to consume way.
@@ -18,10 +18,10 @@ final class Error implements Stringable
      * @param Throwable|null $previous Previous exception stack trace.
      */
     public function __construct(
-        public readonly string $message,
-        public readonly array $context = [],
-        public readonly Levels $level = Levels::ERROR,
-        public readonly Throwable|null $previous = null,
+        public string $message,
+        public array $context = [],
+        public Levels $level = Levels::ERROR,
+        public Throwable|null $previous = null,
     ) {
     }
 

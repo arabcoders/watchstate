@@ -6,7 +6,7 @@ namespace App\Backends\Common;
 
 use Psr\Http\Message\UriInterface;
 
-class Context
+readonly class Context
 {
     /**
      * Make backend context for classes to work with.
@@ -23,16 +23,16 @@ class Context
      * @param array $options optional options.
      */
     public function __construct(
-        public readonly string $clientName,
-        public readonly string $backendName,
-        public readonly UriInterface $backendUrl,
-        public readonly Cache $cache,
-        public readonly string|int|null $backendId = null,
-        public readonly string|int|null $backendToken = null,
-        public readonly string|int|null $backendUser = null,
-        public readonly array $backendHeaders = [],
-        public readonly bool $trace = false,
-        public readonly array $options = []
+        public string $clientName,
+        public string $backendName,
+        public UriInterface $backendUrl,
+        public Cache $cache,
+        public string|int|null $backendId = null,
+        public string|int|null $backendToken = null,
+        public string|int|null $backendUser = null,
+        public array $backendHeaders = [],
+        public bool $trace = false,
+        public array $options = []
     ) {
     }
 }

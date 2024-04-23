@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Backends\Common;
 
 use App\Libs\Entity\StateInterface;
+use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
@@ -199,6 +200,26 @@ interface ClientInterface
      * @return array
      */
     public function listLibraries(array $opts = []): array;
+
+    /**
+     * Parse client specific options from request.
+     *
+     * @param array $config The already pre-filled config.
+     * @param ServerRequestInterface $request request to parse.
+     *
+     * @return array Return updated config.
+     */
+    public function fromRequest(array $config, ServerRequestInterface $request): array;
+
+    /**
+     * Validate backend context.
+     *
+     * @param Context $context context to validate.
+     *
+     * @return bool Returns true if context is valid.
+     * @throws InvalidContextException if unable to validate context.
+     */
+    public function validateContext(Context $context): bool;
 
     /**
      * Add/Edit Backend.

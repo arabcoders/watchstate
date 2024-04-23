@@ -6,23 +6,25 @@ namespace App\API\Backends;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\HTTP_STATUS;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use App\Libs\Traits\APITraits;
+use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 
-#[Get(self::URL . '/{id:[a-zA-Z0-9_-]+}[/]', name: 'backends.view')]
 final class View
 {
-    public const URL = '%{api.prefix}/backends';
+    use APITraits;
 
-    public function __invoke(ServerRequestInterface $request, array $args = []): ResponseInterface
+    #[Get(Index::URL . '/{id:backend}[/]', name: 'backends.view')]
+    public function backendsView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $data = Index::getBackends(name: $id, blacklist: true);
+        $data = $this->getBackends(name: $id);
+
         if (empty($data)) {
-            return api_error('Backend not found.', HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{backend}' not found.", ['backend ' => $id]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
@@ -32,11 +34,10 @@ final class View
             ...$data,
             'links' => [
                 'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(self::URL)),
+                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
             ],
         ];
 
         return api_response(HTTP_STATUS::HTTP_OK, ['backend' => $response]);
     }
-
 }

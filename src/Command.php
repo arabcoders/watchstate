@@ -6,6 +6,7 @@ namespace App;
 
 use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Exceptions\RuntimeException;
 use Closure;
 use DirectoryIterator;
@@ -31,7 +32,7 @@ class Command extends BaseCommand
      *
      * @var array<string>
      */
-    public const DISPLAY_OUTPUT = [
+    public const array DISPLAY_OUTPUT = [
         'table',
         'json',
         'yaml',
@@ -211,11 +212,13 @@ class Command extends BaseCommand
      */
     protected function getBackend(string $name, array $config = []): iClient
     {
-        if (null === Config::get("servers.{$name}.type", null)) {
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+
+        if (null === $configFile->get("{$name}.type", null)) {
             throw new RuntimeException(r('No backend named [{backend}] was found.', ['backend' => $name]));
         }
 
-        $default = Config::get("servers.{$name}");
+        $default = $configFile->get($name);
         $default['name'] = $name;
 
         return makeBackend(array_replace_recursive($default, $config), $name);
