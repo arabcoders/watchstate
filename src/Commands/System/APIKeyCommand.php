@@ -7,7 +7,7 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Stream;
+use App\Libs\EnvFile;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -80,32 +80,10 @@ final class APIKeyCommand extends Command
             $output->writeln('<comment>' . $oldKey . '</comment>');
         }
 
-        $envFile = fixPath(Config::get('path') . '/config/.env');
+        $envFile = new EnvFile(fixPath(Config::get('path') . '/config/.env'), true);
+        $envFile->set('WS_API_KEY', $apiKey)->persist();
 
-        if (!file_exists($envFile)) {
-            $stream = Stream::make($envFile, 'w');
-            $stream->write(r('API_KEY="{key}"', ['key' => $apiKey]) . PHP_EOL);
-            $stream->close();
-            return self::SUCCESS;
-        }
-
-        $lines = file($envFile, FILE_IGNORE_NEW_LINES);
-        $newFile = [];
-
-        foreach ($lines as $line) {
-            if (true === str_starts_with(strtoupper($line), 'WS_API_KEY=')) {
-                continue;
-            }
-            $newFile[] = $line;
-        }
-
-        $newFile[] = r('WS_API_KEY={key}', ['key' => $apiKey]);
-
-        $stream = Stream::make($envFile, 'w');
-        $stream->write(implode(PHP_EOL, $newFile) . PHP_EOL);
-        $stream->close();
-
-        $output->writeln(r("<info>API key has been added to '{file}'.</info>", ['file' => $envFile]));
+        $output->writeln(r("<info>API key has been added to '{file}'.</info>", ['file' => $envFile->file]));
 
         return self::SUCCESS;
     }
