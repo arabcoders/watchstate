@@ -18,6 +18,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 /**
@@ -64,6 +65,10 @@ final class ParseWebhook
         'playback.start',
         'library.new'
     ];
+
+    public function __construct(private iLogger $logger)
+    {
+    }
 
     /**
      * Wrap the parser in try response block.
@@ -231,7 +236,7 @@ final class ParseWebhook
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] = $path;
             }
 
-            if (false === $isPlayed && null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null))) {
+            if (null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null)) && 0 === $isPlayed) {
                 // -- Convert to milliseconds.
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
                     $progress / 1_00_00

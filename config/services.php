@@ -19,7 +19,6 @@ use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use Monolog\Logger;
 use Psr\Http\Message\UriInterface;
-use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
@@ -39,7 +38,7 @@ return (function (): array {
         ],
 
         HttpClientInterface::class => [
-            'class' => function (LoggerInterface $logger): HttpClientInterface {
+            'class' => function (iLogger $logger): HttpClientInterface {
                 $instance = new HttpClient(
                     new CurlHttpClient(
                         defaultOptions: Config::get('http.default.options', []),
