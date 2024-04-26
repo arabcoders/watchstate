@@ -22,7 +22,7 @@ final class EnvCommand extends Command
 {
     public const string ROUTE = 'system:env';
 
-    private const array EXEMPT_KEYS = ['HTTP_PORT', 'TZ'];
+    public const array EXEMPT_KEYS = ['HTTP_PORT', 'TZ'];
 
     /**
      * Configure the command.
