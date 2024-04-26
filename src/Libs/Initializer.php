@@ -484,17 +484,19 @@ final class Initializer
             $cache->set('progress', $progress, new DateInterval('P1D'));
         }
 
-        $this->write($request, Level::Info, 'Queued [{backend}] {item.type} [{item.title}].', [
-            'backend' => $entity->via,
-            'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
-            'item' => [
-                'title' => $entity->getName(),
-                'type' => $entity->type,
-                'played' => $entity->isWatched() ? 'Yes' : 'No',
-                'queue_id' => $itemId,
-                'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
+        $this->write($request, Level::Info, 'Queued [{backend}: {event}] {item.type} [{item.title}].', [
+                'backend' => $entity->via,
+                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
+                'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+                'item' => [
+                    'title' => $entity->getName(),
+                    'type' => $entity->type,
+                    'played' => $entity->isWatched() ? 'Yes' : 'No',
+                    'queue_id' => $itemId,
+                    'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
+                ]
             ]
-        ]);
+        );
 
         return api_response(HTTP_STATUS::HTTP_OK);
     }
