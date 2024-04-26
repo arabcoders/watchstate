@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Last update: 2023-12-12
+ * Last update: 2024-04-26
  *
  * servers.yaml backend spec.
  * This file defines the backend spec.
@@ -30,5 +30,6 @@ return [
     'options.IMPORT_METADATA_ONLY' => false,
     'options.DRY_RUN' => false,
     'options.client.timeout' => false,
+    'options.use_old_progress_endpoint' => false,
 ];
 

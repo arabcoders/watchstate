@@ -38,14 +38,14 @@ final class ParseWebhook
     /**
      * @var array<string> Supported entity types.
      */
-    protected const WEBHOOK_ALLOWED_TYPES = [
+    protected const array WEBHOOK_ALLOWED_TYPES = [
         EmbyClient::TYPE_MOVIE,
         EmbyClient::TYPE_EPISODE,
     ];
     /**
      * @var array<string> Supported webhook events.
      */
-    protected const WEBHOOK_ALLOWED_EVENTS = [
+    protected const array WEBHOOK_ALLOWED_EVENTS = [
         'item.markplayed',
         'item.markunplayed',
         'playback.scrobble',
@@ -58,7 +58,7 @@ final class ParseWebhook
     /**
      * @var array<string> Events that should be marked as tainted.
      */
-    protected const WEBHOOK_TAINTED_EVENTS = [
+    protected const array WEBHOOK_TAINTED_EVENTS = [
         'playback.pause',
         'playback.unpause',
         'playback.start',
