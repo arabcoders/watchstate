@@ -11,6 +11,8 @@ use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Stream;
 use Cron\CronExpression;
 use Exception;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -28,7 +30,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class TasksCommand extends Command
 {
-    public const ROUTE = 'system:tasks';
+    public const string ROUTE = 'system:tasks';
 
     private array $logs = [];
     private array $taskOutput = [];
@@ -36,7 +38,7 @@ final class TasksCommand extends Command
     /**
      * Class Constructor.
      */
-    public function __construct()
+    public function __construct(private readonly iCache $cache)
     {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -128,6 +130,7 @@ final class TasksCommand extends Command
      * @param iOutput $output The output instance.
      *
      * @return int Returns the exit code of the command.
+     * @throws InvalidArgumentException if cache key name is invalid.
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
@@ -162,6 +165,7 @@ final class TasksCommand extends Command
      * @param iOutput $output The output object.
      *
      * @return int The exit code of the command.
+     * @throws InvalidArgumentException if cache key name is invalid.
      */
     private function runTasks(iInput $input, iOutput $output): int
     {
@@ -182,6 +186,21 @@ final class TasksCommand extends Command
             }
 
             $run[] = ag($tasks, $task);
+        } elseif (null !== ($queued = $this->cache->get('queued_tasks', null))) {
+            foreach ($queued as $taskName) {
+                $task = strtolower($taskName);
+                if (false === ag_exists($tasks, $task)) {
+                    $output->writeln(
+                        r('<error>There are no task named [{task}].</error>', [
+                            'task' => $task
+                        ])
+                    );
+                    continue;
+                }
+
+                $run[] = ag($tasks, $task);
+            }
+            $this->cache->delete('queued_tasks');
         } else {
             foreach ($tasks as $task) {
                 if (false === (bool)ag($task, 'enabled')) {

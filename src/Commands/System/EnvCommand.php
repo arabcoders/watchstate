@@ -7,8 +7,10 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use App\Libs\EnvFile;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 
 /**
  * Class EnvCommand
@@ -18,9 +20,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class EnvCommand extends Command
 {
-    public const ROUTE = 'system:env';
+    public const string ROUTE = 'system:env';
 
-    private const EXEMPT_KEYS = ['HTTP_PORT', 'TZ'];
+    private const array EXEMPT_KEYS = ['HTTP_PORT', 'TZ'];
 
     /**
      * Configure the command.
@@ -28,12 +30,22 @@ final class EnvCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
-            ->setDescription('Show loaded environment variables.')
+            ->setDescription('Show/edit environment variables.')
+            ->addOption(
+                'envfile',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Environment file.',
+                Config::get('path') . '/config/.env'
+            )
+            ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
+            ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
+            ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete key.')
             ->setHelp(
                 r(
                     <<<HELP
 
-                    This command display the environment variables that was loaded execution of the tool.
+                    This command display the environment variables that was loaded during execution of the tool.
 
                     -------------------------------
                     <notice>[ Environment variables rules ]</notice>
@@ -93,13 +105,16 @@ final class EnvCommand extends Command
     /**
      * Run the command.
      *
-     * @param InputInterface $input The input interface.
-     * @param OutputInterface $output The output interface.
+     * @param iInput $input The input interface.
+     * @param iOutput $output The output interface.
      *
      * @return int The exit code.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
+        if ($input->getOption('key')) {
+            return $this->handleEnvUpdate($input, $output);
+        }
         $mode = $input->getOption('output');
         $keys = [];
 
@@ -122,6 +137,38 @@ final class EnvCommand extends Command
         }
 
         $this->displayContent($keys, $output, $mode);
+
+        return self::SUCCESS;
+    }
+
+    private function handleEnvUpdate(iInput $input, iOutput $output): int
+    {
+        $key = strtoupper($input->getOption('key'));
+
+        if (false === str_starts_with($key, 'WS_')) {
+            $output->writeln(r("<error>Invalid key '{key}'. Key must start with 'WS_'.</error>", ['key' => $key]));
+            return self::FAILURE;
+        }
+
+        if (!$input->getOption('set') && !$input->getOption('delete')) {
+            $output->writeln((string)env($key, ''));
+            return self::SUCCESS;
+        }
+
+        $envFile = new EnvFile($input->getOption('envfile'), create: true);
+
+        if (true === (bool)$input->getOption('delete')) {
+            $envFile->remove($key);
+        } else {
+            $envFile->set($key, $input->getOption('set'));
+        }
+
+        $output->writeln(r("<info>Key '{key}' {operation} successfully.</info>", [
+            'key' => $key,
+            'operation' => (true === (bool)$input->getOption('delete')) ? 'deleted' : 'updated'
+        ]));
+
+        $envFile->persist();
 
         return self::SUCCESS;
     }

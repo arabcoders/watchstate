@@ -492,6 +492,7 @@ final class Initializer
                 'type' => $entity->type,
                 'played' => $entity->isWatched() ? 'Yes' : 'No',
                 'queue_id' => $itemId,
+                'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
             ]
         ]);
 
@@ -766,7 +767,7 @@ final class Initializer
         }
     }
 
-    private function formatLog(iRequest $request, ResponseInterface $response, string|null $message = null)
+    private function formatLog(iRequest $request, ResponseInterface $response, string|null $message = null): string
     {
         $refer = '-';
 

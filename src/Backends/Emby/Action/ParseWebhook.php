@@ -18,6 +18,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 /**
@@ -38,14 +39,14 @@ final class ParseWebhook
     /**
      * @var array<string> Supported entity types.
      */
-    protected const WEBHOOK_ALLOWED_TYPES = [
+    protected const array WEBHOOK_ALLOWED_TYPES = [
         EmbyClient::TYPE_MOVIE,
         EmbyClient::TYPE_EPISODE,
     ];
     /**
      * @var array<string> Supported webhook events.
      */
-    protected const WEBHOOK_ALLOWED_EVENTS = [
+    protected const array WEBHOOK_ALLOWED_EVENTS = [
         'item.markplayed',
         'item.markunplayed',
         'playback.scrobble',
@@ -58,12 +59,16 @@ final class ParseWebhook
     /**
      * @var array<string> Events that should be marked as tainted.
      */
-    protected const WEBHOOK_TAINTED_EVENTS = [
+    protected const array WEBHOOK_TAINTED_EVENTS = [
         'playback.pause',
         'playback.unpause',
         'playback.start',
         'library.new'
     ];
+
+    public function __construct(private iLogger $logger)
+    {
+    }
 
     /**
      * Wrap the parser in try response block.
@@ -231,7 +236,7 @@ final class ParseWebhook
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_PATH] = $path;
             }
 
-            if (false === $isPlayed && null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null))) {
+            if (null !== ($progress = ag($json, 'PlaybackInfo.PositionTicks', null)) && 0 === $isPlayed) {
                 // -- Convert to milliseconds.
                 $fields[iState::COLUMN_META_DATA][$context->backendName][iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
                     $progress / 1_00_00

@@ -31,6 +31,7 @@ final class Options
     public const string NO_LOGGING = 'NO_LOGGING';
     public const string MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';
     public const string IGNORE = 'ignore';
+    public const string PLEX_USE_OLD_PROGRESS_ENDPOINT = 'use_old_progress_endpoint';
 
     private function __construct()
     {
