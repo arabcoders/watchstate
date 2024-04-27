@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\API\Backends\Webhooks;
 use App\Cli;
-use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
-use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Extends\ConsoleHandler;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\RouterStrategy;
 use Closure;
-use DateInterval;
 use ErrorException;
 use League\Route\Http\Exception as RouterHttpException;
 use League\Route\RouteGroup;
@@ -179,7 +177,7 @@ final class Initializer
     }
 
     /**
-     * Run the application in HTTP Context.
+     * Run the application in HTTP context.
      *
      * @param iRequest|null $request If null, the request will be created from globals.
      * @param callable(iResponse):void|null $emitter If null, the emitter will be created from globals.
@@ -229,20 +227,18 @@ final class Initializer
     }
 
     /**
-     * Handle HTTP requests and process webhooks.
+     * Proxy API requests to the API server, and handle old style webhooks.
+     * into the new API server.
      *
-     * @param iRequest $realRequest The incoming HTTP request.
+     * @param iRequest $request The incoming HTTP request.
      *
      * @return iResponse The HTTP response.
-     *
      * @throws \Psr\SimpleCache\InvalidArgumentException If cache key is illegal.
      */
-    private function defaultHttpServer(iRequest $realRequest): iResponse
+    private function defaultHttpServer(iRequest $request): iResponse
     {
-        $log = $backend = [];
-        $class = null;
+        $backend = [];
 
-        $request = $realRequest;
         $requestPath = $request->getUri()->getPath();
 
         // -- health endpoint.
@@ -260,30 +256,21 @@ final class Initializer
 
         // -- Forward requests to API server.
         if (true === str_starts_with($requestPath, Config::get('api.prefix', '????'))) {
-            return $this->defaultAPIServer(clone $realRequest);
+            return $this->defaultAPIServer(clone $request);
         }
 
-        // -- Save request payload.
-        if (true === Config::get('webhook.dumpRequest')) {
-            saveRequestPayload(clone $realRequest);
-        }
-
-        $apikey = ag($realRequest->getQueryParams(), 'apikey', $realRequest->getHeaderLine('x-apikey'));
+        $apikey = ag($request->getQueryParams(), 'apikey', $request->getHeaderLine('x-apikey'));
 
         if (empty($apikey)) {
             $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
-            $this->write(
-                $request,
-                Level::Info,
-                $this->formatLog($request, $response, 'No webhook token was found in header or query.')
-            );
+            $this->write($request, Level::Info, $this->formatLog($request, $response, 'No webhook token was found.'));
             return $response;
         }
 
-        $validUser = $validUUid = null;
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
 
         // -- Find Relevant backend.
-        foreach (Config::get('servers', []) as $name => $info) {
+        foreach ($configFile->getAll() as $name => $info) {
             if (null === ag($info, 'webhook.token')) {
                 continue;
             }
@@ -292,213 +279,25 @@ final class Initializer
                 continue;
             }
 
-            try {
-                $class = makeBackend($info, $name);
-            } catch (InvalidArgumentException $e) {
-                $this->write(
-                    request: $request,
-                    level: Level::Error,
-                    message: 'Exception [{error.kind}] was thrown unhandled in [{backend}] instance creation. Error [{error.message} @ {error.file}:{error.line}].',
-                    context: [
-                        'backend' => $name,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ]
-                    ]
-                );
-                continue;
-            }
-
-            $request = $class->processRequest(clone $realRequest);
-            $attr = $request->getAttributes();
-
-            if (null !== ($userId = ag($info, 'user', null)) && true === (bool)ag($info, 'webhook.match.user')) {
-                if (null === ($requestUser = ag($attr, 'user.id'))) {
-                    $validUser = false;
-                    $backend = $class = null;
-                    $log[] = 'Request user is not set';
-                    continue;
-                }
-
-                if (false === hash_equals((string)$userId, (string)$requestUser)) {
-                    $validUser = false;
-                    $backend = $class = null;
-                    $log[] = r('Request user id [{req_user}] does not match configured value [{config_user}]', [
-                        'req_user' => $requestUser ?? 'NOT SET',
-                        'config_user' => $userId,
-                    ]);
-                    continue;
-                }
-
-                $validUser = true;
-            }
-
-            if (null !== ($uuid = ag($info, 'uuid', null)) && true === (bool)ag($info, 'webhook.match.uuid')) {
-                if (null === ($requestBackendId = ag($attr, 'backend.id'))) {
-                    $validUUid = false;
-                    $backend = $class = null;
-                    $log[] = 'backend unique id is not set';
-                    continue;
-                }
-
-                if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
-                    $validUUid = false;
-                    $backend = $class = null;
-                    $log[] = r('Request backend unique id [{req_uid}] does not match backend uuid [{config_uid}].', [
-                        'req_uid' => $requestBackendId ?? 'NOT SET',
-                        'config_uid' => $uuid,
-                    ]);
-                    continue;
-                }
-
-                $validUUid = true;
-            }
-
-            $backend = array_replace_recursive(['name' => $name], $info);
+            $info['name'] = $name;
+            $backend = $info;
             break;
         }
 
-        if (empty($backend) || null === $class) {
-            if (false === $validUser) {
-                $loglevel = Level::Debug;
-                $message = 'token is valid, User matching failed.';
-            } elseif (false === $validUUid) {
-                $message = 'token and user are valid. Backend unique id matching failed.';
-            } else {
-                $message = 'Invalid token was given.';
-            }
-
+        if (empty($backend)) {
             $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
-
-            $this->write(
-                $request,
-                $loglevel ?? Level::Error,
-                $this->formatLog($request, $response, $message),
-                ['messages' => $log, 'attr' => $attr ?? []],
-                forceContext: true
-            );
-
+            $this->write($request, Level::Info, $this->formatLog($request, $response, 'Invalid token was given.'));
             return $response;
         }
 
-        // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-        if (true === (bool)ag($backend, 'import.enabled')) {
-            if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-            }
-        }
-
-        $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-
-        if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
-            $response = api_response(HTTP_STATUS::HTTP_NOT_ACCEPTABLE);
-            $this->write(
-                $request,
-                Level::Error,
-                $this->formatLog($request, $response, 'Import are disabled for [{backend}].'),
-                [
-                    'backend' => $class->getName(),
-                ],
-                forceContext: true
-            );
-
-            return $response;
-        }
-
-        $entity = $class->parseWebhook($request);
-
-        // -- Dump Webhook context.
-        if (true === (bool)ag($backend, 'options.' . Options::DUMP_PAYLOAD)) {
-            saveWebhookPayload($entity, $request);
-        }
-
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->write(
-                $request,
-                Level::Info,
-                'Ignoring [{backend}] {item.type} [{item.title}]. No valid/supported external ids.',
-                [
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                    ],
-                ]
-            );
-
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
-        }
-
-        if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
-            $this->write(
-                $request,
-                Level::Notice,
-                'Ignoring [{backend}] {item.type} [{item.title}]. No episode/season number present.',
-                [
-                    'backend' => $entity->via,
-                    'item' => [
-                        'title' => $entity->getName(),
-                        'type' => $entity->type,
-                        'season' => (string)($entity->season ?? 'None'),
-                        'episode' => (string)($entity->episode ?? 'None'),
-                    ]
-                ]
-            );
-
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
-        }
-
-        $cache = Container::get(CacheInterface::class);
-
-        $items = $cache->get('requests', []);
-
-        $itemId = r('{type}://{id}:{tainted}@{backend}', [
-            'type' => $entity->type,
-            'backend' => $entity->via,
-            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-        ]);
-
-        $items[$itemId] = [
-            'options' => [
-                Options::IMPORT_METADATA_ONLY => $metadataOnly,
-            ],
-            'entity' => $entity,
-        ];
-
-        $cache->set('requests', $items, new DateInterval('P3D'));
-
-        if (false === $metadataOnly && true === $entity->hasPlayProgress()) {
-            $progress = $cache->get('progress', []);
-            $progress[$itemId] = $entity;
-            $cache->set('progress', $progress, new DateInterval('P1D'));
-        }
-
-        $this->write($request, Level::Info, 'Queued [{backend}: {event}] {item.type} [{item.title}].', [
-                'backend' => $entity->via,
-                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
-                'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
-                'item' => [
-                    'title' => $entity->getName(),
-                    'type' => $entity->type,
-                    'played' => $entity->isWatched() ? 'Yes' : 'No',
-                    'queue_id' => $itemId,
-                    'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
-                ]
+        $uri = r('/v1/api/backends/{backend}/webhook', ['backend' => ag($backend, 'name')]);
+        return Container::get(Webhooks::class)(
+            $request->withUri($request->getUri()->withPath($uri)->withQuery(''))
+                ->withHeader('Authorization', 'Bearer ' . Config::get('api.key'))->withoutHeader('X-Apikey'),
+            [
+                'name' => $backend['name']
             ]
         );
-
-        return api_response(HTTP_STATUS::HTTP_OK);
     }
 
     /**

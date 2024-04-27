@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Webhooks;
+namespace App\API\Backends;
 
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
@@ -20,18 +20,16 @@ use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 
-final class Index
+final class Webhooks
 {
     use APITraits;
 
-    public const string URL = '%{api.prefix}/webhooks';
-
     private iLogger $accesslog;
 
-    public function __construct(private CacheInterface $cache)
+    public function __construct(private iCache $cache)
     {
         $this->accesslog = new Logger(name: 'http', processors: [new LogMessageProcessor()]);
 
@@ -55,7 +53,7 @@ final class Index
      * @return iResponse The response object.
      * @throws InvalidArgumentException if cache key is invalid.
      */
-    #[Route(['POST', 'PUT'], self::URL . '/{name:backend}[/]', name: 'webhooks.receive')]
+    #[Route(['POST', 'PUT'], Index::URL . '/{name:backend}/webhook[/]', name: 'webhooks.receive')]
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
