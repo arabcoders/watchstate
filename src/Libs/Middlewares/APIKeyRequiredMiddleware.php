@@ -16,11 +16,23 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
 {
     public const string KEY_NAME = 'apikey';
 
+    private const array OPEN_ROUTES = [
+        \App\API\Webhooks\Index::URL,
+        \App\API\System\HealthCheck::URL,
+    ];
+
     /**
      * @throws RandomException if random_bytes() fails
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        foreach (self::OPEN_ROUTES as $route) {
+            $route = parseConfigValue($route);
+            if (true === str_starts_with($request->getUri()->getPath(), parseConfigValue($route))) {
+                return $handler->handle($request);
+            }
+        }
+
         $headerApiKey = $request->getHeaderLine('x-' . self::KEY_NAME);
 
         if (!empty($headerApiKey)) {
