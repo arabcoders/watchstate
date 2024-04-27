@@ -341,11 +341,7 @@ $ docker exec -ti watchstate console system:tasks
 ### How to add webhooks?
 
 To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be
-like this:
-
-Directly to container: `http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
-
-Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
+like this: `http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`, or via reverse proxy `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
 
 If your media backend support sending headers then remove query parameter `?apikey=[WEBHOOK_TOKEN]`, and add this header
 
@@ -398,6 +394,10 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 * Select libraries that you want to sync or leave it blank for all libraries.
 
 Click `Add Webhook`
+
+> [!NOTE]
+> Emby version 4.9 replaced webhooks with Notification system, the system is somewhat similar to webhooks,
+> There is an extra option called `Request content type` you should set it to `application/json`.
 
 -----
 

@@ -25,7 +25,7 @@ use Monolog\Logger;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7Server\ServerRequestCreator;
-use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -182,8 +182,8 @@ final class Initializer
      * Run the application in HTTP Context.
      *
      * @param iRequest|null $request If null, the request will be created from globals.
-     * @param callable(ResponseInterface):void|null $emitter If null, the emitter will be created from globals.
-     * @param null|Closure(iRequest): ResponseInterface $fn If null, the default HTTP server will be used.
+     * @param callable(iResponse):void|null $emitter If null, the emitter will be created from globals.
+     * @param null|Closure(iRequest): iResponse $fn If null, the default HTTP server will be used.
      */
     public function http(iRequest|null $request = null, callable|null $emitter = null, Closure|null $fn = null): void
     {
@@ -200,12 +200,12 @@ final class Initializer
                 $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
             }
 
-            if ($response->hasHeader('X-Log-Response')) {
+            if (true === (bool)$response->getHeaderLine('X-Log-Response')) {
                 $this->write($request, Level::Info, $this->formatLog($request, $response));
                 $response = $response->withoutHeader('X-Log-Response');
             }
         } catch (Throwable $e) {
-            $httpException = (true === ($e instanceof HttpException));
+            $httpException = true === ($e instanceof HttpException);
 
             if (false === $httpException || $e->getCode() !== 200) {
                 Container::get(LoggerInterface::class)->error(
@@ -233,11 +233,11 @@ final class Initializer
      *
      * @param iRequest $realRequest The incoming HTTP request.
      *
-     * @return ResponseInterface The HTTP response.
+     * @return iResponse The HTTP response.
      *
-     * @throws \Psr\SimpleCache\InvalidArgumentException If an error occurs.
+     * @throws \Psr\SimpleCache\InvalidArgumentException If cache key is illegal.
      */
-    private function defaultHttpServer(iRequest $realRequest): ResponseInterface
+    private function defaultHttpServer(iRequest $realRequest): iResponse
     {
         $log = $backend = [];
         $class = null;
@@ -506,11 +506,11 @@ final class Initializer
      *
      * @param iRequest $realRequest The incoming HTTP request.
      *
-     * @return ResponseInterface The HTTP response.
+     * @return iResponse The HTTP response.
      *
      * @throws \Psr\SimpleCache\InvalidArgumentException If an error occurs.
      */
-    private function defaultAPIServer(iRequest $realRequest): ResponseInterface
+    private function defaultAPIServer(iRequest $realRequest): iResponse
     {
         $router = new APIRouter();
         foreach (Config::get('api.pattern_match', []) as $_key => $_value) {
@@ -566,7 +566,11 @@ final class Initializer
         })();
 
         try {
-            return $router->dispatch($realRequest)->withHeader('X-Log-Response', '1');
+            $response = $router->dispatch($realRequest);
+            if (!$response->hasHeader('X-Log-Response')) {
+                $response = $response->withHeader('X-Log-Response', '1');
+            }
+            return $response;
         } /** @noinspection PhpRedundantCatchClauseInspection */
         catch (RouterHttpException $e) {
             throw new HttpException($e->getMessage(), $e->getStatusCode());
@@ -769,7 +773,7 @@ final class Initializer
         }
     }
 
-    private function formatLog(iRequest $request, ResponseInterface $response, string|null $message = null): string
+    private function formatLog(iRequest $request, iResponse $response, string|null $message = null): string
     {
         $refer = '-';
 
