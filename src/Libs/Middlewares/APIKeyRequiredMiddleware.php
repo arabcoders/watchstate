@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Middlewares;
 
+use App\API\System\HealthCheck;
 use App\Libs\Config;
 use App\Libs\HTTP_STATUS;
 use Psr\Http\Message\ResponseInterface;
@@ -17,8 +18,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
     public const string KEY_NAME = 'apikey';
 
     private const array OPEN_ROUTES = [
-        \App\API\Webhooks\Index::URL,
-        \App\API\System\HealthCheck::URL,
+        HealthCheck::URL,
     ];
 
     /**
