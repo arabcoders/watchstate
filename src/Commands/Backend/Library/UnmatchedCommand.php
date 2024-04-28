@@ -21,9 +21,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class UnmatchedCommand extends Command
 {
-    public const ROUTE = 'backend:library:unmatched';
+    public const string ROUTE = 'backend:library:unmatched';
 
-    private const CUTOFF = 30;
+    private const int CUTOFF = 30;
 
     /**
      * Configures the command.
@@ -99,11 +99,11 @@ final class UnmatchedCommand extends Command
         $backendOpts = $opts = $list = [];
 
         if ($input->getOption('timeout')) {
-            $backendOpts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
+            $backendOpts = ag_set($backendOpts, 'client.timeout', (float)$input->getOption('timeout'));
         }
 
         if ($input->getOption('trace')) {
-            $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
+            $backendOpts = ag_set($backendOpts, 'options.' . Options::DEBUG_TRACE, true);
         }
 
         if ($input->getOption('include-raw-response')) {
