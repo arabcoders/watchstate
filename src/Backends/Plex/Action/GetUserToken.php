@@ -228,7 +228,7 @@ final class GetUserToken
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
+                            'trace' => $e->getTrace(),
                         ],
                     ],
                     level: Levels::ERROR

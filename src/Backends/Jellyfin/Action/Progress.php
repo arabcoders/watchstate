@@ -33,7 +33,7 @@ class Progress
     /**
      * @var int Default time drift in seconds.
      */
-    private const DEFAULT_TIME_DRIFT = 30;
+    private const int DEFAULT_TIME_DRIFT = 30;
 
     /**
      * @var string Action name.
@@ -248,7 +248,7 @@ class Progress
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
+                            'trace' => $e->getTrace(),
                         ],
                     ]
                 );
@@ -316,7 +316,7 @@ class Progress
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
+                            'trace' => $e->getTrace(),
                         ],
                     ]
                 );

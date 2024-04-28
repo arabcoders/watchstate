@@ -37,7 +37,7 @@ final class ParseWebhook
     /**
      * @var array<string> Supported entity types.
      */
-    protected const WEBHOOK_ALLOWED_TYPES = [
+    protected const array WEBHOOK_ALLOWED_TYPES = [
         JFC::TYPE_MOVIE,
         JFC::TYPE_EPISODE,
     ];
@@ -45,7 +45,7 @@ final class ParseWebhook
     /**
      * @var array<string> Supported webhook events.
      */
-    protected const WEBHOOK_ALLOWED_EVENTS = [
+    protected const array WEBHOOK_ALLOWED_EVENTS = [
         'ItemAdded',
         'UserDataSaved',
         'PlaybackStart',
@@ -55,7 +55,7 @@ final class ParseWebhook
     /**
      * @var array<string> Events that should be marked as tainted.
      */
-    protected const WEBHOOK_TAINTED_EVENTS = [
+    protected const array WEBHOOK_TAINTED_EVENTS = [
         'PlaybackStart',
         'PlaybackStop',
         'ItemAdded',
@@ -258,7 +258,7 @@ final class ParseWebhook
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
+                            'trace' => $e->getTrace(),
                         ],
                         'context' => [
                             'attributes' => $request->getAttributes(),

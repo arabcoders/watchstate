@@ -15,7 +15,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<string,string> Map plex guids to our guids.
      */
-    private const GUID_MAPPER = [
+    private const array GUID_MAPPER = [
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
         'tvdb' => Guid::GUID_TVDB,
@@ -29,7 +29,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<array-key,string> List of legacy plex agents.
      */
-    private const GUID_LEGACY = [
+    private const array GUID_LEGACY = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
         'com.plexapp.agents.themoviedb',
@@ -44,7 +44,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<array-key,string> List of local plex agents.
      */
-    private const GUID_LOCAL = [
+    private const array GUID_LOCAL = [
         'plex',
         'local',
         'com.plexapp.agents.none',
@@ -53,7 +53,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<string,string> Map guids to their replacement.
      */
-    private const GUID_LEGACY_REPLACER = [
+    private const array GUID_LEGACY_REPLACER = [
         'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
         'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
         'com.plexapp.agents.thetvdb://' => 'com.plexapp.agents.tvdb://',
@@ -238,7 +238,7 @@ final class PlexGuid implements iGuid
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
-                                'trace' => $this->context->trace ? $e->getTrace() : [],
+                                'trace' => $e->getTrace(),
                             ],
                             ...$context,
                         ]
@@ -309,7 +309,7 @@ final class PlexGuid implements iGuid
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
-                            'trace' => $this->context->trace ? $e->getTrace() : [],
+                            'trace' => $e->getTrace(),
                         ],
                         ...$context,
                     ]

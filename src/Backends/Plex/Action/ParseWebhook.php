@@ -24,12 +24,12 @@ final class ParseWebhook
     use CommonTrait;
     use PlexActionTrait;
 
-    protected const WEBHOOK_ALLOWED_TYPES = [
+    protected const array WEBHOOK_ALLOWED_TYPES = [
         PlexClient::TYPE_MOVIE,
         PlexClient::TYPE_EPISODE,
     ];
 
-    protected const WEBHOOK_ALLOWED_EVENTS = [
+    protected const array WEBHOOK_ALLOWED_EVENTS = [
         'library.new',
         'library.on.deck',
         'media.play',
@@ -39,7 +39,7 @@ final class ParseWebhook
         'media.scrobble',
     ];
 
-    protected const WEBHOOK_TAINTED_EVENTS = [
+    protected const array WEBHOOK_TAINTED_EVENTS = [
         'media.play',
         'media.stop',
         'media.resume',
@@ -249,7 +249,7 @@ final class ParseWebhook
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
-                            'trace' => $context->trace ? $e->getTrace() : [],
+                            'trace' => $e->getTrace(),
                         ],
                         'context' => [
                             'attributes' => $request->getAttributes(),

@@ -12,7 +12,7 @@ use Throwable;
 
 class JellyfinGuid implements iGuid
 {
-    private const GUID_MAPPER = [
+    private const array GUID_MAPPER = [
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
         'tvdb' => Guid::GUID_TVDB,
@@ -122,7 +122,7 @@ class JellyfinGuid implements iGuid
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
-                                'trace' => $this->context->trace ? $e->getTrace() : [],
+                                'trace' => $e->getTrace(),
                             ],
                             ...$context,
                         ]
