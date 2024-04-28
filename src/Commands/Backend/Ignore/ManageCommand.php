@@ -9,7 +9,6 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
-use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Stream;
 use Symfony\Component\Console\Input\InputArgument;
@@ -25,7 +24,7 @@ use Symfony\Component\Yaml\Yaml;
 #[Cli(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
-    public const ROUTE = 'backend:ignore:manage';
+    public const string ROUTE = 'backend:ignore:manage';
 
     /**
      * Configure the command.
@@ -135,21 +134,21 @@ final class ManageCommand extends Command
 
         if ($input->getOption('remove')) {
             if (false === ag_exists($list, $id)) {
-                $output->writeln(sprintf('<error>Error: id \'%s\' is not ignored.</error>', $id));
+                $output->writeln(sprintf("<error>Error: id '%s' is not ignored.</error>", $id));
                 return self::FAILURE;
             }
             $list = ag_delete($list, $id);
 
-            $output->writeln(sprintf('<info>Removed: id \'%s\' from ignore list.</info>', $id));
+            $output->writeln(sprintf("<info>Removed: id '%s' from ignore list.</info>", $id));
         } else {
-            $this->checkGuid($id);
+            checkIgnoreRule($id);
 
             $id = makeIgnoreId($id);
 
             if (true === ag_exists($list, (string)$id)) {
                 $output->writeln(
                     r(
-                        '<comment>ERROR: Cannot add [{id}] as it\'s already exists. added at [{date}].</comment>',
+                        "<comment>ERROR: Cannot add [{id}] as it's already exists. added at [{date}].</comment>",
                         [
                             'id' => $id,
                             'date' => makeDate(ag($list, (string)$id))->format('Y-m-d H:i:s T'),
@@ -174,7 +173,7 @@ final class ManageCommand extends Command
             }
 
             $list = ag_set($list, (string)$id, time());
-            $output->writeln(sprintf('<info>Added: id \'%s\' to ignore list.</info>', $id));
+            $output->writeln(sprintf("<info>Added: id '%s' to ignore list.</info>", $id));
         }
 
         @copy($path, $path . '.bak');
@@ -184,69 +183,5 @@ final class ManageCommand extends Command
         $stream->close();
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Check if the given GUID is valid and meets the expected format.
-     *
-     * @param string $guid The GUID to check.
-     *
-     * @throws RuntimeException If any of the checks fail.
-     */
-    private function checkGuid(string $guid): void
-    {
-        $urlParts = parse_url($guid);
-
-        if (null === ($db = ag($urlParts, 'user'))) {
-            throw new RuntimeException('No db source was given.');
-        }
-
-        $sources = array_keys(Guid::getSupported());
-
-        if (false === in_array('guid_' . $db, $sources)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Invalid db source name \'%s\' was given. Expected values are \'%s\'.',
-                    $db,
-                    implode(', ', array_map(fn($f) => after($f, 'guid_'), $sources))
-                )
-            );
-        }
-
-        if (null === ($id = ag($urlParts, 'pass'))) {
-            throw new RuntimeException('No external id was given.');
-        }
-
-        Guid::validate($db, $id);
-
-        if (null === ($type = ag($urlParts, 'scheme'))) {
-            throw new RuntimeException('No type was given.');
-        }
-
-        if (false === in_array($type, iState::TYPES_LIST)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Invalid type \'%s\' was given. Expected values are \'%s\'.',
-                    $type,
-                    implode(', ', iState::TYPES_LIST)
-                )
-            );
-        }
-
-        if (null === ($backend = ag($urlParts, 'host'))) {
-            throw new RuntimeException('No backend was given.');
-        }
-
-        $backends = array_keys(Config::get('servers', []));
-
-        if (false === in_array($backend, $backends)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Invalid backend name \'%s\' was given. Expected values are \'%s\'.',
-                    $backend,
-                    implode(', ', $backends)
-                )
-            );
-        }
     }
 }
