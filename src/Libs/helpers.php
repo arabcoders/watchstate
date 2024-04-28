@@ -482,7 +482,7 @@ if (!function_exists('queuePush')) {
      */
     function queuePush(iState $entity, bool $remove = false): void
     {
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+        if (!$remove && !$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             return;
         }
 
