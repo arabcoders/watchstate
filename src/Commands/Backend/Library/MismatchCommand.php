@@ -23,16 +23,16 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class MismatchCommand extends Command
 {
-    public const ROUTE = 'backend:library:mismatch';
+    public const string ROUTE = 'backend:library:mismatch';
 
-    protected array $methods = [
+    public const array METHODS = [
         'similarity',
         'levenshtein',
     ];
 
-    private const DEFAULT_PERCENT = 50.0;
+    public const float DEFAULT_PERCENT = 50.0;
 
-    private const REMOVED_CHARS = [
+    public const array REMOVED_CHARS = [
         '?',
         ':',
         '(',
@@ -56,7 +56,7 @@ final class MismatchCommand extends Command
         '*',
     ];
 
-    private const CUTOFF = 30;
+    private const int CUTOFF = 30;
 
     /**
      * Configures the command.
@@ -71,8 +71,8 @@ final class MismatchCommand extends Command
                 'method',
                 'm',
                 InputOption::VALUE_OPTIONAL,
-                r('Comparison method. Can be [{list}].', ['list' => implode(', ', $this->methods)]),
-                $this->methods[0]
+                r('Comparison method. Can be [{list}].', ['list' => implode(', ', self::METHODS)]),
+                self::METHODS[0]
             )
             ->addOption(
                 'timeout',
@@ -130,9 +130,9 @@ final class MismatchCommand extends Command
                         'route' => self::ROUTE,
                         'methodsList' => implode(
                             ', ',
-                            array_map(fn($val) => '<value>' . $val . '</value>', $this->methods)
+                            array_map(fn($val) => '<value>' . $val . '</value>', self::METHODS)
                         ),
-                        'DefaultMethod' => $this->methods[0],
+                        'DefaultMethod' => self::METHODS[0],
                         'defaultPercent' => self::DEFAULT_PERCENT,
                         'removedList' => implode(
                             ', ',
@@ -264,7 +264,7 @@ final class MismatchCommand extends Command
      * @param string $method The method to use for comparison (similarity or levenshtein).
      * @return array The updated array item with comparison results.
      */
-    private function compare(array $item, string $method): array
+    public static function compare(array $item, string $method): array
     {
         if (empty($item)) {
             return [];
@@ -297,8 +297,8 @@ final class MismatchCommand extends Command
             foreach ($titles as $title) {
                 $isASCII = mb_detect_encoding($pathShort, 'ASCII') && mb_detect_encoding($title, 'ASCII');
 
-                $title = $toLower($this->formatName(name: $title), isASCII: $isASCII);
-                $pathShort = $toLower($this->formatName(name: $pathShort), isASCII: $isASCII);
+                $title = $toLower(self::formatName(name: $title), isASCII: $isASCII);
+                $pathShort = $toLower(self::formatName(name: $pathShort), isASCII: $isASCII);
 
                 if (1 === preg_match('/\((\d{4})\)/', basename($pathFull), $match)) {
                     $withYear = true;
@@ -317,11 +317,11 @@ final class MismatchCommand extends Command
                     similar_text($pathShort, $title, $similarity);
                     $levenshtein = levenshtein($pathShort, $title);
                 } else {
-                    $this->mb_similar_text($pathShort, $title, $similarity);
-                    $levenshtein = $this->mb_levenshtein($pathShort, $title);
+                    self::mb_similar_text($pathShort, $title, $similarity);
+                    $levenshtein = self::mb_levenshtein($pathShort, $title);
                 }
 
-                $levenshtein = $this->toPercentage($levenshtein, $pathShort, $title);
+                $levenshtein = self::toPercentage($levenshtein, $pathShort, $title);
 
                 switch ($method) {
                     default:
@@ -399,7 +399,7 @@ final class MismatchCommand extends Command
      *
      * @return string The formatted name.
      */
-    private function formatName(string $name): string
+    public static function formatName(string $name): string
     {
         $name = preg_replace('#[\[{].+?[]}]#', '', $name);
         return trim(preg_replace('/\s+/', ' ', str_replace(self::REMOVED_CHARS, ' ', $name)));
@@ -419,7 +419,7 @@ final class MismatchCommand extends Command
      *
      * @return int
      */
-    private function mb_similar_text(string $str1, string $str2, float|null &$percent = null): int
+    public static function mb_similar_text(string $str1, string $str2, float|null &$percent = null): int
     {
         if (0 === mb_strlen($str1) + mb_strlen($str2)) {
             $percent = 0.0;
@@ -455,10 +455,10 @@ final class MismatchCommand extends Command
         $similarity = $max;
         if ($similarity) {
             if ($pos1 && $pos2) {
-                $similarity += $this->mb_similar_text(mb_substr($str1, 0, $pos1), mb_substr($str2, 0, $pos2));
+                $similarity += self::mb_similar_text(mb_substr($str1, 0, $pos1), mb_substr($str2, 0, $pos2));
             }
             if (($pos1 + $max < $l1) && ($pos2 + $max < $l2)) {
-                $similarity += $this->mb_similar_text(
+                $similarity += self::mb_similar_text(
                     mb_substr($str1, $pos1 + $max, $l1 - $pos1 - $max),
                     mb_substr($str2, $pos2 + $max, $l2 - $pos2 - $max)
                 );
@@ -478,13 +478,13 @@ final class MismatchCommand extends Command
      *
      * @return int The Levenshtein distance between the two strings.
      */
-    private function mb_levenshtein(string $str1, string $str2): int
+    public static function mb_levenshtein(string $str1, string $str2): int
     {
         $length1 = mb_strlen($str1, 'UTF-8');
         $length2 = mb_strlen($str2, 'UTF-8');
 
         if ($length1 < $length2) {
-            return $this->mb_levenshtein($str2, $str1);
+            return self::mb_levenshtein($str2, $str1);
         }
 
         if (0 === $length1) {
@@ -525,7 +525,7 @@ final class MismatchCommand extends Command
      *
      * @return float The percentage value calculated based on the base value and the lengths of the strings.
      */
-    private function toPercentage(int $base, string $str1, string $str2, bool $isASCII = false): float
+    public static function toPercentage(int $base, string $str1, string $str2, bool $isASCII = false): float
     {
         $length = fn(string $text) => $isASCII ? mb_strlen($text, 'UTF-8') : strlen($text);
 

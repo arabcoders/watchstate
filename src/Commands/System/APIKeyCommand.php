@@ -43,16 +43,8 @@ final class APIKeyCommand extends Command
     protected function runCommand(iInput $input, iOutput $output): int
     {
         $regenerate = (bool)$input->getOption('regenerate');
-        if ($regenerate) {
+        if ($regenerate || null === ($apiKey = Config::get('api.key'))) {
             return $this->regenerate($output);
-        }
-
-        if (null === ($apiKey = Config::get('api.key'))) {
-            $output->writeln('<error>API key is not set.</error>');
-            $output->writeln(
-                '<info>Use the --regenerate option to generate a new API key to enable API & WebUI.</info>'
-            );
-            return self::FAILURE;
         }
 
         $output->writeln('<info>Current API key:</info>');

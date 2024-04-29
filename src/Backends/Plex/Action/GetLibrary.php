@@ -264,7 +264,7 @@ final class GetLibrary
                                 'line' => $e->getLine(),
                                 'kind' => get_class($e),
                                 'message' => $e->getMessage(),
-                                'trace' => $context->trace ? $e->getTrace() : [],
+                                'trace' => $e->getTrace(),
                             ],
                             ...$requestContext,
                         ],

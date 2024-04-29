@@ -8,10 +8,11 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Entity\StateInterface as iFace;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
+use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
 use App\Libs\Router;
@@ -303,11 +304,11 @@ if (!function_exists('saveWebhookPayload')) {
     /**
      * Save webhook payload to stream.
      *
-     * @param iFace $entity Entity object.
+     * @param iState $entity Entity object.
      * @param iRequest $request Request object.
      * @param iStream|null $file When given a stream, it will be used to write payload.
      */
-    function saveWebhookPayload(iFace $entity, iRequest $request, iStream|null $file = null): void
+    function saveWebhookPayload(iState $entity, iRequest $request, iStream|null $file = null): void
     {
         $content = [
             'request' => [
@@ -476,12 +477,12 @@ if (!function_exists('queuePush')) {
      *
      * This method adds the entity to the queue for further processing.
      *
-     * @param iFace $entity The entity to push to the queue.
+     * @param iState $entity The entity to push to the queue.
      * @param bool $remove (optional) Whether to remove the entity from the queue if it already exists (default is false).
      */
-    function queuePush(iFace $entity, bool $remove = false): void
+    function queuePush(iState $entity, bool $remove = false): void
     {
-        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+        if (!$remove && !$entity->hasGuids() && !$entity->hasRelativeGuid()) {
             return;
         }
 
@@ -838,7 +839,7 @@ if (false === function_exists('isIgnoredId')) {
         string|int $id,
         string|int|null $backendId = null
     ): bool {
-        if (false === in_array($type, iFace::TYPES_LIST)) {
+        if (false === in_array($type, iState::TYPES_LIST)) {
             throw new InvalidArgumentException(sprintf('Invalid context type \'%s\' was given.', $type));
         }
 
@@ -1164,5 +1165,66 @@ if (!function_exists('tryCache')) {
         }
 
         return $data;
+    }
+}
+
+
+if (!function_exists('checkIgnoreRule')) {
+    /**
+     * Check if the given ignore rule is valid.
+     *
+     * @param string $guid The ignore rule to check.
+     *
+     * @return bool True if the ignore rule is valid, false otherwise.
+     * @throws RuntimeException Throws an exception if the ignore rule is invalid.
+     */
+    function checkIgnoreRule(string $guid): bool
+    {
+        $urlParts = parse_url($guid);
+
+        if (null === ($db = ag($urlParts, 'user'))) {
+            throw new RuntimeException('No db source was given.');
+        }
+
+        $sources = array_keys(Guid::getSupported());
+
+        if (false === in_array('guid_' . $db, $sources)) {
+            throw new RuntimeException(r("Invalid db source name '{db}' was given. Expected values are '{dbs}'.", [
+                'db' => $db,
+                'dbs' => implode(', ', array_map(fn($f) => after($f, 'guid_'), $sources)),
+            ]));
+        }
+
+        if (null === ($id = ag($urlParts, 'pass'))) {
+            throw new RuntimeException('No external id was given.');
+        }
+
+        Guid::validate($db, $id);
+
+        if (null === ($type = ag($urlParts, 'scheme'))) {
+            throw new RuntimeException('No type was given.');
+        }
+
+        if (false === in_array($type, iState::TYPES_LIST)) {
+            throw new RuntimeException(r("Invalid type '{type}' was given. Expected values are '{types}'.", [
+                'type' => $type,
+                'types' => implode(', ', iState::TYPES_LIST)
+            ]));
+        }
+
+        if (null === ($backend = ag($urlParts, 'host'))) {
+            throw new RuntimeException('No backend was given.');
+        }
+
+        $backends = array_keys(Config::get('servers', []));
+
+        if (false === in_array($backend, $backends)) {
+            throw new RuntimeException(r("Invalid backend name '{backend}' was given. Expected values are '{list}'.", [
+                'backend' => $backend,
+                'list' => implode(', ', $backends),
+            ]));
+        }
+
+        return true;
     }
 }

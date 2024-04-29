@@ -14,17 +14,17 @@ final class View
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{id:backend}[/]', name: 'backends.view')]
+    #[Get(Index::URL . '/{name:backend}[/]', name: 'backends.view')]
     public function backendsView(iRequest $request, array $args = []): iResponse
     {
-        if (null === ($id = ag($args, 'id'))) {
+        if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $data = $this->getBackends(name: $id);
+        $data = $this->getBackends(name: $name);
 
         if (empty($data)) {
-            return api_error(r("Backend '{backend}' not found.", ['backend ' => $id]), HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Middlewares;
 
+use App\API\System\HealthCheck;
 use App\Libs\Config;
 use App\Libs\HTTP_STATUS;
 use Psr\Http\Message\ResponseInterface;
@@ -16,11 +17,22 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
 {
     public const string KEY_NAME = 'apikey';
 
+    private const array OPEN_ROUTES = [
+        HealthCheck::URL,
+    ];
+
     /**
      * @throws RandomException if random_bytes() fails
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        foreach (self::OPEN_ROUTES as $route) {
+            $route = parseConfigValue($route);
+            if (true === str_starts_with($request->getUri()->getPath(), parseConfigValue($route))) {
+                return $handler->handle($request);
+            }
+        }
+
         $headerApiKey = $request->getHeaderLine('x-' . self::KEY_NAME);
 
         if (!empty($headerApiKey)) {

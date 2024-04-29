@@ -76,6 +76,8 @@ echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database maintenance tasks."
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Ensuring state table has correct indexes."
 /opt/bin/console system:index
 
+/opt/bin/console system:apikey -q
+
 if [ 0 = "${WS_DISABLE_CRON}" ]; then
   if [ -f "/tmp/job-runner.pid" ]; then
     echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Found pre-existing tasks scheduler pid file. Removing it."

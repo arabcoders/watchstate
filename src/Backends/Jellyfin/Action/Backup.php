@@ -23,7 +23,7 @@ use Throwable;
  */
 class Backup extends Import
 {
-    private const JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+    private const int JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
     /**
      * @var string Action name.
@@ -187,7 +187,7 @@ class Backup extends Import
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
                         'message' => $e->getMessage(),
-                        'trace' => $context->trace ? $e->getTrace() : [],
+                        'trace' => $e->getTrace(),
                     ],
                 ]
             );

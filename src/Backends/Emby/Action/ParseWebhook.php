@@ -36,6 +36,7 @@ final class ParseWebhook
      * @var string $action Action name
      */
     protected string $action = 'emby.parseWebhook';
+
     /**
      * @var array<string> Supported entity types.
      */
@@ -43,6 +44,7 @@ final class ParseWebhook
         EmbyClient::TYPE_MOVIE,
         EmbyClient::TYPE_EPISODE,
     ];
+
     /**
      * @var array<string> Supported webhook events.
      */
@@ -56,6 +58,7 @@ final class ParseWebhook
         'playback.stop',
         'library.new',
     ];
+
     /**
      * @var array<string> Events that should be marked as tainted.
      */
@@ -302,7 +305,7 @@ final class ParseWebhook
                             'attributes' => $request->getAttributes(),
                             'payload' => $request->getParsedBody(),
                         ],
-                        'trace' => $context->trace ? $e->getTrace() : [],
+                        'trace' => $e->getTrace(),
                     ],
                     level: Levels::ERROR
                 ),

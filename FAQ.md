@@ -340,30 +340,26 @@ $ docker exec -ti watchstate console system:tasks
 
 ### How to add webhooks?
 
-To add webhook for your backend the URL will be dependent on how you exposed webhook frontend, but typically it will be
-like this:
+The Webhook URL is backend specific, the request path is `/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`,
+Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for, and `[APIKEY]` is the global api key
+which you can get via the `system:apikey` command. Typically, the full path is `http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`. if the tool
+port is directly exposed or via the reverse proxy you have setup.
 
-Directly to container: `http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
-
-Via reverse proxy : `https://watchstate.domain.example/?apikey=[WEBHOOK_TOKEN]`.
-
-If your media backend support sending headers then remove query parameter `?apikey=[WEBHOOK_TOKEN]`, and add this header
+If your media backend support sending headers then remove query parameter `?apikey=[APIKEY]`, and add this header
 
 ```
-x-apikey: [WEBHOOK_TOKEN]
+Authorization: Bearer [APIKEY]
 ```
 
-where `[WEBHOOK_TOKEN]` Should match the backend `webhook.token` value. To see your webhook token for each backend run:
+To see your global api key run the following command:
 
 ```bash
-$ docker exec -ti watchstate console config:view webhook.token
+$ docker exec -ti watchstate console system:apikey
 ```
 
-If you see 'Not configured, or invalid key.' or empty value. run the following command
-
-```bash
-$ docker exec -ti watchstate console config:edit --regenerate-webhook-token -s backend_name 
-```
+> [!NOTE]
+> You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the
+> future.
 
 -----
 
@@ -371,9 +367,16 @@ $ docker exec -ti watchstate console config:edit --regenerate-webhook-token -s b
 
 Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
-##### Webhook Url:
+##### Webhook/Notifications URL:
 
-`http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
+`http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
+
+* Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[APIKEY]` with the global apikey.
+
+##### Request content type (Emby v4.9+):
+
+`application/json`
 
 ##### Webhook Events:
 
@@ -397,7 +400,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 * Select libraries that you want to sync or leave it blank for all libraries.
 
-Click `Add Webhook`
+Click `Add Webhook / Save`
 
 -----
 
@@ -407,31 +410,21 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 ##### URL:
 
-`http://localhost:8080/?apikey=[WEBHOOK_TOKEN]`
+`http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
+
+* Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[APIKEY]` with the global apikey.
+
+> [!NOTE]
+> If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
+> using the same method above, while enabling `limit webhook events to` `selected user` and `backend unique id`.
+> Essentially, this method replaced the old unified webhook.token for backends.
 
 Click `Save Changes`
 
 > [!IMPORTANT]
-> If you use multiple plex servers and use the same PlexPass account for all of them, you have to unify the API key, by
-> running the following command:
-
-```bash
-$ docker exec -ti watchstate console config:unify plex 
-Plex global webhook API key is: [random_string]
-```
-
-The reason is due to the way plex handle webhooks, And to know which webhook request belong to which backend we have to
-identify the backends.
-The unify command will do the necessary adjustments to handle multiple plex servers setup. for more information run.
-
-```bash
-$ docker exec -ti watchstate console help config:unify 
-```
-
-> [!IMPORTANT]
 > If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise
-> their play state
-> will end up changing your play state. Plex will still send their events. But with match user id they will be ignored.
+> their play state will end up changing your play state.
 
 -----
 
@@ -446,7 +439,9 @@ go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 
 ##### Webhook Url:
 
-`http://localhost:8080`
+`http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook`
+
+* Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 
 ##### Notification Type:
 
@@ -470,10 +465,12 @@ Toggle this checkbox.
 
 ### Add Request Header
 
-* Key: `x-apikey`
-* Value: `[WEBHOOK_TOKEN]`
+* Key: `Authorization`
+* Value: `Bearer [APIKEY]`
 
-Click `save`
+Replace `[APIKEY]` with the global apikey.
+
+Click `Save`
 
 ---
 
@@ -524,15 +521,15 @@ server need to send correct fastcgi environment variables. Example caddy file
 
 https://watchstate.example.org {
     # Change "172.23.1.2" to your watchstate container ip e.g. "172.23.20.20"
-	reverse_proxy 172.23.1.2:9000 {
-		transport fastcgi {
-			root /opt/app/public
-			env DOCUMENT_ROOT /opt/app/public
-			env SCRIPT_FILENAME /opt/app/public/index.php
-			env X_REQUEST_ID "{http.request.uuid}"
-			split .php
-		}
-	}
+    reverse_proxy 172.23.1.2:9000 {
+        transport fastcgi {
+            root /opt/app/public
+            env DOCUMENT_ROOT /opt/app/public
+            env SCRIPT_FILENAME /opt/app/public/index.php
+            env X_REQUEST_ID "{http.request.uuid}"
+            split .php
+        }
+    }
 }
 ```
 
@@ -543,19 +540,9 @@ https://watchstate.example.org {
 Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_CACHE` with value of `1`.
 to use external redis server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this
 variable is `redis://host:port?password=auth&db=db_num`, for example to use redis from another container you could use
-something like `redis://redis:6379?password=my_secert_password&db=8`. We only support `redis` at the moment.
+something like `redis://172.23.1.10:6379?password=my_secert_password&db=8`. We only support `redis` and API compatible alternative.
 
 Once that done, restart the container.
-
----
-
-### There are weirdly named directories in my data path?
-
-Unfortunately, That was due to a bug introduced in (2023-09-12 877a41a) and was fixed in (2023-09-19 a2f8c8a), if you
-have happened to installation or update during this period, you will have those directories. To fix this issue, you
-can simply delete those folders `%(tmpDir)` `%(path)` `{path}` `{tmpDir}`. I decided to not do it automatically to avoid
-any data loss. you should check the directories to make sure they are empty. if not copy the directories to the correct
-location and delete the empty directories.
 
 ---
 
@@ -598,7 +585,7 @@ If you having problem adding a backend to `WatchState`, it most likely network r
 isn't able to communicate with the media backend. Thus, you will get errors. To make sure the container is able to
 communicate with the media backend, you can run the following command and check the output.
 
-If the command fails for any reason, then you most likely have network related problem.
+If the command fails for any reason, then you most likely have network related problem or invalid apikey/token.
 
 #### For Plex.
 
@@ -637,8 +624,7 @@ If everything is working correctly you should see something like this previous j
 
 ### I keep receiving this warning in log `INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
 
-We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
-this,
+We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see this,
 this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to 4 episodes.
 
 If this is not enough for your library content. fear not we have you covered you can increase the limit by running the
@@ -668,9 +654,13 @@ the webhooks section to enable it.
 
 ### Bare metal installation
 
+We officially only support the docker container, however for the brave souls who want to install the tool directly on their server,
+You can follow these steps.
+
 #### Requirements
 
-* [PHP](http://https://www.php.net/downloads.php) 8.3+ with fpm installed. with the following extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`
+* [PHP 8.3](http://https://www.php.net/downloads.php) with both the `CLI` and `fpm` mode.
+* PHP Extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`.
 * [Composer](https://getcomposer.org/download/) for dependency management.
 * [Redis-server](https://redis.io/) for caching or a compatible implementation that works with [php-redis](https://github.com/phpredis/phpredis).
 * [Caddy](https://caddyserver.com/) for frontend handling. However, you can use whatever you like. As long as it has support for fastcgi.
@@ -690,8 +680,8 @@ $ cd watchstate
 $ composer install --no-dev 
 ```
 
-3. Create `.env` inside `./var/config/` if you need to change any of the environment variables refer to[Tool specific environment variables](#tool-specific-environment-variables) for more information. For example,
-   if you `redis` server is not on the same server or requires a password you can add the following to the `.env` file.
+3. Create `.env` inside `./var/config/` if you need to change any of the environment variables refer to [Tool specific environment variables](#tool-specific-environment-variables) for more information. For example,
+   if your `redis` server is not on the same server or requires a password you can add the following to the `.env` file.
 
 ```dotenv
 WS_CACHE_URL="redis://127.0.0.1:6379?password=your_password"
