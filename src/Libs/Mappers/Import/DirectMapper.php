@@ -506,7 +506,7 @@ final class DirectMapper implements iImport
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = 'MAPPER: Watch state conflict detected in [{backend}] [{title}] [{new_state}] vs db [{current_state}].';
+            $message = 'MAPPER: Watch state conflict detected in [{backend}: {title}] [{new_state}] vs db [{id}: {current_state}].';
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
