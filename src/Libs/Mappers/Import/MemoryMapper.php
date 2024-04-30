@@ -397,25 +397,25 @@ final class MemoryMapper implements iImport
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $cloned->isWatched() && false === $entity->isWatched()) {
+            $message = 'MAPPER: Watch state conflict detected in [{backend}: {title}] [{new_state}] vs db [{id}: {current_state}].';
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
+            if (false === $hasMeta) {
+                $message .= ' No metadata. Marking the item as tainted and re-processing.';
+            } elseif (true === $hasDate) {
+                $message .= ' db.metadata.played_at is equal to entity.updated. Marking the item as tainted and re-processing.';
+            }
+
+            $this->logger->warning($message, [
+                'id' => $cloned->id,
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
+                'current_state' => $cloned->isWatched() ? 'played' : 'unplayed',
+                'new_state' => $entity->isWatched() ? 'played' : 'unplayed',
+            ]);
+
             if (false === $hasMeta || true === $hasDate) {
-                $message = 'MAPPER: Watch state conflict detected in [{backend}: {title}] [{new_state}] vs db [{id}: {current_state}].';
-                if (false === $hasMeta) {
-                    $message .= ' No metadata. Marking the item as tainted and re-processing.';
-                } elseif (true === $hasDate) {
-                    $message .= ' db.metadata.played_at is equal to entity.updated. Marking the item as tainted and re-processing.';
-                }
-
-                $this->logger->warning($message, [
-                    'id' => $cloned->id,
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                    'current_state' => $cloned->isWatched() ? 'played' : 'unplayed',
-                    'new_state' => $entity->isWatched() ? 'played' : 'unplayed',
-                ]);
-
                 $metadata = $entity->getMetadata();
                 $metadata[$entity->via][iState::COLUMN_META_DATA_PLAYED_AT] = $entity->updated;
                 $entity->metadata = $metadata;
