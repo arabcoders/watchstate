@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use App\Libs\Exceptions\InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
@@ -16,11 +17,23 @@ final class Date extends DateTimeImmutable implements Stringable, JsonSerializab
 
     public function __construct(string|int $time = 'now', ?DateTimeZone $timezone = null)
     {
+        $ori = $time;
+
         if (ctype_digit($time)) {
             $time = '@' . $time;
         }
 
-        parent::__construct($time, $timezone);
+        try {
+            parent::__construct($time, $timezone);
+        } catch (\TypeError $e) {
+            throw new InvalidArgumentException(
+                r("DateTime constructor received invalid time argument \'{arg}\' - {ori}. {message}", [
+                    'arg' => $time,
+                    'ori' => $ori,
+                    'message' => $e->getMessage(),
+                ]), $e->getCode(), $e
+            );
+        }
     }
 
     public function __toString(): string

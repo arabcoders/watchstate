@@ -28,7 +28,7 @@ final class MemoryMapper implements iImport
     /**
      * @var string Local database GUID prefix.
      */
-    protected const GUID = 'local_db://';
+    protected const string GUID = 'local_db://';
 
     /**
      * @var array<int,iState> In memory entities list.
@@ -396,8 +396,8 @@ final class MemoryMapper implements iImport
          * 2- if the db.metadata.backend.played_at is equal to entity.updated or the db.metadata has no data.
          * 3 - mark entity as tainted and re-process it.
          */
-        if (true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = 'MAPPER: Watch state conflict detected in [{backend}] [{title}] [{new_state}] vs db [{current_state}].';
+        if (true === $hasAfter && true === $cloned->isWatched() && false === $entity->isWatched()) {
+            $message = 'MAPPER: Watch state conflict detected in [{backend}: {title}] [{new_state}] vs db [{id}: {current_state}].';
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 

@@ -30,12 +30,12 @@ use Symfony\Component\Yaml\Yaml;
 #[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'db:list';
+    public const string ROUTE = 'db:list';
 
     /**
      * @var array The array containing the names of the columns that can be modified for viewing purposes.
      */
-    public const COLUMNS_CHANGEABLE = [
+    public const array COLUMNS_CHANGEABLE = [
         iState::COLUMN_WATCHED,
         iState::COLUMN_VIA,
         iState::COLUMN_TITLE,
@@ -48,7 +48,7 @@ final class ListCommand extends Command
     /**
      * @var array The array containing the names of the columns that the list can be sorted by.
      */
-    public const COLUMNS_SORTABLE = [
+    public const array COLUMNS_SORTABLE = [
         iState::COLUMN_ID,
         iState::COLUMN_TYPE,
         iState::COLUMN_UPDATED,
@@ -164,7 +164,7 @@ final class ListCommand extends Command
                 'mark-as',
                 'm',
                 InputOption::VALUE_REQUIRED,
-                'Change items play state. Expects [<value>played</value>, <value>unplayed</value>] as value. Requires <notice>interaction</notice>.'
+                'Change items play state. Expects [<value>played</value>, <value>unplayed</value>] as value.'
             )
             ->setDescription('List Database entries.')
             ->setHelp(
@@ -199,7 +199,6 @@ final class ListCommand extends Command
                     <question># How to mark items as played/unplayed?</question>
 
                     First Use filters to narrow down the list. then add the [<flag>-m</flag>, <flag>--mark-as</flag>] flag with one value of [<value>played</value>, <value>unplayed</value>].
-                    This flag requires <notice>interaction</notice>.
 
                     Example, to mark a show that has id of [<value>tvdb://269586</value>], you would do something like.
 
@@ -487,21 +486,20 @@ final class ListCommand extends Command
 
         if (null !== $changeState && count($rows) >= 1) {
             $changeState = strtolower($changeState);
-            $text = r(
-                <<<TEXT
+            if (!$input->getOption('no-interaction')) {
+                $text = r(
+                    '<question>Are you sure you want to mark [<notce>{total}</notce>] items as [<notice>{state}</notice>]</question> ? [<value>Y|N</value>] [<value>Default: No</value>]',
+                    [
+                        'total' => count($rows),
+                        'state' => 'played' === $changeState ? 'Played' : 'Unplayed',
+                    ]
+                );
 
-                <question>Are you sure you want to mark [<notce>{total}</notce>] items as [<notice>{state}</notice>]</question> ? [<value>Y|N</value>] [<value>Default: No</value>]
-                TEXT,
-                [
-                    'total' => count($rows),
-                    'state' => 'played' === $changeState ? 'Played' : 'Unplayed',
-                ]
-            );
+                $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
 
-            $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
-
-            if (false === $this->getHelper('question')->ask($input, $output, $question)) {
-                return self::FAILURE;
+                if (false === $this->getHelper('question')->ask($input, $output, $question)) {
+                    return self::FAILURE;
+                }
             }
 
             foreach ($rows as $row) {
