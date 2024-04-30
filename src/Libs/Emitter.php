@@ -10,6 +10,13 @@ use Psr\Http\Message\ResponseInterface as IResponse;
 final readonly class Emitter
 {
     /**
+     * @param int $maxBufferLength int Maximum output buffering size for each iteration.
+     */
+    public function __construct(protected int $maxBufferLength = 8192)
+    {
+    }
+
+    /**
      * Emit a response.
      *
      * @param IResponse $response The response to emit.
@@ -23,9 +30,7 @@ final readonly class Emitter
         // -- should be called after `emitHeaders()` in order to prevent PHP from changing the status code.
         $this->emitStatusLine($response);
 
-        if ($response->getBody()->getSize() > 0) {
-            echo $response->getBody();
-        }
+        $this->emitBody($response);
     }
 
     /**
@@ -96,6 +101,31 @@ final readonly class Emitter
                     'value' => $value,
                 ]), $first, $statusCode);
                 $first = false;
+            }
+        }
+    }
+
+    /**
+     * Emit the message body.
+     */
+    private function emitBody(IResponse $response): void
+    {
+        $body = $response->getBody();
+
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+
+        if (!$body->isReadable()) {
+            echo $body;
+            return;
+        }
+
+        while (!$body->eof()) {
+            echo $body->read($this->maxBufferLength);
+            flush();
+            if (CONNECTION_NORMAL !== connection_status()) {
+                break;
             }
         }
     }
