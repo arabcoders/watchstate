@@ -2,8 +2,7 @@ FROM node:lts-alpine as npm_builder
 
 WORKDIR /frontend
 COPY ./frontend ./
-RUN if [ ! -d /frontend/node_modules ]; then yarn install --production --prefer-offline --frozen-lockfile; fi && \
-    yarn run generate
+RUN yarn install --production --prefer-offline --frozen-lockfile && yarn run generate
 
 FROM alpine:edge
 
