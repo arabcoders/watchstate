@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.COMPOSER_CACHE_DIR }}
-          key: ${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: "${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}"
           restore-keys: ${{ matrix.php }}-composer-
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer run test
