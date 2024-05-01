@@ -2,7 +2,7 @@ FROM node:lts-alpine as npm_builder
 
 WORKDIR /frontend
 COPY frontend ./
-RUN yarn install --frozen-lockfile && npx nuxi@latest generate
+RUN yarn install --frozen-lockfile && yarn run generate
 
 FROM alpine:edge
 
