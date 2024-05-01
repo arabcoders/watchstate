@@ -83,6 +83,7 @@ jobs:
       - uses: bahmutov/npm-install@v1
         with:
           working-directory: frontend
+          install-command: yarn install --production --prefer-offline --frozen-lockfile && yarn run generate
 
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master
