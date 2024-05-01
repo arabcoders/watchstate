@@ -17,12 +17,12 @@ export default defineNuxtConfig({
     },
     router: {
         options: {
-            linkActiveClass: "is-active",
+            linkActiveClass: "is-selected",
         }
     },
     modules: [
         '@vueuse/nuxt',
-        'floating-vue/nuxt'
+        'floating-vue/nuxt',
     ],
     nitro: {
         output: {

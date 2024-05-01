@@ -18,24 +18,26 @@
 
       <div class="navbar-menu" :class="{'is-active':showMenu}">
         <div class="navbar-start">
-          <a class="navbar-item" href="/backends">
+          <NuxtLink class="navbar-item" href="/backends">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-server"></i></span>
               <span>Backends</span>
             </span>
-          </a>
-          <a class="navbar-item" href="/history">
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/history">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-history"></i></span>
               <span>History</span>
             </span>
-          </a>
-          <a class="navbar-item" href="/logs">
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/logs">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-globe"></i></span>
               <span>Logs</span>
             </span>
-          </a>
+          </NuxtLink>
         </div>
         <div class="navbar-end pr-3">
           <div class="navbar-item">
@@ -63,8 +65,8 @@
       </div>
     </nav>
 
-    <div class="columns is-multiline">
-      <div class="column is-12 mt-2" v-if="showConnection">
+    <div class="columns is-multiline" v-if="showConnection">
+      <div class="column is-12 mt-2">
         <form class="box" @submit.prevent="testApi">
           <div class="field">
             <label class="label" for="api_url">
@@ -114,11 +116,14 @@
           </div>
         </form>
       </div>
-
-      <div class="column is-12">
-        <slot/>
-      </div>
     </div>
+
+    <template v-if="!api_url || !api_token">
+      <no-api/>
+    </template>
+    <template v-else>
+      <slot/>
+    </template>
 
     <div class="columns mt-3 is-mobile">
       <div class="column is-8-mobile">

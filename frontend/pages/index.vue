@@ -1,19 +1,12 @@
 <template>
-  <template v-if="!api_url || !api_token">
-    <no-api/>
-  </template>
-  <template v-else>
-    <p>foo</p>
-  </template>
+  <div class="columns">
+    <div class="column is-12">
+      <h1 class="title is-4">Index</h1>
+      <p>The WebUI still in very early stages.</p>
+    </div>
+  </div>
 </template>
 
-
 <script setup>
-import {useStorage} from "@vueuse/core"
-import NoApi from "~/components/NoApi.vue"
-
-const api_url = useStorage('api_url', '')
-const api_token = useStorage('api_token', '')
-
 useHead({title: 'Index'})
 </script>
