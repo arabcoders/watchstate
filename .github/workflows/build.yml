@@ -80,6 +80,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: bahmutov/npm-install@v1
+        env:
+          NODE_ENV: production
+        with:
+          working-directory: frontend
+
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master
         with:
