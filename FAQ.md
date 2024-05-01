@@ -315,6 +315,7 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_TRUST_HEADER         | string  | Which header contain user true IP.                                      | `X-Forwarded-For`        |
 | WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`                   |
 | WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
+| WS_WEBUI_ENABLED        | bool    | Enable Web UI.                                                          | `false`                  |
 
 > [!IMPORTANT]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one
@@ -342,7 +343,8 @@ $ docker exec -ti watchstate console system:tasks
 
 The Webhook URL is backend specific, the request path is `/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`,
 Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for, and `[APIKEY]` is the global api key
-which you can get via the `system:apikey` command. Typically, the full path is `http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`. if the tool
+which you can get via the `system:apikey` command. Typically, the full path
+is `http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`. if the tool
 port is directly exposed or via the reverse proxy you have setup.
 
 If your media backend support sending headers then remove query parameter `?apikey=[APIKEY]`, and add this header
@@ -540,7 +542,8 @@ https://watchstate.example.org {
 Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_CACHE` with value of `1`.
 to use external redis server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this
 variable is `redis://host:port?password=auth&db=db_num`, for example to use redis from another container you could use
-something like `redis://172.23.1.10:6379?password=my_secert_password&db=8`. We only support `redis` and API compatible alternative.
+something like `redis://172.23.1.10:6379?password=my_secert_password&db=8`. We only support `redis` and API compatible
+alternative.
 
 Once that done, restart the container.
 
@@ -624,7 +627,8 @@ If everything is working correctly you should see something like this previous j
 
 ### I keep receiving this warning in log `INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
 
-We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see this,
+We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
+this,
 this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to 4 episodes.
 
 If this is not enough for your library content. fear not we have you covered you can increase the limit by running the
@@ -644,17 +648,20 @@ to inform you about the issue.
 
 ### I Keep receiving [jellyfin] item [id: name] is marked as [played] vs local state [unplayed], However due to the remote item date [date] being older than the last backend sync date [date]. it was not considered as valid state.
 
-Sadly, this is due to bug in jellyfin, where it marks the item as played without updating the LastPlayedDate, and as such, watchstate doesn't really know the item has changed since last sync.  
+Sadly, this is due to bug in jellyfin, where it marks the item as played without updating the LastPlayedDate, and as
+such, watchstate doesn't really know the item has changed since last sync.  
 Unfortunately, there is no way to fix this issue from our side for the `state:import` task as it working as intended.
 
-However, we managed to somewhat implement a workaround for this issue using the webhooks feature as temporary fix. Until jellyfin devs fixes the issue. Please take look at
+However, we managed to somewhat implement a workaround for this issue using the webhooks feature as temporary fix. Until
+jellyfin devs fixes the issue. Please take look at
 the webhooks section to enable it.
 
 ---
 
 ### Bare metal installation
 
-We officially only support the docker container, however for the brave souls who want to install the tool directly on their server,
+We officially only support the docker container, however for the brave souls who want to install the tool directly on
+their server,
 You can follow these steps.
 
 #### Requirements
@@ -662,8 +669,10 @@ You can follow these steps.
 * [PHP 8.3](http://https://www.php.net/downloads.php) with both the `CLI` and `fpm` mode.
 * PHP Extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`.
 * [Composer](https://getcomposer.org/download/) for dependency management.
-* [Redis-server](https://redis.io/) for caching or a compatible implementation that works with [php-redis](https://github.com/phpredis/phpredis).
-* [Caddy](https://caddyserver.com/) for frontend handling. However, you can use whatever you like. As long as it has support for fastcgi.
+* [Redis-server](https://redis.io/) for caching or a compatible implementation that works
+  with [php-redis](https://github.com/phpredis/phpredis).
+* [Caddy](https://caddyserver.com/) for frontend handling. However, you can use whatever you like. As long as it has
+  support for fastcgi.
 
 #### Installation
 
@@ -680,7 +689,8 @@ $ cd watchstate
 $ composer install --no-dev 
 ```
 
-3. Create `.env` inside `./var/config/` if you need to change any of the environment variables refer to [Tool specific environment variables](#tool-specific-environment-variables) for more information. For example,
+3. Create `.env` inside `./var/config/` if you need to change any of the environment variables refer
+   to [Tool specific environment variables](#tool-specific-environment-variables) for more information. For example,
    if your `redis` server is not on the same server or requires a password you can add the following to the `.env` file.
 
 ```dotenv

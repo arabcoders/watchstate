@@ -262,8 +262,26 @@ final class Initializer
         $apikey = ag($request->getQueryParams(), 'apikey', $request->getHeaderLine('x-apikey'));
 
         if (empty($apikey)) {
-            $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
-            $this->write($request, Level::Info, $this->formatLog($request, $response, 'No webhook token was found.'));
+            if (false === (bool)Config::get('webui.enabled', false)) {
+                $response = api_response(HTTP_STATUS::HTTP_UNAUTHORIZED);
+                $this->write(
+                    $request,
+                    Level::Info,
+                    $this->formatLog($request, $response, 'No webhook token was found.')
+                );
+                return $response;
+            }
+
+            if (file_exists(__DIR__ . '/../../public/exported/index.html')) {
+                return new Response(
+                    status: HTTP_STATUS::HTTP_OK->value,
+                    headers: ['Content-Type' => 'text/html'],
+                    body: Stream::create(fopen(__DIR__ . '/../../public/exported/index.html', 'r'))
+                );
+            }
+
+            $response = api_response(HTTP_STATUS::HTTP_NOT_FOUND);
+            $this->write($request, Level::Info, $this->formatLog($request, $response, 'The Frontend is not compiled.'));
             return $response;
         }
 
@@ -369,7 +387,9 @@ final class Initializer
             if (!$response->hasHeader('X-Log-Response')) {
                 $response = $response->withHeader('X-Log-Response', '1');
             }
-            return $response;
+
+            return $response->withHeader('Access-Control-Allow-Origin', '*')
+                ->withHeader('Access-Control-Allow-Credentials', 'true');
         } /** @noinspection PhpRedundantCatchClauseInspection */
         catch (RouterHttpException $e) {
             throw new HttpException($e->getMessage(), $e->getStatusCode());

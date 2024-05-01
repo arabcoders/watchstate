@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <nav class="navbar is-dark">
+    <nav class="navbar is-dark mb-4">
       <div class="navbar-brand pl-5">
         <NuxtLink class="navbar-item" href="/">
           <span class="icon-text">
@@ -37,27 +37,84 @@
             </span>
           </a>
         </div>
-        <div class="navbar-end">
+        <div class="navbar-end pr-3">
           <div class="navbar-item">
-            <button class="button is-dark has-tooltip-bottom" @click="selectedTheme = 'light'"
-                    v-if="'dark' === selectedTheme">
-              <span class="icon is-small is-left has-text-warning">
+            <button class="button is-dark" @click="selectedTheme = 'light'" v-if="'dark' === selectedTheme"
+                    v-tooltip="'Switch to light theme'">
+              <span class="icon is-small has-text-warning">
                 <i class="fas fa-sun"></i>
               </span>
             </button>
-            <button class="button is-dark has-tooltip-bottom" @click="selectedTheme = 'dark'"
-                    v-if="'light' === selectedTheme">
-              <span class="icon is-small is-left">
+            <button class="button is-dark" @click="selectedTheme = 'dark'" v-if="'light' === selectedTheme"
+                    v-tooltip="'Switch to dark theme'">
+              <span class="icon is-small">
                 <i class="fas fa-moon"></i>
               </span>
             </button>
           </div>
-
+          <div class="navbar-item">
+            <button class="button is-dark" @click="showConnection = !showConnection" v-tooltip="'Configure connection'">
+              <span class="icon is-small">
+                <i class="fas fa-cog"></i>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </nav>
 
-    <div class="columns">
+    <div class="columns is-multiline">
+      <div class="column is-12 mt-2" v-if="showConnection">
+        <form class="box" @submit.prevent="testApi">
+          <div class="field">
+            <label class="label" for="api_url">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>API URL</span>
+              </span>
+            </label>
+            <div class="control">
+              <input class="input" id="api_url" type="url" v-model="api_url" required
+                     placeholder="API URL... http://localhost:8081"
+                     @keyup="api_status = false; api_response = ''">
+              <p class="help">
+                Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
+              </p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="api_token">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-key"></i></span>
+                <span>API Token</span>
+              </span>
+            </label>
+            <div class="control">
+              <input class="input" id="api_token" type="text" v-model="api_token" required placeholder="API Token..."
+                     @keyup="api_status = false; api_response = ''">
+            </div>
+            <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
+          </div>
+
+          <div class="field is-grouped has-addons-right">
+            <div class="control is-expanded">
+              <input class="input" type="text" v-model="api_response" readonly disabled
+                     :class="{'has-background-success': true===api_status}">
+              <p class="help">These settings are stored locally in your browser.</p>
+            </div>
+            <div class="control">
+              <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-signs-post"></i></span>
+                  <span>Check</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
       <div class="column is-12">
         <slot/>
       </div>
@@ -80,7 +137,13 @@ import 'assets/css/style.css'
 import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
 
-const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')());
+const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
+const showConnection = ref(false)
+
+const api_url = useStorage('api_url', '')
+const api_token = useStorage('api_token', '')
+const api_status = ref(false)
+const api_response = ref('Status: Unknown')
 
 const Year = ref(new Date().getFullYear())
 const showMenu = ref(false)
@@ -93,34 +156,34 @@ const applyPreferredColorScheme = (scheme) => {
         if (rule && rule.media && rule.media.mediaText.includes("prefers-color-scheme")) {
           switch (scheme) {
             case "light":
-              rule.media.appendMedium("original-prefers-color-scheme");
+              rule.media.appendMedium("original-prefers-color-scheme")
               if (rule.media.mediaText.includes("light")) {
-                rule.media.deleteMedium("(prefers-color-scheme: light)");
+                rule.media.deleteMedium("(prefers-color-scheme: light)")
               }
               if (rule.media.mediaText.includes("dark")) {
-                rule.media.deleteMedium("(prefers-color-scheme: dark)");
+                rule.media.deleteMedium("(prefers-color-scheme: dark)")
               }
               break;
             case "dark":
-              rule.media.appendMedium("(prefers-color-scheme: light)");
-              rule.media.appendMedium("(prefers-color-scheme: dark)");
+              rule.media.appendMedium("(prefers-color-scheme: light)")
+              rule.media.appendMedium("(prefers-color-scheme: dark)")
               if (rule.media.mediaText.includes("original")) {
-                rule.media.deleteMedium("original-prefers-color-scheme");
+                rule.media.deleteMedium("original-prefers-color-scheme")
               }
               break;
             default:
-              rule.media.appendMedium("(prefers-color-scheme: dark)");
+              rule.media.appendMedium("(prefers-color-scheme: dark)")
               if (rule.media.mediaText.includes("light")) {
-                rule.media.deleteMedium("(prefers-color-scheme: light)");
+                rule.media.deleteMedium("(prefers-color-scheme: light)")
               }
               if (rule.media.mediaText.includes("original")) {
-                rule.media.deleteMedium("original-prefers-color-scheme");
+                rule.media.deleteMedium("original-prefers-color-scheme")
               }
               break;
           }
         }
       } catch (e) {
-        console.debug(e);
+        console.debug(e)
       }
     }
   }
@@ -128,15 +191,44 @@ const applyPreferredColorScheme = (scheme) => {
 
 onMounted(() => {
   try {
-    applyPreferredColorScheme(selectedTheme.value);
+    applyPreferredColorScheme(selectedTheme.value)
   } catch (e) {
   }
 })
 
 watch(selectedTheme, (value) => {
   try {
-    applyPreferredColorScheme(value);
+    applyPreferredColorScheme(value)
   } catch (e) {
   }
 })
+
+const testApi = async () => {
+  try {
+    const response = await fetch(api_url.value + '/v1/api/backends', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + api_token.value,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    const json = await response.json()
+
+    if (json.error) {
+      api_status.value = false;
+      api_response.value = `Error ${json.error.code} - ${json.error.message}`
+      return
+    }
+
+    api_status.value = 200 === response.status;
+    api_response.value = 200 === response.status ? `Status: OK` : `Status: ${response.status} - ${response.statusText}`;
+
+  } catch (e) {
+    api_status.value = false;
+    api_response.value = `Error: ${e.message}`;
+  }
+}
+
+const setOrigin = () => api_url.value = window.location.origin;
 </script>

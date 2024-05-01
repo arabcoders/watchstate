@@ -4,3 +4,5 @@
 ./var/*
 !./var/.gitignore
 .phpunit.result.cache
+frontend/.nuxt
+frontend/node_modules

@@ -107,3 +107,7 @@ hr {
 .is-paddingless {
     padding: 0 !important;
 }
+
+.is-bold {
+    font-weight: bold;
+}

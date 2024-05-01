@@ -22,7 +22,7 @@ trait APITraits
      */
     protected function getClient(string $name, array $config = []): iClient
     {
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         if (null === $configFile->get("{$name}.type", null)) {
             throw new RuntimeException(r("Backend '{backend}' doesn't exists.", ['backend' => $name]));
@@ -44,7 +44,9 @@ trait APITraits
     {
         $backends = [];
 
-        foreach (ConfigFile::open(Config::get('backends_file'), 'yaml')->getAll() as $backendName => $backend) {
+        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true)->getAll();
+
+        foreach ($list as $backendName => $backend) {
             $backend = ['name' => $backendName, ...$backend];
 
             if (null !== ag($backend, 'import.lastSync')) {

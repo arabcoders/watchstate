@@ -26,6 +26,10 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        if ('OPTIONS' === $request->getMethod()) {
+            return $handler->handle($request);
+        }
+
         foreach (self::OPEN_ROUTES as $route) {
             $route = parseConfigValue($route);
             if (true === str_starts_with($request->getUri()->getPath(), parseConfigValue($route))) {
