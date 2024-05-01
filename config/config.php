@@ -36,6 +36,9 @@ return (function () {
                 'backend' => '[a-zA-Z0-9_-]+',
             ],
         ],
+        'webui' => [
+            'enabled' => (bool)env('WS_WEBUI_ENABLED', false),
+        ],
         'database' => [
             'version' => 'v01',
         ],

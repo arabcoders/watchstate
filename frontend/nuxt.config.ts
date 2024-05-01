@@ -22,6 +22,7 @@ export default defineNuxtConfig({
     },
     modules: [
         '@vueuse/nuxt',
+        'floating-vue/nuxt'
     ],
     nitro: {
         output: {

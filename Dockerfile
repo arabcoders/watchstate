@@ -1,3 +1,9 @@
+FROM node:lts-alpine as npm_builder
+
+WORKDIR /frontend
+COPY ./frontend ./
+RUN if [ ! -d /frontend/exported ]; then yarn install --production --prefer-offline --frozen-lockfile && yarn run generate; fi
+
 FROM alpine:edge
 
 COPY --from=composer:2 /usr/bin/composer /opt/bin/composer
@@ -35,8 +41,10 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
     useradd -u ${USER_ID:-1000} -U -d /config -s /bin/bash user
 
 # Copy source code to container.
-#
 COPY ./ /opt/app
+
+# Copy frontend to public directory.
+COPY --chown=app:app --from=npm_builder /frontend/exported/ /opt/app/public/exported/
 
 # Link PHP if needed.
 RUN if [ ! -f /usr/bin/php ]; then ln -s /usr/bin/php${PHP_V:3} /usr/bin/php; fi
