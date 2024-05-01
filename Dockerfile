@@ -2,7 +2,7 @@ FROM node:lts-alpine as npm_builder
 
 WORKDIR /frontend
 COPY frontend ./
-RUN npm ci && npm run generate
+RUN yarn install --verbose --production && npm run generate
 
 FROM alpine:edge
 
