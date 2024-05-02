@@ -21,7 +21,7 @@ use Symfony\Component\Process\Process;
 final class Index
 {
     public const string URL = '%{api.prefix}/logs';
-    private const int DEFAULT_LIMIT = 100;
+    private const int DEFAULT_LIMIT = 1000;
     private int $counter = 1;
 
     #[Get(self::URL . '[/]', name: 'logs.list')]
