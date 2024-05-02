@@ -5,6 +5,10 @@ import path from "path";
 export default defineNuxtConfig({
     ssr: false,
     devtools: {enabled: true},
+    devServer: {
+        port: 8081,
+        host: "0.0.0.0",
+    },
     app: {
         head: {
             "meta": [
@@ -14,6 +18,7 @@ export default defineNuxtConfig({
             ],
         },
         buildAssetsDir: "assets",
+
     },
     router: {
         options: {
@@ -29,4 +34,5 @@ export default defineNuxtConfig({
             publicDir: path.join(__dirname, 'exported')
         }
     },
+    telemetry: false,
 })

@@ -1,21 +1,22 @@
 <template>
-  <div class="p-2">
-    <span class="title is-4">Backends</span>
+  <div class="columns is-multiline">
+    <div class="column is-12">
+      <div class="p-2">
+        <span class="title is-4">Backends</span>
 
-    <div class="is-pulled-right">
-      <div class="field is-grouped">
-        <p class="control">
-          <button class="button is-primary" @click.prevent="loadContent">
-            <span class="icon is-small">
-              <i class="fas fa-sync"></i>
-            </span>
-          </button>
-        </p>
+        <div class="is-pulled-right">
+          <div class="field is-grouped">
+            <p class="control">
+              <button class="button is-primary" @click.prevent="loadContent">
+                <span class="icon is-small">
+                  <i class="fas fa-sync"></i>
+                </span>
+              </button>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-
-  <div class="columns is-multiline">
     <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
       <div class="card">
         <header class="card-header">
@@ -59,23 +60,17 @@
 </template>
 
 <script setup>
-import {useStorage} from '@vueuse/core';
 import 'assets/css/bulma-switch.css'
 import moment from "moment";
+import request from "~/utils/request.js";
 
 useHead({title: 'Backends'})
-
-const api_url = useStorage('api_url', '')
-const api_token = useStorage('api_token', '')
 
 const backends = ref([])
 
 const loadContent = async () => {
-  const response = await fetch(`${api_url.value}/v1/api/backends`, {
-    headers: {
-      'Authorization': `Bearer ${api_token.value}`
-    }
-  })
+  backends.value = []
+  const response = await request('/backends')
   const json = await response.json();
   backends.value = json.backends
 }
@@ -83,11 +78,8 @@ const loadContent = async () => {
 onMounted(() => loadContent())
 
 const updateValue = async (backend, key, newValue) => {
-  const response = await fetch(`${api_url.value}/v1/api/backends/${backend.name}`, {
+  const response = await request(`/backends/${backend.name}`, {
     method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${api_token.value}`
-    },
     body: JSON.stringify([{
       "key": key,
       "value": newValue

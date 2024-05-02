@@ -5100,7 +5100,7 @@ div.icon-text {
     --bulma-table-cell-border-width: 0 0 1px;
     --bulma-table-cell-padding: 0.5em 0.75em;
     --bulma-table-cell-heading-color: var(--bulma-text-strong);
-    --bulma-table-cell-text-align: left;
+    --bulma-table-cell-text-align: inherit;
     --bulma-table-head-cell-border-width: 0 0 2px;
     --bulma-table-head-cell-color: var(--bulma-text-strong);
     --bulma-table-foot-cell-border-width: 2px 0 0;

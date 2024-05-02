@@ -86,6 +86,23 @@
           </div>
 
           <div class="field">
+            <label class="label" for="api_path">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-folder"></i></span>
+                <span>API Path</span>
+              </span>
+            </label>
+            <div class="control">
+              <input class="input" id="api_path" type="text" v-model="api_path" required
+                     placeholder="API Path... /v1/api"
+                     @keyup="api_status = false; api_response = ''">
+              <p class="help">
+                Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API</a>.
+              </p>
+            </div>
+          </div>
+
+          <div class="field">
             <label class="label" for="api_token">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-key"></i></span>
@@ -108,8 +125,8 @@
             <div class="control">
               <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
                 <span class="icon-text">
-                  <span class="icon"><i class="fas fa-signs-post"></i></span>
-                  <span>Check</span>
+                  <span class="icon"><i class="fas fa-save"></i></span>
+                  <span>Save</span>
                 </span>
               </button>
             </div>
@@ -141,11 +158,13 @@ import 'assets/css/bulma.css'
 import 'assets/css/style.css'
 import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
+import request from "~/utils/request.js";
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
 
-const api_url = useStorage('api_url', '')
+const api_url = useStorage('api_url', window.location.origin)
+const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
@@ -210,14 +229,7 @@ watch(selectedTheme, (value) => {
 
 const testApi = async () => {
   try {
-    const response = await fetch(api_url.value + '/v1/api/backends', {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + api_token.value,
-        'Content-Type': 'application/json'
-      }
-    })
-
+    const response = await request('/backends')
     const json = await response.json()
 
     if (json.error) {

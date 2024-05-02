@@ -199,7 +199,9 @@ final class Initializer
             }
 
             if (true === (bool)$response->getHeaderLine('X-Log-Response')) {
-                $this->write($request, Level::Info, $this->formatLog($request, $response));
+                if ('OPTIONS' !== $request->getMethod()) {
+                    $this->write($request, Level::Info, $this->formatLog($request, $response));
+                }
                 $response = $response->withoutHeader('X-Log-Response');
             }
         } catch (Throwable $e) {

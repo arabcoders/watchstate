@@ -302,6 +302,10 @@ final class Index
                 unset($item[iState::COLUMN_EXTRA]);
             }
 
+            $item['full_title'] = $entity->getName();
+            $item['progress'] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : 'None';
+            $item['event'] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '-');
+
             $item = [
                 ...$item,
                 'links' => [
