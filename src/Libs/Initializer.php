@@ -287,7 +287,7 @@ final class Initializer
             return $response;
         }
 
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         // -- Find Relevant backend.
         foreach ($configFile->getAll() as $name => $info) {
