@@ -142,4 +142,9 @@ const loadContent = async () => {
 };
 
 onMounted(async () => loadContent())
+onUpdated(() => {
+  document.querySelectorAll('.logs-container').forEach((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+})
 </script>
