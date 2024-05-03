@@ -7,6 +7,13 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
+              <button class="button is-primary is-light" v-tooltip="'Add New Backend'">
+                <span class="icon">
+                  <i class="fas fa-add"></i>
+                </span>
+              </button>
+            </p>
+            <p class="control">
               <button class="button is-primary" @click.prevent="loadContent">
                 <span class="icon is-small">
                   <i class="fas fa-sync"></i>
@@ -27,13 +34,13 @@
           </div>
         </header>
         <div class="card-content">
-          <div class="content">
-            <p>
-              <strong>Last Import:</strong> {{ moment(backend.import.lastSync).fromNow() }}
-            </p>
-            <p>
+          <div class="columns is-multiline is-mobile has-text-centered">
+            <div class="column is-6-mobile" v-if="backend.export.enabled">
               <strong>Last Export:</strong> {{ moment(backend.export.lastSync).fromNow() }}
-            </p>
+            </div>
+            <div class="column is-hidden-mobile" v-if="backend.import.enabled">
+              <strong>Last Import:</strong> {{ moment(backend.import.lastSync).fromNow() }}
+            </div>
           </div>
         </div>
         <footer class="card-footer">
@@ -42,7 +49,9 @@
               <input :id="backend.name+'_export'" type="checkbox" class="switch is-success"
                      :checked="backend.export.enabled"
                      @change="updateValue(backend, 'export.enabled', !backend.export.enabled)">
-              <label :for="backend.name+'_export'">Export</label>
+              <label :for="backend.name+'_export'">
+                Export {{ backend.export.enabled ? 'Enabled' : 'Disabled' }}
+              </label>
             </div>
           </div>
           <div class="card-footer-item">
@@ -50,7 +59,9 @@
               <input :id="backend.name+'_import'" type="checkbox" class="switch is-success"
                      :checked="backend.import.enabled"
                      @change="updateValue(backend, 'import.enabled',!backend.import.enabled)">
-              <label :for="backend.name+'_import'">Import</label>
+              <label :for="backend.name+'_import'">
+                Import {{ backend.import.enabled ? 'Enabled' : 'Disabled' }}
+              </label>
             </div>
           </div>
         </footer>

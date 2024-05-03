@@ -7,9 +7,7 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-primary" @click.prevent="loadContent">
-                <span class="icon is-small">
-                  <i class="fas fa-sync"></i>
-                </span>
+                <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
           </div>
@@ -20,14 +18,21 @@
     <div class="column is-4-tablet" v-for="(item, index) in logs" :key="'log-'+index">
       <div class="card">
         <header class="card-header">
-          <div class="card-header-title is-centered is-ellipsis">
+          <p class="card-header-title is-text-overflow is-justify-center pr-1">
             <NuxtLink :href="'/logs/'+item.filename">{{ item.filename ?? item.date }}</NuxtLink>
-          </div>
+          </p>
+          <span class="card-header-icon">
+            <span class="icon" v-if="'access' === item.type"><i class="fas fa-key"></i></span>
+            <span class="icon" v-if="'task' === item.type"><i class="fas fa-tasks"></i></span>
+            <span class="icon" v-if="'app' === item.type"><i class="fas fa-bugs"></i></span>
+          </span>
         </header>
         <div class="card-content">
           <div class="columns is-multiline is-mobile has-text-centered">
-            <div class="column is-6-mobile">
-              <span v-tooltip="'Last Update'" class="has-tooltip">{{ moment(item.modified).fromNow() }}</span>
+            <div class="column is-6-mobile is-pre">
+              <span v-tooltip="'Last Update'" class="has-tooltip">
+                {{ moment(item.modified).fromNow() }}
+              </span>
             </div>
             <div class="column is-6-mobile">
               {{ humanFileSize(item.size) }}

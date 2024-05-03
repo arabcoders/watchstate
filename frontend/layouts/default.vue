@@ -46,6 +46,13 @@
             </span>
           </NuxtLink>
 
+          <NuxtLink class="navbar-item" href="/env">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-cogs"></i></span>
+              <span>Env</span>
+            </span>
+          </NuxtLink>
+
         </div>
         <div class="navbar-end pr-3">
           <div class="navbar-item">

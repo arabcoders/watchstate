@@ -12,7 +12,9 @@
         <div class="column is-6-tablet" v-for="history in lastHistory" :key="history.id">
           <div class="card">
             <header class="card-header">
-              <p class="card-header-title">{{ history.full_title ?? history.title }}</p>
+              <p class="card-header-title is-text-overflow is-justify-center pr-1">
+                {{ history.full_title ?? history.title }}
+              </p>
               <span class="card-header-icon">
                 <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
                 <span class="icon" v-else><i class="fas fa-film"></i></span>
@@ -78,11 +80,10 @@
         <p v-for="(item, index) in recentTaskLogs" :key="'plog-'+index">{{ item }}</p>
       </code>
     </div>
-
   </div>
 </template>
 
-<style>
+<style scoped>
 .logs-container {
   max-height: 20vh;
   overflow-y: auto;

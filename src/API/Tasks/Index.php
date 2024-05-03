@@ -22,6 +22,9 @@ final class Index
     {
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     #[Get(self::URL . '[/]', name: 'tasks.index')]
     public function tasksIndex(iRequest $request): iResponse
     {
@@ -35,6 +38,8 @@ final class Index
             ],
         ];
 
+        $queuedTasks = $this->cache->get('queued_tasks', []);
+
         foreach (TasksCommand::getTasks() as $task) {
             $task = array_filter(
                 self::formatTask($task),
@@ -47,6 +52,8 @@ final class Index
                 'queue' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name') . '/queue'),
             ];
 
+            $task['queued'] = in_array(ag($task, 'name'), $queuedTasks);
+
             $response['tasks'][] = $task;
         }
 
@@ -56,7 +63,7 @@ final class Index
     /**
      * @throws InvalidArgumentException
      */
-    #[Route(['GET', 'POST'], self::URL . '/{id:[a-zA-Z0-9_-]+}/queue[/]', name: 'tasks.task.queue')]
+    #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:[a-zA-Z0-9_-]+}/queue[/]', name: 'tasks.task.queue')]
     public function taskQueue(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
@@ -75,6 +82,12 @@ final class Index
             $queuedTasks[] = $id;
             $this->cache->set('queued_tasks', $queuedTasks, new DateInterval('P3D'));
             return api_response(HTTP_STATUS::HTTP_ACCEPTED, ['queue' => $queuedTasks]);
+        }
+
+        if ('DELETE' === $request->getMethod()) {
+            $queuedTasks = array_filter($queuedTasks, fn($v) => $v !== $id);
+            $this->cache->set('queued_tasks', $queuedTasks, new DateInterval('P3D'));
+            return api_response(HTTP_STATUS::HTTP_OK, ['queue' => $queuedTasks]);
         }
 
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('')->withUserInfo('');

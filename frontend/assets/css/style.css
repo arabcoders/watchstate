@@ -127,3 +127,11 @@ hr {
     cursor: help;
     border-bottom: 1px dotted #000;
 }
+
+.is-justify-center {
+    justify-content: center;
+}
+
+.is-pre {
+    white-space: pre;
+}

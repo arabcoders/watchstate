@@ -112,4 +112,14 @@ final class EnvFile
 
         $stream->write(implode(PHP_EOL, $lines) . PHP_EOL);
     }
+
+    /**
+     * Get all configuration settings.
+     *
+     * @return array The configuration settings.
+     */
+    public function getAll(): array
+    {
+        return $this->data;
+    }
 }
