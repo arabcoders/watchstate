@@ -46,6 +46,11 @@ hr {
     white-space: nowrap;
 }
 
+.is-masked {
+    color: transparent !important;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
 @media (prefers-color-scheme: dark) {
     * {
         unicode-bidi: plaintext;
@@ -93,6 +98,10 @@ hr {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .is-masked {
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
     }
 }
 

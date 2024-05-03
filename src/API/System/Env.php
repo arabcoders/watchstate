@@ -17,6 +17,11 @@ final class Env
 {
     public const string URL = '%{api.prefix}/system/env';
 
+    private const array MASK = [
+        'WS_API_KEY',
+        'WS_CACHE_URL'
+    ];
+
     private EnvFile $envfile;
 
     public function __construct()
@@ -43,6 +48,7 @@ final class Env
             $response['data'][] = [
                 'key' => $key,
                 'value' => $val,
+                'mask' => in_array($key, self::MASK),
                 'urls' => [
                     'self' => (string)$request->getUri()->withPath(parseConfigValue(self::URL . '/' . $key)),
                 ],

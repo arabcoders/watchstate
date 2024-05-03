@@ -1,7 +1,7 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
-      <span class="title is-4">Environment Variables</span>
+      <span id="env_page_title" class="title is-4">Environment Variables</span>
 
       <div class="is-pulled-right">
         <div class="field is-grouped">
@@ -29,7 +29,7 @@
     </div>
 
     <div class="column is-12" v-if="toggleForm">
-      <form @submit.prevent="addVariable">
+      <form id="env_add_form" @submit.prevent="addVariable">
         <div class="field is-grouped">
           <div class="control is-expanded">
             <input class="input" type="text" placeholder="Key" v-model="form_key">
@@ -39,6 +39,12 @@
           </div>
           <div class="control is-expanded">
             <input class="input" type="text" placeholder="Value" v-model="form_value">
+          </div>
+          <div class="control">
+            <button class="button is-danger" type="button"
+                    v-tooltip="'Cancel'" @click="form_key=null; form_value=null; toggleForm=false">
+              <span class="icon"><i class="fas fa-cancel"></i></span>
+            </button>
           </div>
           <div class="control">
             <button class="button is-primary" type="submit" :disabled="!form_key || !form_value">
@@ -61,14 +67,30 @@
           </thead>
           <tbody>
           <tr v-for="env in envs" :key="env.key">
-            <td class="has-text-left">{{ env.key }}</td>
-            <td class="has-text-left">{{ env.value }}</td>
+            <td class="has-text-left">
+              {{ env.key }}
+              <div class="is-pulled-right" v-if="env.mask">
+                <span class="icon is-small has-tooltip" v-tooltip="'The value of this key is masked.'">
+                  <i class="fas fa-lock"></i>
+                </span>
+              </div>
+            </td>
+            <td class="has-text-left" :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }">
+              {{ env.value }}
+            </td>
             <td>
               <div class="field is-grouped" style="justify-content: center">
                 <div class="control">
                   <button class="button is-small is-primary" @click="editEnv(env)">
                     <span class="icon">
                       <i class="fas fa-edit"></i>
+                    </span>
+                  </button>
+                </div>
+                <div class="control" v-if="copyAPI">
+                  <button class="button is-small is-warning" @click="copyValue(env)">
+                    <span class="icon">
+                      <i class="fas fa-copy"></i>
                     </span>
                   </button>
                 </div>
@@ -84,6 +106,11 @@
           </tr>
           </tbody>
         </table>
+        <div class="is-hidden-mobile">
+          <Message message_class="is-info" title="Informational">
+            Some variables values are masked for security reasons. If you need to see the value, click on edit.
+          </Message>
+        </div>
       </div>
     </div>
   </div>
@@ -91,6 +118,7 @@
 
 <script setup>
 import request from "~/utils/request.js";
+import {awaitElement} from "~/utils/index.js";
 
 useHead({title: 'Environment Variables'})
 
@@ -99,6 +127,7 @@ const toggleForm = ref(false)
 const form_key = ref(null)
 const form_value = ref(null)
 const file = ref('.env')
+const copyAPI = navigator.clipboard
 
 const loadContent = async () => {
   envs.value = []
@@ -126,7 +155,7 @@ const deleteEnv = async (env) => {
 
 const addVariable = async () => {
   const key = form_key.value.toUpperCase()
-  
+
   if (!key.startsWith('WS_')) {
     alert('Key must start with WS_')
     return
@@ -150,4 +179,19 @@ const editEnv = (env) => {
   form_value.value = env.value
   toggleForm.value = true
 }
+
+const copyValue = (env) => navigator.clipboard.writeText(env.value)
+
+watch(toggleForm, (value) => {
+  if (!value) {
+    form_key.value = null
+    form_value.value = null
+  } else {
+    awaitElement('#env_page_title', (_, el) => el.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest'
+    }))
+  }
+});
 </script>

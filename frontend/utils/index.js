@@ -41,4 +41,22 @@ const humanFileSize = (bytes = 0, showUnit = true, decimals = 2, mod = 1000) => 
     return `${(bytes / (mod ** factor)).toFixed(decimals)}${showUnit ? sz[factor] : ''}`;
 }
 
-export {ag_set, ag, humanFileSize}
+const awaitElement = (sel, callback) => {
+    let interval = undefined;
+
+    let $elm = document.querySelector(sel)
+
+    if ($elm) {
+        return callback(sel, $elm);
+    }
+
+    interval = setInterval(() => {
+        let $elm = document.querySelector(sel);
+        if ($elm) {
+            clearInterval(interval);
+            callback(sel, $elm);
+        }
+    }, 200);
+}
+
+export {ag_set, ag, humanFileSize, awaitElement}
