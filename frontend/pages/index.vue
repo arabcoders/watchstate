@@ -5,41 +5,49 @@
       <h1 class="title is-4">
         <NuxtLink href="/history">Recent History</NuxtLink>
       </h1>
-      <div class="table-container" v-if="lastHistory.length>0">
-        <table class="table is-fullwidth is-hoverable is-striped is-bordered has-text-centered"
-               style="table-layout: fixed">
-          <thead>
-          <tr>
-            <th width="10%">Time</th>
-            <th width="50%">Title</th>
-            <th width="10%">Backend</th>
-            <th width="6%">Played</th>
-            <th width="10%">Progress</th>
-            <th width="14%">Event</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr v-for="history in lastHistory" :key="history.id">
-            <td>{{ moment(history.updated).fromNow() }}</td>
-            <td class="has-text-left">
-              <span class="icon-text">
+    </div>
+
+    <div class="column is-12">
+      <div class="columns is-multiline" v-if="lastHistory.length>0">
+        <div class="column is-6-tablet" v-for="history in lastHistory" :key="history.id">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">{{ history.full_title ?? history.title }}</p>
+              <span class="card-header-icon">
                 <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
                 <span class="icon" v-else><i class="fas fa-film"></i></span>
-                <span>{{ history.full_title ?? history.title }}</span>
               </span>
-            </td>
-            <td>{{ history.via }}</td>
-            <td>
-              <span class="has-text-success" v-if="history.watched">Yes</span>
-              <span class="has-text-danger" v-else>No</span>
-            </td>
-            <td>{{ history.progress ?? 'None' }}</td>
-            <td>{{ history.event ?? '-' }}</td>
-          </tr>
-          </tbody>
-        </table>
+            </header>
+            <div class="card-content">
+              <div class="columns is-multiline is-mobile has-text-centered">
+                <div class="column is-6-mobile">
+                  {{ moment(history.updated).fromNow() }}
+                </div>
+                <div class="column is-6-mobile">
+                  <NuxtLink :href="'/backends/'+history.via">
+                    {{ history.via }}
+                  </NuxtLink>
+                </div>
+                <div class="column is-6-mobile" v-if="history.event">
+                  <span v-tooltip="'The event which triggered the update.'" class="has-tooltip">
+                    {{ history.event }}
+                  </span>
+                </div>
+                <div class="column is-6-mobile">
+                  <span class="has-text-success" v-if="history.watched">Played</span>
+                  <span class="has-text-danger" v-else>Unplayed</span>
+                </div>
+                <div class="column is-6-mobile" v-if="history.progress && !history.watched">
+                  <span v-tooltip="'Play Progress'">
+                    {{ history.progress }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div v-else>
+      <div class="column is-12" v-else>
         <Message title="Ho history found." message_class="is-warning"/>
       </div>
     </div>
@@ -99,7 +107,7 @@ const recentTaskLogs = ref([])
 const loadContent = async () => {
   const logs_limit = 50
   try {
-    const response = await request(`/history?perpage=5`)
+    const response = await request(`/history?perpage=6`)
     const json = await response.json();
     lastHistory.value = json.history
   } catch (e) {

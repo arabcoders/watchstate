@@ -18,20 +18,12 @@ class RouterStrategy extends ApplicationStrategy implements OptionsHandlerInterf
             'Allow' => implode(', ', $methods),
         ];
 
-        $mode = ag($_SERVER, 'HTTP_SEC_FETCH_MODE');
+        $response = new Response(status: HTTP_STATUS::HTTP_NO_CONTENT->value, headers: $headers);
 
-        if ('cors' !== $mode) {
-            return fn(): iResponse => new Response(status: HTTP_STATUS::HTTP_NO_CONTENT->value, headers: $headers);
+        if ('cors' === ag($_SERVER, 'HTTP_SEC_FETCH_MODE')) {
+            return fn(): iResponse => addCors($response, $headers, $methods);
         }
 
-        $headers += [
-            'Access-Control-Max-Age' => 600,
-            'Access-Control-Allow-Headers' => 'X-Apikey, *',
-            'Access-Control-Allow-Methods' => implode(', ', $methods),
-            'Access-Control-Allow-Origin' => '*',
-        ];
-
-        return fn(): iResponse => new Response(status: HTTP_STATUS::HTTP_NO_CONTENT->value, headers: $headers);
+        return fn(): iResponse => $response;
     }
-
 }

@@ -41,10 +41,11 @@ final class Index
             $url = $apiUrl->withPath(parseConfigValue(self::URL . "/" . basename($file)));
 
             $builder = [
+                'filename' => basename($file),
                 'type' => $matches[1] ?? '??',
                 'date' => $matches[2] ?? '??',
                 'size' => filesize($file),
-                'modified' => makeDate(filemtime($file))->format('Y-m-d H:i:s T'),
+                'modified' => makeDate(filemtime($file)),
                 'urls' => [
                     'self' => (string)$url,
                     'stream' => (string)$url->withQuery($query),

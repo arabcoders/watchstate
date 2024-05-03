@@ -32,12 +32,20 @@
             </span>
           </NuxtLink>
 
+          <NuxtLink class="navbar-item" href="/tasks">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-tasks"></i></span>
+              <span>Tasks</span>
+            </span>
+          </NuxtLink>
+
           <NuxtLink class="navbar-item" href="/logs">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-globe"></i></span>
               <span>Logs</span>
             </span>
           </NuxtLink>
+
         </div>
         <div class="navbar-end pr-3">
           <div class="navbar-item">
@@ -68,6 +76,21 @@
     <div class="columns is-multiline" v-if="showConnection">
       <div class="column is-12 mt-2">
         <form class="box" @submit.prevent="testApi">
+
+          <div class="field">
+            <label class="label" for="api_token">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-key"></i></span>
+                <span>API Token</span>
+              </span>
+            </label>
+            <div class="control">
+              <input class="input" id="api_token" type="text" v-model="api_token" required placeholder="API Token..."
+                     @keyup="api_status = false; api_response = ''">
+            </div>
+            <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
+          </div>
+
           <div class="field">
             <label class="label" for="api_url">
               <span class="icon-text">
@@ -102,20 +125,6 @@
             </div>
           </div>
 
-          <div class="field">
-            <label class="label" for="api_token">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-key"></i></span>
-                <span>API Token</span>
-              </span>
-            </label>
-            <div class="control">
-              <input class="input" id="api_token" type="text" v-model="api_token" required placeholder="API Token..."
-                     @keyup="api_status = false; api_response = ''">
-            </div>
-            <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
-          </div>
-
           <div class="field is-grouped has-addons-right">
             <div class="control is-expanded">
               <input class="input" type="text" v-model="api_response" readonly disabled
@@ -145,7 +154,7 @@
     <div class="columns mt-3 is-mobile">
       <div class="column is-8-mobile">
         <div class="has-text-left">
-          © {{ Year }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+          {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
         </div>
       </div>
     </div>
@@ -168,6 +177,7 @@ const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
+const api_version = useStorage('api_version', 'dev-master')
 
 const Year = ref(new Date().getFullYear())
 const showMenu = ref(false)
@@ -213,9 +223,10 @@ const applyPreferredColorScheme = (scheme) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   try {
     applyPreferredColorScheme(selectedTheme.value)
+    await getVersion()
   } catch (e) {
   }
 })
@@ -241,9 +252,21 @@ const testApi = async () => {
     api_status.value = 200 === response.status;
     api_response.value = 200 === response.status ? `Status: OK` : `Status: ${response.status} - ${response.statusText}`;
 
+    await getVersion()
+
   } catch (e) {
     api_status.value = false;
     api_response.value = `Error: ${e.message}`;
+  }
+}
+
+const getVersion = async () => {
+  try {
+    const response = await request('/system/version')
+    const json = await response.json()
+    api_version.value = json.version
+  } catch (e) {
+    return 'Unknown'
   }
 }
 

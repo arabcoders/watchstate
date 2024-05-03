@@ -35,5 +35,10 @@ const ag_set = (obj, path, value, separator = '.') => {
 
     return obj;
 }
+const humanFileSize = (bytes = 0, showUnit = true, decimals = 2, mod = 1000) => {
+    const sz = 'BKMGTP';
+    const factor = Math.floor((bytes.toString().length - 1) / 3);
+    return `${(bytes / (mod ** factor)).toFixed(decimals)}${showUnit ? sz[factor] : ''}`;
+}
 
-export {ag_set, ag}
+export {ag_set, ag, humanFileSize}

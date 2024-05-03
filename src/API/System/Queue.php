@@ -58,7 +58,7 @@ final class Queue
                 'title' => $entity->getName(),
                 'played' => $entity->isWatched() ? 'Yes' : 'No',
                 'via' => $entity->via ?? '??',
-                'date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
+                'date' => makeDate($entity->updated),
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
             ];
         }

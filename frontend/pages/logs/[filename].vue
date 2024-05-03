@@ -1,20 +1,24 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12">
-      <span class="title is-4">View Log file</span>
+    <div class="column is-12 is-clearfix">
+      <span class="title is-4">
+        <NuxtLink href="/logs">Logs</NuxtLink>
+        : {{ filename }}
+      </span>
 
       <div class="is-pulled-right" v-if="!error">
         <div class="field is-grouped">
-          <p class="control">
-            <button class="button is-info" v-tooltip="'Watch log'">
-              <span class="icon is-small">
+          <p class="control" v-if="todayLog">
+            <button class="button" v-tooltip="'Watch log'" @click="watchLog"
+                    :class="{'is-info':!stream,'is-danger':stream}">
+              <span class="icon">
                 <i class="fas fa-stream"></i>
               </span>
             </button>
           </p>
           <p class="control">
             <button class="button is-primary" @click.prevent="loadContent">
-              <span class="icon is-small">
+              <span class="icon">
                 <i class="fas fa-sync"></i>
               </span>
             </button>
@@ -24,7 +28,15 @@
     </div>
 
     <div class="column is-12">
-      <code class="box logs-container" v-if="!error">
+      <template v-if="stream">
+        <Message message_class="is-info">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
+            <span>Streaming log content...</span>
+          </span>
+        </Message>
+      </template>
+      <code ref="logContainer" class="box logs-container" v-if="!error">
         <div v-for="(item, index) in data" :key="'log_line-'+index">
           {{ item }}
         </div>
@@ -39,8 +51,8 @@
 
 <style scoped>
 .logs-container {
-  min-height: 60vh;
-  max-height: 70vh;
+  min-height: 50vh;
+  max-height: 60vh;
   overflow-y: auto;
   white-space: pre;
 }
@@ -49,10 +61,18 @@
 <script setup>
 
 import Message from "~/components/Message.vue";
+import moment from "moment";
+import {useStorage} from "@vueuse/core";
 
 const filename = useRoute().params.filename
 const data = ref([])
 const error = ref(null)
+const stream = ref(null)
+
+const api_path = useStorage('api_path', '/v1/api')
+const api_url = useStorage('api_url', '')
+const api_token = useStorage('api_token', '')
+const logContainer = ref(null)
 
 const loadContent = async () => {
   try {
@@ -68,8 +88,33 @@ const loadContent = async () => {
   }
 }
 
-onMounted(() => {
-  loadContent()
-})
+onMounted(() => loadContent());
+onBeforeUnmount(() => closeStream());
+onUnmounted(() => closeStream());
+
+const watchLog = () => {
+  if (null !== stream.value) {
+    closeStream();
+    return;
+  }
+
+  stream.value = new EventSource(`${api_url.value}${api_path.value}/logs/${filename}?stream=1&apikey=${api_token.value}`)
+  stream.value.addEventListener('data', (event) => {
+    data.value.push(event.data)
+  });
+}
+
+const closeStream = () => {
+  if (stream.value) {
+    stream.value.close()
+    stream.value = null
+  }
+}
+
+const updateScroll = () => logContainer.value.scrollTop = logContainer.value.scrollHeight;
+
+const todayLog = computed(() => filename.includes(moment().format('YYYYMMDD')))
+
+onUpdated(() => updateScroll());
 
 </script>

@@ -111,3 +111,19 @@ hr {
 .is-bold {
     font-weight: bold;
 }
+
+.is-word-break {
+    word-break: break-all;
+}
+
+.is-ellipsis {
+    max-width: calc(100% - 10px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.has-tooltip {
+    cursor: help;
+    border-bottom: 1px dotted #000;
+}

@@ -1,25 +1,14 @@
 <template>
   <div class="notification" :class="message_class">
-    <h1 class="title is-5" v-if="html_title" v-html="html_title"></h1>
-    <h1 class="title is-5" v-if="!html_title && title">{{ title }}</h1>
-    <p v-if="html_message" v-html="html_message"></p>
-    <p v-if="!html_message && message">{{ message }}</p>
+    <h1 class="title is-5" v-if="title">{{ title }}</h1>
+    <p v-if="message">{{ message }}</p>
+    <slot></slot>
   </div>
 </template>
 
 <script setup>
 defineProps({
-  html_title: {
-    type: String,
-    default: null,
-    required: false
-  },
   title: {
-    type: String,
-    default: null,
-    required: false
-  },
-  html_message: {
     type: String,
     default: null,
     required: false
