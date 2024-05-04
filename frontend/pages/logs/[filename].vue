@@ -9,7 +9,7 @@
       <div class="is-pulled-right" v-if="!error">
         <div class="field is-grouped">
 
-          <p class="control" v-if="todayLog">
+          <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
             <button class="button" v-tooltip="'Watch log'" @click="watchLog"
                     :class="{'is-info':!stream,'is-danger':stream}">
               <span class="icon">
@@ -47,9 +47,9 @@
         </Message>
       </template>
       <code ref="logContainer" class="box logs-container" v-if="!error" :class="{'is-pre': !wrapLines}">
-        <div v-for="(item, index) in data" :key="'log_line-'+index">
+        <span class="is-block" v-for="(item, index) in data" :key="'log_line-'+index">
           {{ item }}
-        </div>
+        </span>
       </code>
       <template v-else>
         <Message title="Request Error" message_class="is-danger" :message="error"/>
@@ -75,18 +75,22 @@ import {useStorage} from "@vueuse/core";
 
 const filename = useRoute().params.filename
 const data = ref([])
-const error = ref(null)
-const stream = ref(null)
+const error = ref('')
+const wrapLines = ref(true)
 
 const api_path = useStorage('api_path', '/v1/api')
 const api_url = useStorage('api_url', '')
 const api_token = useStorage('api_token', '')
+
+/** @type {Ref<EventSource|null>} */
+const stream = ref(null)
+
+/** @type {Ref<HTMLPreElement|null>} */
 const logContainer = ref(null)
-const wrapLines = ref(true)
 
 const loadContent = async () => {
   try {
-    const response = await request(`/logs/${filename}`)
+    const response = await request(`/log/${filename}`)
     if (response.ok) {
       const text = await response.text()
       data.value = text.split('\n')
@@ -108,7 +112,8 @@ const watchLog = () => {
     return;
   }
 
-  stream.value = new EventSource(`${api_url.value}${api_path.value}/logs/${filename}?stream=1&apikey=${api_token.value}`)
+  // noinspection JSValidateTypes
+  stream.value = new EventSource(`${api_url.value}${api_path.value}/log/${filename}?stream=1&apikey=${api_token.value}`)
   stream.value.addEventListener('data', (event) => {
     data.value.push(event.data)
   });
@@ -123,8 +128,5 @@ const closeStream = () => {
 
 const updateScroll = () => logContainer.value.scrollTop = logContainer.value.scrollHeight;
 
-const todayLog = computed(() => filename.includes(moment().format('YYYYMMDD')))
-
 onUpdated(() => updateScroll());
-
 </script>

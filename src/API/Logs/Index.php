@@ -21,6 +21,7 @@ use Symfony\Component\Process\Process;
 final class Index
 {
     public const string URL = '%{api.prefix}/logs';
+    public const string URL_FILE = '%{api.prefix}/log';
     private const int DEFAULT_LIMIT = 1000;
     private int $counter = 1;
 
@@ -53,7 +54,59 @@ final class Index
         return api_response(HTTP_STATUS::HTTP_OK, $list);
     }
 
-    #[Get(Index::URL . '/{filename}[/]', name: 'logs.view')]
+    #[Get(Index::URL . '/recent[/]', name: 'logs.recent')]
+    public function recent(iRequest $request): iResponse
+    {
+        $path = fixPath(Config::get('tmpDir') . '/logs');
+
+        $list = [];
+
+        $today = makeDate()->format('Ymd');
+
+        $params = DataUtil::fromArray($request->getQueryParams());
+        $limit = (int)$params->get('limit', 50);
+        $limit = $limit < 1 ? 50 : $limit;
+
+        foreach (glob($path . '/*.*.log') as $file) {
+            preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
+
+            $logDate = $matches[2] ?? null;
+
+            if (!$logDate || $logDate !== $today) {
+                continue;
+            }
+
+            $builder = [
+                'filename' => basename($file),
+                'type' => $matches[1] ?? '??',
+                'date' => $matches[2] ?? '??',
+                'size' => filesize($file),
+                'modified' => makeDate(filemtime($file)),
+                'lines' => [],
+            ];
+
+            $file = new SplFileObject($file, 'r');
+
+            if ($file->getSize() > 1) {
+                $file->seek(PHP_INT_MAX);
+                $lastLine = $file->key();
+                $it = new LimitIterator($file, max(0, $lastLine - $limit), $lastLine);
+                foreach ($it as $line) {
+                    $line = trim((string)$line);
+                    if (empty($line)) {
+                        continue;
+                    }
+                    $builder['lines'][] = $line;
+                }
+            }
+
+            $list[] = $builder;
+        }
+
+        return api_response(HTTP_STATUS::HTTP_OK, $list);
+    }
+
+    #[Get(Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
     public function logView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($filename = ag($args, 'filename'))) {

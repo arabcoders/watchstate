@@ -206,8 +206,9 @@ final class Initializer
             }
         } catch (Throwable $e) {
             $httpException = true === ($e instanceof HttpException);
+            $routeException = true === ($e instanceof RouterHttpException);
 
-            if (false === $httpException || $e->getCode() !== 200) {
+            if (false === $routeException && (false === $httpException || $e->getCode() !== 200)) {
                 Container::get(LoggerInterface::class)->error(
                     message: $e->getMessage(),
                     context: [
@@ -223,6 +224,8 @@ final class Initializer
             $response = new Response(status: $statusCode, headers: [
                 'X-Error-Message' => $httpException ? $e->getMessage() : ''
             ]);
+
+            $this->write($request, Level::Info, $this->formatLog($request, $response));
         }
 
         $emitter($response);
@@ -384,18 +387,13 @@ final class Initializer
             }
         })();
 
-        try {
-            $response = $router->dispatch($realRequest);
-            if (!$response->hasHeader('X-Log-Response')) {
-                $response = $response->withHeader('X-Log-Response', '1');
-            }
-
-            return $response->withHeader('Access-Control-Allow-Origin', '*')
-                ->withHeader('Access-Control-Allow-Credentials', 'true');
-        } /** @noinspection PhpRedundantCatchClauseInspection */
-        catch (RouterHttpException $e) {
-            throw new HttpException($e->getMessage(), $e->getStatusCode());
+        $response = $router->dispatch($realRequest);
+        if (!$response->hasHeader('X-Log-Response')) {
+            $response = $response->withHeader('X-Log-Response', '1');
         }
+
+        return $response->withHeader('Access-Control-Allow-Origin', '*')
+            ->withHeader('Access-Control-Allow-Credentials', 'true');
     }
 
     /**
