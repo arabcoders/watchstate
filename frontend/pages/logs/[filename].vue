@@ -8,6 +8,7 @@
 
       <div class="is-pulled-right" v-if="!error">
         <div class="field is-grouped">
+
           <p class="control" v-if="todayLog">
             <button class="button" v-tooltip="'Watch log'" @click="watchLog"
                     :class="{'is-info':!stream,'is-danger':stream}">
@@ -16,6 +17,15 @@
               </span>
             </button>
           </p>
+
+          <p class="control">
+            <button class="button is-warning" @click.prevent="wrapLines = !wrapLines" v-tooltip="'Toggle wrap line'">
+              <span class="icon">
+                <i class="fas fa-text-width"></i>
+              </span>
+            </button>
+          </p>
+
           <p class="control">
             <button class="button is-primary" @click.prevent="loadContent">
               <span class="icon">
@@ -36,7 +46,7 @@
           </span>
         </Message>
       </template>
-      <code ref="logContainer" class="box logs-container" v-if="!error">
+      <code ref="logContainer" class="box logs-container" v-if="!error" :class="{'is-pre': !wrapLines}">
         <div v-for="(item, index) in data" :key="'log_line-'+index">
           {{ item }}
         </div>
@@ -54,7 +64,6 @@
   min-height: 50vh;
   max-height: 60vh;
   overflow-y: auto;
-  white-space: pre;
 }
 </style>
 
@@ -73,6 +82,7 @@ const api_path = useStorage('api_path', '/v1/api')
 const api_url = useStorage('api_url', '')
 const api_token = useStorage('api_token', '')
 const logContainer = ref(null)
+const wrapLines = ref(true)
 
 const loadContent = async () => {
   try {
