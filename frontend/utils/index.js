@@ -1,3 +1,7 @@
+import {useNotification} from '@kyvg/vue3-notification'
+
+const {notify} = useNotification();
+
 const ag = (obj, path, defaultValue = null, separator = '.') => {
     const keys = path.split(separator)
     let at = obj
@@ -62,4 +66,29 @@ const awaitElement = (sel, callback) => {
 
 const ucFirst = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
-export {ag_set, ag, humanFileSize, awaitElement, ucFirst}
+const notification = (type, title, text, duration = 3000) => {
+    let classes = ''
+
+    switch (type.toLowerCase()) {
+        case 'info':
+        default:
+            classes = 'has-background-info has-text-white'
+            break
+        case 'success':
+            classes = 'has-background-success has-text-white'
+            break
+        case 'warning':
+            classes = 'has-background-warning has-text-white'
+            break
+        case 'error':
+            classes = 'has-background-danger has-text-white'
+            if (duration === 3000) {
+                duration = 10000
+            }
+            break
+    }
+
+    return notify({title, text, type: classes, duration})
+}
+
+export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification}

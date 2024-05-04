@@ -218,6 +218,7 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
+import {notification} from "~/utils/index.js";
 
 const id = useRoute().params.backend
 const backend = ref({})
@@ -249,7 +250,7 @@ const saveContent = async () => {
 
   const json = await response.json()
   if (!response.ok) {
-    alert('Failed to save backend settings.')
+    notification('error', 'Error', 'Failed to save backend settings.')
   }
 }
 
@@ -267,7 +268,7 @@ const getUUid = async () => {
   const required_values = ['type', 'token', 'url'];
 
   if (required_values.some(v => !backend.value[v])) {
-    alert('Please fill all the required fields.')
+    notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
     return
   }
 
@@ -285,7 +286,7 @@ const getUUid = async () => {
   uuidLoading.value = false
 
   if (!response.ok) {
-    alert('Failed to get the UUID from the backend.')
+    notification('error', 'Error', 'Failed to get the UUID from the backend.')
     return
   }
 
@@ -295,14 +296,14 @@ const getUUid = async () => {
 const getUsers = async (showAlert = true) => {
   const required_values = ['type', 'token', 'url', 'uuid'];
 
-  usersLoading.value = true
-
   if (required_values.some(v => !backend.value[v])) {
     if (showAlert) {
-      alert('Please fill all the required fields.')
+      notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
     }
     return
   }
+
+  usersLoading.value = true
 
   const response = await request(`/backends/users/${backend.value.type}`, {
     method: 'POST',
@@ -318,13 +319,13 @@ const getUsers = async (showAlert = true) => {
   usersLoading.value = false
 
   if (200 !== response.status) {
-    alert(`${json.error.code}: ${json.error.message}`)
+    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
     return
   }
 
   users.value = json
 }
 
-onMounted(() => loadContent())
+onMounted(async () => await loadContent())
 
 </script>

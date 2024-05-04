@@ -533,6 +533,11 @@
   resolved "https://registry.yarnpkg.com/@kwsites/promise-deferred/-/promise-deferred-1.1.1.tgz#8ace5259254426ccef57f3175bc64ed7095ed919"
   integrity sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==
 
+"@kyvg/vue3-notification@^3.1.4":
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@kyvg/vue3-notification/-/vue3-notification-3.2.1.tgz#b7dc9f1855b43a24797acee92988dff89aefb45d"
+  integrity sha512-qn4bCBBCxW0Ya+RmHXu2SYBVwGXWsAGdlDKqCqyLryaZTbtFXi32iSSLnuKjSUVxFqQRToFc6g1zp1XLTyHrvw==
+
 "@mapbox/node-pre-gyp@^1.0.5":
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/@mapbox/node-pre-gyp/-/node-pre-gyp-1.0.11.tgz#417db42b7f5323d79e93b34a6d7a2a12c0df43fa"
@@ -3878,6 +3883,14 @@ nuxi@^3.11.1:
   integrity sha512-AW71TpxRHNg8MplQVju9tEFvXPvX42e0wPYknutSStDuAjV99vWTWYed4jxr/grk2FtKAuv2KvdJxcn2W59qyg==
   optionalDependencies:
     fsevents "~2.3.3"
+
+nuxt3-notifications@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/nuxt3-notifications/-/nuxt3-notifications-1.2.0.tgz#5b4440c1fc913ebda7bb88495aeb01f74cbdae2d"
+  integrity sha512-WHYviscx7EcstMCQkv8QBvn0mPLZrsLTgrciHltNCMURAY+afXPq6TS/TcLJoPAZoH8TyHZxRkYOnOEADGUXpA==
+  dependencies:
+    "@kyvg/vue3-notification" "^3.1.4"
+    scule "^1.0.0"
 
 nuxt@^3.11.2:
   version "3.11.2"
