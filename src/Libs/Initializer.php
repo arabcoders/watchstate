@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use App\API\Backends\Webhooks;
+use App\API\Backend\Webhooks;
 use App\Cli;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;

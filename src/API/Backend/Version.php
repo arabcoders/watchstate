@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends;
+namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
@@ -14,11 +14,11 @@ use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
-final class Sessions
+final class Version
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/sessions[/]', name: 'backends.backend.sessions')]
+    #[Get(Index::URL . '/{name:backend}/version[/]', name: 'backends.backend.info')]
     public function backendsView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
@@ -39,7 +39,7 @@ final class Sessions
         }
 
         try {
-            $sessions = $client->getSessions($opts);
+            $version = $client->getVersion($opts);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -47,7 +47,7 @@ final class Sessions
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
 
         $response = [
-            'sessions' => ag($sessions, 'sessions', []),
+            'version' => $version,
             'links' => [
                 'self' => (string)$apiUrl,
                 'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),

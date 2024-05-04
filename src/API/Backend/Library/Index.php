@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends\Library;
+namespace App\API\Backend\Library;
 
-use App\API\Backends\Index as BackendsIndex;
+use App\API\Backend\Index as BackendsIndex;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Config;
 use App\Libs\Exceptions\RuntimeException;

@@ -341,10 +341,10 @@ $ docker exec -ti watchstate console system:tasks
 
 ### How to add webhooks?
 
-The Webhook URL is backend specific, the request path is `/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`,
+The Webhook URL is backend specific, the request path is `/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`,
 Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for, and `[APIKEY]` is the global api key
 which you can get via the `system:apikey` command. Typically, the full path
-is `http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`. if the tool
+is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`. if the tool
 port is directly exposed or via the reverse proxy you have setup.
 
 If your media backend support sending headers then remove query parameter `?apikey=[APIKEY]`, and add this header
@@ -371,7 +371,7 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook/Notifications URL:
 
-`http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
+`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 * Replace `[APIKEY]` with the global apikey.
@@ -412,7 +412,7 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 ##### URL:
 
-`http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
+`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 * Replace `[APIKEY]` with the global apikey.
@@ -441,7 +441,7 @@ go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 
 ##### Webhook Url:
 
-`http://localhost:8080/v1/api/backends/[BACKEND_NAME]/webhook`
+`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 

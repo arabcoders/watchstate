@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends;
+namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
@@ -27,20 +27,20 @@ final class Webhooks
 {
     use APITraits;
 
-    private iLogger $accesslog;
+    private iLogger $accessLog;
 
     public function __construct(private iCache $cache)
     {
-        $this->accesslog = new Logger(name: 'http', processors: [new LogMessageProcessor()]);
+        $this->accessLog = new Logger(name: 'http', processors: [new LogMessageProcessor()]);
 
         $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
 
         if (null !== ($logfile = Config::get('webhook.logfile'))) {
-            $this->accesslog = $this->accesslog->pushHandler(new StreamHandler($logfile, $level, true));
+            $this->accessLog = $this->accessLog->pushHandler(new StreamHandler($logfile, $level, true));
         }
 
         if (true === inContainer()) {
-            $this->accesslog->pushHandler(new StreamHandler('php://stderr', $level, true));
+            $this->accessLog->pushHandler(new StreamHandler('php://stderr', $level, true));
         }
     }
 
@@ -257,9 +257,9 @@ final class Webhooks
         }
 
         if (true === (Config::get('logs.context') || $forceContext)) {
-            $this->accesslog->log($level, $message, $context);
+            $this->accessLog->log($level, $message, $context);
         } else {
-            $this->accesslog->log($level, r($message, $context));
+            $this->accessLog->log($level, r($message, $context));
         }
     }
 }
