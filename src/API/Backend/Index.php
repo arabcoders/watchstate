@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends;
+namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\HTTP_STATUS;
@@ -10,12 +10,14 @@ use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
-final class View
+final class Index
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}[/]', name: 'backends.view')]
-    public function backendsView(iRequest $request, array $args = []): iResponse
+    public const string URL = '%{api.prefix}/backend';
+
+    #[Get(self::URL . '/{name:backend}[/]', name: 'backends.view')]
+    public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);

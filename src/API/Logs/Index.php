@@ -21,7 +21,7 @@ use Symfony\Component\Process\Process;
 final class Index
 {
     public const string URL = '%{api.prefix}/logs';
-    private const int DEFAULT_LIMIT = 100;
+    private const int DEFAULT_LIMIT = 1000;
     private int $counter = 1;
 
     #[Get(self::URL . '[/]', name: 'logs.list')]
@@ -41,10 +41,11 @@ final class Index
             $url = $apiUrl->withPath(parseConfigValue(self::URL . "/" . basename($file)));
 
             $builder = [
+                'filename' => basename($file),
                 'type' => $matches[1] ?? '??',
                 'date' => $matches[2] ?? '??',
                 'size' => filesize($file),
-                'modified' => makeDate(filemtime($file))->format('Y-m-d H:i:s T'),
+                'modified' => makeDate(filemtime($file)),
                 'urls' => [
                     'self' => (string)$url,
                     'stream' => (string)$url->withQuery($query),
@@ -126,7 +127,7 @@ final class Index
             ignore_user_abort(true);
 
             try {
-                $cmd = 'exec tail --lines 0 -F ' . escapeshellarg($filePath);
+                $cmd = 'exec tail -n 0 -F ' . escapeshellarg($filePath);
 
                 $process = Process::fromShellCommandline($cmd);
                 $process->setTimeout(3600);

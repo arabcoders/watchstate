@@ -46,6 +46,11 @@ hr {
     white-space: nowrap;
 }
 
+.is-masked {
+    color: transparent !important;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
 @media (prefers-color-scheme: dark) {
     * {
         unicode-bidi: plaintext;
@@ -94,6 +99,10 @@ hr {
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+
+    .is-masked {
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    }
 }
 
 .is-borderless {
@@ -110,4 +119,28 @@ hr {
 
 .is-bold {
     font-weight: bold;
+}
+
+.is-word-break {
+    word-break: break-all;
+}
+
+.is-ellipsis {
+    max-width: calc(100% - 10px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.has-tooltip {
+    cursor: help;
+    border-bottom: 1px dotted #000;
+}
+
+.is-justify-center {
+    justify-content: center;
+}
+
+.is-pre {
+    white-space: pre;
 }

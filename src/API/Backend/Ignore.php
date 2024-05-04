@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends;
+namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
@@ -58,7 +58,7 @@ final class Ignore
                 'db' => $db,
                 'id' => $id,
                 'scoped' => null === $scope ? 'No' : 'Yes',
-                'created' => makeDate($date)->format('Y-m-d H:i:s T'),
+                'created' => makeDate($date),
             ];
         }
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');

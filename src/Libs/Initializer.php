@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use App\API\Backends\Webhooks;
+use App\API\Backend\Webhooks;
 use App\Cli;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
@@ -199,7 +199,9 @@ final class Initializer
             }
 
             if (true === (bool)$response->getHeaderLine('X-Log-Response')) {
-                $this->write($request, Level::Info, $this->formatLog($request, $response));
+                if ('OPTIONS' !== $request->getMethod()) {
+                    $this->write($request, Level::Info, $this->formatLog($request, $response));
+                }
                 $response = $response->withoutHeader('X-Log-Response');
             }
         } catch (Throwable $e) {
@@ -285,7 +287,7 @@ final class Initializer
             return $response;
         }
 
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         // -- Find Relevant backend.
         foreach ($configFile->getAll() as $name => $info) {

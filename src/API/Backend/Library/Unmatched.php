@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends\Library;
+namespace App\API\Backend\Library;
 
-use App\API\Backends\Index as BackendsIndex;
-use App\Commands\Backend\Library\MismatchCommand;
+use App\API\Backend\Index as BackendsIndex;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
 use App\Libs\Exceptions\RuntimeException;
@@ -15,11 +14,11 @@ use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
-final class Mismatched
+final class Unmatched
 {
     use APITraits;
 
-    #[Get(BackendsIndex::URL . '/{name:backend}/mismatched[/[{id}[/]]]', name: 'backends.library.mismatched')]
+    #[Get(BackendsIndex::URL . '/{name:backend}/unmatched[/[{id}[/]]]', name: 'backends.library.unmatched')]
     public function listLibraries(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
@@ -36,13 +35,6 @@ final class Mismatched
 
         if ($params->get('raw')) {
             $opts[Options::RAW_RESPONSE] = true;
-        }
-
-        $percentage = (float)$params->get('percentage', MismatchCommand::DEFAULT_PERCENT);
-        $method = $params->get('method', MismatchCommand::METHODS[0]);
-
-        if (false === in_array($method, MismatchCommand::METHODS, true)) {
-            return api_error('Invalid comparison method.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         try {
@@ -65,13 +57,9 @@ final class Mismatched
 
         foreach ($ids as $libraryId) {
             foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
-                $processed = MismatchCommand::compare(item: $item, method: $method);
-
-                if (empty($processed) || $processed['percent'] >= $percentage) {
-                    continue;
+                if (null === ($externals = ag($item, 'guids', null)) || empty($externals)) {
+                    $list[] = $item;
                 }
-
-                $list[] = $processed;
             }
         }
 

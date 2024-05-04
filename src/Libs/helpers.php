@@ -1228,3 +1228,28 @@ if (!function_exists('checkIgnoreRule')) {
         return true;
     }
 }
+
+if (!function_exists('addCors')) {
+    function addCors(iResponse $response, array $headers = [], array $methods = []): iResponse
+    {
+        $headers += [
+            'Access-Control-Max-Age' => 600,
+            'Access-Control-Allow-Headers' => 'X-Application-Version, X-Request-Id, *',
+            'Access-Control-Allow-Origin' => '*',
+        ];
+
+        if (count($methods) > 0) {
+            $headers['Access-Control-Allow-Methods'] = implode(', ', $methods);
+        }
+
+        foreach ($headers as $key => $val) {
+            if (true === $response->hasHeader($key)) {
+                continue;
+            }
+
+            $response = $response->withHeader($key, $val);
+        }
+
+        return $response;
+    }
+}

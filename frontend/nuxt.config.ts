@@ -5,6 +5,10 @@ import path from "path";
 export default defineNuxtConfig({
     ssr: false,
     devtools: {enabled: true},
+    devServer: {
+        port: 8081,
+        host: "0.0.0.0",
+    },
     app: {
         head: {
             "meta": [
@@ -14,19 +18,21 @@ export default defineNuxtConfig({
             ],
         },
         buildAssetsDir: "assets",
+
     },
     router: {
         options: {
-            linkActiveClass: "is-active",
+            linkActiveClass: "is-selected",
         }
     },
     modules: [
         '@vueuse/nuxt',
-        'floating-vue/nuxt'
+        'floating-vue/nuxt',
     ],
     nitro: {
         output: {
             publicDir: path.join(__dirname, 'exported')
         }
     },
+    telemetry: false,
 })

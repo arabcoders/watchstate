@@ -9,7 +9,7 @@ http:// {
 
 	header * ?X-Request-Id "{http.request.uuid}"
 
-    try_files {path} exported/{path} /index.php
+    try_files {path} exported/{path} exported/{path}/ /index.php
 
     php_fastcgi 127.0.0.1:9000 {
         trusted_proxies private_ranges

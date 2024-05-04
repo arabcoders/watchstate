@@ -24,7 +24,7 @@ final class Index
     ];
 
     #[Get(self::URL . '[/]', name: 'backends.index')]
-    public function backendsIndex(iRequest $request): iResponse
+    public function __invoke(iRequest $request): iResponse
     {
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
         $urlPath = $request->getUri()->getPath();
@@ -44,7 +44,9 @@ final class Index
             );
 
             $backend['links'] = [
-                'self' => (string)$apiUrl->withPath($urlPath . '/' . $backend['name']),
+                'self' => (string)$apiUrl->withPath(
+                    parseConfigValue(\App\API\Backend\Index::URL) . '/' . $backend['name']
+                ),
             ];
 
             $response['backends'][] = $backend;
@@ -52,4 +54,5 @@ final class Index
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
+
 }

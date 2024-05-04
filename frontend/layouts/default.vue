@@ -18,24 +18,41 @@
 
       <div class="navbar-menu" :class="{'is-active':showMenu}">
         <div class="navbar-start">
-          <a class="navbar-item" href="/backends">
+          <NuxtLink class="navbar-item" href="/backends">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-server"></i></span>
               <span>Backends</span>
             </span>
-          </a>
-          <a class="navbar-item" href="/history">
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/history">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-history"></i></span>
               <span>History</span>
             </span>
-          </a>
-          <a class="navbar-item" href="/logs">
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/tasks">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-tasks"></i></span>
+              <span>Tasks</span>
+            </span>
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/logs">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-globe"></i></span>
               <span>Logs</span>
             </span>
-          </a>
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/env">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-cogs"></i></span>
+              <span>Env</span>
+            </span>
+          </NuxtLink>
+
         </div>
         <div class="navbar-end pr-3">
           <div class="navbar-item">
@@ -63,9 +80,24 @@
       </div>
     </nav>
 
-    <div class="columns is-multiline">
-      <div class="column is-12 mt-2" v-if="showConnection">
+    <div class="columns is-multiline" v-if="showConnection">
+      <div class="column is-12 mt-2">
         <form class="box" @submit.prevent="testApi">
+
+          <div class="field">
+            <label class="label" for="api_token">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-key"></i></span>
+                <span>API Token</span>
+              </span>
+            </label>
+            <div class="control">
+              <input class="input" id="api_token" type="text" v-model="api_token" required placeholder="API Token..."
+                     @keyup="api_status = false; api_response = ''">
+            </div>
+            <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
+          </div>
+
           <div class="field">
             <label class="label" for="api_url">
               <span class="icon-text">
@@ -84,17 +116,20 @@
           </div>
 
           <div class="field">
-            <label class="label" for="api_token">
+            <label class="label" for="api_path">
               <span class="icon-text">
-                <span class="icon"><i class="fas fa-key"></i></span>
-                <span>API Token</span>
+                <span class="icon"><i class="fas fa-folder"></i></span>
+                <span>API Path</span>
               </span>
             </label>
             <div class="control">
-              <input class="input" id="api_token" type="text" v-model="api_token" required placeholder="API Token..."
+              <input class="input" id="api_path" type="text" v-model="api_path" required
+                     placeholder="API Path... /v1/api"
                      @keyup="api_status = false; api_response = ''">
+              <p class="help">
+                Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API</a>.
+              </p>
             </div>
-            <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
           </div>
 
           <div class="field is-grouped has-addons-right">
@@ -106,24 +141,27 @@
             <div class="control">
               <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
                 <span class="icon-text">
-                  <span class="icon"><i class="fas fa-signs-post"></i></span>
-                  <span>Check</span>
+                  <span class="icon"><i class="fas fa-save"></i></span>
+                  <span>Save</span>
                 </span>
               </button>
             </div>
           </div>
         </form>
       </div>
-
-      <div class="column is-12">
-        <slot/>
-      </div>
     </div>
+
+    <template v-if="!api_url || !api_token">
+      <no-api/>
+    </template>
+    <template v-else>
+      <slot/>
+    </template>
 
     <div class="columns mt-3 is-mobile">
       <div class="column is-8-mobile">
         <div class="has-text-left">
-          © {{ Year }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+          {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
         </div>
       </div>
     </div>
@@ -136,14 +174,17 @@ import 'assets/css/bulma.css'
 import 'assets/css/style.css'
 import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
+import request from "~/utils/request.js";
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
 
-const api_url = useStorage('api_url', '')
+const api_url = useStorage('api_url', window.location.origin)
+const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
+const api_version = useStorage('api_version', 'dev-master')
 
 const Year = ref(new Date().getFullYear())
 const showMenu = ref(false)
@@ -189,9 +230,10 @@ const applyPreferredColorScheme = (scheme) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   try {
     applyPreferredColorScheme(selectedTheme.value)
+    await getVersion()
   } catch (e) {
   }
 })
@@ -205,14 +247,7 @@ watch(selectedTheme, (value) => {
 
 const testApi = async () => {
   try {
-    const response = await fetch(api_url.value + '/v1/api/backends', {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + api_token.value,
-        'Content-Type': 'application/json'
-      }
-    })
-
+    const response = await request('/backends')
     const json = await response.json()
 
     if (json.error) {
@@ -224,9 +259,21 @@ const testApi = async () => {
     api_status.value = 200 === response.status;
     api_response.value = 200 === response.status ? `Status: OK` : `Status: ${response.status} - ${response.statusText}`;
 
+    await getVersion()
+
   } catch (e) {
     api_status.value = false;
     api_response.value = `Error: ${e.message}`;
+  }
+}
+
+const getVersion = async () => {
+  try {
+    const response = await request('/system/version')
+    const json = await response.json()
+    api_version.value = json.version
+  } catch (e) {
+    return 'Unknown'
   }
 }
 

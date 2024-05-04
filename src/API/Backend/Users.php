@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backends;
+namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
@@ -14,11 +14,11 @@ use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Throwable;
 
-final class Version
+final class Users
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/version[/]', name: 'backends.backend.info')]
+    #[Get(Index::URL . '/{name:backend}/users[/]', name: 'backends.backend.users')]
     public function backendsView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
@@ -34,12 +34,16 @@ final class Version
         $opts = [];
         $params = DataUtil::fromRequest($request, true);
 
+        if (true === (bool)$params->get('tokens', false)) {
+            $opts['tokens'] = true;
+        }
+
         if (true === (bool)$params->get('raw', false)) {
             $opts[Options::RAW_RESPONSE] = true;
         }
 
         try {
-            $version = $client->getVersion($opts);
+            $users = $client->getUsersList($opts);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -47,7 +51,7 @@ final class Version
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
 
         $response = [
-            'version' => $version,
+            'users' => $users,
             'links' => [
                 'self' => (string)$apiUrl,
                 'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
