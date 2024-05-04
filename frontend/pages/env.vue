@@ -106,10 +106,8 @@
           </tr>
           </tbody>
         </table>
-        <div class="is-hidden-mobile">
-          <Message message_class="is-info" title="Informational">
-            Some variables values are masked for security reasons. If you need to see the value, click on edit.
-          </Message>
+        <div class="is-hidden-mobile help">
+          Some variables values are masked for security reasons. If you need to see the value, click on edit.
         </div>
       </div>
     </div>

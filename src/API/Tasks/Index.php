@@ -31,21 +31,18 @@ final class Index
         $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
         $urlPath = rtrim($request->getUri()->getPath(), '/');
 
+        $queuedTasks = $this->cache->get('queued_tasks', []);
+
         $response = [
             'tasks' => [],
+            'queued' => $queuedTasks,
             'links' => [
                 'self' => (string)$apiUrl,
             ],
         ];
 
-        $queuedTasks = $this->cache->get('queued_tasks', []);
-
         foreach (TasksCommand::getTasks() as $task) {
-            $task = array_filter(
-                self::formatTask($task),
-                fn($k) => false === in_array($k, ['command', 'args']),
-                ARRAY_FILTER_USE_KEY
-            );
+            $task = self::formatTask($task);
 
             $task['links'] = [
                 'self' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name')),

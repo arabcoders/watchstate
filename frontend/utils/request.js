@@ -11,7 +11,7 @@ const api_token = useStorage('api_token', '')
  * @param options {RequestInit}
  * @returns {Promise<Response>}
  */
-export default async function request(url, options) {
+export default async function request(url, options = {}) {
     if (!api_token.value) {
         throw new Error('API token is not set');
     }
