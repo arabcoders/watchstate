@@ -127,7 +127,7 @@ final class Index
             ignore_user_abort(true);
 
             try {
-                $cmd = 'exec tail --lines 0 -F ' . escapeshellarg($filePath);
+                $cmd = 'exec tail -n 0 -F ' . escapeshellarg($filePath);
 
                 $process = Process::fromShellCommandline($cmd);
                 $process->setTimeout(3600);
