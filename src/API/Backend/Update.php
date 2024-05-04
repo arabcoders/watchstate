@@ -73,7 +73,7 @@ final class Update
                 HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $spec = require __DIR__ . '/../../../config/backend.spec.php';
+        $spec = array_keys(require __DIR__ . '/../../../config/backend.spec.php');
 
         foreach ($data as $update) {
             $key = ag($update, 'key');
