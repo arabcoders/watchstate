@@ -120,7 +120,7 @@ const loadContent = async () => {
   let json = await content.json()
   supported.value = json.supported
 
-  content = await request(`/backends/${id}`)
+  content = await request(`/backend/${id}`)
   json = await content.json()
   backend.value = json.backend
 }

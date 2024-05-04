@@ -34,7 +34,7 @@ const backend = useRoute().params.backend
 const info = ref({})
 
 const loadContent = async () => {
-  const response = await request(`/backends/${backend}/info`)
+  const response = await request(`/backend/${backend}/info`)
   const json = await response.json()
   info.value = json.data
 }

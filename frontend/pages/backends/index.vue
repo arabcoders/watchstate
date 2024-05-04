@@ -89,7 +89,7 @@ const loadContent = async () => {
 onMounted(() => loadContent())
 
 const updateValue = async (backend, key, newValue) => {
-  const response = await request(`/backends/${backend.name}`, {
+  const response = await request(`/backend/${backend.name}`, {
     method: 'PATCH',
     body: JSON.stringify([{
       "key": key,
