@@ -23,36 +23,19 @@ final class Index
         'options.' . Options::ADMIN_TOKEN
     ];
 
-    #[Get(self::URL . '[/]', name: 'backends.index')]
+    #[Get(self::URL . '[/]', name: 'backends')]
     public function __invoke(iRequest $request): iResponse
     {
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-        $urlPath = $request->getUri()->getPath();
-
-        $response = [
-            'backends' => [],
-            'links' => [
-                'self' => (string)$apiUrl,
-            ],
-        ];
+        $list = [];
 
         foreach ($this->getBackends() as $backend) {
-            $backend = array_filter(
+            $list[] = array_filter(
                 $backend,
                 fn($key) => false === in_array($key, ['options', 'webhook'], true),
                 ARRAY_FILTER_USE_KEY
             );
-
-            $backend['links'] = [
-                'self' => (string)$apiUrl->withPath(
-                    parseConfigValue(\App\API\Backend\Index::URL) . '/' . $backend['name']
-                ),
-            ];
-
-            $response['backends'][] = $backend;
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(HTTP_STATUS::HTTP_OK, $list);
     }
-
 }

@@ -18,11 +18,11 @@ final class Sessions
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/sessions[/]', name: 'backends.backend.sessions')]
-    public function backendsView(iRequest $request, array $args = []): iResponse
+    #[Get(Index::URL . '/{name:backend}/sessions[/]', name: 'backend.sessions')]
+    public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         try {
@@ -40,20 +40,9 @@ final class Sessions
 
         try {
             $sessions = $client->getSessions($opts);
+            return api_response(HTTP_STATUS::HTTP_OK, ag($sessions, 'sessions', []));
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-
-        $response = [
-            'sessions' => ag($sessions, 'sessions', []),
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 }

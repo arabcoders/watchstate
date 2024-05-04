@@ -27,11 +27,16 @@
     <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
       <div class="card">
         <header class="card-header">
-          <div class="card-header-title is-centered is-word-break">
-            <NuxtLink :href="'/backends/' + backend.name">
+          <p class="card-header-title is-centered is-word-break">
+            <NuxtLink :href="'/backend/' + backend.name">
               {{ backend.name }}
             </NuxtLink>
-          </div>
+          </p>
+          <span class="card-header-icon" v-tooltip="'Edit Backend settings'">
+            <NuxtLink :href="`/backend/${backend.name}/edit`">
+              <span class="icon"><i class="fas fa-cog"></i></span>
+            </NuxtLink>
+          </span>
         </header>
         <div class="card-content">
           <div class="columns is-multiline is-mobile has-text-centered">
@@ -82,8 +87,7 @@ const backends = ref([])
 const loadContent = async () => {
   backends.value = []
   const response = await request('/backends')
-  const json = await response.json();
-  backends.value = json.backends
+  backends.value = await response.json()
 }
 
 onMounted(() => loadContent())
@@ -97,8 +101,7 @@ const updateValue = async (backend, key, newValue) => {
     }])
   });
 
-  const json = await response.json();
-  backends.value[backends.value.findIndex(b => b.name === backend.name)] = json.backend
+  backends.value[backends.value.findIndex(b => b.name === backend.name)] = await response.json();
 }
 
 </script>

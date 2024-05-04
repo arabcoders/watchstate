@@ -60,9 +60,9 @@
         <table class="table is-fullwidth is-bordered is-striped is-hoverable has-text-centered">
           <thead>
           <tr>
-            <th width="25%">Key</th>
+            <th style="width: 25%;">Key</th>
             <th>Value</th>
-            <th width="10%">Actions</th>
+            <th style="width: 10%;">Actions</th>
           </tr>
           </thead>
           <tbody>

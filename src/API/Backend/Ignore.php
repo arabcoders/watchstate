@@ -27,11 +27,11 @@ final class Ignore
         $this->file = new ConfigFile(Config::get('path') . '/config/ignore.yaml', type: 'yaml', autoCreate: true);
     }
 
-    #[Get(Index::URL . '/{name:backend}/ignore[/]', name: 'backends.backend.ignoredIds')]
+    #[Get(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds')]
     public function ignoredIds(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('No backend was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $list = [];
@@ -61,22 +61,23 @@ final class Ignore
                 'created' => makeDate($date),
             ];
         }
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
 
-        $response = [
-            'ignore' => $list,
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(HTTP_STATUS::HTTP_OK, $list);
     }
 
-    #[Delete(Index::URL . '/{name:backend}/ignore[/]', name: 'backends.backend.ignoredIds.delete')]
+    #[Delete(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds.delete')]
     public function deleteRule(iRequest $request, array $args = []): iResponse
     {
+        if (null === ($name = ag($args, 'name'))) {
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $data = $this->getBackends(name: $name);
+
+        if (empty($data)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
         $params = DataUtil::fromRequest($request);
 
         if (null === ($rule = $params->get('rule'))) {
@@ -98,11 +99,11 @@ final class Ignore
         return api_response(HTTP_STATUS::HTTP_OK);
     }
 
-    #[Post(Index::URL . '/{name:backend}/ignore[/]', name: 'backends.backend.ignoredIds.add')]
+    #[Post(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds.add')]
     public function addRule(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('No backend was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $data = $this->getBackends(name: $name);

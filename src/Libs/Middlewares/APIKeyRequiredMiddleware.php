@@ -19,6 +19,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
 
     private const array OPEN_ROUTES = [
         HealthCheck::URL,
+        '/webhook'
     ];
 
     /**
@@ -30,9 +31,11 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
+        $requestPath = rtrim($request->getUri()->getPath(), '/');
+
         foreach (self::OPEN_ROUTES as $route) {
-            $route = parseConfigValue($route);
-            if (true === str_starts_with($request->getUri()->getPath(), parseConfigValue($route))) {
+            $route = rtrim(parseConfigValue($route), '/');
+            if (true === str_starts_with($requestPath, $route) || true === str_ends_with($requestPath, $route)) {
                 return $handler->handle($request);
             }
         }

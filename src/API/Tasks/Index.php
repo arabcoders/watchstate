@@ -8,6 +8,7 @@ use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\HTTP_STATUS;
+use Cron\CronExpression;
 use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -28,29 +29,15 @@ final class Index
     #[Get(self::URL . '[/]', name: 'tasks.index')]
     public function tasksIndex(iRequest $request): iResponse
     {
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-        $urlPath = rtrim($request->getUri()->getPath(), '/');
-
         $queuedTasks = $this->cache->get('queued_tasks', []);
-
         $response = [
             'tasks' => [],
             'queued' => $queuedTasks,
-            'links' => [
-                'self' => (string)$apiUrl,
-            ],
         ];
 
         foreach (TasksCommand::getTasks() as $task) {
             $task = self::formatTask($task);
-
-            $task['links'] = [
-                'self' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name')),
-                'queue' => (string)$apiUrl->withPath($urlPath . '/' . ag($task, 'name') . '/queue'),
-            ];
-
             $task['queued'] = in_array(ag($task, 'name'), $queuedTasks);
-
             $response['tasks'][] = $task;
         }
 
@@ -87,17 +74,9 @@ final class Index
             return api_response(HTTP_STATUS::HTTP_OK, ['queue' => $queuedTasks]);
         }
 
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('')->withUserInfo('');
-        $urlPath = parseConfigValue(Index::URL);
-
         return api_response(HTTP_STATUS::HTTP_OK, [
             'task' => $id,
             'is_queued' => in_array($id, $queuedTasks),
-            'links' => [
-                'self' => (string)$apiUrl,
-                'task' => (string)$apiUrl->withPath($urlPath . '/' . $id),
-                'tasks' => (string)$apiUrl->withPath($urlPath),
-            ],
         ]);
     }
 
@@ -108,34 +87,27 @@ final class Index
             return api_error('No id was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-
         $task = TasksCommand::getTasks($id);
 
         if (empty($task)) {
             return api_error('Task not found.', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $response = [
-            ...Index::formatTask($task),
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, ['task' => $response]);
+        return api_response(HTTP_STATUS::HTTP_OK, Index::formatTask($task));
     }
 
     private function formatTask(array $task): array
     {
         $isEnabled = (bool)ag($task, 'enabled', false);
 
+        $timer = ag($task, 'timer');
+        assert($timer instanceof CronExpression);
+
         $item = [
             'name' => ag($task, 'name'),
             'description' => ag($task, 'description'),
             'enabled' => true === $isEnabled,
-            'timer' => ag($task, 'timer')->getexpression(),
+            'timer' => $timer->getExpression(),
             'next_run' => null,
             'prev_run' => null,
             'command' => ag($task, 'command'),
@@ -147,8 +119,13 @@ final class Index
         }
 
         if (true === $isEnabled) {
-            $item['next_run'] = makeDate(ag($task, 'timer')->getNextRunDate());
-            $item['prev_run'] = makeDate(ag($task, 'timer')->getPreviousRunDate());
+            try {
+                $item['next_run'] = makeDate($timer->getNextRunDate());
+                $item['prev_run'] = makeDate($timer->getPreviousRunDate());
+            } catch (\Exception) {
+                $item['next_run'] = null;
+                $item['prev_run'] = null;
+            }
         }
 
         return $item;

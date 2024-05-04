@@ -42,6 +42,13 @@ interface ClientInterface
     public function getName(): string;
 
     /**
+     * Get The Backend type.
+     *
+     * @return string Backend type.
+     */
+    public function getType(): string;
+
+    /**
      * Inject logger.
      *
      * @param LoggerInterface $logger logger instance.

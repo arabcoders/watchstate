@@ -22,11 +22,11 @@ final class Env
         'WS_CACHE_URL'
     ];
 
-    private EnvFile $envfile;
+    private EnvFile $envFile;
 
     public function __construct()
     {
-        $this->envfile = (new EnvFile(file: Config::get('path') . '/config/.env', create: true));
+        $this->envFile = (new EnvFile(file: Config::get('path') . '/config/.env', create: true));
     }
 
     #[Get(self::URL . '[/]', name: 'system.env')]
@@ -35,12 +35,9 @@ final class Env
         $response = [
             'data' => [],
             'file' => Config::get('path') . '/config/.env',
-            'links' => [
-                'self' => (string)$request->getUri()->withHost('')->withPort(0)->withScheme(''),
-            ],
         ];
 
-        foreach ($this->envfile->getAll() as $key => $val) {
+        foreach ($this->envFile->getAll() as $key => $val) {
             if (false === str_starts_with($key, 'WS_')) {
                 continue;
             }
@@ -49,9 +46,6 @@ final class Env
                 'key' => $key,
                 'value' => $val,
                 'mask' => in_array($key, self::MASK),
-                'urls' => [
-                    'self' => (string)$request->getUri()->withPath(parseConfigValue(self::URL . '/' . $key)),
-                ],
             ];
         }
 
@@ -70,13 +64,13 @@ final class Env
             return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if (false === $this->envfile->has($key)) {
+        if (false === $this->envFile->has($key)) {
             return api_error(r("Key '{key}' is not set.", ['key' => $key]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $key,
-            'value' => $this->envfile->get($key),
+            'value' => $this->envFile->get($key),
         ]);
     }
 
@@ -94,7 +88,7 @@ final class Env
         }
 
         if ('DELETE' === $request->getMethod()) {
-            $this->envfile->remove($key);
+            $this->envFile->remove($key);
         } else {
             $params = DataUtil::fromRequest($request);
             if (null === ($value = $params->get('value', null))) {
@@ -103,14 +97,14 @@ final class Env
                 ]), HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
-            $this->envfile->set($key, $value);
+            $this->envFile->set($key, $value);
         }
 
-        $this->envfile->persist();
+        $this->envFile->persist();
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $key,
-            'value' => env($key, fn() => $this->envfile->get($key)),
+            'value' => $this->envFile->get($key, fn() => env($key)),
         ]);
     }
 }

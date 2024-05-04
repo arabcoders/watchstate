@@ -9,6 +9,11 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## updates
 
+### 2024-05-04
+
+The new webhook endpoint no longer requires a key, and it's now open to public you just need to specify the backend
+name.
+
 ### 2024-04-30 - [BREAKING CHANGE]
 
 We are going to retire the old webhooks endpoint, please refer to the [FAQ](FAQ.md#how-to-add-webhooks) to know how to

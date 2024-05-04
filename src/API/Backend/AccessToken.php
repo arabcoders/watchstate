@@ -2,47 +2,43 @@
 
 declare(strict_types=1);
 
-namespace App\API\Plex;
+namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Post;
 use App\Libs\DataUtil;
-use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Throwable;
 
-final class GenerateAccessToken
+final class AccessToken
 {
     use APITraits;
 
-    public const string URL = '%{api.prefix}/plex/accesstoken';
-
-    public function __construct(private iHttp $http)
+    public function __construct(private readonly iHttp $http)
     {
     }
 
-    #[Post(self::URL . '/{id:backend}[/]', name: 'plex.accesstoken')]
-    public function gAccesstoken(iRequest $request, array $args = []): iResponse
+    #[Post(Index::URL . '/{name:backend}/accesstoken[/]', name: 'backend.accesstoken')]
+    public function __invoke(iRequest $request, array $args = []): iResponse
     {
-        $backend = ag($args, 'id');
+        if (null === ($name = ag($args, 'name'))) {
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
 
         $data = DataUtil::fromArray($request->getParsedBody());
 
-        if (null === ($uuid = $data->get('uuid'))) {
-            return api_error('No User (uuid) was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        if (null === ($id = $data->get('id'))) {
+            return api_error('No id was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         try {
-            $client = $this->getClient($backend);
-        } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        try {
+            $client = $this->getClient(name: $name);
             $token = $client->getUserToken(
-                userId: $uuid,
+                userId: $id,
                 username: $data->get('username', $client->getContext()->backendName . '_user'),
             );
 
@@ -59,7 +55,9 @@ final class GenerateAccessToken
             }
 
             return api_response(HTTP_STATUS::HTTP_OK, $arr);
-        } catch (\Throwable $e) {
+        } catch (InvalidArgumentException $e) {
+            return api_error($e->getMessage(), HTTP_STATUS::HTTP_NOT_FOUND);
+        } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

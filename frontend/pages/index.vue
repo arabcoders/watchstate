@@ -26,7 +26,7 @@
                   {{ moment(history.updated).fromNow() }}
                 </div>
                 <div class="column is-6-mobile">
-                  <NuxtLink :href="'/backends/'+history.via">
+                  <NuxtLink :href="'/backend/'+history.via">
                     {{ history.via }}
                   </NuxtLink>
                 </div>

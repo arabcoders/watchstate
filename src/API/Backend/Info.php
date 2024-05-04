@@ -18,11 +18,11 @@ final class Info
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/info[/]', name: 'backends.backend.info')]
-    public function backendsView(iRequest $request, array $args = []): iResponse
+    #[Get(Index::URL . '/{name:backend}/info[/]', name: 'backend.info')]
+    public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         try {
@@ -40,20 +40,9 @@ final class Info
 
         try {
             $data = $client->getInfo($opts);
+            return api_response(HTTP_STATUS::HTTP_OK, $data);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-
-        $response = [
-            'data' => $data,
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 }

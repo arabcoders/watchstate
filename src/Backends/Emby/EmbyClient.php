@@ -163,6 +163,11 @@ class EmbyClient implements iClient
         return $this->context?->backendName ?? static::CLIENT_NAME;
     }
 
+    public function getType(): string
+    {
+        return static::CLIENT_NAME;
+    }
+
     /**
      * @inheritdoc
      */
