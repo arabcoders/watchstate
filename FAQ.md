@@ -341,27 +341,13 @@ $ docker exec -ti watchstate console system:tasks
 
 ### How to add webhooks?
 
-The Webhook URL is backend specific, the request path is `/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`,
-Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for, and `[APIKEY]` is the global api key
-which you can get via the `system:apikey` command. Typically, the full path
-is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`. if the tool
-port is directly exposed or via the reverse proxy you have setup.
-
-If your media backend support sending headers then remove query parameter `?apikey=[APIKEY]`, and add this header
-
-```
-Authorization: Bearer [APIKEY]
-```
-
-To see your global api key run the following command:
-
-```bash
-$ docker exec -ti watchstate console system:apikey
-```
+The Webhook URL is backend specific, the request path is `/v1/api/backend/[BACKEND_NAME]/webhook`,
+Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for. Typically, the full URL
+is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook]`.
 
 > [!NOTE]
 > You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the
-> future.
+> future. It has no effect except as pointer to the new method.
 
 -----
 
@@ -371,10 +357,9 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook/Notifications URL:
 
-`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
+`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
-* Replace `[APIKEY]` with the global apikey.
 
 ##### Request content type (Emby v4.9+):
 
@@ -412,10 +397,9 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 ##### URL:
 
-`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook?apikey=[APIKEY]`
+`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
-* Replace `[APIKEY]` with the global apikey.
 
 > [!NOTE]
 > If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
@@ -464,13 +448,6 @@ go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 ### Send All Properties (ignores template)
 
 Toggle this checkbox.
-
-### Add Request Header
-
-* Key: `Authorization`
-* Value: `Bearer [APIKEY]`
-
-Replace `[APIKEY]` with the global apikey.
 
 Click `Save`
 

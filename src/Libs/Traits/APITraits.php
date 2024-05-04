@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace App\Libs\Traits;
 
+use App\Backends\Common\Cache as BackendCache;
+use App\Backends\Common\ClientInterface;
 use App\Backends\Common\ClientInterface as iClient;
+use App\Backends\Common\Context;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
+use App\Libs\DataUtil;
+use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Uri;
 
 trait APITraits
 {
@@ -65,5 +72,43 @@ trait APITraits
         }
 
         return $backends;
+    }
+
+    /**
+     * Create basic client to inquiry about the backend.
+     *
+     * @param string $type Backend type.
+     * @param DataUtil $data The request data.
+     *
+     * @return iClient The client instance.
+     * @throws InvalidArgumentException If url, token is missing or type is incorrect.
+     */
+    protected function getBasicClient(string $type, DataUtil $data): iClient
+    {
+        if (null === ($class = Config::get("supported.{$type}", null))) {
+            throw new InvalidArgumentException(r("Unexpected client type '{type}' was given.", ['type' => $type]));
+        }
+
+        if (null === $data->get('url')) {
+            throw new InvalidArgumentException('No URL was given.');
+        }
+
+        if (null === $data->get('token')) {
+            throw new InvalidArgumentException('No token was given.');
+        }
+
+        $instance = Container::getNew($class);
+        assert($instance instanceof ClientInterface, new InvalidArgumentException('Invalid client class.'));
+        return $instance->withContext(
+            new Context(
+                clientName: $type,
+                backendName: 'basic_' . $type,
+                backendUrl: new Uri($data->get('url')),
+                cache: Container::get(BackendCache::class),
+                backendId: $data->get('uuid'),
+                backendToken: $data->get('token'),
+                backendUser: $data->get('user'),
+            )
+        );
     }
 }

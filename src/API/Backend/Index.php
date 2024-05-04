@@ -16,11 +16,11 @@ final class Index
 
     public const string URL = '%{api.prefix}/backend';
 
-    #[Get(self::URL . '/{name:backend}[/]', name: 'backends.view')]
+    #[Get(self::URL . '/{name:backend}[/]', name: 'backend.view')]
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $data = $this->getBackends(name: $name);
@@ -29,17 +29,8 @@ final class Index
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
         $data = array_pop($data);
 
-        $response = [
-            ...$data,
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, ['backend' => $response]);
+        return api_response(HTTP_STATUS::HTTP_OK, $data);
     }
 }

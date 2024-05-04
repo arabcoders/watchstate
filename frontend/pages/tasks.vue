@@ -83,10 +83,10 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import moment from "moment";
-import request from "~/utils/request.js";
+import moment from 'moment'
+import request from '~/utils/request.js'
 
-useHead({title: 'tasks'})
+useHead({title: 'Tasks'})
 
 const tasks = ref([])
 const queued = ref([])
@@ -96,7 +96,7 @@ const loadContent = async (clear = false) => {
     tasks.value = []
   }
   const response = await request('/tasks')
-  const json = await response.json();
+  const json = await response.json()
   tasks.value = json.tasks
   queued.value = json.queued
 }
@@ -111,9 +111,7 @@ const toggleTask = async (task) => {
   });
 
   const response = await request(`/tasks/${task.name}`)
-  const json = await response.json();
-
-  tasks.value[tasks.value.findIndex(b => b.name === task.name)] = json.task
+  tasks.value[tasks.value.findIndex(b => b.name === task.name)] = await response.json()
 }
 
 const queueTask = async (task) => {
@@ -123,8 +121,7 @@ const queueTask = async (task) => {
 
   const response = await request(`/tasks/${task.name}/queue`, {method: 'POST'})
   if (response.ok) {
-    await loadContent();
+    await loadContent()
   }
 }
-
 </script>

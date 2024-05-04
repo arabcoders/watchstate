@@ -22,9 +22,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class PruneCommand extends Command
 {
-    public const ROUTE = 'system:prune';
+    public const string ROUTE = 'system:prune';
 
-    public const TASK_NAME = 'prune';
+    public const string TASK_NAME = 'prune';
 
     /**
      * Class Constructor.

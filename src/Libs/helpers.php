@@ -401,7 +401,7 @@ if (!function_exists('api_response')) {
         return (new Response(
             status: $status->value,
             headers: $headers,
-            body: $body ? json_encode(
+            body: null !== $body ? json_encode(
                 $body,
                 JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
             ) : null,
@@ -1251,5 +1251,29 @@ if (!function_exists('addCors')) {
         }
 
         return $response;
+    }
+}
+
+if (!function_exists('deepArrayMerge')) {
+    function deepArrayMerge(array $arrays, $preserve_integer_keys = false)
+    {
+        $result = [];
+        foreach ($arrays as $array) {
+            foreach ($array as $key => $value) {
+                // Renumber integer keys as array_merge_recursive() does unless
+                // $preserve_integer_keys is set to TRUE. Note that PHP automatically
+                // converts array keys that are integer strings (e.g., '1') to integers.
+                if (is_int($key) && !$preserve_integer_keys) {
+                    $result[] = $value;
+                } // Recurse when both values are arrays.
+                elseif (isset($result[$key]) && is_array($result[$key]) && is_array($value)) {
+                    $result[$key] = deepArrayMerge([$result[$key], $value], $preserve_integer_keys);
+                } // Otherwise, use the latter value, overriding any previous value.
+                else {
+                    $result[$key] = $value;
+                }
+            }
+        }
+        return $result;
     }
 }

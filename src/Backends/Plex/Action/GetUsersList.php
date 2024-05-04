@@ -11,6 +11,7 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Options;
+use DateInterval;
 use JsonException;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
@@ -40,7 +41,7 @@ final class GetUsersList
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->getUsers($context, $opts),
+            fn: fn() => $this->action($context, $opts),
             action: $this->action
         );
     }
@@ -51,7 +52,26 @@ final class GetUsersList
      * @throws ExceptionInterface
      * @throws JsonException
      */
-    private function getUsers(Context $context, array $opts = []): Response
+    private function action(Context $context, array $opts = []): Response
+    {
+        $cls = fn() => $this->real_request($context, $opts);
+
+        return true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
+            $context,
+            'users_' . md5(json_encode($opts)),
+            $cls,
+            new DateInterval('PT5M'),
+            $this->logger
+        );
+    }
+
+    /**
+     * Get Users list.
+     *
+     * @throws ExceptionInterface
+     * @throws JsonException
+     */
+    private function real_request(Context $context, array $opts = []): Response
     {
         $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
             ->withPath('/api/v2/home/users/');
@@ -77,6 +97,7 @@ final class GetUsersList
                     context: [
                         'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
+                        'body' => $response->getContent(),
                     ],
                     level: Levels::ERROR
                 ),
@@ -137,4 +158,5 @@ final class GetUsersList
 
         return new Response(status: true, response: $list);
     }
+
 }

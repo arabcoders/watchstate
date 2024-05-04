@@ -18,17 +18,11 @@ final class Users
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/users[/]', name: 'backends.backend.users')]
-    public function backendsView(iRequest $request, array $args = []): iResponse
+    #[Get(Index::URL . '/{name:backend}/users[/]', name: 'backend.users')]
+    public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
-        }
-
-        try {
-            $client = $this->getClient(name: $name);
-        } catch (InvalidArgumentException $e) {
-            return api_error($e->getMessage(), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         $opts = [];
@@ -43,21 +37,11 @@ final class Users
         }
 
         try {
-            $users = $client->getUsersList($opts);
+            return api_response(HTTP_STATUS::HTTP_OK, $this->getClient(name: $name)->getUsersList($opts));
+        } catch (InvalidArgumentException $e) {
+            return api_error($e->getMessage(), HTTP_STATUS::HTTP_NOT_FOUND);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-
-        $response = [
-            'users' => $users,
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 }

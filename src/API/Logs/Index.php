@@ -24,7 +24,7 @@ final class Index
     private const int DEFAULT_LIMIT = 1000;
     private int $counter = 1;
 
-    #[Get(self::URL . '[/]', name: 'logs.list')]
+    #[Get(self::URL . '[/]', name: 'logs')]
     public function logsList(iRequest $request): iResponse
     {
         $path = fixPath(Config::get('tmpDir') . '/logs');
@@ -38,7 +38,6 @@ final class Index
 
         foreach (glob($path . '/*.*.log') as $file) {
             preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
-            $url = $apiUrl->withPath(parseConfigValue(self::URL . "/" . basename($file)));
 
             $builder = [
                 'filename' => basename($file),
@@ -46,23 +45,19 @@ final class Index
                 'date' => $matches[2] ?? '??',
                 'size' => filesize($file),
                 'modified' => makeDate(filemtime($file)),
-                'urls' => [
-                    'self' => (string)$url,
-                    'stream' => (string)$url->withQuery($query),
-                ],
             ];
 
             $list[] = $builder;
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, ['logs' => $list]);
+        return api_response(HTTP_STATUS::HTTP_OK, $list);
     }
 
     #[Get(Index::URL . '/{filename}[/]', name: 'logs.view')]
     public function logView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($filename = ag($args, 'filename'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for filename path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $path = realpath(fixPath(Config::get('tmpDir') . '/logs'));

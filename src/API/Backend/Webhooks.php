@@ -27,20 +27,20 @@ final class Webhooks
 {
     use APITraits;
 
-    private iLogger $accessLog;
+    private iLogger $logfile;
 
     public function __construct(private iCache $cache)
     {
-        $this->accessLog = new Logger(name: 'http', processors: [new LogMessageProcessor()]);
+        $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
 
         $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
 
         if (null !== ($logfile = Config::get('webhook.logfile'))) {
-            $this->accessLog = $this->accessLog->pushHandler(new StreamHandler($logfile, $level, true));
+            $this->logfile = $this->logfile->pushHandler(new StreamHandler($logfile, $level, true));
         }
 
         if (true === inContainer()) {
-            $this->accessLog->pushHandler(new StreamHandler('php://stderr', $level, true));
+            $this->logfile->pushHandler(new StreamHandler('php://stderr', $level, true));
         }
     }
 
@@ -53,13 +53,27 @@ final class Webhooks
      * @return iResponse The response object.
      * @throws InvalidArgumentException if cache key is invalid.
      */
-    #[Route(['POST', 'PUT'], Index::URL . '/{name:backend}/webhook[/]', name: 'webhooks.receive')]
+    #[Route(['POST', 'PUT'], Index::URL . '/{name:backend}/webhook[/]', name: 'backend.webhook')]
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        return $this->process($name, $request)->withHeader('X-Log-Response', '0');
+    }
+
+    /**
+     * Process the incoming webhook request.
+     *
+     * @param string $name The backend name.
+     * @param iRequest $request The incoming request object.
+     *
+     * @return iResponse The response object.
+     * @throws InvalidArgumentException if cache key is invalid.
+     */
+    private function process(string $name, iRequest $request): iResponse
+    {
         try {
             $backend = $this->getBackends(name: $name);
             if (empty($backend)) {
@@ -84,7 +98,7 @@ final class Webhooks
             if (null === ($requestUser = ag($attr, 'user.id'))) {
                 $message = "Request payload didn't contain a user id. Backend requires a user check.";
                 $this->write($request, Level::Info, $message);
-                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST)->withHeader('X-Log-Response', '0');
+                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
             if (false === hash_equals((string)$userId, (string)$requestUser)) {
@@ -93,7 +107,7 @@ final class Webhooks
                     'config_user' => $userId,
                 ]);
                 $this->write($request, Level::Info, $message);
-                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST)->withHeader('X-Log-Response', '0');
+                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST);
             }
         }
 
@@ -101,7 +115,7 @@ final class Webhooks
             if (null === ($requestBackendId = ag($attr, 'backend.id'))) {
                 $message = "Request payload didn't contain the backend unique id.";
                 $this->write($request, Level::Info, $message);
-                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST)->withHeader('X-Log-Response', '0');
+                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
             if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
@@ -110,7 +124,7 @@ final class Webhooks
                     'config_uid' => $uuid,
                 ]);
                 $this->write($request, Level::Info, $message);
-                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST)->withHeader('X-Log-Response', '0');
+                return api_error($message, HTTP_STATUS::HTTP_BAD_REQUEST);
             }
         }
 
@@ -128,7 +142,7 @@ final class Webhooks
                 'backend' => $client->getName(),
             ]), forceContext: true);
 
-            return $response->withHeader('X-Log-Response', '0');
+            return $response;
         }
 
         $entity = $client->parseWebhook($request);
@@ -151,7 +165,7 @@ final class Webhooks
                 ]
             );
 
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED)->withHeader('X-Log-Response', '0');
+            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
         if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
@@ -170,7 +184,7 @@ final class Webhooks
                 ]
             );
 
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED)->withHeader('X-Log-Response', '0');
+            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
         $items = $this->cache->get('requests', []);
@@ -211,7 +225,7 @@ final class Webhooks
             ]
         );
 
-        return api_response(HTTP_STATUS::HTTP_OK)->withHeader('X-Log-Response', '0');
+        return api_response(HTTP_STATUS::HTTP_OK);
     }
 
     /**
@@ -257,9 +271,9 @@ final class Webhooks
         }
 
         if (true === (Config::get('logs.context') || $forceContext)) {
-            $this->accessLog->log($level, $message, $context);
+            $this->logfile->log($level, $message, $context);
         } else {
-            $this->accessLog->log($level, r($message, $context));
+            $this->logfile->log($level, r($message, $context));
         }
     }
 }

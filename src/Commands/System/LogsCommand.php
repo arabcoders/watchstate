@@ -25,21 +25,22 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 #[Cli(command: self::ROUTE)]
 final class LogsCommand extends Command
 {
-    public const ROUTE = 'system:logs';
+    public const string ROUTE = 'system:logs';
 
     /**
      * @var array Constant array containing names of supported log files.
      */
-    private const LOG_FILES = [
+    private const array LOG_FILES = [
         'app',
         'access',
-        'task'
+        'task',
+        'webhook',
     ];
 
     /**
      * @var int The default limit of how many lines to show.
      */
-    public const DEFAULT_LIMIT = 50;
+    public const int DEFAULT_LIMIT = 50;
 
     /**
      * Configure the command.

@@ -25,6 +25,7 @@
             <span class="icon" v-if="'access' === item.type"><i class="fas fa-key"></i></span>
             <span class="icon" v-if="'task' === item.type"><i class="fas fa-tasks"></i></span>
             <span class="icon" v-if="'app' === item.type"><i class="fas fa-bugs"></i></span>
+            <span class="icon" v-if="'webhook' === item.type"><i class="fas fa-book"></i></span>
           </span>
         </header>
         <div class="card-content">
@@ -63,8 +64,8 @@ const logs = ref([])
 const loadContent = async () => {
   logs.value = []
   const response = await request('/logs')
-  const json = await response.json();
-  let data = json.logs;
+  let data = await response.json();
+
   data.sort((a, b) => new Date(b.modified) - new Date(a.modified));
 
   logs.value = data;

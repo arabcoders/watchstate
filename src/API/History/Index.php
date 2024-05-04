@@ -27,7 +27,7 @@ final class Index
         $this->pdo = $this->db->getPDO();
     }
 
-    #[Get(self::URL . '[/]', name: 'history.index')]
+    #[Get(self::URL . '[/]', name: 'history')]
     public function historyIndex(iRequest $request): iResponse
     {
         $es = fn(string $val) => $this->db->identifier($val);
@@ -334,22 +334,12 @@ final class Index
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-
         $item = $item->getAll();
 
         $item[iState::COLUMN_WATCHED] = $entity->isWatched();
         $item[iState::COLUMN_UPDATED] = makeDate($entity->updated);
 
-        $item = [
-            ...$item,
-            'links' => [
-                'self' => (string)$apiUrl,
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
-        ];
-
-        return api_response(HTTP_STATUS::HTTP_OK, ['history' => $item]);
+        return api_response(HTTP_STATUS::HTTP_OK, $item);
     }
 
 }

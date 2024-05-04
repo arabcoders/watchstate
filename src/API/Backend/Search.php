@@ -17,8 +17,8 @@ final class Search
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/search[/[{id}[/]]]', name: 'backends.backend.search.id')]
-    public function searchById(iRequest $request, array $args = []): iResponse
+    #[Get(Index::URL . '/{name:backend}/search[/[{id}[/]]]', name: 'backend.search')]
+    public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
@@ -55,14 +55,8 @@ final class Search
             ]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $apiUrl = $request->getUri()->withHost('')->withPort(0)->withScheme('');
         $response = [
             'results' => $id ? [$data] : $data,
-            'links' => [
-                'self' => (string)$apiUrl,
-                'backend' => (string)$apiUrl->withPath(parseConfigValue(Index::URL . '/' . $name)),
-                'list' => (string)$apiUrl->withPath(parseConfigValue(Index::URL)),
-            ],
             'options' => [
                 'raw' => (bool)$params->get('raw', false),
             ],

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\API\Backends;
 
 use App\Backends\Common\Cache as BackendCache;
-use App\Backends\Common\ClientInterface;
+use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
@@ -80,7 +80,7 @@ final class Add
         }
 
         $instance = Container::getNew($class);
-        assert($instance instanceof ClientInterface, new RuntimeException('Invalid client class.'));
+        assert($instance instanceof iClient, new RuntimeException('Invalid client class.'));
 
         try {
             $config = DataUtil::fromArray($this->fromRequest($type, $request, $instance));
@@ -118,15 +118,10 @@ final class Add
         $data = $this->getBackends(name: $name);
         $data = array_pop($data);
 
-        return api_response(HTTP_STATUS::HTTP_CREATED, [
-            ...$data,
-            'links' => [
-                'self' => parseConfigValue(Index::URL) . '/' . $name,
-            ],
-        ]);
+        return api_response(HTTP_STATUS::HTTP_CREATED, $data);
     }
 
-    private function fromRequest(string $type, iRequest $request, ClientInterface|null $client = null): array
+    private function fromRequest(string $type, iRequest $request, iClient $client): array
     {
         $data = DataUtil::fromArray($request->getParsedBody());
 
@@ -162,16 +157,11 @@ final class Add
 
         foreach ($optionals as $key => $type) {
             if (null !== ($value = $data->get('options.' . $key))) {
-                $val = $data->get($value, $type);
-                settype($val, $type);
-                $config = ag_set($config, "options.{$key}", $val);
+                settype($value, $type);
+                $config = ag_set($config, "options.{$key}", $value);
             }
         }
 
-        if (null !== $client) {
-            $config = $client->fromRequest($config, $request);
-        }
-
-        return $config;
+        return $client->fromRequest($config, $request);
     }
 }

@@ -4,7 +4,7 @@
       <span class="title is-4">
         <NuxtLink href="/backends">Backends</NuxtLink>
         -
-        <NuxtLink :href="'/backends/' + backend">{{ backend }}</NuxtLink>
+        <NuxtLink :href="'/backend/' + backend">{{ backend }}</NuxtLink>
         : Info
       </span>
 

@@ -180,6 +180,11 @@ class PlexClient implements iClient
         return $this->context?->backendName ?? static::CLIENT_NAME;
     }
 
+    public function getType(): string
+    {
+        return static::CLIENT_NAME;
+    }
+
     /**
      * @inheritdoc
      */
@@ -558,12 +563,16 @@ class PlexClient implements iClient
     {
         $params = DataUtil::fromArray($request->getParsedBody());
 
-        if (null !== ($uuid = $params->get('options.' . Options::PLEX_USER_UUID))) {
-            $config = ag_set($config, 'options.' . Options::PLEX_USER_UUID, $uuid);
+        if (null !== ($val = $params->get('options.' . Options::PLEX_USER_UUID))) {
+            $config = ag_set($config, 'options.' . Options::PLEX_USER_UUID, $val);
         }
 
-        if (null !== ($adminToken = $params->get('options.' . Options::ADMIN_TOKEN))) {
-            $config = ag_set($config, 'options.' . Options::ADMIN_TOKEN, $adminToken);
+        if (null !== ($val = $params->get('options.' . Options::ADMIN_TOKEN))) {
+            $config = ag_set($config, 'options.' . Options::ADMIN_TOKEN, $val);
+        }
+
+        if (null !== ($val = $params->get('options.' . Options::PLEX_USE_OLD_PROGRESS_ENDPOINT))) {
+            $config = ag_set($config, 'options.' . Options::PLEX_USE_OLD_PROGRESS_ENDPOINT, (bool)$val);
         }
 
         if (null !== ($userId = ag($config, 'user')) && !is_int($userId)) {

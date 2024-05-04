@@ -14,6 +14,5 @@
 </template>
 
 <script setup>
-
 const backend = useRoute().params.backend
 </script>

@@ -477,13 +477,12 @@ final class Initializer
     {
         $inContainer = inContainer();
 
-        if (null !== ($logfile = Config::get('webhook.logfile'))) {
-            $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
+        if (null !== ($logfile = Config::get('api.logfile'))) {
             $this->accessLog = $logger->withName(name: 'http')
-                ->pushHandler(new StreamHandler($logfile, $level, true));
+                ->pushHandler(new StreamHandler($logfile, Level::Info, true));
 
             if (true === $inContainer) {
-                $this->accessLog->pushHandler(new StreamHandler('php://stderr', $level, true));
+                $this->accessLog->pushHandler(new StreamHandler('php://stderr', Level::Info, true));
             }
         }
 

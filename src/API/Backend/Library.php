@@ -2,32 +2,51 @@
 
 declare(strict_types=1);
 
-namespace App\API\Backend\Library;
+namespace App\API\Backend;
 
 use App\API\Backend\Index as BackendsIndex;
+use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
-use App\Libs\DataUtil;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Throwable;
 
-final class Ignore
+final class Library
 {
     use APITraits;
 
-    #[Route(['POST', 'DELETE'], BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backends.library.ignore')]
-    public function _invoke(iRequest $request, array $args = []): iResponse
+    #[Get(BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backend.library')]
+    public function listLibraries(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('No backend was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if (null === ($id = DataUtil::fromRequest($request, true)->get('id', null))) {
-            return api_error('No library id was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        try {
+            $client = $this->getClient(name: $name);
+            return api_response(HTTP_STATUS::HTTP_OK, $client->listLibraries());
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), HTTP_STATUS::HTTP_NOT_FOUND);
+        } catch (Throwable $e) {
+            return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route(['POST', 'DELETE'], BackendsIndex::URL . '/{name:backend}/library/{id}[/]', name: 'backend.library.ignore')]
+    public function ignoreLibrary(iRequest $request, array $args = []): iResponse
+    {
+        if (null === ($name = ag($args, 'name'))) {
+            return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if (null === ($id = ag($args, 'id'))) {
+            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $remove = 'DELETE' === $request->getMethod();
@@ -75,13 +94,6 @@ final class Ignore
 
         $config->set("{$name}.options." . Options::IGNORE, implode(',', array_values($ignoreIds)))->persist();
 
-        return api_response(HTTP_STATUS::HTTP_OK, [
-            'type' => $config->get("{$name}.type"),
-            'libraries' => $libraries,
-            'links' => [
-                'self' => (string)parseConfigValue(BackendsIndex::URL . "/{$name}/library"),
-                'backend' => (string)parseConfigValue(BackendsIndex::URL . "/{$name}"),
-            ],
-        ]);
+        return api_response(HTTP_STATUS::HTTP_OK, $libraries);
     }
 }
