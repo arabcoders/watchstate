@@ -49,11 +49,11 @@
             <div class="column is-6 has-text-right" v-if="task.args">
               <strong class="is-hidden-mobile">Args:</strong> <code>{{ task.args }}</code>
             </div>
-            <div class="column is-6 has-text-left">
+            <div class="column is-6 has-text-left" v-if="task.enabled">
               <strong class="is-hidden-mobile">Prev Run:</strong>
               {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
             </div>
-            <div class="column is-6 has-text-right">
+            <div class="column is-6 has-text-right" v-if="task.enabled">
               <strong class="is-hidden-mobile">Next Run:</strong>
               {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
             </div>
