@@ -316,6 +316,7 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`                   |
 | WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
 | WS_WEBUI_ENABLED        | bool    | Enable Web UI.                                                          | `false`                  |
+| WS_SECURE_API_ENDPOINTS | bool    | Disregard the open route policy and require API key for all endpoints.  | `false`                  |
 
 > [!IMPORTANT]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one
@@ -404,16 +405,18 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
 
-> [!NOTE]
-> If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
-> using the same method above, while enabling `limit webhook events to` `selected user` and `backend unique id`.
-> Essentially, this method replaced the old unified webhook.token for backends.
+> [!IMPORTANT]
+> If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
 
 Click `Save Changes`
 
-> [!IMPORTANT]
+> [!NOTE]
 > If you share your plex server with other users, i,e. `Home/managed users`, you have to enable match user id, otherwise
 > their play state will end up changing your play state.
+>
+> If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
+> using the same method above, while enabling `limit webhook events to` `selected user` and `backend unique id`.
+> Essentially, this method replaced the old unified webhook.token for backends.
 
 -----
 
