@@ -285,6 +285,19 @@ final class Index
                 'prev_url' => $prevUrl,
                 'last_url' => $lastUrl,
             ],
+            'searchable' => [
+                'id',
+                'via',
+                'year',
+                'type',
+                'title',
+                'season',
+                'episode',
+                'parent',
+                'guid',
+                'metadata',
+                'extra',
+            ],
         ];
 
         while ($row = $stmt->fetch()) {
