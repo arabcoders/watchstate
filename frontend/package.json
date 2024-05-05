@@ -17,6 +17,7 @@
         "nuxt": "^3.11.2",
         "nuxt3-notifications": "^1.2.0",
         "vue": "^3.4.21",
-        "vue-router": "^4.3.0"
+        "vue-router": "^4.3.0",
+        "cronstrue": "^2.49.0"
     }
 }

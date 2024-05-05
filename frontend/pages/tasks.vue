@@ -36,8 +36,11 @@
             <div class="column is-12 has-text-left" v-if="task.description">
               {{ task.description }}
             </div>
+            <div class="column is-12 has-text-left">
+              <strong class="is-hidden-mobile">Runs:</strong> {{ cronstrue.toString(task.timer) }}
+            </div>
             <div class="column is-6 has-text-left">
-              <strong class="is-hidden-mobile">Timer:</strong>
+              <strong class="is-hidden-mobile">Timer:&nbsp;</strong>
               <a target="_blank" :href="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`"
                  rel="noreferrer,nofollow,noopener">
                 {{ task.timer }}
@@ -86,6 +89,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import {notification} from "~/utils/index.js";
+import cronstrue from 'cronstrue'
 
 useHead({title: 'Tasks'})
 
