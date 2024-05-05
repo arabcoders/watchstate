@@ -49,7 +49,7 @@ $ docker exec -ti watchstate console system:tasks
 
 ### Container is crashing on startup?
 
-This is likely due to misconfigured `user:` in `docker-compose.yaml`, the container is rootless as such it will crash if
+This is likely due to misconfigured `user:` in `compose.yaml`, the container is rootless as such it will crash if
 the tool unable to access the data path. to check permissions simply do the following
 
 ```bash
@@ -174,7 +174,7 @@ You have to repeat these steps for each user you want to migrate their data off 
 
 > [!IMPORTANT]
 > YOU MUST always start with fresh data for **EACH USER**, otherwise unexpected things might happen.
-> Make sure to delete docker-compose.yaml `./data` directory. to start fresh
+> Make sure to delete compose.yaml `./data` directory. to start fresh
 
 ----
 
@@ -286,7 +286,7 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 
 There are many ways to load the environment variables, However the recommended methods are:
 
-* Via `docker-compose.yaml` file.
+* Via `compose.yaml` file.
 * Via `/config/config/.env` file. This file normally does not exist you have to created manually.
 
 to see list of loaded environment variables run:
@@ -328,14 +328,17 @@ $ docker exec -ti watchstate console system:tasks
 #### Container specific environment variables.
 
 > [!IMPORTANT]
-> These environment variables relates to the container itself, and must be added via the `docker-compose.yaml` file.
+> These environment variables relates to the container itself, and must be added via the `compose.yaml` file.
 
-| Key              | Type    | Description                        | Default  |
-|------------------|---------|------------------------------------|----------|
-| WS_DISABLE_HTTP  | integer | Disable included `HTTP Server`.    | `0`      |
-| WS_DISABLE_CRON  | integer | Disable included `Task Scheduler`. | `0`      |
-| WS_DISABLE_CACHE | integer | Disable included `Cache Server`.   | `0`      |
-| HTTP_PORT        | string  | Change the `HTTP` listen port.     | `"8080"` |
+| Key                  | Type    | Description                        | Default  |
+|----------------------|---------|------------------------------------|----------|
+| DISABLE_HTTP         | integer | Disable included `HTTP Server`.    | `0`      |
+| DISABLE_CRON         | integer | Disable included `Task Scheduler`. | `0`      |
+| DISABLE_CACHE        | integer | Disable included `Cache Server`.   | `0`      |
+| HTTP_PORT            | string  | Change the `HTTP` listen port.     | `"8080"` |
+| ~~WS_DISABLE_HTTP~~  | integer | Deprecated use `DISABLE_HTTP`      | `0`      |
+| ~~WS_DISABLE_CRON~~  | integer | Deprecated use `DISABLE_CRON`      | `0`      |
+| ~~WS_DISABLE_CACHE~~ | integer | Deprecated use `DISABLE_CACHE`     | `0`      |
 
 ---
 
@@ -486,14 +489,14 @@ Those are some web hook limitations we discovered for the following media backen
 
 As stated in webhook limitation section sometimes media backends don't make it easy to receive those events, as such, to
 complement webhooks, you should enable import/export tasks by settings their respective environment variables in
-your `docker-compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks`
+your `compose.yaml` file. For more information run help on `system:env` command as well as `system:tasks`
 command.
 
 ---
 
 ### How to disable the included HTTP server and use external server?
 
-Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_HTTP` with value of `1`. your external
+Set this environment variable in your `compose.yaml` file `WS_DISABLE_HTTP` with value of `1`. your external
 server need to send correct fastcgi environment variables. Example caddy file
 
 ```caddyfile
@@ -516,7 +519,7 @@ https://watchstate.example.org {
 
 ### How to disable the included cache server and use external cache server?
 
-Set this environment variable in your `docker-compose.yaml` file `WS_DISABLE_CACHE` with value of `1`.
+Set this environment variable in your `compose.yaml` file `WS_DISABLE_CACHE` with value of `1`.
 to use external redis server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this
 variable is `redis://host:port?password=auth&db=db_num`, for example to use redis from another container you could use
 something like `redis://172.23.1.10:6379?password=my_secert_password&db=8`. We only support `redis` and API compatible

@@ -1,5 +1,14 @@
 # Old Updates
 
+### 2024-04-30 - [BREAKING CHANGE]
+
+We are going to retire the old webhooks endpoint, please refer to the [FAQ](FAQ.md#how-to-add-webhooks) to know how to
+update
+to the new API endpoint. We are going to include `WebUI` for alpha testing after two weeks from today `2024-05-15`.
+Which most likely means the old webhooks
+endpoint will be removed. We will try to preserve the old endpoint for a while, but it's not guaranteed we will be able
+to.
+
 ### 2024-03-08
 
 This update include breaking changes to how we process commands, we have streamlined the command interface to accept

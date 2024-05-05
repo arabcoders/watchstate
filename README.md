@@ -9,19 +9,16 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## updates
 
+### 2024-05-05
+
+We are deprecating the use of the following environment variables `WS_DISABLE_HTTP`, `WS_DISABLE_CRON`, `WS_DISABLE_CACHE`,
+and replacing them with `DISABLE_CACHE`, `DISABLE_CRON`, `DISABLE_HTTP`. The old environment variables will be removed in the future versions.
+It doesn't make sense to mark them as `WS_` since they are global and do not relate to the tool itself. And they must be set from the `compose.yaml` file itself.
+
 ### 2024-05-04
 
 The new webhook endpoint no longer requires a key, and it's now open to public you just need to specify the backend
 name.
-
-### 2024-04-30 - [BREAKING CHANGE]
-
-We are going to retire the old webhooks endpoint, please refer to the [FAQ](FAQ.md#how-to-add-webhooks) to know how to
-update
-to the new API endpoint. We are going to include `WebUI` for alpha testing after two weeks from today `2024-05-15`.
-Which most likely means the old webhooks
-endpoint will be removed. We will try to preserve the old endpoint for a while, but it's not guaranteed we will be able
-to.
 
 Refer to [NEWS](NEWS.md) for old updates.
 
@@ -40,7 +37,7 @@ Refer to [NEWS](NEWS.md) for old updates.
 
 # Install
 
-create your `docker-compose.yaml` with the following content:
+create your `compose.yaml` with the following content:
 
 ```yaml
 services:
@@ -60,7 +57,7 @@ services:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```
 
-Create directory called `data` next to the `docker-compose.yaml` file. After creating your docker compose file, start
+Create directory called `data` next to the `compose.yaml` file. After creating your docker compose file, start
 the container.
 
 ```bash
@@ -82,7 +79,7 @@ $ mkdir -p ./data && docker-compose pull && docker-compose up -d
 > terminal `chown -R 99:100 /mnt/user/appdata/watchstate`.
 
 > [!NOTE]
-> To use this container with `podman` set `docker-compose.yaml` `user` to `0:0`. it will appear to be working as root
+> To use this container with `podman` set `compose.yaml` `user` to `0:0`. it will appear to be working as root
 > inside the container, but it will be mapped to the user in which the command was run under.
 
 # Adding backend
@@ -132,7 +129,7 @@ $ docker exec -ti watchstate console state:import -v -s home_plex -s home_jellyf
 > [!NOTE]
 > Now that you have imported your current play state enable the import task by adding the following environment
 > variables to
-> your `docker-compose.yaml` file `WS_CRON_IMPORT=1`. By default, we have it disabled. for more environment variables
+> your `compose.yaml` file `WS_CRON_IMPORT=1`. By default, we have it disabled. for more environment variables
 > please
 > refer to [Environment variables list](FAQ.md#environment-variables).
 
@@ -172,7 +169,7 @@ $ docker exec -ti watchstate console state:export -v -s home_plex -s home_jellyf
 > [!NOTE]
 > Now that you have exported your current play state, enable the export task by adding the following environment
 > variables to
-> your `docker-compose.yaml` file `WS_CRON_EXPORT=1`. By default, we have it disabled. for more environment variables
+> your `compose.yaml` file `WS_CRON_EXPORT=1`. By default, we have it disabled. for more environment variables
 > please
 > refer to [Environment variables list](FAQ.md#environment-variables).
 

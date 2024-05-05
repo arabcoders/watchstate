@@ -69,7 +69,7 @@ final class EnvCommand extends Command
 
                     <question>(1) Via Docker compose file</>
 
-                    You can load environment variables via [<comment>docker-compose.yaml</comment>] file by adding them under the [<comment>environment</comment>] key.
+                    You can load environment variables via [<comment>compose.yaml</comment>] file by adding them under the [<comment>environment</comment>] key.
                     For example, to enable import task, do the following:
 
                     -------------------------------
