@@ -17,8 +17,17 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
 {
     public const string KEY_NAME = 'apikey';
 
-    private const array OPEN_ROUTES = [
+    /**
+     * Public routes that are accessible without an API key. and must remain open.
+     */
+    private const array PUBLIC_ROUTES = [
         HealthCheck::URL,
+    ];
+
+    /**
+     * Routes that follow the open route policy. However, those routes are subject to user configuration.
+     */
+    private const array OPEN_ROUTES = [
         '/webhook'
     ];
 
@@ -33,7 +42,12 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
 
         $requestPath = rtrim($request->getUri()->getPath(), '/');
 
-        foreach (self::OPEN_ROUTES as $route) {
+        $openRoutes = self::PUBLIC_ROUTES;
+        if (false === (bool)Config::get('api.secure')) {
+            $openRoutes = array_merge($openRoutes, self::OPEN_ROUTES);
+        }
+
+        foreach ($openRoutes as $route) {
             $route = rtrim(parseConfigValue($route), '/');
             if (true === str_starts_with($requestPath, $route) || true === str_ends_with($requestPath, $route)) {
                 return $handler->handle($request);
@@ -54,7 +68,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             return api_error(
                 'API key is required to access the API.',
                 HTTP_STATUS::HTTP_BAD_REQUEST,
-                reason: 'API key is required to access the API.'
+                reason: 'API key is required to access the API.',
             );
         }
 

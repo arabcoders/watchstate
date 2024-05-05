@@ -17,11 +17,6 @@ final class Env
 {
     public const string URL = '%{api.prefix}/system/env';
 
-    private const array MASK = [
-        'WS_API_KEY',
-        'WS_CACHE_URL'
-    ];
-
     private EnvFile $envFile;
 
     public function __construct()
@@ -32,6 +27,8 @@ final class Env
     #[Get(self::URL . '[/]', name: 'system.env')]
     public function envList(iRequest $request): iResponse
     {
+        $spec = require __DIR__ . '/../../../config/env.spec.php';
+
         $response = [
             'data' => [],
             'file' => Config::get('path') . '/config/.env',
@@ -45,7 +42,7 @@ final class Env
             $response['data'][] = [
                 'key' => $key,
                 'value' => $val,
-                'mask' => in_array($key, self::MASK),
+                'mask' => (bool)ag($spec, "{$key}.mask", false),
             ];
         }
 
