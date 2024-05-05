@@ -165,6 +165,7 @@
         </div>
       </div>
     </div>
+    <NuxtNotifications position="top right" :speed="800" :ignoreDuplicates="true" :width="340" :pauseOnHover="true"/>
   </div>
 </template>
 

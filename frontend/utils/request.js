@@ -5,10 +5,12 @@ const api_url = useStorage('api_url', '')
 const api_token = useStorage('api_token', '')
 
 /**
- * Request function
+ * Request content from the API. This function will automatically add the API token to the request headers.
+ * And prefix the URL with the API URL and path.
  *
  * @param url {string}
  * @param options {RequestInit}
+ *
  * @returns {Promise<Response>}
  */
 export default async function request(url, options = {}) {

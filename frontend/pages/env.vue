@@ -116,7 +116,7 @@
 
 <script setup>
 import request from "~/utils/request.js";
-import {awaitElement} from "~/utils/index.js";
+import {awaitElement, notification} from "~/utils/index.js";
 
 useHead({title: 'Environment Variables'})
 
@@ -155,7 +155,7 @@ const addVariable = async () => {
   const key = form_key.value.toUpperCase()
 
   if (!key.startsWith('WS_')) {
-    alert('Key must start with WS_')
+    notification('error', 'Error', 'Key must start with WS_',)
     return
   }
 

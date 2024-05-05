@@ -54,32 +54,17 @@
       </div>
     </div>
 
-    <div class="column is-12" v-if="recentAccessLog.length>0">
+    <div class="column is-12" v-for="log in logs" :key="log.filename">
       <h1 class="title is-4">
-        <NuxtLink :href="`/logs/access.${today}.log`">Recent Access logs</NuxtLink>
+        <NuxtLink :href="`/logs/${log.filename}`">Today {{ ucFirst(log.type) }} log</NuxtLink>
       </h1>
       <code class="box logs-container">
-        <p v-for="(item, index) in recentAccessLog" :key="'alog-'+index">{{ item }}</p>
+        <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
+          {{ item }}
+        </span>
       </code>
     </div>
 
-    <div class="column is-12" v-if="recentAppLogs.length>0">
-      <h1 class="title is-4">
-        <NuxtLink :href="`/logs/app.${today}.log`">Recent App logs</NuxtLink>
-      </h1>
-      <code class="box logs-container">
-        <p v-for="(item, index) in recentAppLogs" :key="'plog-'+index">{{ item }}</p>
-      </code>
-    </div>
-
-    <div class="column is-12" v-if="recentTaskLogs.length>0">
-      <h1 class="title is-4">
-        <NuxtLink :href="`/logs/task.${today}.log`">Recent Task logs</NuxtLink>
-      </h1>
-      <code class="box logs-container">
-        <p v-for="(item, index) in recentTaskLogs" :key="'plog-'+index">{{ item }}</p>
-      </code>
-    </div>
   </div>
 </template>
 
@@ -92,21 +77,17 @@
 </style>
 
 <script setup>
-import request from "~/utils/request.js";
-import moment from "moment";
-import Message from "~/components/Message.vue";
+import request from '~/utils/request.js'
+import moment from 'moment'
+import Message from '~/components/Message.vue'
+import {ucFirst} from '../utils/index.js'
 
 useHead({title: 'Index'})
 
-const today = moment().format('YYYYMMDD')
-
 const lastHistory = ref([])
-const recentAccessLog = ref([])
-const recentAppLogs = ref([])
-const recentTaskLogs = ref([])
+const logs = ref([])
 
 const loadContent = async () => {
-  const logs_limit = 50
   try {
     const response = await request(`/history?perpage=6`)
     const json = await response.json();
@@ -115,37 +96,14 @@ const loadContent = async () => {
   }
 
   try {
-    const response = await request(`/logs/access.${today}.log`)
+    const response = await request(`/logs/recent`)
     if (response.ok) {
-      const access = await response.text();
-      recentAccessLog.value = access.split('\n').filter(Boolean).slice(-logs_limit)
-    }
-  } catch (e) {
-  }
-
-  try {
-    const response = await request(`/logs/app.${today}.log`)
-    if (response.ok) {
-      const app = await response.text();
-      recentAppLogs.value = app.split('\n').filter(Boolean).slice(-logs_limit)
-    }
-  } catch (e) {
-  }
-
-  try {
-    const response = await request(`/logs/task.${today}.log`)
-    if (response.ok) {
-      const access = await response.text();
-      recentTaskLogs.value = access.split('\n').filter(Boolean).slice(-logs_limit)
+      logs.value = await response.json();
     }
   } catch (e) {
   }
 };
 
 onMounted(async () => loadContent())
-onUpdated(() => {
-  document.querySelectorAll('.logs-container').forEach((el) => {
-    el.scrollTop = el.scrollHeight;
-  });
-})
+onUpdated(() => document.querySelectorAll('.logs-container').forEach((el) => el.scrollTop = el.scrollHeight))
 </script>

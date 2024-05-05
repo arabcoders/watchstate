@@ -85,6 +85,7 @@
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
+import {notification} from "~/utils/index.js";
 
 useHead({title: 'Tasks'})
 
@@ -121,6 +122,7 @@ const queueTask = async (task) => {
 
   const response = await request(`/tasks/${task.name}/queue`, {method: 'POST'})
   if (response.ok) {
+    notification('success', 'Success', `Task ${task.name} has been queued.`)
     await loadContent()
   }
 }

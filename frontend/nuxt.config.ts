@@ -28,6 +28,7 @@ export default defineNuxtConfig({
     modules: [
         '@vueuse/nuxt',
         'floating-vue/nuxt',
+        'nuxt3-notifications',
     ],
     nitro: {
         output: {
