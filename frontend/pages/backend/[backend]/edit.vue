@@ -221,7 +221,18 @@ import 'assets/css/bulma-switch.css'
 import {notification} from "~/utils/index.js";
 
 const id = useRoute().params.backend
-const backend = ref({})
+const backend = ref({
+  name: '',
+  type: '',
+  url: '',
+  token: '',
+  uuid: '',
+  user: '',
+  import: {enabled: false},
+  export: {enabled: false},
+  webhook: {match: {user: false, uuid: false}},
+  options: {}
+})
 const showOptions = ref(false)
 const isLoading = ref(true)
 const users = ref([])
@@ -305,13 +316,21 @@ const getUsers = async (showAlert = true) => {
 
   usersLoading.value = true
 
+  let data = {
+    token: backend.value.token,
+    url: backend.value.url,
+    uuid: backend.value.uuid,
+  };
+
+  if (backend.value.options && backend.value.options.ADMIN_TOKEN) {
+    data.options = {
+      ADMIN_TOKEN: backend.value.options.ADMIN_TOKEN
+    }
+  }
+
   const response = await request(`/backends/users/${backend.value.type}`, {
     method: 'POST',
-    body: JSON.stringify({
-      token: backend.value.token,
-      url: backend.value.url,
-      uuid: backend.value.uuid,
-    })
+    body: JSON.stringify(data)
   })
 
   const json = await response.json()

@@ -10,6 +10,7 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
+use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
 use DateInterval;
 use JsonException;
@@ -17,6 +18,7 @@ use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class GetUsersList
 {
@@ -76,6 +78,8 @@ final class GetUsersList
         $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
             ->withPath('/api/v2/home/users/');
 
+        $tokenType = 'user';
+
         $response = $this->http->request('GET', (string)$url, [
             'headers' => [
                 'Accept' => 'application/json',
@@ -89,21 +93,56 @@ final class GetUsersList
             'url' => (string)$url,
         ]);
 
-        if (200 !== $response->getStatusCode()) {
+        if (HTTP_STATUS::HTTP_OK->value !== $response->getStatusCode()) {
+            $message = "Request for '{backend}' users list returned with unexpected '{status_code}' status code. Using {type} token.";
+
+            if (null !== ag($context->options, Options::ADMIN_TOKEN)) {
+                $adminResponse = $this->http->request('GET', (string)$url, [
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'X-Plex-Token' => ag($context->options, Options::ADMIN_TOKEN),
+                        'X-Plex-Client-Identifier' => $context->backendId,
+                    ],
+                ]);
+
+                if (HTTP_STATUS::HTTP_OK->value === $adminResponse->getStatusCode()) {
+                    return $this->process($context, $url, $adminResponse, $opts);
+                }
+                $tokenType = 'user and admin';
+            }
+
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [{backend}] users list returned with unexpected [{status_code}] status code.',
+                    message: $message,
                     context: [
                         'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
                         'body' => $response->getContent(),
+                        'type' => $tokenType,
                     ],
                     level: Levels::ERROR
                 ),
             );
         }
 
+        return $this->process($context, $url, $response, $opts);
+    }
+
+    /**
+     * Process the actual response.
+     *
+     * @param Context $context
+     * @param UriInterface $url
+     * @param ResponseInterface $response
+     * @param array $opts
+     *
+     * @return Response Return processed response.
+     * @throws ExceptionInterface
+     * @throws JsonException
+     */
+    private function process(Context $context, UriInterface $url, ResponseInterface $response, array $opts): Response
+    {
         $json = json_decode(
             json: $response->getContent(),
             associative: true,
@@ -158,5 +197,4 @@ final class GetUsersList
 
         return new Response(status: true, response: $list);
     }
-
 }
