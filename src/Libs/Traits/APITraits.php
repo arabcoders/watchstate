@@ -57,12 +57,12 @@ trait APITraits
         foreach ($list as $backendName => $backend) {
             $backend = ['name' => $backendName, ...$backend];
 
-            if (null !== ag($backend, 'import.lastSync')) {
-                $backend = ag_set($backend, 'import.lastSync', makeDate(ag($backend, 'import.lastSync')));
+            if (null !== ($import = ag($backend, 'import.lastSync'))) {
+                $backend = ag_set($backend, 'import.lastSync', $import ? makeDate($import) : null);
             }
 
-            if (null !== ag($backend, 'export.lastSync')) {
-                $backend = ag_set($backend, 'export.lastSync', makeDate(ag($backend, 'export.lastSync')));
+            if (null !== ($export = ag($backend, 'export.lastSync'))) {
+                $backend = ag_set($backend, 'export.lastSync', $export ? makeDate($export) : null);
             }
 
             $backends[] = $backend;

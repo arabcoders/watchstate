@@ -23,7 +23,7 @@
         <div class="box">
 
           <div class="field">
-            <label class="label">Backend Name</label>
+            <label class="label">Name</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.name" required readonly disabled>
               <div class="icon is-small is-left">
@@ -37,7 +37,7 @@
           </div>
 
           <div class="field">
-            <label class="label">Backend Type</label>
+            <label class="label">Type</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.type" readonly disabled>
               <div class="icon is-small is-left">
@@ -47,7 +47,7 @@
           </div>
 
           <div class="field">
-            <label class="label">Backend URL</label>
+            <label class="label">URL</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.url" required>
               <div class="icon is-small is-left">
@@ -62,7 +62,8 @@
 
           <div class="field">
             <label class="label">
-              Backend API token
+              <template v-if="'plex' !== backend.type">API Token</template>
+              <template v-else>X-Plex-Token</template>
             </label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.token" required>
@@ -101,16 +102,14 @@
           <div class="field">
             <label class="label">Backend User ID</label>
             <div class="control has-icons-left">
-              <div class="select is-fullwidth">
+              <div class="select is-fullwidth" v-if="users.length>0">
                 <select v-model="backend.user" class="is-capitalized">
                   <option v-for="user in users" :key="'uid-'+user.id" :value="user.id">
-                    <template v-if="'plex' === backend">
-                      {{ user.id }} - {{ user.name }}
-                    </template>
-                    <template v-else>{{ user.name }}</template>
+                    {{ user.name }}
                   </option>
                 </select>
               </div>
+              <input class="input" type="text" v-model="backend.user" v-else>
               <div class="icon is-small is-left">
                 <i class="fas fa-user-tie" v-if="!usersLoading"></i>
                 <i class="fas fa-spinner fa-pulse" v-else></i>
@@ -260,9 +259,13 @@ const saveContent = async () => {
   })
 
   const json = await response.json()
-  if (!response.ok) {
-    notification('error', 'Error', 'Failed to save backend settings.')
+  if (200 !== response.status) {
+    notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
+    return
   }
+
+  notification('success', 'Information', `Backend settings saved successfully.`)
+
 }
 
 const removeOption = async (key) => {
