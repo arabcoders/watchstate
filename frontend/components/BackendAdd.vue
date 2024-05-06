@@ -1,4 +1,24 @@
 <template>
+  <Message v-if="'plex' === backend.type" message_class="is-warning" title="Please read">
+    <span class="icon-text">
+      <span class="icon"><i class="fas fa-exclamation"></i></span>
+      <span>Currently, <strong>Add Backend</strong> via WebUI doesn't cover all plex different behaviors. The WebUI
+        currently doesn't generate access tokens for users.</span>
+    </span>
+    <div class="content mt-4">
+      <h5>Example of limitations.</h5>
+      <ul>
+        <li>If you are using the admin token, you should select the admin user from the list.</li>
+        <li>If you are using a limited token, you have to manually enter the user id. If you plan on using webhooks, if
+          not using <code>1</code> should be ok.
+        </li>
+      </ul>
+      <p>
+        <strong>Workaround:</strong> You can go into the console and use the <code>config:add</code> command which is
+        designed to handle all these edge cases.
+      </p>
+    </div>
+  </Message>
   <form id="backend_add_form" @submit.prevent="addBackend" @change="changeStage">
     <div class="box">
 
