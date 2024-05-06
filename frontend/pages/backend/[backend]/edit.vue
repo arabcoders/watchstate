@@ -23,7 +23,7 @@
         <div class="box">
 
           <div class="field">
-            <label class="label">Backend Name</label>
+            <label class="label">Name</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.name" required readonly disabled>
               <div class="icon is-small is-left">
@@ -37,7 +37,7 @@
           </div>
 
           <div class="field">
-            <label class="label">Backend Type</label>
+            <label class="label">Type</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.type" readonly disabled>
               <div class="icon is-small is-left">
@@ -47,7 +47,7 @@
           </div>
 
           <div class="field">
-            <label class="label">Backend URL</label>
+            <label class="label">URL</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.url" required>
               <div class="icon is-small is-left">
@@ -62,7 +62,8 @@
 
           <div class="field">
             <label class="label">
-              Backend API token
+              <template v-if="'plex' !== backend.type">API Token</template>
+              <template v-else>X-Plex-Token</template>
             </label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.token" required>
@@ -101,16 +102,14 @@
           <div class="field">
             <label class="label">Backend User ID</label>
             <div class="control has-icons-left">
-              <div class="select is-fullwidth">
+              <div class="select is-fullwidth" v-if="users.length>0">
                 <select v-model="backend.user" class="is-capitalized">
                   <option v-for="user in users" :key="'uid-'+user.id" :value="user.id">
-                    <template v-if="'plex' === backend">
-                      {{ user.id }} - {{ user.name }}
-                    </template>
-                    <template v-else>{{ user.name }}</template>
+                    {{ user.name }}
                   </option>
                 </select>
               </div>
+              <input class="input" type="text" v-model="backend.user" v-else>
               <div class="icon is-small is-left">
                 <i class="fas fa-user-tie" v-if="!usersLoading"></i>
                 <i class="fas fa-spinner fa-pulse" v-else></i>
@@ -221,7 +220,18 @@ import 'assets/css/bulma-switch.css'
 import {notification} from "~/utils/index.js";
 
 const id = useRoute().params.backend
-const backend = ref({})
+const backend = ref({
+  name: '',
+  type: '',
+  url: '',
+  token: '',
+  uuid: '',
+  user: '',
+  import: {enabled: false},
+  export: {enabled: false},
+  webhook: {match: {user: false, uuid: false}},
+  options: {}
+})
 const showOptions = ref(false)
 const isLoading = ref(true)
 const users = ref([])
@@ -249,9 +259,13 @@ const saveContent = async () => {
   })
 
   const json = await response.json()
-  if (!response.ok) {
-    notification('error', 'Error', 'Failed to save backend settings.')
+  if (200 !== response.status) {
+    notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
+    return
   }
+
+  notification('success', 'Information', `Backend settings saved successfully.`)
+
 }
 
 const removeOption = async (key) => {
@@ -305,13 +319,21 @@ const getUsers = async (showAlert = true) => {
 
   usersLoading.value = true
 
+  let data = {
+    token: backend.value.token,
+    url: backend.value.url,
+    uuid: backend.value.uuid,
+  };
+
+  if (backend.value.options && backend.value.options.ADMIN_TOKEN) {
+    data.options = {
+      ADMIN_TOKEN: backend.value.options.ADMIN_TOKEN
+    }
+  }
+
   const response = await request(`/backends/users/${backend.value.type}`, {
     method: 'POST',
-    body: JSON.stringify({
-      token: backend.value.token,
-      url: backend.value.url,
-      uuid: backend.value.uuid,
-    })
+    body: JSON.stringify(data)
   })
 
   const json = await response.json()

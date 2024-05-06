@@ -23,7 +23,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 #[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'backend:users:list';
+    public const string ROUTE = 'backend:users:list';
 
     /**
      * Configures the command.
@@ -40,6 +40,7 @@ final class ListCommand extends Command
             )
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Use this given token.')
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
+            ->addOption('no-cache', null, InputOption::VALUE_NONE, 'Do not use cache.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend')
             ->setHelp(
                 r(
@@ -110,6 +111,10 @@ final class ListCommand extends Command
 
         if ($input->getOption('with-tokens')) {
             $opts['tokens'] = true;
+        }
+
+        if ($input->getOption('no-cache')) {
+            $opts[Options::NO_CACHE] = true;
         }
 
         if ($input->getOption('include-raw-response')) {

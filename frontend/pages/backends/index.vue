@@ -1,13 +1,14 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12">
+    <div class="column is-12 is-clearfix">
       <div class="p-2">
         <span class="title is-4">Backends</span>
 
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-primary is-light" v-tooltip="'Add New Backend'">
+              <button class="button is-primary is-light" v-tooltip="'Add New Backend'"
+                      @click="toggleForm = !toggleForm">
                 <span class="icon">
                   <i class="fas fa-add"></i>
                 </span>
@@ -24,6 +25,11 @@
         </div>
       </div>
     </div>
+
+    <div class="column is-12" v-if="toggleForm">
+      <BackendAdd @addBackend="toggleForm = false; loadContent()"/>
+    </div>
+
     <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
       <div class="card">
         <header class="card-header">
@@ -41,10 +47,12 @@
         <div class="card-content">
           <div class="columns is-multiline is-mobile has-text-centered">
             <div class="column is-6-mobile" v-if="backend.export.enabled">
-              <strong>Last Export:</strong> {{ moment(backend.export.lastSync).fromNow() }}
+              <strong>Last Export:</strong>
+              {{ backend.export.lastSync ? moment(backend.export.lastSync).fromNow() : 'None' }}
             </div>
             <div class="column is-hidden-mobile" v-if="backend.import.enabled">
-              <strong>Last Import:</strong> {{ moment(backend.import.lastSync).fromNow() }}
+              <strong>Last Import:</strong>
+              {{ backend.import.lastSync ? moment(backend.import.lastSync).fromNow() : 'None' }}
             </div>
           </div>
         </div>
@@ -79,15 +87,21 @@
 import 'assets/css/bulma-switch.css'
 import moment from "moment";
 import request from "~/utils/request.js";
+import BackendAdd from "~/components/BackendAdd.vue";
 
 useHead({title: 'Backends'})
 
 const backends = ref([])
+const toggleForm = ref(false)
 
 const loadContent = async () => {
   backends.value = []
   const response = await request('/backends')
   backends.value = await response.json()
+  if (backends.value.length === 0) {
+    toggleForm.value = true
+    notification('warning', 'Information', 'No backends found.')
+  }
 }
 
 onMounted(() => loadContent())
