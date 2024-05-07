@@ -71,7 +71,7 @@ Use the ids as parameters for `user:` in this case it should be `user:"1000:1000
 Run the following command:
 
 ```bash
-$ docker exec -ti console state:apikey
+$ docker exec -ti console system:apikey
 ```
 
 ----

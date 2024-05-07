@@ -20,5 +20,7 @@ http:// {
         hide .*
     }
 
-    log
+    log {
+        output discard
+    }
 }
