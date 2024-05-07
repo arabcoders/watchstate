@@ -66,6 +66,27 @@ Use the ids as parameters for `user:` in this case it should be `user:"1000:1000
 
 ----
 
+### How to find the apikey?
+
+Run the following command:
+
+```bash
+$ docker exec -ti console state:apikey
+```
+
+----
+
+### What the API key used for?
+
+The API key is used to authenticate the requests to the tool, it's used to prevent unauthorized access. The API key is
+required for all endpoints except the `/v1/api/[backend_name]/webhook` endpoint which is open by default Unless you have
+enabled `WS_SECURE_API_ENDPOINTS` environment variable. which then you also need to use the apikey for it.
+
+The new `WebUI` will also require the API key to access data as it's decoupled from the backend and run in standalone
+mode.
+
+----
+
 ### MAPPER: Watch state conflict detected in [BACKEND_NAME]...?
 
 This warning occurs when the database has the movie/episode marked as played but a backend reporting the

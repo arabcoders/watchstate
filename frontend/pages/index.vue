@@ -13,7 +13,9 @@
           <div class="card">
             <header class="card-header">
               <p class="card-header-title is-text-overflow is-justify-center pr-1">
-                {{ history.full_title ?? history.title }}
+                <NuxtLink :href="`/history/${history.id}`">
+                  {{ history.full_title ?? history.title }}
+                </NuxtLink>
               </p>
               <span class="card-header-icon">
                 <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>

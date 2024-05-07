@@ -49,13 +49,23 @@
             <div class="column is-6 has-text-right" v-if="task.args">
               <strong class="is-hidden-mobile">Args:</strong> <code>{{ task.args }}</code>
             </div>
-            <div class="column is-6 has-text-left" v-if="task.enabled">
-              <strong class="is-hidden-mobile">Prev Run:</strong>
-              {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
+            <div class="column is-6 has-text-left">
+              <strong class="is-hidden-mobile">Prev Run:&nbsp;</strong>
+              <template v-if="task.enabled">
+                {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
+              </template>
+              <template v-else>
+                <span class="tag is-danger">Disabled</span>
+              </template>
             </div>
-            <div class="column is-6 has-text-right" v-if="task.enabled">
-              <strong class="is-hidden-mobile">Next Run:</strong>
-              {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
+            <div class="column is-6 has-text-right">
+              <strong class="is-hidden-mobile">Next Run:&nbsp;</strong>
+              <template v-if="task.enabled">
+                {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
+              </template>
+              <template v-else>
+                <span class="tag is-danger">Disabled</span>
+              </template>
             </div>
           </div>
         </div>
@@ -69,12 +79,20 @@
               </label>
             </div>
           </div>
-          <div class="card-footer-item">
-            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued || !task.enabled">
+          <div class="card-footer-item" v-if="task.enabled">
+            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued">
               <span class="icon-text">
-                <span class="icon"><i class="fas fa-trash"></i></span>
-                <span v-if="!task.queued">Run now</span>
+                <span class="icon"><i class="fas fa-clock"></i></span>
+                <span v-if="!task.queued">Queue</span>
                 <span v-else>Queued</span>
+              </span>
+            </button>
+          </div>
+          <div class="card-footer-item">
+            <button class="button is-warning" @click="confirmRun(task)">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-terminal"></i></span>
+                <span>Run via console</span>
               </span>
             </button>
           </div>
@@ -129,5 +147,12 @@ const queueTask = async (task) => {
     notification('success', 'Success', `Task ${task.name} has been queued.`)
     await loadContent()
   }
+}
+
+const confirmRun = async (task) => {
+  if (!confirm(`Are you sure you want to run ${task.name}?`)) {
+    return
+  }
+  await navigateTo({path: '/console', query: {task: task.name, keep: 1}})
 }
 </script>
