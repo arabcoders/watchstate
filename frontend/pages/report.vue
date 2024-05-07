@@ -4,7 +4,7 @@
       <span class="title is-4">
         System Report
       </span>
-      <div class="is-pulled-right" v-if="!copyAPI">
+      <div class="is-pulled-right" v-if="copyAPI">
         <div class="field is-grouped">
           <p class="control">
             <button class="button is-primary" @click="copyContent" v-tooltip="'Copy Report'">
