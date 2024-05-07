@@ -8,6 +8,7 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\Config;
 use App\Libs\Container;
+use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
@@ -26,6 +27,7 @@ use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
@@ -1275,5 +1277,35 @@ if (!function_exists('deepArrayMerge')) {
             }
         }
         return $result;
+    }
+}
+
+if (!function_exists('runCommand')) {
+    function runCommand(string $command, array $args = [], bool $asArray = false, array $opts = []): string|array
+    {
+        $path = realpath(__DIR__ . '/../../');
+
+        $opts = DataUtil::fromArray($opts);
+
+        set_time_limit(0);
+
+        $process = new Process(
+            command: ["{$path}/bin/console", $command, ...$args],
+            cwd: $path,
+            env: $_ENV,
+            timeout: $opts->get('timeout', 3600),
+        );
+
+        $output = $asArray ? [] : '';
+
+        $process->run(function ($type, $data) use (&$output, $asArray) {
+            if ($asArray) {
+                $output[] = $data;
+                return;
+            }
+            $output .= $data;
+        });
+
+        return $output;
     }
 }

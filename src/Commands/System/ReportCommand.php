@@ -29,7 +29,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class ReportCommand extends Command
 {
-    public const ROUTE = 'system:report';
+    public const string ROUTE = 'system:report';
 
     /**
      * Class Constructor.

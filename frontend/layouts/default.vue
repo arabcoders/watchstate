@@ -39,6 +39,13 @@
             </span>
           </NuxtLink>
 
+          <NuxtLink class="navbar-item" href="/env">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-cogs"></i></span>
+              <span>Env</span>
+            </span>
+          </NuxtLink>
+
           <NuxtLink class="navbar-item" href="/logs">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-globe"></i></span>
@@ -46,10 +53,17 @@
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/env">
+          <NuxtLink class="navbar-item" href="/console">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-cogs"></i></span>
-              <span>Env</span>
+              <span class="icon"><i class="fas fa-terminal"></i></span>
+              <span>Console</span>
+            </span>
+          </NuxtLink>
+
+          <NuxtLink class="navbar-item" href="/report">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-flag"></i></span>
+              <span>S. Report</span>
             </span>
           </NuxtLink>
 
@@ -158,14 +172,31 @@
       <slot/>
     </template>
 
-    <div class="columns mt-3 is-mobile">
-      <div class="column is-8-mobile">
-        <div class="has-text-left">
-          {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+    <div class="columns is-multiline mt-3">
+      <div class="column is-12">
+        <div class="content">
+          If you have question, want clarification on something, or just want to chat with other users, you are welcome
+          to join our <a href="https://discord.gg/haUXHJyj6Y" rel="noreferrer,nofollow,noopener" target="_blank">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
+            <span>Discord server</span>
+          </span>
+        </a>. For real bug reports, feature requests, or contributions, please visit the <a
+            href="https://github.com/arabcoders/watchstate/issues/new/choose" rel="noreferrer,nofollow,noopener">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-brands fa-github"></i></span>
+            <span>GitHub repository</span>
+          </span>
+        </a>.
         </div>
       </div>
+      <div class="column is-6 is-12-mobile has-text-left">
+        {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+      </div>
     </div>
+
     <NuxtNotifications position="top right" :speed="800" :ignoreDuplicates="true" :width="340" :pauseOnHover="true"/>
+
   </div>
 </template>
 
