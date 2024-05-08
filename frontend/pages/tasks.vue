@@ -16,20 +16,22 @@
           </div>
         </div>
       </div>
-      <div class="is-hidden-mobile" v-if="queued.length > 0">
-        <p>
-          <span>The following tasks <code>{{ queued.join(', ') }}</code> are queued to be run soon.</span>
-        </p>
+      <div class="subtitle is-hidden-mobile" v-if="queued.length > 0">
+        <p>The following tasks <code>{{ queued.join(', ') }}</code> are queued to be run in background soon.</p>
       </div>
     </div>
 
     <div v-for="task in tasks" :key="task.name" class="column is-6-tablet is-12-mobile">
-      <div class="card">
+      <div class="card" :class="{ 'is-gray' : !task.enabled, 'is-success': task.enabled }">
         <header class="card-header">
-          <div class="is-capitalized card-header-title is-centered has-tooltip"
-               v-tooltip="'The command: ' + task.command">
+          <div class="is-capitalized card-header-title">
             {{ task.name }}
           </div>
+          <span class="card-header-icon" v-tooltip="'Enable/Disable Task.'">
+            <input :id="task.name" type="checkbox" class="switch is-success" :checked="task.enabled"
+                   @change="toggleTask(task)">
+            <label :for="task.name"></label>
+          </span>
         </header>
         <div class="card-content">
           <div class="columns is-multiline is-mobile has-text-centered">
@@ -71,20 +73,13 @@
         </div>
         <footer class="card-footer">
           <div class="card-footer-item">
-            <div class="field">
-              <input :id="task.name" type="checkbox" class="switch is-success" :checked="task.enabled"
-                     @change="toggleTask(task)">
-              <label :for="task.name">
-                <span class="is-hidden-mobile">Task is&nbsp;</span> {{ task.enabled ? 'Enabled' : 'Disabled' }}
-              </label>
-            </div>
-          </div>
-          <div class="card-footer-item" v-if="task.enabled">
-            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued">
+            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued || !task.enabled">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-clock"></i></span>
-                <span v-if="!task.queued">Queue</span>
-                <span v-else>Queued</span>
+                <span>
+                  <template v-if="!task.queued">Queue Task</template>
+                  <template v-else>Queued</template>
+                </span>
               </span>
             </button>
           </div>
@@ -138,7 +133,7 @@ const toggleTask = async (task) => {
 }
 
 const queueTask = async (task) => {
-  if (!confirm(`Are you sure you want to queue the task ${task.name}?`)) {
+  if (!confirm(`Queue '${task.name}' to run in background?`)) {
     return
   }
 
@@ -150,7 +145,7 @@ const queueTask = async (task) => {
 }
 
 const confirmRun = async (task) => {
-  if (!confirm(`Are you sure you want to run ${task.name}?`)) {
+  if (!confirm(`Are you sure you want to run '${task.name}' via web console now?`)) {
     return
   }
   await navigateTo({path: '/console', query: {task: task.name, keep: 1}})

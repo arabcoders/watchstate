@@ -29,24 +29,17 @@ final class Env
     {
         $spec = require __DIR__ . '/../../../config/env.spec.php';
 
-        $response = [
-            'data' => [],
-            'file' => Config::get('path') . '/config/.env',
-        ];
-
-        foreach ($this->envFile->getAll() as $key => $val) {
-            if (false === str_starts_with($key, 'WS_')) {
+        foreach ($spec as &$info) {
+            if (!$this->envFile->has($info['key'])) {
                 continue;
             }
-
-            $response['data'][] = [
-                'key' => $key,
-                'value' => $val,
-                'mask' => (bool)ag($spec, "{$key}.mask", false),
-            ];
+            $info['value'] = $this->envFile->get($info['key']);
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(HTTP_STATUS::HTTP_OK, [
+            'data' => $spec,
+            'file' => Config::get('path') . '/config/.env',
+        ]);
     }
 
     #[Get(self::URL . '/{key}[/]', name: 'system.env.view')]
