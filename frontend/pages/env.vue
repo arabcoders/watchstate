@@ -31,15 +31,27 @@
     <div class="column is-12" v-if="toggleForm">
       <form id="env_add_form" @submit.prevent="addVariable">
         <div class="field is-grouped">
-          <div class="control is-expanded">
-            <input class="input" type="text" placeholder="Key" v-model="form_key">
-            <p class="help has-text-danger" v-if="form_key && !form_key.toLowerCase().startsWith('ws_')">
-              Key Must start with WS_
-            </p>
+          <div class="control has-icons-left">
+            <div class="select is-fullwidth">
+              <select v-model="form_key" id="form_key" @change="keyChanged">
+                <option value="" disabled>Select Key</option>
+                <option v-for="env in envs" :key="env.key" :value="env.key">
+                  {{ env.key }}
+                </option>
+              </select>
+            </div>
+            <div class="icon is-small is-left">
+              <i class="fas fa-key"></i>
+            </div>
           </div>
-          <div class="control is-expanded">
-            <input class="input" type="text" placeholder="Value" v-model="form_value">
+          <div class="control is-expanded has-icons-left">
+            <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
+            <div class="icon is-small is-left">
+              <i class="fas fa-font"></i>
+            </div>
+            <p class="help" v-html="getHelp(form_key)"></p>
           </div>
+
           <div class="control">
             <button class="button is-danger" type="button"
                     v-tooltip="'Cancel'" @click="form_key=null; form_value=null; toggleForm=false">
@@ -55,7 +67,7 @@
       </form>
     </div>
 
-    <div class="column is-12">
+    <div class="column is-12" v-if="envs">
       <div class="table-container">
         <table class="table is-fullwidth is-bordered is-striped is-hoverable has-text-centered">
           <thead>
@@ -66,7 +78,7 @@
           </tr>
           </thead>
           <tbody>
-          <tr v-for="env in envs" :key="env.key">
+          <tr v-for="env in filteredRows(envs)" :key="env.key">
             <td class="has-text-left">
               {{ env.key }}
               <div class="is-pulled-right" v-if="env.mask">
@@ -115,14 +127,14 @@
 </template>
 
 <script setup>
-import request from "~/utils/request.js";
-import {awaitElement, notification} from "~/utils/index.js";
+import request from '~/utils/request.js'
+import {awaitElement, notification} from '~/utils/index.js'
 
 useHead({title: 'Environment Variables'})
 
 const envs = ref([])
 const toggleForm = ref(false)
-const form_key = ref(null)
+const form_key = ref('')
 const form_value = ref(null)
 const file = ref('.env')
 const copyAPI = navigator.clipboard
@@ -192,4 +204,33 @@ watch(toggleForm, (value) => {
     }))
   }
 });
+
+const keyChanged = () => {
+  if (!form_key.value) {
+    return
+  }
+
+  let data = envs.value.filter(i => i.key === form_key.value)
+  form_value.value = (data.length > 0) ? data[0].value : ''
+}
+
+const getHelp = (key) => {
+  if (!key) {
+    return ''
+  }
+
+  let data = envs.value.filter(i => i.key === key)
+  if (data.length === 0) {
+    return ''
+  }
+
+  let text = `${data[0].description}`;
+
+  if (data[0].type) {
+    text += ` Expected value: <code>${('bool' === data[0].type) ? 'bool, 0, 1' : data[0].type}</code>`
+  }
+
+  return text;
+}
+const filteredRows = (rows) => rows.filter(i => i.value !== undefined);
 </script>

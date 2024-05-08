@@ -2,7 +2,7 @@
   <div class="container">
     <nav class="navbar is-dark mb-4">
       <div class="navbar-brand pl-5">
-        <NuxtLink class="navbar-item" href="/">
+        <NuxtLink class="navbar-item" href="/" @click.native="showMenu=false">
           <span class="icon-text">
             <span class="icon"><i class="fas fa-home"></i></span>
             <span>Home</span>
@@ -18,49 +18,49 @@
 
       <div class="navbar-menu" :class="{'is-active':showMenu}">
         <div class="navbar-start">
-          <NuxtLink class="navbar-item" href="/backends">
+          <NuxtLink class="navbar-item" href="/backends" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-server"></i></span>
               <span>Backends</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/history">
+          <NuxtLink class="navbar-item" href="/history" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-history"></i></span>
               <span>History</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/tasks">
+          <NuxtLink class="navbar-item" href="/tasks" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-tasks"></i></span>
               <span>Tasks</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/env">
+          <NuxtLink class="navbar-item" href="/env" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-cogs"></i></span>
               <span>Env</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/logs">
+          <NuxtLink class="navbar-item" href="/logs" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-globe"></i></span>
               <span>Logs</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/console">
+          <NuxtLink class="navbar-item" href="/console" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-terminal"></i></span>
               <span>Console</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" href="/report">
+          <NuxtLink class="navbar-item" href="/report" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-flag"></i></span>
               <span>S. Report</span>

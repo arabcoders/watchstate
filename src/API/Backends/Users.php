@@ -30,13 +30,16 @@ final class Users
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        $users = $opts = [];
+        $params = DataUtil::fromRequest($request, true);
+
+        if (true === (bool)$params->get('tokens', false)) {
+            $opts['tokens'] = true;
+        }
+
         try {
-            $users = [];
-            foreach ($client->getUsersList() as $user) {
-                $users[] = [
-                    'id' => $user['id'],
-                    'name' => $user['name']
-                ];
+            foreach ($client->getUsersList($opts) as $user) {
+                $users[] = $user;
             }
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);

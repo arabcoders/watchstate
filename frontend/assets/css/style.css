@@ -162,3 +162,24 @@ hr {
 .vue-notification-wrapper {
     padding-top: 0.5em;
 }
+
+.card.is-danger {
+    border: var(--bulma-control-border-width) solid var(--bulma-danger);
+}
+
+.card.is-info {
+    border: var(--bulma-control-border-width) solid var(--bulma-info);
+}
+
+.card.is-success {
+    border: var(--bulma-control-border-width) solid var(--bulma-success);
+}
+
+.card.is-warning {
+    border: var(--bulma-control-border-width) solid var(--bulma-warning);
+}
+
+.card.is-gray {
+    border: var(--bulma-control-border-width) solid rgba(56, 56, 56, 0.38);
+}
+
