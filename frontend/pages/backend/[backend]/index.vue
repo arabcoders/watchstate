@@ -15,4 +15,6 @@
 
 <script setup>
 const backend = useRoute().params.backend
+
+useHead({title: `Backends: ${backend}`})
 </script>

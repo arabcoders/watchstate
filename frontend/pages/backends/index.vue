@@ -27,7 +27,7 @@
     </div>
 
     <div class="column is-12" v-if="toggleForm">
-      <BackendAdd @addBackend="toggleForm = false; loadContent()"/>
+      <BackendAdd @addBackend="toggleForm = false; loadContent()" :backends="backends"/>
     </div>
 
     <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
@@ -85,9 +85,9 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import moment from "moment";
-import request from "~/utils/request.js";
-import BackendAdd from "~/components/BackendAdd.vue";
+import moment from 'moment'
+import request from '~/utils/request.js'
+import BackendAdd from '~/components/BackendAdd.vue'
 
 useHead({title: 'Backends'})
 
@@ -98,10 +98,12 @@ const loadContent = async () => {
   backends.value = []
   const response = await request('/backends')
   backends.value = await response.json()
-  if (backends.value.length === 0) {
-    toggleForm.value = true
-    notification('warning', 'Information', 'No backends found.')
+  if (backends.value.length > 0) {
+    return
   }
+
+  toggleForm.value = true
+  notification('warning', 'Information', 'No backends found.')
 }
 
 onMounted(() => loadContent())
@@ -113,9 +115,9 @@ const updateValue = async (backend, key, newValue) => {
       "key": key,
       "value": newValue
     }])
-  });
+  })
 
-  backends.value[backends.value.findIndex(b => b.name === backend.name)] = await response.json();
+  backends.value[backends.value.findIndex(b => b.name === backend.name)] = await response.json()
 }
 
 </script>
