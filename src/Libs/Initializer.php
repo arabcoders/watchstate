@@ -207,8 +207,9 @@ final class Initializer
         } catch (Throwable $e) {
             $httpException = true === ($e instanceof HttpException);
             $routeException = true === ($e instanceof RouterHttpException);
+            $isNormal = true === ($httpException || $routeException);
 
-            if (false === $routeException && (false === $httpException || $e->getCode() !== 200)) {
+            if (!$isNormal) {
                 Container::get(LoggerInterface::class)->error(
                     message: $e->getMessage(),
                     context: [
@@ -220,10 +221,11 @@ final class Initializer
                 );
             }
 
-            $statusCode = $httpException && $e->getCode() >= 200 && $e->getCode() <= 499 ? $e->getCode() : 500;
-            $response = new Response(status: $statusCode, headers: [
-                'X-Error-Message' => $httpException ? $e->getMessage() : ''
-            ]);
+            $statusCode = $isNormal && ($e->getCode() >= 200 && $e->getCode() <= 499) ? $e->getCode() : 500;
+            $response = new Response(
+                status: $statusCode,
+                body: $isNormal ? "{$e->getCode()}: {$e->getMessage()}" : 'Unable to serve request.'
+            );
 
             $this->write($request, Level::Info, $this->formatLog($request, $response));
         }
@@ -239,6 +241,7 @@ final class Initializer
      *
      * @return iResponse The HTTP response.
      * @throws \Psr\SimpleCache\InvalidArgumentException If cache key is illegal.
+     * @throws RouterHttpException If the request is invalid.
      */
     private function defaultHttpServer(iRequest $request): iResponse
     {
@@ -249,14 +252,6 @@ final class Initializer
         // -- health endpoint.
         if (true === str_starts_with($requestPath, '/healthcheck')) {
             return api_response(HTTP_STATUS::HTTP_OK);
-        }
-
-        // -- favicon.
-        if (true === str_starts_with($requestPath, '/favicon.ico')) {
-            return api_response(HTTP_STATUS::HTTP_NOT_FOUND)
-                ->withoutHeader('Content-Type')
-                ->withHeader('Cache-Control', 'public, max-age=604800, immutable')
-                ->withHeader('Content-Type', 'image/x-icon');
         }
 
         // -- Forward requests to API server.
@@ -276,18 +271,7 @@ final class Initializer
                 );
                 return $response;
             }
-
-            if (file_exists(__DIR__ . '/../../public/exported/index.html')) {
-                return new Response(
-                    status: HTTP_STATUS::HTTP_OK->value,
-                    headers: ['Content-Type' => 'text/html'],
-                    body: Stream::create(fopen(__DIR__ . '/../../public/exported/index.html', 'r'))
-                );
-            }
-
-            $response = api_response(HTTP_STATUS::HTTP_NOT_FOUND);
-            $this->write($request, Level::Info, $this->formatLog($request, $response, 'The Frontend is not compiled.'));
-            return $response;
+            return (new ServeStatic())->serve($request);
         }
 
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);

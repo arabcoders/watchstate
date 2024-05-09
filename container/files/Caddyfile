@@ -6,21 +6,14 @@
 
 http:// {
     root * /opt/app/public
+    log {
+        output discard
+    }
 
 	header * ?X-Request-Id "{http.request.uuid}"
-
-    try_files {path} exported/{path} exported/{path}/ /index.php
 
     php_fastcgi 127.0.0.1:9000 {
         trusted_proxies private_ranges
         env X_REQUEST_ID "{http.request.uuid}"
-    }
-
-    file_server {
-        hide .*
-    }
-
-    log {
-        output discard
     }
 }

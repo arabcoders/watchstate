@@ -72,8 +72,13 @@ return (function () {
         ],
         [
             'key' => 'WS_WEBUI_ENABLED',
-            'description' => 'Enable the web UI.',
+            'description' => 'Enable the WebUI.',
             'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_WEBUI_PATH',
+            'description' => 'The path the the WebUI static files.',
+            'type' => 'string',
         ],
         [
             'key' => 'WS_API_KEY',
