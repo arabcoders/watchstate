@@ -96,7 +96,7 @@
 
     <div class="columns is-multiline" v-if="showConnection">
       <div class="column is-12 mt-2">
-        <form class="box" @submit.prevent="testApi">
+        <div class="box">
 
           <div class="field">
             <label class="label" for="api_token">
@@ -105,11 +105,24 @@
                 <span>API Token</span>
               </span>
             </label>
-            <div class="control">
-              <input class="input" id="api_token" type="text" v-model="api_token" required placeholder="API Token..."
-                     @keyup="api_status = false; api_response = ''">
+            <div class="field-body">
+              <div class="field">
+                <div class="field has-addons">
+                  <div class="control is-expanded">
+                    <input class="input" id="api_token" v-model="api_token" required placeholder="API Token..."
+                           @keyup="api_status = false; api_response = ''"
+                           :type="false === exposeToken ? 'password' : 'text'">
+                  </div>
+                  <div class="control">
+                    <button class="button is-primary" @click="exposeToken = !exposeToken" v-tooltip="'Show/Hide token'">
+                      <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
+                      <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
+                    </button>
+                  </div>
+                </div>
+                <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
+              </div>
             </div>
-            <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
           </div>
 
           <div class="field">
@@ -119,13 +132,17 @@
                 <span>API URL</span>
               </span>
             </label>
-            <div class="control">
-              <input class="input" id="api_url" type="url" v-model="api_url" required
-                     placeholder="API URL... http://localhost:8081"
-                     @keyup="api_status = false; api_response = ''">
-              <p class="help">
-                Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
-              </p>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  <input class="input" id="api_url" type="url" v-model="api_url" required
+                         placeholder="API URL... http://localhost:8081"
+                         @keyup="api_status = false; api_response = ''">
+                  <p class="help">
+                    Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -136,32 +153,42 @@
                 <span>API Path</span>
               </span>
             </label>
-            <div class="control">
-              <input class="input" id="api_path" type="text" v-model="api_path" required
-                     placeholder="API Path... /v1/api"
-                     @keyup="api_status = false; api_response = ''">
-              <p class="help">
-                Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API</a>.
-              </p>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  <input class="input" id="api_path" type="text" v-model="api_path" required
+                         placeholder="API Path... /v1/api"
+                         @keyup="api_status = false; api_response = ''">
+                  <p class="help">
+                    Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API</a>.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="field is-grouped has-addons-right">
-            <div class="control is-expanded">
-              <input class="input" type="text" v-model="api_response" readonly disabled
-                     :class="{'has-background-success': true===api_status}">
-              <p class="help">These settings are stored locally in your browser.</p>
-            </div>
-            <div class="control">
-              <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-save"></i></span>
-                  <span>Save</span>
-                </span>
-              </button>
+            <div class="field-body">
+              <div class="field">
+                <div class="field has-addons">
+                  <div class="control is-expanded">
+                    <input class="input" type="text" v-model="api_response" readonly disabled
+                           :class="{'has-background-success': true===api_status}">
+                  </div>
+                  <div class="control">
+                    <button type="submit" class="button is-primary" :disabled="!api_url || !api_token" @click="testApi">
+                      <span class="icon-text">
+                        <span class="icon"><i class="fas fa-save"></i></span>
+                        <span>Save</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                <p class="help">These settings are stored locally in your browser.</p>
+              </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
 
@@ -220,6 +247,7 @@ const api_version = useStorage('api_version', 'dev-master')
 
 const Year = ref(new Date().getFullYear())
 const showMenu = ref(false)
+const exposeToken = ref(false)
 
 const applyPreferredColorScheme = (scheme) => {
   for (let s = 0; s < document.styleSheets.length; s++) {
@@ -300,6 +328,10 @@ const testApi = async () => {
 }
 
 const getVersion = async () => {
+  if (api_version.value) {
+    return;
+  }
+
   try {
     const response = await request('/system/version')
     const json = await response.json()
