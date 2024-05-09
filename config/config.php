@@ -39,6 +39,7 @@ return (function () {
         ],
         'webui' => [
             'enabled' => (bool)env('WS_WEBUI_ENABLED', false),
+            'path' => fixPath(env('WS_WEBUI_PATH', __DIR__ . '/../public/exported')),
         ],
         'database' => [
             'version' => 'v01',

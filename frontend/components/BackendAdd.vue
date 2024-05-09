@@ -338,7 +338,7 @@ onMounted(async () => {
   backend.value.type = supported.value[0]
 })
 
-const changeStage = () => {
+const changeStage = async () => {
   const required = ['name', 'type', 'token']
 
   if ('plex' !== backend.value.type) {
@@ -437,8 +437,9 @@ const getServers = async () => {
   }
 
   servers.value = json
-  backend.value.url = json[0].uri
-  backend.value.uuid = json[0].uuid
+  backend.value.url = servers.value[0].uri
+  backend.value.uuid = servers.value[0].identifier
+  await changeStage()
 }
 
 const updateIdentifier = async () => {

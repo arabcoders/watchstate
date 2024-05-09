@@ -47,9 +47,9 @@
         </Message>
       </template>
       <code ref="logContainer" class="box logs-container" v-if="!error" :class="{'is-pre': !wrapLines}">
-        <span class="is-block" v-for="(item, index) in data" :key="'log_line-'+index">
+        <div class="is-log-line" v-for="(item, index) in data" :key="'log_line-'+index">
           {{ item }}
-        </span>
+        </div>
       </code>
       <template v-else>
         <Message title="Request Error" message_class="is-danger" :message="error"/>
@@ -114,8 +114,11 @@ const watchLog = () => {
 
   // noinspection JSValidateTypes
   stream.value = new EventSource(`${api_url.value}${api_path.value}/log/${filename}?stream=1&apikey=${api_token.value}`)
-  stream.value.addEventListener('data', (event) => {
-    data.value.push(event.data)
+  stream.value.addEventListener('data', e => {
+    let lines = e.data.split(/\n/g);
+    for (let x = 0; x < lines.length; x++) {
+      data.value.push(lines[x]);
+    }
   });
 }
 
