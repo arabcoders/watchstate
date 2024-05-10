@@ -77,7 +77,7 @@ return (function () {
         ],
         [
             'key' => 'WS_WEBUI_PATH',
-            'description' => 'The path the the WebUI static files.',
+            'description' => 'The path to where the WebUI is compiled.',
             'type' => 'string',
         ],
         [
