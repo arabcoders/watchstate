@@ -93,14 +93,25 @@
                 <i class="fas fa-spinner fa-pulse" v-else></i>
               </div>
               <p class="help">
-                The Unique identifier for the backend.
+                <span v-if="'plex' === backend.type">
+                  The backend unique ID is random string generated on server setup, In Plex case it used to inquiry
+                  about the users associated with the server to generate limited <code>X-Plex-Token</code> for them. It
+                  used by webhooks as a filter to match the backend. in-case you are member of multiple servers.
+                </span>
+                <span v-else>
+                  The backend unique ID is a random string generated on server setup. It is used to identify the backend
+                  uniquely. This is used for webhook matching and filtering.
+                </span>
                 <a href="javascript:void(0)" @click="getUUid">Get from the backend.</a>
               </p>
             </div>
           </div>
 
           <div class="field">
-            <label class="label">Backend User ID</label>
+            <label class="label">
+              <template v-if="users.length>0">Associated User</template>
+              <template v-else>User ID</template>
+            </label>
             <div class="control has-icons-left">
               <div class="select is-fullwidth" v-if="users.length>0">
                 <select v-model="backend.user" class="is-capitalized">
@@ -115,7 +126,16 @@
                 <i class="fas fa-spinner fa-pulse" v-else></i>
               </div>
               <p class="help">
-                The user ID of the backend.
+                <span v-if="'plex' === backend.type">
+                  Plex doesn't use standard API practice for identifying users. They use <code>X-Plex-Token</code> to
+                  identify the user. The user selected here will only be used for webhook matching and filtering.
+                </span>
+                <span v-else>
+                  Which <code>{{ ucFirst(backend.type) }}</code> user should this backend use? The User ID will
+                  determine the
+                  data we get from the backend. And for webhook matching and filtering.
+                </span>
+                This tool is meant for single user use.
                 <a href="javascript:void(0)" @click="getUsers">
                   Retrieve User ids from backend.
                 </a>
@@ -217,7 +237,7 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import {notification} from "~/utils/index.js";
+import {notification, ucFirst} from '~/utils/index.js'
 
 const id = useRoute().params.backend
 const backend = ref({
