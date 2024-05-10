@@ -1,4 +1,19 @@
 <template>
+  <Message>
+    <span class="icon-text">
+      <span class="icon">
+        <i class="fas fa-info"></i>
+      </span>
+      <span>
+        Please, Beware <code>WatchState</code> is single user tool. It doesn't support syncing multiple users
+        play state. Please read
+        <NuxtLink
+            href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"
+            target="_blank" v-text="'this link'"></NuxtLink>
+        for more information.
+      </span>
+    </span>
+  </Message>
   <form id="backend_add_form" @submit.prevent="addBackend" @change="changeStage">
     <div class="box">
 
@@ -107,7 +122,8 @@
               <i class="fas fa-spinner fa-pulse" v-else></i>
             </div>
             <p class="help">
-              The Unique identifier for the backend.
+              The backend unique ID is a random string generated on server setup. It is used to identify the backend
+              uniquely. This is used for webhook matching and filtering.
               <a href="javascript:void(0)" @click="getUUid">Load automatically.</a>
             </p>
           </div>
@@ -132,7 +148,16 @@
               <i class="fas fa-spinner fa-pulse" v-else></i>
             </div>
             <p class="help">
-              The user ID of the backend.
+              <span v-if="'plex' === backend.type">
+                Plex doesn't use standard API practice for identifying users. They use <code>X-Plex-Token</code> to
+                identify the user. The user selected here will only be used for webhook matching and filtering.
+              </span>
+              <span v-else>
+                Which <code>{{ ucFirst(backend.type) }}</code> user should this backend use? The User ID will
+                determine the
+                data we get from the backend. And for webhook matching and filtering.
+              </span>
+              This tool is meant for single user use.
               <a href="javascript:void(0)" @click="getUsers">
                 Retrieve User ids from backend.
               </a>
@@ -202,7 +227,7 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import {notification} from "~/utils/index.js";
+import {notification, ucFirst} from '~/utils/index.js'
 
 const emit = defineEmits(['addBackend'])
 
