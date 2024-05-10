@@ -257,7 +257,7 @@ const api_token = useStorage('api_token', '')
 const show_page_info = useStorage('show_page_info', true)
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
-const api_version = useStorage('api_version', 'dev-master')
+const api_version = ref()
 
 const showMenu = ref(false)
 const exposeToken = ref(false)
