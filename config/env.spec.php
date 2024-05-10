@@ -1,6 +1,6 @@
 <?php
 /**
- * Last update: 2024-05-05
+ * Last update: 2024-05-10
  *
  * This file contains the environment variables that are supported by the application.
  * All keys MUST start with WS_ and be in UPPERCASE and use _ as a separator.
@@ -16,7 +16,7 @@ return (function () {
         ],
         [
             'key' => 'WS_TMP_DIR',
-            'description' => 'Where to store temp data. (logs, cache)',
+            'description' => 'Where to store temp data. (logs, cache).',
             'type' => 'string',
         ],
         [
@@ -26,17 +26,17 @@ return (function () {
         ],
         [
             'key' => 'WS_LOGS_CONTEXT',
-            'description' => 'Enable context in logs.',
+            'description' => 'Enable extra context information in logs and output.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_LOGGER_FILE_ENABLE',
-            'description' => 'Enable logging to app.log file',
+            'description' => 'Enable logging to app.(YYYYMMDD).log file.',
             'type' => 'bool',
         ],
         [
             'key' => 'WS_LOGGER_FILE_LEVEL',
-            'description' => 'Set the log level for the file logger. Default: ERROR',
+            'description' => 'Set the log level for the file logger. Default: ERROR.',
             'type' => 'string',
         ],
         [
@@ -51,12 +51,12 @@ return (function () {
         ],
         [
             'key' => 'WS_TRUST_HEADER',
-            'description' => 'The header with the true user IP.',
+            'description' => 'The header which contains the true user IP.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_LIBRARY_SEGMENT',
-            'description' => 'How many items to request per a request.',
+            'description' => 'How many items to request per a request to backends.',
             'type' => 'string',
         ],
         [
@@ -67,7 +67,7 @@ return (function () {
         ],
         [
             'key' => 'WS_CACHE_NULL',
-            'description' => 'Enable the null cache. This is useful for testing. Or first time container startup.',
+            'description' => 'Enable the null cache driver. This is useful for testing or container container startup.',
             'type' => 'bool',
         ],
         [
@@ -82,7 +82,7 @@ return (function () {
         ],
         [
             'key' => 'WS_API_KEY',
-            'description' => 'The API key to allow access to the API',
+            'description' => 'The API key to allow access to the API.',
             'type' => 'string',
             'mask' => true,
         ],
@@ -98,7 +98,7 @@ return (function () {
         ],
         [
             'key' => 'WS_EPISODES_DISABLE_GUID',
-            'description' => 'Disable the GUID field in the episodes.',
+            'description' => 'DO NOT parse episodes GUID.',
             'type' => 'bool',
             'deprecated' => true,
         ],
@@ -114,12 +114,12 @@ return (function () {
         ],
         [
             'key' => 'WS_CACHE_PREFIX',
-            'description' => 'The prefix for the cache keys.',
+            'description' => 'The prefix for the cache keys. Default \'\'.',
             'type' => 'string',
         ],
         [
             'key' => 'WS_CACHE_PATH',
-            'description' => 'The path to the cache directory. This is usually if the cache server is not available.',
+            'description' => 'Where to store cache data. This is usually used if the cache server is not available and/or experiencing issues.',
             'type' => 'string',
         ],
         [
@@ -139,7 +139,7 @@ return (function () {
         ],
         [
             'key' => 'WS_SECURE_API_ENDPOINTS',
-            'description' => 'Disregard the open route policy, and require an API key for all routes.',
+            'description' => 'Close all open routes and enforce API key authentication on all endpoints.',
             'type' => 'bool',
         ],
     ];
