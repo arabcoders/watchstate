@@ -2,7 +2,7 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
       <span class="title is-4">System Report</span>
-      <div class="is-pulled-right" v-if="copyAPI">
+      <div class="is-pulled-right" v-if="copyAPI && false === show_report_warning">
         <div class="field is-grouped">
           <p class="control">
             <button class="button is-primary" @click="copyContent" v-tooltip="'Copy Report'">
@@ -30,12 +30,12 @@
         </div>
       </Message>
 
-      <Message message_class="is-info" v-if="!show_report_warning && data.length<1">
+      <Message message_class="is-info" v-if="!show_report_warning && data.length < 1">
         <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
         <span>Generating the report. Please wait...</span>
       </Message>
 
-      <template v-if="!show_report_warning && data.length>0">
+      <template v-if="!show_report_warning && data.length > 0">
         <pre style="min-height: 60vh;max-height:80vh; overflow-y: scroll"
         ><code><span v-for="(item, index) in data" :key="index" class="is-block">{{ item }}</span></code></pre>
       </template>
