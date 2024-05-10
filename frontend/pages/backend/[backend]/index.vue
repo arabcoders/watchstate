@@ -5,7 +5,6 @@
         <NuxtLink href="/backends">Backends</NuxtLink>
         : {{ backend }}
       </span>
-
       <div class="is-pulled-right">
         <div class="field is-grouped"></div>
       </div>

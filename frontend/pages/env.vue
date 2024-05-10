@@ -2,18 +2,17 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
       <span id="env_page_title" class="title is-4">Environment Variables</span>
-
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-primary is-light" v-tooltip="'Add New Variable'" @click="toggleForm = !toggleForm">
+            <button class="button is-primary" v-tooltip="'Add New Variable'" @click="toggleForm = !toggleForm">
               <span class="icon">
                 <i class="fas fa-add"></i>
               </span>
             </button>
           </p>
           <p class="control">
-            <button class="button is-primary" @click="loadContent">
+            <button class="button is-info" @click="loadContent">
               <span class="icon">
                 <i class="fas fa-sync"></i>
               </span>
@@ -53,16 +52,23 @@
           </div>
 
           <div class="control">
-            <button class="button is-danger" type="button"
-                    v-tooltip="'Cancel'" @click="form_key=null; form_value=null; toggleForm=false">
-              <span class="icon"><i class="fas fa-cancel"></i></span>
-            </button>
-          </div>
-          <div class="control">
             <button class="button is-primary" type="submit" :disabled="!form_key || !form_value">
-              <span class="icon"><i class="fas fa-save"></i></span>
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-save"></i></span>
+                <span>Save</span>
+              </span>
             </button>
           </div>
+
+          <div class="control">
+            <button class="button is-danger" type="button" @click="form_key=null; form_value=null; toggleForm=false">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-cancel"></i></span>
+                <span>Cancel</span>
+              </span>
+            </button>
+          </div>
+
         </div>
       </form>
     </div>

@@ -5,14 +5,14 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-warning" @click.prevent="searchForm = !searchForm">
+            <button class="button is-primary" @click.prevent="searchForm = !searchForm">
               <span class="icon">
                 <i class="fas fa-search"></i>
               </span>
             </button>
           </p>
           <p class="control">
-            <button class="button is-primary" @click.prevent="loadContent(page, true)">
+            <button class="button is-info" @click.prevent="loadContent(page, true)">
               <span class="icon">
                 <i class="fas fa-sync"></i>
               </span>
@@ -87,20 +87,20 @@
               </div>
 
               <div class="control">
-                <button class="button is-warning" type="button" @click="clearSearch" :disabled="isLoading">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-cancel"></i></span>
-                    <span>Reset</span>
-                  </span>
-                </button>
-              </div>
-
-              <div class="control">
                 <button class="button is-primary" type="submit" :disabled="!query || '' === searchField || isLoading"
                         :class="{'is-loading':isLoading}">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-search"></i></span>
                     <span>Search</span>
+                  </span>
+                </button>
+              </div>
+
+              <div class="control">
+                <button class="button is-warning" type="button" @click="clearSearch" :disabled="isLoading">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-cancel"></i></span>
+                    <span>Reset</span>
                   </span>
                 </button>
               </div>
@@ -262,6 +262,9 @@ const loadContent = async (pageNumber, fromPopState = false) => {
       page.value = json.paging.current_page
       perpage.value = json.paging.perpage
       total.value = json.paging.total
+    } else {
+      page.value = 1
+      total.value = 0
     }
 
     if (json.history) {

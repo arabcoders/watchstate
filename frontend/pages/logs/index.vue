@@ -1,16 +1,14 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12">
-      <div class="p-2">
-        <span class="title is-4">Logs</span>
-        <div class="is-pulled-right">
-          <div class="field is-grouped">
-            <p class="control">
-              <button class="button is-primary" @click.prevent="loadContent">
-                <span class="icon"><i class="fas fa-sync"></i></span>
-              </button>
-            </p>
-          </div>
+    <div class="column is-12 is-clearfix">
+      <span class="title is-4">Logs</span>
+      <div class="is-pulled-right">
+        <div class="field is-grouped">
+          <p class="control">
+            <button class="button is-info" @click.prevent="loadContent">
+              <span class="icon"><i class="fas fa-sync"></i></span>
+            </button>
+          </p>
         </div>
       </div>
       <div class="is-hidden-mobile">

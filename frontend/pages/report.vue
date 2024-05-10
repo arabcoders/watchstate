@@ -1,9 +1,7 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
-      <span class="title is-4">
-        System Report
-      </span>
+      <span class="title is-4">System Report</span>
       <div class="is-pulled-right" v-if="copyAPI">
         <div class="field is-grouped">
           <p class="control">

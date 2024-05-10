@@ -1,9 +1,7 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
-      <span class="title is-4">
-        Console
-      </span>
+      <h1 class="title is-4">Console</h1>
       <div class="subtitle is-6">
         You can execute <strong>non-interactive</strong> commands here. The interface jailed to the <code>console</code>
         command. You do not have to write <code>console</code> or <code>docker exec -ti watchstate console</code> here.

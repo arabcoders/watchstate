@@ -1,17 +1,14 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12">
-      <div class="p-2">
-        <span class="title is-4">Tasks</span>
-
-        <div class="is-pulled-right">
-          <div class="field is-grouped">
-            <p class="control">
-              <button class="button is-primary" @click.prevent="loadContent(true)">
-                <span class="icon"><i class="fas fa-sync"></i></span>
-              </button>
-            </p>
-          </div>
+    <div class="column is-12 is-clearfix">
+      <span class="title is-4">Tasks</span>
+      <div class="is-pulled-right">
+        <div class="field is-grouped">
+          <p class="control">
+            <button class="button is-info" @click.prevent="loadContent(true)">
+              <span class="icon"><i class="fas fa-sync"></i></span>
+            </button>
+          </p>
         </div>
       </div>
       <div class="is-hidden-mobile">
@@ -22,6 +19,7 @@
           </template>
         </span>
       </div>
+
     </div>
 
     <div v-for="task in tasks" :key="task.name" class="column is-6-tablet is-12-mobile">
