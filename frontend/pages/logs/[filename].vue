@@ -11,7 +11,7 @@
 
           <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
             <button class="button" v-tooltip="'Watch log'" @click="watchLog"
-                    :class="{'is-info':!stream,'is-danger':stream}">
+                    :class="{'is-primary':!stream,'is-danger':stream}">
               <span class="icon">
                 <i class="fas fa-stream"></i>
               </span>
@@ -27,10 +27,8 @@
           </p>
 
           <p class="control">
-            <button class="button is-primary" @click.prevent="loadContent">
-              <span class="icon">
-                <i class="fas fa-sync"></i>
-              </span>
+            <button class="button is-info" @click.prevent="loadContent">
+              <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
         </div>

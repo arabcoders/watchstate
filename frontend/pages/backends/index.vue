@@ -1,28 +1,23 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
-      <div class="p-2">
-        <span class="title is-4">Backends</span>
-
-        <div class="is-pulled-right">
-          <div class="field is-grouped">
-            <p class="control">
-              <button class="button is-primary is-light" v-tooltip="'Add New Backend'"
-                      @click="toggleForm = !toggleForm">
-                <span class="icon">
-                  <i class="fas fa-add"></i>
-                </span>
-              </button>
-            </p>
-            <p class="control">
-              <button class="button is-primary" @click.prevent="loadContent">
-                <span class="icon is-small">
-                  <i class="fas fa-sync"></i>
-                </span>
-              </button>
-            </p>
-          </div>
+      <span class="title is-4">Backends</span>
+      <div class="is-pulled-right">
+        <div class="field is-grouped">
+          <p class="control">
+            <button class="button is-primary" v-tooltip="'Add New Backend'" @click="toggleForm = !toggleForm">
+              <span class="icon"><i class="fas fa-add"></i></span>
+            </button>
+          </p>
+          <p class="control">
+            <button class="button is-info" @click.prevent="loadContent">
+              <span class="icon"><i class="fas fa-sync"></i></span>
+            </button>
+          </p>
         </div>
+      </div>
+      <div class="is-hidden-mobile">
+        <span class="subtitle">This page contains all the backends that are currently configured.</span>
       </div>
     </div>
 
@@ -33,8 +28,8 @@
     <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
       <div class="card">
         <header class="card-header">
-          <p class="card-header-title is-centered is-word-break">
-            <NuxtLink :href="'/backend/' + backend.name">
+          <p class="card-header-title">
+            <NuxtLink :href="`/backend/${backend.name}`">
               {{ backend.name }}
             </NuxtLink>
           </p>
@@ -45,12 +40,12 @@
           </span>
         </header>
         <div class="card-content">
-          <div class="columns is-multiline is-mobile has-text-centered">
-            <div class="column is-6-mobile" v-if="backend.export.enabled">
+          <div class="columns is-multiline has-text-centered">
+            <div class="column is-6 has-text-left-mobile" v-if="backend.export.enabled">
               <strong>Last Export:</strong>
               {{ backend.export.lastSync ? moment(backend.export.lastSync).fromNow() : 'None' }}
             </div>
-            <div class="column is-hidden-mobile" v-if="backend.import.enabled">
+            <div class="column is-6 has-text-left-mobile" v-if="backend.import.enabled">
               <strong>Last Import:</strong>
               {{ backend.import.lastSync ? moment(backend.import.lastSync).fromNow() : 'None' }}
             </div>
@@ -63,7 +58,7 @@
                      :checked="backend.export.enabled"
                      @change="updateValue(backend, 'export.enabled', !backend.export.enabled)">
               <label :for="backend.name+'_export'">
-                Export {{ backend.export.enabled ? 'Enabled' : 'Disabled' }}
+                Export <span class="is-hidden-mobile">&nbsp;{{ backend.export.enabled ? 'Enabled' : 'Disabled' }}</span>
               </label>
             </div>
           </div>
@@ -73,7 +68,7 @@
                      :checked="backend.import.enabled"
                      @change="updateValue(backend, 'import.enabled',!backend.import.enabled)">
               <label :for="backend.name+'_import'">
-                Import {{ backend.import.enabled ? 'Enabled' : 'Disabled' }}
+                Import <span class="is-hidden-mobile">&nbsp;{{ backend.import.enabled ? 'Enabled' : 'Disabled' }}</span>
               </label>
             </div>
           </div>
@@ -88,6 +83,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
+import {notification} from '~/utils/index.js'
 
 useHead({title: 'Backends'})
 

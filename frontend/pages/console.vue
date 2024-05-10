@@ -1,9 +1,7 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
-      <span class="title is-4">
-        Console
-      </span>
+      <h1 class="title is-4">Console</h1>
       <div class="subtitle is-6">
         You can execute <strong>non-interactive</strong> commands here. The interface jailed to the <code>console</code>
         command. You do not have to write <code>console</code> or <code>docker exec -ti watchstate console</code> here.
@@ -14,37 +12,51 @@
 
     <div class="column is-12">
       <form @submit.prevent="RunCommand">
-        <div class="field is-grouped">
-          <p class="control is-expanded has-icons-left">
-            <input type="text" class="input" v-model="command" placeholder="system:view" autocomplete="off" autofocus
-                   :disabled="isLoading">
-            <span class="icon is-small is-left">
-              <i class="fas fa-terminal"></i>
-            </span>
-          </p>
-          <p class="control">
-            <button class="button is-primary" type="submit" :disabled="isLoading" :class="{'is-loading':isLoading}">
-              <span class="icon-text">
-                <span class="icon">
-                  <i class="fa fa-server"></i>
+        <div class="field">
+          <div class="field-body">
+            <div class="field is-grouped-tablet">
+              <p class="control is-expanded has-icons-left">
+                <input type="text" class="input" v-model="command" placeholder="system:view" autocomplete="off"
+                       autofocus
+                       :disabled="isLoading">
+                <span class="icon is-left">
+                  <i class="fas fa-terminal"></i>
                 </span>
-                <span>Run</span>
-              </span>
-            </button>
-          </p>
-          <p class="control">
-            <button class="button is-info" type="button" v-tooltip="'Clear output'" @click="response = []">
-              <span class="icon">
-                <i class="fa fa-broom"></i>
-              </span>
-            </button>
-          </p>
-          <p class="control" v-if="isLoading">
-            <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
-              <span class="icon">
-                <i class="fa fa-power-off"></i>
-              </span>
-            </button>
+              </p>
+              <p class="control">
+                <button class="button is-primary" type="submit" :disabled="isLoading" :class="{'is-loading':isLoading}">
+                  <span class="icon-text">
+                    <span class="icon">
+                      <i class="fa fa-server"></i>
+                    </span>
+                    <span>Run</span>
+                  </span>
+                </button>
+              </p>
+              <p class="control">
+                <button class="button is-info" type="button" v-tooltip="'Clear output'" @click="response = []">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fa fa-broom"></i></span>
+                    <span>Clear</span>
+                  </span>
+                </button>
+              </p>
+              <p class="control" v-if="isLoading">
+                <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fa fa-power-off"></i></span>
+                    <span>Close Connection</span>
+                  </span>
+                </button>
+              </p>
+            </div>
+          </div>
+          <p class="help">
+            <span class="icon-text">
+              <span class="icon"><i class="fa fa-info"></i></span>
+              <span>Please beware, clicking close connection does not stop the command. It only stops the output from
+                being displayed. The command will continue to run until it finishes.</span>
+            </span>
           </p>
         </div>
       </form>

@@ -72,22 +72,16 @@
           <div class="navbar-item">
             <button class="button is-dark" @click="selectedTheme = 'light'" v-if="'dark' === selectedTheme"
                     v-tooltip="'Switch to light theme'">
-              <span class="icon is-small has-text-warning">
-                <i class="fas fa-sun"></i>
-              </span>
+              <span class="icon has-text-warning"><i class="fas fa-sun"></i></span>
             </button>
             <button class="button is-dark" @click="selectedTheme = 'dark'" v-if="'light' === selectedTheme"
                     v-tooltip="'Switch to dark theme'">
-              <span class="icon is-small">
-                <i class="fas fa-moon"></i>
-              </span>
+              <span class="icon"><i class="fas fa-moon"></i></span>
             </button>
           </div>
           <div class="navbar-item">
             <button class="button is-dark" @click="showConnection = !showConnection" v-tooltip="'Configure connection'">
-              <span class="icon is-small">
-                <i class="fas fa-cog"></i>
-              </span>
+              <span class="icon"><i class="fas fa-cog"></i></span>
             </button>
           </div>
         </div>
@@ -120,7 +114,10 @@
                     </button>
                   </div>
                 </div>
-                <p class="help">Can be obtained by using the <code>system:apikey</code> command.</p>
+                <p class="help">
+                  You can obtain the <code>API TOKEN</code> by using the <code>system:apikey</code> command or by
+                  viewing the <code>/config/config/.env</code> and looking for the <code>WS_API_KEY=</code> key.
+                </p>
               </div>
             </div>
           </div>
@@ -160,14 +157,14 @@
                          placeholder="API Path... /v1/api"
                          @keyup="api_status = false; api_response = ''">
                   <p class="help">
-                    Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API</a>.
+                    Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API Path</a>.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="field is-grouped has-addons-right">
+          <div class="field">
             <div class="field-body">
               <div class="field">
                 <div class="field has-addons">
@@ -184,7 +181,13 @@
                     </button>
                   </div>
                 </div>
-                <p class="help">These settings are stored locally in your browser.</p>
+                <p class="help">
+                  <span class="icon-text">
+                    <span class="icon has-text-danger"><i class="fas fa-info"></i></span>
+                    <span>These settings are stored locally in your browser. You need to re-add them if you access the
+                      <code>WebUI</code> from different browser.</span>
+                  </span>
+                </p>
               </div>
             </div>
           </div>
@@ -200,30 +203,40 @@
     </template>
 
     <div class="columns is-multiline mt-3">
-      <div class="column is-12">
+      <div class="column is-12 is-hidden-mobile">
         <div class="content">
-          If you have question, want clarification on something, or just want to chat with other users, you are welcome
-          to join our <a href="https://discord.gg/haUXHJyj6Y" rel="noreferrer,nofollow,noopener" target="_blank">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
-            <span>Discord server</span>
-          </span>
-        </a>. For real bug reports, feature requests, or contributions, please visit the <a
-            href="https://github.com/arabcoders/watchstate/issues/new/choose" rel="noreferrer,nofollow,noopener">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-brands fa-github"></i></span>
-            <span>GitHub repository</span>
-          </span>
-        </a>.
+          <Message v-if="show_page_info" title="Information">
+            <button class="delete" @click="show_page_info = false"></button>
+            If you have question, or want clarification on something, or just want to chat with other users, you are
+            welcome to join our
+            <NuxtLink href="https://discord.gg/haUXHJyj6Y" target="_blank">
+              <span class="icon-text is-underlined">
+                <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
+                <span>Discord server</span>
+              </span>
+            </NuxtLink>
+            . For real bug reports, feature requests, or contributions, please visit the
+            <NuxtLink href="https://github.com/arabcoders/watchstate/issues/new/choose" target="_blank">
+              <span class="icon-text is-underlined">
+                <span class="icon"><i class="fas fa-brands fa-github"></i></span>
+                <span>GitHub repository</span>
+              </span>
+            </NuxtLink>
+            .
+          </Message>
         </div>
       </div>
       <div class="column is-6 is-12-mobile has-text-left">
         {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+        <template v-if="!show_page_info">
+          <span class="is-hidden-mobile">
+            - <a href="javascript:void(0)" @click="show_page_info=true">Show Info</a>
+          </span>
+        </template>
       </div>
     </div>
 
     <NuxtNotifications position="top right" :speed="800" :ignoreDuplicates="true" :width="340" :pauseOnHover="true"/>
-
   </div>
 </template>
 
@@ -241,15 +254,15 @@ const showConnection = ref(false)
 const api_url = useStorage('api_url', window.location.origin)
 const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
+const show_page_info = useStorage('show_page_info', true)
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
 const api_version = useStorage('api_version', 'dev-master')
 
-const Year = ref(new Date().getFullYear())
 const showMenu = ref(false)
 const exposeToken = ref(false)
 
-const applyPreferredColorScheme = (scheme) => {
+const applyPreferredColorScheme = scheme => {
   for (let s = 0; s < document.styleSheets.length; s++) {
     for (let i = 0; i < document.styleSheets[s].cssRules.length; i++) {
       try {
@@ -298,7 +311,7 @@ onMounted(async () => {
   }
 })
 
-watch(selectedTheme, (value) => {
+watch(selectedTheme, value => {
   try {
     applyPreferredColorScheme(value)
   } catch (e) {

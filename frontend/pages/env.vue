@@ -2,18 +2,17 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
       <span id="env_page_title" class="title is-4">Environment Variables</span>
-
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-primary is-light" v-tooltip="'Add New Variable'" @click="toggleForm = !toggleForm">
+            <button class="button is-primary" v-tooltip="'Add New Variable'" @click="toggleForm = !toggleForm">
               <span class="icon">
                 <i class="fas fa-add"></i>
               </span>
             </button>
           </p>
           <p class="control">
-            <button class="button is-primary" @click="loadContent">
+            <button class="button is-info" @click="loadContent">
               <span class="icon">
                 <i class="fas fa-sync"></i>
               </span>
@@ -30,7 +29,7 @@
 
     <div class="column is-12" v-if="toggleForm">
       <form id="env_add_form" @submit.prevent="addVariable">
-        <div class="field is-grouped">
+        <div class="field is-grouped-tablet">
           <div class="control has-icons-left">
             <div class="select is-fullwidth">
               <select v-model="form_key" id="form_key" @change="keyChanged">
@@ -40,7 +39,7 @@
                 </option>
               </select>
             </div>
-            <div class="icon is-small is-left">
+            <div class="icon is-left">
               <i class="fas fa-key"></i>
             </div>
           </div>
@@ -53,16 +52,23 @@
           </div>
 
           <div class="control">
-            <button class="button is-danger" type="button"
-                    v-tooltip="'Cancel'" @click="form_key=null; form_value=null; toggleForm=false">
-              <span class="icon"><i class="fas fa-cancel"></i></span>
-            </button>
-          </div>
-          <div class="control">
             <button class="button is-primary" type="submit" :disabled="!form_key || !form_value">
-              <span class="icon"><i class="fas fa-save"></i></span>
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-save"></i></span>
+                <span>Save</span>
+              </span>
             </button>
           </div>
+
+          <div class="control">
+            <button class="button is-danger" type="button" @click="form_key=null; form_value=null; toggleForm=false">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-cancel"></i></span>
+                <span>Cancel</span>
+              </span>
+            </button>
+          </div>
+
         </div>
       </form>
     </div>

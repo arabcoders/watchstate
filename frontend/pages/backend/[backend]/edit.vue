@@ -26,7 +26,7 @@
             <label class="label">Name</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.name" required readonly disabled>
-              <div class="icon is-small is-left">
+              <div class="icon is-left">
                 <i class="fas fa-user"></i>
               </div>
               <p class="help">
@@ -40,7 +40,7 @@
             <label class="label">Type</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.type" readonly disabled>
-              <div class="icon is-small is-left">
+              <div class="icon is-left">
                 <i class="fas fa-globe"></i>
               </div>
             </div>
@@ -50,7 +50,7 @@
             <label class="label">URL</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.url" required>
-              <div class="icon is-small is-left">
+              <div class="icon is-left">
                 <i class="fas fa-link"></i>
               </div>
               <p class="help">
@@ -67,7 +67,7 @@
             </label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.token" required>
-              <div class="icon is-small is-left">
+              <div class="icon is-left">
                 <i class="fas fa-key"></i>
               </div>
               <p class="help">
@@ -88,7 +88,7 @@
             <label class="label">Backend Unique ID</label>
             <div class="control has-icons-left">
               <input class="input" type="text" v-model="backend.uuid" required>
-              <div class="icon is-small is-left">
+              <div class="icon is-left">
                 <i class="fas fa-server" v-if="!uuidLoading"></i>
                 <i class="fas fa-spinner fa-pulse" v-else></i>
               </div>
@@ -110,7 +110,7 @@
                 </select>
               </div>
               <input class="input" type="text" v-model="backend.user" v-else>
-              <div class="icon is-small is-left">
+              <div class="icon is-left">
                 <i class="fas fa-user-tie" v-if="!usersLoading"></i>
                 <i class="fas fa-spinner fa-pulse" v-else></i>
               </div>
@@ -170,13 +170,13 @@
           </div>
 
           <div class="field">
-            <label class="label" @click="showOptions = !showOptions">
+            <label class="label is-clickable" @click="showOptions = !showOptions">
               <span class="icon-text">
                 <span class="icon">
                   <i v-if="showOptions" class="fas fa-arrow-up"></i>
                   <i v-else class="fas fa-arrow-down"></i>
                 </span>
-                <span>Optional options</span>
+                <span>Additional options...</span>
               </span>
             </label>
             <div class="columns is-multiline is-mobile" v-if="showOptions && backend.options">
@@ -189,7 +189,7 @@
                 </div>
                 <div class="column is-1">
                   <button class="button is-danger" @click.prevent="removeOption(key)">
-                    <span class="icon is-small">
+                    <span class="icon">
                       <i class="fas fa-trash"></i>
                     </span>
                   </button>
@@ -201,7 +201,7 @@
           <div class="field has-text-right">
             <div class="control">
               <button class="button is-primary" type="submit">
-                <span class="icon is-small">
+                <span class="icon">
                   <i class="fas fa-save"></i>
                 </span>
                 <span>Save Settings</span>
