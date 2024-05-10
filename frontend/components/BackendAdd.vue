@@ -12,7 +12,7 @@
               </option>
             </select>
           </div>
-          <div class="icon is-small is-left">
+          <div class="icon is-left">
             <i class="fas fa-server"></i>
           </div>
           <p class="help">
@@ -25,7 +25,7 @@
         <label class="label">Name</label>
         <div class="control has-icons-left">
           <input class="input" type="text" v-model="backend.name" required>
-          <div class="icon is-small is-left">
+          <div class="icon is-left">
             <i class="fas fa-user"></i>
           </div>
           <p class="help">
@@ -42,13 +42,15 @@
         </label>
         <div class="control has-icons-left">
           <input class="input" type="text" v-model="backend.token" required>
-          <div class="icon is-small is-left">
+          <div class="icon is-left">
             <i class="fas fa-key"></i>
           </div>
           <p class="help">
             <template v-if="'plex'===backend.type">
-              Enter the <code>X-Plex-Token</code>.<a target="_blank" href="https://support.plex.tv/articles/204059436">
-              Visit This article for more information</a>.
+              Enter the <code>X-Plex-Token</code>.
+              <NuxtLink target="_blank" href="https://support.plex.tv/articles/204059436">
+                Visit This article for more information.
+              </NuxtLink>
             </template>
             <template v-else>
               Generate a new API token from <code>Dashboard > Settings > API Keys</code>.
@@ -68,7 +70,7 @@
             </select>
           </div>
           <input class="input" type="text" v-model="backend.url" v-else required>
-          <div class="icon is-small is-left">
+          <div class="icon is-left">
             <i class="fas fa-link" v-if="!serversLoading"></i>
             <i class="fas fa-spinner fa-pulse" v-else></i>
 
@@ -86,7 +88,7 @@
         <label class="label">URL</label>
         <div class="control has-icons-left">
           <input class="input" type="text" v-model="backend.url" required>
-          <div class="icon is-small is-left">
+          <div class="icon is-left">
             <i class="fas fa-link"></i>
           </div>
           <p class="help">
@@ -100,7 +102,7 @@
           <label class="label">Unique Identifier</label>
           <div class="control has-icons-left">
             <input class="input" type="text" v-model="backend.uuid" required>
-            <div class="icon is-small is-left">
+            <div class="icon is-left">
               <i class="fas fa-server" v-if="!uuidLoading"></i>
               <i class="fas fa-spinner fa-pulse" v-else></i>
             </div>
@@ -125,7 +127,7 @@
               </select>
             </div>
             <input class="input" type="text" v-model="backend.user" v-else>
-            <div class="icon is-small is-left">
+            <div class="icon is-left">
               <i class="fas fa-user-tie" v-if="!usersLoading"></i>
               <i class="fas fa-spinner fa-pulse" v-else></i>
             </div>
@@ -188,7 +190,7 @@
       <div class="field has-text-right">
         <div class="control">
           <button class="button is-primary" type="submit">
-            <span class="icon is-small"><i class="fas fa-plus"></i></span>
+            <span class="icon"><i class="fas fa-plus"></i></span>
             <span>Add Backend</span>
           </button>
         </div>
@@ -213,7 +215,7 @@ const props = defineProps({
 
 const backend = ref({
   name: '',
-  type: '',
+  type: 'plex',
   url: '',
   token: '',
   uuid: '',

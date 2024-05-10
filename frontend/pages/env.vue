@@ -30,7 +30,7 @@
 
     <div class="column is-12" v-if="toggleForm">
       <form id="env_add_form" @submit.prevent="addVariable">
-        <div class="field is-grouped">
+        <div class="field is-grouped-tablet">
           <div class="control has-icons-left">
             <div class="select is-fullwidth">
               <select v-model="form_key" id="form_key" @change="keyChanged">
@@ -40,7 +40,7 @@
                 </option>
               </select>
             </div>
-            <div class="icon is-small is-left">
+            <div class="icon is-left">
               <i class="fas fa-key"></i>
             </div>
           </div>

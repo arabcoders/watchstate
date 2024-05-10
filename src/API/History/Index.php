@@ -286,17 +286,64 @@ final class Index
                 'last_url' => $lastUrl,
             ],
             'searchable' => [
-                'id',
-                'via',
-                'year',
-                'type',
-                'title',
-                'season',
-                'episode',
-                'parent',
-                'guid',
-                'metadata',
-                'extra',
+                [
+                    'key' => 'id',
+                    'description' => 'Search using local history id.',
+                    'type' => 'int',
+                ],
+                [
+                    'key' => 'via',
+                    'description' => 'Search using the backend name.',
+                    'type' => 'string',
+                ],
+                [
+                    'key' => 'year',
+                    'description' => 'Search using the year.',
+                    'type' => 'int',
+                ],
+                [
+                    'key' => 'type',
+                    'description' => 'Search using the content type.',
+                    'type' => [
+                        'movie',
+                        'episode',
+                    ],
+                ],
+                [
+                    'key' => 'title',
+                    'description' => 'Search using the title.',
+                    'type' => 'string',
+                ],
+                [
+                    'key' => 'season',
+                    'description' => 'Search using the season number.',
+                    'type' => 'int',
+                ],
+                [
+                    'key' => 'episode',
+                    'description' => 'Search using the episode number.',
+                    'type' => 'int',
+                ],
+                [
+                    'key' => 'parent',
+                    'description' => 'Search using the parent GUID.',
+                    'type' => 'guid://id',
+                ],
+                [
+                    'key' => 'guid',
+                    'description' => 'Search using the GUID.',
+                    'type' => 'guid://id',
+                ],
+                [
+                    'key' => 'metadata',
+                    'description' => 'Search using the metadata JSON field. Searching this field might be slow.',
+                    'type' => 'backend.field://value',
+                ],
+                [
+                    'key' => 'extra',
+                    'description' => 'Search using the extra JSON field. Searching this field might be slow.',
+                    'type' => 'backend.field://value',
+                ],
             ],
         ];
 

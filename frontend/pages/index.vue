@@ -3,7 +3,7 @@
 
     <div class="column is-12">
       <h1 class="title is-4">
-        <NuxtLink href="/history">Recent History</NuxtLink>
+        <NuxtLink href="/history">Latest History Entries</NuxtLink>
       </h1>
     </div>
 
@@ -58,7 +58,7 @@
 
     <div class="column is-12" v-for="log in logs" :key="log.filename">
       <h1 class="title is-4">
-        <NuxtLink :href="`/logs/${log.filename}`">Today {{ ucFirst(log.type) }} log</NuxtLink>
+        <NuxtLink :href="`/logs/${log.filename}`">Latest {{ log.type }} logs</NuxtLink>
       </h1>
       <code class="box logs-container">
         <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
@@ -82,7 +82,6 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {ucFirst} from '../utils/index.js'
 
 useHead({title: 'Index'})
 

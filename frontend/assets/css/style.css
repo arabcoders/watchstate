@@ -183,3 +183,32 @@ hr {
     border: var(--bulma-control-border-width) solid rgba(56, 56, 56, 0.38);
 }
 
+@media screen and (min-width: 769px), print {
+
+    .field.is-grouped-tablet {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-start;
+    }
+
+    .field.is-grouped-tablet > .control {
+        flex-shrink: 0;
+    }
+
+    .field.is-grouped-tablet > .control.is-expanded {
+        flex-grow: 1;
+        flex-shrink: 1;
+    }
+
+    .field.is-grouped-tablet.is-grouped-centered {
+        justify-content: center;
+    }
+
+    .field.is-grouped-tablet.is-grouped-right {
+        justify-content: flex-end;
+    }
+
+    .field.is-grouped-tablet.is-grouped-multiline {
+        flex-wrap: wrap;
+    }
+}

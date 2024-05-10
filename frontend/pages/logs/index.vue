@@ -13,6 +13,11 @@
           </div>
         </div>
       </div>
+      <div class="is-hidden-mobile">
+        <span class="subtitle">
+          This page contains all the stored log files. The naming convention is <code>type.YYYYMMDD.log</code>.
+        </span>
+      </div>
     </div>
 
     <div class="column is-4-tablet" v-for="(item, index) in logs" :key="'log-'+index">

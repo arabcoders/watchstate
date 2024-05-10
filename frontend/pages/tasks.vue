@@ -8,16 +8,19 @@
           <div class="field is-grouped">
             <p class="control">
               <button class="button is-primary" @click.prevent="loadContent(true)">
-                <span class="icon is-small">
-                  <i class="fas fa-sync"></i>
-                </span>
+                <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
           </div>
         </div>
       </div>
-      <div class="subtitle is-hidden-mobile" v-if="queued.length > 0">
-        <p>The following tasks <code>{{ queued.join(', ') }}</code> are queued to be run in background soon.</p>
+      <div class="is-hidden-mobile">
+        <span class="subtitle">
+          This page contains all the tasks that are currently configured.
+          <template v-if="queued.length > 0">
+            <p>The following tasks <code>{{ queued.join(', ') }}</code> are queued to be run in background soon.</p>
+          </template>
+        </span>
       </div>
     </div>
 
@@ -87,7 +90,8 @@
             <button class="button is-warning" @click="confirmRun(task)">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-terminal"></i></span>
-                <span>Run via console</span>
+                <span class="is-hidden-mobile">Run via console</span>
+                <span class="is-hidden-tablet">Run now</span>
               </span>
             </button>
           </div>
