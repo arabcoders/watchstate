@@ -256,7 +256,21 @@
       </div>
     </div>
 
-    <div class=""></div>
+    <div class="column is-12">
+
+      <span class="title is-4 is-clickable" @click="showRawData = !showRawData">
+        <span class="icon-text">
+          <span class="icon">
+            <i v-if="showRawData" class="fas fa-arrow-up"></i>
+            <i v-else class="fas fa-arrow-down"></i>
+          </span>
+          <span>Show raw data...</span>
+        </span>
+      </span>
+      <div v-if="showRawData" class="mt-2">
+        <pre><code>{{ JSON.stringify(data, null, 2) }}</code></pre>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -270,6 +284,7 @@ const id = useRoute().params.id
 useHead({title: `History : ${id}`})
 
 const isLoading = ref(false)
+const showRawData = ref(false)
 
 const data = ref({
   id: id,
