@@ -6,12 +6,14 @@ namespace App\API\History;
 
 use App\Commands\Database\ListCommand;
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Attributes\Route\Route;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Uri;
 use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -22,7 +24,7 @@ final class Index
     public const string URL = '%{api.prefix}/history';
     private PDO $pdo;
 
-    public function __construct(private readonly iDB $db)
+    public function __construct(private readonly iDB $db, private DirectMapper $mapper)
     {
         $this->pdo = $this->db->getPDO();
     }
@@ -394,12 +396,55 @@ final class Index
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $item = $item->getAll();
+        $response = $item->getAll();
+        $response['full_title'] = $item->getName();
+        $response[iState::COLUMN_WATCHED] = $item->isWatched();
+        $response[iState::COLUMN_UPDATED] = makeDate($item->updated);
 
-        $item[iState::COLUMN_WATCHED] = $entity->isWatched();
-        $item[iState::COLUMN_UPDATED] = makeDate($entity->updated);
-
-        return api_response(HTTP_STATUS::HTTP_OK, $item);
+        return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
 
+    #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:\d+}/watch[/]', name: 'history.watch')]
+    public function historyPlayStatus(iRequest $request, array $args = []): iResponse
+    {
+        if (null === ($id = ag($args, 'id'))) {
+            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $this->db->get($entity))) {
+            return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
+        if ('GET' === $request->getMethod()) {
+            return api_response(HTTP_STATUS::HTTP_OK, ['watched' => $item->isWatched()]);
+        }
+
+        if ('POST' === $request->getMethod() && true === $item->isWatched()) {
+            return api_error('Already watched', HTTP_STATUS::HTTP_CONFLICT);
+        }
+
+        if ('DELETE' === $request->getMethod() && false === $item->isWatched()) {
+            return api_error('Already unwatched', HTTP_STATUS::HTTP_CONFLICT);
+        }
+
+        $item->watched = 'POST' === $request->getMethod() ? 1 : 0;
+        $item->updated = time();
+        $item->extra = ag_set($item->getExtra(), $item->via, [
+            iState::COLUMN_EXTRA_EVENT => 'webui.mark' . ($item->isWatched() ? 'played' : 'unplayed'),
+            iState::COLUMN_EXTRA_DATE => (string)makeDate('now'),
+        ]);
+
+        $this->mapper->add($item)->commit();
+
+        $response = $item->getAll();
+        $response['full_title'] = $item->getName();
+        $response[iState::COLUMN_WATCHED] = $item->isWatched();
+        $response[iState::COLUMN_UPDATED] = makeDate($item->updated);
+
+        queuePush($item);
+
+        return api_response(HTTP_STATUS::HTTP_OK, $response);
+    }
 }

@@ -488,7 +488,7 @@ final class ListCommand extends Command
             $changeState = strtolower($changeState);
             if (!$input->getOption('no-interaction')) {
                 $text = r(
-                    '<question>Are you sure you want to mark [<notce>{total}</notce>] items as [<notice>{state}</notice>]</question> ? [<value>Y|N</value>] [<value>Default: No</value>]',
+                    '<question>Are you sure you want to mark [<notice>{total}</notice>] items as [<notice>{state}</notice>]</question> ? [<value>Y|N</value>] [<value>Default: No</value>]',
                     [
                         'total' => count($rows),
                         'state' => 'played' === $changeState ? 'Played' : 'Unplayed',
