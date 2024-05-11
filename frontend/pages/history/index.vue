@@ -121,6 +121,7 @@
                 <span class="icon" v-if="!item.progress">
                   <i class="fas fa-eye-slash" v-if="!item.watched"></i>
                   <i class="fas fa-eye" v-else></i>
+                  &nbsp;
                 </span>
                 <NuxtLink :to="'/history/'+item.id" v-text="item.full_title ?? item.title"/>
               </p>
