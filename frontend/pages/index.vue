@@ -9,12 +9,14 @@
     <div class="column is-12">
       <div class="columns is-multiline" v-if="lastHistory.length>0">
         <div class="column is-6-tablet" v-for="history in lastHistory" :key="history.id">
-          <div class="card">
+          <div class="card" :class="{ 'is-success': history.watched, 'is-danger': !history.watched }">
             <header class="card-header">
-              <p class="card-header-title is-text-overflow is-justify-center pr-1">
-                <NuxtLink :href="`/history/${history.id}`">
-                  {{ history.full_title ?? history.title }}
-                </NuxtLink>
+              <p class="card-header-title is-text-overflow pr-1">
+                <span class="icon" v-if="!history.progress">
+                  <i class="fas fa-eye-slash" v-if="!history.watched"></i>
+                  <i class="fas fa-eye" v-else></i>
+                </span>
+                <NuxtLink :href="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
@@ -22,30 +24,35 @@
               </span>
             </header>
             <div class="card-content">
-              <div class="columns is-multiline is-mobile has-text-centered">
-                <div class="column is-6-mobile">
-                  {{ moment(history.updated).fromNow() }}
-                </div>
-                <div class="column is-6-mobile">
-                  <NuxtLink :href="'/backend/'+history.via">
-                    {{ history.via }}
-                  </NuxtLink>
-                </div>
-                <div class="column is-6-mobile" v-if="history.event">
-                  <span v-tooltip="'The event which triggered the update.'" class="has-tooltip">
-                    {{ history.event }}
+              <div class="columns is-multiline is-mobile">
+                <div class="column is-4-tablet is-6-mobile has-text-left">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                    {{ moment(history.updated).fromNow() }}
                   </span>
                 </div>
-                <div class="column is-6-mobile">
-                  <span class="has-text-success" v-if="history.watched">Played</span>
-                  <span class="has-text-danger" v-else>Unplayed</span>
+                <div class="column is-4-tablet is-6-mobile  has-text-right-mobile">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-server"></i></span>
+                    <span>
+                      <NuxtLink :href="'/backend/'+history.via" v-text="history.via"/>
+                    </span>
+                  </span>
                 </div>
-                <div class="column is-6-mobile" v-if="history.progress && !history.watched">
-                  <span v-tooltip="'Play Progress'">
-                    {{ history.progress }}
+                <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-envelope"></i></span>
+                    <span>{{ history.event }}</span>
                   </span>
                 </div>
               </div>
+            </div>
+            <div class="card-footer" v-if="history.progress">
+              <div class="card-footer-item">
+                <span class="has-text-success" v-if="history.watched">Played</span>
+                <span class="has-text-danger" v-else>Unplayed</span>
+              </div>
+              <div class="card-footer-item">{{ history.progress }}</div>
             </div>
           </div>
         </div>

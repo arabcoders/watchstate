@@ -3,40 +3,336 @@
     <div class="column is-12 is-clearfix">
       <span class="title is-4">
         <NuxtLink href="/history">History</NuxtLink>
-        : {{ id }}
+        : {{ data?.full_title ?? data?.title ?? id }}
       </span>
-      <div class="is-pulled-right">
+      <div class="is-pulled-right" v-if="data?.via">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-info" @click="loadContent(id)">
+            <button class="button is-info" @click="loadContent(id)" :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
         </div>
       </div>
-      <div class="subtitle">
-        This page still not done, and will be updated at later stages.
+      <div class="subtitle" v-if="data?.via && getTitle !== data.title">
+        {{ getTitle }}
       </div>
     </div>
 
-    <div class="column is-12">
-      <pre><code>{{ data }}</code></pre>
+    <div class="column is-12" v-if="!data?.via && isLoading">
+      <Message>
+        <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
+        <span>Loading data. Please wait...</span>
+      </Message>
     </div>
+
+    <div class="column is-12" v-if="data?.via">
+      <div class="card" :class="{ 'is-success': parseInt(data.watched), 'is-danger': !data.watched }">
+        <header class="card-header">
+          <div class="card-header-title">Latest metadata info</div>
+          <div class="card-header-icon">
+            <button class="button is-small" @click="toggleWatched"
+                    :class="{ 'is-success': !data.watched, 'is-danger': data.watched }">
+              <span class="icon" v-if="data.watched"><i class="fas fa-eye-slash"></i></span>
+              <span class="icon" v-else><i class="fas fa-eye"></i></span>
+              <span>Mark as <span v-if="data.watched">Unplayed</span><span v-else>played</span></span>
+            </button>
+          </div>
+        </header>
+        <div class="card-content">
+          <div class="columns is-multiline is-mobile">
+            <div class="column is-6 has-text-left">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-server"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Via:&nbsp;</span>
+                  <NuxtLink :href="`/backend/${data.via}`" v-text="data.via"/>
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-right">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-passport"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">ID:</span>
+                  {{ data.id }}
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-left">
+              <span class="icon-text">
+                <span class="icon">
+                  <i class="fas fa-eye-slash" v-if="!data.watched"></i>
+                  <i class="fas fa-eye" v-else></i>
+                </span>
+                <span>
+                  <span class="is-hidden-mobile">Status:</span>
+                  {{ data.watched ? 'Played' : 'Unplayed' }}
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-right">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-envelope"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Event:</span>
+                  {{ ag(data.extra, `${data.via}.event`, 'Unknown') }}
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-left">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-calendar"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Updated:</span>
+                  {{ moment(data.updated).fromNow() }}
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-right">
+              <span class="icon-text">
+                <span class="icon" v-if="'episode' === data.type"><i class="fas fa-tv"></i></span>
+                <span class="icon" v-else><i class="fas fa-film"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Type:</span>
+                  {{ ucFirst(data.type) }}
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-left" v-if="'episode' === data.type">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-tv"></i></span>
+                <span><span class="is-hidden-mobile">Season:</span> {{ data.season }}</span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-right" v-if="'episode' === data.type">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-tv"></i></span>
+                <span><span class="is-hidden-mobile">Episode:</span> {{ data.episode }}</span>
+              </span>
+            </div>
+
+            <div class="column is-12" v-if="data.guids && Object.keys(data.guids).length>0">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>
+                  {{ ucFirst(data.type) }} GUIDs:
+                  <span class="tag mr-1" v-for="(guid,source) in data.guids">
+                    {{ source.split('guid_')[1] }} : {{ guid }}
+                  </span>
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-12" v-if="data.parent && Object.keys(data.parent).length>0">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>
+                  Series GUIDs:
+                  <span class="tag mr-1" v-for="(guid,source) in data.parent">
+                    {{ source.split('guid_')[1] }} : {{ guid }}
+                  </span>
+                </span>
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column is-12" v-if="data?.via && Object.keys(data.metadata).length>0">
+      <div class="card" v-for="(item, key) in data.metadata" :key="key"
+           :class="{ 'is-success': parseInt(item.watched), 'is-danger': !parseInt(item.watched) }">
+        <header class="card-header">
+          <div class="card-header-title">
+            Metadata from
+          </div>
+          <div class="card-header-icon">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-server"></i></span>
+              <span>
+                <NuxtLink :href="`/backend/${key}`" v-text="key"/>
+              </span>
+            </span>
+          </div>
+        </header>
+        <div class="card-content">
+          <div class="columns is-multiline is-mobile">
+            <div class="column is-12 has-text-left">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-passport"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">ID:</span>
+                  {{ item.id }}
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-left">
+              <span class="icon-text">
+                <span class="icon">
+                  <i class="fas fa-eye-slash" v-if="!parseInt(item.watched)"></i>
+                  <i class="fas fa-eye" v-else></i>
+                </span>
+                <span>
+                  <span class="is-hidden-mobile">Status:</span>
+                  {{ parseInt(item.watched) ? 'Played' : 'Unplayed' }}
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-right">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-envelope"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Event:</span>
+                  {{ ag(data.extra, `${key}.event`, 'Unknown') }}
+                </span>
+              </span>
+            </div>
+            <div class="column is-6 has-text-left">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-calendar"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Updated:</span>
+                  {{ moment(ag(data.extra, `${key}.received_at`, data.updated)).fromNow() }}
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-right">
+              <span class="icon-text">
+                <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
+                <span class="icon" v-else><i class="fas fa-film"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Type:</span>
+                  {{ ucFirst(item.type) }}
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-left" v-if="'episode' === item.type">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-tv"></i></span>
+                <span><span class="is-hidden-mobile">Season:</span> {{ item.season }}</span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-right" v-if="'episode' === item.type">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-tv"></i></span>
+                <span><span class="is-hidden-mobile">Episode:</span> {{ item.episode }}</span>
+              </span>
+            </div>
+
+            <div class="column is-12" v-if="item.guids && Object.keys(item.guids).length>0">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>
+                  {{ ucFirst(item.type) }} GUIDs:
+                  <span class="tag mr-1" v-for="(guid,source) in item.guids">
+                    {{ source.split('guid_')[1] }} : {{ guid }}
+                  </span>
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-12" v-if="item.parent && Object.keys(item.parent).length>0">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>
+                  Series GUIDs:
+                  <span class="tag mr-1" v-for="(guid,source) in item.parent">
+                    {{ source.split('guid_')[1] }} : {{ guid }}
+                  </span>
+                </span>
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class=""></div>
   </div>
 </template>
 
 <script setup>
 import request from '~/utils/request.js'
+import {ag, notification, ucFirst} from '~/utils/index.js'
+import moment from 'moment'
 
 const id = useRoute().params.id
 
 useHead({title: `History : ${id}`})
 
-const data = ref();
+const isLoading = ref(false)
+
+const data = ref({
+  id: id,
+  title: `${id}`,
+  via: null,
+  metadata: {},
+  guids: {},
+  parent: {},
+});
 
 const loadContent = async (id) => {
+  isLoading.value = true
+
   const response = await request(`/history/${id}`)
-  data.value = await response.json();
+  const json = await response.json()
+
+  isLoading.value = false
+
+  if (200 !== response.status) {
+    notification('Error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
+    return
+  }
+
+  data.value = json
+}
+
+const getTitle = computed(() => {
+  if (!data.value) {
+    return id
+  }
+
+  if (data.value?.via) {
+    return ag(data.value, `metadata.${data.value.via}.extra.title`, data.value.title)
+  }
+
+  return data.value.title
+})
+
+const toggleWatched = async () => {
+  if (!data.value) {
+    return
+  }
+  if (!confirm(`Mark '${data.value.full_title}' as ${data.value.watched ? 'unplayed' : 'played'}?`)) {
+    return
+  }
+  try {
+    const response = await request(`/history/${data.value.id}/watch`, {
+      method: data.value.watched ? 'DELETE' : 'POST'
+    })
+
+    const json = await response.json()
+
+    if (200 !== response.status) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    data.value = json
+    notification('success', '', `Marked '${data.value.full_title}' as ${data.value.watched ? 'played' : 'unplayed'}`)
+
+  } catch (e) {
+    notification('error', 'Error', `Failed to update watched status. ${e}`)
+  }
 }
 
 onMounted(async () => loadContent(id))
