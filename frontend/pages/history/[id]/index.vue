@@ -119,9 +119,11 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-link"></i></span>
                 <span>
-                  {{ ucFirst(data.type) }} GUIDs:
+                  <span v-tooltip="'Globally unique identifier for this item'">GUIDs:</span>
                   <span class="tag mr-1" v-for="(guid,source) in data.guids">
-                    {{ source.split('guid_')[1] }} : {{ guid }}
+                    <NuxtLink target="_blank" :href="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
+                      {{ source.split('guid_')[1] }}-{{ guid }}
+                    </NuxtLink>
                   </span>
                 </span>
               </span>
@@ -131,9 +133,11 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-link"></i></span>
                 <span>
-                  Series GUIDs:
+                  <span v-tooltip="'Globally unique identifier for the series'">Series GUIDs:</span>
                   <span class="tag mr-1" v-for="(guid,source) in data.parent">
-                    {{ source.split('guid_')[1] }} : {{ guid }}
+                    <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
+                      {{ source.split('guid_')[1] }}-{{ guid }}
+                    </NuxtLink>
                   </span>
                 </span>
               </span>
@@ -231,9 +235,11 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-link"></i></span>
                 <span>
-                  {{ ucFirst(item.type) }} GUIDs:
+                  <span v-tooltip="'Globally unique identifier for this item'">GUIDs:</span>
                   <span class="tag mr-1" v-for="(guid,source) in item.guids">
-                    {{ source.split('guid_')[1] }} : {{ guid }}
+                    <NuxtLink target="_blank" :href="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
+                      {{ source.split('guid_')[1] }}-{{ guid }}
+                    </NuxtLink>
                   </span>
                 </span>
               </span>
@@ -243,9 +249,11 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-link"></i></span>
                 <span>
-                  Series GUIDs:
+                  <span v-tooltip="'Globally unique identifier for the series'">Series GUIDs:</span>
                   <span class="tag mr-1" v-for="(guid,source) in item.parent">
-                    {{ source.split('guid_')[1] }} : {{ guid }}
+                    <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
+                      {{ source.split('guid_')[1] }}-{{ guid }}
+                    </NuxtLink>
                   </span>
                 </span>
               </span>
@@ -257,7 +265,6 @@
     </div>
 
     <div class="column is-12">
-
       <span class="title is-4 is-clickable" @click="showRawData = !showRawData">
         <span class="icon-text">
           <span class="icon">
@@ -276,7 +283,7 @@
 
 <script setup>
 import request from '~/utils/request.js'
-import {ag, notification, ucFirst} from '~/utils/index.js'
+import {ag, makeGUIDLink, notification, ucFirst} from '~/utils/index.js'
 import moment from 'moment'
 
 const id = useRoute().params.id
