@@ -4,6 +4,36 @@ const {notify} = useNotification();
 
 const AG_SEPARATOR = '.'
 
+const guid_links = {
+    'episode': {
+        'imdb': 'https://www.imdb.com/title/{_guid}',
+        'tmdb': 'https://www.themoviedb.org/tv/{parent.guid_tmdb}/season/{season}/episode/{episode}',
+        'tvdb': 'https://thetvdb.com/dereferrer/episode/{_guid}',
+        'tvmaze': 'https://www.tvmaze.com/episodes/{_guid}',
+        'anidb': 'https://anidb.net/episode/{_guid}',
+        'youtube_video': 'https://www.youtube.com/watch?v={_guid}',
+    },
+    'series': {
+        'imdb': 'https://www.imdb.com/title/{_guid}',
+        'tmdb': 'https://www.themoviedb.org/tv/{_guid}',
+        'tvdb': 'https://thetvdb.com/dereferrer/series/{_guid}',
+        'tvmaze': 'https://www.tvmaze.com/shows/{_guid}/-',
+        'anidb': 'https://anidb.net/anime/{_guid}',
+        'youtube_channel': 'https://www.youtube.com/channel/{_guid}',
+        'youtube_playlist': 'https://www.youtube.com/playlist?list={_guid}',
+    },
+    'movie': {
+        'imdb': 'https://www.imdb.com/title/{_guid}',
+        'tmdb': 'https://www.themoviedb.org/movie/{_guid}',
+        'tvdb': 'https://thetvdb.com/dereferrer/movie/{_guid}',
+        'anidb': 'https://anidb.net/anime/{_guid}',
+        'youtube_video': 'https://www.youtube.com/watch?v={_guid}',
+    },
+}
+
+const YT_CH = new RegExp('(UC|HC)[a-zA-Z0-9\\-_]{22}')
+const YT_PL = new RegExp('PL[^\\[\\]]{32}|PL[^\\[\\]]{16}|(UU|FL|LP|RD)[^\\[\\]]{22}')
+
 /**
  * Get value from object or function
  *
@@ -159,4 +189,64 @@ const notification = (type, title, text, duration = 3000) => {
     return notify({title, text, type: classes, duration})
 }
 
-export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification}
+/**
+ * Replace tags in text with values from context
+ *
+ * @param {string} text The text with tags
+ * @param {object} context The context with values
+ *
+ * @returns {string} The text with replaced tags
+ */
+const r = (text, context = {}) => {
+    const tagLeft = '{';
+    const tagRight = '}';
+
+    if (!text.includes(tagLeft) || !text.includes(tagRight)) {
+        return text
+    }
+
+    const pattern = new RegExp(`${tagLeft}([\\w_.]+)${tagRight}`, 'g');
+    const matches = text.match(pattern);
+
+    if (!matches) {
+        return text
+    }
+
+    let replacements = {};
+
+    matches.forEach(match => replacements[match] = ag(context, match.slice(1, -1), ''));
+
+    for (let key in replacements) {
+        text = text.replace(new RegExp(key, 'g'), replacements[key]);
+    }
+
+    return text
+}
+
+/**
+ * Make GUID link
+ *
+ * @param {string} type
+ * @param {string} source
+ * @param {string} guid
+ * @param {object} data
+ *
+ * @returns {string}
+ */
+const makeGUIDLink = (type, source, guid, data) => {
+    if ('youtube' === source) {
+        if (YT_CH.test(guid)) {
+            source = 'youtube_channel'
+        } else if (YT_PL.test(guid)) {
+            source = 'youtube_playlist'
+        } else {
+            source = 'youtube_video'
+        }
+    }
+
+    const link = ag(guid_links, `${type}.${source}`, null)
+
+    return null == link ? '' : r(link, {_guid: guid, ...toRaw(data)})
+}
+
+export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification, makeGUIDLink}

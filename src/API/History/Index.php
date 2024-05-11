@@ -365,7 +365,7 @@ final class Index
             }
 
             $item['full_title'] = $entity->getName();
-            $item['progress'] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
+            $item['progress'] = $entity->hasPlayProgress() ? formatDuration($entity->getPlayProgress()) : null;
             $item['event'] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
 
             $item = [
