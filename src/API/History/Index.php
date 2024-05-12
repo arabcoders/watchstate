@@ -14,7 +14,6 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Uri;
 use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -242,12 +241,7 @@ final class Index
         $stmt = $this->pdo->prepare('SELECT * ' . implode(' ', array_map('trim', $sql)));
         $stmt->execute($params);
 
-        $currentQuery = [];
-        $apikey = $data->get('apikey');
         $getUri = $request->getUri()->withHost('')->withPort(0)->withScheme('');
-        if (null !== $apikey) {
-            $currentQuery['apikey'] = $apikey;
-        }
 
         $pagingUrl = $getUri->withPath($request->getUri()->getPath());
 
@@ -365,17 +359,8 @@ final class Index
             }
 
             $item['full_title'] = $entity->getName();
-            $item['progress'] = $entity->hasPlayProgress() ? formatDuration($entity->getPlayProgress()) : null;
-            $item['event'] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
-
-            $item = [
-                ...$item,
-                'links' => [
-                    'self' => (string)(new Uri())->withPath(
-                        rtrim($request->getUri()->getPath(), '/') . '/' . $entity->id
-                    )->withQuery(http_build_query($currentQuery)),
-                ],
-            ];
+            $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
+            $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
 
             $response['history'][] = $item;
         }
@@ -396,12 +381,14 @@ final class Index
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $response = $item->getAll();
-        $response['full_title'] = $item->getName();
-        $response[iState::COLUMN_WATCHED] = $item->isWatched();
-        $response[iState::COLUMN_UPDATED] = makeDate($item->updated);
+        $r = $item->getAll();
+        $r['full_title'] = $item->getName();
+        $r[iState::COLUMN_META_DATA_PROGRESS] = $item->hasPlayProgress() ? $item->getPlayProgress() : null;
+        $r[iState::COLUMN_WATCHED] = $item->isWatched();
+        $r[iState::COLUMN_UPDATED] = makeDate($item->updated);
+        $r[iState::COLUMN_EXTRA_EVENT] = ag($item->getExtra($item->via), iState::COLUMN_EXTRA_EVENT, null);
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(HTTP_STATUS::HTTP_OK, $r);
     }
 
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:\d+}/watch[/]', name: 'history.watch')]

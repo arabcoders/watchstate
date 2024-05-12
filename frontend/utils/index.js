@@ -12,8 +12,7 @@ const guid_links = {
         'tvmaze': 'https://www.tvmaze.com/episodes/{_guid}',
         'anidb': 'https://anidb.net/episode/{_guid}',
         'youtube_video': 'https://www.youtube.com/watch?v={_guid}',
-    },
-    'series': {
+    }, 'series': {
         'imdb': 'https://www.imdb.com/title/{_guid}',
         'tmdb': 'https://www.themoviedb.org/tv/{_guid}',
         'tvdb': 'https://thetvdb.com/dereferrer/series/{_guid}',
@@ -21,8 +20,7 @@ const guid_links = {
         'anidb': 'https://anidb.net/anime/{_guid}',
         'youtube_channel': 'https://www.youtube.com/channel/{_guid}',
         'youtube_playlist': 'https://www.youtube.com/playlist?list={_guid}',
-    },
-    'movie': {
+    }, 'movie': {
         'imdb': 'https://www.imdb.com/title/{_guid}',
         'tmdb': 'https://www.themoviedb.org/movie/{_guid}',
         'tvdb': 'https://thetvdb.com/dereferrer/movie/{_guid}',
@@ -249,4 +247,23 @@ const makeGUIDLink = (type, source, guid, data) => {
     return null == link ? '' : r(link, {_guid: guid, ...toRaw(data)})
 }
 
-export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification, makeGUIDLink}
+/**
+ * Format duration
+ *
+ * @param {number} milliseconds
+ *
+ * @returns {string} The formatted duration.
+ */
+const formatDuration = (milliseconds) => {
+    console.log(milliseconds)
+    milliseconds = parseInt(milliseconds)
+    let seconds = Math.floor(milliseconds / 1000);
+    let minutes = Math.floor(seconds / 60);
+    let hours = Math.floor(minutes / 60);
+    seconds %= 60;
+    minutes %= 60;
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification, makeGUIDLink, formatDuration}

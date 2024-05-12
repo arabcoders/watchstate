@@ -132,13 +132,12 @@
             </header>
             <div class="card-content">
               <div class="columns is-multiline is-mobile has-text-centered">
-                <div class="column is-4-tablet is-6-mobile has-text-left">
+                <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
                     {{ moment(item.updated).fromNow() }}
                   </span>
                 </div>
-
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-server"></i></span>
@@ -160,7 +159,12 @@
                 <span class="has-text-success" v-if="item.watched">Played</span>
                 <span class="has-text-danger" v-else>Unplayed</span>
               </div>
-              <div class="card-footer-item">{{ item.progress }}</div>
+              <div class="card-footer-item">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                  <span>{{ formatDuration(item.progress) }}</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -191,7 +195,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {notification} from '~/utils/index.js'
+import {formatDuration, notification} from '~/utils/index.js'
 
 const route = useRoute()
 

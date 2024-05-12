@@ -29,7 +29,10 @@
     <div class="column is-12" v-if="data?.via">
       <div class="card" :class="{ 'is-success': parseInt(data.watched), 'is-danger': !data.watched }">
         <header class="card-header">
-          <div class="card-header-title">Latest metadata info</div>
+          <div class="card-header-title">
+            <span>Last update by&nbsp;</span>
+            <NuxtLink :href="`/backend/${data.via}`" v-text="data.via"/>
+          </div>
           <div class="card-header-icon">
             <button class="button is-small" @click="toggleWatched"
                     :class="{ 'is-success': !data.watched, 'is-danger': data.watched }">
@@ -41,16 +44,7 @@
         </header>
         <div class="card-content">
           <div class="columns is-multiline is-mobile">
-            <div class="column is-6 has-text-left">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-server"></i></span>
-                <span>
-                  <span class="is-hidden-mobile">Via:&nbsp;</span>
-                  <NuxtLink :href="`/backend/${data.via}`" v-text="data.via"/>
-                </span>
-              </span>
-            </div>
-            <div class="column is-6 has-text-right">
+            <div class="column is-6">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-passport"></i></span>
                 <span>
@@ -59,6 +53,15 @@
                 </span>
               </span>
             </div>
+
+            <div class="column is-6 has-text-right">
+              <span class="icon-text" v-if="parseInt(data.progress)">
+                <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                <span><span class="is-hidden-mobile">Progress:</span> {{ formatDuration(data.progress) }}</span>
+              </span>
+              <span v-else>-</span>
+            </div>
+
             <div class="column is-6 has-text-left">
               <span class="icon-text">
                 <span class="icon">
@@ -116,30 +119,26 @@
             </div>
 
             <div class="column is-12" v-if="data.guids && Object.keys(data.guids).length>0">
-              <span class="icon-text">
+              <span class="icon-text is-clickable" v-tooltip="'Globally unique identifier for this item'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>
-                  <span v-tooltip="'Globally unique identifier for this item'">GUIDs:</span>
-                  <span class="tag mr-1" v-for="(guid,source) in data.guids">
-                    <NuxtLink target="_blank" :href="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
-                      {{ source.split('guid_')[1] }}-{{ guid }}
-                    </NuxtLink>
-                  </span>
-                </span>
+                <span>GUIDs:</span>
+              </span>
+              <span class="tag mr-1" v-for="(guid,source) in data.guids">
+                <NuxtLink target="_blank" :href="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
+                  {{ source.split('guid_')[1] }}-{{ guid }}
+                </NuxtLink>
               </span>
             </div>
 
             <div class="column is-12" v-if="data.parent && Object.keys(data.parent).length>0">
-              <span class="icon-text">
+              <span class="icon-text is-clickable" v-tooltip="'Globally unique identifier for the series'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>
-                  <span v-tooltip="'Globally unique identifier for the series'">Series GUIDs:</span>
-                  <span class="tag mr-1" v-for="(guid,source) in data.parent">
-                    <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
-                      {{ source.split('guid_')[1] }}-{{ guid }}
-                    </NuxtLink>
-                  </span>
-                </span>
+                <span>Series GUIDs:</span>
+              </span>
+              <span class="tag mr-1" v-for="(guid,source) in data.parent">
+                <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
+                  {{ source.split('guid_')[1] }}-{{ guid }}
+                </NuxtLink>
               </span>
             </div>
 
@@ -166,7 +165,8 @@
         </header>
         <div class="card-content">
           <div class="columns is-multiline is-mobile">
-            <div class="column is-12 has-text-left">
+
+            <div class="column is-6">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-passport"></i></span>
                 <span>
@@ -175,7 +175,16 @@
                 </span>
               </span>
             </div>
-            <div class="column is-6 has-text-left">
+
+            <div class="column is-6 has-text-right">
+              <span class="icon-text" v-if="parseInt(item?.progress)">
+                <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                <span><span class="is-hidden-mobile">Progress:</span> {{ formatDuration(item.progress) }}</span>
+              </span>
+              <span v-else>-</span>
+            </div>
+
+            <div class="column is-6">
               <span class="icon-text">
                 <span class="icon">
                   <i class="fas fa-eye-slash" v-if="!parseInt(item.watched)"></i>
@@ -187,6 +196,7 @@
                 </span>
               </span>
             </div>
+
             <div class="column is-6 has-text-right">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-envelope"></i></span>
@@ -196,7 +206,8 @@
                 </span>
               </span>
             </div>
-            <div class="column is-6 has-text-left">
+
+            <div class="column is-6">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-calendar"></i></span>
                 <span>
@@ -217,7 +228,7 @@
               </span>
             </div>
 
-            <div class="column is-6 has-text-left" v-if="'episode' === item.type">
+            <div class="column is-6" v-if="'episode' === item.type">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-tv"></i></span>
                 <span><span class="is-hidden-mobile">Season:</span> {{ item.season }}</span>
@@ -232,30 +243,26 @@
             </div>
 
             <div class="column is-12" v-if="item.guids && Object.keys(item.guids).length>0">
-              <span class="icon-text">
+              <span class="icon-text is-clickable" v-tooltip="'Globally unique identifier for this item'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>
-                  <span v-tooltip="'Globally unique identifier for this item'">GUIDs:</span>
-                  <span class="tag mr-1" v-for="(guid,source) in item.guids">
-                    <NuxtLink target="_blank" :href="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
-                      {{ source.split('guid_')[1] }}-{{ guid }}
-                    </NuxtLink>
-                  </span>
-                </span>
+                <span>GUIDs:</span>
+              </span>
+              <span class="tag mr-1" v-for="(guid,source) in item.guids">
+                <NuxtLink target="_blank" :href="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
+                  {{ source.split('guid_')[1] }}-{{ guid }}
+                </NuxtLink>
               </span>
             </div>
 
             <div class="column is-12" v-if="item.parent && Object.keys(item.parent).length>0">
-              <span class="icon-text">
+              <span class="is-clickable icon-text" v-tooltip="'Globally unique identifier for the series'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>
-                  <span v-tooltip="'Globally unique identifier for the series'">Series GUIDs:</span>
-                  <span class="tag mr-1" v-for="(guid,source) in item.parent">
-                    <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
-                      {{ source.split('guid_')[1] }}-{{ guid }}
-                    </NuxtLink>
-                  </span>
-                </span>
+                <span>Series GUIDs:</span>
+              </span>
+              <span class="tag mr-1" v-for="(guid,source) in item.parent">
+                <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
+                  {{ source.split('guid_')[1] }}-{{ guid }}
+                </NuxtLink>
               </span>
             </div>
 
@@ -283,7 +290,7 @@
 
 <script setup>
 import request from '~/utils/request.js'
-import {ag, makeGUIDLink, notification, ucFirst} from '~/utils/index.js'
+import {ag, formatDuration, makeGUIDLink, notification, ucFirst} from '~/utils/index.js'
 import moment from 'moment'
 
 const id = useRoute().params.id
@@ -316,6 +323,8 @@ const loadContent = async (id) => {
   }
 
   data.value = json
+
+  useHead({title: `History : ${json.full_title ?? json.title ?? id}`})
 }
 
 const getTitle = computed(() => {
