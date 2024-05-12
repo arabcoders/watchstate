@@ -2,7 +2,7 @@
   <div class="columns is-multiline">
     <div class="column is-12">
       <h1 class="title is-4">
-        <NuxtLink href="/history">Latest History Entries</NuxtLink>
+        <NuxtLink href="/history">Latest History</NuxtLink>
       </h1>
     </div>
 
@@ -24,14 +24,14 @@
               </span>
             </header>
             <div class="card-content">
-              <div class="columns is-multiline is-mobile">
-                <div class="column is-4-tablet is-6-mobile has-text-left">
+              <div class="columns is-multiline is-mobile has-text-centered">
+                <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
                     {{ moment(history.updated).fromNow() }}
                   </span>
                 </div>
-                <div class="column is-4-tablet is-6-mobile  has-text-right-mobile">
+                <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-server"></i></span>
                     <span>
@@ -58,7 +58,12 @@
         </div>
       </div>
       <div class="column is-12" v-else>
-        <Message title="Ho history found." message_class="is-warning"/>
+        <Message message_class="is-warning">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-exclamation"></i></span>
+            <span>No items were found. There are probably no items in the local database yet.</span>
+          </span>
+        </Message>
       </div>
     </div>
 

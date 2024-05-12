@@ -116,7 +116,8 @@
                 </div>
                 <p class="help">
                   You can obtain the <code>API TOKEN</code> by using the <code>system:apikey</code> command or by
-                  viewing the <code>/config/config/.env</code> and looking for the <code>WS_API_KEY=</code> key.
+                  viewing the <code>/config/.env</code> inside <code>WS_DATA_PATH</code> variable and looking for the
+                  <code>WS_API_KEY=</code> key.
                 </p>
               </div>
             </div>
