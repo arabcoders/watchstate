@@ -15,6 +15,7 @@ ARG PHP_V=php83
 ARG PHP_PACKAGES="common ctype curl dom fileinfo fpm intl mbstring opcache pcntl pdo_sqlite phar posix session shmop simplexml snmp sockets sodium sysvmsg sysvsem sysvshm tokenizer xml openssl xmlreader xmlwriter zip pecl-igbinary pecl-xhprof pecl-redis"
 ARG TOOL_PATH=/opt/app
 ARG USER_ID=1000
+ARG PHP_FPM_PORT=9000
 
 ENV IN_CONTAINER=1
 ENV PHP_INI_DIR=/etc/${PHP_V}
@@ -23,6 +24,7 @@ ENV HTTP_PORT="8080"
 ENV HTTPS_PORT="8443"
 ENV WS_DATA_PATH=/config
 ENV WS_TZ=UTC
+ENV FPM_PORT="${PHP_FPM_PORT}"
 
 # Setup the required environment.
 #
@@ -61,7 +63,7 @@ RUN echo '' && \
     sed -i 's/user = nobody/; user = user/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     sed -i 's/group = nobody/; group = users/' /etc/${PHP_V}/php-fpm.d/www.conf && \
     # expose php-fpm on all interfaces.
-    sed -i 's/listen = 127.0.0.1:9000/listen = 0.0.0.0:9000/' /etc/${PHP_V}/php-fpm.d/www.conf && \
+    sed -i "s/listen = 127.0.0.1:9000/listen = 0.0.0.0:${FPM_PORT}/" /etc/${PHP_V}/php-fpm.d/www.conf && \
     # Install dependencies.
     /opt/bin/composer --working-dir=/opt/app/ -no --no-progress --no-dev --no-cache --quiet -- install && \
     # Copy configuration files to the expected directories.

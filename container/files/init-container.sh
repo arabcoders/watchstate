@@ -42,6 +42,7 @@ fi
 DISABLE_HTTP=${DISABLE_HTTP:-0}
 DISABLE_CRON=${DISABLE_CRON:-0}
 DISABLE_CACHE=${DISABLE_CACHE:-0}
+FPM_PORT=${FPM_PORT:-9000}
 
 WS_DISABLE_HTTP=${WS_DISABLE_HTTP:-0}
 WS_DISABLE_CRON=${WS_DISABLE_CRON:-0}
@@ -57,6 +58,11 @@ if [ 0 != "${WS_DISABLE_HTTP}" ] || [ 0 != "${WS_DISABLE_CRON}" ] || [ 0 != "${W
   echo_err "Please use the DISABLE_HTTP, DISABLE_CRON, DISABLE_CACHE variables instead."
   echo_err "---------------------------------------------------------------------------------------------"
   echo_err ""
+fi
+
+if [ 9000 != "${FPM_PORT}" ]; then
+  echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: Changing PHP-FPM port to [${FPM_PORT}]."
+  sed -i "s/listen = 0.0.0.0:9000/listen = 0.0.0.0:${FPM_PORT}/" /etc/*/php-fpm.d/www.conf
 fi
 
 set -u

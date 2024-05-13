@@ -69,7 +69,7 @@
             <span class="has-text-success" v-if="history.watched">Played</span>
             <span class="has-text-danger" v-else>Unplayed</span>
           </div>
-          <div class="card-footer-item">{{ history.progress }}</div>
+          <div class="card-footer-item">{{ formatDuration(history.progress) }}</div>
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@
 <script setup>
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {notification} from "~/utils/index.js";
+import {formatDuration, notification} from "~/utils/index.js";
 
 const backend = useRoute().params.backend
 const historyUrl = `/history/?via=${backend}`

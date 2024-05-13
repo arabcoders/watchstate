@@ -358,6 +358,7 @@ $ docker exec -ti watchstate console system:tasks
 | DISABLE_CRON         | integer | Disable included `Task Scheduler`. | `0`      |
 | DISABLE_CACHE        | integer | Disable included `Cache Server`.   | `0`      |
 | HTTP_PORT            | string  | Change the `HTTP` listen port.     | `"8080"` |
+| FPM_PORT             | string  | Change the `PHP-FPM` listen port.  | `"9000"` |
 | ~~WS_DISABLE_HTTP~~  | integer | Deprecated use `DISABLE_HTTP`      | `0`      |
 | ~~WS_DISABLE_CRON~~  | integer | Deprecated use `DISABLE_CRON`      | `0`      |
 | ~~WS_DISABLE_CACHE~~ | integer | Deprecated use `DISABLE_CACHE`     | `0`      |

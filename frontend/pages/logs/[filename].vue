@@ -9,6 +9,14 @@
       <div class="is-pulled-right" v-if="!error">
         <div class="field is-grouped">
 
+          <p class="control">
+            <button class="button is-danger is-light" v-tooltip="'Download the entire logfile.'" @click="downloadFile"
+                    :class="{'is-loading':isDownloading}">
+              <span class="icon">
+                <i class="fas fa-download"></i>
+              </span>
+            </button>
+          </p>
           <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
             <button class="button" v-tooltip="'Watch log'" @click="watchLog"
                     :class="{'is-primary':!stream,'is-danger':stream}">
@@ -31,6 +39,7 @@
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
+
         </div>
       </div>
     </div>
@@ -75,6 +84,8 @@ const filename = useRoute().params.filename
 const data = ref([])
 const error = ref('')
 const wrapLines = ref(true)
+
+const isDownloading = ref(false)
 
 const api_path = useStorage('api_path', '/v1/api')
 const api_url = useStorage('api_url', '')
@@ -124,6 +135,32 @@ const closeStream = () => {
   if (stream.value) {
     stream.value.close()
     stream.value = null
+  }
+}
+
+const downloadFile = () => {
+  isDownloading.value = true;
+
+  const response = request(`/log/${filename}?download=1`)
+
+  if ('showSaveFilePicker' in window) {
+    response.then(async res => {
+      isDownloading.value = false;
+
+      return res.body.pipeTo(await (await showSaveFilePicker({
+        suggestedName: `${filename}`
+      })).createWritable())
+
+    })
+  } else {
+    response.then(res => res.blob()).then(blob => {
+      isDownloading.value = false;
+      const fileURL = URL.createObjectURL(blob)
+      const fileLink = document.createElement('a')
+      fileLink.href = fileURL
+      fileLink.download = `${filename}`
+      fileLink.click()
+    });
   }
 }
 

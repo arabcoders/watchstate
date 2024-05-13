@@ -114,8 +114,9 @@ fi;
 
 eval set -- "$GETOPT"
 
+FPM_PORT=${FPM_PORT:-9000}
 # FastCGI variables
-FCGI_CONNECT_DEFAULT="localhost:9000"
+FCGI_CONNECT_DEFAULT="localhost:${FPM_PORT}"
 FCGI_STATUS_PATH_DEFAULT="/status"
 
 export REQUEST_METHOD="GET"

@@ -52,7 +52,7 @@
                 <span class="has-text-success" v-if="history.watched">Played</span>
                 <span class="has-text-danger" v-else>Unplayed</span>
               </div>
-              <div class="card-footer-item">{{ history.progress }}</div>
+              <div class="card-footer-item">{{ formatDuration(history.progress) }}</div>
             </div>
           </div>
         </div>
@@ -93,6 +93,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
+import {formatDuration} from "../utils/index.js";
 
 useHead({title: 'Index'})
 
