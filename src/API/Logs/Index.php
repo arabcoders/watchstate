@@ -10,6 +10,7 @@ use App\Libs\DataUtil;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Stream;
 use App\Libs\StreamClosure;
+use finfo;
 use LimitIterator;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -129,6 +130,9 @@ final class Index
 
         $file = new SplFileObject($filePath, 'r');
 
+        if (true === (bool)$params->get('download')) {
+            return $this->download($filePath);
+        }
         if ($params->get('stream')) {
             return $this->stream($filePath);
         }
@@ -164,6 +168,20 @@ final class Index
             status: HTTP_STATUS::HTTP_OK->value,
             headers: ['Content-Type' => 'text/plain'],
             body: $stream
+        );
+    }
+
+    private function download(string $filePath): iResponse
+    {
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($filePath);
+
+        return new Response(
+            status: HTTP_STATUS::HTTP_OK->value,
+            headers: [
+                'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
+                'Content-Length' => filesize($filePath),
+            ],
+            body: stream::make($filePath, 'r')
         );
     }
 
