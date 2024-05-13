@@ -25,6 +25,19 @@
       <BackendAdd @addBackend="toggleForm = false; loadContent()" :backends="backends"/>
     </div>
 
+    <div class="column is-12" v-if="backends.length<1 && !toggleForm">
+      <Message class="is-warning" title="Warning">
+        <span class="icon-text">
+          <span class="icon"><i class="fas fa-exclamation"></i></span>
+          <span>
+            No backends found. Please add new backends to start using the tool. You can add new backend by
+            <NuxtLink @click="toggleForm=true" v-text="'clicking here'"/>
+            or by clicking the <span class="icon is-small"><i class="fas fa-add"></i></span> button above.
+          </span>
+        </span>
+      </Message>
+    </div>
+
     <div v-for="backend in backends" :key="backend.name" class="column is-6-tablet is-12-mobile">
       <div class="card">
         <header class="card-header">
@@ -83,7 +96,6 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {notification} from '~/utils/index.js'
 
 useHead({title: 'Backends'})
 
@@ -94,12 +106,6 @@ const loadContent = async () => {
   backends.value = []
   const response = await request('/backends')
   backends.value = await response.json()
-  if (backends.value.length > 0) {
-    return
-  }
-
-  toggleForm.value = true
-  notification('warning', 'Information', 'No backends found.')
 }
 
 onMounted(() => loadContent())
