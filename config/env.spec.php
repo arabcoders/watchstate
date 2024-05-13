@@ -71,11 +71,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_WEBUI_ENABLED',
-            'description' => 'Enable the WebUI.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_WEBUI_PATH',
             'description' => 'The path to where the WebUI is compiled.',
             'type' => 'string',

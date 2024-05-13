@@ -336,7 +336,6 @@ These environment variables relates to the tool itself, you can load them via th
 | WS_TRUST_HEADER         | string  | Which header contain user true IP.                                      | `X-Forwarded-For`        |
 | WS_LIBRARY_SEGMENT      | integer | Paginate backend library items request. Per request get total X number. | `1000`                   |
 | WS_CACHE_URL            | string  | Cache server URL.                                                       | `redis://127.0.0.1:6379` |
-| WS_WEBUI_ENABLED        | bool    | Enable Web UI.                                                          | `false`                  |
 | WS_SECURE_API_ENDPOINTS | bool    | Disregard the open route policy and require API key for all endpoints.  | `false`                  |
 
 > [!IMPORTANT]
@@ -352,16 +351,17 @@ $ docker exec -ti watchstate console system:tasks
 > [!IMPORTANT]
 > These environment variables relates to the container itself, and must be added via the `compose.yaml` file.
 
-| Key                  | Type    | Description                        | Default  |
-|----------------------|---------|------------------------------------|----------|
-| DISABLE_HTTP         | integer | Disable included `HTTP Server`.    | `0`      |
-| DISABLE_CRON         | integer | Disable included `Task Scheduler`. | `0`      |
-| DISABLE_CACHE        | integer | Disable included `Cache Server`.   | `0`      |
-| HTTP_PORT            | string  | Change the `HTTP` listen port.     | `"8080"` |
-| FPM_PORT             | string  | Change the `PHP-FPM` listen port.  | `"9000"` |
-| ~~WS_DISABLE_HTTP~~  | integer | Deprecated use `DISABLE_HTTP`      | `0`      |
-| ~~WS_DISABLE_CRON~~  | integer | Deprecated use `DISABLE_CRON`      | `0`      |
-| ~~WS_DISABLE_CACHE~~ | integer | Deprecated use `DISABLE_CACHE`     | `0`      |
+| Key                  | Type    | Description                          | Default  |
+|----------------------|---------|--------------------------------------|----------|
+| WEBUI_ENABLED        | bool    | Enable WebUI. Value casted to a bool | `true`   |
+| DISABLE_HTTP         | integer | Disable included `HTTP Server`.      | `0`      |
+| DISABLE_CRON         | integer | Disable included `Task Scheduler`.   | `0`      |
+| DISABLE_CACHE        | integer | Disable included `Cache Server`.     | `0`      |
+| HTTP_PORT            | string  | Change the `HTTP` listen port.       | `"8080"` |
+| FPM_PORT             | string  | Change the `PHP-FPM` listen port.    | `"9000"` |
+| ~~WS_DISABLE_HTTP~~  | integer | Deprecated use `DISABLE_HTTP`        | `0`      |
+| ~~WS_DISABLE_CRON~~  | integer | Deprecated use `DISABLE_CRON`        | `0`      |
+| ~~WS_DISABLE_CACHE~~ | integer | Deprecated use `DISABLE_CACHE`       | `0`      |
 
 ---
 
@@ -369,7 +369,7 @@ $ docker exec -ti watchstate console system:tasks
 
 The Webhook URL is backend specific, the request path is `/v1/api/backend/[BACKEND_NAME]/webhook`,
 Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for. Typically, the full URL
-is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook]`.
+is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`.
 
 > [!NOTE]
 > You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the

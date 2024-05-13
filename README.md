@@ -9,18 +9,33 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## updates
 
+### 2024-05-13
+
+In preparation for the beta testing of `WebUI` in two days, we have made little breaking change, we have changed the
+environment variable `WS_WEBUI_ENABLED` to just `WEBUI_ENABLED`, We made this change to make sure people don't disable
+the `WebUI`by mistake via the environment page in the `WebUI`. The `WebUI` will be enabled by default, in two days from
+now, to disable it from now add `WEBUI_ENABLED=false` to your `compose.yaml` file. As this environment variable is
+system level, it cannot be set via `.env` file.
+
+Note: `WS_WEBUI_ENABLED` will be gone in few weeks, However it will still work for now, if `WEBUI_ENABLED` is not set.
+
 ### 2024-05-05
 
-**Edit** - We received requests that people are exposing watchstate externally, and there was concern that having open webhook
+**Edit** - We received requests that people are exposing watchstate externally, and there was concern that having open
+webhook
 endpoints might lead to abuse. As such, we have added a new environment variable `WS_SECURE_API_ENDPOINTS`. Simply set
-the environment variable to `1` to secure the webhook endpoint. This means you have to add `?apikey=yourapikey` to the end
+the environment variable to `1` to secure the webhook endpoint. This means you have to add `?apikey=yourapikey` to the
+end
 of the webhook endpoint.
 
 ----- 
 
-We are deprecating the use of the following environment variables `WS_DISABLE_HTTP`, `WS_DISABLE_CRON`, `WS_DISABLE_CACHE`,
-and replacing them with `DISABLE_CACHE`, `DISABLE_CRON`, `DISABLE_HTTP`. The old environment variables will be removed in the future versions.
-It doesn't make sense to mark them as `WS_` since they are global and do not relate to the tool itself. And they must be set from the `compose.yaml` file itself.
+We are deprecating the use of the following environment
+variables `WS_DISABLE_HTTP`, `WS_DISABLE_CRON`, `WS_DISABLE_CACHE`,
+and replacing them with `DISABLE_CACHE`, `DISABLE_CRON`, `DISABLE_HTTP`. The old environment variables will be removed
+in the future versions.
+It doesn't make sense to mark them as `WS_` since they are global and do not relate to the tool itself. And they must be
+set from the `compose.yaml` file itself.
 
 ### 2024-05-04
 
