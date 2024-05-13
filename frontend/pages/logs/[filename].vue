@@ -144,9 +144,14 @@ const downloadFile = () => {
   const response = request(`/log/${filename}?download=1`)
 
   if ('showSaveFilePicker' in window) {
-    response.then(async res => res.body.pipeTo(await (await showSaveFilePicker({
-      suggestedName: `${filename}`
-    })).createWritable()))
+    response.then(async res => {
+      isDownloading.value = false;
+
+      return res.body.pipeTo(await (await showSaveFilePicker({
+        suggestedName: `${filename}`
+      })).createWritable())
+
+    })
   } else {
     response.then(res => res.blob()).then(blob => {
       isDownloading.value = false;
