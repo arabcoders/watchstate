@@ -15,7 +15,6 @@ use App\Libs\DataUtil;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\HTTP_STATUS;
-use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -149,17 +148,14 @@ final class Add
             'options' => [],
         ];
 
-        $optionals = [
-            Options::DUMP_PAYLOAD => 'bool',
-            Options::LIBRARY_SEGMENT => 'int',
-            Options::IGNORE => 'string',
-        ];
+        $spec = require __DIR__ . '/../../../config/backend.spec.php';
 
-        foreach ($optionals as $key => $type) {
-            if (null !== ($value = $data->get('options.' . $key))) {
-                settype($value, $type);
-                $config = ag_set($config, "options.{$key}", $value);
+        foreach ($data->get('options', []) as $key => $value) {
+            if (false === ag_exists($spec, "options.{$key}") || null === $value) {
+                continue;
             }
+
+            $config = ag_set($config, "options.{$key}", $value);
         }
 
         return $client->fromRequest($config, $request);

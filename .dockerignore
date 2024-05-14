@@ -2,6 +2,7 @@
 **/.git
 **/vendor
 ./var/*
+**/screenshots
 !./var/.gitignore
 .phpunit.result.cache
 frontend/.nuxt

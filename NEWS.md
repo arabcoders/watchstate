@@ -1,5 +1,26 @@
 # Old Updates
 
+### 2024-05-05
+
+**Edit** - We received requests that people are exposing watchstate externally, and there was concern that having open
+webhook endpoints might lead to abuse. As such, we have added a new environment variable `WS_SECURE_API_ENDPOINTS`. Simply set
+the environment variable to `1` to secure the webhook endpoint. This means you have to add `?apikey=yourapikey` to the end
+of the webhook endpoint.
+
+----- 
+
+We are deprecating the use of the following environment
+variables `WS_DISABLE_HTTP`, `WS_DISABLE_CRON`, `WS_DISABLE_CACHE`,
+and replacing them with `DISABLE_CACHE`, `DISABLE_CRON`, `DISABLE_HTTP`. The old environment variables will be removed
+in the future versions.
+It doesn't make sense to mark them as `WS_` since they are global and do not relate to the tool itself. And they must be
+set from the `compose.yaml` file itself.
+
+### 2024-05-04
+
+The new webhook endpoint no longer requires a key, and it's now open to public you just need to specify the backend
+name.
+
 ### 2024-04-30 - [BREAKING CHANGE]
 
 We are going to retire the old webhooks endpoint, please refer to the [FAQ](FAQ.md#how-to-add-webhooks) to know how to

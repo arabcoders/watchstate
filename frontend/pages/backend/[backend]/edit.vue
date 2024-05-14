@@ -144,7 +144,7 @@
           </div>
 
           <div class="field" v-if="backend.import">
-            <label class="label" for="backend_import">Import data from this backend</label>
+            <label class="label" for="backend_import">Import data from this backend?</label>
             <div class="control">
               <input id="backend_import" type="checkbox" class="switch is-success" v-model="backend.import.enabled">
               <label for="backend_import">Enable</label>
@@ -154,8 +154,22 @@
             </div>
           </div>
 
+          <div class="field" v-if="backend.import && !backend.import.enabled">
+            <label class="label" for="backend_import_metadata">Import metadata only from from this backend?</label>
+            <div class="control">
+              <input id="backend_import_metadata" type="checkbox" class="switch is-success"
+                     v-model="backend.options.IMPORT_METADATA_ONLY">
+              <label for="backend_import_metadata">Enable</label>
+              <p class="help has-text-danger">
+                To efficiently push changes to the backend we need relation map and this require
+                us to get metadata from the backend. You have Importing disabled, as such this option
+                allow us to import this backend metadata without altering your play state.
+              </p>
+            </div>
+          </div>
+
           <div class="field" v-if="backend.export">
-            <label class="label" for="backend_export">Export data to this backend</label>
+            <label class="label" for="backend_export">Export data to this backend?</label>
             <div class="control">
               <input id="backend_export" type="checkbox" class="switch is-success" v-model="backend.export.enabled">
               <label for="backend_export">Enable</label>

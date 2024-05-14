@@ -38,7 +38,7 @@ return (function () {
             ],
         ],
         'webui' => [
-            'enabled' => (bool)env('WEBUI_ENABLED', env('WS_WEBUI_ENABLED', false)),
+            'enabled' => (bool)env('WEBUI_ENABLED', env('WS_WEBUI_ENABLED', true)),
             'path' => fixPath(env('WS_WEBUI_PATH', __DIR__ . '/../public/exported')),
         ],
         'database' => [

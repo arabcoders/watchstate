@@ -266,4 +266,25 @@ const formatDuration = (milliseconds) => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification, makeGUIDLink, formatDuration}
+const copyText = (str) => {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(data.value.join('\n')).then(() => {
+            notification('success', 'Success', 'Report has been copied to clipboard.')
+        }).catch((error) => {
+            console.error('Failed to copy: ', error)
+            notification('error', 'Error', 'Failed to copy to clipboard.')
+        });
+        return
+    }
+
+    const el = document.createElement('textarea')
+    el.value = str
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+
+    notification('success', 'Success', 'Text copied to clipboard.')
+}
+
+export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification, makeGUIDLink, formatDuration, copyText}

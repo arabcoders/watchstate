@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Traits;
 
+use App\API\Backend\Index;
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface;
 use App\Backends\Common\ClientInterface as iClient;
@@ -64,6 +65,16 @@ trait APITraits
             if (null !== ($export = ag($backend, 'export.lastSync'))) {
                 $backend = ag_set($backend, 'export.lastSync', $export ? makeDate($export) : null);
             }
+
+            $webhookUrl = parseConfigValue(Index::URL) . "/{$backendName}/webhook";
+
+            if (true === (bool)Config::get('api.secure')) {
+                $webhookUrl .= '?apikey=' . Config::get('api.key');
+            }
+
+            $backend['urls'] = [
+                'webhook' => $webhookUrl,
+            ];
 
             $backends[] = $backend;
         }

@@ -11,7 +11,6 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\DataUtil;
 use App\Libs\HTTP_STATUS;
-use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -126,17 +125,14 @@ final class Update
             ],
         ];
 
-        $optionals = [
-            Options::DUMP_PAYLOAD => 'bool',
-            Options::LIBRARY_SEGMENT => 'int',
-            Options::IGNORE => 'string',
-        ];
+        $spec = require __DIR__ . '/../../../config/backend.spec.php';
 
-        foreach ($optionals as $key => $type) {
-            if (null !== ($value = $data->get('options.' . $key))) {
-                settype($value, $type);
-                $newData = ag_set($newData, "options.{$key}", $value);
+        foreach ($data->get('options', []) as $key => $value) {
+            if (false === ag_exists($spec, "options.{$key}") || null === $value) {
+                continue;
             }
+
+            $newData = ag_set($newData, "options.{$key}", $value);
         }
 
         return deepArrayMerge([$config, $client->fromRequest($newData, $request)]);

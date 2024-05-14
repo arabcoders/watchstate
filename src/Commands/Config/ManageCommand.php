@@ -240,7 +240,7 @@ final class ManageCommand extends Command
         $output->writeln('');
 
         // -- $name.options.IMPORT_METADATA_ONLY
-        (function () use ($input, $output, &$u) {
+        (function () use ($input, $output, &$u, $name) {
             if (true === (bool)ag($u, 'import.enabled')) {
                 return;
             }
@@ -265,6 +265,7 @@ final class ManageCommand extends Command
                     <notice>This option will not alter your play state or add new items to the database.</notice>
                     HELP. PHP_EOL . '> ',
                     [
+                        'name' => $name,
                         'default' => '[<value>Y|N</value>] [<value>Default: ' . ($chosen ? 'Yes' : 'No') . '</value>]',
                     ]
                 ),
