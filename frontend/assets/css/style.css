@@ -46,9 +46,9 @@ hr {
     white-space: nowrap;
 }
 
-.is-masked {
+.is-masked, .is-full-mask, .is-full-mask :not(marquee) {
     color: transparent !important;
-    text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -100,8 +100,8 @@ hr {
         white-space: nowrap;
     }
 
-    .is-masked {
-        text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    .is-masked, .is-full-mask, .is-full-mask :not(marquee) {
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
     }
 }
 
