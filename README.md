@@ -9,6 +9,12 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## updates
 
+### 2024-05-14
+
+We are happy to announce the beta testing of the `WebUI`. To get started on using it you just need to visit the url `http://localhost:8080` We are supposed to
+enabled it by default tomorrow, but we decided to give you a head start. We are looking forward to your feedback. If you don't use the `WebUI` then you need to
+add the environment variable `WEBUI_ENABLED=0` in your `compose.yaml` file. and restart the container.
+
 ### 2024-05-13
 
 In preparation for the beta testing of `WebUI` in two days, we have made little breaking change, we have changed the
@@ -19,33 +25,11 @@ system level, it cannot be set via `.env` file.
 
 Note: `WS_WEBUI_ENABLED` will be gone in few weeks, However it will still work for now, if `WEBUI_ENABLED` is not set.
 
-### 2024-05-05
-
-**Edit** - We received requests that people are exposing watchstate externally, and there was concern that having open
-webhook
-endpoints might lead to abuse. As such, we have added a new environment variable `WS_SECURE_API_ENDPOINTS`. Simply set
-the environment variable to `1` to secure the webhook endpoint. This means you have to add `?apikey=yourapikey` to the
-end
-of the webhook endpoint.
-
------ 
-
-We are deprecating the use of the following environment
-variables `WS_DISABLE_HTTP`, `WS_DISABLE_CRON`, `WS_DISABLE_CACHE`,
-and replacing them with `DISABLE_CACHE`, `DISABLE_CRON`, `DISABLE_HTTP`. The old environment variables will be removed
-in the future versions.
-It doesn't make sense to mark them as `WS_` since they are global and do not relate to the tool itself. And they must be
-set from the `compose.yaml` file itself.
-
-### 2024-05-04
-
-The new webhook endpoint no longer requires a key, and it's now open to public you just need to specify the backend
-name.
-
 Refer to [NEWS](NEWS.md) for old updates.
 
 # Features
 
+* **NEW** WebUI. (Preview).
 * Sync backends play state (from many to many).
 * Backup your backends play state into `portable` format.
 * Receive Webhook events from media backends.
@@ -74,7 +58,7 @@ services:
         environment:
             - WS_TZ=UTC # Set timezone.
         ports:
-            - "8080:8080" # webhook listener port.
+            - "8080:8080" # The port which will serve WebUI + API + Webhooks
         volumes:
             - ./data:/config:rw # mount current directory to container /config directory.
 ```
@@ -104,16 +88,48 @@ $ mkdir -p ./data && docker-compose pull && docker-compose up -d
 > To use this container with `podman` set `compose.yaml` `user` to `0:0`. it will appear to be working as root
 > inside the container, but it will be mapped to the user in which the command was run under.
 
+# Management via WebUI
+
+After starting the container, you can access the WebUI by visiting `http://localhost:8080` in your browser.
+
+At the start you won't see anything as the `WebUI` is decoupled from the WatchState and need to be configured to be able to access the API.
+In the top right corner, you will see a cogwheel icon, click on it and then Configure the connection settings.
+
+![Connection settings](screenshots/api_settings.png)
+
+As shown in the screenshot, to get your `API Token`, run the following command
+
+```bash
+$ docker exec -ti watchstate console system:apikey 
+```
+
+Copy the random string in dark yellow, into the `API Token` field Make sure to set the `API URL` or click the `current page URL` link. If everything is set, then the Status field will turn
+green. and `Status: OK` will be shown, and the reset of the navbar will show up. Which hopefully means everything is ok.
+
+To add a backend, click on the `Backends` link in the navbar, then `+` button. as showing in the following screenshot
+
+![Add backend](screenshots/add_backend.png)
+
+Fill the required information, if you get a green notification, then the backend is added successfully. If you get a red/yellow notification, Then most likely incorrect information was provided.
+You can check the message in the notification itself to know what went wrong. Or check the logs page, Most likely an error has been logged to a file named `app.YYYYMMDD.log`.
+
+If everything went ok, you should see the backend shows up in the same page. You can then go to the Tasks page and click on `Qeueu Task`, for first time import we recommand letting
+the task run in the background, as it might take a while to import all the data.
+
+Once you have done all for your backends, You should go back again to `Tasks` page and enable the `Import` and `Export` tasks. This will make sure your data is always in sync.
+To enable/disable the task, simply click on the slider next to the task name if it's green then it's enabled, if it's gray then it's disabled.
+
+Once that is done, you can let the tool do its job, and you can start using the tool to track your play state.
+
+# Management via CLI.
+
 # Adding backend
 
 After starting the container you should start adding your backends and to do so run the following command:
 
 > [!NOTE]
-> to get your plex token, please
-> visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to
-> know
-> how to extract your plex token.
-> For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api keys.
+> to get your plex token, please visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to
+> know how to extract your plex token. For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api keys.
 
 ```bash
 $ docker exec -ti watchstate console config:add

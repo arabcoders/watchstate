@@ -74,7 +74,7 @@
         </div>
         <footer class="card-footer">
           <div class="card-footer-item">
-            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued || !task.enabled">
+            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-clock"></i></span>
                 <span>

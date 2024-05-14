@@ -17,7 +17,7 @@
       </div>
 
       <div class="navbar-menu" :class="{'is-active':showMenu}">
-        <div class="navbar-start">
+        <div class="navbar-start" v-if="hasAPISettings">
           <NuxtLink class="navbar-item" href="/backends" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-server"></i></span>
@@ -96,109 +96,121 @@
 
       <div class="columns is-multiline" v-if="showConnection">
         <div class="column is-12 mt-2">
-          <div class="box">
-
-            <div class="field">
-              <label class="label" for="api_token">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-key"></i></span>
-                  <span>API Token</span>
-                </span>
-              </label>
-              <div class="field-body">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">
+                Configure API Connection
+              </p>
+              <span class="card-header-icon">
+                <span class="icon"><i class="fas fa-cog"></i></span>
+              </span>
+            </header>
+            <div class="card-content">
+              <form @submit.prevent="testApi">
                 <div class="field">
-                  <div class="field has-addons">
-                    <div class="control is-expanded">
-                      <input class="input" id="api_token" v-model="api_token" required placeholder="API Token..."
-                             @keyup="api_status = false; api_response = ''"
-                             :type="false === exposeToken ? 'password' : 'text'">
-                    </div>
-                    <div class="control">
-                      <button class="button is-primary" @click="exposeToken = !exposeToken"
-                              v-tooltip="'Show/Hide token'">
-                        <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
-                        <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
-                      </button>
-                    </div>
-                  </div>
-                  <p class="help">
-                    You can obtain the <code>API TOKEN</code> by using the <code>system:apikey</code> command or by
-                    viewing the <code>/config/.env</code> inside <code>WS_DATA_PATH</code> variable and looking for the
-                    <code>WS_API_KEY=</code> key.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="label" for="api_url">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-link"></i></span>
-                  <span>API URL</span>
-                </span>
-              </label>
-              <div class="field-body">
-                <div class="field">
-                  <div class="control">
-                    <input class="input" id="api_url" type="url" v-model="api_url" required
-                           placeholder="API URL... http://localhost:8081"
-                           @keyup="api_status = false; api_response = ''">
-                    <p class="help">
-                      Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="label" for="api_path">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-folder"></i></span>
-                  <span>API Path</span>
-                </span>
-              </label>
-              <div class="field-body">
-                <div class="field">
-                  <div class="control">
-                    <input class="input" id="api_path" type="text" v-model="api_path" required
-                           placeholder="API Path... /v1/api"
-                           @keyup="api_status = false; api_response = ''">
-                    <p class="help">
-                      Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API Path</a>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <div class="field-body">
-                <div class="field">
-                  <div class="field has-addons">
-                    <div class="control is-expanded">
-                      <input class="input" type="text" v-model="api_response" readonly disabled
-                             :class="{'has-background-success': true===api_status}">
-                    </div>
-                    <div class="control">
-                      <button type="submit" class="button is-primary" :disabled="!api_url || !api_token"
-                              @click="testApi">
-                        <span class="icon-text">
-                          <span class="icon"><i class="fas fa-save"></i></span>
-                          <span>Save</span>
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                  <p class="help">
+                  <label class="label" for="api_token">
                     <span class="icon-text">
-                      <span class="icon has-text-danger"><i class="fas fa-info"></i></span>
-                      <span>These settings are stored locally in your browser. You need to re-add them if you access the
-                        <code>WebUI</code> from different browser.</span>
+                      <span class="icon"><i class="fas fa-key"></i></span>
+                      <span>API Token</span>
                     </span>
-                  </p>
+                  </label>
+                  <div class="field-body">
+                    <div class="field">
+                      <div class="field has-addons">
+                        <div class="control is-expanded">
+                          <input class="input" id="api_token" v-model="api_token" required placeholder="API Token..."
+                                 @keyup="api_status = false; api_response = ''"
+                                 :type="false === exposeToken ? 'password' : 'text'">
+                        </div>
+                        <div class="control">
+                          <button class="button is-primary" @click="exposeToken = !exposeToken"
+                                  v-tooltip="'Show/Hide token'">
+                            <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
+                            <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
+                          </button>
+                        </div>
+                      </div>
+                      <p class="help">
+                        You can obtain the <code>API TOKEN</code> by using the <code>system:apikey</code> command or by
+                        viewing the <code>/config/.env</code> inside <code>WS_DATA_PATH</code> variable and looking for
+                        the
+                        <code>WS_API_KEY=</code> key.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                <div class="field">
+                  <label class="label" for="api_url">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-link"></i></span>
+                      <span>API URL</span>
+                    </span>
+                  </label>
+                  <div class="field-body">
+                    <div class="field">
+                      <div class="control">
+                        <input class="input" id="api_url" type="url" v-model="api_url" required
+                               placeholder="API URL... http://localhost:8081"
+                               @keyup="api_status = false; api_response = ''">
+                        <p class="help">
+                          Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="api_path">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-folder"></i></span>
+                      <span>API Path</span>
+                    </span>
+                  </label>
+                  <div class="field-body">
+                    <div class="field">
+                      <div class="control">
+                        <input class="input" id="api_path" type="text" v-model="api_path" required
+                               placeholder="API Path... /v1/api"
+                               @keyup="api_status = false; api_response = ''">
+                        <p class="help">
+                          Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API Path</a>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="field-body">
+                    <div class="field">
+                      <div class="field has-addons">
+                        <div class="control is-expanded">
+                          <input class="input" type="text" v-model="api_response" readonly disabled
+                                 :class="{'has-background-success': true===api_status,'has-background-warning': true!==api_status}">
+                        </div>
+                        <div class="control">
+                          <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
+                            <span class="icon-text">
+                              <span class="icon"><i class="fas fa-save"></i></span>
+                              <span>Save</span>
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                      <p class="help">
+                        <span class="icon-text">
+                          <span class="icon has-text-danger"><i class="fas fa-info"></i></span>
+                          <span>These settings are stored locally in your browser. You need to re-add them if you access
+                            the
+                            <code>WebUI</code> from different browser.</span>
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -317,7 +329,13 @@ const applyPreferredColorScheme = scheme => {
 
 onMounted(async () => {
   try {
+
     applyPreferredColorScheme(selectedTheme.value)
+
+    if ('' === api_token.value) {
+      showConnection.value = true
+      return
+    }
     await getVersion()
   } catch (e) {
   }
@@ -327,6 +345,14 @@ watch(selectedTheme, value => {
   try {
     applyPreferredColorScheme(value)
   } catch (e) {
+  }
+})
+
+watch(api_token, value => {
+  if ('' === value) {
+    api_status.value = false;
+    api_response.value = 'Status: Unknown'
+    showConnection.value = true
   }
 })
 
@@ -367,4 +393,6 @@ const getVersion = async () => {
 }
 
 const setOrigin = () => api_url.value = window.location.origin;
+
+const hasAPISettings = computed(() => '' !== api_token.value && '' !== api_url.value)
 </script>

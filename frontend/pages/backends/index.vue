@@ -26,7 +26,7 @@
     </div>
 
     <div class="column is-12" v-if="backends.length<1 && !toggleForm">
-      <Message class="is-warning" title="Warning">
+      <Message message_class="is-warning" title="Warning">
         <span class="icon-text">
           <span class="icon"><i class="fas fa-exclamation"></i></span>
           <span>
@@ -70,9 +70,7 @@
               <input :id="backend.name+'_export'" type="checkbox" class="switch is-success"
                      :checked="backend.export.enabled"
                      @change="updateValue(backend, 'export.enabled', !backend.export.enabled)">
-              <label :for="backend.name+'_export'">
-                Export <span class="is-hidden-mobile">&nbsp;{{ backend.export.enabled ? 'Enabled' : 'Disabled' }}</span>
-              </label>
+              <label :for="backend.name+'_export'">Export</label>
             </div>
           </div>
           <div class="card-footer-item">
@@ -80,12 +78,30 @@
               <input :id="backend.name+'_import'" type="checkbox" class="switch is-success"
                      :checked="backend.import.enabled"
                      @change="updateValue(backend, 'import.enabled',!backend.import.enabled)">
-              <label :for="backend.name+'_import'">
-                Import <span class="is-hidden-mobile">&nbsp;{{ backend.import.enabled ? 'Enabled' : 'Disabled' }}</span>
-              </label>
+              <label :for="backend.name+'_import'">Import</label>
             </div>
           </div>
+          <div class="card-footer-item">
+            <a :href="api_url + backend.urls.webhook" class="is-info is-light" @click.prevent="copyUrl(backend)">
+              <span class="icon"><i class="fas fa-copy"></i></span>
+              <span class="is-hidden-mobile">Copy Webhook URL</span>
+              <span class="is-hidden-tablet">Webhook</span>
+            </a>
+          </div>
         </footer>
+      </div>
+    </div>
+
+    <div class="column is-12" v-if="backends.length>0">
+      <div class="content">
+        <ul>
+          <li>
+            Import In context of <code>WatchState</code> means pulling data from the backends into the local database.
+          </li>
+          <li>
+            Export in context of <code>WatchState</code> means pushing data from the local database to the backends.
+          </li>
+        </ul>
       </div>
     </div>
   </div>
@@ -96,11 +112,14 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
+import {copyText} from '~/utils/index.js'
+import {useStorage} from "@vueuse/core";
 
 useHead({title: 'Backends'})
 
 const backends = ref([])
 const toggleForm = ref(false)
+const api_url = useStorage('api_url', '')
 
 const loadContent = async () => {
   backends.value = []
@@ -109,6 +128,8 @@ const loadContent = async () => {
 }
 
 onMounted(() => loadContent())
+
+const copyUrl = (backend) => copyText(api_url.value + backend.urls.webhook)
 
 const updateValue = async (backend, key, newValue) => {
   const response = await request(`/backend/${backend.name}`, {

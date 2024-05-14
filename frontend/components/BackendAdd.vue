@@ -1,18 +1,25 @@
 <template>
-  <Message>
-    <span class="icon-text">
-      <span class="icon">
-        <i class="fas fa-info"></i>
-      </span>
-      <span>
-        Please, Beware <code>WatchState</code> is single user tool. It doesn't support syncing multiple users
-        play state. Please read
-        <NuxtLink
-            href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"
-            target="_blank" v-text="'this link'"></NuxtLink>
-        for more information.
-      </span>
-    </span>
+  <Message title="Important Information">
+    <div class="content">
+      <ul>
+        <li>
+
+          Please, Beware <code>WatchState</code> is single user tool. It doesn't support syncing multiple users
+          play state. Please read
+          <NuxtLink target="_blank" v-text="'this link'"
+                    href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
+          for more information.
+        </li>
+        <li>
+          If you are adding new backend that is fresh and doesn't have your play state state, you should turn off import
+          and enable only metadata import at the start to prevent overriding your current play state. Please
+          <NuxtLink
+              href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"
+              target="_blank" v-text="'Read this link'"/>
+          for more information.
+        </li>
+      </ul>
+    </div>
   </Message>
   <form id="backend_add_form" @submit.prevent="addBackend" @change="changeStage">
     <div class="box">
@@ -172,6 +179,20 @@
             <label for="backend_import">Enable</label>
             <p class="help">
               Import means to get the data from the backend and store it in the database.
+            </p>
+          </div>
+        </div>
+
+        <div class="field" v-if="backend.import && !backend.import.enabled">
+          <label class="label" for="backend_import_metadata">Import metadata only from from this backend?</label>
+          <div class="control">
+            <input id="backend_import_metadata" type="checkbox" class="switch is-success"
+                   v-model="backend.options.IMPORT_METADATA_ONLY">
+            <label for="backend_import_metadata">Enable</label>
+            <p class="help has-text-danger">
+              To efficiently push changes to the backend we need relation map and this require
+              us to get metadata from the backend. You have Importing disabled, as such this option
+              allow us to import this backend metadata without altering your play state.
             </p>
           </div>
         </div>
@@ -406,9 +427,7 @@ const addBackend = async () => {
   if ('plex' === backend.value.type) {
     let token = users.value.find(u => u.id === backend.value.user).token
     if (token !== backend.value.token) {
-      backend.value.options = {
-        ADMIN_TOKEN: backend.value.token
-      }
+      backend.value.options.ADMIN_TOKEN = backend.value.token;
       backend.value.token = token
     }
   }
