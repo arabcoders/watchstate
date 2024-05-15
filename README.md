@@ -53,10 +53,6 @@ services:
         user: "${UID:-1000}:${GID:-1000}"
         container_name: watchstate
         restart: unless-stopped
-        # For information about supported environment variables visit FAQ page.
-        # works for both global and container specific environment variables. 
-        environment:
-            - WS_TZ=UTC # Set timezone.
         ports:
             - "8080:8080" # The port which will serve WebUI + API + Webhooks
         volumes:
@@ -165,18 +161,18 @@ $ docker exec -ti watchstate console state:import -v -s home_plex -s home_jellyf
 ```
 
 > [!NOTE]
-> Now that you have imported your current play state enable the import task by adding the following environment
-> variables to
-> your `compose.yaml` file `WS_CRON_IMPORT=1`. By default, we have it disabled. for more environment variables
-> please
-> refer to [Environment variables list](FAQ.md#environment-variables).
+> Now that you have imported your current play state enable the import task by using the following command
+
+```bash
+$ docker exec -ti watchstate console system:env -k WS_CRON_IMPORT -e true
+```
 
 ### Supported import methods
 
 Out of the box, we support the following import methods:
 
-* Scheduled Task. `Cron jobs that pull data from backends on a schedule.`
-* On demand. `Pull data from backends on demand. By running the state:import & state:export command manually`
+* Scheduled Tasks. `Cron jobs that pull data from backends on a schedule.`
+* On demand. `Pull data from backends on demand. By running the state:import command manually`
 * Webhooks. `Receive events from backends and update the database accordingly.`
 
 > [!NOTE]
@@ -189,9 +185,8 @@ Out of the box, we support the following import methods:
 
 What does `export` or what does the command `state:export` means in context of watchstate?
 
-Export means, sending data back to backends, while trying to minimize the network traffic.
-
-To export your current play state to backends that have export enabled, run the following command
+Export means, sending data back to backends, while trying to minimize the network traffic. To export your current play
+state to backends that have export enabled, run the following command:
 
 ```bash
 $ docker exec -ti watchstate console state:export -v
@@ -205,11 +200,11 @@ $ docker exec -ti watchstate console state:export -v -s home_plex -s home_jellyf
 ```
 
 > [!NOTE]
-> Now that you have exported your current play state, enable the export task by adding the following environment
-> variables to
-> your `compose.yaml` file `WS_CRON_EXPORT=1`. By default, we have it disabled. for more environment variables
-> please
-> refer to [Environment variables list](FAQ.md#environment-variables).
+> Now that you have exported your current play state, enable the export task by using the following command
+
+```bash
+$ docker exec -ti watchstate console system:env -k WS_CRON_EXPORT -e true
+```
 
 ---
 
@@ -218,14 +213,16 @@ $ docker exec -ti watchstate console state:export -v -s home_plex -s home_jellyf
 Take look at this [frequently asked questions](FAQ.md) page. to know more about this tool and how to enable webhook
 support and answers to many questions.
 
-# Social contact
+---
 
-If you have short or quick questions, you are free to join my [discord server](https://discord.gg/haUXHJyj6Y) and ask
-the question. keep in mind it's solo project, as such it might take me a bit of time to reply.
+# Social channels
+
+If you have short or quick questions, or just want to chat with other users, feel free to join my [discord server](https://discord.gg/haUXHJyj6Y).
+keep in mind it's solo project, as such it might take me a bit of time to reply to questions.
+
+---
 
 # Donate
 
-If you feel like donating and appreciate my work, you can do so by donating to children charity. For
-example [Make-A-Wish](https://worldwish.org).
-I Personally don't need the money, but I do appreciate the gesture. Making a child happy is the best thing you can do in
-this world.
+If you feel like donating and appreciate my work, you can do so by donating to children charity. For example [Make-A-Wish](https://worldwish.org).
+I Personally don't need the money, but I do appreciate the gesture.

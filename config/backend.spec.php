@@ -30,6 +30,8 @@ return [
     'options.IMPORT_METADATA_ONLY' => false,
     'options.DRY_RUN' => false,
     'options.client.timeout' => false,
+    'options.client.http_version' => false,
     'options.use_old_progress_endpoint' => false,
+    'options.MAX_EPISODE_RANGE' => false,
 ];
 

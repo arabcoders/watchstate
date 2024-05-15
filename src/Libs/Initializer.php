@@ -21,7 +21,6 @@ use Monolog\Handler\SyslogHandler;
 use Monolog\Level;
 use Monolog\Logger;
 use Nyholm\Psr7\Factory\Psr17Factory;
-use Nyholm\Psr7\Response;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -209,7 +208,16 @@ final class Initializer
             $routeException = true === ($e instanceof RouterHttpException);
             $isNormal = true === ($httpException || $routeException);
 
-            if (!$isNormal) {
+            $statusCode = $isNormal && ($e->getCode() >= 200 && $e->getCode() <= 499) ? $e->getCode() : 503;
+
+            $response = addCors(
+                api_error(
+                    message: $isNormal ? "{$e->getCode()}: {$e->getMessage()}" : 'Unable to serve request.',
+                    httpCode: HTTP_STATUS::tryFrom($statusCode) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
+                )
+            );
+
+            if (!$isNormal || HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value === $statusCode) {
                 Container::get(LoggerInterface::class)->error(
                     message: $e->getMessage(),
                     context: [
@@ -220,12 +228,6 @@ final class Initializer
                     ]
                 );
             }
-
-            $statusCode = $isNormal && ($e->getCode() >= 200 && $e->getCode() <= 499) ? $e->getCode() : 500;
-            $response = new Response(
-                status: $statusCode,
-                body: $isNormal ? "{$e->getCode()}: {$e->getMessage()}" : 'Unable to serve request.'
-            );
 
             $this->write($request, Level::Info, $this->formatLog($request, $response));
         }
@@ -271,6 +273,7 @@ final class Initializer
                 );
                 return $response;
             }
+
             return (new ServeStatic())->serve($request);
         }
 

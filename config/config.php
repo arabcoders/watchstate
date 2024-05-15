@@ -14,6 +14,7 @@ use App\Commands\State\RequestsCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
+use Cron\CronExpression;
 use Monolog\Level;
 
 return (function () {
@@ -219,6 +220,15 @@ return (function () {
         ],
     ];
 
+    $checkTaskTimer = function (string $timer, string $default): string {
+        try {
+            $isValid = (new CronExpression($timer))->getNextRunDate()->getTimestamp() >= 0;
+            return $isValid ? $timer : $default;
+        } catch (Throwable) {
+            return $default;
+        }
+    };
+
     $config['tasks'] = [
         'logfile' => ag($config, 'tmpDir') . '/logs/task.' . $logDateFormat . '.log',
         'list' => [
@@ -227,7 +237,7 @@ return (function () {
                 'name' => ImportCommand::TASK_NAME,
                 'info' => 'Import play state and metadata from backends.',
                 'enabled' => (bool)env('WS_CRON_IMPORT', false),
-                'timer' => (string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'), '0 */1 * * *'),
                 'args' => env('WS_CRON_IMPORT_ARGS', '-v'),
             ],
             ExportCommand::TASK_NAME => [
@@ -235,7 +245,7 @@ return (function () {
                 'name' => ExportCommand::TASK_NAME,
                 'info' => 'Export play state to backends.',
                 'enabled' => (bool)env('WS_CRON_EXPORT', false),
-                'timer' => (string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'), '30 */1 * * *'),
                 'args' => env('WS_CRON_EXPORT_ARGS', '-v'),
             ],
             PushCommand::TASK_NAME => [
@@ -243,7 +253,7 @@ return (function () {
                 'name' => PushCommand::TASK_NAME,
                 'info' => 'Push Webhook play states to backends.',
                 'enabled' => (bool)env('WS_CRON_PUSH', true),
-                'timer' => (string)env('WS_CRON_PUSH_AT', '*/10 * * * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_PUSH_AT', '*/10 * * * *'), '*/10 * * * *'),
                 'args' => env('WS_CRON_PUSH_ARGS', '-v'),
             ],
             ProgressCommand::TASK_NAME => [
@@ -251,7 +261,7 @@ return (function () {
                 'name' => ProgressCommand::TASK_NAME,
                 'info' => 'Push play progress to backends.',
                 'enabled' => (bool)env('WS_CRON_PROGRESS', false),
-                'timer' => (string)env('WS_CRON_PROGRESS_AT', '*/45 * * * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_PROGRESS_AT', '*/45 * * * *'), '*/45 * * * *'),
                 'args' => env('WS_CRON_PROGRESS_ARGS', '-v'),
             ],
             BackupCommand::TASK_NAME => [
@@ -259,7 +269,7 @@ return (function () {
                 'name' => BackupCommand::TASK_NAME,
                 'info' => 'Backup backends play states.',
                 'enabled' => (bool)env('WS_CRON_BACKUP', true),
-                'timer' => (string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_BACKUP_AT', '0 6 */3 * *'), '0 6 */3 * *'),
                 'args' => env('WS_CRON_BACKUP_ARGS', '-v'),
             ],
             PruneCommand::TASK_NAME => [
@@ -267,7 +277,7 @@ return (function () {
                 'name' => PruneCommand::TASK_NAME,
                 'info' => 'Delete old logs and backups.',
                 'enabled' => (bool)env('WS_CRON_PRUNE', true),
-                'timer' => (string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_PRUNE_AT', '0 */12 * * *'), '0 */12 * * *'),
                 'args' => env('WS_CRON_PRUNE_ARGS', '-v'),
             ],
             IndexCommand::TASK_NAME => [
@@ -275,7 +285,7 @@ return (function () {
                 'name' => IndexCommand::TASK_NAME,
                 'info' => 'Check database for optimal indexes.',
                 'enabled' => (bool)env('WS_CRON_INDEXES', true),
-                'timer' => (string)env('WS_CRON_INDEXES_AT', '0 3 * * 3'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_INDEXES_AT', '0 3 * * 3'), '0 3 * * 3'),
                 'args' => env('WS_CRON_INDEXES_ARGS', '-v'),
             ],
             RequestsCommand::TASK_NAME => [
@@ -283,7 +293,7 @@ return (function () {
                 'name' => RequestsCommand::TASK_NAME,
                 'info' => 'Process queued http requests.',
                 'enabled' => (bool)env('WS_CRON_REQUESTS', true),
-                'timer' => (string)env('WS_CRON_REQUESTS_AT', '*/2 * * * *'),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_REQUESTS_AT', '*/2 * * * *'), '*/2 * * * *'),
                 'args' => env('WS_CRON_REQUESTS_ARGS', '-v --no-stats'),
             ],
         ],

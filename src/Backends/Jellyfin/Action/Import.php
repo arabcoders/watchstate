@@ -710,7 +710,7 @@ class Import
                     $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 3);
                     $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
                     if (count($range) > $episodeRangeLimit) {
-                        $this->logger->info(
+                        $this->logger->warning(
                             'Ignoring [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] Episode range, and treating it as single episode. Backend says it covers [{item.indexNumber}-{item.indexNumberEnd}] [{item.rangeCount}].',
                             [
                                 'backend' => $context->backendName,

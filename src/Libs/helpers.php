@@ -1257,7 +1257,15 @@ if (!function_exists('addCors')) {
 }
 
 if (!function_exists('deepArrayMerge')) {
-    function deepArrayMerge(array $arrays, $preserve_integer_keys = false)
+    /**
+     * Recursively merge arrays.
+     *
+     * @param array $arrays The arrays to merge.
+     * @param bool $preserve_integer_keys (Optional) Whether to preserve integer keys.
+     *
+     * @return array The merged array.
+     */
+    function deepArrayMerge(array $arrays, bool $preserve_integer_keys = false): array
     {
         $result = [];
         foreach ($arrays as $array) {
@@ -1307,5 +1315,29 @@ if (!function_exists('runCommand')) {
         });
 
         return $output;
+    }
+}
+
+if (!function_exists('tryCatch')) {
+    /**
+     * Try to execute a callback and catch any exceptions.
+     *
+     * @param Closure $callback The callback to execute.
+     * @param Closure(Throwable):mixed|null $catch (Optional) Executes when an exception is caught.
+     * @param Closure|null $finally (Optional) Executes after the callback and catch.
+     *
+     * @return mixed The result of the callback or the catch. or null if no catch is provided.
+     */
+    function tryCatch(Closure $callback, Closure|null $catch = null, Closure|null $finally = null): mixed
+    {
+        try {
+            return $callback();
+        } catch (Throwable $e) {
+            return null !== $catch ? $catch($e) : null;
+        } finally {
+            if (null !== $finally) {
+                $finally();
+            }
+        }
     }
 }
