@@ -766,7 +766,7 @@ There must be exactly one `index.php` file and one `exported` directory. inside 
 * link the app to the frontend proxy. For caddy, you can use the following configuration.
 
 > [!NOTE]
-> frontend server is only needed for `webhooks` and the upcoming `API` & `Web UI`.
+> frontend server is needed All the `API`, `WebUI` and `Webhooks` operations.
 
 ```Caddyfile
 http://watchstate.example.org {
