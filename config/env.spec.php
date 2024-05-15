@@ -7,6 +7,9 @@
  * Avoid using complex datatypes, the value should be a simple scalar value.
  */
 
+use App\Libs\Exceptions\InvalidArgumentException;
+use Cron\CronExpression;
+
 return (function () {
     $env = [
         [
@@ -139,30 +142,46 @@ return (function () {
         ],
     ];
 
+    $validateCronExpression = function ($value): bool {
+        if (empty($value)) {
+            return false;
+        }
+
+        try {
+            if (str_starts_with($value, '"') && str_ends_with($value, '"')) {
+                $value = substr($value, 1, -1);
+            }
+            return (new CronExpression($value))->getNextRunDate()->getTimestamp() >= 0;
+        } catch (Throwable) {
+            throw new InvalidArgumentException('Invalid cron expression.');
+        }
+    };
+
     // -- Do not forget to update the tasks list if you add a new task.
     $tasks = ['import', 'export', 'push', 'progress', 'backup', 'prune', 'indexes', 'requests'];
     $task_env = [
         [
-            'key' => 'WS_CRON_{task}',
-            'description' => 'Enable the {task} task.',
+            'key' => 'WS_CRON_{TASK}',
+            'description' => 'Enable the {TASK} task.',
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_CRON_{task}_AT',
-            'description' => 'The time to run the {task} task.',
+            'key' => 'WS_CRON_{TASK}_AT',
+            'description' => 'The time to run the {TASK} task.',
             'type' => 'string',
+            'validate' => $validateCronExpression(...),
         ],
         [
-            'key' => 'WS_CRON_{task}_ARGS',
-            'description' => 'The arguments to pass to the {task} task.',
+            'key' => 'WS_CRON_{TASK}_ARGS',
+            'description' => 'The arguments to pass to the {TASK} task.',
             'type' => 'string',
         ],
     ];
 
     foreach ($tasks as $task) {
         foreach ($task_env as $info) {
-            $info['key'] = r($info['key'], ['task' => strtoupper($task)]);
-            $info['description'] = r($info['description'], ['task' => $task]);
+            $info['key'] = r($info['key'], ['TASK' => strtoupper($task)]);
+            $info['description'] = r($info['description'], ['TASK' => $task]);
             $env[] = $info;
         }
     }

@@ -124,11 +124,19 @@
           </tr>
           </tbody>
         </table>
-        <div class="is-hidden-mobile help">
-          Some variables values are masked for security reasons. If you need to see the value, click on edit.
-        </div>
       </div>
     </div>
+
+    <div class="column is-12 is-hidden-mobile" v-if="envs">
+      <div class="content">
+        <ul>
+          <li>
+            Some variables values are masked for security reasons. If you need to see the value, click on edit.
+          </li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -140,8 +148,8 @@ useHead({title: 'Environment Variables'})
 
 const envs = ref([])
 const toggleForm = ref(false)
-const form_key = ref('')
-const form_value = ref(null)
+const form_key = ref()
+const form_value = ref()
 const file = ref('.env')
 const copyAPI = navigator.clipboard
 
@@ -177,23 +185,48 @@ const addVariable = async () => {
     return
   }
 
+  // -- check if value is empty or the same
+  if (!form_value.value) {
+    notification('error', 'Error', 'Value cannot be empty.', 5000)
+    return
+  }
+
+  const data = envs.value.filter(i => i.key === key)
+  if (data.length > 0 && data[0].value === form_value.value) {
+    return cancelForm();
+  }
+
   const response = await request(`/system/env/${key}`, {
     method: 'POST',
     body: JSON.stringify({value: form_value.value})
   })
 
-  if (response.ok) {
-    await loadContent()
-    form_key.value = null
-    form_value.value = null
-    toggleForm.value = false
+  if (304 === response.status) {
+    return cancelForm();
   }
+
+  const json = await response.json()
+
+  if (!response.ok) {
+    notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+    return
+  }
+
+  notification('success', 'Success', 'Environment variable successfully updated.', 5000)
+  await loadContent()
+  return cancelForm();
 }
 
 const editEnv = (env) => {
   form_key.value = env.key
   form_value.value = env.value
   toggleForm.value = true
+}
+
+const cancelForm = () => {
+  form_key.value = null
+  form_value.value = null
+  toggleForm.value = false
 }
 
 const copyValue = (env) => navigator.clipboard.writeText(env.value)
