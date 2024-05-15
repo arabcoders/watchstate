@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\EnvFile;
+use App\Libs\Exceptions\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -41,6 +42,7 @@ final class EnvCommand extends Command
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete key.')
+            ->addOption('list', 'l', InputOption::VALUE_NONE, 'List All Supported keys.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -112,6 +114,10 @@ final class EnvCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
+        if ($input->getOption('list')) {
+            return $this->handleEnvList($input, $output);
+        }
+
         if ($input->getOption('key')) {
             return $this->handleEnvUpdate($input, $output);
         }
@@ -160,6 +166,31 @@ final class EnvCommand extends Command
         if (true === (bool)$input->getOption('delete')) {
             $envFile->remove($key);
         } else {
+            $spec = $this->getSpec($key);
+
+            if (empty($spec)) {
+                $output->writeln(
+                    r(
+                        "<error>Invalid key '{key}' was used. Run the command with --list flag to see list of supported vars.</error>",
+                        ['key' => $key]
+                    )
+                );
+                return self::FAILURE;
+            }
+
+            try {
+                if (!$this->checkValue($spec, $input->getOption('set'))) {
+                    $output->writeln(r("<error>Invalid value for '{key}'.</error>", ['key' => $key]));
+                    return self::FAILURE;
+                }
+            } catch (InvalidArgumentException $e) {
+                $output->writeln(r("<error>Value validation for '{key}' failed. {message}</error>", [
+                    'key' => $key,
+                    'message' => $e->getMessage()
+                ]));
+                return self::FAILURE;
+            }
+
             $envFile->set($key, $input->getOption('set'));
         }
 
@@ -172,4 +203,68 @@ final class EnvCommand extends Command
 
         return self::SUCCESS;
     }
+
+    private function handleEnvList(iInput $input, iOutput $output): int
+    {
+        $spec = require __DIR__ . '/../../../config/env.spec.php';
+
+        $keys = [];
+
+        $mode = $input->getOption('output');
+
+        foreach ($spec as $info) {
+            $item = [
+                'key' => $info['key'],
+                'description' => $info['description'],
+                'type' => $info['type'],
+                'value' => env($info['key'], 'Not Set')
+            ];
+
+            $keys[] = $item;
+        }
+
+        $this->displayContent($keys, $output, $mode);
+
+        return self::SUCCESS;
+    }
+
+    private function getSpec(string $key): array
+    {
+        $spec = require __DIR__ . '/../../../config/env.spec.php';
+
+        foreach ($spec as $info) {
+            if ($info['key'] !== $key) {
+                continue;
+            }
+            return $info;
+        }
+
+        return [];
+    }
+
+    /**
+     * Check if the value is valid.
+     *
+     * @param array $spec the specification for the key.
+     * @param mixed $value the value to check.
+     *
+     * @return bool true if the value is valid, false otherwise.
+     */
+    private function checkValue(array $spec, mixed $value): bool
+    {
+        if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
+            throw new InvalidArgumentException(
+                r("The value for '{key}' must be \"quoted string\", as it contains a space.", [
+                    'key' => ag($spec, 'key'),
+                ])
+            );
+        }
+
+        if (ag_exists($spec, 'validate')) {
+            return (bool)$spec['validate']($value);
+        }
+
+        return true;
+    }
+
 }

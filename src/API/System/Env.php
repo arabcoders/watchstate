@@ -133,7 +133,10 @@ final class Env
                 throw new InvalidArgumentException(r("Invalid value for '{key}'.", ['key' => $key]));
             }
         } catch (InvalidArgumentException $e) {
-            return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error(r("Value validation for '{key}' failed. {error}", [
+                'key' => $key,
+                'error' => $e->getMessage()
+            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $this->envFile->set($key, $value)->persist();
