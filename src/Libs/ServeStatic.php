@@ -72,9 +72,16 @@ final class ServeStatic
             $filePath = $checkIndex;
         }
 
+        if (false === ($realBasePath = realpath($this->staticPath))) {
+            throw new BadRequestException(
+                message: r("The static path '{path}' doesn't exists.", ['path' => $this->staticPath]),
+                code: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value
+            );
+        }
+
         $filePath = realpath($filePath);
 
-        if (false === str_starts_with($filePath, $this->staticPath)) {
+        if (false === $filePath || false === str_starts_with($filePath, $realBasePath)) {
             throw new BadRequestException(
                 message: r("Request '{file}' is invalid.", ['file' => $requestPath]),
                 code: HTTP_STATUS::HTTP_BAD_REQUEST->value
