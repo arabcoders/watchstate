@@ -132,10 +132,22 @@ return [
         'description' => 'Enable dry-run changes will not be committed in supported context.',
     ],
     [
+        'key' => 'options.MAX_EPISODE_RANGE',
+        'type' => 'int',
+        'visible' => false,
+        'description' => 'The max range of episodes that episode can cover. The default is 3.'
+    ],
+    [
         'key' => 'options.client.timeout',
         'type' => 'integer',
         'visible' => false,
         'description' => 'The http timeout per request to the backend.',
+    ],
+    [
+        'key' => 'options.client.http_version',
+        'type' => 'float',
+        'visible' => false,
+        'description' => 'The http version to use when making requests to the backend.',
     ],
     [
         'key' => 'options.use_old_progress_endpoint',
