@@ -31,8 +31,6 @@ final class ServeStatic
         if (null === $this->staticPath) {
             $this->staticPath = Config::get('webui.path', __DIR__ . '/../../public/exported');
         }
-
-        $this->staticPath = realpath($this->staticPath);
     }
 
     /**
