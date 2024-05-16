@@ -60,7 +60,7 @@ final class Webhooks
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        return $this->process($name, $request)->withHeader('X-Log-Response', '0');
+        return $this->process($name, $request);
     }
 
     /**
