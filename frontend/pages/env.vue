@@ -52,6 +52,13 @@
                 <template v-else>Off</template>
               </label>
             </template>
+            <template v-else-if=" 'int' === form_type ">
+              <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
+                     pattern="[0-9]*" inputmode="numeric">
+              <div class="icon is-small is-left">
+                <i class="fas fa-font"></i>
+              </div>
+            </template>
             <template v-else>
               <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
               <div class="icon is-small is-left">
