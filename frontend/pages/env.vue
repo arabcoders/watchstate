@@ -44,15 +44,32 @@
             </div>
           </div>
           <div class="control is-expanded has-icons-left">
-            <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
-            <div class="icon is-small is-left">
-              <i class="fas fa-font"></i>
-            </div>
+            <template v-if="'bool' === form_type">
+              <input id="form_switch" type="checkbox" class="switch is-success"
+                     :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
+              <label for="form_switch">
+                <template v-if="fixBool(form_value)">On</template>
+                <template v-else>Off</template>
+              </label>
+            </template>
+            <template v-else-if=" 'int' === form_type ">
+              <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
+                     pattern="[0-9]*" inputmode="numeric">
+              <div class="icon is-small is-left">
+                <i class="fas fa-font"></i>
+              </div>
+            </template>
+            <template v-else>
+              <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
+              <div class="icon is-small is-left">
+                <i class="fas fa-font"></i>
+              </div>
+            </template>
             <p class="help" v-html="getHelp(form_key)"></p>
           </div>
 
           <div class="control">
-            <button class="button is-primary" type="submit" :disabled="!form_key || !form_value">
+            <button class="button is-primary" type="submit" :disabled="!form_key || '' === form_value">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-save"></i></span>
                 <span>Save</span>
@@ -94,7 +111,16 @@
               </div>
             </td>
             <td class="has-text-left" :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }">
-              {{ env.value }}
+              <template v-if="'bool' === env.type">
+                <span class="icon-text">
+                  <span class="icon">
+                    <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(env.value)"></i>
+                    <i class="fas fa-toggle-off" v-else></i>
+                  </span>
+                  <span>{{ fixBool(env.value) ? 'On' : 'Off' }}</span>
+                </span>
+              </template>
+              <template v-else>{{ env.value }}</template>
             </td>
             <td>
               <div class="field is-grouped" style="justify-content: center">
@@ -150,6 +176,8 @@ const envs = ref([])
 const toggleForm = ref(false)
 const form_key = ref()
 const form_value = ref()
+const form_type = ref()
+
 const file = ref('.env')
 const copyAPI = navigator.clipboard
 
@@ -186,7 +214,7 @@ const addVariable = async () => {
   }
 
   // -- check if value is empty or the same
-  if (!form_value.value) {
+  if ('' === form_value.value) {
     notification('error', 'Error', 'Value cannot be empty.', 5000)
     return
   }
@@ -212,20 +240,23 @@ const addVariable = async () => {
     return
   }
 
+  envs.value[envs.value.findIndex(i => i.key === key)] = json
+
   notification('success', 'Success', 'Environment variable successfully updated.', 5000)
-  await loadContent()
   return cancelForm();
 }
 
 const editEnv = (env) => {
   form_key.value = env.key
   form_value.value = env.value
+  form_type.value = env.type
   toggleForm.value = true
 }
 
 const cancelForm = () => {
   form_key.value = null
   form_value.value = null
+  form_type.value = null
   toggleForm.value = false
 }
 
@@ -251,6 +282,7 @@ const keyChanged = () => {
 
   let data = envs.value.filter(i => i.key === form_key.value)
   form_value.value = (data.length > 0) ? data[0].value : ''
+  form_type.value = (data.length > 0) ? data[0].type : 'string'
 }
 
 const getHelp = (key) => {
@@ -269,7 +301,10 @@ const getHelp = (key) => {
     text += ` Expected value: <code>${('bool' === data[0].type) ? 'bool, 0, 1' : data[0].type}</code>`
   }
 
-  return text;
+  return (data[0].deprecated) ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
 }
+
+const fixBool = (value) => [true, 'true', '1'].includes(value)
+
 const filteredRows = (rows) => rows.filter(i => i.value !== undefined);
 </script>

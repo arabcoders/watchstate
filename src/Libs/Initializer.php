@@ -197,39 +197,51 @@ final class Initializer
                 $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
             }
 
-            if (true === (bool)$response->getHeaderLine('X-Log-Response')) {
-                if ('OPTIONS' !== $request->getMethod()) {
-                    $this->write($request, Level::Info, $this->formatLog($request, $response));
-                }
-                $response = $response->withoutHeader('X-Log-Response');
+            if ('OPTIONS' !== $request->getMethod()) {
+                $this->write(
+                    $request,
+                    $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
+                    $this->formatLog($request, $response)
+                );
             }
-        } catch (Throwable $e) {
-            $httpException = true === ($e instanceof HttpException);
-            $routeException = true === ($e instanceof RouterHttpException);
-            $isNormal = true === ($httpException || $routeException);
-
-            $statusCode = $isNormal && ($e->getCode() >= 200 && $e->getCode() <= 499) ? $e->getCode() : 503;
+        } catch (HttpException|RouterHttpException $e) {
+            $realStatusCode = ($e instanceof RouterHttpException) ? $e->getStatusCode() : $e->getCode();
+            $statusCode = $realStatusCode >= 200 && $realStatusCode <= 499 ? $realStatusCode : 503;
 
             $response = addCors(
                 api_error(
-                    message: $isNormal ? "{$e->getCode()}: {$e->getMessage()}" : 'Unable to serve request.',
-                    httpCode: HTTP_STATUS::tryFrom($statusCode) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
+                    message: "{$realStatusCode}: {$e->getMessage()}",
+                    httpCode: HTTP_STATUS::tryFrom($realStatusCode) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
                 )
             );
 
-            if (!$isNormal || HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value === $statusCode) {
-                Container::get(LoggerInterface::class)->error(
-                    message: $e->getMessage(),
-                    context: [
-                        'kind' => $e::class,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'trace' => $e->getTrace(),
-                    ]
-                );
+            if (HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value === $statusCode) {
+                Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                    'kind' => $e::class,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTrace(),
+                ]);
             }
 
-            $this->write($request, Level::Info, $this->formatLog($request, $response));
+            $this->write(
+                $request,
+                $statusCode >= 400 ? Level::Error : Level::Info,
+                $this->formatLog($request, $response)
+            );
+        } catch (Throwable $e) {
+            $response = addCors(
+                api_error(message: 'Unable to serve request.', httpCode: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE)
+            );
+
+            Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                'kind' => $e::class,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTrace(),
+            ]);
+
+            $this->write($request, Level::Error, $this->formatLog($request, $response));
         }
 
         $emitter($response);
@@ -375,9 +387,6 @@ final class Initializer
         })();
 
         $response = $router->dispatch($realRequest);
-        if (!$response->hasHeader('X-Log-Response')) {
-            $response = $response->withHeader('X-Log-Response', '1');
-        }
 
         return $response->withHeader('Access-Control-Allow-Origin', '*')
             ->withHeader('Access-Control-Allow-Credentials', 'true');
@@ -560,6 +569,7 @@ final class Initializer
         $context = array_replace_recursive([
             'request' => [
                 'method' => $request->getMethod(),
+                'path' => $uri->getPath(),
                 'id' => ag($params, 'X_REQUEST_ID'),
                 'ip' => getClientIp($request),
                 'agent' => ag($params, 'HTTP_USER_AGENT'),
@@ -594,7 +604,7 @@ final class Initializer
             'uri' => $request->getUri()->getPath(),
             'protocol' => 'HTTP/' . $request->getProtocolVersion(),
             'status' => $response->getStatusCode(),
-            'size' => $response->getBody()->getSize(),
+            'size' => $response->getBody()->getSize() ?? 0,
             'agent' => ag($request->getServerParams(), 'HTTP_USER_AGENT', '-'),
             'refer' => (string)$refer,
             'message' => $message ?? '-',
