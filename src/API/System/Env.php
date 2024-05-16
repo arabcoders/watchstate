@@ -120,6 +120,8 @@ final class Env
             return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
+        $value = (string)$value;
+
         // -- check if the string contains space but not quoted.
         // symfony/dotenv throws an exception if the value contains a space but not quoted.
         if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
@@ -137,6 +139,10 @@ final class Env
                 'key' => $key,
                 'error' => $e->getMessage()
             ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if ('bool' === ag($spec, 'type')) {
+            settype($value, 'bool');
         }
 
         $this->envFile->set($key, $value)->persist();
