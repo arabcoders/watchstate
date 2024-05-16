@@ -141,8 +141,19 @@ final class Env
             ]), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if ('bool' === ag($spec, 'type')) {
-            settype($value, 'bool');
+        switch (ag($spec, 'type', 'string')) {
+            case 'bool':
+                settype($value, 'bool');
+                break;
+            case 'int':
+                settype($value, 'int');
+                break;
+            case 'float':
+                settype($value, 'float');
+                break;
+            default:
+                settype($value, 'string');
+                break;
         }
 
         $this->envFile->set($key, $value)->persist();

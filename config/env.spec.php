@@ -60,7 +60,7 @@ return (function () {
         [
             'key' => 'WS_LIBRARY_SEGMENT',
             'description' => 'How many items to request per a request to backends.',
-            'type' => 'string',
+            'type' => 'int',
         ],
         [
             'key' => 'WS_CACHE_URL',
