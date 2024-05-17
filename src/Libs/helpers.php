@@ -1442,3 +1442,55 @@ if (!function_exists('APIRequest')) {
         return new APIResponse($response->getStatusCode(), $response->getHeaders(), [], $response->getBody());
     }
 }
+
+if (!function_exists('getServerColumnSpec')) {
+    /**
+     * Returns the spec for the given server column.
+     *
+     * @param string $column
+     *
+     * @return array The spec for the given column. Otherwise, an empty array.
+     */
+    function getServerColumnSpec(string $column): array
+    {
+        static $_serverSpec = null;
+
+        if (null === $_serverSpec) {
+            $_serverSpec = require __DIR__ . '/../../config/servers.spec.php';
+        }
+
+        foreach ($_serverSpec as $spec) {
+            if (ag($spec, 'key') === $column) {
+                return $spec;
+            }
+        }
+
+        return [];
+    }
+}
+
+if (!function_exists('getEnvSpec')) {
+    /**
+     * Returns the spec for the given environment variable.
+     *
+     * @param string $env
+     *
+     * @return array The spec for the given column. Otherwise, an empty array.
+     */
+    function getEnvSpec(string $env): array
+    {
+        static $_envSpec = null;
+
+        if (null === $_envSpec) {
+            $_envSpec = require __DIR__ . '/../../config/env.spec.php';
+        }
+
+        foreach ($_envSpec as $spec) {
+            if (ag($spec, 'key') === $env) {
+                return $spec;
+            }
+        }
+
+        return [];
+    }
+}

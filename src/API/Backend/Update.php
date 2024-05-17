@@ -20,6 +20,16 @@ final class Update
 {
     use APITraits;
 
+    private const array IMMUTABLE_KEYS = [
+        'name',
+        'type',
+        'options',
+        'webhook',
+        'webhook.match',
+        'import',
+        'export',
+    ];
+
     private ConfigFile $backendFile;
 
     public function __construct()
@@ -72,18 +82,21 @@ final class Update
                 HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $spec = array_keys(require __DIR__ . '/../../../config/backend.spec.php');
-
         foreach ($data as $update) {
-            $key = ag($update, 'key');
             $value = ag($update, 'value');
 
-            if (null === $key) {
+            if (null === ($key = ag($update, 'key'))) {
                 return api_error('No key to update was present.', HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
-            if (false === in_array($key, $spec, true)) {
+            $spec = getServerColumnSpec($key);
+
+            if (empty($spec)) {
                 return api_error(r('Invalid key to update: {key}', ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            }
+
+            if (in_array($key, self::IMMUTABLE_KEYS, true)) {
+                return api_error(r('Key {key} is immutable.', ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
             $this->backendFile->set("{$name}.{$key}", $value);
@@ -125,14 +138,15 @@ final class Update
             ],
         ];
 
-        $spec = require __DIR__ . '/../../../config/backend.spec.php';
-
         foreach ($data->get('options', []) as $key => $value) {
-            if (false === ag_exists($spec, "options.{$key}") || null === $value) {
+            $key = "options.{$key}";
+            $spec = getServerColumnSpec($key);
+
+            if (empty($spec) || null === $value) {
                 continue;
             }
 
-            $newData = ag_set($newData, "options.{$key}", $value);
+            $newData = ag_set($newData, $key, $value);
         }
 
         return deepArrayMerge([$config, $client->fromRequest($newData, $request)]);

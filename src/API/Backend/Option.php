@@ -31,26 +31,39 @@ final class Option
             return api_error('Invalid value for option path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        if (false === str_starts_with($option, 'options.')) {
+            return api_error(
+                "Invalid option. Option path parameter keys must start with 'options.'",
+                HTTP_STATUS::HTTP_BAD_REQUEST
+            );
+        }
+
+        $spec = getServerColumnSpec($option);
+        if (empty($spec)) {
+            return api_error(r("Invalid option '{key}'.", ['key' => $option]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
         $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         if (false === $list->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $key = $name . '.options.' . $option;
-
-        if (false === $list->has($key)) {
-            return api_error(r("Option '{option}' not found in backend '{name}'.", [
+        if (false === $list->has($name . '.' . $option)) {
+            return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                 'option' => $option,
                 'name' => $name
             ]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $value = $list->get($key);
+        $value = $list->get($name . '.' . $option);
+        settype($value, ag($spec, 'type', 'string'));
+
         return api_response(HTTP_STATUS::HTTP_OK, [
-            'key' => $option,
+            'key' => $spec['key'],
             'value' => $value,
-            'type' => get_debug_type($value),
+            'type' => ag($spec, 'type', 'string'),
+            'description' => ag($spec, 'description', ''),
         ]);
     }
 
@@ -70,31 +83,38 @@ final class Option
         $data = DataUtil::fromRequest($request);
 
         if (null === ($option = $data->get('key'))) {
-            return api_error('Invalid value for key.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('No option key was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $spec = require __DIR__ . '/../../../config/backend.spec.php';
-        $found = false;
-
-        foreach ($spec as $supportedKey => $_) {
-            if (str_ends_with($supportedKey, 'options.' . $option)) {
-                $found = true;
-                break;
-            }
+        if (false === str_starts_with($option, 'options.')) {
+            return api_error(
+                "Invalid option key was given. Option keys must start with 'options.'",
+                HTTP_STATUS::HTTP_BAD_REQUEST
+            );
         }
 
-        if (false === $found) {
-            return api_error(r("Option '{key}' is not supported.", ['key' => $option]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        $spec = getServerColumnSpec($option);
+        if (empty($spec)) {
+            return api_error(r("Invalid option '{key}'.", ['key' => $option]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if ($list->has($name . '.' . $option)) {
+            return api_error(r("Option '{option}' already exists in backend '{name}'.", [
+                'option' => $option,
+                'name' => $name
+            ]), HTTP_STATUS::HTTP_CONFLICT);
         }
 
         $value = $data->get('value');
+        settype($value, ag($spec, 'type', 'string'));
 
-        $list->set($name . '.options.' . $option, $value)->persist();
+        $list->set($name . '.' . $option, $value)->persist();
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $option,
             'value' => $value,
-            'type' => get_debug_type($value),
+            'type' => ag($spec, 'type', 'string'),
+            'description' => ag($spec, 'description', ''),
         ]);
     }
 
@@ -109,34 +129,60 @@ final class Option
             return api_error('Invalid value for option parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        if (false === str_starts_with($option, 'options.')) {
+            return api_error(
+                "Invalid option key was given. Option keys must start with 'options.'",
+                HTTP_STATUS::HTTP_BAD_REQUEST
+            );
+        }
 
+        $spec = getServerColumnSpec($option);
+        if (empty($spec)) {
+            return api_error(r("Invalid option '{key}'.", ['key' => $option]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
         if (false === $list->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $key = $name . '.options.' . $option;
-        if (false === $list->has($key)) {
-            return api_error(r("Option '{option}' not found in backend '{name}'.", [
+        if (false === $list->has($name . '.' . $option)) {
+            return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                 'option' => $option,
                 'name' => $name
             ]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
+        if (true === (bool)ag($spec, 'immutable', false)) {
+            return api_error(r("Option '{option}' is immutable.", [
+                'option' => $option,
+            ]), HTTP_STATUS::HTTP_CONFLICT);
         }
 
         $data = DataUtil::fromRequest($request);
 
         if (null === ($value = $data->get('value'))) {
             return api_error(r("No value was provided for '{key}'.", [
-                'key' => $key,
+                'key' => $option,
             ]), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $list->set($key, $value)->persist();
+        settype($value, ag($spec, 'type', 'string'));
+
+        $oldValue = $list->get($name . '.' . $option);
+        if (null !== $oldValue) {
+            settype($oldValue, ag($spec, 'type', 'string'));
+        }
+
+        if ($oldValue !== $value) {
+            $list->set($name . '.' . $option, $value)->persist();
+        }
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $option,
             'value' => $value,
-            'type' => get_debug_type($value),
+            'type' => ag($spec, 'type', 'string'),
+            'description' => ag($spec, 'description', ''),
         ]);
     }
 
@@ -151,21 +197,40 @@ final class Option
             return api_error('Invalid value for option option parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        if (false === str_starts_with($option, 'options.')) {
+            return api_error(
+                "Invalid option key was given. Option keys must start with 'options.'",
+                HTTP_STATUS::HTTP_BAD_REQUEST
+            );
+        }
 
+        $spec = getServerColumnSpec($option);
+        if (empty($spec)) {
+            return api_error(r("Invalid option '{key}'.", ['key' => $option]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
         if (false === $list->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $key = $name . '.options.' . $option;
+        if (false === $list->has($name . '.' . $option)) {
+            return api_error(r("Option '{option}' not found in backend '{name}' config.", [
+                'option' => $option,
+                'name' => $name
+            ]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
 
-        $value = $list->get($key);
-        $list->delete($key)->persist();
+        $value = $list->get($name . '.' . $option);
+        settype($value, ag($spec, 'type', 'string'));
+
+        $list->delete($option)->persist();
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $option,
             'value' => $value,
-            'type' => get_debug_type($value),
+            'type' => ag($spec, 'type', 'string'),
+            'description' => ag($spec, 'description', ''),
         ]);
     }
 }
