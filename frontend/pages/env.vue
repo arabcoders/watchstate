@@ -29,63 +29,75 @@
 
     <div class="column is-12" v-if="toggleForm">
       <form id="env_add_form" @submit.prevent="addVariable">
-        <div class="field is-grouped-tablet">
-          <div class="control has-icons-left">
-            <div class="select is-fullwidth">
-              <select v-model="form_key" id="form_key" @change="keyChanged">
-                <option value="" disabled>Select Key</option>
-                <option v-for="env in envs" :key="env.key" :value="env.key">
-                  {{ env.key }}
-                </option>
-              </select>
+        <div class="card">
+          <header class="card-header">
+            <p class="card-header-title is-justify-center">Manage Environment Variable</p>
+          </header>
+          <div class="card-content">
+            <div class="field">
+              <label class="label" for="form_key">Environment key</label>
+              <div class="control has-icons-left">
+                <div class="select is-fullwidth">
+                  <select v-model="form_key" id="form_key" @change="keyChanged">
+                    <option value="" disabled>Select Key</option>
+                    <option v-for="env in envs" :key="env.key" :value="env.key">
+                      {{ env.key }}
+                    </option>
+                  </select>
+                </div>
+                <div class="icon is-left">
+                  <i class="fas fa-key"></i>
+                </div>
+              </div>
             </div>
-            <div class="icon is-left">
-              <i class="fas fa-key"></i>
-            </div>
-          </div>
-          <div class="control is-expanded has-icons-left">
-            <template v-if="'bool' === form_type">
-              <input id="form_switch" type="checkbox" class="switch is-success"
-                     :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
-              <label for="form_switch">
-                <template v-if="fixBool(form_value)">On</template>
-                <template v-else>Off</template>
+
+            <div class="field">
+              <label class="label">
+                Environment value
               </label>
-            </template>
-            <template v-else-if=" 'int' === form_type ">
-              <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
-                     pattern="[0-9]*" inputmode="numeric">
-              <div class="icon is-small is-left">
-                <i class="fas fa-font"></i>
+              <div class="control has-icons-left">
+                <template v-if="'bool' === form_type">
+                  <input id="form_switch" type="checkbox" class="switch is-success"
+                         :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
+                  <label for="form_switch">
+                    <template v-if="fixBool(form_value)">On</template>
+                    <template v-else>Off</template>
+                  </label>
+                </template>
+                <template v-else-if=" 'int' === form_type ">
+                  <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
+                         pattern="[0-9]*" inputmode="numeric">
+                  <div class="icon is-small is-left">
+                    <i class="fas fa-font"></i>
+                  </div>
+                </template>
+                <template v-else>
+                  <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
+                  <div class="icon is-small is-left"><i class="fas fa-font"></i></div>
+                </template>
+                <p class="help" v-html="getHelp(form_key)"></p>
               </div>
-            </template>
-            <template v-else>
-              <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
-              <div class="icon is-small is-left">
-                <i class="fas fa-font"></i>
-              </div>
-            </template>
-            <p class="help" v-html="getHelp(form_key)"></p>
+            </div>
           </div>
-
-          <div class="control">
-            <button class="button is-primary" type="submit" :disabled="!form_key || '' === form_value">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-save"></i></span>
-                <span>Save</span>
-              </span>
-            </button>
+          <div class="card-footer">
+            <div class="card-footer-item">
+              <button class="button is-fullwidth is-primary" type="submit" :disabled="!form_key || '' === form_value">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-save"></i></span>
+                  <span>Save</span>
+                </span>
+              </button>
+            </div>
+            <div class="card-footer-item">
+              <button class="button is-fullwidth is-danger" type="button"
+                      @click="form_key=null; form_value=null; toggleForm=false">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-cancel"></i></span>
+                  <span>Cancel</span>
+                </span>
+              </button>
+            </div>
           </div>
-
-          <div class="control">
-            <button class="button is-danger" type="button" @click="form_key=null; form_value=null; toggleForm=false">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-cancel"></i></span>
-                <span>Cancel</span>
-              </span>
-            </button>
-          </div>
-
         </div>
       </form>
     </div>
@@ -298,7 +310,7 @@ const getHelp = (key) => {
   let text = `${data[0].description}`;
 
   if (data[0].type) {
-    text += ` Expected value: <code>${('bool' === data[0].type) ? 'bool, 0, 1' : data[0].type}</code>`
+    text += ` Expects: <code>${data[0].type}</code>`
   }
 
   return (data[0].deprecated) ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text

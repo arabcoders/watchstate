@@ -3,7 +3,6 @@
     <div class="content">
       <ul>
         <li>
-
           Please, Beware <code>WatchState</code> is single user tool. It doesn't support syncing multiple users
           play state. Please read
           <NuxtLink target="_blank" v-text="'this link'"
