@@ -6,6 +6,7 @@ declare(strict_types=1);
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Libs\APIResponse;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
@@ -15,12 +16,15 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
 use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
+use App\Libs\Initializer;
 use App\Libs\Options;
 use App\Libs\Router;
 use App\Libs\Stream;
 use App\Libs\Uri;
 use Monolog\Utils;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
+use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
@@ -1289,6 +1293,16 @@ if (!function_exists('deepArrayMerge')) {
 }
 
 if (!function_exists('runCommand')) {
+    /**
+     * Run a command.
+     *
+     * @param string $command The command to run.
+     * @param array $args The command arguments.
+     * @param bool $asArray (Optional) Whether to return the output as an array.
+     * @param array $opts (Optional) Additional options.
+     *
+     * @return string|array The output of the command.
+     */
     function runCommand(string $command, array $args = [], bool $asArray = false, array $opts = []): string|array
     {
         $path = realpath(__DIR__ . '/../../');
@@ -1339,5 +1353,92 @@ if (!function_exists('tryCatch')) {
                 $finally();
             }
         }
+    }
+}
+
+if (!function_exists('APIRequest')) {
+    /**
+     * Make internal request to the API.
+     *
+     * @param string $method The request method.
+     * @param string $path The request path.
+     * @param array $json The request body.
+     * @param array $opts Additional options.
+     *
+     * @return APIResponse The response object.
+     */
+    function APIRequest(string $method, string $path, array $json = [], array $opts = []): APIResponse
+    {
+        $initializer = Container::get(Initializer::class);
+
+        $factory = new Psr17Factory();
+        $creator = new ServerRequestCreator($factory, $factory, $factory, $factory);
+
+        $uri = new Uri($path);
+
+        $server = [
+            'REQUEST_METHOD' => $method,
+            'SCRIPT_FILENAME' => realpath(__DIR__ . '/../../public/index.php'),
+            'REMOTE_ADDR' => '127.0.0.1',
+            'REQUEST_URI' => Config::get('api.prefix') . $uri->getPath(),
+            'SERVER_NAME' => 'localhost',
+            'SERVER_PORT' => 80,
+            'HTTP_USER_AGENT' => 'WatchState/' . getAppVersion() . ' (Internal API Request)',
+            ...ag($opts, 'server', []),
+        ];
+
+        $headers = [
+            'Host' => 'localhost',
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . Config::get('api.key'),
+            ...ag($opts, 'headers', []),
+        ];
+
+        $body = null;
+
+        if (!empty($json)) {
+            $body = json_encode($json);
+            $headers['CONTENT_TYPE'] = 'application/json';
+            $headers['CONTENT_LENGTH'] = strlen($body);
+            $server['CONTENT_TYPE'] = $headers['CONTENT_TYPE'];
+            $server['CONTENT_LENGTH'] = $headers['CONTENT_LENGTH'];
+        }
+
+        $query = ag($opts, 'query', []);
+        if (empty($query) && !empty($uri->getQuery())) {
+            parse_str($uri->getQuery(), $query);
+        }
+
+        if (!empty($query)) {
+            $server['QUERY_STRING'] = http_build_query($query);
+        }
+
+        $response = $initializer->http(
+            $creator->fromArrays(
+                server: $server,
+                headers: $headers,
+                get: $query,
+                post: $json,
+                body: $body
+            )
+        );
+
+        if ($response->getBody()->getSize() < 1) {
+            return new APIResponse($response->getStatusCode(), $response->getHeaders());
+        }
+
+        $response->getBody()->rewind();
+
+        if (false !== str_contains($response->getHeaderLine('Content-Type'), 'application/json')) {
+            try {
+                $json = json_decode($response->getBody()->getContents(), true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                $json = [];
+            }
+            $response->getBody()->rewind();
+            return new APIResponse($response->getStatusCode(), $response->getHeaders(), $json, $response->getBody());
+        }
+
+        return new APIResponse($response->getStatusCode(), $response->getHeaders(), [], $response->getBody());
     }
 }
