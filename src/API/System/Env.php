@@ -33,7 +33,7 @@ final class Env
                 continue;
             }
 
-            $info['value'] = $this->envFile->get($info['key']);
+            $info['value'] = $this->setType($info, $this->envFile->get($info['key']));
         }
 
         $this->envSpec = $spec;
@@ -42,6 +42,8 @@ final class Env
     #[Get(self::URL . '[/]', name: 'system.env')]
     public function envList(iRequest $request): iResponse
     {
+        $params = DataUtil::fromRequest($request, true);
+
         $list = [];
 
         foreach ($this->envSpec as $info) {
@@ -51,8 +53,12 @@ final class Env
             $list[] = $info;
         }
 
+        if (true === (bool)$params->get('set', false)) {
+            $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
+        }
+
         return api_response(HTTP_STATUS::HTTP_OK, [
-            'data' => $list,
+            'data' => array_values($list),
             'file' => Config::get('path') . '/config/.env',
         ]);
     }
@@ -77,7 +83,7 @@ final class Env
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $key,
-            'value' => $this->envFile->get($key),
+            'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
         ]);
@@ -102,7 +108,7 @@ final class Env
 
             return api_response(HTTP_STATUS::HTTP_OK, [
                 'key' => $key,
-                'value' => $this->envFile->get($key, fn() => env($key)),
+                'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
                 'type' => ag($spec, 'type'),
             ]);
@@ -111,26 +117,17 @@ final class Env
         $params = DataUtil::fromRequest($request);
 
         if (null === ($value = $params->get('value', null))) {
-            return api_error(r("No value was provided for '{key}'.", [
-                'key' => $key,
-            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error(r("No value was provided for '{key}'.", ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if ($value === $this->envFile->get($key)) {
+        if ($value === ag($spec, 'value')) {
             return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
-        $value = (string)$value;
-
-        // -- check if the string contains space but not quoted.
-        // symfony/dotenv throws an exception if the value contains a space but not quoted.
-        if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
-            return api_error(r("The value for '{key}' must be \"quoted\", as it contains a space.", [
-                'key' => $key,
-            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
-        }
 
         try {
+            $value = $this->setType($spec, $value);
+
             if (false === $this->checkValue($spec, $value)) {
                 throw new InvalidArgumentException(r("Invalid value for '{key}'.", ['key' => $key]));
             }
@@ -141,15 +138,11 @@ final class Env
             ]), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if ('bool' === ag($spec, 'type')) {
-            settype($value, 'bool');
-        }
-
         $this->envFile->set($key, $value)->persist();
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $key,
-            'value' => $this->envFile->get($key, fn() => env($key)),
+            'value' => $value,
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
         ]);
@@ -165,6 +158,14 @@ final class Env
      */
     private function checkValue(array $spec, mixed $value): bool
     {
+        if (true === is_string($value)) {
+            // -- check if the string contains space but not quoted.
+            // symfony/dotenv throws an exception if the value contains a space but not quoted.
+            if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
+                throw new InvalidArgumentException('The value must be "quoted string", as it contains a space.');
+            }
+        }
+
         if (ag_exists($spec, 'validate')) {
             return (bool)$spec['validate']($value);
         }
@@ -189,5 +190,15 @@ final class Env
         }
 
         return [];
+    }
+
+    private function setType($spec, mixed $value): mixed
+    {
+        return match (ag($spec, 'type', 'string')) {
+            'bool' => (bool)$value,
+            'int' => (int)$value,
+            'float' => (float)$value,
+            default => (string)$value,
+        };
     }
 }

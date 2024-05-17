@@ -268,7 +268,7 @@ const formatDuration = (milliseconds) => {
 
 const copyText = (str) => {
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(data.value.join('\n')).then(() => {
+        navigator.clipboard.writeText(str).then(() => {
             notification('success', 'Success', 'Report has been copied to clipboard.')
         }).catch((error) => {
             console.error('Failed to copy: ', error)
