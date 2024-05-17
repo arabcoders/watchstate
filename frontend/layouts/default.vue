@@ -93,7 +93,6 @@
       </div>
     </nav>
     <div :class="{'is-full-mask':maskAll}">
-
       <div class="columns is-multiline" v-if="showConnection">
         <div class="column is-12 mt-2">
           <div class="card">
@@ -224,35 +223,16 @@
       </template>
 
       <div class="columns is-multiline mt-3">
-        <div class="column is-12 is-hidden-mobile">
-          <div class="content">
-            <Message v-if="show_page_info" title="Information">
-              <button class="delete" @click="show_page_info = false"></button>
-              If you have question, or want clarification on something, or just want to chat with other users, you are
-              welcome to join our
-              <NuxtLink href="https://discord.gg/haUXHJyj6Y" target="_blank">
-                <span class="icon-text is-underlined">
-                  <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
-                  <span>Discord server</span>
-                </span>
-              </NuxtLink>
-              . For real bug reports, feature requests, or contributions, please visit the
-              <NuxtLink href="https://github.com/arabcoders/watchstate/issues/new/choose" target="_blank">
-                <span class="icon-text is-underlined">
-                  <span class="icon"><i class="fas fa-brands fa-github"></i></span>
-                  <span>GitHub repository</span>
-                </span>
-              </NuxtLink>
-              .
-            </Message>
-          </div>
-        </div>
         <div class="column is-6 is-12-mobile has-text-left">
           {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
-          <template v-if="!show_page_info">
-            <span class="is-hidden-mobile">
-              - <a href="javascript:void(0)" @click="show_page_info=true">Show Info</a>
-            </span>
+          <template v-if="!show_page_tips">
+            -
+            <a href="javascript:void(0)" @click="show_page_tips=true">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-lines-leaning"></i></span>
+                <span>Show hidden tips</span>
+              </span>
+            </a>
           </template>
         </div>
       </div>
@@ -268,7 +248,7 @@ import 'assets/css/bulma.css'
 import 'assets/css/style.css'
 import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
-import request from "~/utils/request.js";
+import request from '~/utils/request.js'
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
@@ -276,8 +256,8 @@ const showConnection = ref(false)
 const api_url = useStorage('api_url', window.location.origin)
 const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
-const show_page_info = useStorage('show_page_info', true)
 const maskAll = useStorage('page_mask', false)
+const show_page_tips = useStorage('show_page_tips', true)
 
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')

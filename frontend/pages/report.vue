@@ -11,25 +11,27 @@
           </p>
         </div>
       </div>
-      <div class="subtitle">This page shows basic information about the system.</div>
+      <div class="subtitle is-hidden-mobile">
+        This page shows basic information about the various components of the system.
+      </div>
     </div>
 
     <div class="column is-12">
-
-      <Message message_class="is-warning" title="Warning" v-if="show_report_warning">
-        <p>While we try to make sure no sensitive information is leaked via the report, it's possible that
-          something might be missed. Please review the report before posting it. If you notice
-          any sensitive information, please report it to the developers. so we can fix it.</p>
+      <template v-if="show_report_warning">
+        <Message message_class="has-background-warning-80 has-text-dark" title="Warning">
+          <p>While we try to make sure no sensitive information is leaked via the report, it's possible that
+            something might be missed. Please review the report before posting it. If you notice
+            any sensitive information, please report it to the developers. so we can fix it.</p>
+        </Message>
         <div class="mt-4">
           <button class="button is-block is-fullwidth is-primary" @click="show_report_warning = false">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-exclamation"></i></span>
-              <span>I Understand, show report.</span>
+              <span class="icon"><i class="fas fa-thumbs-up"></i></span>
+              <span>I Understand. Show me the report.</span>
             </span>
           </button>
         </div>
-      </Message>
-
+      </template>
       <Message message_class="is-info" v-if="!show_report_warning && data.length < 1">
         <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
         <span>Generating the report. Please wait...</span>

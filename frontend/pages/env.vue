@@ -31,11 +31,11 @@
       <form id="env_add_form" @submit.prevent="addVariable">
         <div class="card">
           <header class="card-header">
-            <p class="card-header-title is-justify-center">Manage Environment Variable</p>
+            <p class="card-header-title is-unselectable is-justify-center">Manage Environment Variable</p>
           </header>
           <div class="card-content">
             <div class="field">
-              <label class="label" for="form_key">Environment key</label>
+              <label class="label is-unselectable" for="form_key">Environment key</label>
               <div class="control has-icons-left">
                 <div class="select is-fullwidth">
                   <select v-model="form_key" id="form_key" @change="keyChanged">
@@ -52,14 +52,12 @@
             </div>
 
             <div class="field">
-              <label class="label">
-                Environment value
-              </label>
+              <label class="label is-unselectable" for="form_value">Environment value</label>
               <div class="control has-icons-left">
                 <template v-if="'bool' === form_type">
-                  <input id="form_switch" type="checkbox" class="switch is-success"
+                  <input id="form_value" type="checkbox" class="switch is-success"
                          :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
-                  <label for="form_switch">
+                  <label for="form_value">
                     <template v-if="fixBool(form_value)">On</template>
                     <template v-else>Off</template>
                   </label>
@@ -117,9 +115,7 @@
             <td class="has-text-left">
               {{ env.key }}
               <div class="is-pulled-right" v-if="env.mask">
-                <span class="icon is-small has-tooltip" v-tooltip="'The value of this key is masked.'">
-                  <i class="fas fa-lock"></i>
-                </span>
+                <span class="icon is-small"><i class="fas fa-lock"></i></span>
               </div>
             </td>
             <td class="has-text-left" :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }">
@@ -138,23 +134,17 @@
               <div class="field is-grouped" style="justify-content: center">
                 <div class="control">
                   <button class="button is-small is-primary" @click="editEnv(env)">
-                    <span class="icon">
-                      <i class="fas fa-edit"></i>
-                    </span>
+                    <span class="icon"><i class="fas fa-edit"></i></span>
                   </button>
                 </div>
-                <div class="control" v-if="copyAPI">
-                  <button class="button is-small is-warning" @click="copyValue(env)">
-                    <span class="icon">
-                      <i class="fas fa-copy"></i>
-                    </span>
+                <div class="control">
+                  <button class="button is-small is-warning" @click="copyText(env.value)">
+                    <span class="icon"><i class="fas fa-copy"></i></span>
                   </button>
                 </div>
                 <div class="control">
                   <button class="button is-small is-danger" @click="deleteEnv(env)">
-                    <span class="icon">
-                      <i class="fas fa-trash"></i>
-                    </span>
+                    <span class="icon"><i class="fas fa-trash"></i></span>
                   </button>
                 </div>
               </div>
@@ -165,22 +155,26 @@
       </div>
     </div>
 
-    <div class="column is-12 is-hidden-mobile" v-if="envs">
-      <div class="content">
-        <ul>
-          <li>
-            Some variables values are masked for security reasons. If you need to see the value, click on edit.
-          </li>
-        </ul>
-      </div>
+    <div class="column is-12 is-hidden-mobile" v-if="envs && show_page_tips">
+      <Message title="Tips" message_class="has-background-info-90 has-text-dark">
+        <button class="delete" @click="show_page_tips=false"></button>
+        <div class="content">
+          <ul>
+            <li>
+              Some variables values are masked for security reasons. You will see <i class="fa fa-lock"></i> next to
+              them. If you need to see the value, click on edit.
+            </li>
+          </ul>
+        </div>
+      </Message>
     </div>
-
   </div>
 </template>
 
 <script setup>
 import request from '~/utils/request.js'
-import {awaitElement, notification} from '~/utils/index.js'
+import {awaitElement, copyText, notification} from '~/utils/index.js'
+import {useStorage} from "@vueuse/core";
 
 useHead({title: 'Environment Variables'})
 
@@ -189,9 +183,9 @@ const toggleForm = ref(false)
 const form_key = ref()
 const form_value = ref()
 const form_type = ref()
+const show_page_tips = useStorage('show_page_tips', true)
 
 const file = ref('.env')
-const copyAPI = navigator.clipboard
 
 const loadContent = async () => {
   envs.value = []
@@ -271,8 +265,6 @@ const cancelForm = () => {
   form_type.value = null
   toggleForm.value = false
 }
-
-const copyValue = (env) => navigator.clipboard.writeText(env.value)
 
 watch(toggleForm, (value) => {
   if (!value) {
