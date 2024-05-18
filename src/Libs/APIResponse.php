@@ -14,7 +14,7 @@ use Psr\Http\Message\StreamInterface;
 final readonly class APIResponse
 {
     public function __construct(
-        public int $status,
+        public HTTP_STATUS $status,
         public array $headers = [],
         public array $body = [],
         public StreamInterface|null $stream = null

@@ -1383,14 +1383,13 @@ if (!function_exists('APIRequest')) {
             'REQUEST_URI' => Config::get('api.prefix') . $uri->getPath(),
             'SERVER_NAME' => 'localhost',
             'SERVER_PORT' => 80,
-            'HTTP_USER_AGENT' => 'WatchState/' . getAppVersion() . ' (Internal API Request)',
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (WatchState/' . getAppVersion() . '; Internal API Request)',
             ...ag($opts, 'server', []),
         ];
 
         $headers = [
             'Host' => 'localhost',
             'Accept' => 'application/json',
-            'Authorization' => 'Bearer ' . Config::get('api.key'),
             ...ag($opts, 'headers', []),
         ];
 
@@ -1405,8 +1404,10 @@ if (!function_exists('APIRequest')) {
         }
 
         $query = ag($opts, 'query', []);
-        if (empty($query) && !empty($uri->getQuery())) {
-            parse_str($uri->getQuery(), $query);
+
+        if (!empty($uri->getQuery())) {
+            parse_str($uri->getQuery(), $queryFromPath);
+            $query = deepArrayMerge([$queryFromPath, $query]);
         }
 
         if (!empty($query)) {
@@ -1420,11 +1421,13 @@ if (!function_exists('APIRequest')) {
                 get: $query,
                 post: $json,
                 body: $body
-            )
+            )->withAttribute('INTERNAL_REQUEST', true)
         );
 
+        $statusCode = HTTP_STATUS::tryFrom($response->getStatusCode()) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE;
+
         if ($response->getBody()->getSize() < 1) {
-            return new APIResponse($response->getStatusCode(), $response->getHeaders());
+            return new APIResponse($statusCode, $response->getHeaders());
         }
 
         $response->getBody()->rewind();
@@ -1436,10 +1439,10 @@ if (!function_exists('APIRequest')) {
                 $json = [];
             }
             $response->getBody()->rewind();
-            return new APIResponse($response->getStatusCode(), $response->getHeaders(), $json, $response->getBody());
+            return new APIResponse($statusCode, $response->getHeaders(), $json, $response->getBody());
         }
 
-        return new APIResponse($response->getStatusCode(), $response->getHeaders(), [], $response->getBody());
+        return new APIResponse($statusCode, $response->getHeaders(), [], $response->getBody());
     }
 }
 

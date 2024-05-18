@@ -37,6 +37,7 @@ return (function () {
             'pattern_match' => [
                 'backend' => '[a-zA-Z0-9_-]+',
             ],
+            'logInternal' => (bool)env('WS_API_LOG_INTERNAL', false),
         ],
         'webui' => [
             'enabled' => (bool)env('WEBUI_ENABLED', env('WS_WEBUI_ENABLED', true)),

@@ -256,7 +256,12 @@ class Command extends BaseCommand
                         if (true === is_array($leaf)) {
                             continue;
                         }
+
                         $subItem[$key] = $leaf;
+
+                        if (ag_exists($item, 'type') && 'bool' === ag($item, 'type', 'string')) {
+                            $subItem[$key] = $leaf ? 'true' : 'false';
+                        }
                     }
 
                     $list[] = $subItem;

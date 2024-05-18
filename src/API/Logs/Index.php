@@ -170,11 +170,10 @@ final class Index
 
         $stream->rewind();
 
-        return new Response(
-            status: HTTP_STATUS::HTTP_OK->value,
-            headers: ['Content-Type' => 'text/plain'],
-            body: $stream
-        );
+        return new Response(status: HTTP_STATUS::HTTP_OK->value, headers: [
+            'Content-Type' => 'text/plain',
+            'X-No-AccessLog' => '1'
+        ], body: $stream);
     }
 
     private function download(string $filePath): iResponse

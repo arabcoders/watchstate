@@ -197,17 +197,20 @@ final class Initializer
 
         try {
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
+
             if (false === $response->hasHeader('X-Application-Version')) {
                 $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
             }
 
-            if ('OPTIONS' !== $request->getMethod()) {
-                $this->write(
-                    $request,
-                    $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
-                    $this->formatLog($request, $response)
-                );
+            if ($response->hasHeader('X-No-AccessLog') || 'OPTIONS' === $request->getMethod()) {
+                return $response->withoutHeader('X-No-AccessLog');
             }
+
+            $this->write(
+                $request,
+                $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
+                $this->formatLog($request, $response)
+            );
         } catch (HttpException|RouterHttpException $e) {
             $realStatusCode = ($e instanceof RouterHttpException) ? $e->getStatusCode() : $e->getCode();
             $statusCode = $realStatusCode >= 200 && $realStatusCode <= 499 ? $realStatusCode : 503;
