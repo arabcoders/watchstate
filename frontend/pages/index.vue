@@ -78,7 +78,7 @@
       </code>
     </div>
 
-    <div class="column is-12 is-hidden-mobile">
+    <div class="column is-12">
       <div class="content">
         <Message message_class="has-background-info-90 has-text-dark">
           If you have question, or want clarification on something, or just want to chat with other users, you are
@@ -114,7 +114,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration} from "../utils/index.js";
+import {formatDuration} from '../utils/index.js'
 
 useHead({title: 'Index'})
 

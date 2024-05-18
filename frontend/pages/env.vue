@@ -155,7 +155,7 @@
       </div>
     </div>
 
-    <div class="column is-12 is-hidden-mobile" v-if="envs && show_page_tips">
+    <div class="column is-12" v-if="envs && show_page_tips">
       <Message title="Tips" message_class="has-background-info-90 has-text-dark">
         <button class="delete" @click="show_page_tips=false"></button>
         <div class="content">
@@ -174,7 +174,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import {awaitElement, copyText, notification} from '~/utils/index.js'
-import {useStorage} from "@vueuse/core";
+import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Environment Variables'})
 
