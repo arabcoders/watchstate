@@ -220,23 +220,54 @@
                   <span>Additional options...</span>
                 </span>
               </label>
-              <div class="columns is-multiline is-mobile" v-if="showOptions && backend.options">
-                <template v-for="(val, key) in backend.options" :key="'bo-'+key">
+              <template v-if="showOptions">
+                <div class="columns is-multiline is-mobile">
+                  <template v-for="(val, key) in backend?.options" :key="'bo-'+key">
+                    <div class="column is-5">
+                      <input type="text" class="input" :value="key" readonly disabled>
+                    </div>
+                    <div class="column is-6">
+                      <input type="text" class="input" v-model="backend.options[key]" required>
+                    </div>
+                    <div class="column is-1">
+                      <button class="button is-danger" @click.prevent="removeOption(key)">
+                        <span class="icon">
+                          <i class="fas fa-trash"></i>
+                        </span>
+                      </button>
+                    </div>
+                  </template>
+                </div>
+                <div class="columns is-multiline is-mobile">
+                  <div class="column is-12">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-plus"></i></span>
+                      <span>Add new option</span>
+                    </span>
+                  </div>
                   <div class="column is-5">
-                    <input type="text" class="input" :value="key" readonly disabled>
+                    <div class="select is-fullwidth">
+                      <select v-model="selectedOption">
+                        <option value="">Select Option</option>
+                        <option v-for="option in filteredOptions(optionsList)"
+                                :key="'opt-'+option.key" :value="option.key">
+                          {{ option.key }}
+                        </option>
+                      </select>
+                    </div>
                   </div>
                   <div class="column is-6">
-                    <input type="text" class="input" v-model="backend.options[key]">
+                    {{ selectedOptionHelp }}
                   </div>
                   <div class="column is-1">
-                    <button class="button is-danger" @click.prevent="removeOption(key)">
+                    <button class="button is-primary" @click.prevent="addOption">
                       <span class="icon">
-                        <i class="fas fa-trash"></i>
+                        <i class="fas fa-add"></i>
                       </span>
                     </button>
                   </div>
-                </template>
-              </div>
+                </div>
+              </template>
             </div>
           </div>
           <div class="card-footer">
@@ -275,6 +306,14 @@ const isLoading = ref(true)
 const users = ref([])
 const usersLoading = ref(false)
 const uuidLoading = ref(false)
+const optionsList = ref([])
+const selectedOption = ref('')
+const newOptions = ref({})
+
+const selectedOptionHelp = computed(() => {
+  const option = optionsList.value.find(v => v.key === selectedOption.value)
+  return option ? option.description : ''
+});
 
 useHead({title: 'Backends - Edit: ' + id})
 
@@ -307,10 +346,15 @@ const saveContent = async () => {
 }
 
 const removeOption = async (key) => {
-  if (!confirm(`Are you sure you want to remove this option [${key}]?`)) {
+  if (newOptions.value[key]) {
+    delete newOptions.value[key]
+    delete backend.value.options[key]
     return
   }
 
+  if (!confirm(`Are you sure you want to remove this option [${key}]?`)) {
+    return
+  }
   const response = await request(`/backend/${id}/option/options.${key}`, {method: 'DELETE'})
 
   if (!response.ok) {
@@ -322,6 +366,18 @@ const removeOption = async (key) => {
   notification('success', 'Information', `Option [${key}] removed successfully.`)
   delete backend.value.options[key]
 }
+const addOption = async () => {
+  if (!selectedOption.value) {
+    notification('error', 'Error', 'Please select an option to add.')
+    return
+  }
+
+  backend.value.options = backend.value.options || {}
+  backend.value.options[selectedOption.value] = ''
+  newOptions.value[selectedOption.value] = true
+  selectedOption.value = ''
+}
+
 
 const getUUid = async () => {
   const required_values = ['type', 'token', 'url'];
@@ -391,6 +447,32 @@ const getUsers = async (showAlert = true) => {
   }
 
   users.value = json
+}
+
+watch(showOptions, async (value) => {
+  if (!value) {
+    return
+  }
+  if (optionsList.value.length > 0) {
+    return
+  }
+
+  const response = await request(`/backends/spec`)
+  const json = await response.json()
+  json.forEach(v => {
+    if (false === v.key.startsWith('options.')) {
+      return
+    }
+    v['key'] = v.key.replace('options.', '')
+    optionsList.value.push(v)
+  })
+});
+
+const filteredOptions = (options) => {
+  if (!options) {
+    return []
+  }
+  return options.filter(v => !backend.value.options[v.key] && !newOptions.value[v.key])
 }
 
 onMounted(async () => await loadContent())
