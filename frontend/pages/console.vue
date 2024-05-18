@@ -62,7 +62,7 @@
       </form>
     </div>
     <div class="column is-12">
-        <pre ref="outputConsole" style="min-height: 60vh;max-height:80vh; overflow-y: scroll"
+        <pre ref="outputConsole" style="min-height: 60vh;max-height:70vh; overflow-y: scroll"
         ><code><span v-for="(item, index) in response" :key="'log_line-'+index" class="is-block">{{
             item
           }}</span></code></pre>

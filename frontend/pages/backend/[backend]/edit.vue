@@ -311,9 +311,16 @@ const removeOption = async (key) => {
     return
   }
 
-  delete backend.value.options[key]
+  const response = await request(`/backend/${id}/option/options.${key}`, {method: 'DELETE'})
 
-  const response = await request(`/backend/${id}/option/${key}`, {method: 'DELETE'})
+  if (!response.ok) {
+    const json = await response.json()
+    notification('error', 'Error', `Failed to remove the option. (${json.error.code}: ${json.error.message}).`)
+    return
+  }
+
+  notification('success', 'Information', `Option [${key}] removed successfully.`)
+  delete backend.value.options[key]
 }
 
 const getUUid = async () => {

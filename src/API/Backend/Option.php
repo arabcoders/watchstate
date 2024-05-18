@@ -224,7 +224,7 @@ final class Option
         $value = $list->get($name . '.' . $option);
         settype($value, ag($spec, 'type', 'string'));
 
-        $list->delete($option)->persist();
+        $list->delete($name . '.' . $option)->persist();
 
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $option,
