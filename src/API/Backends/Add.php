@@ -148,14 +148,15 @@ final class Add
             'options' => [],
         ];
 
-        $spec = require __DIR__ . '/../../../config/backend.spec.php';
-
         foreach ($data->get('options', []) as $key => $value) {
-            if (false === ag_exists($spec, "options.{$key}") || null === $value) {
+            $key = "options.{$key}";
+            $spec = getServerColumnSpec($key);
+
+            if (empty($spec) || null === $value) {
                 continue;
             }
 
-            $config = ag_set($config, "options.{$key}", $value);
+            $config = ag_set($config, $key, $value);
         }
 
         return $client->fromRequest($config, $request);

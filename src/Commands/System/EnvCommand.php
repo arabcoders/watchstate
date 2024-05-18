@@ -7,8 +7,7 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\EnvFile;
-use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -22,8 +21,6 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
 final class EnvCommand extends Command
 {
     public const string ROUTE = 'system:env';
-
-    public const array EXEMPT_KEYS = ['HTTP_PORT', 'TZ'];
 
     /**
      * Configure the command.
@@ -58,8 +55,6 @@ final class EnvCommand extends Command
                     * the value is usually simple type, usually string unless otherwise stated.
                     * the key SHOULD attempt to mirror the key path in default config, If not applicable or otherwise impossible it
                     should then use an approximate path.
-
-                    * The following keys are exempt from the rules: [<flag>{exempt_keys}</flag>].
 
                     -------
                     <notice>[ FAQ ]</notice>
@@ -98,7 +93,6 @@ final class EnvCommand extends Command
                     HELP,
                     [
                         'path' => after(Config::get('path') . '/config', ROOT_PATH),
-                        'exempt_keys' => implode(', ', self::EXEMPT_KEYS),
                     ]
                 )
             );
@@ -115,109 +109,71 @@ final class EnvCommand extends Command
     protected function runCommand(iInput $input, iOutput $output): int
     {
         if ($input->getOption('list')) {
-            return $this->handleEnvList($input, $output);
+            return $this->handleEnvList($input, $output, true);
         }
 
         if ($input->getOption('key')) {
             return $this->handleEnvUpdate($input, $output);
         }
-        $mode = $input->getOption('output');
-        $keys = [];
 
-        foreach (getenv() as $key => $val) {
-            if (false === str_starts_with($key, 'WS_') && false === in_array($key, self::EXEMPT_KEYS)) {
-                continue;
-            }
-
-            $keys[$key] = $val;
-        }
-
-        if ('table' === $mode) {
-            $list = [];
-
-            foreach ($keys as $key => $val) {
-                $list[] = ['key' => $key, 'value' => $val];
-            }
-
-            $keys = $list;
-        }
-
-        $this->displayContent($keys, $output, $mode);
-
-        return self::SUCCESS;
+        return $this->handleEnvList($input, $output, false);
     }
 
     private function handleEnvUpdate(iInput $input, iOutput $output): int
     {
         $key = strtoupper($input->getOption('key'));
 
-        if (false === str_starts_with($key, 'WS_')) {
-            $output->writeln(r("<error>Invalid key '{key}'. Key must start with 'WS_'.</error>", ['key' => $key]));
-            return self::FAILURE;
-        }
-
         if (!$input->getOption('set') && !$input->getOption('delete')) {
             $output->writeln((string)env($key, ''));
             return self::SUCCESS;
         }
 
-        $envFile = new EnvFile($input->getOption('envfile'), create: true);
-
         if (true === (bool)$input->getOption('delete')) {
-            $envFile->remove($key);
+            $response = APIRequest('DELETE', '/system/env/' . $key);
         } else {
-            $spec = $this->getSpec($key);
-
-            if (empty($spec)) {
-                $output->writeln(
-                    r(
-                        "<error>Invalid key '{key}' was used. Run the command with --list flag to see list of supported vars.</error>",
-                        ['key' => $key]
-                    )
-                );
-                return self::FAILURE;
-            }
-
-            try {
-                if (!$this->checkValue($spec, $input->getOption('set'))) {
-                    $output->writeln(r("<error>Invalid value for '{key}'.</error>", ['key' => $key]));
-                    return self::FAILURE;
-                }
-            } catch (InvalidArgumentException $e) {
-                $output->writeln(r("<error>Value validation for '{key}' failed. {message}</error>", [
-                    'key' => $key,
-                    'message' => $e->getMessage()
-                ]));
-                return self::FAILURE;
-            }
-
-            $envFile->set($key, $input->getOption('set'));
+            $response = APIRequest('POST', '/system/env/' . $key, ['value' => $input->getOption('set')]);
         }
 
-        $output->writeln(r("<info>Key '{key}' {operation} successfully.</info>", [
-            'key' => $key,
-            'operation' => (true === (bool)$input->getOption('delete')) ? 'deleted' : 'updated'
-        ]));
+        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                'key' => $key,
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
+            return self::FAILURE;
+        }
 
-        $envFile->persist();
+        $output->writeln(r("<info>Key '{key}' was {action}.</info>", [
+            'key' => $key,
+            'action' => true === (bool)$input->getOption('delete') ? 'deleted' : 'updated',
+        ]));
 
         return self::SUCCESS;
     }
 
-    private function handleEnvList(iInput $input, iOutput $output): int
+    private function handleEnvList(iInput $input, iOutput $output, bool $all = true): int
     {
-        $spec = require __DIR__ . '/../../../config/env.spec.php';
+        $query = [];
+
+        if (false === $all) {
+            $query['set'] = 1;
+        }
+
+        $response = APIRequest('GET', '/system/env', opts: [
+            'query' => $query,
+        ]);
 
         $keys = [];
 
         $mode = $input->getOption('output');
 
-        foreach ($spec as $info) {
+        $data = ag($response->body, 'data', []);
+        foreach ($data as $info) {
             $item = [
                 'key' => $info['key'],
                 'description' => $info['description'],
                 'type' => $info['type'],
-                'value' => env($info['key'], 'Not Set')
+                'value' => ag($info, 'value', 'Not set'),
             ];
 
             $keys[] = $item;
@@ -227,44 +183,4 @@ final class EnvCommand extends Command
 
         return self::SUCCESS;
     }
-
-    private function getSpec(string $key): array
-    {
-        $spec = require __DIR__ . '/../../../config/env.spec.php';
-
-        foreach ($spec as $info) {
-            if ($info['key'] !== $key) {
-                continue;
-            }
-            return $info;
-        }
-
-        return [];
-    }
-
-    /**
-     * Check if the value is valid.
-     *
-     * @param array $spec the specification for the key.
-     * @param mixed $value the value to check.
-     *
-     * @return bool true if the value is valid, false otherwise.
-     */
-    private function checkValue(array $spec, mixed $value): bool
-    {
-        if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
-            throw new InvalidArgumentException(
-                r("The value for '{key}' must be \"quoted string\", as it contains a space.", [
-                    'key' => ag($spec, 'key'),
-                ])
-            );
-        }
-
-        if (ag_exists($spec, 'validate')) {
-            return (bool)$spec['validate']($value);
-        }
-
-        return true;
-    }
-
 }

@@ -26,7 +26,7 @@ use Symfony\Component\Yaml\Yaml;
 #[Cli(command: self::ROUTE)]
 final class ViewCommand extends Command
 {
-    public const ROUTE = 'config:view';
+    public const string ROUTE = 'config:view';
 
     /**
      * Configure the command.
@@ -177,8 +177,10 @@ final class ViewCommand extends Command
 
             $suggest = [];
 
-            foreach (require __DIR__ . '/../../../config/backend.spec.php' as $name => $val) {
-                if (true === $val && (empty($currentValue) || str_starts_with($name, $currentValue))) {
+            foreach (require __DIR__ . '/../../../config/servers.spec.php' as $column) {
+                $name = ag($column, 'key', '');
+                $visible = (bool)ag($column, 'visible', false);
+                if ($visible && (empty($currentValue) || str_starts_with($name, $currentValue))) {
                     $suggest[] = $name;
                 }
             }

@@ -35,18 +35,22 @@ class ParseJsonBodyMiddleware implements MiddlewareInterface
 
     private function parse(ServerRequestInterface $request): ServerRequestInterface
     {
-        $rawBody = (string)$request->getBody();
+        $body = (string)$request->getBody();
 
-        if (empty($rawBody)) {
-            return $request->withAttribute('rawBody', $rawBody)->withParsedBody(null);
+        if ($request->getBody()->isSeekable()) {
+            $request->getBody()->rewind();
         }
 
-        $parsedBody = json_decode($rawBody, true);
-
-        if (JSON_ERROR_NONE !== json_last_error()) {
-            throw new RuntimeException(sprintf('Error when parsing JSON request body: %s', json_last_error_msg()));
+        if (empty($body)) {
+            return $request;
         }
 
-        return $request->withAttribute('rawBody', $rawBody)->withParsedBody($parsedBody);
+        try {
+            return $request->withParsedBody(json_decode($body, true, flags: JSON_THROW_ON_ERROR));
+        } catch (\JsonException $e) {
+            throw new RuntimeException(r('Error when parsing JSON request body. {error}', [
+                'error' => $e->getMessage()
+            ]), $e->getCode(), $e);
+        }
     }
 }

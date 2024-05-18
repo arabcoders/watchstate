@@ -76,6 +76,9 @@ final class Initializer
             Container::add($name, $definition);
         }
 
+        // -- Add the Initializer class to the container.
+        Container::add(self::class, ['shared' => true, 'class' => $this]);
+
         $this->cliOutput = new ConsoleOutput();
         $this->cli = new Cli(Container::getContainer());
     }
@@ -179,13 +182,14 @@ final class Initializer
      * Run the application in HTTP context.
      *
      * @param iRequest|null $request If null, the request will be created from globals.
-     * @param callable(iResponse):void|null $emitter If null, the emitter will be created from globals.
      * @param null|Closure(iRequest): iResponse $fn If null, the default HTTP server will be used.
+     *
+     * @return iResponse Returns the HTTP response.
      */
-    public function http(iRequest|null $request = null, callable|null $emitter = null, Closure|null $fn = null): void
-    {
-        $emitter = $emitter ?? new Emitter();
-
+    public function http(
+        iRequest|null $request = null,
+        Closure|null $fn = null
+    ): iResponse {
         if (null === $request) {
             $factory = new Psr17Factory();
             $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))->fromGlobals();
@@ -193,26 +197,27 @@ final class Initializer
 
         try {
             $response = null === $fn ? $this->defaultHttpServer($request) : $fn($request);
+
             if (false === $response->hasHeader('X-Application-Version')) {
                 $response = $response->withAddedHeader('X-Application-Version', getAppVersion());
             }
 
-            if ('OPTIONS' !== $request->getMethod()) {
-                $this->write(
-                    $request,
-                    $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
-                    $this->formatLog($request, $response)
-                );
+            if ($response->hasHeader('X-No-AccessLog') || 'OPTIONS' === $request->getMethod()) {
+                return $response->withoutHeader('X-No-AccessLog');
             }
+
+            $this->write(
+                $request,
+                $response->getStatusCode() >= 400 ? Level::Error : Level::Info,
+                $this->formatLog($request, $response)
+            );
         } catch (HttpException|RouterHttpException $e) {
             $realStatusCode = ($e instanceof RouterHttpException) ? $e->getStatusCode() : $e->getCode();
             $statusCode = $realStatusCode >= 200 && $realStatusCode <= 499 ? $realStatusCode : 503;
 
-            $response = addCors(
-                api_error(
-                    message: "{$realStatusCode}: {$e->getMessage()}",
-                    httpCode: HTTP_STATUS::tryFrom($realStatusCode) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
-                )
+            $response = api_error(
+                message: "{$realStatusCode}: {$e->getMessage()}",
+                httpCode: HTTP_STATUS::tryFrom($realStatusCode) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
             );
 
             if (HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value === $statusCode) {
@@ -230,9 +235,7 @@ final class Initializer
                 $this->formatLog($request, $response)
             );
         } catch (Throwable $e) {
-            $response = addCors(
-                api_error(message: 'Unable to serve request.', httpCode: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE)
-            );
+            $response = api_error(message: 'Unable to serve request.', httpCode: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE);
 
             Container::get(LoggerInterface::class)->error($e->getMessage(), [
                 'kind' => $e::class,
@@ -244,7 +247,7 @@ final class Initializer
             $this->write($request, Level::Error, $this->formatLog($request, $response));
         }
 
-        $emitter($response);
+        return $response;
     }
 
     /**

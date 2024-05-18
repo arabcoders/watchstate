@@ -6,6 +6,7 @@ declare(strict_types=1);
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Libs\APIResponse;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
@@ -15,12 +16,15 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
 use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
+use App\Libs\Initializer;
 use App\Libs\Options;
 use App\Libs\Router;
 use App\Libs\Stream;
 use App\Libs\Uri;
 use Monolog\Utils;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
+use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
@@ -1289,6 +1293,16 @@ if (!function_exists('deepArrayMerge')) {
 }
 
 if (!function_exists('runCommand')) {
+    /**
+     * Run a command.
+     *
+     * @param string $command The command to run.
+     * @param array $args The command arguments.
+     * @param bool $asArray (Optional) Whether to return the output as an array.
+     * @param array $opts (Optional) Additional options.
+     *
+     * @return string|array The output of the command.
+     */
     function runCommand(string $command, array $args = [], bool $asArray = false, array $opts = []): string|array
     {
         $path = realpath(__DIR__ . '/../../');
@@ -1339,5 +1353,147 @@ if (!function_exists('tryCatch')) {
                 $finally();
             }
         }
+    }
+}
+
+if (!function_exists('APIRequest')) {
+    /**
+     * Make internal request to the API.
+     *
+     * @param string $method The request method.
+     * @param string $path The request path.
+     * @param array $json The request body.
+     * @param array $opts Additional options.
+     *
+     * @return APIResponse The response object.
+     */
+    function APIRequest(string $method, string $path, array $json = [], array $opts = []): APIResponse
+    {
+        $initializer = Container::get(Initializer::class);
+
+        $factory = new Psr17Factory();
+        $creator = new ServerRequestCreator($factory, $factory, $factory, $factory);
+
+        $uri = new Uri($path);
+
+        $server = [
+            'REQUEST_METHOD' => $method,
+            'SCRIPT_FILENAME' => realpath(__DIR__ . '/../../public/index.php'),
+            'REMOTE_ADDR' => '127.0.0.1',
+            'REQUEST_URI' => Config::get('api.prefix') . $uri->getPath(),
+            'SERVER_NAME' => 'localhost',
+            'SERVER_PORT' => 80,
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (WatchState/' . getAppVersion() . '; Internal API Request)',
+            ...ag($opts, 'server', []),
+        ];
+
+        $headers = [
+            'Host' => 'localhost',
+            'Accept' => 'application/json',
+            ...ag($opts, 'headers', []),
+        ];
+
+        $body = null;
+
+        if (!empty($json)) {
+            $body = json_encode($json);
+            $headers['CONTENT_TYPE'] = 'application/json';
+            $headers['CONTENT_LENGTH'] = strlen($body);
+            $server['CONTENT_TYPE'] = $headers['CONTENT_TYPE'];
+            $server['CONTENT_LENGTH'] = $headers['CONTENT_LENGTH'];
+        }
+
+        $query = ag($opts, 'query', []);
+
+        if (!empty($uri->getQuery())) {
+            parse_str($uri->getQuery(), $queryFromPath);
+            $query = deepArrayMerge([$queryFromPath, $query]);
+        }
+
+        if (!empty($query)) {
+            $server['QUERY_STRING'] = http_build_query($query);
+        }
+
+        $response = $initializer->http(
+            $creator->fromArrays(
+                server: $server,
+                headers: $headers,
+                get: $query,
+                post: $json,
+                body: $body
+            )->withAttribute('INTERNAL_REQUEST', true)
+        );
+
+        $statusCode = HTTP_STATUS::tryFrom($response->getStatusCode()) ?? HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE;
+
+        if ($response->getBody()->getSize() < 1) {
+            return new APIResponse($statusCode, $response->getHeaders());
+        }
+
+        $response->getBody()->rewind();
+
+        if (false !== str_contains($response->getHeaderLine('Content-Type'), 'application/json')) {
+            try {
+                $json = json_decode($response->getBody()->getContents(), true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                $json = [];
+            }
+            $response->getBody()->rewind();
+            return new APIResponse($statusCode, $response->getHeaders(), $json, $response->getBody());
+        }
+
+        return new APIResponse($statusCode, $response->getHeaders(), [], $response->getBody());
+    }
+}
+
+if (!function_exists('getServerColumnSpec')) {
+    /**
+     * Returns the spec for the given server column.
+     *
+     * @param string $column
+     *
+     * @return array The spec for the given column. Otherwise, an empty array.
+     */
+    function getServerColumnSpec(string $column): array
+    {
+        static $_serverSpec = null;
+
+        if (null === $_serverSpec) {
+            $_serverSpec = require __DIR__ . '/../../config/servers.spec.php';
+        }
+
+        foreach ($_serverSpec as $spec) {
+            if (ag($spec, 'key') === $column) {
+                return $spec;
+            }
+        }
+
+        return [];
+    }
+}
+
+if (!function_exists('getEnvSpec')) {
+    /**
+     * Returns the spec for the given environment variable.
+     *
+     * @param string $env
+     *
+     * @return array The spec for the given column. Otherwise, an empty array.
+     */
+    function getEnvSpec(string $env): array
+    {
+        static $_envSpec = null;
+
+        if (null === $_envSpec) {
+            $_envSpec = require __DIR__ . '/../../config/env.spec.php';
+        }
+
+        foreach ($_envSpec as $spec) {
+            if (ag($spec, 'key') === $env) {
+                return $spec;
+            }
+        }
+
+        return [];
     }
 }

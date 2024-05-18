@@ -140,6 +140,11 @@ return (function () {
             'description' => 'Close all open routes and enforce API key authentication on all endpoints.',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_API_LOG_INTERNAL',
+            'description' => 'Log internal requests to the API.',
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function ($value): bool {

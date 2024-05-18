@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Command;
+use App\Libs\Emitter;
+use App\Libs\HTTP_STATUS;
 
 error_reporting(E_ALL);
 ini_set('error_reporting', 'On');
@@ -61,7 +63,7 @@ try {
 
     $out(
         r(
-            text: 'HTTP: Exception [{kind}] was thrown unhandled during HTTP boot context. Error [{message} @ {file}:{line}].',
+            text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. Error '{message} @ {file}:{line}'.",
             context: [
                 'kind' => $e::class,
                 'line' => $e->getLine(),
@@ -72,10 +74,33 @@ try {
     );
 
     if (!headers_sent()) {
-        http_response_code(500);
+        http_response_code(HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value);
     }
 
     exit(Command::FAILURE);
 }
 
-$app->http();
+try {
+    (new Emitter())($app->http());
+} catch (Throwable $e) {
+    $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+
+    $out(
+        r(
+            text: "HTTP: Exception '{kind}' was thrown unhandled during response context. Error '{message} @ {file}:{line}'.",
+            context: [
+                'kind' => $e::class,
+                'line' => $e->getLine(),
+                'message' => $e->getMessage(),
+                'file' => after($e->getFile(), ROOT_PATH),
+            ]
+        )
+    );
+
+    if (!headers_sent()) {
+        http_response_code(HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value);
+    }
+
+    exit(Command::FAILURE);
+}
+

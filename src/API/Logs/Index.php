@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\Logs;
 
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\HTTP_STATUS;
@@ -107,7 +108,7 @@ final class Index
         return api_response(HTTP_STATUS::HTTP_OK, $list);
     }
 
-    #[Get(Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
+    #[Route(['GET', 'DELETE'], Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
     public function logView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($filename = ag($args, 'filename'))) {
@@ -124,6 +125,11 @@ final class Index
 
         if (false === str_starts_with($filePath, $path)) {
             return api_error('Invalid file path.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if ('DELETE' === $request->getMethod()) {
+            unlink($filePath);
+            return api_response(HTTP_STATUS::HTTP_OK);
         }
 
         $params = DataUtil::fromArray($request->getQueryParams());
@@ -164,11 +170,10 @@ final class Index
 
         $stream->rewind();
 
-        return new Response(
-            status: HTTP_STATUS::HTTP_OK->value,
-            headers: ['Content-Type' => 'text/plain'],
-            body: $stream
-        );
+        return new Response(status: HTTP_STATUS::HTTP_OK->value, headers: [
+            'Content-Type' => 'text/plain',
+            'X-No-AccessLog' => '1'
+        ], body: $stream);
     }
 
     private function download(string $filePath): iResponse

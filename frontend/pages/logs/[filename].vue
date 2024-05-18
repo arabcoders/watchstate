@@ -10,27 +10,28 @@
         <div class="field is-grouped">
 
           <p class="control">
-            <button class="button is-danger is-light" v-tooltip="'Download the entire logfile.'" @click="downloadFile"
-                    :class="{'is-loading':isDownloading}">
-              <span class="icon">
-                <i class="fas fa-download"></i>
-              </span>
+            <button class="button is-danger" v-tooltip="'Delete Logfile.'" @click="deleteFile">
+              <span class="icon"><i class="fas fa-trash"></i></span>
             </button>
           </p>
+
+          <p class="control">
+            <button class="button is-danger is-light" v-tooltip="'Download the entire logfile.'" @click="downloadFile"
+                    :class="{'is-loading':isDownloading}">
+              <span class="icon"><i class="fas fa-download"></i></span>
+            </button>
+          </p>
+
           <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
             <button class="button" v-tooltip="'Watch log'" @click="watchLog"
                     :class="{'is-primary':!stream,'is-danger':stream}">
-              <span class="icon">
-                <i class="fas fa-stream"></i>
-              </span>
+              <span class="icon"><i class="fas fa-stream"></i></span>
             </button>
           </p>
 
           <p class="control">
             <button class="button is-warning" @click.prevent="wrapLines = !wrapLines" v-tooltip="'Toggle wrap line'">
-              <span class="icon">
-                <i class="fas fa-text-width"></i>
-              </span>
+              <span class="icon"><i class="fas fa-text-width"></i></span>
             </button>
           </p>
 
@@ -76,9 +77,11 @@
 
 <script setup>
 
-import Message from "~/components/Message.vue";
-import moment from "moment";
-import {useStorage} from "@vueuse/core";
+import Message from '~/components/Message.vue'
+import moment from 'moment'
+import {useStorage} from '@vueuse/core'
+import {notification} from '~/utils/index.js'
+import request from '~/utils/request.js'
 
 const filename = useRoute().params.filename
 const data = ref([])
@@ -161,6 +164,39 @@ const downloadFile = () => {
       fileLink.download = `${filename}`
       fileLink.click()
     });
+  }
+}
+
+const deleteFile = async () => {
+  if (!confirm(`Are you sure you want to delete '${filename}'? this cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    closeStream();
+
+    const response = await request(`/log/${filename}`, {method: 'DELETE'})
+
+    if (response.ok) {
+      notification('success', 'Information', `Logfile '${filename}' has been deleted.`)
+      const router = useRouter()
+      await router.push('/logs')
+      return;
+    }
+
+    let json;
+
+    try {
+      json = await response.json()
+    } catch (e) {
+      json = {
+        error: {code: response.status, message: response.statusText}
+      }
+    }
+
+    notification('error', 'Error', `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`)
+  } catch (e) {
+    notification('error', 'Error', `Failed to request to delete a logfile. ${e}.`)
   }
 }
 

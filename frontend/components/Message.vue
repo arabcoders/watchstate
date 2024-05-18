@@ -1,8 +1,8 @@
 <template>
   <div class="notification" :class="message_class">
-    <h1 class="title is-5" v-if="title">{{ title }}</h1>
+    <h2 class="title is-5" v-if="title">{{ title }}</h2>
     <p v-if="message">{{ message }}</p>
-    <slot></slot>
+    <slot/>
   </div>
 </template>
 

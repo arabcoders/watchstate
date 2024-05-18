@@ -24,7 +24,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class EditCommand extends Command
 {
-    public const ROUTE = 'config:edit';
+    public const string ROUTE = 'config:edit';
 
     public function __construct(private LoggerInterface $logger)
     {
@@ -75,13 +75,7 @@ final class EditCommand extends Command
                             ', ',
                             array_map(
                                 fn($val) => '<value>' . $val . '</value>',
-                                array_keys(
-                                    array_filter(
-                                        array: require __DIR__ . '/../../../config/backend.spec.php',
-                                        callback: fn($val, $key) => $val,
-                                        mode: ARRAY_FILTER_USE_BOTH
-                                    )
-                                )
+                                array_column(require __DIR__ . '/../../../config/servers.spec.php', 'key')
                             ),
                         )
                     ]
@@ -232,13 +226,13 @@ final class EditCommand extends Command
 
             $suggest = [];
 
-            foreach (require __DIR__ . '/../../../config/backend.spec.php' as $name => $val) {
-                if (false === $val) {
+            foreach (require __DIR__ . '/../../../config/servers.spec.php' as $column) {
+                if (false === (bool)ag($column, 'visible', false)) {
                     continue;
                 }
 
-                if (empty($currentValue) || str_starts_with($name, $currentValue)) {
-                    $suggest[] = $name;
+                if (empty($currentValue) || str_starts_with(ag($column, 'key', ''), $currentValue)) {
+                    $suggest[] = ag($column, 'key', '');
                 }
             }
 

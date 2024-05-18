@@ -208,7 +208,7 @@ final class Index
 
         $sorts = [];
 
-        foreach ($data->get('sort') as $sort) {
+        foreach ($data->get('sort', []) as $sort) {
             if (1 !== preg_match('/(?P<field>\w+)(:(?P<dir>\w+))?/', $sort, $matches)) {
                 continue;
             }

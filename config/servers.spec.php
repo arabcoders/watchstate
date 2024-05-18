@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Last update: 2024-05-14
+ * Last update: 2024-05-17
  *
  * servers.yaml backend spec.
  *
@@ -14,13 +14,15 @@ return [
         'type' => 'string',
         'visible' => true,
         'description' => 'The name of the backend.',
+        'immutable' => true,
     ],
     [
         'key' => 'type',
         'type' => 'string',
         'visible' => true,
         'description' => 'The type of the backend.',
-        'choices' => ['plex', 'emby', 'jellyfin']
+        'choices' => ['plex', 'emby', 'jellyfin'],
+        'immutable' => true,
     ],
     [
         'key' => 'url',
@@ -54,7 +56,7 @@ return [
     ],
     [
         'key' => 'export.lastSync',
-        'type' => 'integer',
+        'type' => 'int',
         'visible' => true,
         'description' => 'The last time data was exported to the backend.',
     ],
@@ -66,7 +68,7 @@ return [
     ],
     [
         'key' => 'import.lastSync',
-        'type' => 'integer',
+        'type' => 'int',
         'visible' => true,
         'description' => 'The last time data was imported from the backend.',
     ],
@@ -139,7 +141,7 @@ return [
     ],
     [
         'key' => 'options.client.timeout',
-        'type' => 'integer',
+        'type' => 'int',
         'visible' => false,
         'description' => 'The http timeout per request to the backend.',
     ],

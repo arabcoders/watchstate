@@ -78,6 +78,27 @@
       </code>
     </div>
 
+    <div class="column is-12">
+      <div class="content">
+        <Message message_class="has-background-info-90 has-text-dark">
+          If you have question, or want clarification on something, or just want to chat with other users, you are
+          welcome to join our <span class="icon-text is-underlined">
+          <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
+          <span>
+            <NuxtLink href="https://discord.gg/haUXHJyj6Y" target="_blank" v-text="'Discord server'"/>
+          </span>
+        </span>. For bug reports, feature requests, or contributions, please visit the
+          <span class="icon-text is-underlined">
+            <span class="icon"><i class="fas fa-brands fa-github"></i></span>
+            <span>
+              <NuxtLink href="https://github.com/arabcoders/watchstate/issues/new/choose" target="_blank"
+                        v-text="'GitHub repository'"/>
+            </span>
+          </span>.
+        </Message>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -93,7 +114,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration} from "../utils/index.js";
+import {formatDuration} from '../utils/index.js'
 
 useHead({title: 'Index'})
 
