@@ -259,7 +259,7 @@ class Command extends BaseCommand
 
                         $subItem[$key] = $leaf;
 
-                        if (ag_exists($item, 'type') && 'bool' === ag($item, 'type', 'string')) {
+                        if (ag_exists($item, 'type') && 'bool' === ag($item, 'type', 'string') && is_bool($leaf)) {
                             $subItem[$key] = $leaf ? 'true' : 'false';
                         }
                     }
