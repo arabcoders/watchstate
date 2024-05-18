@@ -137,7 +137,7 @@ return [
         'key' => 'options.MAX_EPISODE_RANGE',
         'type' => 'int',
         'visible' => false,
-        'description' => 'The max range of episodes that episode can cover. The default is 3.'
+        'description' => 'The max range a single record/episode can cover. The default is 5.'
     ],
     [
         'key' => 'options.client.timeout',
