@@ -222,21 +222,33 @@
         <slot/>
       </template>
 
-      <div class="columns is-multiline mt-3">
-        <div class="column is-6 is-12-mobile has-text-left">
-          {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+      <div class="columns is-multiline is-mobile mt-3">
+        <div class="column is-6 is-9-mobile has-text-left">
+          <NuxtLink @click="loadFile = '/README.md'" v-text="'README'"/>
+          -
+          <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'"/>
+          -
+          <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'"/>
           <template v-if="!show_page_tips">
             -
             <a href="javascript:void(0)" @click="show_page_tips=true">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-lines-leaning"></i></span>
-                <span>Show hidden tips</span>
+                <span>Show tips</span>
               </span>
             </a>
           </template>
         </div>
+        <div class="column is-6 is-4-mobile has-text-right">
+          {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
+        </div>
       </div>
 
+      <template v-if="loadFile">
+        <Overlay @closeOverlay="closeOverlay" :title="loadFile">
+          <Markdown :file="loadFile"/>
+        </Overlay>
+      </template>
       <NuxtNotifications position="top right" :speed="800" :ignoreDuplicates="true" :width="340" :pauseOnHover="true"/>
     </div>
   </div>
@@ -249,6 +261,7 @@ import 'assets/css/style.css'
 import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
+import Markdown from "~/components/Markdown.vue";
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
@@ -265,6 +278,8 @@ const api_version = ref()
 
 const showMenu = ref(false)
 const exposeToken = ref(false)
+
+const loadFile = ref()
 
 const applyPreferredColorScheme = scheme => {
   for (let s = 0; s < document.styleSheets.length; s++) {
@@ -375,4 +390,8 @@ const getVersion = async () => {
 const setOrigin = () => api_url.value = window.location.origin;
 
 const hasAPISettings = computed(() => '' !== api_token.value && '' !== api_url.value)
+
+const closeOverlay = () => {
+  loadFile.value = ''
+}
 </script>

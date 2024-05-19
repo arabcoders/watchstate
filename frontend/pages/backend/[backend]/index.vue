@@ -26,7 +26,7 @@
       <h1 class="title is-4">Recent History</h1>
     </div>
     <div class="column is-6-tablet" v-for="history in bHistory" :key="history.id">
-      <div class="card" :class="{ 'is-success': history.watched, 'is-danger': !history.watched }">
+      <div class="card" :class="{ 'is-success': history.watched }">
         <header class="card-header">
           <p class="card-header-title is-text-overflow pr-1">
             <span class="icon" v-if="!history.progress">

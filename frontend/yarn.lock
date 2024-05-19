@@ -3415,6 +3415,11 @@ make-fetch-happen@^13.0.0:
     promise-retry "^2.0.1"
     ssri "^10.0.0"
 
+marked-base-url@^1.1.3:
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/marked-base-url/-/marked-base-url-1.1.3.tgz#bde9458960e9ea0c3f364c6309c555c3b8c1093a"
+  integrity sha512-KuQV8EIR/RCdov4KPcw7hdMaugxoKGx8kYprsOhNMwLybX+OqZNRSOMwmjS9Bdyj+i+e/fg5/RkDMS6PMzG7rQ==
+
 marked@^12.0.2:
   version "12.0.2"
   resolved "https://registry.yarnpkg.com/marked/-/marked-12.0.2.tgz#b31578fe608b599944c69807b00f18edab84647e"
