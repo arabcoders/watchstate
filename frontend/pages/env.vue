@@ -213,7 +213,7 @@ const loadContent = async () => {
 onMounted(() => loadContent())
 
 const deleteEnv = async (env) => {
-  if (!confirm(`Are you sure you want to delete the environment variable ${env.key}?`)) {
+  if (!confirm(`Are you sure you want to delete the environment variable '${env.key}'?`)) {
     return
   }
 
@@ -221,6 +221,7 @@ const deleteEnv = async (env) => {
 
   if (response.ok) {
     envs.value = envs.value.filter(i => i.key !== env.key)
+    notification('success', 'Success', `Environment variable ${env.key} successfully deleted.`, 5000)
   }
 }
 
