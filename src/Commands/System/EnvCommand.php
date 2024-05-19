@@ -40,6 +40,7 @@ final class EnvCommand extends Command
             ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete key.')
             ->addOption('list', 'l', InputOption::VALUE_NONE, 'List All Supported keys.')
+            ->addOption('expose', 'x', InputOption::VALUE_NONE, 'Expose Hidden values.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -175,6 +176,14 @@ final class EnvCommand extends Command
                 'type' => $info['type'],
                 'value' => ag($info, 'value', 'Not set'),
             ];
+
+            if (true === (bool)ag($info, 'mask') && !$input->getOption('expose')) {
+                $item['value'] = '*HIDDEN*';
+            }
+
+            if ('table' === $mode) {
+                unset($item['description']);
+            }
 
             $keys[] = $item;
         }

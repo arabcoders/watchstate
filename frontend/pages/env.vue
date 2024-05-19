@@ -101,57 +101,62 @@
     </div>
 
     <div class="column is-12" v-if="envs">
-      <div class="table-container">
-        <table class="table is-fullwidth is-bordered is-striped is-hoverable has-text-centered">
-          <thead>
-          <tr>
-            <th style="width: 25%;">Key</th>
-            <th>Value</th>
-            <th style="width: 10%;">Actions</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr v-for="env in filteredRows(envs)" :key="env.key">
-            <td class="has-text-left">
-              {{ env.key }}
-              <div class="is-pulled-right" v-if="env.mask">
-                <span class="icon is-small"><i class="fas fa-lock"></i></span>
-              </div>
-            </td>
-            <td class="has-text-left" :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }">
-              <template v-if="'bool' === env.type">
-                <span class="icon-text">
-                  <span class="icon">
-                    <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(env.value)"></i>
-                    <i class="fas fa-toggle-off" v-else></i>
+      <div class="columns is-multiline">
+        <div class="column is-4" v-for="env in filteredRows(envs)" :key="env.key">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title is-unselectable">
+                <span class="has-tooltip is-clickable" v-tooltip="env.description">{{ env.key }}</span>
+              </p>
+              <span class="card-header-icon" v-if="env.mask" @click="env.mask = false" v-tooltip="'Unmask the value'">
+                <span class="icon"><i class="fas fa-unlock"></i></span>
+              </span>
+            </header>
+            <div class="card-content">
+              <div class="content">
+                <p v-if="'bool' === env.type">
+                  <span class="icon-text">
+                    <span class="icon">
+                      <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(env.value)"></i>
+                      <i class="fas fa-toggle-off" v-else></i>
+                    </span>
+                    <span>{{ fixBool(env.value) ? 'On (True)' : 'Off (False)' }}</span>
                   </span>
-                  <span>{{ fixBool(env.value) ? 'On' : 'Off' }}</span>
-                </span>
-              </template>
-              <template v-else>{{ env.value }}</template>
-            </td>
-            <td>
-              <div class="field is-grouped" style="justify-content: center">
-                <div class="control">
-                  <button class="button is-small is-primary" @click="editEnv(env)">
-                    <span class="icon"><i class="fas fa-edit"></i></span>
-                  </button>
-                </div>
-                <div class="control">
-                  <button class="button is-small is-warning" @click="copyText(env.value)">
-                    <span class="icon"><i class="fas fa-copy"></i></span>
-                  </button>
-                </div>
-                <div class="control">
-                  <button class="button is-small is-danger" @click="deleteEnv(env)">
-                    <span class="icon"><i class="fas fa-trash"></i></span>
-                  </button>
-                </div>
+                </p>
+                <p v-else class="is-text-overflow is-clickable is-unselectable"
+                   :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }"
+                   @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                  {{ env.value }}</p>
               </div>
-            </td>
-          </tr>
-          </tbody>
-        </table>
+            </div>
+            <footer class="card-footer">
+              <div class="card-footer-item">
+                <button class="button is-primary is-fullwidth" @click="editEnv(env)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-edit"></i></span>
+                    <span>Edit</span>
+                  </span>
+                </button>
+              </div>
+              <div class="card-footer-item">
+                <button class="button is-fullwidth is-warning" @click="copyText(env.value)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-copy"></i></span>
+                    <span>Copy</span>
+                  </span>
+                </button>
+              </div>
+              <div class="card-footer-item">
+                <button class="button is-fullwidth is-danger" @click="deleteEnv(env)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-trash"></i></span>
+                    <span>Delete</span>
+                  </span>
+                </button>
+              </div>
+            </footer>
+          </div>
+        </div>
       </div>
     </div>
 
