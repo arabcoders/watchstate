@@ -18,8 +18,18 @@ const content = ref('')
 const api_url = useStorage('api_url', '')
 
 onMounted(() => fetch(`${api_url.value}${props.file}`).then(response => response.text()).then(text => {
-  marked.use(baseUrl(api_url.value))
-  marked.use({gfm: true})
+  marked.use({
+    gfm: true,
+    renderer: {
+      text: (text) => {
+        // -- replace github [!] with icon
+        text = text.replace(/\[!IMPORTANT\]/g, '<i class="fas fa-exclamation-triangle has-text-danger"></i>')
+        text = text.replace(/\[!NOTE\]/g, '<i class="fas fa-exclamation-circle has-text-info"></i>')
+        return text
+      }
+    },
+    ...baseUrl(api_url.value),
+  });
   content.value = marked.parse(text)
 }));
 
