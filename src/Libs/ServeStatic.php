@@ -36,6 +36,11 @@ final class ServeStatic
         '/FAQ.md' => __DIR__ . '/../../FAQ.md',
     ];
 
+    private const array MD_IMAGES = [
+        '/screenshots' => __DIR__ . '/../../',
+    ];
+    private array $looked = [];
+
     public function __construct(private string|null $staticPath = null)
     {
         if (null === $this->staticPath) {
@@ -67,19 +72,32 @@ final class ServeStatic
             return $this->serveFile($request, new SplFileInfo(self::MD_FILES[$requestPath]));
         }
 
-        $filePath = $this->staticPath . $requestPath;
+        // -- check if the request path is in the MD_IMAGES array
+        foreach (self::MD_IMAGES as $key => $value) {
+            if (str_starts_with($requestPath, $key)) {
+                $this->staticPath = realpath($value);
+                break;
+            }
+        }
+
+        $filePath = fixPath($this->staticPath . $requestPath);
 
         if (is_dir($filePath)) {
             $filePath = $filePath . '/index.html';
         }
 
-        $filePath = fixPath($filePath);
-
         if (!file_exists($filePath)) {
-            $checkIndex = dirname($filePath) . '/index.html';
+            $checkIndex = $this->deepIndexLookup($this->staticPath, $requestPath);
             if (!file_exists($checkIndex)) {
                 throw new NotFoundException(
-                    message: r("File '{file}' is not found.", ['file' => $requestPath]),
+                    message: r(
+                        "File '{file}' is not found. {checkIndex} {looked}",
+                        [
+                            'file' => $requestPath,
+                            'checkIndex' => $checkIndex,
+                            'looked' => $this->looked,
+                        ]
+                    ),
                     code: HTTP_STATUS::HTTP_NOT_FOUND->value
                 );
             }
@@ -158,5 +176,34 @@ final class ServeStatic
         $mime = $this->mimeType->file($file->getRealPath());
 
         return false === $mime ? 'application/octet-stream' : $mime;
+    }
+
+    private function deepIndexLookup(string $base, string $path): string
+    {
+        // -- paths may look like /parent/id/child, do a deep lookup for index.html at each level
+        // return the first index.html found
+        $path = fixPath($path);
+
+        if ('/' === $path) {
+            return $path;
+        }
+
+        $paths = explode('/', $path);
+        $count = count($paths);
+        if ($count < 2) {
+            return $path;
+        }
+
+        $index = $count - 1;
+
+        for ($i = $index; $i > 0; $i--) {
+            $check = $base . implode('/', array_slice($paths, 0, $i)) . '/index.html';
+            $this->looked[] = $check;
+            if (file_exists($check)) {
+                return $check;
+            }
+        }
+
+        return $path;
     }
 }
