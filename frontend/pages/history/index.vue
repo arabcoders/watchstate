@@ -223,7 +223,7 @@ const loadContent = async (pageNumber, fromPopState = false) => {
     pageNumber = 1
   }
 
-  let title = `Links: Page #${pageNumber}`
+  let title = `History: Page #${pageNumber}`
 
   let search = new URLSearchParams()
   search.set('perpage', perpage.value)

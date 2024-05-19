@@ -22,7 +22,7 @@
       </div>
       <div class="is-hidden-mobile">
         <span class="subtitle">
-          These environment variables are loaded from the <code>{{ file }}</code> file.
+          This page allow you alter the environment variables that are used to configure the application.
         </span>
       </div>
     </div>
@@ -58,8 +58,8 @@
                   <input id="form_value" type="checkbox" class="switch is-success"
                          :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
                   <label for="form_value">
-                    <template v-if="fixBool(form_value)">On</template>
-                    <template v-else>Off</template>
+                    <template v-if="fixBool(form_value)">On (True)</template>
+                    <template v-else>Off (False)</template>
                   </label>
                 </template>
                 <template v-else-if=" 'int' === form_type ">
@@ -101,57 +101,62 @@
     </div>
 
     <div class="column is-12" v-if="envs">
-      <div class="table-container">
-        <table class="table is-fullwidth is-bordered is-striped is-hoverable has-text-centered">
-          <thead>
-          <tr>
-            <th style="width: 25%;">Key</th>
-            <th>Value</th>
-            <th style="width: 10%;">Actions</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr v-for="env in filteredRows(envs)" :key="env.key">
-            <td class="has-text-left">
-              {{ env.key }}
-              <div class="is-pulled-right" v-if="env.mask">
-                <span class="icon is-small"><i class="fas fa-lock"></i></span>
-              </div>
-            </td>
-            <td class="has-text-left" :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }">
-              <template v-if="'bool' === env.type">
-                <span class="icon-text">
-                  <span class="icon">
-                    <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(env.value)"></i>
-                    <i class="fas fa-toggle-off" v-else></i>
+      <div class="columns is-multiline">
+        <div class="column is-4" v-for="env in filteredRows(envs)" :key="env.key">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title is-unselectable">
+                <span class="has-tooltip is-clickable" v-tooltip="env.description">{{ env.key }}</span>
+              </p>
+              <span class="card-header-icon" v-if="env.mask" @click="env.mask = false" v-tooltip="'Unmask the value'">
+                <span class="icon"><i class="fas fa-unlock"></i></span>
+              </span>
+            </header>
+            <div class="card-content">
+              <div class="content">
+                <p v-if="'bool' === env.type">
+                  <span class="icon-text">
+                    <span class="icon">
+                      <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(env.value)"></i>
+                      <i class="fas fa-toggle-off" v-else></i>
+                    </span>
+                    <span>{{ fixBool(env.value) ? 'On (True)' : 'Off (False)' }}</span>
                   </span>
-                  <span>{{ fixBool(env.value) ? 'On' : 'Off' }}</span>
-                </span>
-              </template>
-              <template v-else>{{ env.value }}</template>
-            </td>
-            <td>
-              <div class="field is-grouped" style="justify-content: center">
-                <div class="control">
-                  <button class="button is-small is-primary" @click="editEnv(env)">
-                    <span class="icon"><i class="fas fa-edit"></i></span>
-                  </button>
-                </div>
-                <div class="control">
-                  <button class="button is-small is-warning" @click="copyText(env.value)">
-                    <span class="icon"><i class="fas fa-copy"></i></span>
-                  </button>
-                </div>
-                <div class="control">
-                  <button class="button is-small is-danger" @click="deleteEnv(env)">
-                    <span class="icon"><i class="fas fa-trash"></i></span>
-                  </button>
-                </div>
+                </p>
+                <p v-else class="is-text-overflow is-clickable is-unselectable"
+                   :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }"
+                   @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                  {{ env.value }}</p>
               </div>
-            </td>
-          </tr>
-          </tbody>
-        </table>
+            </div>
+            <footer class="card-footer">
+              <div class="card-footer-item">
+                <button class="button is-primary is-fullwidth" @click="editEnv(env)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-edit"></i></span>
+                    <span>Edit</span>
+                  </span>
+                </button>
+              </div>
+              <div class="card-footer-item">
+                <button class="button is-fullwidth is-warning" @click="copyText(env.value)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-copy"></i></span>
+                    <span>Copy</span>
+                  </span>
+                </button>
+              </div>
+              <div class="card-footer-item">
+                <button class="button is-fullwidth is-danger" @click="deleteEnv(env)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-trash"></i></span>
+                    <span>Delete</span>
+                  </span>
+                </button>
+              </div>
+            </footer>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -161,8 +166,16 @@
         <div class="content">
           <ul>
             <li>
-              Some variables values are masked for security reasons. You will see <i class="fa fa-lock"></i> next to
-              them. If you need to see the value, click on edit.
+              Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.
+            </li>
+            <li>
+              Some values are too large to fit into the view, clicking on the value will show the full value.
+            </li>
+            <li>
+              These environment variables are loaded from the <code>{{ file }}</code> file.
+            </li>
+            <li>
+              To add a new variable click on the <i class="fa fa-add"></i> button.
             </li>
           </ul>
         </div>
@@ -180,7 +193,7 @@ useHead({title: 'Environment Variables'})
 
 const envs = ref([])
 const toggleForm = ref(false)
-const form_key = ref()
+const form_key = ref('')
 const form_value = ref()
 const form_type = ref()
 const show_page_tips = useStorage('show_page_tips', true)
@@ -200,7 +213,7 @@ const loadContent = async () => {
 onMounted(() => loadContent())
 
 const deleteEnv = async (env) => {
-  if (!confirm(`Are you sure you want to delete the environment variable ${env.key}?`)) {
+  if (!confirm(`Are you sure you want to delete the environment variable '${env.key}'?`)) {
     return
   }
 
@@ -208,6 +221,7 @@ const deleteEnv = async (env) => {
 
   if (response.ok) {
     envs.value = envs.value.filter(i => i.key !== env.key)
+    notification('success', 'Success', `Environment variable ${env.key} successfully deleted.`, 5000)
   }
 }
 
@@ -260,7 +274,7 @@ const editEnv = (env) => {
 }
 
 const cancelForm = () => {
-  form_key.value = null
+  form_key.value = ''
   form_value.value = null
   form_type.value = null
   toggleForm.value = false
@@ -268,7 +282,7 @@ const cancelForm = () => {
 
 watch(toggleForm, (value) => {
   if (!value) {
-    form_key.value = null
+    form_key.value = ''
     form_value.value = null
   } else {
     awaitElement('#env_page_title', (_, el) => el.scrollIntoView({
