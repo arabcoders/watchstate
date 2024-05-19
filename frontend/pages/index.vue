@@ -9,9 +9,9 @@
     <div class="column is-12">
       <div class="columns is-multiline" v-if="lastHistory.length>0">
         <div class="column is-6-tablet" v-for="history in lastHistory" :key="history.id">
-          <div class="card" :class="{ 'is-success': history.watched, 'is-danger': !history.watched }">
+          <div class="card" :class="{ 'is-success': history.watched }">
             <header class="card-header">
-              <p class="card-header-title is-text-overflow pr-1">
+              <p class="card-header-title is-text-overflow">
                 <span class="icon" v-if="!history.progress">
                   <i class="fas fa-eye-slash" v-if="!history.watched"></i>
                   <i class="fas fa-eye" v-else></i>

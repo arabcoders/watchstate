@@ -21,7 +21,7 @@
     <div class="column is-4-tablet" v-for="(item, index) in logs" :key="'log-'+index">
       <div class="card">
         <header class="card-header">
-          <p class="card-header-title is-text-overflow is-justify-center pr-1">
+          <p class="card-header-title is-text-overflow pr-1">
             <NuxtLink :href="'/logs/'+item.filename">{{ item.filename ?? item.date }}</NuxtLink>
           </p>
           <span class="card-header-icon">

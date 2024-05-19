@@ -1,17 +1,29 @@
 <template>
-  <div class="modal">
+  <div class="modal is-active">
     <div class="modal-background"></div>
     <div class="modal-card" style="min-width: calc(100% - 30%);">
       <header class="modal-card-head">
-        <p class="modal-card-title el" id="modal-head"></p>
+        <p class="modal-card-title" v-text="model_title"></p>
         <button class="delete" @click="closeOverLay"></button>
       </header>
-      <slot></slot>
+      <div class="modal-card-body">
+        <slot/>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 const emit = defineEmits(['closeOverlay']);
+
+const props = defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+});
+
+const model_title = ref(props.title.replace(/^\//g, ''));
+
 const closeOverLay = () => emit('closeOverlay');
 </script>

@@ -115,7 +115,7 @@
     <div class="column is-12">
       <div class="columns is-multiline" v-if="items?.length>0">
         <div class="column is-6-tablet" v-for="item in items" :key="item.id">
-          <div class="card">
+          <div class="card" :class="{ 'is-success': item.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow pr-1">
                 <span class="icon" v-if="!item.progress">

@@ -289,7 +289,8 @@ final class Initializer
                 return $response;
             }
 
-            return (new ServeStatic())->serve($request);
+            return (new ServeStatic())->serve($request)->withHeader('Access-Control-Allow-Origin', '*')
+                ->withHeader('Access-Control-Allow-Credentials', 'true');
         }
 
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
@@ -389,10 +390,7 @@ final class Initializer
             }
         })();
 
-        $response = $router->dispatch($realRequest);
-
-        return $response->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Credentials', 'true');
+        return $router->dispatch($realRequest);
     }
 
     /**
