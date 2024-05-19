@@ -84,10 +84,12 @@ import {notification} from '~/utils/index.js'
 import request from '~/utils/request.js'
 
 const filename = useRoute().params.filename
+
+useHead({title: `Logs : ${filename}`})
+
 const data = ref([])
 const error = ref('')
 const wrapLines = ref(true)
-
 const isDownloading = ref(false)
 
 const api_path = useStorage('api_path', '/v1/api')

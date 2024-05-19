@@ -22,7 +22,7 @@
       </div>
       <div class="is-hidden-mobile">
         <span class="subtitle">
-          These environment variables are loaded from the <code>{{ file }}</code> file.
+          This page allow you alter the environment variables that are used to configure the application.
         </span>
       </div>
     </div>
@@ -58,8 +58,8 @@
                   <input id="form_value" type="checkbox" class="switch is-success"
                          :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
                   <label for="form_value">
-                    <template v-if="fixBool(form_value)">On</template>
-                    <template v-else>Off</template>
+                    <template v-if="fixBool(form_value)">On (True)</template>
+                    <template v-else>Off (False)</template>
                   </label>
                 </template>
                 <template v-else-if=" 'int' === form_type ">
@@ -166,8 +166,16 @@
         <div class="content">
           <ul>
             <li>
-              Some variables values are masked for security reasons. You will see <i class="fa fa-lock"></i> next to
-              them. If you need to see the value, click on edit.
+              Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.
+            </li>
+            <li>
+              Some values are too large to fit into the view, clicking on the value will show the full value.
+            </li>
+            <li>
+              These environment variables are loaded from the <code>{{ file }}</code> file.
+            </li>
+            <li>
+              To add a new variable click on the <i class="fa fa-add"></i> button.
             </li>
           </ul>
         </div>
@@ -185,7 +193,7 @@ useHead({title: 'Environment Variables'})
 
 const envs = ref([])
 const toggleForm = ref(false)
-const form_key = ref()
+const form_key = ref('')
 const form_value = ref()
 const form_type = ref()
 const show_page_tips = useStorage('show_page_tips', true)
@@ -265,7 +273,7 @@ const editEnv = (env) => {
 }
 
 const cancelForm = () => {
-  form_key.value = null
+  form_key.value = ''
   form_value.value = null
   form_type.value = null
   toggleForm.value = false
@@ -273,7 +281,7 @@ const cancelForm = () => {
 
 watch(toggleForm, (value) => {
   if (!value) {
-    form_key.value = null
+    form_key.value = ''
     form_value.value = null
   } else {
     awaitElement('#env_page_title', (_, el) => el.scrollIntoView({
