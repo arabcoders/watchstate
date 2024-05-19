@@ -24,6 +24,16 @@ final class ServeStatic
         'woff2' => 'font/woff2',
         'ico' => 'image/x-icon',
         'json' => 'application/json; charset=utf-8',
+        'md' => 'text/markdown; charset=utf-8',
+    ];
+
+    /**
+     * @var array<string, string> These files are served from outside the public directory.
+     */
+    private const array MD_FILES = [
+        '/README.md' => __DIR__ . '/../../README.md',
+        '/NEWS.md' => __DIR__ . '/../../NEWS.md',
+        '/FAQ.md' => __DIR__ . '/../../FAQ.md',
     ];
 
     public function __construct(private string|null $staticPath = null)
@@ -51,6 +61,10 @@ final class ServeStatic
                 message: r("Method '{method}' is not allowed.", ['method' => $request->getMethod()]),
                 code: HTTP_STATUS::HTTP_METHOD_NOT_ALLOWED->value
             );
+        }
+
+        if (array_key_exists($requestPath, self::MD_FILES)) {
+            return $this->serveFile($request, new SplFileInfo(self::MD_FILES[$requestPath]));
         }
 
         $filePath = $this->staticPath . $requestPath;
@@ -88,8 +102,11 @@ final class ServeStatic
             );
         }
 
-        $file = new SplFileInfo($filePath);
+        return $this->serveFile($request, new SplFileInfo($filePath));
+    }
 
+    private function serveFile(iRequest $request, SplFileInfo $file): iResponse
+    {
         $ifModifiedSince = $request->getHeaderLine('if-modified-since');
 
         if (!empty($ifModifiedSince) && false !== $file->getMTime()) {

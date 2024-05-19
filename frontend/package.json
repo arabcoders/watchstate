@@ -14,6 +14,7 @@
         "@vueuse/nuxt": "^10.9.0",
         "cronstrue": "^2.49.0",
         "floating-vue": "^5.2.2",
+        "marked": "^12.0.2",
         "moment": "^2.30.1",
         "nuxt": "^3.11.2",
         "nuxt3-notifications": "^1.2.0",
