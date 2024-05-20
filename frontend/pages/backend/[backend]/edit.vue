@@ -32,7 +32,7 @@
               <div class="control has-icons-left">
                 <input class="input" type="text" v-model="backend.name" required readonly disabled>
                 <div class="icon is-left">
-                  <i class="fas fa-user"></i>
+                  <i class="fas fa-id-badge"></i>
                 </div>
                 <p class="help">
                   Choose a unique name for this backend. You cannot change it later. Backend name must be in <code>lower
@@ -46,7 +46,7 @@
               <div class="control has-icons-left">
                 <input class="input" type="text" v-model="backend.type" readonly disabled>
                 <div class="icon is-left">
-                  <i class="fas fa-globe"></i>
+                  <i class="fas fa-server"></i>
                 </div>
               </div>
             </div>
@@ -54,38 +54,67 @@
             <div class="field">
               <label class="label">URL</label>
               <div class="control has-icons-left">
-                <input class="input" type="text" v-model="backend.url" required>
+                <div class="select is-fullwidth" v-if="servers.length > 0">
+                  <select v-model="backend.url" class="is-capital" @change="updateIdentifier" required>
+                    <option value="" disabled>Select Server</option>
+                    <option v-for="server in servers" :key="server.uuid" :value="server.uri">
+                      {{ server.name }} - {{ server.uri }}
+                    </option>
+                  </select>
+                </div>
+                <input class="input" type="text" v-model="backend.url" v-else required>
                 <div class="icon is-left">
                   <i class="fas fa-link"></i>
                 </div>
                 <p class="help">
-                  Enter the URL of the backend.
-                  <a v-if="'plex' === backend.type" href="javascript:void(0)">Get associated servers with token. NYI</a>
+                  <template v-if="servers.length<1">
+                    Enter the URL of the backend. For example
+                    <code v-if="'plex' === backend.type">http://192.168.8.11:32400</code>
+                    <code v-else>http://192.168.8.100:8096</code>
+                    .
+                  </template>
+                  <template v-else>
+                    Those are the servers associated with the Plex Token. Select the server you want to use.
+                  </template>
                 </p>
               </div>
             </div>
 
             <div class="field">
               <label class="label">
-                <template v-if="'plex' !== backend.type">API Token</template>
+                <template v-if="'plex' !== backend.type">API Key</template>
                 <template v-else>X-Plex-Token</template>
               </label>
-              <div class="control has-icons-left">
-                <input class="input" type="text" v-model="backend.token" required>
-                <div class="icon is-left">
-                  <i class="fas fa-key"></i>
+              <div class="field-body">
+                <div class="field">
+                  <div class="field has-addons">
+                    <div class="control is-expanded has-icons-left">
+                      <input class="input" v-model="backend.token" required
+                             :type="false === exposeToken ? 'password' : 'text'">
+                      <div class="icon is-left">
+                        <i class="fas fa-key"></i>
+                      </div>
+                    </div>
+                    <div class="control">
+                      <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
+                              v-tooltip="'Toggle token'">
+                        <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
+                        <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
+                      </button>
+                    </div>
+                  </div>
+                  <p class="help">
+                    <template v-if="'plex'===backend.type">
+                      Enter the <code>X-Plex-Token</code>.
+                      <NuxtLink target="_blank"
+                                to="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
+                                v-text="'Visit This article for more information.'"/>
+                    </template>
+                    <template v-else>
+                      You can generate a new API key from <code>Dashboard > Settings > API Keys</code>.
+                    </template>
+                  </p>
                 </div>
-                <p class="help">
-                  <template v-if="'plex'===backend.type">
-                    Enter the <code>X-Plex-Token</code>. <a target="_blank"
-                                                            href="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/">
-                    Visit This article for more information
-                  </a>.
-                  </template>
-                  <template v-else>
-                    Generate a new API token from <code>Dashboard > Settings > API Keys</code>.
-                  </template>
-                </p>
               </div>
             </div>
 
@@ -94,7 +123,7 @@
               <div class="control has-icons-left">
                 <input class="input" type="text" v-model="backend.uuid" required>
                 <div class="icon is-left">
-                  <i class="fas fa-server" v-if="!uuidLoading"></i>
+                  <i class="fas fa-cloud" v-if="!uuidLoading"></i>
                   <i class="fas fa-spinner fa-pulse" v-else></i>
                 </div>
                 <p class="help">
@@ -287,6 +316,7 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import {notification, ucFirst} from '~/utils/index.js'
+import {ref} from "vue";
 
 const id = useRoute().params.backend
 const backend = ref({
@@ -309,6 +339,9 @@ const uuidLoading = ref(false)
 const optionsList = ref([])
 const selectedOption = ref('')
 const newOptions = ref({})
+const exposeToken = ref(false)
+const servers = ref([])
+const serversLoading = ref(false)
 
 const selectedOptionHelp = computed(() => {
   const option = optionsList.value.find(v => v.key === selectedOption.value)
@@ -320,6 +353,10 @@ useHead({title: 'Backends - Edit: ' + id})
 const loadContent = async () => {
   const content = await request(`/backend/${id}`)
   backend.value = await content.json()
+
+  if ('plex' === backend.value.type) {
+    await getServers()
+  }
 
   await getUsers()
 
@@ -473,6 +510,46 @@ const filteredOptions = (options) => {
     return []
   }
   return options.filter(v => !backend.value.options[v.key] && !newOptions.value[v.key])
+}
+
+
+const getServers = async () => {
+  if ('plex' !== backend.value.type || servers.value.length > 0) {
+    return
+  }
+
+  if (!backend.value.token) {
+    notification('error', 'Error', `Token is required to get list of servers.`)
+    return
+  }
+
+  serversLoading.value = true
+
+  let data = {
+    token: backend.value.token,
+    url: window.location.origin,
+  };
+
+  const response = await request(`/backends/discover/${backend.value.type}`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+
+  serversLoading.value = false
+
+  const json = await response.json()
+
+  if (200 !== response.status) {
+    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+    return
+  }
+
+  servers.value = json
+}
+
+const updateIdentifier = async () => {
+  backend.value.uuid = servers.value.find(s => s.uri === backend.value.url).identifier
+  await getUsers()
 }
 
 onMounted(async () => await loadContent())

@@ -1383,7 +1383,7 @@ if (!function_exists('APIRequest')) {
             'REQUEST_URI' => Config::get('api.prefix') . $uri->getPath(),
             'SERVER_NAME' => 'localhost',
             'SERVER_PORT' => 80,
-            'HTTP_USER_AGENT' => 'Mozilla/5.0 (WatchState/' . getAppVersion() . '; Internal API Request)',
+            'HTTP_USER_AGENT' => Config::get('http.default.options.headers.User-Agent', 'APIRequest'),
             ...ag($opts, 'server', []),
         ];
 

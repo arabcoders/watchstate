@@ -52,7 +52,7 @@
           <div class="control has-icons-left">
             <input class="input" type="text" v-model="backend.name" required>
             <div class="icon is-left">
-              <i class="fas fa-user"></i>
+              <i class="fas fa-id-badge"></i>
             </div>
             <p class="help">
               Choose a unique name for this backend. You cannot change it later. Backend name must be in <code>lower
@@ -63,25 +63,38 @@
 
         <div class="field">
           <label class="label">
-            <template v-if="'plex' !== backend.type">API Token</template>
+            <template v-if="'plex' !== backend.type">API Key</template>
             <template v-else>X-Plex-Token</template>
           </label>
-          <div class="control has-icons-left">
-            <input class="input" type="text" v-model="backend.token" required>
-            <div class="icon is-left">
-              <i class="fas fa-key"></i>
+          <div class="field-body">
+            <div class="field">
+              <div class="field has-addons">
+                <div class="control is-expanded has-icons-left">
+                  <input class="input" v-model="backend.token" required
+                         :type="false === exposeToken ? 'password' : 'text'">
+                  <div class="icon is-left">
+                    <i class="fas fa-key"></i>
+                  </div>
+                </div>
+                <div class="control">
+                  <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
+                          v-tooltip="'Toggle token'">
+                    <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
+                    <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
+                  </button>
+                </div>
+              </div>
+              <p class="help">
+                <template v-if="'plex'===backend.type">
+                  Enter the <code>X-Plex-Token</code>.
+                  <NuxtLink target="_blank" to="https://support.plex.tv/articles/204059436"
+                            v-text="'Visit This article for more information.'"/>
+                </template>
+                <template v-else>
+                  Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.
+                </template>
+              </p>
             </div>
-            <p class="help">
-              <template v-if="'plex'===backend.type">
-                Enter the <code>X-Plex-Token</code>.
-                <NuxtLink target="_blank" href="https://support.plex.tv/articles/204059436">
-                  Visit This article for more information.
-                </NuxtLink>
-              </template>
-              <template v-else>
-                Generate a new API token from <code>Dashboard > Settings > API Keys</code>.
-              </template>
-            </p>
           </div>
         </div>
 
@@ -91,7 +104,7 @@
             <div class="select is-fullwidth" v-if="servers.length > 0">
               <select v-model="backend.url" class="is-capital" @change="updateIdentifier" required>
                 <option v-for="server in servers" :key="'server-'+server.uuid" :value="server.uri">
-                  {{ server.name }} - {{ server.address }}
+                  {{ server.name }} - {{ server.uri }}
                 </option>
               </select>
             </div>
@@ -105,7 +118,7 @@
               <template v-if="servers.length<1">
                 Enter the URL of the backend. For example <code>http://localhost:32400</code>.&nbsp;
               </template>
-              <a href="javascript:void(0)" @click="getServers">Attempt to discover servers associated with the token</a>.
+              <NuxtLink @click="getServers" v-text="'Attempt to discover servers associated with the token.'"/>
             </p>
           </div>
         </div>
@@ -135,7 +148,7 @@
               <p class="help">
                 The backend unique ID is a random string generated on server setup. It is used to identify the backend
                 uniquely. This is used for webhook matching and filtering.
-                <a href="javascript:void(0)" @click="getUUid">Load automatically.</a>
+                <NuxtLink @click="getUUid" v-text="'Load automatically.'"/>
               </p>
             </div>
           </div>
@@ -169,9 +182,7 @@
                   data we get from the backend. And for webhook matching and filtering.
                 </span>
                 This tool is meant for single user use.
-                <a href="javascript:void(0)" @click="getUsers">
-                  Retrieve User ids from backend.
-                </a>
+                <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'"/>
               </p>
             </div>
           </div>
@@ -292,6 +303,7 @@ const stage = ref(0)
 const usersLoading = ref(false)
 const uuidLoading = ref(false)
 const serversLoading = ref(false)
+const exposeToken = ref(false)
 
 const getUUid = async () => {
   const required_values = ['type', 'token', 'url'];
@@ -496,5 +508,4 @@ const updateIdentifier = async () => {
   backend.value.uuid = servers.value.find(s => s.uri === backend.value.url).identifier
   await getUsers()
 }
-
 </script>

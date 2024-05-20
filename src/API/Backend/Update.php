@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\API\Backend;
 
+use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
+use App\Backends\Common\Context;
 use App\Libs\Attributes\Route\Patch;
 use App\Libs\Attributes\Route\Put;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
 use App\Libs\DataUtil;
+use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Traits\APITraits;
+use App\Libs\Uri;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -48,20 +53,40 @@ final class Update
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $this->backendFile->set(
-            $name,
-            $this->fromRequest($this->backendFile->get($name), $request, $this->getClient($name))
-        )->persist();
+        try {
+            $client = $this->getClient($name);
 
-        $backend = $this->getBackends(name: $name);
+            $config = DataUtil::fromArray($this->fromRequest($this->backendFile->get($name), $request, $client));
 
-        if (empty($backend)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+            $context = new Context(
+                clientName: $this->backendFile->get("{$name}.type"),
+                backendName: $name,
+                backendUrl: new Uri($config->get('url')),
+                cache: Container::get(BackendCache::class),
+                backendId: $config->get('uuid', null),
+                backendToken: $this->backendFile->get("{$name}.token", null),
+                backendUser: $config->get('user', null),
+                options: $config->get('options', []),
+            );
+
+            if (false === $client->validateContext($context)) {
+                return api_error('Context information validation failed.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            }
+
+            $this->backendFile->set($name, $config->getAll())->persist();
+
+            $backend = $this->getBackends(name: $name);
+
+            if (empty($backend)) {
+                return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+            }
+
+            $backend = array_pop($backend);
+
+            return api_response(HTTP_STATUS::HTTP_OK, $backend);
+        } catch (InvalidContextException $e) {
+            return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
-
-        $backend = array_pop($backend);
-
-        return api_response(HTTP_STATUS::HTTP_OK, $backend);
     }
 
     #[Patch(Index::URL . '/{name:backend}[/]', name: 'backend.patch')]

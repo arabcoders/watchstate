@@ -122,7 +122,7 @@
                                  :type="false === exposeToken ? 'password' : 'text'">
                         </div>
                         <div class="control">
-                          <button class="button is-primary" @click="exposeToken = !exposeToken"
+                          <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
                                   v-tooltip="'Show/Hide token'">
                             <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
                             <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>

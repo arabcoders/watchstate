@@ -37,7 +37,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         if ('OPTIONS' === $request->getMethod() || true === (bool)$request->getAttribute('INTERNAL_REQUEST', false)) {
-            return $handler->handle($request);
+            return $handler->handle($request->withoutAttribute('INTERNAL_REQUEST'));
         }
 
         $requestPath = rtrim($request->getUri()->getPath(), '/');
