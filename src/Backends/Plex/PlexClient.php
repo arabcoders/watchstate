@@ -692,6 +692,16 @@ class PlexClient implements iClient
                     $arr['AccessToken'] = ag($attr, 'accessToken');
                 }
 
+                if (false !== filter_var(ag($arr, 'address'), FILTER_VALIDATE_IP)) {
+                    $list['list'][] = array_replace_recursive($arr, [
+                        'proto' => 'http',
+                        'uri' => r('http://{ip}:{port}', [
+                            'ip' => ag($arr, 'address'),
+                            'port' => ag($arr, 'port')
+                        ]),
+                    ]);
+                }
+
                 $list['list'][] = $arr;
             }
         }

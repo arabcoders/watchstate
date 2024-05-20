@@ -6,15 +6,12 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\Config;
-use App\Libs\ConfigFile;
-use Psr\Log\LoggerInterface;
+use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Throwable;
 
 /**
  * Class EditCommand
@@ -26,11 +23,6 @@ final class EditCommand extends Command
 {
     public const string ROUTE = 'config:edit';
 
-    public function __construct(private LoggerInterface $logger)
-    {
-        parent::__construct();
-    }
-
     /**
      * Configures the command.
      */
@@ -38,11 +30,9 @@ final class EditCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Edit backend settings inline.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Use Alternative config file.')
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete value.')
-            ->addOption('regenerate-webhook-token', 'g', InputOption::VALUE_NONE, 'Re-generate backend webhook token.')
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->setHelp(
                 r(
@@ -113,98 +103,54 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
-        $configFile->setLogger($this->logger);
-
-        if (null === $configFile->get("{$name}.type", null)) {
-            $output->writeln(r('<error>ERROR: Backend \'{name}\' not found.</error>', ['name' => $name]));
+        if (null === ($key = $input->getOption('key'))) {
+            $output->writeln('<error>ERROR: [-k, --key] flag is required.</error>');
             return self::FAILURE;
         }
 
-        if ($input->getOption('regenerate-webhook-token')) {
-            try {
-                $webhookToken = bin2hex(random_bytes(Config::get('webhook.tokenLength')));
-
-                $output->writeln(r('<info>The webhook token for \'{name}\' is: \'{token}\'.</info>', [
-                    'name' => $name,
-                    'token' => $webhookToken
-                ]));
-
-                $configFile->set("{$name}.webhook.token", $webhookToken);
-            } catch (Throwable $e) {
-                $output->writeln(r('<error>ERROR: {error}</error>', ['error' => $e->getMessage()]));
-                return self::FAILURE;
-            }
+        $json = [];
+        if ($input->getOption('delete')) {
+            $method = 'DELETE';
+        } elseif ($input->getOption('set')) {
+            $method = 'POST';
+            $json['value'] = $input->getOption('set');
         } else {
-            if (null === ($key = $input->getOption('key'))) {
-                $output->writeln('<error>ERROR: [-k, --key] flag is required.</error>');
-                return self::FAILURE;
-            }
-
-            $value = $input->getOption('set');
-
-            if (null !== $value && $input->getOption('delete')) {
-                $output->writeln(
-                    '<error>ERROR: cannot use both [-s, --set] and [-d, --delete] flags as the same time.</error>'
-                );
-
-                return self::FAILURE;
-            }
-
-            if (null === $value && !$input->getOption('delete')) {
-                if ($configFile->has("{$name}.{$key}")) {
-                    $val = $configFile->get("{$name}.{$key}", '[No value]');
-                } else {
-                    $val = '[Not set]';
-                }
-
-                $output->writeln(is_scalar($val) ? (string)$val : r('Type({type})', ['type' => get_debug_type($val)]));
-                return self::SUCCESS;
-            }
-
-            if (null !== $value) {
-                if (true === ctype_digit($value)) {
-                    $value = (int)$value;
-                } elseif (true === is_numeric($value) && true === str_contains($value, '.')) {
-                    $value = (float)$value;
-                } elseif ('true' === strtolower((string)$value) || 'false' === strtolower((string)$value)) {
-                    $value = 'true' === $value;
-                } else {
-                    $value = (string)$value;
-                }
-
-                if ($value === $configFile->get("{$name}.{$key}", null)) {
-                    $output->writeln('<comment>Not updating. Value already matches.</comment>');
-                    return self::SUCCESS;
-                }
-
-                $configFile->set("{$name}.{$key}", $value);
-
-                $output->writeln(r("<info>{name}: Updated '{key}' key value to '{value}'.</info>", [
-                    'name' => $name,
-                    'key' => $key,
-                    'value' => is_bool($value) ? (true === $value ? 'true' : 'false') : $value,
-                ]));
-            }
-
-            if ($input->getOption('delete')) {
-                if (false === $configFile->has("{$name}.{$key}")) {
-                    $output->writeln(r("<error>{name}: '{key}' key does not exist.</error>", [
-                        'name' => $name,
-                        'key' => $key
-                    ]));
-                    return self::FAILURE;
-                }
-
-                $configFile->delete("{$name}.{$key}");
-                $output->writeln(r("<info>{name}: Removed '{key}' key.</info>", [
-                    'name' => $name,
-                    'key' => $key
-                ]));
-            }
+            $method = 'GET';
         }
 
-        $configFile->persist();
+        $response = apiRequest($method, "/backend/{$name}/option/{$key}", $json);
+
+        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
+            return self::FAILURE;
+        }
+
+        if ($input->getOption('delete')) {
+            $output->writeln(r("<info>Key '{key}' was deleted.</info>", ['key' => $key]));
+            return self::SUCCESS;
+        }
+
+        if ($input->getOption('set')) {
+            if ('bool' === ag($response->body, 'type', 'string')) {
+                $value = true === (bool)ag($response->body, 'value') ? 'On (True)' : 'Off (False)';
+            } else {
+                $value = ag($json, 'value');
+            }
+
+            $output->writeln(
+                r("<info>Key '<value>{key}</value>' was updated with value '<value>{value}</value>'.</info>", [
+                    'key' => $key,
+                    'value' => $value,
+                ])
+            );
+
+            return self::SUCCESS;
+        }
+
+        $output->writeln((string)ag($response->body, 'value', '[not_set]'));
 
         return self::SUCCESS;
     }
