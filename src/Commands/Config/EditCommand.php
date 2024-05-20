@@ -7,7 +7,6 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\HTTP_STATUS;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,11 +22,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class EditCommand extends Command
 {
     public const string ROUTE = 'config:edit';
-
-    public function __construct(private LoggerInterface $logger)
-    {
-        parent::__construct();
-    }
 
     /**
      * Configures the command.

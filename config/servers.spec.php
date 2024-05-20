@@ -106,8 +106,9 @@ return [
         'visible' => true,
         'description' => 'How many items to per request.',
         'validate' => function ($value) {
-            if ((int)$value < 100) {
-                throw new ValidationException('The value must be greater than 100 items.');
+            $limit = 300;
+            if ((int)$value < $limit) {
+                throw new ValidationException(r('The value must be greater than {limit} items.', ['limit' => $limit]));
             }
             return (int)$value;
         },

@@ -14,6 +14,7 @@ use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Exceptions\Backends\InvalidContextException;
+use App\Libs\Exceptions\ValidationException;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
@@ -84,7 +85,7 @@ final class Update
             $backend = array_pop($backend);
 
             return api_response(HTTP_STATUS::HTTP_OK, $backend);
-        } catch (InvalidContextException $e) {
+        } catch (InvalidContextException|ValidationException $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
     }
@@ -107,6 +108,8 @@ final class Update
                 HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        $updates = [];
+
         foreach ($data as $update) {
             $value = ag($update, 'value');
 
@@ -117,14 +120,31 @@ final class Update
             $spec = getServerColumnSpec($key);
 
             if (empty($spec)) {
-                return api_error(r('Invalid key to update: {key}', ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
+                return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            }
+
+            settype($value, ag($spec, 'type', 'string'));
+
+            if (true === ag_exists($spec, 'validate')) {
+                try {
+                    $value = $spec['validate']($value);
+                } catch (ValidationException $e) {
+                    return api_error(r("Value validation for '{key}' failed. {error}", [
+                        'key' => $key,
+                        'error' => $e->getMessage()
+                    ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+                }
             }
 
             if (in_array($key, self::IMMUTABLE_KEYS, true)) {
                 return api_error(r('Key {key} is immutable.', ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
-            $this->backendFile->set("{$name}.{$key}", $value);
+            $updates["{$name}.{$key}"] = $value;
+        }
+
+        foreach ($updates as $key => $value) {
+            $this->backendFile->set($key, $value);
         }
 
         $this->backendFile->persist();
@@ -169,6 +189,19 @@ final class Update
 
             if (empty($spec) || null === $value) {
                 continue;
+            }
+
+            settype($value, ag($spec, 'type', 'string'));
+
+            if (true === ag_exists($spec, 'validate')) {
+                try {
+                    $value = $spec['validate']($value);
+                } catch (ValidationException $e) {
+                    throw new ValidationException(r("Value validation for '{key}' failed. {error}", [
+                        'key' => $key,
+                        'error' => $e->getMessage()
+                    ]), $e->getCode(), $e);
+                }
             }
 
             $newData = ag_set($newData, $key, $value);
