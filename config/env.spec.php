@@ -7,7 +7,7 @@
  * Avoid using complex datatypes, the value should be a simple scalar value.
  */
 
-use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Exceptions\ValidationException;
 use Cron\CronExpression;
 
 return (function () {
@@ -147,19 +147,26 @@ return (function () {
         ],
     ];
 
-    $validateCronExpression = function ($value): bool {
+    $validateCronExpression = function (string $value): string {
         if (empty($value)) {
-            return false;
+            throw new ValidationException('Invalid cron expression. Empty value.');
         }
 
         try {
             if (str_starts_with($value, '"') && str_ends_with($value, '"')) {
                 $value = substr($value, 1, -1);
             }
-            return (new CronExpression($value))->getNextRunDate()->getTimestamp() >= 0;
-        } catch (Throwable) {
-            throw new InvalidArgumentException('Invalid cron expression.');
+
+            $status = (new CronExpression($value))->getNextRunDate()->getTimestamp() >= 0;
+
+            if (!$status) {
+                throw new ValidationException('Invalid cron expression. The next run date is in the past.');
+            }
+        } catch (Throwable $e) {
+            throw new ValidationException(r('Invalid cron expression. {error}', ['error' => $e->getMessage()]));
         }
+
+        return $value;
     };
 
     // -- Do not forget to update the tasks list if you add a new task.

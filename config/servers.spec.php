@@ -8,6 +8,9 @@
  * This file defines the backend spec.
  * The dot (.) means the string past the dot is sub key of the string preceding it.
  */
+
+use App\Libs\Exceptions\ValidationException;
+
 return [
     [
         'key' => 'name',
@@ -99,9 +102,15 @@ return [
     ],
     [
         'key' => 'options.LIBRARY_SEGMENT',
-        'type' => 'string',
+        'type' => 'int',
         'visible' => true,
         'description' => 'How many items to per request.',
+        'validate' => function ($value) {
+            if ((int)$value < 100) {
+                throw new ValidationException('The value must be greater than 100 items.');
+            }
+            return (int)$value;
+        },
     ],
     [
         'key' => 'options.ADMIN_TOKEN',

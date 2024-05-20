@@ -578,6 +578,8 @@ final class Initializer
             ],
         ], $context);
 
+        $request = $request->withoutAttribute('INTERNAL_REQUEST');
+
         if (($attributes = $request->getAttributes()) && count($attributes) >= 1) {
             $context['attributes'] = $attributes;
         }

@@ -9,7 +9,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\EnvFile;
-use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Exceptions\ValidationException;
 use App\Libs\HTTP_STATUS;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -124,14 +124,21 @@ final class Env
             return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
         }
 
-
         try {
             $value = $this->setType($spec, $value);
 
-            if (false === $this->checkValue($spec, $value)) {
-                throw new InvalidArgumentException(r("Invalid value for '{key}'.", ['key' => $key]));
+            if (true === is_string($value)) {
+                // -- check if the string contains space but not quoted.
+                // symfony/dotenv throws an exception if the value contains a space but not quoted.
+                if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
+                    throw new ValidationException('The value must be "quoted string", as it contains a space.');
+                }
             }
-        } catch (InvalidArgumentException $e) {
+
+            if (true === ag_exists($spec, 'validate')) {
+                $value = $spec['validate']($value, $spec);
+            }
+        } catch (ValidationException $e) {
             return api_error(r("Value validation for '{key}' failed. {error}", [
                 'key' => $key,
                 'error' => $e->getMessage()
@@ -146,31 +153,6 @@ final class Env
             'description' => ag($spec, 'description'),
             'type' => ag($spec, 'type'),
         ]);
-    }
-
-    /**
-     * Check if the value is valid.
-     *
-     * @param array $spec the specification for the key.
-     * @param mixed $value the value to check.
-     *
-     * @return bool true if the value is valid, false otherwise.
-     */
-    private function checkValue(array $spec, mixed $value): bool
-    {
-        if (true === is_string($value)) {
-            // -- check if the string contains space but not quoted.
-            // symfony/dotenv throws an exception if the value contains a space but not quoted.
-            if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
-                throw new InvalidArgumentException('The value must be "quoted string", as it contains a space.');
-            }
-        }
-
-        if (ag_exists($spec, 'validate')) {
-            return (bool)$spec['validate']($value);
-        }
-
-        return true;
     }
 
     /**
