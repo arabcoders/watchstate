@@ -48,6 +48,7 @@ final class PlexGuid implements iGuid
         'plex',
         'local',
         'com.plexapp.agents.none',
+        'tv.plex.agents.none',
     ];
 
     /**
