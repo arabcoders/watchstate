@@ -21,6 +21,30 @@
     </div>
   </div>
 
+  <div class="columns is-multiline">
+    <div class="column is-12">
+      <div class="content">
+        <h1 class="title is-4">Useful Tools</h1>
+        <ul>
+          <li>
+            <NuxtLink :to="`/backend/${backend}/mismatched`" v-text="'Find possible mismatched content.'"/>
+          </li>
+          <li>
+            <NuxtLink :to="`/backend/${backend}/unmatched`" v-text="'Find unmatched content.'"/>
+          </li>
+          <li>
+            <NuxtLink v-text="'View backend libraries.'"
+                      @click="notification('Error','Error','The page is not available in this build yet.')"/>
+          </li>
+          <li>
+            <NuxtLink v-text="'View backend users.'"
+                      @click="notification('Error','Error','The page is not available in this build yet.')"/>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="columns is-multiline" v-if="bHistory.length>0">
     <div class="column is-12">
       <h1 class="title is-4">Recent History</h1>

@@ -239,9 +239,10 @@ class GetLibrary
 
         $this->logger->debug('Processing [{backend}] {item.type} [{item.title} ({item.year})].', $data);
 
-        $webUrl = $url->withPath('/web/index.html')->withFragment(r('/details?id={id}&serverId={backend_id}', [
+        $webUrl = $url->withPath('/web/index.html')->withFragment(r('!/{action}?id={id}&serverId={backend_id}', [
             'backend_id' => $context->backendId,
-            'id' => ag($item, 'Id')
+            'id' => ag($item, 'Id'),
+            'action' => JellyfinClient::CLIENT_NAME === $context->clientName ? 'details' : 'item',
         ]));
 
         $metadata = [

@@ -5,7 +5,7 @@
         <NuxtLink href="/backends">Backends</NuxtLink>
         -
         <NuxtLink :href="'/backend/' + backend">{{ backend }}</NuxtLink>
-        : Unmatched
+        : Mismatched
       </span>
 
       <div class="is-pulled-right" v-if="hasLooked">
@@ -20,7 +20,7 @@
       </div>
 
       <div class="subtitle is-hidden-mobile">
-        In this page you will find items <code>WatchState</code> knows that are un-matched in your backend.
+        This page will show items that <code>WatchState</code> thinks are possible mismatches.
       </div>
     </div>
 
@@ -49,6 +49,7 @@
         </div>
       </div>
     </template>
+
     <template v-else>
       <div class="column is-12" v-if="isLoading && items.length < 1">
         <Message message_class="is-info" title="Analyzing">
@@ -62,7 +63,7 @@
         <Message message_class="has-background-success-90" title="Success!">
           <span class="icon-text">
             <span class="icon"><i class="fas fa-check"></i></span>
-            <span>There are no unmatched content in the libraries we looked at.</span>
+            <span>WatchState did not find possible mismatched items in the libraries we looked at.</span>
           </span>
         </Message>
       </div>
@@ -71,8 +72,8 @@
         <div class="column is-12">
           <h1 class="title is-4">
             <span class="icon-text">
-              <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
-              <span>Unmatched Content</span>
+              <span class="icon has-text-warning"><i class="fas fa-exclamation-triangle"></i></span>
+              <span>Possible Mismatches</span>
             </span>
           </h1>
         </div>
@@ -84,7 +85,7 @@
                 <NuxtLink target="_blank" :to="item.webUrl ?? item.url">{{ item.title }}</NuxtLink>
               </p>
               <div class="card-header-icon" @click="item.showItem = !item.showItem">
-                <span class="icon has-tooltip" v-tooltip="'Toggle raw data'">
+                <span class="icon has-tooltip">
                   <i class="fas fa-film" :class="{'fa-film': 'Movie' === item.type,'fa-tv': 'Movie' !== item.type}"></i>
                 </span>
               </div>
@@ -97,49 +98,59 @@
                 <div class="column is-6 has-text-right">
                   <strong>Type:</strong> {{ item.type }}
                 </div>
-                <div class="column is-6" v-if="0 !== item.year && item.year">
-                  <strong>Year:</strong> {{ item.year }}
+                <div class="column is-6">
+                  <strong>Year:</strong> {{ item.year ?? '???' }}
+                </div>
+                <div class="column is-6 has-text-right">
+                  <strong>Percent:</strong> <span :class="percentColor(item.percent)">
+                  {{ item.percent.toFixed(2) }}%
+                </span>
+                </div>
+                <div class="column is-12" v-if="item.path">
+                  <strong>Path:</strong> {{ item.path }}
                 </div>
               </div>
             </div>
             <div class="card-content p-0 m-0" v-if="item?.showItem">
               <pre><code>{{ JSON.stringify(item, null, 2) }}</code></pre>
             </div>
-            <div class="card-footer">
-              <div class="card-footer-item">
-                <NuxtLink target="_blank" :to="`https://www.imdb.com/find/?q=${fixTitle(item.title)}`">
-                  <span class="icon"><i class="fas fa-search"></i></span>
-                  <span>IMDb</span>
-                </NuxtLink>
-              </div>
-              <div class="card-footer-item">
-                <NuxtLink target="_blank" :to="`https://www.themoviedb.org/search?query=${fixTitle(item.title)}`">
-                  <span class="icon"><i class="fas fa-search"></i></span>
-                  <span>TMDB</span>
-                </NuxtLink>
-              </div>
-              <div class="card-footer-item">
-                <NuxtLink target="_blank" :to="`https://thetvdb.com/search?query=${fixTitle(item.title)}`">
-                  <span class="icon"><i class="fas fa-search"></i></span>
-                  <span>TVDB</span>
-                </NuxtLink>
-              </div>
-            </div>
           </div>
-
         </div>
       </template>
     </template>
+
+
+    <div class="column is-12" v-if="show_page_tips">
+      <Message title="Tips" message_class="has-background-info-90 has-text-dark">
+        <button class="delete" @click="show_page_tips=false"></button>
+        <div class="content">
+          <ul>
+            <li>
+              This service expects standard plex naming conventions. So if you libraries doesn't follow the same
+              conventions, you will see a lot of items being reported as mismatches.
+            </li>
+            <li>
+              If you see a lot of mismatches, you might want to check the that the source directory matches the item.
+            </li>
+            <li>
+              Clicking on the icon next to the title will show you the raw data that was used to generate the report.
+            </li>
+          </ul>
+        </div>
+      </Message>
+    </div>
   </div>
 </template>
 
 <script setup>
 import {notification} from "~/utils/index.js";
+import {useStorage} from "@vueuse/core";
 
 const backend = useRoute().params.backend
 const items = ref([])
 const isLoading = ref(false)
 const hasLooked = ref(false)
+const show_page_tips = useStorage('show_page_tips', true)
 
 const loadContent = async () => {
   hasLooked.value = true
@@ -149,7 +160,7 @@ const loadContent = async () => {
   let response, json;
 
   try {
-    response = await request(`/backend/${backend}/unmatched`)
+    response = await request(`/backend/${backend}/mismatched`)
   } catch (e) {
     isLoading.value = false
     return notification('error', 'Error', e.message)
@@ -176,5 +187,14 @@ const loadContent = async () => {
   items.value = json
 }
 
-const fixTitle = (title) => title.replace(/([\[(]).*?([\])])/g, '').replace(/-\w+$/, '').trim()
+const percentColor = (percent) => {
+  percent = parseInt(percent)
+  if (percent > 90) {
+    return 'has-text-success'
+  } else if (percent > 50 && 90 < percent) {
+    return 'has-text-warning'
+  } else {
+    return 'has-text-danger'
+  }
+}
 </script>
