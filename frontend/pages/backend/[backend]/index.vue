@@ -3,13 +3,13 @@
 
     <div class="column is-12 is-clearfix">
       <span class="title is-4">
-        <NuxtLink href="/backends" v-text="'Backends'"/>
+        <NuxtLink to="/backends" v-text="'Backends'"/>
         : {{ backend }}
       </span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <NuxtLink class="button is-primary" v-tooltip="'Edit Backend'" :href="`/backend/${backend}/edit`">
+            <NuxtLink class="button is-primary" v-tooltip="'Edit Backend'" :to="`/backend/${backend}/edit`">
               <span class="icon"><i class="fas fa-edit"></i></span>
             </NuxtLink>
           </p>
@@ -57,7 +57,7 @@
               <i class="fas fa-eye-slash" v-if="!history.watched"></i>
               <i class="fas fa-eye" v-else></i>
             </span>
-            <NuxtLink :href="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
+            <NuxtLink :to="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
           </p>
           <span class="card-header-icon">
             <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
@@ -76,7 +76,7 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-server"></i></span>
                 <span>
-                  <NuxtLink :href="'/backend/'+history.via" v-text="history.via"/>
+                  <NuxtLink :to="'/backend/'+history.via" v-text="history.via"/>
                 </span>
               </span>
             </div>
@@ -98,7 +98,7 @@
       </div>
     </div>
     <div class="column is-12">
-      <NuxtLink :href="`/history/?perpage=50&page=1&q=${backend}&key=via`">
+      <NuxtLink :to="`/history/?perpage=50&page=1&q=${backend}&key=via`">
         <span class="icon-text">
           <span class="icon"><i class="fas fa-history"></i></span>
           <span>View all history related to this backend</span>

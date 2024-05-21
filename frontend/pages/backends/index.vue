@@ -42,12 +42,12 @@
         <div class="card">
           <header class="card-header">
             <p class="card-header-title">
-              <NuxtLink :href="`/backend/${backend.name}`">
+              <NuxtLink :to="`/backend/${backend.name}`">
                 {{ backend.name }}
               </NuxtLink>
             </p>
             <span class="card-header-icon" v-tooltip="'Edit Backend settings'">
-              <NuxtLink :href="`/backend/${backend.name}/edit`">
+              <NuxtLink :to="`/backend/${backend.name}/edit`">
                 <span class="icon"><i class="fas fa-cog"></i></span>
               </NuxtLink>
             </span>
@@ -92,7 +92,7 @@
         </div>
       </div>
     </template>
-    
+
     <div class="column is-12" v-if="show_page_tips">
       <Message title="Tips" message_class="has-background-info-90 has-text-dark">
         <button class="delete" @click="show_page_tips=false"></button>

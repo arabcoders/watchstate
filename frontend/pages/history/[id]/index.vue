@@ -2,7 +2,7 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
       <span class="title is-4">
-        <NuxtLink href="/history">History</NuxtLink>
+        <NuxtLink to="/history">History</NuxtLink>
         : {{ data?.full_title ?? data?.title ?? id }}
       </span>
       <div class="is-pulled-right" v-if="data?.via">
@@ -31,7 +31,7 @@
         <header class="card-header">
           <div class="card-header-title">
             <span>Last update by&nbsp;</span>
-            <NuxtLink :href="`/backend/${data.via}`" v-text="data.via"/>
+            <NuxtLink :to="`/backend/${data.via}`" v-text="data.via"/>
           </div>
           <div class="card-header-icon">
             <button class="button is-small" @click="toggleWatched"
@@ -124,7 +124,7 @@
                 <span>GUIDs:</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.guids">
-                <NuxtLink target="_blank" :href="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
+                <NuxtLink target="_blank" :to="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
                   {{ source.split('guid_')[1] }}-{{ guid }}
                 </NuxtLink>
               </span>
@@ -136,7 +136,7 @@
                 <span>Series GUIDs:</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.parent">
-                <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
+                <NuxtLink target="_blank" :to="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
                   {{ source.split('guid_')[1] }}-{{ guid }}
                 </NuxtLink>
               </span>
@@ -158,7 +158,7 @@
             <span class="icon-text">
               <span class="icon"><i class="fas fa-server"></i></span>
               <span>
-                <NuxtLink :href="`/backend/${key}`" v-text="key"/>
+                <NuxtLink :to="`/backend/${key}`" v-text="key"/>
               </span>
             </span>
           </div>
@@ -248,7 +248,7 @@
                 <span>GUIDs:</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in item.guids">
-                <NuxtLink target="_blank" :href="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
+                <NuxtLink target="_blank" :to="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
                   {{ source.split('guid_')[1] }}-{{ guid }}
                 </NuxtLink>
               </span>
@@ -260,7 +260,7 @@
                 <span>Series GUIDs:</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in item.parent">
-                <NuxtLink target="_blank" :href="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
+                <NuxtLink target="_blank" :to="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
                   {{ source.split('guid_')[1] }}-{{ guid }}
                 </NuxtLink>
               </span>

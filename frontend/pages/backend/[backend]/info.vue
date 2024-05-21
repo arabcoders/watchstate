@@ -2,9 +2,9 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
       <span class="title is-4">
-        <NuxtLink href="/backends">Backends</NuxtLink>
+        <NuxtLink to="/backends">Backends</NuxtLink>
         -
-        <NuxtLink :href="'/backend/' + backend">{{ backend }}</NuxtLink>
+        <NuxtLink :to="'/backend/' + backend">{{ backend }}</NuxtLink>
         : Info
       </span>
 

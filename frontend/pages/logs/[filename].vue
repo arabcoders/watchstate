@@ -2,7 +2,7 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
       <span class="title is-4">
-        <NuxtLink href="/logs">Logs</NuxtLink>
+        <NuxtLink to="/logs">Logs</NuxtLink>
         : {{ filename }}
       </span>
 

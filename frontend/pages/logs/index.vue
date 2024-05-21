@@ -22,7 +22,7 @@
       <div class="card">
         <header class="card-header">
           <p class="card-header-title is-text-overflow pr-1">
-            <NuxtLink :href="'/logs/'+item.filename">{{ item.filename ?? item.date }}</NuxtLink>
+            <NuxtLink :to="'/logs/'+item.filename">{{ item.filename ?? item.date }}</NuxtLink>
           </p>
           <span class="card-header-icon">
             <span class="icon" v-if="'access' === item.type"><i class="fas fa-key"></i></span>
