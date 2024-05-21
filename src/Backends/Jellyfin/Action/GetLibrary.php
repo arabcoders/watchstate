@@ -239,11 +239,17 @@ class GetLibrary
 
         $this->logger->debug('Processing [{backend}] {item.type} [{item.title} ({item.year})].', $data);
 
+        $webUrl = $url->withPath('/web/index.html')->withFragment(r('/details?id={id}&serverId={backend_id}', [
+            'backend_id' => $context->backendId,
+            'id' => ag($item, 'Id')
+        ]));
+
         $metadata = [
             'id' => ag($item, 'Id'),
             'type' => ucfirst(ag($item, 'Type', 'unknown')),
             'library' => ag($log, 'library.title'),
             'url' => (string)$url,
+            'webUrl' => (string)$webUrl,
             'title' => ag($item, $possibleTitlesList, '??'),
             'year' => ag($item, 'ProductionYear'),
             'guids' => [],
