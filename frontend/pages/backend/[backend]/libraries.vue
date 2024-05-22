@@ -24,14 +24,18 @@
       </div>
     </div>
 
-    <template v-if="items.length < 1">
+    <div class="column is-12" v-if="items.length < 1">
       <Message message_class="has-background-info-90 has-text-dark" title="No Libraries">
-        <span class="icon-text">
+        <span class="icon-text" v-if="isLoading">
+          <span class="icon"><i class="fas fa-spinner fa-spin"></i></span>
+          <span>Loading libraries list. Please wait...</span>
+        </span>
+        <span class="icon-text" v-else>
           <span class="icon"><i class="fas fa-info-circle"></i></span>
           <span>No libraries found in the backend.</span>
         </span>
       </Message>
-    </template>
+    </div>
 
     <div class="column is-6" v-for="item in items" :key="`library-${item.id}`">
       <div class="card">
@@ -85,8 +89,7 @@
             <li>Ignoring library will prevent any content from being added to the local database from that library
               during import process, and via webhook events.
             </li>
-            <li>Libraries that shows <code>Supported: No</code> will not be processed by the system.
-            </li>
+            <li>Libraries that shows <code>Supported: No</code> will not be processed by the system.</li>
           </ul>
         </div>
       </Message>
@@ -105,43 +108,40 @@ const isLoading = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 
 const loadContent = async () => {
-  isLoading.value = true
-  items.value = []
-
-  let response, json
-
   try {
-    response = await request(`/backend/${backend}/library`)
-  } catch (e) {
-    isLoading.value = false
-    return notification('error', 'Error', e.message)
-  }
+    isLoading.value = true
+    items.value = []
 
-  try {
-    json = await response.json()
-  } catch (e) {
-    json = {
-      error: {
-        code: response.status,
-        message: response.statusText
+    const response = await request(`/backend/${backend}/library`)
+    let json
+
+    try {
+      json = await response.json()
+    } catch (e) {
+      json = {
+        error: {
+          code: response.status,
+          message: response.statusText
+        }
       }
     }
+
+    if (200 !== response.status) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    items.value = json
+  } catch (e) {
+    return notification('error', 'Error', `Request error. ${e.message}`)
+  } finally {
+    isLoading.value = false
   }
-
-  isLoading.value = false
-
-  if (!response.ok) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
-    return
-  }
-
-  items.value = json
 }
 
 const toggleIgnore = async (library) => {
-  const newState = !library.ignored
-
   try {
+    const newState = !library.ignored
     const response = await request(`/backend/${backend}/library/${library.id}`, {
       method: newState ? 'POST' : 'DELETE',
     });

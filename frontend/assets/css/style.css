@@ -167,10 +167,3 @@ body {
 .is-strike-through {
     text-decoration: line-through;
 }
-
-div.content img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    margin: 0 auto;
-}
