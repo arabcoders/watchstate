@@ -105,6 +105,13 @@ final class GetLibrariesList
             $agent = ag($section, 'agent', 'unknown');
             $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
 
+            $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(
+                r('!/media/{backend_id}/com.plexapp.plugins.library?source={key}', [
+                    'key' => $key,
+                    'backend_id' => $context->backendId,
+                ])
+            );
+
             $builder = [
                 'id' => $key,
                 'title' => ag($section, 'title', '???'),
@@ -113,6 +120,7 @@ final class GetLibrariesList
                 'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
                 'agent' => ag($section, 'agent'),
                 'scanner' => ag($section, 'scanner'),
+                'webUrl' => (string)$webUrl,
             ];
 
             if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
