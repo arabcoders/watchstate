@@ -2,7 +2,7 @@
   <div class="columns is-multiline">
     <div class="column is-12">
       <h1 class="title is-4">
-        <NuxtLink href="/history">Latest History</NuxtLink>
+        <NuxtLink to="/history">Latest History</NuxtLink>
       </h1>
     </div>
 
@@ -16,7 +16,7 @@
                   <i class="fas fa-eye-slash" v-if="!history.watched"></i>
                   <i class="fas fa-eye" v-else></i>
                 </span>
-                <NuxtLink :href="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
+                <NuxtLink :to="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
@@ -35,7 +35,7 @@
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-server"></i></span>
                     <span>
-                      <NuxtLink :href="'/backend/'+history.via" v-text="history.via"/>
+                      <NuxtLink :to="'/backend/'+history.via" v-text="history.via"/>
                     </span>
                   </span>
                 </div>
@@ -69,7 +69,7 @@
 
     <div class="column is-12" v-for="log in logs" :key="log.filename">
       <h1 class="title is-4">
-        <NuxtLink :href="`/logs/${log.filename}`">Latest {{ log.type }} logs</NuxtLink>
+        <NuxtLink :to="`/logs/${log.filename}`">Latest {{ log.type }} logs</NuxtLink>
       </h1>
       <code class="box logs-container">
         <span class="is-block" v-for="(item, index) in log.lines" :key="log.filename + '-' + index">
@@ -85,13 +85,13 @@
           welcome to join our <span class="icon-text is-underlined">
           <span class="icon"><i class="fas fa-brands fa-discord"></i></span>
           <span>
-            <NuxtLink href="https://discord.gg/haUXHJyj6Y" target="_blank" v-text="'Discord server'"/>
+            <NuxtLink to="https://discord.gg/haUXHJyj6Y" target="_blank" v-text="'Discord server'"/>
           </span>
         </span>. For bug reports, feature requests, or contributions, please visit the
           <span class="icon-text is-underlined">
             <span class="icon"><i class="fas fa-brands fa-github"></i></span>
             <span>
-              <NuxtLink href="https://github.com/arabcoders/watchstate/issues/new/choose" target="_blank"
+              <NuxtLink to="https://github.com/arabcoders/watchstate/issues/new/choose" target="_blank"
                         v-text="'GitHub repository'"/>
             </span>
           </span>.

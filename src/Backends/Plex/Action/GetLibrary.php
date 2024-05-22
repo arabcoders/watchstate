@@ -311,11 +311,19 @@ final class GetLibrary
 
         $this->logger->debug('Processing [{backend}] {item.type} [{item.title} ({item.year})].', $data);
 
+        $webUrl = $url->withPath('/web/index.html')->withFragment(
+            r('!/server/{backend_id}/details?key={key}&context=external', [
+                'backend_id' => $context->backendId,
+                'key' => urlencode($url->getPath())
+            ])
+        );
+
         $metadata = [
             'id' => (int)ag($item, 'ratingKey'),
             'type' => ucfirst(ag($item, 'type', 'unknown')),
             'library' => ag($log, 'library.title'),
             'url' => (string)$url,
+            'webUrl' => (string)$webUrl,
             'title' => ag($item, $possibleTitlesList, '??'),
             'year' => $year,
             'guids' => [],

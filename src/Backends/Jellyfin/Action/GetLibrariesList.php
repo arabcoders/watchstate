@@ -102,7 +102,7 @@ class GetLibrariesList
             );
         }
 
-        if (null !== ($ignoreIds = ag($context->options, 'ignore', null))) {
+        if (null !== ($ignoreIds = ag($context->options, Options::IGNORE, null))) {
             $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
@@ -111,6 +111,17 @@ class GetLibrariesList
         foreach ($listDirs as $section) {
             $key = (string)ag($section, 'Id');
             $type = ag($section, 'CollectionType', 'unknown');
+
+            if (JellyfinClient::CLIENT_NAME === $context->clientName) {
+                $fragment = '/tv.html?topParentId={id}&serverId={backend_id}';
+            } else {
+                $fragment = '!/tv?serverId={backend_id}&parentId={id}';
+            }
+
+            $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(r($fragment, [
+                'backend_id' => $context->backendId,
+                'id' => $key,
+            ]));
 
             $builder = [
                 'id' => $key,
@@ -121,6 +132,7 @@ class GetLibrariesList
                     $type,
                     [JellyfinClient::COLLECTION_TYPE_MOVIES, JellyfinClient::COLLECTION_TYPE_SHOWS]
                 ),
+                'webUrl' => (string)$webUrl,
             ];
 
             if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {

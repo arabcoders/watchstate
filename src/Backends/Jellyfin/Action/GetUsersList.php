@@ -120,7 +120,7 @@ class GetUsersList
                 'id' => ag($user, 'Id'),
                 'name' => ag($user, 'Name'),
                 'admin' => (bool)ag($user, 'Policy.IsAdministrator'),
-                'Hidden' => (bool)ag($user, 'Policy.IsHidden'),
+                'hidden' => (bool)ag($user, 'Policy.IsHidden'),
                 'disabled' => (bool)ag($user, 'Policy.IsDisabled'),
                 'updatedAt' => null !== $date ? makeDate($date) : 'Never',
             ];

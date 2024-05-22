@@ -72,6 +72,12 @@ class GetLibrariesListTest extends TestCase
             $type = ag($item, 'type', 'unknown');
             $agent = ag($item, 'agent', 'unknown');
             $supportedType = PlexClient::TYPE_MOVIE === $type || PlexClient::TYPE_SHOW === $type;
+            $webUrl = $this->context->backendUrl->withPath('/web/index.html')->withFragment(
+                r('!/media/{backend_id}/com.plexapp.plugins.library?source={key}', [
+                    'key' => $key,
+                    'backend_id' => $this->context->backendId,
+                ])
+            );
 
             $expected[$key] = [
                 'id' => $key,
@@ -81,6 +87,7 @@ class GetLibrariesListTest extends TestCase
                 'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
                 'agent' => $agent,
                 'scanner' => ag($item, 'scanner'),
+                'webUrl' => (string)$webUrl,
             ];
         }
 

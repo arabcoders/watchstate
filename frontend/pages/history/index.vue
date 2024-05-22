@@ -142,7 +142,7 @@
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-server"></i></span>
                     <span>
-                      <NuxtLink :href="'/backend/'+item.via" v-text="item.via"/>
+                      <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
                     </span>
                   </span>
                 </div>

@@ -67,12 +67,13 @@ final class Library
             return api_error(r("Library id '{id}' is {message} ignored.", [
                 'id' => $id,
                 'message' => $remove ? "not" : 'already',
-            ]), $remove ? HTTP_STATUS::HTTP_NOT_FOUND : HTTP_STATUS::HTTP_CONFLICT);
+            ]), HTTP_STATUS::HTTP_CONFLICT);
         }
 
         $found = false;
 
         $libraries = $this->getClient(name: $name)->listLibraries();
+
         foreach ($libraries as &$library) {
             if ((string)ag($library, 'id') === (string)$id) {
                 $ignoreIds[] = $id;
