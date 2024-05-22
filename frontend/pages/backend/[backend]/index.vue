@@ -33,12 +33,10 @@
             <NuxtLink :to="`/backend/${backend}/unmatched`" v-text="'Find unmatched content.'"/>
           </li>
           <li>
-            <NuxtLink v-text="'View backend libraries.'"
-                      @click="notification('Error','Error','The page is not available in this build yet.')"/>
+            <NuxtLink :to="`/backend/${backend}/libraries`" v-text="'View backend libraries.'"/>
           </li>
           <li>
-            <NuxtLink v-text="'View backend users.'"
-                      @click="notification('Error','Error','The page is not available in this build yet.')"/>
+            <NuxtLink :to="`/backend/${backend}/users`" v-text="'View backend users.'"/>
           </li>
         </ul>
       </div>

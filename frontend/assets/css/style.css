@@ -14,14 +14,6 @@
     border-radius: 15px;
 }
 
-.is-bordered-danger {
-    border: 1px solid red;
-}
-
-.is-bordered-info {
-    border: 1px solid #3e8ed0;
-}
-
 html,
 body {
     background-color: #eaeaea;
@@ -29,14 +21,6 @@ body {
 
 .container {
     background-color: #ffffff;
-}
-
-hr {
-    background-color: #000;
-}
-
-.is-unselectable {
-    user-select: none;
 }
 
 .is-text-overflow {
@@ -68,18 +52,6 @@ hr {
         border-radius: 15px;
     }
 
-    .is-bordered-danger {
-        border: 1px solid red;
-    }
-
-    .is-bordered-info {
-        border: 1px solid #3e8ed0;
-    }
-
-    hr {
-        background-color: #fff;
-    }
-
     html,
     body {
         background-color: #000000;
@@ -87,10 +59,6 @@ hr {
 
     .container {
         background-color: #0f1010;
-    }
-
-    .is-unselectable {
-        user-select: none;
     }
 
     .is-text-overflow {
@@ -105,24 +73,8 @@ hr {
     }
 }
 
-.is-borderless {
-    border: none;
-}
-
-.is-marginless {
-    margin: 0 !important;
-}
-
-.is-paddingless {
-    padding: 0 !important;
-}
-
 .is-bold {
     font-weight: bold;
-}
-
-.is-word-break {
-    word-break: break-all;
 }
 
 .is-ellipsis {
@@ -184,7 +136,6 @@ hr {
 }
 
 @media screen and (min-width: 769px), print {
-
     .field.is-grouped-tablet {
         display: flex;
         gap: 0.75rem;
@@ -215,4 +166,11 @@ hr {
 
 .is-strike-through {
     text-decoration: line-through;
+}
+
+div.content img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
 }

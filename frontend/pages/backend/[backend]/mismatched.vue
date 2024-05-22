@@ -60,7 +60,7 @@
         </Message>
       </div>
       <div class="column is-12" v-else-if="hasLooked && items.length < 1">
-        <Message message_class="has-background-success-90" title="Success!">
+        <Message message_class="has-background-success-90 has-text-dark" title="Success!">
           <span class="icon-text">
             <span class="icon"><i class="fas fa-check"></i></span>
             <span>WatchState did not find possible mismatched items in the libraries we looked at.</span>
