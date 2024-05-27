@@ -255,7 +255,6 @@ const makeGUIDLink = (type, source, guid, data) => {
  * @returns {string} The formatted duration.
  */
 const formatDuration = (milliseconds) => {
-    console.log(milliseconds)
     milliseconds = parseInt(milliseconds)
     let seconds = Math.floor(milliseconds / 1000);
     let minutes = Math.floor(seconds / 60);
