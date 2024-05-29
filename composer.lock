@@ -3186,12 +3186,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "0ec6bad5f4523eda2514e89d5ea48cde6ebe7f99"
+        "reference": "e567d8d7d81fe18d93e87f64427a49caf3d5511f"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/0ec6bad5f4523eda2514e89d5ea48cde6ebe7f99",
-        "reference": "0ec6bad5f4523eda2514e89d5ea48cde6ebe7f99",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/e567d8d7d81fe18d93e87f64427a49caf3d5511f",
+        "reference": "e567d8d7d81fe18d93e87f64427a49caf3d5511f",
         "shasum": ""
       },
       "conflict": {
@@ -3199,6 +3199,7 @@
         "admidio/admidio": "<4.2.13",
         "adodb/adodb-php": "<=5.20.20|>=5.21,<=5.21.3",
         "aheinze/cockpit": "<2.2",
+        "aimeos/aimeos-core": ">=2022.04.1,<2022.10.17|>=2023.04.1,<2023.10.17|>=2024.04.1,<2024.04.7",
         "aimeos/aimeos-typo3": "<19.10.12|>=20,<20.10.5",
         "airesvsg/acf-to-rest-api": "<=3.1",
         "akaunting/akaunting": "<2.1.13",
@@ -3400,6 +3401,7 @@
         "funadmin/funadmin": "<=3.2|>=3.3.2,<=3.3.3",
         "gaoming13/wechat-php-sdk": "<=1.10.2",
         "genix/cms": "<=1.1.11",
+        "getformwork/formwork": "<1.13",
         "getgrav/grav": "<1.7.46",
         "getkirby/cms": "<4.1.1",
         "getkirby/kirby": "<=2.5.12",
@@ -3706,7 +3708,7 @@
         "silverstripe/admin": "<1.13.19|>=2,<2.1.8",
         "silverstripe/assets": ">=1,<1.11.1",
         "silverstripe/cms": "<4.11.3",
-        "silverstripe/comments": ">=1.3,<1.9.99|>=2,<2.9.99|>=3,<3.1.1",
+        "silverstripe/comments": ">=1.3,<3.1.1",
         "silverstripe/forum": "<=0.6.1|>=0.7,<=0.7.3",
         "silverstripe/framework": "<4.13.39|>=5,<5.1.11",
         "silverstripe/graphql": ">=2,<2.0.5|>=3,<3.8.2|>=4,<4.3.7|>=5,<5.1.3",
@@ -3976,7 +3978,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-05-23T15:04:32+00:00"
+      "time": "2024-05-29T15:04:31+00:00"
     },
     {
       "name": "sebastian/cli-parser",

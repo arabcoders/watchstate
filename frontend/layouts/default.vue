@@ -67,6 +67,13 @@
             </span>
           </NuxtLink>
 
+          <NuxtLink class="navbar-item" to="/queue" @click.native="showMenu=false">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-list"></i></span>
+              <span>Queue</span>
+            </span>
+          </NuxtLink>
+
         </div>
         <div class="navbar-end pr-3">
           <div class="navbar-item">

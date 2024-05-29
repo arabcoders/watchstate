@@ -236,7 +236,7 @@ return (function () {
             ImportCommand::TASK_NAME => [
                 'command' => ImportCommand::ROUTE,
                 'name' => ImportCommand::TASK_NAME,
-                'info' => 'Import play state and metadata from backends.',
+                'info' => 'Import data from backends.',
                 'enabled' => (bool)env('WS_CRON_IMPORT', false),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_IMPORT_AT', '0 */1 * * *'), '0 */1 * * *'),
                 'args' => env('WS_CRON_IMPORT_ARGS', '-v'),
@@ -244,7 +244,7 @@ return (function () {
             ExportCommand::TASK_NAME => [
                 'command' => ExportCommand::ROUTE,
                 'name' => ExportCommand::TASK_NAME,
-                'info' => 'Export play state to backends.',
+                'info' => 'Export data to backends.',
                 'enabled' => (bool)env('WS_CRON_EXPORT', false),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'), '30 */1 * * *'),
                 'args' => env('WS_CRON_EXPORT_ARGS', '-v'),
@@ -252,7 +252,7 @@ return (function () {
             PushCommand::TASK_NAME => [
                 'command' => PushCommand::ROUTE,
                 'name' => PushCommand::TASK_NAME,
-                'info' => 'Push Webhook play states to backends.',
+                'info' => 'Send queued events to backends.',
                 'enabled' => (bool)env('WS_CRON_PUSH', true),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_PUSH_AT', '*/10 * * * *'), '*/10 * * * *'),
                 'args' => env('WS_CRON_PUSH_ARGS', '-v'),
@@ -260,7 +260,7 @@ return (function () {
             ProgressCommand::TASK_NAME => [
                 'command' => ProgressCommand::ROUTE,
                 'name' => ProgressCommand::TASK_NAME,
-                'info' => 'Push play progress to backends.',
+                'info' => 'Send play progress to backends.',
                 'enabled' => (bool)env('WS_CRON_PROGRESS', false),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_PROGRESS_AT', '*/45 * * * *'), '*/45 * * * *'),
                 'args' => env('WS_CRON_PROGRESS_ARGS', '-v'),

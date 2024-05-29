@@ -27,18 +27,13 @@ final class Queue
      * @throws InvalidArgumentException
      */
     #[Get(self::URL . '[/]', name: 'system.queue')]
-    public function envList(iRequest $request): iResponse
+    public function queueList(iRequest $request): iResponse
     {
-        $response = [
-            'queue' => [],
-            'links' => [
-                'self' => (string)$request->getUri()->withHost('')->withPort(0)->withScheme(''),
-            ],
-        ];
-
-        $entities = $items = [];
+        $response = [];
 
         $queue = $this->cache->get('queue', []);
+
+        $entities = $items = [];
 
         foreach ($queue as $item) {
             $items[] = Container::get(iState::class)::fromArray($item);
@@ -53,13 +48,14 @@ final class Queue
         $items = null;
 
         foreach ($entities as $entity) {
-            $response['queue'][] = [
-                'id' => $entity->id,
-                'title' => $entity->getName(),
-                'played' => $entity->isWatched() ? 'Yes' : 'No',
-                'via' => $entity->via ?? '??',
-                'date' => makeDate($entity->updated),
-                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
+            $response[] = [
+                iState::COLUMN_ID => $entity->id,
+                iState::COLUMN_TITLE => $entity->getName(),
+                iState::COLUMN_WATCHED => $entity->isWatched(),
+                iState::COLUMN_VIA => $entity->via ?? '??',
+                iState::COLUMN_UPDATED => makeDate($entity->updated),
+                iState::COLUMN_EXTRA_EVENT => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
+                iState::COLUMN_META_DATA_PROGRESS => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null
             ];
         }
 
