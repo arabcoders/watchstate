@@ -286,4 +286,17 @@ const copyText = (str) => {
     notification('success', 'Success', 'Text copied to clipboard.')
 }
 
-export {ag_set, ag, humanFileSize, awaitElement, ucFirst, notification, makeGUIDLink, formatDuration, copyText}
+const stringToRegex = (str) => new RegExp(str.match(/\/(.+)\/.*/)[1], str.match(/\/.+\/(.*)/)[1]);
+
+export {
+    ag_set,
+    ag,
+    humanFileSize,
+    awaitElement,
+    ucFirst,
+    notification,
+    makeGUIDLink,
+    formatDuration,
+    copyText,
+    stringToRegex
+}
