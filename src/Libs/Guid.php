@@ -21,14 +21,14 @@ use Stringable;
  */
 final class Guid implements JsonSerializable, Stringable
 {
-    public const GUID_IMDB = 'guid_imdb';
-    public const GUID_TVDB = 'guid_tvdb';
-    public const GUID_TMDB = 'guid_tmdb';
-    public const GUID_TVMAZE = 'guid_tvmaze';
-    public const GUID_TVRAGE = 'guid_tvrage';
-    public const GUID_ANIDB = 'guid_anidb';
-    public const GUID_YOUTUBE = 'guid_youtube';
-    public const GUID_CMDB = 'guid_cmdb';
+    public const string GUID_IMDB = 'guid_imdb';
+    public const string GUID_TVDB = 'guid_tvdb';
+    public const string GUID_TMDB = 'guid_tmdb';
+    public const string GUID_TVMAZE = 'guid_tvmaze';
+    public const string GUID_TVRAGE = 'guid_tvrage';
+    public const string GUID_ANIDB = 'guid_anidb';
+    public const string GUID_YOUTUBE = 'guid_youtube';
+    public const string GUID_CMDB = 'guid_cmdb';
     /**
      * Constant array of supported GUID types.
      *
@@ -36,7 +36,7 @@ final class Guid implements JsonSerializable, Stringable
      *
      * @var array
      */
-    private const SUPPORTED = [
+    private const array SUPPORTED = [
         Guid::GUID_IMDB => 'string',
         Guid::GUID_TVDB => 'string',
         Guid::GUID_TMDB => 'string',
@@ -56,7 +56,7 @@ final class Guid implements JsonSerializable, Stringable
      *
      * @var array
      */
-    private const VALIDATE_GUID = [
+    private const array VALIDATE_GUID = [
         Guid::GUID_IMDB => [
             'pattern' => '/tt(\d+)/i',
             'example' => 'tt(number)',
@@ -85,7 +85,7 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * @var string LOOKUP_KEY is how we format external ids to look up a record.
      */
-    private const LOOKUP_KEY = '{db}://{id}';
+    private const string LOOKUP_KEY = '{db}://{id}';
     /**
      * @var array $data Holds the list of supported external ids.
      */
@@ -187,6 +187,16 @@ final class Guid implements JsonSerializable, Stringable
     public static function getSupported(): array
     {
         return self::SUPPORTED;
+    }
+
+    /**
+     * Get validators for external ids.
+     *
+     * @return array<string,array{pattern:string, example:string}>
+     */
+    public static function getValidators(): array
+    {
+        return self::VALIDATE_GUID;
     }
 
     /**

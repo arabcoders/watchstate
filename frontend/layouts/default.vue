@@ -74,13 +74,15 @@
             </span>
           </NuxtLink>
 
+          <NuxtLink class="navbar-item" to="/ignore" @click.native="showMenu=false">
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-ban"></i></span>
+              <span>Ignore</span>
+            </span>
+          </NuxtLink>
+
         </div>
         <div class="navbar-end pr-3">
-          <div class="navbar-item">
-            <button class="button is-dark" @click="maskAll = !maskAll" v-tooltip="'Toggle Text Obscure'">
-              <span class="icon"><i class="fas fa-mask"></i></span>
-            </button>
-          </div>
           <div class="navbar-item">
             <button class="button is-dark" @click="selectedTheme = 'light'" v-if="'dark' === selectedTheme"
                     v-tooltip="'Switch to light theme'">
@@ -99,7 +101,7 @@
         </div>
       </div>
     </nav>
-    <div :class="{'is-full-mask':maskAll}">
+    <div>
       <div class="columns is-multiline" v-if="showConnection">
         <div class="column is-12 mt-2">
           <div class="card">
@@ -276,7 +278,6 @@ const showConnection = ref(false)
 const api_url = useStorage('api_url', window.location.origin)
 const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
-const maskAll = useStorage('page_mask', false)
 const show_page_tips = useStorage('show_page_tips', true)
 
 const api_status = ref(false)
