@@ -7,12 +7,8 @@ namespace App\Commands\Backend\Ignore;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
-use PDO;
-use Psr\Http\Message\UriInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
@@ -27,21 +23,13 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'backend:ignore:list';
-
-    private array $cache = [];
-
-    private PDO $db;
+    public const string ROUTE = 'backend:ignore:list';
 
     /**
      * Class Constructor.
-     *
-     * @param iDB $db The database object to be injected
      */
-    public function __construct(iDB $db)
+    public function __construct()
     {
-        $this->db = $db->getPDO();
-
         parent::__construct();
     }
 
@@ -99,151 +87,54 @@ final class ListCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        $path = Config::get('path') . '/config/ignore.yaml';
-
-        if (false === file_exists($path)) {
-            touch($path);
-        }
-
         $list = [];
 
-        $fType = $input->getOption('type');
-        $fDb = $input->getOption('db');
-        $fId = $input->getOption('id');
         $backends = $input->getOption('select-backend');
 
-        $ids = Config::get('ignore', []);
+        $query = [];
 
-        foreach ($ids as $guid => $date) {
-            $urlParts = parse_url($guid);
+        if (null !== ($fType = $input->getOption('type'))) {
+            $query['type'] = $fType;
+        }
+        if (null !== ($fDb = $input->getOption('db'))) {
+            $query['db'] = $fDb;
+        }
+        if (null !== ($fId = $input->getOption('id'))) {
+            $query['id'] = $fId;
+        }
 
-            $backend = ag($urlParts, 'host');
-            $type = ag($urlParts, 'scheme');
-            $db = ag($urlParts, 'user');
-            $id = ag($urlParts, 'pass');
-            $scope = ag($urlParts, 'query');
+        if (!empty($backends)) {
+            $query['backend'] = $backends[0];
+        }
 
-            if (!empty($backends) && !in_array($backend, $backends)) {
-                if (true === str_contains($backend, ',')) {
-                    throw new \RuntimeException(
-                        'The option [-s --select-backend] does not support comma separated values. it should be used multiple times.'
-                    );
+        $response = APIRequest('GET', '/ignore/?' . http_build_query($query));
+
+        foreach ($response->body as $item) {
+            if ('table' === $input->getOption('output')) {
+                unset($item['rule']);
+                $item = ag_set($item, 'scoped', ag($item, 'scoped', false) ? 'Yes' : 'No');
+                if (null === ag($item, 'scoped_to')) {
+                    $item = ag_set($item, 'scoped_to', '-');
                 }
-                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-s, --select-backend].</comment>', [
-                    'rule' => $guid,
-                    'backend' => $backend
-                ]), OutputInterface::VERBOSITY_DEBUG);
-                continue;
+                $item = ag_set($item, 'created', makeDate(ag($item, 'created'))->format('Y-m-d H:i:s T'));
             }
 
-            if (null !== $fType && $type !== $fType) {
-                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-t, --type].</comment>', [
-                    'rule' => $guid,
-                    'type' => $type
-                ]), OutputInterface::VERBOSITY_DEBUG);
-                continue;
-            }
-
-            if (null !== $fDb && $db !== $fDb) {
-                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-d, --db].</comment>', [
-                    'rule' => $guid,
-                    'db' => $db
-                ]), OutputInterface::VERBOSITY_DEBUG);
-                continue;
-            }
-
-            if (null !== $fId && $id !== $fId) {
-                $output->writeln(r('<comment>Skipping \'{rule}\' as requested by [-i, --id].</comment>', [
-                    'rule' => $guid,
-                    'id' => $id
-                ]), OutputInterface::VERBOSITY_DEBUG);
-                continue;
-            }
-
-            $rule = makeIgnoreId($guid);
-
-            $builder = [
-                'type' => ucfirst($type),
-                'backend' => $backend,
-                'db' => $db,
-                'id' => $id,
-                'title' => null !== $scope ? ($this->getinfo($rule) ?? 'Unknown') : '** Global Rule **',
-                'Scoped' => null === $scope ? 'No' : 'Yes',
-            ];
-
-            if ('table' !== $input->getOption('output')) {
-                $builder = ['rule' => (string)$rule] + $builder;
-                $builder['scope'] = [];
-                if (null !== $scope) {
-                    parse_str($scope, $builder['scope']);
-                }
-                $builder['created'] = makeDate($date);
-            } else {
-                $builder['created'] = makeDate($date)->format('Y-m-d H:i:s T');
-            }
-
-            $list[] = $builder;
+            $list[] = $item;
         }
 
         if (empty($list)) {
-            $hasIds = count($ids) >= 1;
+            $hasFilter = count($query) > 0;
 
             $output->writeln(
-                $hasIds ? '<comment>Filters did not return any results.</comment>' : '<info>Ignore list is empty.</info>'
+                $hasFilter ? '<comment>Filters did not return any results.</comment>' : '<info>Ignore list is empty.</info>'
             );
 
-            if (true === $hasIds) {
-                return self::FAILURE;
-            }
+            return $hasFilter ? self::FAILURE : self::SUCCESS;
         }
 
         $this->displayContent($list, $output, $input->getOption('output'));
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Gets information about the ignore id.
-     *
-     * @param UriInterface $uri Ignore ID encoded as URL.
-     *
-     * @return string|null Return the name of the item or null if not found.
-     */
-    private function getInfo(UriInterface $uri): string|null
-    {
-        if (empty($uri->getQuery())) {
-            return null;
-        }
-
-        $params = [];
-        parse_str($uri->getQuery(), $params);
-
-        $key = sprintf('%s://%s@%s', $uri->getScheme(), $uri->getHost(), $params['id']);
-
-        if (true === array_key_exists($key, $this->cache)) {
-            return $this->cache[$key];
-        }
-
-        $sql = sprintf(
-            "SELECT * FROM state WHERE JSON_EXTRACT(metadata, '$.%s.%s') = :id LIMIT 1",
-            $uri->getHost(),
-            $uri->getScheme() === iState::TYPE_SHOW ? 'show' : 'id'
-        );
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['id' => $params['id']]);
-        $item = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (empty($item)) {
-            $this->cache[$key] = null;
-            return null;
-        }
-
-        $this->cache[$key] = Container::get(iState::class)->fromArray($item)->getName(
-            iState::TYPE_SHOW === $uri->getScheme()
-        );
-
-        return $this->cache[$key];
     }
 
     /**

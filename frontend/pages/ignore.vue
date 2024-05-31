@@ -96,15 +96,18 @@
 
             <div class="field">
               <label class="label is-unselectable">Type</label>
-              <div class="control">
-                <label class="radio">
-                  <input type="radio" v-model="form.type" value="show">
-                  Show
-                </label>
-                <label class="radio">
-                  <input type="radio" v-model="form.type" value="movie">
-                  Movie
-                </label>
+              <div class="control has-icons-left">
+                <div class="select is-fullwidth">
+                  <select id="form_select_backend" v-model="form.type" class="is-capitalized">
+                    <option value="" disabled>Select type</option>
+                    <option v-for="type in types" :key="type" :value="type">
+                      {{ type }}
+                    </option>
+                  </select>
+                </div>
+                <div class="icon is-left">
+                  <i class="fas fa-server"></i>
+                </div>
               </div>
               <p class="help">
                 <span class="icon"><i class="fas fa-info"></i></span>
@@ -282,9 +285,10 @@ import 'assets/css/bulma-switch.css'
 
 useHead({title: 'Ignored GUIDs'})
 
-const empty_form = {id: '', type: 'show', backend: '', db: '', scoped: false, scoped_to: null}
+const types = ['show', 'movie', 'episode']
+const empty_form = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
 const items = ref([])
-const toggleForm = ref(false)
+const toggleForm = ref(true)
 const form = ref(JSON.parse(JSON.stringify(empty_form)))
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
