@@ -242,6 +242,12 @@ const makeGUIDLink = (type, source, guid, data) => {
         }
     }
 
+    type = type.toLowerCase();
+
+    if ('show' === type) {
+        type = 'series'
+    }
+
     const link = ag(guid_links, `${type}.${source}`, null)
 
     return null == link ? '' : r(link, {_guid: guid, ...toRaw(data)})
