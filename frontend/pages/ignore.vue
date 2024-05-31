@@ -288,7 +288,7 @@ useHead({title: 'Ignored GUIDs'})
 const types = ['show', 'movie', 'episode']
 const empty_form = {id: '', type: '', backend: '', db: '', scoped: false, scoped_to: null}
 const items = ref([])
-const toggleForm = ref(true)
+const toggleForm = ref(false)
 const form = ref(JSON.parse(JSON.stringify(empty_form)))
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
