@@ -215,6 +215,10 @@ final class MemoryMapper implements iImport
                 $reasons[] = 'Mapper is in metadata only mode';
             }
 
+            if (count($reasons) < 1) {
+                $reasons[] = 'Abnormal state detected.';
+            }
+
             $this->logger->notice(
                 'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the following reason ({reason}) it was not considered as valid state.',
                 [

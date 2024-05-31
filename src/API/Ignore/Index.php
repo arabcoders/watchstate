@@ -45,10 +45,35 @@ final class Index
     #[Get(self::URL . '[/]', name: 'ignore')]
     public function __invoke(iRequest $request): iResponse
     {
+        $params = DataUtil::fromArray($request->getQueryParams());
+
+        $type = $params->get('type');
+        $db = $params->get('db');
+        $id = $params->get('id');
+        $backend = $params->get('backend');
+
         $response = [];
 
         foreach ($this->config->getAll() as $guid => $date) {
-            $response[] = $this->ruleAsArray($guid, $date);
+            $item = $this->ruleAsArray($guid, $date);
+
+            if (null !== $type && strtolower($type) !== strtolower(ag($item, 'type', ''))) {
+                continue;
+            }
+
+            if (null !== $db && strtolower($db) !== strtolower(ag($item, 'db', ''))) {
+                continue;
+            }
+
+            if (null !== $id && $id !== ag($item, 'id', '')) {
+                continue;
+            }
+
+            if (null !== $backend && strtolower($backend) !== strtolower(ag($item, 'backend', ''))) {
+                continue;
+            }
+
+            $response[] = $item;
         }
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
@@ -59,21 +84,23 @@ final class Index
     {
         $params = DataUtil::fromRequest($request);
 
-        foreach (['id', 'db', 'backend', 'type'] as $key) {
-            if (null === $params->get($key)) {
-                return api_error(r('Missing required parameter: {key}', ['key' => $key]),
-                    HTTP_STATUS::HTTP_BAD_REQUEST);
+        if (null === ($id = $params->get('rule'))) {
+            foreach (['id', 'db', 'backend', 'type'] as $key) {
+                if (null === $params->get($key)) {
+                    return api_error(r('Missing required parameter: {key}', ['key' => $key]),
+                        HTTP_STATUS::HTTP_BAD_REQUEST);
+                }
             }
+
+            $id = r('{type}://{db}:{id}@{backend}?id={scoped_to}', [
+                'type' => $params->get('type'),
+                'db' => $params->get('db'),
+                'id' => $params->get('id'),
+                'backend' => $params->get('backend'),
+                'scoped_to' => $params->get('scoped') ? $params->get('scoped_to') : '',
+            ]);
         }
-
-        $id = r('{type}://{db}:{id}@{backend}?id={scoped_to}', [
-            'type' => $params->get('type'),
-            'db' => $params->get('db'),
-            'id' => $params->get('id'),
-            'backend' => $params->get('backend'),
-            'scoped_to' => $params->get('scoped') ? $params->get('scoped_to') : '',
-        ]);
-
+        
         try {
             checkIgnoreRule($id);
         } catch (RuntimeException $e) {
@@ -164,7 +191,7 @@ final class Index
         return $this->cache[$key];
     }
 
-    private function ruleAsArray(string $guid, int|null $date = null): array
+    public function ruleAsArray(string $guid, int|null $date = null): array
     {
         $urlParts = parse_url($guid);
 
@@ -177,7 +204,14 @@ final class Index
         if (null !== $scope) {
             parse_str($scope, $query);
         }
+
         $rule = makeIgnoreId($guid);
+
+        $scoped_to = null;
+
+        if (ag_exists($query, 'id')) {
+            $scoped_to = ctype_digit(ag($query, 'id')) ? (int)ag($query, 'id') : ag($query, 'id');
+        }
 
         $builder = [
             'rule' => (string)$rule,
@@ -186,8 +220,8 @@ final class Index
             'backend' => $backend,
             'db' => $db,
             'title' => null !== $scope ? ($this->getinfo($rule) ?? 'Unknown') : null,
-            'scoped' => ag_exists($query, 'id'),
-            'scoped_to' => ag_exists($query, 'id') ? ag($query, 'id') : null,
+            'scoped' => null !== $scoped_to,
+            'scoped_to' => $scoped_to,
         ];
 
         if (null !== $date) {
