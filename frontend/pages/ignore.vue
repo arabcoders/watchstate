@@ -190,7 +190,9 @@
                 <div class="column is-6">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-server"></i></span>
-                    {{ item.backend }}
+                    <span>
+                      <NuxtLink :to="`/backend/${item.backend}`" v-text="item.backend"/>
+                    </span>
                   </span>
                 </div>
                 <div class="column is-6 has-text-right">
@@ -202,7 +204,10 @@
                 <div class="column is-6">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-database"></i></span>
-                    <span>{{ item.db }}://{{ item.id }}</span>
+                    <span>
+                      <NuxtLink target="_blank" :to="makeGUIDLink(item.type, item.db, item.id)"
+                                v-text="`${item.db}://${item.id}`"/>
+                    </span>
                   </span>
                 </div>
 
