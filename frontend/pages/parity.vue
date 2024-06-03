@@ -164,7 +164,7 @@
               <li>
                 By clicking the <span class="fa fa-trash"></span> icon you will delete the record from the database.
                 Not available via <code>WebUI</code> yet. You can do it via the
-                <NuxtLink :to="makeConsoleCommand('db:parity --prune --min')">
+                <NuxtLink :to="makeConsoleCommand('db:parity -n --prune --min')">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-terminal"></i></span>
                     <span>Console</span>
