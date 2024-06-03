@@ -103,9 +103,10 @@ final class LogsCommand extends Command
 
                     <question># How to clear log file?</question>
 
-                    You can clear log file by running this command, However clearing log file require interactive confirmation.
-
                     {cmd} <cmd>{route}</cmd> <flag>--type</flag> <value>{defaultLog}</value> <flag>--date</flag> <value>{defaultDate}</value> <flag>--clear</flag>
+
+                    You can clear log file by running this command, However clearing log file require <notice>interaction</notice>.
+                    To bypass the check use <flag>[-n, --no-interaction]</flag> flag.
 
                     <question># How to increase/decrease the returned log lines?</question>
 

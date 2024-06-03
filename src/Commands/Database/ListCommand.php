@@ -204,6 +204,8 @@ final class ListCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--parent</flag> <value>tvdb://269586</value> <flag>--mark-as</flag> <value>played</value>
 
+                    This flag require <notice>interaction</notice> to work. to bypass the check use <flag>[-n, --no-interaction]</flag> flag.
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),

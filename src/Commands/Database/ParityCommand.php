@@ -13,6 +13,7 @@ use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 /**
  * Class ParityCommand
@@ -76,6 +77,7 @@ final class ParityCommand extends Command
                     {cmd} <cmd>{route}</cmd> <flag>--min</flag> <value>3</value> <flag>--prune</flag>
 
                     Warning, this command will delete the entire match, not limited by <flag>--limit</flag> flag.
+                    This flag require <notice>interaction</notice> to work. to bypass the check use <flag>[-n, --no-interaction]</flag> flag.
 
                     HELP,
                     [
@@ -127,6 +129,51 @@ final class ParityCommand extends Command
         }
 
         if (true === $prune) {
+            if (!$input->getOption('no-interaction')) {
+                $paging = ag($response->body, 'paging', []);
+                $tty = !(function_exists('stream_isatty') && defined('STDERR')) || stream_isatty(STDERR);
+                if (false === $tty || $input->getOption('no-interaction')) {
+                    $output->writeln(
+                        r(
+                            <<<ERROR
+                        <error>ERROR:</error> This command require <notice>interaction</notice>. For example:
+                        {cmd} <cmd>{route}</cmd> <flag>--prune</flag>
+                        ERROR,
+                            [
+                                'cmd' => trim(commandContext()),
+                                'route' => self::ROUTE,
+                            ]
+                        )
+                    );
+                    return self::FAILURE;
+                }
+
+                $helper = $this->getHelper('question');
+
+                $question = new ConfirmationQuestion(
+                    r(
+                        <<<HELP
+                    <question>Are you sure you want to delete [<value>{count}</value>] records from database</question>? {default}
+                    ------------------
+                    <notice>NOTICE:</notice> You would have to re-import the records using [<cmd>state:import</cmd>] command.
+                    ------------------
+                    <notice>For more information please read the FAQ.</notice>
+                    HELP. PHP_EOL . '> ',
+                        [
+                            'count' => ag($paging, 'total', 0),
+                            'cmd' => trim(commandContext()),
+                            'default' => '[<value>Y|N</value>] [<value>Default: No</value>]',
+                        ]
+                    ),
+                    false,
+                );
+
+                if (true !== $helper->ask($input, $output, $question)) {
+                    $output->writeln('<info>Pruning aborted.</info>');
+                    return self::SUCCESS;
+                }
+            }
+
             $response = APIRequest('DELETE', '/system/parity/', opts: ['query' => ['min' => $min]]);
 
             if (HTTP_STATUS::HTTP_OK !== $response->status) {
