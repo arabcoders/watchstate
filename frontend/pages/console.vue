@@ -102,14 +102,21 @@
 import {useStorage} from "@vueuse/core";
 import {notification} from "~/utils/index.js";
 
-const fromTask = useRoute().query.task || '';
+const route = useRoute()
+
+const fromTask = route.query.task || '';
+let fromCommand = route.query.cmd || '';
+if (fromCommand) {
+  // -- decode base64
+  fromCommand = atob(fromCommand);
+}
 
 useHead({title: `Console`})
 
 let sse;
 
 const response = ref([]);
-const command = ref('');
+const command = ref(fromCommand);
 const isLoading = ref(false);
 const outputConsole = ref();
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'));
@@ -162,8 +169,12 @@ const finished = () => {
 onUpdated(() => outputConsole.value.scrollTop = outputConsole.value.scrollHeight);
 
 onMounted(async () => {
-  if (!fromTask) {
+  if (!fromTask && '' === command.value) {
     await RunCommand();
+    return
+  }
+
+  if (!fromTask) {
     return
   }
 

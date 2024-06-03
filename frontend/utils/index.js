@@ -292,6 +292,13 @@ const copyText = (str) => {
     notification('success', 'Success', 'Text copied to clipboard.')
 }
 
+const makeConsoleCommand = (cmd) => {
+    const params = new URLSearchParams();
+    // -- base64 encode the command to prevent XSS
+    params.append('cmd', btoa(cmd));
+    return `/console?${params.toString()}`
+}
+
 const stringToRegex = (str) => new RegExp(str.match(/\/(.+)\/.*/)[1], str.match(/\/.+\/(.*)/)[1]);
 
 export {
@@ -304,5 +311,6 @@ export {
     makeGUIDLink,
     formatDuration,
     copyText,
-    stringToRegex
+    stringToRegex,
+    makeConsoleCommand
 }
