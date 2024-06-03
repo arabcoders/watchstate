@@ -50,7 +50,7 @@ final class DeleteCommand extends Command
 
                     This command allows you to delete local backend data from the database.
 
-                    This command require <notice>interaction</notice> to work. to bypass the check use <flag>--no-interaction</flag> flag.
+                    This command require <notice>interaction</notice> to work. to bypass the check use <flag>[-n, --no-interaction]</flag> flag.
 
                     This command will do the following:
 

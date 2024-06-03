@@ -67,7 +67,7 @@ final class Parity
         $total = (int)$stmt->fetchColumn();
 
         $lastPage = @ceil($total / $perpage);
-        if ($page > $lastPage) {
+        if ($total && $page > $lastPage) {
             return api_error(r("Invalid page number. '{page}' is higher than what the last page is '{last_page}'.", [
                 'page' => $page,
                 'last_page' => $lastPage,
