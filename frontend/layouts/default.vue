@@ -53,6 +53,40 @@
             </span>
           </NuxtLink>
 
+
+          <div class="navbar-item has-dropdown is-hoverable">
+            <a class="navbar-link">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-ellipsis-vertical"></i></span>
+                <span>More</span>
+              </span>
+            </a>
+            <div class="navbar-dropdown">
+              <NuxtLink class="navbar-item" to="/report" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-flag"></i></span>
+                <span>Basic Report</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/queue" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-list"></i></span>
+                <span>Queue</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/ignore" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-ban"></i></span>
+                <span>Ignore List</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/parity" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-database"></i></span>
+                <span>Data Parity</span>
+              </NuxtLink>
+
+            </div>
+          </div>
+
+        </div>
+        <div class="navbar-end pr-3">
           <NuxtLink class="navbar-item" to="/console" @click.native="showMenu=false">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-terminal"></i></span>
@@ -60,29 +94,6 @@
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/report" @click.native="showMenu=false">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-flag"></i></span>
-              <span>S. Report</span>
-            </span>
-          </NuxtLink>
-
-          <NuxtLink class="navbar-item" to="/queue" @click.native="showMenu=false">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-list"></i></span>
-              <span>Queue</span>
-            </span>
-          </NuxtLink>
-
-          <NuxtLink class="navbar-item" to="/ignore" @click.native="showMenu=false">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-ban"></i></span>
-              <span>Ignore</span>
-            </span>
-          </NuxtLink>
-
-        </div>
-        <div class="navbar-end pr-3">
           <div class="navbar-item">
             <button class="button is-dark" @click="selectedTheme = 'light'" v-if="'dark' === selectedTheme"
                     v-tooltip="'Switch to light theme'">
@@ -228,7 +239,7 @@
         <no-api/>
       </template>
       <template v-else>
-        <slot/>
+        <slot v-if="!showConnection"/>
       </template>
 
       <div class="columns is-multiline is-mobile mt-3">

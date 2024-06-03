@@ -316,31 +316,33 @@ final class LogsCommand extends Command
             return self::FAILURE;
         }
 
-        if (function_exists('stream_isatty') && defined('STDERR')) {
-            $tty = stream_isatty(STDERR);
-        } else {
-            $tty = true;
-        }
+        if (!$input->getOption('no-interaction')) {
+            if (function_exists('stream_isatty') && defined('STDERR')) {
+                $tty = stream_isatty(STDERR);
+            } else {
+                $tty = true;
+            }
 
-        if (false === $tty || $input->getOption('no-interaction')) {
-            $output->writeln('<error>ERROR: This command flag require interaction.</error>');
-            $output->writeln(
-                '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
-            );
-            $output->writeln(
-                '<comment>For example: docker exec -ti watchstate console config:manage my_server</comment>'
-            );
-            return self::FAILURE;
-        }
+            if (false === $tty) {
+                $output->writeln('<error>ERROR: This command flag require interaction.</error>');
+                $output->writeln(
+                    '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
+                );
+                $output->writeln(
+                    '<comment>For example: docker exec -ti watchstate console config:manage my_server</comment>'
+                );
+                return self::FAILURE;
+            }
 
-        $question = new ConfirmationQuestion(
-            sprintf(
-                'Clear file <info>[%s]</info> contents? <comment>%s</comment>' . PHP_EOL . '> ',
-                after($file->getRealPath(), Config::get('tmpDir') . '/'),
-                '[Y|N] [Default: No]',
-            ),
-            false
-        );
+            $question = new ConfirmationQuestion(
+                sprintf(
+                    'Clear file <info>[%s]</info> contents? <comment>%s</comment>' . PHP_EOL . '> ',
+                    after($file->getRealPath(), Config::get('tmpDir') . '/'),
+                    '[Y|N] [Default: No]',
+                ),
+                false
+            );
+        }
 
         $confirmClear = $this->getHelper('question')->ask($input, $output, $question);
 

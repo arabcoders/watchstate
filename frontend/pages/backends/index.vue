@@ -82,11 +82,11 @@
               </div>
             </div>
             <div class="card-footer-item">
-              <a :href="api_url + backend.urls.webhook" class="is-info is-light" @click.prevent="copyUrl(backend)">
+              <NuxtLink :to="api_url + backend.urls.webhook" class="is-info is-light" @click.prevent="copyUrl(backend)">
                 <span class="icon"><i class="fas fa-copy"></i></span>
                 <span class="is-hidden-mobile">Copy Webhook URL</span>
                 <span class="is-hidden-tablet">Webhook</span>
-              </a>
+              </NuxtLink>
             </div>
           </footer>
         </div>
@@ -107,7 +107,7 @@
             <li>
               WatchState is single user tool. It doesn't support syncing multiple users play state.
               <NuxtLink target="_blank" v-text="'Visit this link'"
-                        href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
+                        to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
               to learn more.
             </li>
             <li>
@@ -115,9 +115,19 @@
               turn off import and enable only metadata import at the start to prevent overriding your current play
               state.
               <NuxtLink
-                  href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"
+                  to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"
                   target="_blank" v-text="'Visit this link'"/>
               to learn more.
+            </li>
+            <li>
+              Deleting backend is not available via <code>WebUI</code> yet. You can do it via the
+              <NuxtLink :to="makeConsoleCommand('config:delete -n -s backend_name')">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-terminal"></i></span>
+                  <span>Console</span>
+                </span>
+              </NuxtLink>
+              page, or using the the following command <code>config:delete -s backend_name</code> in shell.
             </li>
           </ul>
         </div>
@@ -131,7 +141,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {copyText} from '~/utils/index.js'
+import {copyText, makeConsoleCommand} from '~/utils/index.js'
 import {useStorage} from "@vueuse/core";
 
 useHead({title: 'Backends'})
