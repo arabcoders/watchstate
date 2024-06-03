@@ -26,7 +26,7 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 #[Cli(command: self::ROUTE)]
 final class DeleteCommand extends Command
 {
-    public const ROUTE = 'config:delete';
+    public const string ROUTE = 'config:delete';
     private PDO $pdo;
 
     public function __construct(private LoggerInterface $logger, iDB $db)
@@ -50,7 +50,7 @@ final class DeleteCommand extends Command
 
                     This command allows you to delete local backend data from the database.
 
-                    This command require <notice>interaction</notice> to work.
+                    This command require <notice>interaction</notice> to work. to bypass the check use <flag>--no-interaction</flag> flag.
 
                     This command will do the following:
 
@@ -87,7 +87,7 @@ final class DeleteCommand extends Command
             $tty = true;
         }
 
-        if (false === $tty || $input->getOption('no-interaction')) {
+        if (false === $tty && !$input->getOption('no-interaction')) {
             $output->writeln(
                 r(
                     <<<ERROR
@@ -103,7 +103,6 @@ final class DeleteCommand extends Command
                         'backend' => $input->getArgument('backend'),
                     ]
                 )
-
             );
             return self::FAILURE;
         }
@@ -140,9 +139,10 @@ final class DeleteCommand extends Command
 
         $helper = $this->getHelper('question');
 
-        $question = new ConfirmationQuestion(
-            r(
-                <<<HELP
+        if (!$input->getOption('no-interaction')) {
+            $question = new ConfirmationQuestion(
+                r(
+                    <<<HELP
                     <question>Are you sure you want to remove [<value>{name}</value>] data?</question> {default}
                     ------------------
                     <notice>WARNING:</notice> This command will remove entries from database related to the backend.
@@ -151,24 +151,25 @@ final class DeleteCommand extends Command
                     ------------------
                     <notice>For more information please read the FAQ.</notice>
                     HELP. PHP_EOL . '> ',
-                [
-                    'name' => $name,
-                    'default' => '[<value>Y|N</value>] [<value>Default: No</value>]',
-                ]
-            ),
-            false
-        );
-
-        $response = $helper->ask($input, $output, $question);
-        $output->writeln('');
-
-        if (false === $response) {
-            $output->writeln(
-                r('Backend [<value>{backend}</value>] removal was cancelled.', [
-                    'backend' => $name
-                ])
+                    [
+                        'name' => $name,
+                        'default' => '[<value>Y|N</value>] [<value>Default: No</value>]',
+                    ]
+                ),
+                false
             );
-            return self::FAILURE;
+
+            $response = $helper->ask($input, $output, $question);
+            $output->writeln('');
+
+            if (false === $response) {
+                $output->writeln(
+                    r('Backend [<value>{backend}</value>] removal was cancelled.', [
+                        'backend' => $name
+                    ])
+                );
+                return self::FAILURE;
+            }
         }
 
         $output->writeln(
