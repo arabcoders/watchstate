@@ -44,10 +44,9 @@
             </div>
             <div class="column is-6 has-text-left">
               <strong class="is-hidden-mobile">Timer:&nbsp;</strong>
-              <a target="_blank" :href="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`"
-                 rel="noreferrer,nofollow,noopener">
+              <NuxtLink target="_blank" :to="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`">
                 {{ task.timer }}
-              </a>
+              </NuxtLink>
             </div>
             <div class="column is-6 has-text-right" v-if="task.args">
               <strong class="is-hidden-mobile">Args:</strong> <code>{{ task.args }}</code>
