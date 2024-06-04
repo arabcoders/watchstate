@@ -740,22 +740,46 @@ class Import
             );
 
             foreach ($it as $entity) {
-                if ($entity instanceof DecodingError) {
-                    $this->logger->warning(
-                        'Failed to decode one item of [{backend}] [{library.title}] [{segment.number}/{segment.of}] content.',
-                        [
+                try {
+                    if ($entity instanceof DecodingError) {
+                        $this->logger->warning(
+                            'Failed to decode one item of [{backend}] [{library.title}] [{segment.number}/{segment.of}] content.',
+                            [
+                                'backend' => $context->backendName,
+                                ...$logContext,
+                                'error' => [
+                                    'message' => $entity->getErrorMessage(),
+                                    'body' => $entity->getMalformedJson(),
+                                ],
+                            ]
+                        );
+                        continue;
+                    }
+                    $callback(item: $entity, logContext: $logContext);
+                } catch (Throwable $e) {
+                    $this->logger->error(
+                        message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{library.title}] [{segment.number}/{segment.of}] item response. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
                             'backend' => $context->backendName,
-                            ...$logContext,
+                            'client' => $context->clientName,
                             'error' => [
-                                'message' => $entity->getErrorMessage(),
-                                'body' => $entity->getMalformedJson(),
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'entity' => $entity,
+                            ...$logContext,
+                            'exception' => [
+                                'kind' => $e::class,
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
                             ],
                         ]
                     );
-                    continue;
                 }
-
-                $callback(item: $entity, logContext: $logContext);
             }
         } catch (Throwable $e) {
             $this->logger->error(
