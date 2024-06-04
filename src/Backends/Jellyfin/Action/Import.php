@@ -688,69 +688,94 @@ class Import
             );
 
             foreach ($it as $entity) {
-                if ($entity instanceof DecodingError) {
-                    $this->logger->warning(
-                        'Failed to decode one item of [{backend}] [{library.title}] [{segment.number}/{segment.of}] content.',
-                        [
-                            'backend' => $context->backendName,
-                            ...$logContext,
-                            'error' => [
-                                'message' => $entity->getErrorMessage(),
-                                'body' => $entity->getMalformedJson(),
-                            ],
-                        ]
-                    );
-                    continue;
-                }
-
-                // -- Handle multi episode entries.
-                $indexNumber = ag($entity, 'IndexNumber');
-                $indexNumberEnd = ag($entity, 'IndexNumberEnd');
-                if (null !== $indexNumberEnd && $indexNumberEnd > $indexNumber) {
-                    $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 5);
-                    $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
-                    if (count($range) > $episodeRangeLimit) {
+                try {
+                    if ($entity instanceof DecodingError) {
                         $this->logger->warning(
-                            'Ignoring [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] Episode range, and treating it as single episode. Backend says it covers [{item.indexNumber}-{item.indexNumberEnd}] [{item.rangeCount}] The limit is [{rangeLimit}] per record.',
+                            'Failed to decode one item of [{backend}] [{library.title}] [{segment.number}/{segment.of}] content.',
                             [
                                 'backend' => $context->backendName,
-                                'rangeLimit' => $episodeRangeLimit,
                                 ...$logContext,
-                                'item' => [
-                                    'id' => ag($entity, 'Id'),
-                                    'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
-                                    'type' => ag($entity, 'Type'),
-                                    'rangeCount' => count($range),
-                                    'indexNumber' => ag($entity, 'IndexNumber'),
-                                    'indexNumberEnd' => $indexNumberEnd,
+                                'error' => [
+                                    'message' => $entity->getErrorMessage(),
+                                    'body' => $entity->getMalformedJson(),
                                 ],
                             ]
                         );
-                        $callback(item: $entity, logContext: $logContext);
-                    } else {
-                        $indexNumber = ag($entity, 'IndexNumber');
-                        foreach ($range as $i) {
-                            $this->logger->debug(
-                                'Making virtual episode [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] [{item.indexNumber} => {item.i} of {item.indexNumberEnd}]',
+                        continue;
+                    }
+
+                    // -- Handle multi episode entries.
+                    $indexNumber = ag($entity, 'IndexNumber');
+                    $indexNumberEnd = ag($entity, 'IndexNumberEnd');
+                    if (null !== $indexNumber && null !== $indexNumberEnd && $indexNumberEnd > $indexNumber) {
+                        $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 5);
+                        $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
+                        if (count($range) > $episodeRangeLimit) {
+                            $this->logger->warning(
+                                'Ignoring [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] Episode range, and treating it as single episode. Backend says it covers [{item.indexNumber}-{item.indexNumberEnd}] [{item.rangeCount}] The limit is [{rangeLimit}] per record.',
                                 [
                                     'backend' => $context->backendName,
+                                    'rangeLimit' => $episodeRangeLimit,
                                     ...$logContext,
                                     'item' => [
                                         'id' => ag($entity, 'Id'),
                                         'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
                                         'type' => ag($entity, 'Type'),
-                                        'i' => $i,
-                                        'indexNumber' => $indexNumber,
+                                        'rangeCount' => count($range),
+                                        'indexNumber' => ag($entity, 'IndexNumber'),
                                         'indexNumberEnd' => $indexNumberEnd,
                                     ],
                                 ]
                             );
-                            $entity['IndexNumber'] = $i;
                             $callback(item: $entity, logContext: $logContext);
+                        } else {
+                            $indexNumber = ag($entity, 'IndexNumber');
+                            foreach ($range as $i) {
+                                $this->logger->debug(
+                                    'Making virtual episode [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] [{item.indexNumber} => {item.i} of {item.indexNumberEnd}]',
+                                    [
+                                        'backend' => $context->backendName,
+                                        ...$logContext,
+                                        'item' => [
+                                            'id' => ag($entity, 'Id'),
+                                            'title' => ag($entity, ['Name', 'OriginalTitle'], '??'),
+                                            'type' => ag($entity, 'Type'),
+                                            'i' => $i,
+                                            'indexNumber' => $indexNumber,
+                                            'indexNumberEnd' => $indexNumberEnd,
+                                        ],
+                                    ]
+                                );
+                                $entity['IndexNumber'] = $i;
+                                $callback(item: $entity, logContext: $logContext);
+                            }
                         }
+                    } else {
+                        $callback(item: $entity, logContext: $logContext);
                     }
-                } else {
-                    $callback(item: $entity, logContext: $logContext);
+                } catch (Throwable $e) {
+                    $this->logger->error(
+                        message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{library.title}] [{segment.number}/{segment.of}] item response. Error [{error.message} @ {error.file}:{error.line}].',
+                        context: [
+                            'backend' => $context->backendName,
+                            'client' => $context->clientName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'entity' => $entity,
+                            ...$logContext,
+                            'exception' => [
+                                'kind' => $e::class,
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
+                        ]
+                    );
                 }
             }
         } catch (Throwable $e) {
@@ -758,6 +783,13 @@ class Import
                 message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{library.title}] [{segment.number}/{segment.of}] response. Error [{error.message} @ {error.file}:{error.line}].',
                 context: [
                     'backend' => $context->backendName,
+                    'client' => $context->clientName,
+                    'error' => [
+                        'kind' => $e::class,
+                        'line' => $e->getLine(),
+                        'message' => $e->getMessage(),
+                        'file' => after($e->getFile(), ROOT_PATH),
+                    ],
                     ...$logContext,
                     'exception' => [
                         'file' => $e->getFile(),
