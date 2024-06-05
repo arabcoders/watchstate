@@ -54,10 +54,11 @@
           </span>
         </Message>
       </template>
-      <code ref="logContainer" class="box logs-container" v-if="!error" :class="{'is-pre': !wrapLines}">
-        <div class="is-log-line" v-for="(item, index) in data" :key="'log_line-'+index">
+      <code ref="logContainer" class="box logs-container" v-if="!error"
+            :class="{'is-pre': !wrapLines, 'is-pre-wrap': wrapLines}">
+        <span class="is-log-line is-block" v-for="(item, index) in data" :key="'log_line-'+index">
           {{ item }}
-        </div>
+        </span>
       </code>
       <template v-else>
         <Message title="Request Error" message_class="is-danger" :message="error"/>

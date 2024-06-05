@@ -97,6 +97,10 @@ body {
     white-space: pre;
 }
 
+.is-pre-wrap {
+    white-space: pre-wrap;
+}
+
 .vue-notification {
     background: unset;
     border-left: none;
