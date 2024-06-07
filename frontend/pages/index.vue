@@ -124,8 +124,9 @@ const logs = ref([])
 const loadContent = async () => {
   try {
     const response = await request(`/history?perpage=6`)
-    const json = await response.json();
-    lastHistory.value = json.history
+    if (response.ok) {
+      lastHistory.value = await response.json()
+    }
   } catch (e) {
   }
 
