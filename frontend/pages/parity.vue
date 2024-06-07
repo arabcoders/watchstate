@@ -69,38 +69,46 @@
                 <NuxtLink :to="'/history/'+item.id" v-text="item.full_title ?? item.title"/>
               </p>
               <span class="card-header-icon">
-                <NuxtLink :to="makeSearchLink(item)">
-                  <span class="icon">
-                    <i class="fas"
-                       :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"></i>
-                  </span>
-                </NuxtLink>
+                <span class="icon">
+                  <i class="fas"
+                     :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"></i>
+                </span>
               </span>
             </header>
             <div class="card-content">
-              <div class="content">
-                <p>
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-check"></i></span>
-                    <span>Reported by:&nbsp;</span>
-                  </span>
+              <div class="columns is-multiline is-mobile">
+                <div class="column is-12 " v-if="item?.title">
+                  <div class="is-text-overflow is-clickable"
+                       @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                    <span class="icon"><i class="fas fa-heading"></i></span>
+                    <span class="is-hidden-mobile">Title:&nbsp;</span>
+                    {{ item.title }}
+                  </div>
+                </div>
+                <div class="column is-12 is-clickable " v-if="item?.path"
+                     @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-file"></i></span>
+                    <span class="is-hidden-mobile">File:&nbsp;</span>
+                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                  </div>
+                </div>
+                <div class="column is-12">
+                  <span class="icon"><i class="fas fa-check"></i></span>
                   <span v-for="backend in item.reported_by">
                     <NuxtLink :to="'/backend/'+backend" v-text="backend"
                               class="tag"/>
                     &nbsp;
                   </span>
-                </p>
-                <p>
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-times"></i></span>
-                    <span>Not reported by:&nbsp;</span>
-                  </span>
+                </div>
+                <div class="column is-12">
+                  <span class="icon"><i class="fas fa-times"></i></span>
                   <span v-for="backend in item.not_reported_by">
                     <NuxtLink :to="'/backend/'+backend" v-text="backend"
                               class="tag"/>
                     &nbsp;
                   </span>
-                </p>
+                </div>
               </div>
             </div>
             <div class="card-footer">
@@ -146,10 +154,6 @@
           <button class="delete" @click="show_page_tips=false"></button>
           <div class="content">
             <ul>
-              <li>Clicking the icon <span class="fa fa-tv"></span> / <span class="fa fa-film"></span>
-                next to the title will trigger search using that record title, while clicking the title will take you to
-                the record page.
-              </li>
               <li>
                 You can specify the minimum number of backends that need to report the record to be considered valid.
                 Not available via <code>WebUI</code> yet. You can do it via the
@@ -183,7 +187,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {makeConsoleCommand, notification} from '~/utils/index.js'
+import {makeConsoleCommand, makeSearchLink, notification} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 
@@ -270,16 +274,6 @@ const makePagination = () => {
 const deleteData = () => {
   notification('warning', 'Warning', 'This feature is not implemented yet.')
 };
-
-const makeSearchLink = (item) => {
-  const params = new URLSearchParams();
-  params.append('perpage', '50')
-  params.append('page', '1')
-  params.append('q', item.title)
-  params.append('key', 'title')
-
-  return `/history?${params.toString()}`
-}
 
 onMounted(async () => loadContent(page.value ?? 1))
 </script>

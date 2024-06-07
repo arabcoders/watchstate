@@ -127,13 +127,18 @@ final class Parity
                 iState::COLUMN_ID => ag($row, 'id'),
                 iState::COLUMN_WATCHED => $entity->isWatched(),
                 iState::COLUMN_TYPE => ucfirst($entity->type),
-                iState::COLUMN_TITLE => $entity->title,
+                iState::COLUMN_TITLE => $entity->isEpisode() ? ag(
+                    $entity->getMetadata($entity->via),
+                    iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+                    null
+                ) : null,
                 'full_title' => $entity->getName(),
                 iState::COLUMN_UPDATED => makeDate($entity->updated),
                 'reported_by' => $reportedBackends,
                 'not_reported_by' => array_values(
                     array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBackends))
                 ),
+                iState::COLUMN_META_PATH => ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH),
             ];
         }
 
