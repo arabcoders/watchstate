@@ -125,7 +125,8 @@ const loadContent = async () => {
   try {
     const response = await request(`/history?perpage=6`)
     if (response.ok) {
-      lastHistory.value = await response.json()
+      const json = await response.json();
+      lastHistory.value = json.history;
     }
   } catch (e) {
   }
