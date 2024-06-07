@@ -8,6 +8,15 @@
       <div class="is-pulled-right" v-if="data?.via">
         <div class="field is-grouped">
           <p class="control">
+            <button class="button" @click="toggleWatched"
+                    :class="{ 'is-success': !data.watched, 'is-danger': data.watched }"
+                    v-tooltip="'Toggle played/unplayed'">
+              <span class="icon">
+                <i class="fas" :class="{'fa-eye-slash':data.watched,'fa-eye':!data.watched}"></i>
+              </span>
+            </button>
+          </p>
+          <p class="control">
             <button class="button is-info" @click="loadContent(id)" :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
@@ -30,16 +39,15 @@
       <div class="card" :class="{ 'is-success': parseInt(data.watched), 'is-danger': !data.watched }">
         <header class="card-header">
           <div class="card-header-title">
-            <span>Last update by&nbsp;</span>
-            <NuxtLink :to="`/backend/${data.via}`" v-text="data.via"/>
+            <span>Latest local metadata via</span>
           </div>
           <div class="card-header-icon">
-            <button class="button is-small" @click="toggleWatched"
-                    :class="{ 'is-success': !data.watched, 'is-danger': data.watched }">
-              <span class="icon" v-if="data.watched"><i class="fas fa-eye-slash"></i></span>
-              <span class="icon" v-else><i class="fas fa-eye"></i></span>
-              <span>Mark as <span v-if="data.watched">Unplayed</span><span v-else>played</span></span>
-            </button>
+            <span class="icon-text">
+              <span class="icon"><i class="fas fa-server"></i></span>
+              <span>
+                <NuxtLink :to="`/backend/${data.via}`" v-text="data.via"/>
+              </span>
+            </span>
           </div>
         </header>
         <div class="card-content">
@@ -48,8 +56,8 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-passport"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">ID:</span>
-                  {{ data.id }}
+                  <span class="is-hidden-mobile">ID:&nbsp;</span>
+                  <NuxtLink :to="`/history/${data.id}`" v-text="data.id"/>
                 </span>
               </span>
             </div>
@@ -152,7 +160,7 @@
            :class="{ 'is-success': parseInt(item.watched), 'is-danger': !parseInt(item.watched) }">
         <header class="card-header">
           <div class="card-header-title">
-            Metadata from
+            Metadata via
           </div>
           <div class="card-header-icon">
             <span class="icon-text">
@@ -170,8 +178,9 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-passport"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">ID:</span>
-                  {{ item.id }}
+                  <span class="is-hidden-mobile">ID:&nbsp;</span>
+                  <NuxtLink :to="item?.webUrl" target="_blank" v-text="item.id" v-if="item?.webUrl"/>
+                  <span v-else v-text="item.id"/>
                 </span>
               </span>
             </div>
@@ -266,6 +275,13 @@
               </span>
             </div>
 
+            <div class="column is-12" v-if="item?.extra.title">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-heading"></i></span>
+                <span><span class="is-hidden-mobile">Title:</span> {{ item.extra.title }}</span>
+              </span>
+            </div>
+
           </div>
         </div>
       </div>
@@ -285,6 +301,20 @@
         <pre><code>{{ JSON.stringify(data, null, 2) }}</code></pre>
       </div>
     </div>
+
+    <div class="column is-12" v-if="show_page_tips">
+      <Message title="Tips" message_class="has-background-info-90 has-text-dark">
+        <button class="delete" @click="show_page_tips=false"></button>
+        <div class="content">
+          <ul>
+            <li>Clicking on the ID in <code>metadata via</code> boxes will take you directly to the item in the source
+              backend. While clicking on the GUIDs will take you to that source link, similarly clicking on the series
+              GUIDs will take you to the series link that was provided by the external source.
+            </li>
+          </ul>
+        </div>
+      </Message>
+    </div>
   </div>
 </template>
 
@@ -292,6 +322,7 @@
 import request from '~/utils/request.js'
 import {ag, formatDuration, makeGUIDLink, notification, ucFirst} from '~/utils/index.js'
 import moment from 'moment'
+import {useStorage} from "@vueuse/core";
 
 const id = useRoute().params.id
 
@@ -299,6 +330,7 @@ useHead({title: `History : ${id}`})
 
 const isLoading = ref(false)
 const showRawData = ref(false)
+const show_page_tips = useStorage('show_page_tips', true)
 
 const data = ref({
   id: id,

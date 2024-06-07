@@ -14,12 +14,15 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Traits\APITraits;
 use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
 final class Index
 {
+    use APITraits;
+
     public const string URL = '%{api.prefix}/history';
     private PDO $pdo;
 
@@ -387,6 +390,16 @@ final class Index
         $r[iState::COLUMN_WATCHED] = $item->isWatched();
         $r[iState::COLUMN_UPDATED] = makeDate($item->updated);
         $r[iState::COLUMN_EXTRA_EVENT] = ag($item->getExtra($item->via), iState::COLUMN_EXTRA_EVENT, null);
+
+        if (!empty($r[iState::COLUMN_META_DATA])) {
+            foreach ($r[iState::COLUMN_META_DATA] as $key => &$metadata) {
+                $metadata['webUrl'] = (string)$this->getWebUrl(
+                    $key,
+                    ag($metadata, iState::COLUMN_TYPE),
+                    ag($metadata, iState::COLUMN_ID),
+                );
+            }
+        }
 
         return api_response(HTTP_STATUS::HTTP_OK, $r);
     }

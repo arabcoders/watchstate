@@ -17,6 +17,7 @@ use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use App\Libs\Uri;
+use Psr\Http\Message\UriInterface as iUri;
 
 trait APITraits
 {
@@ -129,5 +130,25 @@ trait APITraits
                 options: $options,
             )
         );
+    }
+
+    /**
+     * Get the web URL for the specified item.
+     *
+     * @param string $backend The backend name.
+     * @param string $type The item type.
+     * @param string|int $id The item ID.
+     *
+     * @return iUri The web URL.
+     */
+    protected function getWebUrl(string $backend, string $type, string|int $id): iUri
+    {
+        static $clients = [];
+
+        if (!isset($clients[$backend])) {
+            $clients[$backend] = $this->getClient(name: $backend);
+        }
+
+        return $clients[$backend]->getWebUrl($type, $id);
     }
 }
