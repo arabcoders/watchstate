@@ -18,6 +18,7 @@ use App\Backends\Emby\Action\GetLibrary;
 use App\Backends\Emby\Action\GetMetaData;
 use App\Backends\Emby\Action\GetSessions;
 use App\Backends\Emby\Action\GetUsersList;
+use App\Backends\Emby\Action\GetWebUrl;
 use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
 use App\Backends\Emby\Action\ParseWebhook;
@@ -39,6 +40,7 @@ use App\Libs\Uri;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 
 /**
@@ -485,6 +487,24 @@ class EmbyClient implements iClient
     public function getUserToken(int|string $userId, string $username): string|bool
     {
         return $this->context->backendToken;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getWebUrl(string $type, int|string $id): UriInterface
+    {
+        $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
     }
 
     /**

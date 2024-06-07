@@ -12,6 +12,7 @@ use DateTimeInterface as iDate;
 use JsonException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -255,6 +256,16 @@ interface ClientInterface
      * @return string|bool return user token as string or bool(false) if not supported.
      */
     public function getUserToken(int|string $userId, string $username): string|bool;
+
+    /**
+     * Get item Web Url
+     *
+     * @param string $type item type.
+     * @param int|string $id item id.
+     *
+     * @return UriInterface
+     */
+    public function getWebUrl(string $type, int|string $id): UriInterface;
 
     /**
      * Get backend info.

@@ -20,6 +20,7 @@ use App\Backends\Plex\Action\GetSessions;
 use App\Backends\Plex\Action\GetUsersList;
 use App\Backends\Plex\Action\GetUserToken;
 use App\Backends\Plex\Action\GetVersion;
+use App\Backends\Plex\Action\GetWebUrl;
 use App\Backends\Plex\Action\Import;
 use App\Backends\Plex\Action\InspectRequest;
 use App\Backends\Plex\Action\ParseWebhook;
@@ -40,6 +41,7 @@ use App\Libs\Uri;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -490,6 +492,24 @@ class PlexClient implements iClient
     public function getUserToken(int|string $userId, string $username): string|bool
     {
         $response = Container::get(GetUserToken::class)($this->context, $userId, $username);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getWebUrl(string $type, int|string $id): UriInterface
+    {
+        $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {
