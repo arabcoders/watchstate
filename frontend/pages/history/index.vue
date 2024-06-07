@@ -119,9 +119,7 @@
             <header class="card-header">
               <p class="card-header-title is-text-overflow pr-1">
                 <span class="icon" v-if="!item.progress">
-                  <i class="fas fa-eye-slash" v-if="!item.watched"></i>
-                  <i class="fas fa-eye" v-else></i>
-                  &nbsp;
+                  <i class="fas" :class="{'fa-eye-slash': !item.watched, 'fa-eye': item.watched}"></i>
                 </span>
                 <NuxtLink :to="'/history/'+item.id" v-text="item.full_title ?? item.title"/>
               </p>
@@ -132,6 +130,12 @@
             </header>
             <div class="card-content">
               <div class="columns is-multiline is-mobile has-text-centered">
+                <div class="column is-12 has-text-left" v-if="item?.title">
+                  <div class="is-text-overflow is-clickable"
+                       @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                    {{ item.title }}
+                  </div>
+                </div>
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
@@ -262,8 +266,10 @@ const loadContent = async (pageNumber, fromPopState = false) => {
 
     const response = await request(`/history/?${search.toString()}`)
     const json = await response.json()
+    const currentUrl = window.location.pathname + '?' + (new URLSearchParams(window.location.search)).toString()
 
-    if (!fromPopState && window.location.href !== newUrl) {
+    if (!fromPopState && currentUrl !== newUrl) {
+      console.log(currentUrl, newUrl)
       window.history.pushState({
         page: pageNumber,
         query: query.value,

@@ -35,6 +35,31 @@
       </Message>
     </div>
 
+    <div class="column is-12" v-if="data?.not_reported_by && data.not_reported_by.length>0">
+      <Message message_class="has-background-warning-80 has-text-dark" title="Warning!">
+        <div class="content">
+          <p>
+            <span class="icon"><i class="fas fa-exclamation"></i></span>
+            There are no metadata regarding this <strong>{{ data.type }}</strong> from (
+            <span class="tag mr-1" v-for="backend in data.not_reported_by" :key="`nr-${backend}`">
+              <NuxtLink :to="`/backend/${backend}`" v-text="backend"/>
+            </span>).
+          </p>
+          <h5>Possible reasons:</h5>
+          <ul>
+            <li>Delayed import operation. Might be yet to be imported due to webhooks not being used, or the backend
+              doesn't support webhooks.
+            </li>
+            <li>Item mismatched at the source backend.</li>
+            <li>
+              There are no matching <code>{{ 'episode' === data.type ? 'Series GUIDs' : 'GUIDs' }}</code> in common
+              being reported, And thus it was treated as separate item.
+            </li>
+          </ul>
+        </div>
+      </Message>
+    </div>
+
     <div class="column is-12" v-if="data?.via">
       <div class="card" :class="{ 'is-success': parseInt(data.watched), 'is-danger': !data.watched }">
         <header class="card-header">
@@ -106,8 +131,8 @@
                 <span class="icon" v-if="'episode' === data.type"><i class="fas fa-tv"></i></span>
                 <span class="icon" v-else><i class="fas fa-film"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">Type:</span>
-                  {{ ucFirst(data.type) }}
+                  <span class="is-hidden-mobile">Type:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('type',data.type)" v-text="ucFirst(data.type)"/>
                 </span>
               </span>
             </div>
@@ -115,14 +140,18 @@
             <div class="column is-6 has-text-left" v-if="'episode' === data.type">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-tv"></i></span>
-                <span><span class="is-hidden-mobile">Season:</span> {{ data.season }}</span>
+                <span><span class="is-hidden-mobile">Season:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('season',data.season)" v-text="data.season"/>
+                </span>
               </span>
             </div>
 
             <div class="column is-6 has-text-right" v-if="'episode' === data.type">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-tv"></i></span>
-                <span><span class="is-hidden-mobile">Episode:</span> {{ data.episode }}</span>
+                <span><span class="is-hidden-mobile">Episode:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('episode',data.episode)" v-text="data.episode"/>
+                </span>
               </span>
             </div>
 
@@ -133,6 +162,18 @@
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.guids">
                 <NuxtLink target="_blank" :to="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
+                  {{ source.split('guid_')[1] }}-{{ guid }}
+                </NuxtLink>
+              </span>
+            </div>
+
+            <div class="column is-12" v-if="data.rguids && Object.keys(data.rguids).length>0">
+              <span class="icon-text is-clickable" v-tooltip="'Relative Globally unique identifier for this episode'">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>rGUIDs:</span>
+              </span>
+              <span class="tag mr-1" v-for="(guid,source) in data.rguids">
+                <NuxtLink :to="makeSearchLink('rguid', `${source.split('guid_')[1]}://${guid}`)">
                   {{ source.split('guid_')[1] }}-{{ guid }}
                 </NuxtLink>
               </span>
@@ -231,8 +272,8 @@
                 <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
                 <span class="icon" v-else><i class="fas fa-film"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">Type:</span>
-                  {{ ucFirst(item.type) }}
+                  <span class="is-hidden-mobile">Type:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('type',item.type)" v-text="ucFirst(item.type)"/>
                 </span>
               </span>
             </div>
@@ -240,14 +281,20 @@
             <div class="column is-6" v-if="'episode' === item.type">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-tv"></i></span>
-                <span><span class="is-hidden-mobile">Season:</span> {{ item.season }}</span>
+                <span>
+                  <span class="is-hidden-mobile">Season:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('season',item.season)" v-text="item.season"/>
+                </span>
               </span>
             </div>
 
             <div class="column is-6 has-text-right" v-if="'episode' === item.type">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-tv"></i></span>
-                <span><span class="is-hidden-mobile">Episode:</span> {{ item.episode }}</span>
+                <span>
+                  <span class="is-hidden-mobile">Episode:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('episode',item.episode)" v-text="item.episode"/>
+                </span>
               </span>
             </div>
 
@@ -275,7 +322,7 @@
               </span>
             </div>
 
-            <div class="column is-12" v-if="item?.extra.title">
+            <div class="column is-12" v-if="item?.extra?.title">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-heading"></i></span>
                 <span><span class="is-hidden-mobile">Title:</span> {{ item.extra.title }}</span>
@@ -311,6 +358,23 @@
               backend. While clicking on the GUIDs will take you to that source link, similarly clicking on the series
               GUIDs will take you to the series link that was provided by the external source.
             </li>
+            <li>
+              <code>rGUIDSs</code> are relative globally unique identifiers for episodes based on <code>series
+              GUID</code>. They are formatted as <code>GUID://seriesID/season_number/episode_number</code>. We use
+              <code>rGUIDs</code>, to identify specific episode. This is more reliable than using episode specific
+              <code>GUID</code>, as they are often misreported in the source data.
+            </li>
+            <template v-if="data?.not_reported_by && data.not_reported_by.length > 0">
+              <li>
+                The warning on top of the page usually is accurate, and it is recommended to check the backend metadata
+                for the item.
+                <template v-if="'episode' === data.type">
+                  For episodes, we use <code>rGUIDs</code> to identify the episode, and <strong>important part</strong>
+                  of that GUID is the <code>series GUID</code>. We need at least one reported series GUIDs to match
+                  between your backends. If none are matching, it will be treated as separate series.
+                </template>
+              </li>
+            </template>
           </ul>
         </div>
       </Message>
@@ -320,7 +384,7 @@
 
 <script setup>
 import request from '~/utils/request.js'
-import {ag, formatDuration, makeGUIDLink, notification, ucFirst} from '~/utils/index.js'
+import {ag, formatDuration, makeGUIDLink, makeSearchLink, notification, ucFirst} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from "@vueuse/core";
 
@@ -339,6 +403,8 @@ const data = ref({
   metadata: {},
   guids: {},
   parent: {},
+  rguids: {},
+  not_reported_by: [],
 });
 
 const loadContent = async (id) => {

@@ -299,7 +299,25 @@ const makeConsoleCommand = (cmd) => {
     return `/console?${params.toString()}`
 }
 
-const stringToRegex = (str) => new RegExp(str.match(/\/(.+)\/.*/)[1], str.match(/\/.+\/(.*)/)[1]);
+const stringToRegex = (str) => new RegExp(str.match(/\/(.+)\/.*/)[1], str.match(/\/.+\/(.*)/)[1])
+
+
+/**
+ * Make history search link.
+ *
+ * @param {string} type
+ * @param {string} guid
+ *
+ * @returns {string}
+ */
+const makeSearchLink = (type, guid) => {
+    const params = new URLSearchParams();
+    params.append('perpage', 50);
+    params.append('page', 1);
+    params.append('q', guid);
+    params.append('key', type);
+    return `/history/?${params.toString()}`
+}
 
 export {
     ag_set,
@@ -312,5 +330,6 @@ export {
     formatDuration,
     copyText,
     stringToRegex,
-    makeConsoleCommand
+    makeConsoleCommand,
+    makeSearchLink
 }

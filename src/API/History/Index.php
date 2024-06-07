@@ -50,52 +50,76 @@ final class Index
 
         $sql[] = sprintf('FROM %s', $es('state'));
 
-        if ($data->get('id')) {
-            $where[] = $es(iState::COLUMN_ID) . ' = :id';
-            $params['id'] = $data->get('id');
-            $filters['id'] = $data->get('id');
+        // -- search relative guids.
+        if ($data->get('rguid')) {
+            $regex = '/(?<guid>\w+)\:\/\/(?<parentID>.+?)\/(?<seasonNumber>\w+)(\/(?<episodeNumber>.+))?/is';
+            if (1 !== preg_match($regex, $data->get('rguid'), $matches)) {
+                return api_error(
+                    'Invalid value for rguid query string expected value format is guid://parentID/seasonNumber[/episodeNumber].',
+                    HTTP_STATUS::HTTP_BAD_REQUEST
+                );
+            }
+
+            $data = $data->with(iState::COLUMN_PARENT, r('{guid}://{parent}', [
+                'guid' => ag($matches, 'guid'),
+                'parent' => ag($matches, 'parentID'),
+            ]));
+
+            $data = $data->with(iState::COLUMN_SEASON, ag($matches, 'seasonNumber'));
+
+            if (null !== ($episodeNumber = ag($matches, 'episodeNumber'))) {
+                $data = $data->with(iState::COLUMN_EPISODE, $episodeNumber);
+            }
+
+            $filters['rguid'] = $data->get('rguid');
         }
 
-        if ($data->get('via')) {
+        if ($data->get(iState::COLUMN_ID)) {
+            $where[] = $es(iState::COLUMN_ID) . ' = :id';
+            $params['id'] = $data->get(iState::COLUMN_ID);
+            $filters['id'] = $data->get(iState::COLUMN_ID);
+        }
+
+        if ($data->get(iState::COLUMN_VIA)) {
             $where[] = $es(iState::COLUMN_VIA) . ' = :via';
             $params['via'] = $data->get('via');
             $filters['via'] = $data->get('via');
         }
 
-        if ($data->get('year')) {
+        if ($data->get(iState::COLUMN_YEAR)) {
             $where[] = $es(iState::COLUMN_YEAR) . ' = :year';
-            $params['year'] = $data->get('year');
-            $filters['year'] = $data->get('year');
+            $params['year'] = $data->get(iState::COLUMN_YEAR);
+            $filters['year'] = $data->get(iState::COLUMN_YEAR);
         }
 
-        if ($data->get('type')) {
+        if ($data->get(iState::COLUMN_TYPE)) {
             $where[] = $es(iState::COLUMN_TYPE) . ' = :type';
-            $params['type'] = match ($data->get('type')) {
+            $params['type'] = match ($data->get(iState::COLUMN_TYPE)) {
                 iState::TYPE_MOVIE => iState::TYPE_MOVIE,
                 default => iState::TYPE_EPISODE,
             };
-            $filters['type'] = $data->get('type');
+            $filters['type'] = $data->get(iState::COLUMN_TYPE);
         }
 
-        if ($data->get('title')) {
+        if ($data->get(iState::COLUMN_TITLE)) {
             $where[] = $es(iState::COLUMN_TITLE) . ' LIKE "%" || :title || "%"';
-            $params['title'] = $data->get('title');
-            $filters['title'] = $data->get('title');
+            $params['title'] = $data->get(iState::COLUMN_TITLE);
+            $filters['title'] = $data->get(iState::COLUMN_TITLE);
         }
 
-        if (null !== $data->get('season')) {
+        if (null !== $data->get(iState::COLUMN_SEASON)) {
             $where[] = $es(iState::COLUMN_SEASON) . ' = :season';
-            $params['season'] = $data->get('season');
-            $filters['season'] = $data->get('season');
+            $params['season'] = $data->get(iState::COLUMN_SEASON);
+            $filters['season'] = $data->get(iState::COLUMN_SEASON);
         }
 
-        if (null !== $data->get('episode')) {
+        if (null !== $data->get(iState::COLUMN_EPISODE)) {
             $where[] = $es(iState::COLUMN_EPISODE) . ' = :episode';
-            $params['episode'] = $data->get('episode');
-            $filters['episode'] = $data->get('episode');
+            $params['episode'] = $data->get(iState::COLUMN_EPISODE);
+            $filters['episode'] = $data->get(iState::COLUMN_EPISODE);
         }
 
-        if (null !== ($parent = $data->get('parent'))) {
+        if (null !== ($parent = $data->get(iState::COLUMN_PARENT))) {
             $parent = after($parent, 'guid_');
             $d = Guid::fromArray(['guid_' . before($parent, '://') => after($parent, '://')]);
             $parent = array_keys($d->getAll())[0] ?? null;
@@ -109,10 +133,10 @@ final class Index
 
             $where[] = "json_extract(" . iState::COLUMN_PARENT . ",'$.{$parent}') = :parent";
             $params['parent'] = array_values($d->getAll())[0];
-            $filters['parent'] = $data->get('parent');
+            $filters['parent'] = $data->get(iState::COLUMN_PARENT);
         }
 
-        if (null !== ($guid = $data->get('guid'))) {
+        if (null !== ($guid = $data->get(iState::COLUMN_GUIDS))) {
             $guid = after($guid, 'guid_');
             $d = Guid::fromArray(['guid_' . before($guid, '://') => after($guid, '://')]);
             $guid = array_keys($d->getAll())[0] ?? null;
@@ -126,10 +150,10 @@ final class Index
 
             $where[] = "json_extract(" . iState::COLUMN_GUIDS . ",'$.{$guid}') = :guid";
             $params['guid'] = array_values($d->getAll())[0];
-            $filters['guid'] = $data->get('guid');
+            $filters['guid'] = $data->get(iState::COLUMN_GUIDS);
         }
 
-        if ($data->get('metadata')) {
+        if ($data->get(iState::COLUMN_META_DATA)) {
             $sField = $data->get('key');
             $sValue = $data->get('value');
             if (null === $sField || null === $sValue) {
@@ -160,7 +184,7 @@ final class Index
             ];
         }
 
-        if ($data->get('extra')) {
+        if ($data->get(iState::COLUMN_EXTRA)) {
             $sField = $data->get('key');
             $sValue = $data->get('value');
             if (null === $sField || null === $sValue) {
@@ -329,7 +353,7 @@ final class Index
                     'type' => 'guid://id',
                 ],
                 [
-                    'key' => 'guid',
+                    'key' => 'guids',
                     'description' => 'Search using the GUID.',
                     'type' => 'guid://id',
                 ],
@@ -342,6 +366,11 @@ final class Index
                     'key' => 'extra',
                     'description' => 'Search using the extra JSON field. Searching this field might be slow.',
                     'type' => 'backend.field://value',
+                ],
+                [
+                    'key' => 'rguid',
+                    'description' => 'Search using the rGUID.',
+                    'type' => 'guid://parentID/seasonNumber[/episodeNumber]',
                 ],
             ],
         ];
@@ -364,6 +393,19 @@ final class Index
             $item['full_title'] = $entity->getName();
             $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
             $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
+            $item[iState::COLUMN_TITLE] = $entity->isEpisode() ? ag(
+                $entity->getMetadata($entity->via),
+                iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+                null
+            ) : null;
+
+            $item['rguids'] = [];
+
+            if ($entity->isEpisode()) {
+                foreach ($entity->getRelativeGuids() as $rKey => $rGuid) {
+                    $item['rguids'][$rKey] = $rGuid;
+                }
+            }
 
             $response['history'][] = $item;
         }
@@ -390,6 +432,16 @@ final class Index
         $r[iState::COLUMN_WATCHED] = $item->isWatched();
         $r[iState::COLUMN_UPDATED] = makeDate($item->updated);
         $r[iState::COLUMN_EXTRA_EVENT] = ag($item->getExtra($item->via), iState::COLUMN_EXTRA_EVENT, null);
+        $r['rguids'] = [];
+
+        if ($item->isEpisode()) {
+            foreach ($item->getRelativeGuids() as $rKey => $rGuid) {
+                $r['rguids'][$rKey] = $rGuid;
+            }
+        }
+
+        $reportedBy = [];
+        $r['not_reported_by'] = [];
 
         if (!empty($r[iState::COLUMN_META_DATA])) {
             foreach ($r[iState::COLUMN_META_DATA] as $key => &$metadata) {
@@ -398,8 +450,15 @@ final class Index
                     ag($metadata, iState::COLUMN_TYPE),
                     ag($metadata, iState::COLUMN_ID),
                 );
+                $reportedBy[] = $key;
             }
         }
+
+        $backendsKeys = array_column($this->getBackends(), 'name');
+
+        $r['not_reported_by'] = array_values(
+            array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBy))
+        );
 
         return api_response(HTTP_STATUS::HTTP_OK, $r);
     }
