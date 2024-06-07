@@ -48,8 +48,8 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-passport"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">ID:</span>
-                  {{ data.id }}
+                  <span class="is-hidden-mobile">ID:&nbsp;</span>
+                  <NuxtLink :to="getWebUrl(data)" target="_blank" v-text="data.id"/>
                 </span>
               </span>
             </div>
@@ -170,8 +170,8 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-passport"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">ID:</span>
-                  {{ item.id }}
+                  <span class="is-hidden-mobile">ID:&nbsp;</span>
+                  <NuxtLink :to="item?.webUrl" target="_blank" v-text="item.id"/>
                 </span>
               </span>
             </div>
@@ -364,6 +364,17 @@ const toggleWatched = async () => {
   } catch (e) {
     notification('error', 'Error', `Failed to update watched status. ${e}`)
   }
+}
+
+const getWebUrl = (item) => {
+  const via = item.via
+
+  for (const key in item.metadata) {
+    if (key === via) {
+      return item.metadata[key].webUrl
+    }
+  }
+  return '';
 }
 
 onMounted(async () => loadContent(id))
