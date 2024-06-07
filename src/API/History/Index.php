@@ -46,7 +46,7 @@ final class Index
 
         $params = [];
 
-        $sql = $where = [];
+        $sql = $where = $or = [];
 
         $sql[] = sprintf('FROM %s', $es('state'));
 
@@ -75,48 +75,48 @@ final class Index
         }
 
         if ($data->get(iState::COLUMN_ID)) {
-            $where[] = $es(iState::COLUMN_ID) . ' = :id';
-            $params['id'] = $data->get(iState::COLUMN_ID);
-            $filters['id'] = $data->get(iState::COLUMN_ID);
+            $where[] = $es(iState::COLUMN_ID) . ' = :' . iState::COLUMN_ID;
+            $params[iState::COLUMN_ID] = $data->get(iState::COLUMN_ID);
+            $filters[iState::COLUMN_ID] = $data->get(iState::COLUMN_ID);
         }
 
         if ($data->get(iState::COLUMN_VIA)) {
-            $where[] = $es(iState::COLUMN_VIA) . ' = :via';
-            $params['via'] = $data->get('via');
-            $filters['via'] = $data->get('via');
+            $where[] = $es(iState::COLUMN_VIA) . ' = :' . iState::COLUMN_VIA;
+            $params[iState::COLUMN_VIA] = $data->get('via');
+            $filters[iState::COLUMN_VIA] = $data->get('via');
         }
 
         if ($data->get(iState::COLUMN_YEAR)) {
-            $where[] = $es(iState::COLUMN_YEAR) . ' = :year';
-            $params['year'] = $data->get(iState::COLUMN_YEAR);
-            $filters['year'] = $data->get(iState::COLUMN_YEAR);
+            $where[] = $es(iState::COLUMN_YEAR) . ' = :' . iState::COLUMN_YEAR;
+            $params[iState::COLUMN_YEAR] = $data->get(iState::COLUMN_YEAR);
+            $filters[iState::COLUMN_YEAR] = $data->get(iState::COLUMN_YEAR);
         }
 
         if ($data->get(iState::COLUMN_TYPE)) {
-            $where[] = $es(iState::COLUMN_TYPE) . ' = :type';
-            $params['type'] = match ($data->get(iState::COLUMN_TYPE)) {
+            $where[] = $es(iState::COLUMN_TYPE) . ' = :' . iState::COLUMN_TYPE;
+            $params[iState::COLUMN_TYPE] = match ($data->get(iState::COLUMN_TYPE)) {
                 iState::TYPE_MOVIE => iState::TYPE_MOVIE,
                 default => iState::TYPE_EPISODE,
             };
-            $filters['type'] = $data->get(iState::COLUMN_TYPE);
+            $filters[iState::COLUMN_TYPE] = $data->get(iState::COLUMN_TYPE);
         }
 
         if ($data->get(iState::COLUMN_TITLE)) {
-            $where[] = $es(iState::COLUMN_TITLE) . ' LIKE "%" || :title || "%"';
-            $params['title'] = $data->get(iState::COLUMN_TITLE);
-            $filters['title'] = $data->get(iState::COLUMN_TITLE);
+            $where[] = $es(iState::COLUMN_TITLE) . ' LIKE "%" || :' . iState::COLUMN_TITLE . ' || "%"';
+            $params[iState::COLUMN_TITLE] = $data->get(iState::COLUMN_TITLE);
+            $filters[iState::COLUMN_TITLE] = $data->get(iState::COLUMN_TITLE);
         }
 
         if (null !== $data->get(iState::COLUMN_SEASON)) {
-            $where[] = $es(iState::COLUMN_SEASON) . ' = :season';
-            $params['season'] = $data->get(iState::COLUMN_SEASON);
-            $filters['season'] = $data->get(iState::COLUMN_SEASON);
+            $where[] = $es(iState::COLUMN_SEASON) . ' = :' . iState::COLUMN_SEASON;
+            $params[iState::COLUMN_SEASON] = $data->get(iState::COLUMN_SEASON);
+            $filters[iState::COLUMN_SEASON] = $data->get(iState::COLUMN_SEASON);
         }
 
         if (null !== $data->get(iState::COLUMN_EPISODE)) {
-            $where[] = $es(iState::COLUMN_EPISODE) . ' = :episode';
-            $params['episode'] = $data->get(iState::COLUMN_EPISODE);
-            $filters['episode'] = $data->get(iState::COLUMN_EPISODE);
+            $where[] = $es(iState::COLUMN_EPISODE) . ' = :' . iState::COLUMN_EPISODE;
+            $params[iState::COLUMN_EPISODE] = $data->get(iState::COLUMN_EPISODE);
+            $filters[iState::COLUMN_EPISODE] = $data->get(iState::COLUMN_EPISODE);
         }
 
         if (null !== ($parent = $data->get(iState::COLUMN_PARENT))) {
@@ -131,9 +131,9 @@ final class Index
                 );
             }
 
-            $where[] = "json_extract(" . iState::COLUMN_PARENT . ",'$.{$parent}') = :parent";
-            $params['parent'] = array_values($d->getAll())[0];
-            $filters['parent'] = $data->get(iState::COLUMN_PARENT);
+            $where[] = "json_extract(" . iState::COLUMN_PARENT . ",'$.{$parent}') = :" . iState::COLUMN_PARENT;
+            $params[iState::COLUMN_PARENT] = array_values($d->getAll())[0];
+            $filters[iState::COLUMN_PARENT] = $data->get(iState::COLUMN_PARENT);
         }
 
         if (null !== ($guid = $data->get(iState::COLUMN_GUIDS))) {
@@ -148,9 +148,9 @@ final class Index
                 );
             }
 
-            $where[] = "json_extract(" . iState::COLUMN_GUIDS . ",'$.{$guid}') = :guid";
-            $params['guid'] = array_values($d->getAll())[0];
-            $filters['guid'] = $data->get(iState::COLUMN_GUIDS);
+            $where[] = "json_extract(" . iState::COLUMN_GUIDS . ",'$.{$guid}') = :" . iState::COLUMN_GUIDS;
+            $params[iState::COLUMN_GUIDS] = array_values($d->getAll())[0];
+            $filters[iState::COLUMN_GUIDS] = $data->get(iState::COLUMN_GUIDS);
         }
 
         if ($data->get(iState::COLUMN_META_DATA)) {
@@ -171,17 +171,33 @@ final class Index
             }
 
             if ($data->get('exact')) {
-                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value ";
+                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value";
             } else {
                 $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
             }
 
             $params['jf_metadata_value'] = $sValue;
-            $filters['metadata'] = [
+            $filters[iState::COLUMN_META_DATA] = [
                 'key' => $sField,
                 'value' => $sValue,
                 'exact' => $data->get('exact'),
             ];
+        }
+
+        if ($data->get(iState::COLUMN_META_PATH)) {
+            foreach ($this->getBackends() as $backend) {
+                $bName = $backend['name'];
+
+                if ($data->get('exact')) {
+                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.path') = :path_{$bName}";
+                } else {
+                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.path') LIKE \"%\" || :path_{$bName} || \"%\"";
+                }
+
+                $params["path_{$bName}"] = $data->get(iState::COLUMN_META_PATH);
+            }
+
+            $filters[iState::COLUMN_META_PATH] = $data->get(iState::COLUMN_META_PATH);
         }
 
         if ($data->get(iState::COLUMN_EXTRA)) {
@@ -213,6 +229,10 @@ final class Index
                 'value' => $sValue,
                 'exact' => $data->get('exact'),
             ];
+        }
+
+        if (count($or) >= 1) {
+            $where[] = '( ' . implode(' OR ', $or) . ' )';
         }
 
         if (count($where) >= 1) {
@@ -372,6 +392,11 @@ final class Index
                     'description' => 'Search using the rGUID.',
                     'type' => 'guid://parentID/seasonNumber[/episodeNumber]',
                 ],
+                [
+                    'key' => 'path',
+                    'description' => 'Search using file path. Searching this field might be slow.',
+                    'type' => 'string',
+                ],
             ],
         ];
 
@@ -398,6 +423,7 @@ final class Index
                 iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
                 null
             ) : null;
+            $item[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
             $item['rguids'] = [];
 
@@ -459,6 +485,12 @@ final class Index
         $r['not_reported_by'] = array_values(
             array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBy))
         );
+        $r[iState::COLUMN_TITLE] = $item->isEpisode() ? ag(
+            $item->getMetadata($item->via),
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+            null
+        ) : null;
+        $r[iState::COLUMN_META_PATH] = ag($item->getMetadata($item->via), iState::COLUMN_META_PATH);
 
         return api_response(HTTP_STATUS::HTTP_OK, $r);
     }

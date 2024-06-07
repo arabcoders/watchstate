@@ -45,7 +45,7 @@
               <NuxtLink :to="`/backend/${backend}`" v-text="backend"/>
             </span>).
           </p>
-          <h5>Possible reasons:</h5>
+          <h5 class="has-text-dark">Possible reasons:</h5>
           <ul>
             <li>Delayed import operation. Might be yet to be imported due to webhooks not being used, or the backend
               doesn't support webhooks.
@@ -56,6 +56,10 @@
               being reported, And thus it was treated as separate item.
             </li>
           </ul>
+          <p class="has-text-danger-50">
+            <span class="icon"><i class="fas fa-info"></i></span> To see if your media backends are reporting different
+            metadata for the same file, click on the file link which will filter your history based on that file.
+          </p>
         </div>
       </Message>
     </div>
@@ -191,6 +195,22 @@
               </span>
             </div>
 
+            <div class="column is-12" v-if="data?.title">
+              <div class="is-text-overflow">
+                <span class="icon"><i class="fas fa-heading"></i></span>
+                <span class="is-hidden-mobile">Title:</span>
+                {{ data.title }}
+              </div>
+            </div>
+
+            <div class="column is-12" v-if="data?.path">
+              <div class="is-text-overflow">
+                <span class="icon"><i class="fas fa-file"></i></span>
+                <span class="is-hidden-mobile">File:&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('path',data.path)" v-text="data.path"/>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -323,10 +343,19 @@
             </div>
 
             <div class="column is-12" v-if="item?.extra?.title">
-              <span class="icon-text">
+              <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-heading"></i></span>
-                <span><span class="is-hidden-mobile">Title:</span> {{ item.extra.title }}</span>
-              </span>
+                <span class="is-hidden-mobile">Title:</span>
+                {{ item.extra.title }}
+              </div>
+            </div>
+
+            <div class="column is-12" v-if="item?.path">
+              <div class="is-text-overflow">
+                <span class="icon"><i class="fas fa-file"></i></span>
+                <span class="is-hidden-mobile">File:&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+              </div>
             </div>
 
           </div>

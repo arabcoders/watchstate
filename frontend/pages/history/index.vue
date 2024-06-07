@@ -124,8 +124,9 @@
                 <NuxtLink :to="'/history/'+item.id" v-text="item.full_title ?? item.title"/>
               </p>
               <span class="card-header-icon">
-                <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
-                <span class="icon" v-else><i class="fas fa-film"></i></span>
+                <span class="icon">
+                  <i class="fas" :class="{'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                </span>
               </span>
             </header>
             <div class="card-content">
@@ -133,7 +134,17 @@
                 <div class="column is-12 has-text-left" v-if="item?.title">
                   <div class="is-text-overflow is-clickable"
                        @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                    <span class="icon"><i class="fas fa-heading"></i></span>
+                    <span class="is-hidden-mobile">Title:&nbsp;</span>
                     {{ item.title }}
+                  </div>
+                </div>
+                <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
+                     @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-file"></i></span>
+                    <span class="is-hidden-mobile">File:&nbsp;</span>
+                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
                   </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
@@ -199,7 +210,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, notification} from '~/utils/index.js'
+import {formatDuration, makeSearchLink, notification} from '~/utils/index.js'
 
 const route = useRoute()
 
@@ -357,5 +368,11 @@ const getHelp = (key) => {
 
   return `<span class="icon-text"><span class="icon"><i class="fas fa-info"></i></span><span>${text}</span></span>`
 }
-onMounted(async () => loadContent(page.value ?? 1))
+
+onMounted(async () => {
+  if (query.value) {
+    searchForm.value = true
+  }
+  await loadContent(page.value ?? 1)
+})
 </script>
