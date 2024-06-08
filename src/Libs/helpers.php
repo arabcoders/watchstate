@@ -1363,7 +1363,7 @@ if (!function_exists('APIRequest')) {
      * @param string $method The request method.
      * @param string $path The request path.
      * @param array $json The request body.
-     * @param array $opts Additional options.
+     * @param array{ server: array, query: array, headers: array} $opts Additional options.
      *
      * @return APIResponse The response object.
      */

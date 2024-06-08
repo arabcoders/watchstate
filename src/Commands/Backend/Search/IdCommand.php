@@ -6,13 +6,13 @@ namespace App\Commands\Backend\Search;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Entity\StateInterface as iState;
+use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Throwable;
 
 /**
  * IdCommand
@@ -22,7 +22,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class IdCommand extends Command
 {
-    public const ROUTE = 'backend:search:id';
+    public const string ROUTE = 'backend:search:id';
 
     /**
      * Configures the command.
@@ -74,45 +74,61 @@ final class IdCommand extends Command
             return self::FAILURE;
         }
 
-        $backendOpts = [];
-        $opts = [
-            Options::NO_CACHE => true,
+        $query = [
+            'id' => $id,
         ];
 
-        if ($input->getOption('trace')) {
-            $backendOpts = ag_set($opts, 'options.' . Options::DEBUG_TRACE, true);
-        }
-
-        try {
-            $backend = $this->getBackend($name, $backendOpts);
-        } catch (RuntimeException) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
-            return self::FAILURE;
-        }
-
         if ($input->getOption('include-raw-response')) {
-            $opts[Options::RAW_RESPONSE] = true;
+            $query[Options::RAW_RESPONSE] = 1;
         }
 
-        try {
-            $results = $backend->searchId(id: $id, opts: $opts + [Options::NO_LOGGING => true]);
-        } catch (Throwable $e) {
-            $output->writeln(r('<error>{kind}: {message}</error>', [
-                'kind' => $e::class,
-                'message' => $e->getMessage()
+        $response = APIRequest('GET', r('/backend/{backend}/search', ['backend' => $name]), opts: ['query' => $query]);
+
+        if (HTTP_STATUS::HTTP_NOT_FOUND === $response->status) {
+            $output->writeln(r("<error>No results for '{key}'. {status}: {message}</error>", [
+                'key' => $id,
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
             ]));
             return self::FAILURE;
         }
 
-        if (count($results) < 1) {
-            $output->writeln(r("{backend}: No results were found for this id #'{id}'.", [
-                'backend' => $backend->getName(),
-                'query' => $id
+        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                'key' => $id,
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
             ]));
             return self::FAILURE;
         }
 
-        $this->displayContent('table' === $mode ? [$results] : $results, $output, $mode);
+        if (empty($response->body)) {
+            $output->writeln(r("<error>No results for '{key}'.</error>", ['key' => $id]));
+            return self::FAILURE;
+        }
+
+        if ('table' !== $mode) {
+            $this->displayContent($response->body, $output, $mode);
+            return self::SUCCESS;
+        }
+
+        $list = [];
+
+
+        foreach ($response->body as $item) {
+            $via = ag($item, iState::COLUMN_VIA, '-');
+            $list[] = [
+                iState::COLUMN_ID => ag($item, iState::COLUMN_ID, '-'),
+                iState::COLUMN_TYPE => ucfirst(ag($item, iState::COLUMN_TYPE, '-')),
+                'Reference' => ag($item, 'full_title', ag($item, iState::COLUMN_TITLE, '-')),
+                iState::COLUMN_TITLE => mb_substr(ag($item, 'Title', ag($item, iState::COLUMN_TITLE, '-')), 0, 80),
+                iState::COLUMN_UPDATED => makeDate(ag($item, iState::COLUMN_UPDATED, time()))->format('Y-m-d H:i:s T'),
+                iState::COLUMN_WATCHED => ag($item, iState::COLUMN_WATCHED, false) ? 'Yes' : 'No',
+                'Backend Item ID' => ag($item, iState::COLUMN_META_DATA . ".{$via}." . iState::COLUMN_ID, '-'),
+            ];
+        }
+
+        $this->displayContent($list, $output, 'table');
 
         return self::SUCCESS;
     }

@@ -8,12 +8,14 @@ use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\Action\GetLibrariesList;
 use App\Backends\Jellyfin\Action\GetMetaData;
+use App\Backends\Jellyfin\Action\GetWebUrl;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Guid;
 use App\Libs\Options;
+use Psr\Http\Message\UriInterface as iUri;
 
 /**
  * Trait JellyfinActionTrait
@@ -292,5 +294,26 @@ trait JellyfinActionTrait
         }
 
         return $arr;
+    }
+
+    /**
+     * Get A web URL for the specified item.
+     *
+     * @param Context $context The backend context.
+     * @param string $type The item type.
+     * @param int $id The item ID.
+     *
+     * @return iUri The web URL.
+     * @throws RuntimeException
+     */
+    protected function getWebUrl(Context $context, string $type, int $id): iUri
+    {
+        $response = Container::get(GetWebUrl::class)(context: $context, type: $type, id: $id);
+
+        if ($response->hasError()) {
+            throw new RuntimeException(message: $response->error->format(), previous: $response->error->previous);
+        }
+
+        return $response->response;
     }
 }

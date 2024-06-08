@@ -12,6 +12,7 @@ use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Throwable;
 
 final class Search
 {
@@ -27,7 +28,7 @@ final class Search
         $params = DataUtil::fromRequest($request, true);
 
         $id = ag($args, 'id', $params->get('id', null));
-        $query = $params->get('query', null);
+        $query = $params->get('q', null);
 
         if (null === $id && null === $query) {
             return api_error('No search id or query string was provided.', HTTP_STATUS::HTTP_BAD_REQUEST);
@@ -39,32 +40,29 @@ final class Search
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        if (null !== $id) {
-            $data = $backend->searchId($id, [Options::RAW_RESPONSE => (bool)$params->get('raw', false)]);
-        } else {
-            $data = $backend->search(
-                query: $query,
-                limit: (int)$params->get('limit', 25),
-                opts: [Options::RAW_RESPONSE => (bool)$params->get('raw', false)]
-            );
+        $raw = $params->get('raw', false) || $params->get(Options::RAW_RESPONSE, false);
+
+        try {
+            if (null !== $id) {
+                $data = $backend->searchId($id, [Options::RAW_RESPONSE => $raw]);
+            } else {
+                $data = $backend->search(
+                    query: $query,
+                    limit: (int)$params->get('limit', 25),
+                    opts: [Options::RAW_RESPONSE => $raw]
+                );
+            }
+        } catch (Throwable $e) {
+            return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         if (count($data) < 1) {
-            return api_error(r("No results are found for '{query}'.", [
+            return api_error(r("No results were found for '{query}'.", [
                 'query' => $id ?? $query
             ]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $response = [
-            'results' => $id ? [$data] : $data,
-            'options' => [
-                'raw' => (bool)$params->get('raw', false),
-            ],
-        ];
-
-        if (null === $id && $query) {
-            $response['options']['limit'] = (int)$params->get('limit', 25);
-        }
+        $response = $id ? [$data] : array_values($data);
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }
