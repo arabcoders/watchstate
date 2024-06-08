@@ -9,20 +9,31 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Backends\Plex\PlexActionTrait;
+use App\Backends\Plex\PlexClient;
+use App\Backends\Plex\PlexGuid;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonException;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class SearchQuery
 {
     use CommonTrait;
+    use PlexActionTrait;
 
     private string $action = 'plex.searchQuery';
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+        private iDB $db,
+        private PlexGuid $plexGuid
+    ) {
     }
 
     /**
@@ -49,6 +60,7 @@ final class SearchQuery
      *
      * @throws ExceptionInterface if the request failed
      * @throws JsonException if the response cannot be parsed
+     * @throws RuntimeException
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
@@ -116,35 +128,44 @@ final class SearchQuery
 
         $list = [];
 
-        foreach (ag($json, 'MediaContainer.Hub', []) as $leaf) {
-            $type = ag($leaf, 'type');
+        $plexGuid = $this->plexGuid->withContext($context);
 
-            if ('show' !== $type && 'movie' !== $type && 'episode' !== $type) {
+        foreach (ag($json, 'MediaContainer.Hub', []) as $leaf) {
+            $type = strtolower(ag($leaf, 'type', ''));
+
+            if (false === in_array($type, [PlexClient::TYPE_EPISODE, PlexClient::TYPE_MOVIE])) {
                 continue;
             }
 
             foreach (ag($leaf, 'Metadata', []) as $item) {
-                $watchedAt = ag($item, 'lastViewedAt');
-
-                $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
-                if (0 === $year && null !== ($airDate = ag($item, 'originallyAvailableAt'))) {
-                    $year = (int)makeDate($airDate)->format('Y');
+                try {
+                    $entity = $this->createEntity($context, $plexGuid, $item, $opts);
+                } catch (\Throwable $e) {
+                    $this->logger->error('Error creating entity: {error}', ['error' => $e->getMessage()]);
+                    continue;
                 }
 
-                $episodeNumber = ('episode' === $type) ? r('{season}x{episode} - ', [
-                    'season' => str_pad((string)(ag($item, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
-                    'episode' => str_pad((string)(ag($item, 'index', 0)), 3, '0', STR_PAD_LEFT),
-                ]) : null;
+                if (null !== ($localEntity = $this->db->get($entity))) {
+                    $entity->id = $localEntity->id;
+                }
 
-                $builder = [
-                    'id' => (int)ag($item, 'ratingKey'),
-                    'type' => ucfirst(ag($item, 'type', '??')),
-                    'library' => ag($item, 'librarySectionTitle', '??'),
-                    'title' => $episodeNumber . mb_substr(ag($item, ['title', 'originalTitle'], '??'), 0, 50),
-                    'year' => $year,
-                    'addedAt' => makeDate(ag($item, 'addedAt'))->format('Y-m-d H:i:s T'),
-                    'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
-                ];
+                $builder = $entity->getAll();
+                $builder['url'] = (string)$this->getWebUrl(
+                    $context,
+                    $entity->type,
+                    (int)ag(
+                        $entity->getMetadata($entity->via),
+                        iState::COLUMN_ID
+                    )
+                );
+
+                $builder[iState::COLUMN_TITLE] = ag(
+                    $entity->getMetadata($entity->via),
+                    iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+                    $entity->title
+                );
+                $builder['full_title'] = $entity->getName();
+                $builder[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
                 if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
                     $builder['raw'] = $item;

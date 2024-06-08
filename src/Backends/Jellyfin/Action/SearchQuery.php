@@ -9,12 +9,17 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Jellyfin\JellyfinGuid;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonException;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class SearchQuery
@@ -24,20 +29,19 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class SearchQuery
 {
     use CommonTrait;
+    use JellyfinActionTrait;
 
     /**
      * @var string Action name.
      */
     protected string $action = 'jellyfin.searchQuery';
 
-    /**
-     * Class Constructor.
-     *
-     * @param HttpClientInterface $http The HTTP client.
-     * @param LoggerInterface $logger The logger.
-     */
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+        private JellyfinGuid $jellyfinGuid,
+        private iDB $db
+    ) {
     }
 
     /**
@@ -69,6 +73,7 @@ class SearchQuery
      *
      * @throws ExceptionInterface When the request fails.
      * @throws JsonException When the response is not valid JSON.
+     * @throws RuntimeException
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
@@ -85,7 +90,7 @@ class SearchQuery
                     'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
                     'enableUserData' => 'true',
                     'enableImages' => 'false',
-                    'includeItemTypes' => 'Episode,Movie,Series',
+                    'includeItemTypes' => 'Episode,Movie',
                 ], $opts['query'] ?? [])
             )
         );
@@ -133,30 +138,36 @@ class SearchQuery
         }
 
         $list = [];
-
+        $jellyfinGuid = $this->jellyfinGuid->withContext($context);
         foreach (ag($json, 'Items', []) as $item) {
-            $watchedAt = ag($item, 'UserData.LastPlayedDate');
-            $year = (int)ag($item, 'Year', 0);
-
-            if (0 === $year && null !== ($airDate = ag($item, 'PremiereDate'))) {
-                $year = (int)makeDate($airDate)->format('Y');
+            try {
+                $entity = $this->createEntity($context, $jellyfinGuid, $item, $opts);
+            } catch (\Throwable $e) {
+                $this->logger->error('Error creating entity: {error}', ['error' => $e->getMessage()]);
+                continue;
             }
 
-            $type = strtolower(ag($item, 'Type'));
+            if (null !== ($localEntity = $this->db->get($entity))) {
+                $entity->id = $localEntity->id;
+            }
 
-            $episodeNumber = ('episode' === $type) ? r('{season}x{episode} - ', [
-                'season' => str_pad((string)(ag($item, 'ParentIndexNumber', 0)), 2, '0', STR_PAD_LEFT),
-                'episode' => str_pad((string)(ag($item, 'IndexNumber', 0)), 3, '0', STR_PAD_LEFT),
-            ]) : null;
+            $builder = $entity->getAll();
+            $builder['url'] = (string)$this->getWebUrl(
+                $context,
+                $entity->type,
+                (int)ag(
+                    $entity->getMetadata($entity->via),
+                    iState::COLUMN_ID
+                )
+            );
 
-            $builder = [
-                'id' => ag($item, 'Id'),
-                'type' => ucfirst($type),
-                'title' => $episodeNumber . mb_substr(ag($item, ['Name', 'OriginalTitle'], '??'), 0, 50),
-                'year' => $year,
-                'addedAt' => makeDate(ag($item, 'DateCreated', 'now'))->format('Y-m-d H:i:s T'),
-                'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
-            ];
+            $builder[iState::COLUMN_TITLE] = ag(
+                $entity->getMetadata($entity->via),
+                iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+                $entity->title
+            );
+            $builder['full_title'] = $entity->getName();
+            $builder[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
             if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
                 $builder['raw'] = $item;

@@ -8,9 +8,14 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
+use App\Backends\Plex\PlexGuid;
+use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
-use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class SearchId
 {
@@ -19,8 +24,12 @@ final class SearchId
 
     private string $action = 'plex.searchId';
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
-    {
+    public function __construct(
+        protected iHttp $http,
+        protected iLogger $logger,
+        private iDB $db,
+        private PlexGuid $plexGuid
+    ) {
     }
 
     /**
@@ -41,6 +50,10 @@ final class SearchId
         );
     }
 
+    /**
+     * @throws InvalidArgumentException
+     * @throws RuntimeException
+     */
     private function search(Context $context, string|int $id, array $opts = []): Response
     {
         $item = $this->getItemInfo($context, $id, $opts + [Options::NO_THROW => true]);
@@ -49,33 +62,33 @@ final class SearchId
             return $item;
         }
 
-        $item = $item->response;
+        $entity = $this->createEntity(
+            $context,
+            $this->plexGuid->withContext($context),
+            ag($item->response, 'MediaContainer.Metadata.0', [])
+        );
 
-        $metadata = ag($item, 'MediaContainer.Metadata.0', []);
-
-        $type = ag($metadata, 'type');
-        $watchedAt = ag($metadata, 'lastViewedAt');
-
-        $year = (int)ag($metadata, ['grandParentYear', 'parentYear', 'year'], 0);
-        if (0 === $year && null !== ($airDate = ag($metadata, 'originallyAvailableAt'))) {
-            $year = (int)makeDate($airDate)->format('Y');
+        if (null !== ($localEntity = $this->db->get($entity))) {
+            $entity->id = $localEntity->id;
         }
 
-        $episodeNumber = ('episode' === $type) ? r('{season}x{episode} - ', [
-            'season' => str_pad((string)(ag($metadata, 'parentIndex', 0)), 2, '0', STR_PAD_LEFT),
-            'episode' => str_pad((string)(ag($metadata, 'index', 0)), 3, '0', STR_PAD_LEFT),
-        ]) : null;
+        $builder = $entity->getAll();
+        $builder['url'] = (string)$this->getWebUrl(
+            $context,
+            $entity->type,
+            (int)ag(
+                $entity->getMetadata($entity->via),
+                iState::COLUMN_ID
+            )
+        );
 
-        $builder = [
-            'id' => (int)ag($metadata, 'ratingKey'),
-            'type' => ucfirst(ag($metadata, 'type', '??')),
-            'library' => ag($metadata, 'librarySectionTitle', '??'),
-            'title' => $episodeNumber . mb_substr(ag($metadata, ['title', 'originalTitle'], '??'), 0, 50),
-            'year' => $year,
-            'addedAt' => makeDate(ag($metadata, 'addedAt'))->format('Y-m-d H:i:s T'),
-            'watchedAt' => null !== $watchedAt ? makeDate($watchedAt)->format('Y-m-d H:i:s T') : 'Never',
-            'duration' => ag($metadata, 'duration') ? formatDuration(ag($metadata, 'duration')) : 'None',
-        ];
+        $builder[iState::COLUMN_TITLE] = ag(
+            $entity->getMetadata($entity->via),
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+            $entity->title
+        );
+        $builder['full_title'] = $entity->getName();
+        $builder[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
             $builder['raw'] = $item;

@@ -41,6 +41,9 @@
           <li>
             <NuxtLink :to="`/backend/${backend}/sessions`" v-text="'View active sessions.'"/>
           </li>
+          <li>
+            <NuxtLink :to="`/backend/${backend}/search`" v-text="'Search backend content.'"/>
+          </li>
         </ul>
       </div>
     </div>

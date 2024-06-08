@@ -28,18 +28,20 @@
     <div class="column is-12" v-if="total && last_page > 1">
       <div class="field is-grouped">
         <div class="control" v-if="page !== 1">
-          <button rel="first" class="button" @click="loadContent(1)">
+          <button rel="first" class="button" @click="loadContent(1)" :disabled="isLoading"
+                  :class="{'is-loading':isLoading}">
             <span><<</span>
           </button>
         </div>
         <div class="control" v-if="page > 1 && (page-1) !== 1">
-          <button rel="prev" class="button" @click="loadContent(page-1)">
+          <button rel="prev" class="button" @click="loadContent(page-1)" :disabled="isLoading"
+                  :class="{'is-loading':isLoading}">
             <span><</span>
           </button>
         </div>
         <div class="control">
           <div class="select">
-            <select v-model="page" @change="loadContent(page)">
+            <select v-model="page" @change="loadContent(page)" :disabled="isLoading">
               <option v-for="(item, index) in makePagination()" :key="index" :value="item.page">
                 {{ item.text }}
               </option>
@@ -47,12 +49,14 @@
           </div>
         </div>
         <div class="control" v-if="page !== last_page && (page+1) !== last_page">
-          <button rel="next" class="button" @click="loadContent(page+1)">
+          <button rel="next" class="button" @click="loadContent(page+1)" :disabled="isLoading"
+                  :class="{'is-loading':isLoading}">
             <span>></span>
           </button>
         </div>
         <div class="control" v-if="page !== last_page">
-          <button rel="last" class="button" @click="loadContent(last_page)">
+          <button rel="last" class="button" @click="loadContent(last_page)" :disabled="isLoading"
+                  :class="{'is-loading':isLoading}">
             <span>>></span>
           </button>
         </div>
