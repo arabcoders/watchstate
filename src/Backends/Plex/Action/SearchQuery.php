@@ -10,7 +10,6 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
-use App\Backends\Plex\PlexClient;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
@@ -71,6 +70,7 @@ final class SearchQuery
                         'query' => $query,
                         'limit' => $limit,
                         'includeGuids' => 1,
+                        'includeLocations' => 1,
                         'includeExternalMedia' => 0,
                         'includeCollections' => 0,
                     ],
@@ -79,7 +79,8 @@ final class SearchQuery
             )
         );
 
-        $this->logger->debug('Searching [{backend}] libraries for [{query}].', [
+        $this->logger->debug("Searching '{client}: {backend}' libraries for '{query}'.", [
+            'client' => $context->clientName,
             'backend' => $context->backendName,
             'query' => $query,
             'url' => $url
@@ -91,17 +92,13 @@ final class SearchQuery
             array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
         );
 
-        $this->logger->debug('Requesting [{backend}] Users list.', [
-            'backend' => $context->backendName,
-            'url' => (string)$url,
-        ]);
-
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Search request for [{query}] in [{backend}] returned with unexpected [{status_code}] status code.',
+                    message: "Search request for '{query}' in '{client}: {backend}' returned with unexpected '{status_code}' status code.",
                     context: [
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
                         'query' => $query,
                         'status_code' => $response->getStatusCode(),
@@ -118,7 +115,8 @@ final class SearchQuery
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing Searching [{backend}] libraries for [{query}] payload.', [
+            $this->logger->debug("Parsing [{client}: {backend}] search results for '{query}' payload.", [
+                'client' => $context->clientName,
                 'backend' => $context->backendName,
                 'query' => $query,
                 'url' => (string)$url,
@@ -133,7 +131,7 @@ final class SearchQuery
         foreach (ag($json, 'MediaContainer.Hub', []) as $leaf) {
             $type = strtolower(ag($leaf, 'type', ''));
 
-            if (false === in_array($type, [PlexClient::TYPE_EPISODE, PlexClient::TYPE_MOVIE])) {
+            if (false === $this->isSupportedType($type)) {
                 continue;
             }
 
@@ -168,7 +166,7 @@ final class SearchQuery
                 $builder[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
                 if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                    $builder['raw'] = $item;
+                    $builder[Options::RAW_RESPONSE] = $item;
                 }
 
                 $list[] = $builder;

@@ -147,7 +147,7 @@
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">File:&nbsp;</span>
+                    <span class="is-hidden-mobile">Path:&nbsp;</span>
                     <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
                   </div>
                 </div>

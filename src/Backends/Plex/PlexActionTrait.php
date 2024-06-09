@@ -361,6 +361,10 @@ trait PlexActionTrait
      */
     protected function isSupportedType(string $type): bool
     {
-        return in_array(PlexClient::TYPE_MAPPER[$type] ?? $type, iState::TYPES_LIST, true);
+        return true === in_array(
+                PlexClient::TYPE_MAPPER[$type] ?? PlexClient::TYPE_MAPPER[strtolower($type)] ?? $type,
+                iState::TYPES_LIST,
+                true
+            );
     }
 }

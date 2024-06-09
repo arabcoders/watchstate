@@ -141,11 +141,9 @@
                 </div>
                 <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
-                  <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">File:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
-                  </div>
+                  <span class="icon"><i class="fas fa-file"></i></span>
+                  <span class="is-hidden-mobile">Path:&nbsp;</span>
+                  <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
                 </div>
               </div>
             </div>
@@ -158,8 +156,18 @@
               </div>
               <div class="card-footer-item">
                 <span class="icon-text">
+                  <span class="icon">
+                    <i class="fas"
+                       :class="{'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                  </span>
+                  <span class="is-capitalized">{{ item.type }}</span>
+                </span>
+              </div>
+              <div class="card-footer-item">
+                <span class="icon-text">
                   <span class="icon"><i class="fas fa-database"></i></span>
-                  <span>
+                  <span v-if="'show' === item.type" class="is-unselectable">Not applicable</span>
+                  <span v-else>
                     <NuxtLink :to="`/history/${item.id}`" v-if="item.id">
                       Referenced locally
                     </NuxtLink>
