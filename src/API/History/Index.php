@@ -471,7 +471,7 @@ final class Index
 
         if (!empty($r[iState::COLUMN_META_DATA])) {
             foreach ($r[iState::COLUMN_META_DATA] as $key => &$metadata) {
-                $metadata['webUrl'] = (string)$this->getWebUrl(
+                $metadata['webUrl'] = (string)$this->getBackendItemWebUrl(
                     $key,
                     ag($metadata, iState::COLUMN_TYPE),
                     ag($metadata, iState::COLUMN_ID),
