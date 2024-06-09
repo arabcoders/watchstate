@@ -304,12 +304,12 @@ trait JellyfinActionTrait
      *
      * @param Context $context The backend context.
      * @param string $type The item type.
-     * @param int $id The item ID.
+     * @param string|int $id The item ID.
      *
      * @return iUri The web URL.
      * @throws RuntimeException
      */
-    protected function getWebUrl(Context $context, string $type, int $id): iUri
+    protected function getWebUrl(Context $context, string $type, string|int $id): iUri
     {
         $response = Container::get(GetWebUrl::class)(context: $context, type: $type, id: $id);
 
@@ -329,6 +329,10 @@ trait JellyfinActionTrait
      */
     protected function isSupportedType(string $type): bool
     {
-        return in_array(JellyfinClient::TYPE_MAPPER[$type] ?? $type, iState::TYPES_LIST, true);
+        return in_array(
+            JellyfinClient::TYPE_MAPPER[$type] ?? JellyfinClient::TYPE_MAPPER[strtolower($type)] ?? $type,
+            iState::TYPES_LIST,
+            true
+        );
     }
 }

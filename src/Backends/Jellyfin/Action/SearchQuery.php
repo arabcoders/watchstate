@@ -90,11 +90,10 @@ class SearchQuery
                     'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
                     'enableUserData' => 'true',
                     'enableImages' => 'false',
-                    'includeItemTypes' => 'Episode,Movie',
+                    'includeItemTypes' => join(',', array_keys(JellyfinClient::TYPE_MAPPER)),
                 ], $opts['query'] ?? [])
             )
         );
-
         $this->logger->debug('Searching [{backend}] libraries for [{query}].', [
             'backend' => $context->backendName,
             'query' => $query,
@@ -155,7 +154,7 @@ class SearchQuery
             $builder['url'] = (string)$this->getWebUrl(
                 $context,
                 $entity->type,
-                (int)ag(
+                ag(
                     $entity->getMetadata($entity->via),
                     iState::COLUMN_ID
                 )
@@ -170,7 +169,7 @@ class SearchQuery
             $builder[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
             if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $builder['raw'] = $item;
+                $builder[Options::RAW_RESPONSE] = $item;
             }
 
             $list[] = $builder;
