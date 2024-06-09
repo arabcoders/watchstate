@@ -29,6 +29,7 @@ use App\Backends\Jellyfin\Action\Progress;
 use App\Backends\Jellyfin\Action\Push;
 use App\Backends\Jellyfin\Action\SearchId;
 use App\Backends\Jellyfin\Action\SearchQuery;
+use App\Backends\Jellyfin\Action\ToEntity;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
@@ -528,6 +529,24 @@ class JellyfinClient implements iClient
     public function getWebUrl(string $type, int|string $id): UriInterface
     {
         $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function toEntity(array $item, array $opts = []): iState
+    {
+        $response = Container::get(ToEntity::class)($this->context, $item, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {

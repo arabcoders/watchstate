@@ -26,6 +26,7 @@ use App\Backends\Emby\Action\Progress;
 use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
+use App\Backends\Emby\Action\ToEntity;
 use App\Backends\Jellyfin\Action\GetVersion;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
@@ -495,6 +496,24 @@ class EmbyClient implements iClient
     public function getWebUrl(string $type, int|string $id): UriInterface
     {
         $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function toEntity(array $item, array $opts = []): iState
+    {
+        $response = Container::get(ToEntity::class)($this->context, $item, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {
