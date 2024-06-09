@@ -34,7 +34,7 @@
             <div class="content">
               <ul>
                 <li>
-                  Check the items will take time, you will see the spinner while <code>WatchState</code> is analyzing
+                  Checking the items will take time, you will see the spinner while <code>WatchState</code> is analyzing
                   the entire backend libraries content. Do not reload the page.
                 </li>
               </ul>
@@ -94,23 +94,23 @@
             <div class="card-content">
               <div class="columns is-mobile is-multiline">
                 <div class="column is-6">
-                  <strong>Library:</strong> {{ item.library }}
+                  <strong class="is-unselectable">Library:</strong> {{ item.library }}
                 </div>
                 <div class="column is-6 has-text-right">
-                  <strong>Type:</strong> {{ item.type }}
+                  <strong class="is-unselectable">Type:</strong> {{ item.type }}
                 </div>
                 <div class="column is-6">
-                  <strong>Year:</strong> {{ item.year ?? '???' }}
+                  <strong class="is-unselectable">Year:</strong> {{ item.year ?? '???' }}
                 </div>
                 <div class="column is-6 has-text-right">
-                  <strong>Percent:</strong> <span :class="percentColor(item.percent)">
+                  <strong class="is-unselectable">Percent:</strong> <span :class="percentColor(item.percent)">
                   {{ item.percent.toFixed(2) }}%
                 </span>
                 </div>
-                <div class="column is-12" v-if="item.path">
+                <div class="column is-12" v-if="item.path"
+                     @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
                   <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">File:&nbsp;</span>
+                    <strong class="is-unselectable">Path:&nbsp;</strong>
                     <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
                   </div>
                 </div>

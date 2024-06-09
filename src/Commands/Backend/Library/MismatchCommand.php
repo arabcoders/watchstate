@@ -96,10 +96,6 @@ final class MismatchCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> <flag>-s</flag> <value>backend_name</value>
 
-                    <question># I want to show all items regardless of the status?</question>
-
-                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <flag>-s</flag> <value>backend_name</value>
-
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
@@ -200,7 +196,12 @@ final class MismatchCommand extends Command
                     $title = mb_substr($title, 0, $cutoff) . '..';
                 }
 
-                $leaf[iState::COLUMN_TITLE] = $title;
+                if (null !== ($webUrl = ag($item, 'webUrl'))) {
+                    $leaf[iState::COLUMN_TITLE] = "<href={$webUrl}>{$title}</>";
+                } else {
+                    $leaf[iState::COLUMN_TITLE] = $title;
+                }
+
                 $leaf[iState::COLUMN_YEAR] = ag($item, iState::COLUMN_YEAR);
                 $leaf['percent'] = ag($item, 'percent') . '%';
 

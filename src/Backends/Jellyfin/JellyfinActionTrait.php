@@ -54,7 +54,8 @@ trait JellyfinActionTrait
             }
         }
 
-        $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
+        $type = ag($item, 'Type', '');
+        $type = JellyfinClient::TYPE_MAPPER[$type] ?? $type;
 
         if (null === $date) {
             if (iState::TYPE_SHOW !== $type) {
@@ -124,7 +125,7 @@ trait JellyfinActionTrait
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
         // -- jellyfin/emby API does not provide library ID.
-        if (null !== ($library = $opts['library'] ?? null)) {
+        if (null !== ($library = $opts[iState::COLUMN_META_LIBRARY] ?? null)) {
             $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
         }
 
@@ -172,9 +173,8 @@ trait JellyfinActionTrait
         }
 
         if (false === $isPlayed && null !== ($progress = ag($item, 'UserData.PlaybackPositionTicks', null))) {
-            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
-                $progress / 1_00_00
-            ); // -- Convert to milliseconds.
+            // -- Convert to play progress to milliseconds.
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)floor($progress / 1_00_00);
         }
 
         unset($metadata, $metadataExtra);

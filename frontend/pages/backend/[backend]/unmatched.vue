@@ -34,7 +34,7 @@
             <div class="content">
               <ul>
                 <li>
-                  Check the items will take time, you will see the spinner while <code>WatchState</code> is analyzing
+                  Checking the items will take time, you will see the spinner while <code>WatchState</code> is analyzing
                   the entire backend libraries content. Do not reload the page.
                 </li>
               </ul>
@@ -92,13 +92,22 @@
             <div class="card-content">
               <div class="columns is-mobile is-multiline">
                 <div class="column is-6">
-                  <strong>Library:</strong> {{ item.library }}
+                  <strong class="is-unselectable">Library:</strong> {{ item.library ?? 'Unknown' }}
                 </div>
                 <div class="column is-6 has-text-right">
-                  <strong>Type:</strong> {{ item.type }}
+                  <strong class="is-unselectable">Type:</strong> <span class="is-capitalized">{{
+                    item.type ?? 'Unknown'
+                  }}</span>
                 </div>
                 <div class="column is-6" v-if="0 !== item.year && item.year">
-                  <strong>Year:</strong> {{ item.year }}
+                  <strong class="is-unselectable">Year:</strong> {{ item.year ?? 'Unknown' }}
+                </div>
+                <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
+                     @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
+                  <div class="is-text-overflow">
+                    <strong class="is-unselectable">Path:&nbsp;</strong>
+                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                  </div>
                 </div>
               </div>
             </div>
@@ -134,7 +143,7 @@
 </template>
 
 <script setup>
-import {notification} from "~/utils/index.js";
+import {makeSearchLink, notification} from "~/utils/index.js";
 
 const backend = useRoute().params.backend
 const items = ref([])
