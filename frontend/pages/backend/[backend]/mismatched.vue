@@ -82,7 +82,8 @@
           <div class="card">
             <header class="card-header">
               <p class="card-header-title is-text-overflow">
-                <NuxtLink target="_blank" :to="item.webUrl ?? item.url">{{ item.title }}</NuxtLink>
+                <NuxtLink target="_blank" :to="item.webUrl" v-if="item.webUrl" v-text="item.title"/>
+                <span v-else>{{ item.title }}</span>
               </p>
               <div class="card-header-icon" @click="item.showItem = !item.showItem">
                 <span class="icon has-tooltip">
@@ -107,7 +108,11 @@
                 </span>
                 </div>
                 <div class="column is-12" v-if="item.path">
-                  <strong>Path:</strong> {{ item.path }}
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-file"></i></span>
+                    <span class="is-hidden-mobile">File:&nbsp;</span>
+                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                  </div>
                 </div>
               </div>
             </div>
@@ -143,7 +148,7 @@
 </template>
 
 <script setup>
-import {notification} from "~/utils/index.js";
+import {makeSearchLink, notification} from "~/utils/index.js";
 import {useStorage} from "@vueuse/core";
 
 const backend = useRoute().params.backend

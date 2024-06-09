@@ -175,7 +175,7 @@ interface ClientInterface
      * @param string|int $id library id.
      * @param array $opts options.
      *
-     * @return array empty array if no items found.
+     * @return array|array<iState> empty array if no items found.
      */
     public function getLibrary(string|int $id, array $opts = []): array;
 
