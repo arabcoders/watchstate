@@ -81,9 +81,8 @@ trait JellyfinActionTrait
                         str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
-                        r("Unexpected Content type '{type}' was received. '{content}'.", [
+                        r("Unexpected Content type '{type}' was received.", [
                             'type' => $type,
-                            'content' => arrayToString($item),
                         ])
                     ),
                 },
@@ -319,5 +318,17 @@ trait JellyfinActionTrait
         }
 
         return $response->response;
+    }
+
+    /**
+     * Check if the content type is supported WatchState.
+     *
+     * @param string $type The type to check.
+     *
+     * @return bool Returns true if the type is supported.
+     */
+    protected function isSupportedType(string $type): bool
+    {
+        return in_array(JellyfinClient::TYPE_MAPPER[$type] ?? $type, iState::TYPES_LIST, true);
     }
 }

@@ -350,4 +350,16 @@ trait PlexActionTrait
 
         return $response->response;
     }
+
+    /**
+     * Check if the content type is supported WatchState.
+     *
+     * @param string $type The type to check.
+     *
+     * @return bool Returns true if the type is supported.
+     */
+    protected function isSupportedType(string $type): bool
+    {
+        return in_array(PlexClient::TYPE_MAPPER[$type] ?? $type, iState::TYPES_LIST, true);
+    }
 }
