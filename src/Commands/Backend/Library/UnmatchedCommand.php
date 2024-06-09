@@ -7,8 +7,9 @@ namespace App\Commands\Backend\Library;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Entity\StateInterface as iState;
+use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
-use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -32,7 +33,6 @@ final class UnmatchedCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Find Item in backend library that does not have external ids.')
-            ->addOption('show-all', null, InputOption::VALUE_NONE, 'Show all items regardless of the match status.')
             ->addOption(
                 'timeout',
                 null,
@@ -61,10 +61,6 @@ final class UnmatchedCommand extends Command
 
                     {cmd} <cmd>{route}</cmd> <flag>--id</flag> <value>backend_library_id</value> <flag>-s</flag> <value>backend_name</value>
 
-                    <question># I want to show all items regardless of the status?</question>
-
-                    {cmd} <cmd>{route}</cmd> <flag>--show-all</flag> <flag>-s</flag> <value>backend_name</value>
-
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
@@ -86,7 +82,6 @@ final class UnmatchedCommand extends Command
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         $mode = $input->getOption('output');
-        $showAll = $input->getOption('show-all');
         $id = $input->getOption('id');
         $cutoff = (int)$input->getOption('cutoff');
         $name = $input->getOption('select-backend');
@@ -96,71 +91,56 @@ final class UnmatchedCommand extends Command
             return self::FAILURE;
         }
 
-        $backendOpts = $opts = $list = [];
+        $query = [];
 
         if ($input->getOption('timeout')) {
-            $backendOpts = ag_set($backendOpts, 'client.timeout', (float)$input->getOption('timeout'));
+            $query['timeout'] = (float)$input->getOption('timeout');
         }
 
         if ($input->getOption('trace')) {
-            $backendOpts = ag_set($backendOpts, 'options.' . Options::DEBUG_TRACE, true);
+            $query[Options::DEBUG_TRACE] = true;
         }
 
         if ($input->getOption('include-raw-response')) {
-            $opts[Options::RAW_RESPONSE] = true;
+            $query[Options::RAW_RESPONSE] = true;
         }
 
-        try {
-            $backend = $this->getBackend($name, $backendOpts);
-        } catch (RuntimeException) {
-            $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $name]));
+        $url = r('/backend/{backend}/unmatched/{id}', [
+            'backend' => $name,
+            'id' => $id ?? '',
+        ]);
+
+        $response = APIRequest('GET', $url, opts: ['query' => $query]);
+
+        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            $output->writeln(r('<error>API error. {status}: {message}</error>', [
+                'id' => $id,
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
             return self::FAILURE;
         }
 
-        $ids = [];
-        if (null !== $id) {
-            $ids[] = $id;
-        } else {
-            foreach ($backend->listLibraries() as $library) {
-                if (false === (bool)ag($library, 'supported') || true === (bool)ag($library, 'ignored')) {
-                    continue;
-                }
-                $ids[] = ag($library, 'id');
-            }
-        }
-
-        foreach ($ids as $libraryId) {
-            foreach ($backend->getLibrary(id: $libraryId, opts: $opts) as $item) {
-                if (true === $showAll) {
-                    $list[] = $item;
-                    continue;
-                }
-                if (null === ($externals = ag($item, 'guids', null)) || empty($externals)) {
-                    $list[] = $item;
-                }
-            }
-        }
-
-        if (empty($list)) {
-            $arr = [
-                'info' => 'No un-unmatched items were found',
-            ];
-
-            $this->displayContent('table' === $mode ? [$arr] : $arr, $output, $mode);
+        if (empty($response->body)) {
+            $output->writeln(r('<info>No unmatched items found.</info>'));
             return self::SUCCESS;
         }
+
+        $list = $response->body;
 
         if ('table' === $mode) {
             $forTable = [];
 
             foreach ($list as $item) {
+                $via = ag($item, iState::COLUMN_VIA, '-');
+
                 $leaf = [
-                    'id' => ag($item, 'id'),
+                    iState::COLUMN_ID => ag($item, iState::COLUMN_META_DATA . ".{$via}." . iState::COLUMN_ID),
                 ];
 
                 if (!$id) {
-                    $leaf['type'] = ag($item, 'type');
-                    $leaf['library'] = ag($item, 'library');
+                    $leaf[iState::COLUMN_TYPE] = ag($item, iState::COLUMN_TYPE);
+                    $leaf[iState::COLUMN_META_LIBRARY] = ag($item, iState::COLUMN_META_LIBRARY);
                 }
 
                 $title = ag($item, 'title');
@@ -169,12 +149,13 @@ final class UnmatchedCommand extends Command
                     $title = mb_substr($title, 0, $cutoff) . '..';
                 }
 
-                $leaf['title'] = $title;
-                $leaf['year'] = ag($item, 'year');
-
-                if ($showAll) {
-                    $leaf['guids'] = implode(', ', $item['guids'] ?? []);
+                if (null !== ($webUrl = ag($item, 'webUrl'))) {
+                    $leaf[iState::COLUMN_TITLE] = "<href={$webUrl}>{$title}</>";
+                } else {
+                    $leaf[iState::COLUMN_TITLE] = $title;
                 }
+
+                $leaf[iState::COLUMN_YEAR] = ag($item, iState::COLUMN_YEAR);
 
                 $forTable[] = $leaf;
             }

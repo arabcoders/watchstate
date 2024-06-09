@@ -39,6 +39,7 @@ final class StateEntity implements iState
      * @var string $type What type of data this entity holds.
      */
     public string $type = '';
+
     /**
      * @var int $updated When was the entity last updated.
      */
@@ -106,11 +107,11 @@ final class StateEntity implements iState
                 continue;
             }
 
-            if (iState::COLUMN_TYPE === $key && self::TYPE_MOVIE !== $val && self::TYPE_EPISODE !== $val) {
+            if (iState::COLUMN_TYPE === $key && false === in_array($val, self::TYPES_LIST)) {
                 throw new RuntimeException(
-                    r('StateEntity: Unexpected [{value}] type was given. Expecting [{types_list}].', context: [
+                    r("StateEntity: Unexpected '{value}' type was given. Expecting '{types_list}'.", context: [
                         'value' => $val,
-                        'types_list' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
+                        'types_list' => implode(', ', self::TYPES_LIST),
                     ])
                 );
             }
@@ -181,7 +182,7 @@ final class StateEntity implements iState
         $year = ag($this->data, iState::COLUMN_YEAR, $this->year);
         $title = ag($this->data, iState::COLUMN_TITLE, $this->title);
 
-        if ($this->isMovie() || true === $asMovie) {
+        if ($this->isMovie() || $this->isShow() || true === $asMovie) {
             return r('{title} ({year})', [
                 'title' => !empty($title) ? $title : '??',
                 'year' => $year ?? '0000'
@@ -288,6 +289,14 @@ final class StateEntity implements iState
     public function isMovie(): bool
     {
         return iState::TYPE_MOVIE === $this->type;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isShow(): bool
+    {
+        return iState::TYPE_SHOW === $this->type;
     }
 
     /**

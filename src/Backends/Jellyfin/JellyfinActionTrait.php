@@ -54,32 +54,36 @@ trait JellyfinActionTrait
             }
         }
 
-        if (null === $date) {
-            throw new InvalidArgumentException('No date was set on object.');
-        }
+        $type = ag($item, 'Type', '');
+        $type = JellyfinClient::TYPE_MAPPER[$type] ?? $type;
 
-        $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
+        if (null === $date) {
+            if (iState::TYPE_SHOW !== $type) {
+                throw new InvalidArgumentException(r("'{type}' No date was set on object.", ['type' => $type]));
+            }
+            $date = 0;
+        }
 
         $logContext = [
             'backend' => $context->backendName,
             'item' => [
                 'id' => (string)ag($item, 'Id'),
-                'type' => ag($item, 'Type'),
-                'title' => match (ag($item, 'Type')) {
-                    JellyfinClient::TYPE_MOVIE => sprintf(
+                'type' => $type,
+                'title' => match ($type) {
+                    iState::TYPE_MOVIE, iState::TYPE_SHOW => sprintf(
                         '%s (%s)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
                         ag($item, 'ProductionYear', '0000')
                     ),
-                    JellyfinClient::TYPE_EPISODE => sprintf(
+                    iState::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
                         str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
-                        r('Unexpected Content type [{type}] was received.', [
-                            'type' => $type
+                        r("Unexpected Content type '{type}' was received.", [
+                            'type' => $type,
                         ])
                     ),
                 },
@@ -94,7 +98,7 @@ trait JellyfinActionTrait
         }
 
         $builder = [
-            iState::COLUMN_TYPE => strtolower(ag($item, 'Type')),
+            iState::COLUMN_TYPE => $type,
             iState::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
             iState::COLUMN_WATCHED => (int)$isPlayed,
             iState::COLUMN_VIA => $context->backendName,
@@ -121,7 +125,7 @@ trait JellyfinActionTrait
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
         // -- jellyfin/emby API does not provide library ID.
-        if (null !== ($library = $opts['library'] ?? null)) {
+        if (null !== ($library = $opts[iState::COLUMN_META_LIBRARY] ?? null)) {
             $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
         }
 
@@ -169,9 +173,8 @@ trait JellyfinActionTrait
         }
 
         if (false === $isPlayed && null !== ($progress = ag($item, 'UserData.PlaybackPositionTicks', null))) {
-            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)floor(
-                $progress / 1_00_00
-            ); // -- Convert to milliseconds.
+            // -- Convert to play progress to milliseconds.
+            $metadata[iState::COLUMN_META_DATA_PROGRESS] = (string)floor($progress / 1_00_00);
         }
 
         unset($metadata, $metadataExtra);
@@ -315,5 +318,17 @@ trait JellyfinActionTrait
         }
 
         return $response->response;
+    }
+
+    /**
+     * Check if the content type is supported WatchState.
+     *
+     * @param string $type The type to check.
+     *
+     * @return bool Returns true if the type is supported.
+     */
+    protected function isSupportedType(string $type): bool
+    {
+        return in_array(JellyfinClient::TYPE_MAPPER[$type] ?? $type, iState::TYPES_LIST, true);
     }
 }

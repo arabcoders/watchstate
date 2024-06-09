@@ -12,15 +12,17 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
+use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetLibrary
@@ -37,10 +39,10 @@ class GetLibrary
     /**
      * Class constructor
      *
-     * @param HttpClientInterface $http The HTTP client object.
-     * @param LoggerInterface $logger The logger object.
+     * @param iHttp $http The HTTP client object.
+     * @param iLogger $logger The logger object.
      */
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    public function __construct(protected iHttp $http, protected iLogger $logger)
     {
     }
 
@@ -58,7 +60,7 @@ class GetLibrary
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->action($context, $id, $opts),
+            fn: fn() => $this->action($context, $guid, $id, $opts),
             action: $this->action
         );
     }
@@ -74,8 +76,9 @@ class GetLibrary
      * @throws ExceptionInterface If the backend request fails.
      * @throws RuntimeException When the API call was not successful.
      * @throws \JsonMachine\Exception\InvalidArgumentException If the backend response is not a valid JSON.
+     * @throws InvalidArgumentException
      */
-    private function action(Context $context, string|int $id, array $opts = []): Response
+    private function action(Context $context, iGuid $guid, string|int $id, array $opts = []): Response
     {
         $libraries = $this->getBackendLibraries($context);
 
@@ -188,6 +191,10 @@ class GetLibrary
                 continue;
             }
 
+            if (false === $this->isSupportedType(ag($entity, 'Type'))) {
+                continue;
+            }
+
             $url = $context->backendUrl->withPath(
                 sprintf('/Users/%s/items/%s', $context->backendUser, ag($entity, 'Id'))
             );
@@ -200,13 +207,22 @@ class GetLibrary
                 'url' => (string)$url,
             ];
 
-            if (null !== ($indexNumberEnd = ag($entity, 'IndexNumberEnd'))) {
-                foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
-                    $entity['IndexNumber'] = $i;
+            // -- Handle multi episode entries.
+            $indexNumber = ag($entity, 'IndexNumber');
+            $indexNumberEnd = ag($entity, 'IndexNumberEnd');
+            if (null !== $indexNumber && null !== $indexNumberEnd && $indexNumberEnd > $indexNumber) {
+                $episodeRangeLimit = (int)ag($context->options, Options::MAX_EPISODE_RANGE, 5);
+                $range = range(ag($entity, 'IndexNumber'), $indexNumberEnd);
+                if (count($range) > $episodeRangeLimit) {
                     $list[] = $this->process($context, $entity, $logContext, $opts);
+                } else {
+                    foreach (range((int)ag($entity, 'IndexNumber'), $indexNumberEnd) as $i) {
+                        $entity['IndexNumber'] = $i;
+                        $list[] = $this->process($context, $entity, $logContext, $opts);
+                    }
                 }
             } else {
-                $list[] = $this->process($context, $entity, $logContext, $opts);
+                $list[] = $this->process($context, $guid, $entity, $logContext, $opts);
             }
         }
 
@@ -217,14 +233,26 @@ class GetLibrary
      * Process the given item.
      *
      * @param Context $context The context object.
+     * @param iGuid $guid The guid object.
      * @param array $item The item to be processed.
      * @param array $log (optional) The log array.
      * @param array $opts (optional) The options array.
      *
-     * @return array<string,mixed> The processed metadata.
+     * @return array<string,mixed>|iState The processed metadata.
+     * @throws RuntimeException
+     * @throws InvalidArgumentException
      */
-    private function process(Context $context, array $item, array $log = [], array $opts = []): array
-    {
+    private function process(
+        Context $context,
+        iGuid $guid,
+        array $item,
+        array $log = [],
+        array $opts = []
+    ): array|iState {
+        if (true === (bool)ag($opts, Options::TO_ENTITY)) {
+            return $this->createEntity($context, $guid, $item, $opts);
+        }
+
         $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/%s', $context->backendUser, ag($item, 'Id')));
         $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
 
@@ -246,14 +274,14 @@ class GetLibrary
         ]));
 
         $metadata = [
-            'id' => ag($item, 'Id'),
-            'type' => ucfirst(ag($item, 'Type', 'unknown')),
-            'library' => ag($log, 'library.title'),
+            iState::COLUMN_ID => ag($item, 'Id'),
+            iState::COLUMN_TYPE => ucfirst(ag($item, 'Type', 'unknown')),
+            iState::COLUMN_META_LIBRARY => ag($log, 'library.title'),
             'url' => (string)$url,
             'webUrl' => (string)$webUrl,
-            'title' => ag($item, $possibleTitlesList, '??'),
-            'year' => ag($item, 'ProductionYear'),
-            'guids' => [],
+            iState::COLUMN_TITLE => ag($item, $possibleTitlesList, '??'),
+            iState::COLUMN_YEAR => ag($item, 'ProductionYear'),
+            iState::COLUMN_GUIDS => [],
             'match' => [
                 'titles' => [],
                 'paths' => [],
@@ -293,12 +321,12 @@ class GetLibrary
 
         if (null !== ($providerIds = ag($item, 'ProviderIds'))) {
             foreach ($providerIds as $key => $val) {
-                $metadata['guids'][] = $key . '://' . $val;
+                $metadata[iState::COLUMN_GUIDS][] = $key . '://' . $val;
             }
         }
 
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-            $metadata['raw'] = $item;
+            $metadata[Options::RAW_RESPONSE] = $item;
         }
 
         return $metadata;

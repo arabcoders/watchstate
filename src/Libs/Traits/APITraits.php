@@ -141,7 +141,7 @@ trait APITraits
      *
      * @return iUri The web URL.
      */
-    protected function getWebUrl(string $backend, string $type, string|int $id): iUri
+    protected function getBackendItemWebUrl(string $backend, string $type, string|int $id): iUri
     {
         static $clients = [];
 

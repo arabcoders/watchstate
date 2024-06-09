@@ -235,7 +235,19 @@ final class Initializer
                 $this->formatLog($request, $response)
             );
         } catch (Throwable $e) {
-            $response = api_error(message: 'Unable to serve request.', httpCode: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE);
+            $response = api_error(
+                message: 'Unable to serve request.',
+                httpCode: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
+                body: true !== (bool)Config::get('debug.enabled') ? [] : [
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'kind' => $e::class,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTrace(),
+                    ],
+                ]
+            );
 
             Container::get(LoggerInterface::class)->error($e->getMessage(), [
                 'kind' => $e::class,

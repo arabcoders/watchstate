@@ -7,12 +7,14 @@ namespace App\API\Backend;
 use App\API\Backend\Index as backendIndex;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Throwable;
 
 final class Unmatched
 {
@@ -33,9 +35,9 @@ final class Unmatched
             $backendOpts = ag_set($backendOpts, 'client.timeout', (float)$params->get('timeout'));
         }
 
-        if ($params->get('raw')) {
-            $opts[Options::RAW_RESPONSE] = true;
-        }
+        $includeRaw = $params->get('raw') || $params->get(Options::RAW_RESPONSE);
+
+        $opts[Options::RAW_RESPONSE] = true;
 
         try {
             $client = $this->getClient(name: $name, config: $backendOpts);
@@ -55,11 +57,39 @@ final class Unmatched
             }
         }
 
+        $opts[Options::RAW_RESPONSE] = true;
+
         foreach ($ids as $libraryId) {
+            $opts[iState::COLUMN_META_LIBRARY] = $libraryId;
             foreach ($client->getLibrary(id: $libraryId, opts: $opts) as $item) {
-                if (null === ($externals = ag($item, 'guids', null)) || empty($externals)) {
-                    $list[] = $item;
+                $entity = $client->toEntity($item[Options::RAW_RESPONSE], $opts);
+
+                if ($entity->hasGuids() || $entity->hasParentGuid()) {
+                    continue;
                 }
+
+                $builder = $entity->getAll();
+
+                try {
+                    $builder['webUrl'] = (string)$client->getWebUrl(
+                        $entity->type,
+                        ag($entity->getMetadata($entity->via), iState::COLUMN_ID)
+                    );
+                } catch (Throwable) {
+                    $builder['webUrl'] = null;
+                }
+
+                $builder[iState::COLUMN_META_LIBRARY] = ag($item, iState::COLUMN_META_LIBRARY);
+
+                if ($includeRaw) {
+                    $builder[Options::RAW_RESPONSE] = ag($item, Options::RAW_RESPONSE, []);
+                }
+
+                if (null !== ($path = ag($entity->getMetadata($entity->via), 'path'))) {
+                    $builder[iState::COLUMN_META_PATH] = $path;
+                }
+
+                $list[] = $builder;
             }
         }
 

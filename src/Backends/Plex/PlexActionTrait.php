@@ -55,8 +55,14 @@ trait PlexActionTrait
             $date = max(ag($item, 'lastViewedAt', 0), ag($item, 'addedAt', 0), ag($item, 'updatedAt', 0));
         }
 
+        $type = (string)ag($item, 'type', '');
+        $type = $this->typeMapper[$type] ?? $this->typeMapper[strtolower($type)] ?? $type;
+
         if (null === $date) {
-            throw new InvalidArgumentException('No date was set on object.');
+            if (iState::TYPE_SHOW !== $type) {
+                throw new InvalidArgumentException('No date was set on object');
+            }
+            $date = 0;
         }
 
         $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
@@ -70,27 +76,25 @@ trait PlexActionTrait
             $item['Guid'][] = ['id' => ag($item, 'guid')];
         }
 
-        $type = $this->typeMapper[ag($item, 'type')] ?? ag($item, 'type');
-
         $logContext = [
             'backend' => $context->backendName,
             'item' => [
                 'id' => ag($item, 'ratingKey'),
                 'type' => ag($item, 'type'),
-                'title' => match (ag($item, 'type')) {
-                    PlexClient::TYPE_MOVIE => sprintf(
+                'title' => match ($type) {
+                    iState::TYPE_MOVIE, iState::TYPE_SHOW => sprintf(
                         '%s (%s)',
                         ag($item, ['title', 'originalTitle'], '??'),
                         0 === $year ? '0000' : $year,
                     ),
-                    PlexClient::TYPE_EPISODE => sprintf(
+                    iState::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
                         ag($item, ['grandparentTitle', 'originalTitle', 'title'], '??'),
                         str_pad((string)ag($item, 'parentIndex', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
-                        r('Unexpected Content type [{type}] was received.', [
+                        r("Unexpected Content type '{type}' was received.", [
                             'type' => $type
                         ])
                     ),
@@ -131,7 +135,7 @@ trait PlexActionTrait
         $metadata = &$builder[iState::COLUMN_META_DATA][$context->backendName];
         $metadataExtra = &$metadata[iState::COLUMN_META_DATA_EXTRA];
 
-        if (null !== ($library = ag($item, 'librarySectionID', $opts['library'] ?? null))) {
+        if (null !== ($library = ag($item, 'librarySectionID', $opts[iState::COLUMN_META_LIBRARY] ?? null))) {
             $metadata[iState::COLUMN_META_LIBRARY] = (string)$library;
         }
 
@@ -165,6 +169,10 @@ trait PlexActionTrait
 
         if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
+        }
+
+        if (null === $mediaPath && null !== ($showPath = ag($item, 'Location.0.path')) && !empty($showPath)) {
+            $metadata[iState::COLUMN_META_PATH] = (string)$showPath;
         }
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {
@@ -342,5 +350,17 @@ trait PlexActionTrait
         }
 
         return $response->response;
+    }
+
+    /**
+     * Check if the content type is supported WatchState.
+     *
+     * @param string $type The type to check.
+     *
+     * @return bool Returns true if the type is supported.
+     */
+    protected function isSupportedType(string $type): bool
+    {
+        return in_array(PlexClient::TYPE_MAPPER[$type] ?? $type, iState::TYPES_LIST, true);
     }
 }

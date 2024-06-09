@@ -28,6 +28,7 @@ use App\Backends\Plex\Action\Progress;
 use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
+use App\Backends\Plex\Action\ToEntity;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
@@ -39,15 +40,15 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use DateTimeInterface as iDate;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Http\Message\StreamInterface as iStream;
+use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class PlexClient
@@ -200,7 +201,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
+    public function processRequest(iRequest $request, array $opts = []): iRequest
     {
         $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
 
@@ -214,7 +215,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function parseWebhook(ServerRequestInterface $request): iState
+    public function parseWebhook(iRequest $request): iState
     {
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,
@@ -262,7 +263,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array
+    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
@@ -507,9 +508,27 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function getWebUrl(string $type, int|string $id): UriInterface
+    public function getWebUrl(string $type, int|string $id): iUri
     {
         $response = Container::get(GetWebUrl::class)($this->context, $type, $id);
+
+        if (false === $response->isSuccessful()) {
+            if ($response->hasError()) {
+                $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+            }
+
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function toEntity(array $item, array $opts = []): iState
+    {
+        $response = Container::get(ToEntity::class)($this->context, $item, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {
@@ -579,7 +598,7 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(array $config, ServerRequestInterface $request): array
+    public function fromRequest(array $config, iRequest $request): array
     {
         $params = DataUtil::fromArray($request->getParsedBody());
 
@@ -621,7 +640,7 @@ class PlexClient implements iClient
     /**
      * Retrieves a list of Plex servers using the Plex.tv API.
      *
-     * @param HttpClientInterface $http The HTTP client used to send the request.
+     * @param iHttp $http The HTTP client used to send the request.
      * @param string $token The Plex authentication token.
      * @param array $opts (Optional) options.
      *
@@ -632,7 +651,7 @@ class PlexClient implements iClient
      * @throws RedirectionExceptionInterface When a redirection error is encountered.
      * @throws ServerExceptionInterface When a server error is encountered.
      */
-    public static function discover(HttpClientInterface $http, string $token, array $opts = []): array
+    public static function discover(iHttp $http, string $token, array $opts = []): array
     {
         try {
             $response = $http->request('GET', 'https://plex.tv/api/resources?includeHttps=1&includeRelay=0', [

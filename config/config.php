@@ -127,6 +127,7 @@ return (function () {
     ];
 
     $config['debug'] = [
+        'enabled' => (bool)env('WS_DEBUG', false),
         'profiler' => [
             'options' => [
                 'save.handler' => 'file',

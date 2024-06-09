@@ -14,9 +14,9 @@ use RuntimeException;
 
 interface DatabaseInterface
 {
-    public const MIGRATE_UP = 'up';
+    public const string MIGRATE_UP = 'up';
 
-    public const MIGRATE_DOWN = 'down';
+    public const string MIGRATE_DOWN = 'down';
 
     /**
      * Set options

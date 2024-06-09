@@ -12,6 +12,7 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexClient;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonException;
@@ -59,6 +60,7 @@ final class GetLibrary
      * @throws ExceptionInterface
      * @throws InvalidArgumentException
      * @throws RuntimeException
+     * @throws \App\Libs\Exceptions\Backends\InvalidArgumentException
      */
     private function action(Context $context, iGuid $guid, string|int $id, array $opts = []): Response
     {
@@ -174,6 +176,10 @@ final class GetLibrary
                 continue;
             }
 
+            if (false === $this->isSupportedType(ag($entity, 'type'))) {
+                continue;
+            }
+
             $year = (int)ag($entity, 'year', 0);
 
             if (0 === $year && null !== ($airDate = ag($entity, 'originallyAvailableAt'))) {
@@ -215,20 +221,24 @@ final class GetLibrary
             );
         }
 
+        $noLog = (bool)ag($opts, Options::NO_LOGGING);
+
         foreach ($requests as $response) {
             $requestContext = ag($response->getInfo('user_data'), 'context', []);
 
             try {
                 if (200 !== $response->getStatusCode()) {
-                    $this->logger->warning(
-                        'Request for [{backend}] {item.type} [{item.title}] metadata returned with unexpected [{status_code}] status code.',
-                        [
-                            'backend' => $context->backendName,
-                            'status_code' => $response->getStatusCode(),
-                            ...$requestContext
-                        ]
-                    );
-
+                    if (false === $noLog) {
+                        $this->logger->warning(
+                            'Request for [{backend}] {item.type} [{item.title}] metadata returned with unexpected [{status_code}] status code.',
+                            [
+                                'backend' => $context->backendName,
+                                'status_code' => $response->getStatusCode(),
+                                'body' => $response->getContent(false),
+                                ...$requestContext
+                            ]
+                        );
+                    }
                     continue;
                 }
 
@@ -287,11 +297,21 @@ final class GetLibrary
      * @param array $log The log array. Default is an empty array.
      * @param array $opts The options array. Default is an empty array.
      *
-     * @return array Returns an array containing the processed metadata.
+     * @return array|iState Returns an array containing the processed metadata.
      * @throws RuntimeException Throws a RuntimeException if an unexpected item type is encountered while parsing the library.
+     * @throws \App\Libs\Exceptions\Backends\InvalidArgumentException Throws an InvalidArgumentException if the item type is not supported.
      */
-    private function process(Context $context, iGuid $guid, array $item, array $log = [], array $opts = []): array
-    {
+    private function process(
+        Context $context,
+        iGuid $guid,
+        array $item,
+        array $log = [],
+        array $opts = []
+    ): array|iState {
+        if (true === (bool)ag($opts, Options::TO_ENTITY)) {
+            return $this->createEntity($context, $guid, $item, $opts);
+        }
+
         $url = $context->backendUrl->withPath(r('/library/metadata/{item_id}', ['item_id' => ag($item, 'ratingKey')]));
         $possibleTitlesList = ['title', 'originalTitle', 'titleSort'];
 
@@ -319,14 +339,14 @@ final class GetLibrary
         );
 
         $metadata = [
-            'id' => (int)ag($item, 'ratingKey'),
-            'type' => ucfirst(ag($item, 'type', 'unknown')),
-            'library' => ag($log, 'library.title'),
+            iState::COLUMN_ID => (int)ag($item, 'ratingKey'),
+            iState::COLUMN_TYPE => ucfirst(ag($item, 'type', 'unknown')),
+            iState::COLUMN_META_LIBRARY => ag($log, 'library.title'),
             'url' => (string)$url,
             'webUrl' => (string)$webUrl,
-            'title' => ag($item, $possibleTitlesList, '??'),
-            'year' => $year,
-            'guids' => [],
+            iState::COLUMN_TITLE => ag($item, $possibleTitlesList, '??'),
+            iState::COLUMN_YEAR => $year,
+            iState::COLUMN_GUIDS => [],
             'match' => [
                 'titles' => [],
                 'paths' => [],
@@ -389,15 +409,15 @@ final class GetLibrary
         }
 
         if (null !== ($itemGuid = ag($item, 'guid')) && false === $guid->isLocal($itemGuid)) {
-            $metadata['guids'][] = $itemGuid;
+            $metadata[iState::COLUMN_GUIDS][] = $itemGuid;
         }
 
         foreach (array_column(ag($item, 'Guid', []), 'id') as $externalId) {
-            $metadata['guids'][] = $externalId;
+            $metadata[iState::COLUMN_GUIDS][] = $externalId;
         }
 
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-            $metadata['raw'] = $item;
+            $metadata[Options::RAW_RESPONSE] = $item;
         }
 
         return $metadata;

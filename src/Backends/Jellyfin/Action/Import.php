@@ -729,7 +729,6 @@ class Import
                             );
                             $callback(item: $entity, logContext: $logContext);
                         } else {
-                            $indexNumber = ag($entity, 'IndexNumber');
                             foreach ($range as $i) {
                                 $this->logger->debug(
                                     'Making virtual episode [{backend}] [{library.title}] [{segment.number}/{segment.of}] [{item.type}: {item.title}] [{item.indexNumber} => {item.i} of {item.indexNumberEnd}]',

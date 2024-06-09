@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
-use App\Libs\Entity\StateInterface;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
 use JsonException;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UriInterface;
-use Psr\Log\LoggerInterface;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Http\Message\StreamInterface as iStream;
+use Psr\Http\Message\UriInterface as iUri;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -52,30 +52,30 @@ interface ClientInterface
     /**
      * Inject logger.
      *
-     * @param LoggerInterface $logger logger instance.
+     * @param iLogger $logger logger instance.
      *
      * @return ClientInterface Returns same instance.
      */
-    public function setLogger(LoggerInterface $logger): ClientInterface;
+    public function setLogger(iLogger $logger): ClientInterface;
 
     /**
      * Process the request for attributes extraction.
      *
-     * @param ServerRequestInterface $request request to process.
+     * @param iRequest $request request to process.
      * @param array $opts options for processing the request.
      *
-     * @return ServerRequestInterface processed request.
+     * @return iRequest processed request.
      */
-    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface;
+    public function processRequest(iRequest $request, array $opts = []): iRequest;
 
     /**
      * Parse backend webhook event.
      *
-     * @param ServerRequestInterface $request request to process.
+     * @param iRequest $request request to process.
      *
-     * @return StateInterface state object.
+     * @return iState state object.
      */
-    public function parseWebhook(ServerRequestInterface $request): StateInterface;
+    public function parseWebhook(iRequest $request): iState;
 
     /**
      * Import play state and metadata from backend.
@@ -91,12 +91,12 @@ interface ClientInterface
      * Backup play state from backend.
      *
      * @param iImport $mapper mapper to use.
-     * @param StreamInterface|null $writer writer to use.
+     * @param iStream|null $writer writer to use.
      * @param array $opts options for backup.
      *
      * @return array<array-key,ResponseInterface> responses.
      */
-    public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array;
+    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array;
 
     /**
      * Export play state back to backend.
@@ -112,7 +112,7 @@ interface ClientInterface
     /**
      * Compare webhook queued events and push them to backend.
      *
-     * @param array<StateInterface> $entities entities to push.
+     * @param array<iState> $entities entities to push.
      * @param QueueRequests $queue queue to use.
      * @param iDate|null $after only push items after this date.
      *
@@ -123,7 +123,7 @@ interface ClientInterface
     /**
      * Compare watch progress and push to backend.
      *
-     * @param array<StateInterface> $entities entities to push.
+     * @param array<iState> $entities entities to push.
      * @param QueueRequests $queue queue to use.
      * @param iDate|null $after only push items after this date.
      *
@@ -175,7 +175,7 @@ interface ClientInterface
      * @param string|int $id library id.
      * @param array $opts options.
      *
-     * @return array empty array if no items found.
+     * @return array|array<iState> empty array if no items found.
      */
     public function getLibrary(string|int $id, array $opts = []): array;
 
@@ -213,11 +213,11 @@ interface ClientInterface
      * Parse client specific options from request.
      *
      * @param array $config The already pre-filled config.
-     * @param ServerRequestInterface $request request to parse.
+     * @param iRequest $request request to parse.
      *
      * @return array Return updated config.
      */
-    public function fromRequest(array $config, ServerRequestInterface $request): array;
+    public function fromRequest(array $config, iRequest $request): array;
 
     /**
      * Validate backend context.
@@ -263,9 +263,19 @@ interface ClientInterface
      * @param string $type item type.
      * @param int|string $id item id.
      *
-     * @return UriInterface
+     * @return iUri
      */
-    public function getWebUrl(string $type, int|string $id): UriInterface;
+    public function getWebUrl(string $type, int|string $id): iUri;
+
+    /**
+     *  Convert given data to entity.
+     *
+     * @param array $item item data.
+     * @param array $opts options.
+     *
+     * @return iState state entity.
+     */
+    public function toEntity(array $item, array $opts = []): iState;
 
     /**
      * Get backend info.

@@ -8,14 +8,14 @@ use Psr\Log\LoggerAwareInterface;
 
 interface StateInterface extends LoggerAwareInterface
 {
-    public const TYPE_MOVIE = 'movie';
-    public const TYPE_EPISODE = 'episode';
-    public const TYPE_SHOW = 'show';
+    public const string TYPE_MOVIE = 'movie';
+    public const string TYPE_EPISODE = 'episode';
+    public const string TYPE_SHOW = 'show';
 
     /**
      * @var array list of supported types.
      */
-    public const TYPES_LIST = [
+    public const array TYPES_LIST = [
         self::TYPE_MOVIE,
         self::TYPE_SHOW,
         self::TYPE_EPISODE,
@@ -24,36 +24,36 @@ interface StateInterface extends LoggerAwareInterface
     /**
      * If you must reference field directly, use those constants.
      */
-    public const COLUMN_ID = 'id';
-    public const COLUMN_TYPE = 'type';
-    public const COLUMN_UPDATED = 'updated';
-    public const COLUMN_WATCHED = 'watched';
-    public const COLUMN_VIA = 'via';
-    public const COLUMN_TITLE = 'title';
-    public const COLUMN_YEAR = 'year';
-    public const COLUMN_SEASON = 'season';
-    public const COLUMN_EPISODE = 'episode';
-    public const COLUMN_PARENT = 'parent';
-    public const COLUMN_GUIDS = 'guids';
-    public const COLUMN_META_DATA = 'metadata';
-    public const COLUMN_META_SHOW = 'show';
-    public const COLUMN_META_LIBRARY = 'library';
-    public const COLUMN_META_PATH = 'path';
-    public const COLUMN_META_DATA_ADDED_AT = 'added_at';
-    public const COLUMN_META_DATA_PLAYED_AT = 'played_at';
-    public const COLUMN_META_DATA_PROGRESS = 'progress';
-    public const COLUMN_META_DATA_RATING = 'rating';
-    public const COLUMN_META_DATA_EXTRA = 'extra';
-    public const COLUMN_META_DATA_EXTRA_TITLE = 'title';
-    public const COLUMN_META_DATA_EXTRA_DATE = 'date';
-    public const COLUMN_EXTRA = 'extra';
-    public const COLUMN_EXTRA_EVENT = 'event';
-    public const COLUMN_EXTRA_DATE = 'received_at';
+    public const string COLUMN_ID = 'id';
+    public const string COLUMN_TYPE = 'type';
+    public const string COLUMN_UPDATED = 'updated';
+    public const string COLUMN_WATCHED = 'watched';
+    public const string COLUMN_VIA = 'via';
+    public const string COLUMN_TITLE = 'title';
+    public const string COLUMN_YEAR = 'year';
+    public const string COLUMN_SEASON = 'season';
+    public const string COLUMN_EPISODE = 'episode';
+    public const string COLUMN_PARENT = 'parent';
+    public const string COLUMN_GUIDS = 'guids';
+    public const string COLUMN_META_DATA = 'metadata';
+    public const string COLUMN_META_SHOW = 'show';
+    public const string COLUMN_META_LIBRARY = 'library';
+    public const string COLUMN_META_PATH = 'path';
+    public const string COLUMN_META_DATA_ADDED_AT = 'added_at';
+    public const string COLUMN_META_DATA_PLAYED_AT = 'played_at';
+    public const string COLUMN_META_DATA_PROGRESS = 'progress';
+    public const string COLUMN_META_DATA_RATING = 'rating';
+    public const string COLUMN_META_DATA_EXTRA = 'extra';
+    public const string COLUMN_META_DATA_EXTRA_TITLE = 'title';
+    public const string COLUMN_META_DATA_EXTRA_DATE = 'date';
+    public const string COLUMN_EXTRA = 'extra';
+    public const string COLUMN_EXTRA_EVENT = 'event';
+    public const string COLUMN_EXTRA_DATE = 'received_at';
 
     /**
      * List of table keys.
      */
-    public const ENTITY_KEYS = [
+    public const array ENTITY_KEYS = [
         self::COLUMN_ID,
         self::COLUMN_TYPE,
         self::COLUMN_UPDATED,
@@ -72,7 +72,7 @@ interface StateInterface extends LoggerAwareInterface
     /**
      * Ignore listed fields if the played status did not change.
      */
-    public const ENTITY_IGNORE_DIFF_CHANGES = [
+    public const array ENTITY_IGNORE_DIFF_CHANGES = [
         self::COLUMN_VIA,
         self::COLUMN_TITLE,
         self::COLUMN_YEAR,
@@ -84,7 +84,7 @@ interface StateInterface extends LoggerAwareInterface
     /**
      * Fields that if changed will trigger an update regardless of the watch state or event.
      */
-    public const ENTITY_FORCE_UPDATE_FIELDS = [
+    public const array ENTITY_FORCE_UPDATE_FIELDS = [
         self::COLUMN_PARENT,
         self::COLUMN_GUIDS,
         self::COLUMN_META_DATA,
@@ -93,7 +93,7 @@ interface StateInterface extends LoggerAwareInterface
     /**
      * List of JSON/array fields.
      */
-    public const ENTITY_ARRAY_KEYS = [
+    public const array ENTITY_ARRAY_KEYS = [
         self::COLUMN_PARENT,
         self::COLUMN_GUIDS,
         self::COLUMN_META_DATA,
@@ -189,6 +189,13 @@ interface StateInterface extends LoggerAwareInterface
      * @return bool Return true if the entity is of movie type.
      */
     public function isMovie(): bool;
+
+    /**
+     * Is the entity of show type?
+     *
+     * @return bool Return true if the entity is of show type.
+     */
+    public function isShow(): bool;
 
     /**
      * Is the entity of episode type?
