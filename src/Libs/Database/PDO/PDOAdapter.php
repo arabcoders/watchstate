@@ -28,7 +28,8 @@ final class PDOAdapter implements iDB
     /**
      * @var int The number of times to retry acquiring a lock.
      */
-    private const LOCK_RETRY = 4;
+    private const int LOCK_RETRY = 4;
+
     /**
      * @var bool Whether the current operation is in a transaction.
      */
@@ -90,6 +91,20 @@ final class PDOAdapter implements iDB
                     r('PDOAdapter: Unable to insert item that has primary key already defined. [#{id}].', [
                         'id' => $entity->id
                     ]), 21
+                );
+            }
+
+            if (false === in_array($entity->type, [iState::TYPE_MOVIE, iState::TYPE_EPISODE])) {
+                throw new DBException(
+                    r(
+                        "PDOAdapter: Unexpected content type '{type}' was given for '{via}: {title}'. Expecting '{types}'.",
+                        [
+                            'type' => $entity->type,
+                            'types' => implode(', ', [iState::TYPE_MOVIE, iState::TYPE_EPISODE]),
+                            'id' => $entity->via,
+                            'title' => $entity->getName(),
+                        ]
+                    ), 22
                 );
             }
 
