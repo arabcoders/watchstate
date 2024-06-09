@@ -56,7 +56,10 @@ trait PlexActionTrait
         }
 
         if (null === $date) {
-            throw new InvalidArgumentException('No date was set on object.');
+            if (PlexClient::TYPE_SHOW !== ag($item, 'type', '')) {
+                throw new InvalidArgumentException('No date was set on object.');
+            }
+            $date = 0;
         }
 
         $year = (int)ag($item, ['grandParentYear', 'parentYear', 'year'], 0);
@@ -78,7 +81,7 @@ trait PlexActionTrait
                 'id' => ag($item, 'ratingKey'),
                 'type' => ag($item, 'type'),
                 'title' => match (ag($item, 'type')) {
-                    PlexClient::TYPE_MOVIE => sprintf(
+                    PlexClient::TYPE_MOVIE, PlexClient::TYPE_SHOW => sprintf(
                         '%s (%s)',
                         ag($item, ['title', 'originalTitle'], '??'),
                         0 === $year ? '0000' : $year,
@@ -165,6 +168,10 @@ trait PlexActionTrait
 
         if (null !== ($mediaPath = ag($item, 'Media.0.Part.0.file')) && !empty($mediaPath)) {
             $metadata[iState::COLUMN_META_PATH] = (string)$mediaPath;
+        }
+
+        if (null === $mediaPath && null !== ($showPath = ag($item, 'Location.0.path')) && !empty($showPath)) {
+            $metadata[iState::COLUMN_META_PATH] = (string)$showPath;
         }
 
         if (null !== ($PremieredAt = ag($item, 'originallyAvailableAt'))) {

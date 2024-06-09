@@ -7,14 +7,14 @@ namespace App\Backends\Jellyfin\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
+use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinGuid;
-use App\Backends\Plex\PlexActionTrait;
 use App\Libs\Entity\StateInterface;
 
 class ToEntity
 {
     use CommonTrait;
-    use PlexActionTrait;
+    use JellyfinActionTrait;
 
     private string $action = 'jellyfin.toEntity';
 

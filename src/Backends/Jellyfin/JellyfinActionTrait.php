@@ -54,32 +54,36 @@ trait JellyfinActionTrait
             }
         }
 
-        if (null === $date) {
-            throw new InvalidArgumentException('No date was set on object.');
-        }
-
         $type = JellyfinClient::TYPE_MAPPER[ag($item, 'Type')] ?? ag($item, 'Type');
+
+        if (null === $date) {
+            if (iState::TYPE_SHOW !== $type) {
+                throw new InvalidArgumentException(r("'{type}' No date was set on object.", ['type' => $type]));
+            }
+            $date = 0;
+        }
 
         $logContext = [
             'backend' => $context->backendName,
             'item' => [
                 'id' => (string)ag($item, 'Id'),
-                'type' => ag($item, 'Type'),
-                'title' => match (ag($item, 'Type')) {
-                    JellyfinClient::TYPE_MOVIE => sprintf(
+                'type' => $type,
+                'title' => match ($type) {
+                    iState::TYPE_MOVIE, iState::TYPE_SHOW => sprintf(
                         '%s (%s)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
                         ag($item, 'ProductionYear', '0000')
                     ),
-                    JellyfinClient::TYPE_EPISODE => sprintf(
+                    iState::TYPE_EPISODE => sprintf(
                         '%s - (%sx%s)',
                         ag($item, ['Name', 'OriginalTitle'], '??'),
                         str_pad((string)ag($item, 'ParentIndexNumber', 0), 2, '0', STR_PAD_LEFT),
                         str_pad((string)ag($item, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                     ),
                     default => throw new InvalidArgumentException(
-                        r('Unexpected Content type [{type}] was received.', [
-                            'type' => $type
+                        r("Unexpected Content type '{type}' was received. '{content}'.", [
+                            'type' => $type,
+                            'content' => arrayToString($item),
                         ])
                     ),
                 },
@@ -94,7 +98,7 @@ trait JellyfinActionTrait
         }
 
         $builder = [
-            iState::COLUMN_TYPE => strtolower(ag($item, 'Type')),
+            iState::COLUMN_TYPE => $type,
             iState::COLUMN_UPDATED => makeDate($date)->getTimestamp(),
             iState::COLUMN_WATCHED => (int)$isPlayed,
             iState::COLUMN_VIA => $context->backendName,
