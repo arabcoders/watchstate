@@ -145,6 +145,11 @@ return (function () {
             'description' => 'Log internal requests to the API.',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_DEBUG',
+            'description' => 'Expose debug information in the API when an error occurs.',
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {
