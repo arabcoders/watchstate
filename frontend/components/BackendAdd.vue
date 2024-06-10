@@ -119,6 +119,14 @@
                 Enter the URL of the backend. For example <code>http://localhost:32400</code>.&nbsp;
               </template>
               <NuxtLink @click="getServers" v-text="'Attempt to discover servers associated with the token.'"/>
+              Try to use non <code>.plex.direct</code> urls if possible, as they are often have problems working in
+              docker. If you use custom domain for your plex server and it's not showing in the list, you can add it
+              via Plex settings page. <code>Plex > Settings > Network > <strong>Custom server access
+              URLs:</strong></code>. For more information
+              <NuxtLink target="_blank"
+                        to="https://support.plex.tv/articles/200430283-network/#Custom-server-access-URLs"
+                        v-text="'Visit this link'"/>
+              .
             </p>
           </div>
         </div>
