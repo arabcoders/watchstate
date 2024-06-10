@@ -249,15 +249,6 @@
           <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'"/>
           -
           <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'"/>
-          <template v-if="!show_page_tips">
-            -
-            <a href="javascript:void(0)" @click="show_page_tips=true">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-lines-leaning"></i></span>
-                <span>Show tips</span>
-              </span>
-            </a>
-          </template>
         </div>
         <div class="column is-6 is-4-mobile has-text-right">
           {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
@@ -289,7 +280,6 @@ const showConnection = ref(false)
 const api_url = useStorage('api_url', window.location.origin)
 const api_path = useStorage('api_path', '/v1/api')
 const api_token = useStorage('api_token', '')
-const show_page_tips = useStorage('show_page_tips', true)
 
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
