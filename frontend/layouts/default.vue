@@ -87,7 +87,7 @@
 
         </div>
         <div class="navbar-end pr-3">
-          <NuxtLink class="navbar-item" to="/console" @click.native="showMenu=false">
+          <NuxtLink class="navbar-item" to="/console" @click.native="showMenu=false" v-if="hasAPISettings">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-terminal"></i></span>
               <span>Console</span>
@@ -277,9 +277,13 @@ import Markdown from "~/components/Markdown.vue";
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
 
-const api_url = useStorage('api_url', window.location.origin)
-const api_path = useStorage('api_path', '/v1/api')
-const api_token = useStorage('api_token', '')
+const real_api_url = useStorage('api_url', '')
+const real_api_path = useStorage('api_path', '/v1/api')
+const real_api_token = useStorage('api_token', '')
+
+const api_url = ref(toRaw(real_api_url.value))
+const api_path = ref(toRaw(real_api_path.value))
+const api_token = ref(toRaw(real_api_token.value))
 
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
@@ -336,10 +340,11 @@ onMounted(async () => {
 
     applyPreferredColorScheme(selectedTheme.value)
 
-    if ('' === api_token.value) {
+    if ('' === api_token.value || '' === api_url.value) {
       showConnection.value = true
       return
     }
+
     await getVersion()
   } catch (e) {
   }
@@ -362,7 +367,13 @@ watch(api_token, value => {
 
 const testApi = async () => {
   try {
-    const response = await request('/backends')
+    const response = await fetch(`${api_url.value}${api_path.value}/backends`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${api_token.value}`
+      }
+    })
     const json = await response.json()
 
     if (json.error) {
@@ -371,18 +382,22 @@ const testApi = async () => {
       return
     }
 
+    if (200 === response.status) {
+      real_api_url.value = api_url.value
+      real_api_path.value = api_path.value
+      real_api_token.value = api_token.value
+      await getVersion(false)
+    }
+
     api_status.value = 200 === response.status;
     api_response.value = 200 === response.status ? `Status: OK` : `Status: ${response.status} - ${response.statusText}`;
-
-    await getVersion()
-
   } catch (e) {
     api_status.value = false;
-    api_response.value = `Error: ${e.message}`;
+    api_response.value = `Request error. ${e.message}`;
   }
 }
 
-const getVersion = async () => {
+const getVersion = async (updateStatus = true) => {
   if (api_version.value) {
     return;
   }
@@ -391,6 +406,11 @@ const getVersion = async () => {
     const response = await request('/system/version')
     const json = await response.json()
     api_version.value = json.version
+    if (updateStatus) {
+      api_status.value = true
+      api_response.value = 'Status: OK'
+    }
+
   } catch (e) {
     return 'Unknown'
   }
@@ -398,9 +418,10 @@ const getVersion = async () => {
 
 const setOrigin = () => api_url.value = window.location.origin;
 
-const hasAPISettings = computed(() => '' !== api_token.value && '' !== api_url.value)
+const hasAPISettings = computed(() => '' !== real_api_token.value && '' !== real_api_url.value)
 
 const closeOverlay = () => {
   loadFile.value = ''
 }
+
 </script>
