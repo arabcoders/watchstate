@@ -93,10 +93,25 @@
       </div>
     </template>
 
-    <div class="column is-12" v-if="show_page_tips">
-      <Message title="Tips" message_class="has-background-info-90 has-text-dark">
-        <button class="delete" @click="show_page_tips=false"></button>
-        <div class="content">
+    <div class="column is-12">
+      <Message message_class="has-background-info-90 has-text-dark">
+        <div class="is-pulled-right">
+          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
+            <span class="icon"><i class="fas fa-arrow-up"></i></span>
+            <span>Close</span>
+          </NuxtLink>
+          <NuxtLink @click="show_page_tips=true" v-else>
+            <span class="icon"><i class="fas fa-arrow-down"></i></span>
+            <span>Open</span>
+          </NuxtLink>
+        </div>
+        <h5 class="title is-5 is-unselectable">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-info-circle"></i></span>
+            <span>Tips</span>
+          </span>
+        </h5>
+        <div class="content" v-if="show_page_tips">
           <ul>
             <li>
               <strong>Import</strong> means pulling data from the backends into the local database.
