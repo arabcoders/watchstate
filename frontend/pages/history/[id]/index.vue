@@ -36,8 +36,24 @@
     </div>
 
     <div class="column is-12" v-if="data?.not_reported_by && data.not_reported_by.length>0">
-      <Message message_class="has-background-warning-80 has-text-dark" title="Warning!">
-        <div class="content">
+      <Message message_class="has-background-warning-80 has-text-dark">
+        <div class="is-pulled-right">
+          <NuxtLink @click="show_history_page_warning=false" v-if="show_history_page_warning">
+            <span class="icon"><i class="fas fa-arrow-up"></i></span>
+            <span>Close</span>
+          </NuxtLink>
+          <NuxtLink @click="show_history_page_warning=true" v-else>
+            <span class="icon"><i class="fas fa-arrow-down"></i></span>
+            <span>Open</span>
+          </NuxtLink>
+        </div>
+        <h5 class="title is-5 is-unselectable">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-exclamation-triangle"></i></span>
+            <span>Warning</span>
+          </span>
+        </h5>
+        <div class="content" v-if="show_history_page_warning">
           <p>
             <span class="icon"><i class="fas fa-exclamation"></i></span>
             There are no metadata regarding this <strong>{{ data.type }}</strong> from (
@@ -67,7 +83,10 @@
     <div class="column is-12" v-if="data?.via">
       <div class="card" :class="{ 'is-success': parseInt(data.watched), 'is-danger': !data.watched }">
         <header class="card-header">
-          <div class="card-header-title">
+          <div class="card-header-title is-clickable is-unselectable" @click="data._toggle = !data._toggle">
+            <span class="icon">
+              <i class="fas" :class="{'fa-arrow-up': data?._toggle, 'fa-arrow-down': !data?._toggle}"></i>
+            </span>
             <span>Latest local metadata via</span>
           </div>
           <div class="card-header-icon">
@@ -79,7 +98,7 @@
             </span>
           </div>
         </header>
-        <div class="card-content">
+        <div class="card-content" v-if="data?._toggle">
           <div class="columns is-multiline is-mobile">
             <div class="column is-6">
               <span class="icon-text">
@@ -124,8 +143,10 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-calendar"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">Updated:</span>
-                  {{ moment(data.updated).fromNow() }}
+                  <span class="is-hidden-mobile">Updated:&nbsp;</span>
+                  <span class="has-tooltip" v-tooltip="moment(data.updated).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment(data.updated).fromNow() }}
+                  </span>
                 </span>
               </span>
             </div>
@@ -220,7 +241,10 @@
       <div class="card" v-for="(item, key) in data.metadata" :key="key"
            :class="{ 'is-success': parseInt(item.watched), 'is-danger': !parseInt(item.watched) }">
         <header class="card-header">
-          <div class="card-header-title">
+          <div class="card-header-title is-clickable is-unselectable" @click="item._toggle = !item._toggle">
+            <span class="icon">
+              <i class="fas" :class="{'fa-arrow-up': item?._toggle, 'fa-arrow-down': !item?._toggle}"></i>
+            </span>
             Metadata via
           </div>
           <div class="card-header-icon">
@@ -232,7 +256,7 @@
             </span>
           </div>
         </header>
-        <div class="card-content">
+        <div class="card-content" v-if="item?._toggle">
           <div class="columns is-multiline is-mobile">
 
             <div class="column is-6">
@@ -281,8 +305,11 @@
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-calendar"></i></span>
                 <span>
-                  <span class="is-hidden-mobile">Updated:</span>
-                  {{ moment(ag(data.extra, `${key}.received_at`, data.updated)).fromNow() }}
+                  <span class="is-hidden-mobile">Updated:&nbsp;</span>
+                  <span class="has-tooltip"
+                        v-tooltip="moment(ag(data.extra, `${key}.received_at`, data.updated)).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment(ag(data.extra, `${key}.received_at`, data.updated)).fromNow() }}
+                  </span>
                 </span>
               </span>
             </div>
@@ -378,10 +405,25 @@
       </div>
     </div>
 
-    <div class="column is-12" v-if="show_page_tips">
-      <Message title="Tips" message_class="has-background-info-90 has-text-dark">
-        <button class="delete" @click="show_page_tips=false"></button>
-        <div class="content">
+    <div class="column is-12">
+      <Message message_class="has-background-info-90 has-text-dark">
+        <div class="is-pulled-right">
+          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
+            <span class="icon"><i class="fas fa-arrow-up"></i></span>
+            <span>Close</span>
+          </NuxtLink>
+          <NuxtLink @click="show_page_tips=true" v-else>
+            <span class="icon"><i class="fas fa-arrow-down"></i></span>
+            <span>Open</span>
+          </NuxtLink>
+        </div>
+        <h5 class="title is-5 is-unselectable">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-info-circle"></i></span>
+            <span>Tips</span>
+          </span>
+        </h5>
+        <div class="content" v-if="show_page_tips">
           <ul>
             <li>Clicking on the ID in <code>metadata via</code> boxes will take you directly to the item in the source
               backend. While clicking on the GUIDs will take you to that source link, similarly clicking on the series
@@ -424,6 +466,7 @@ useHead({title: `History : ${id}`})
 const isLoading = ref(false)
 const showRawData = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const show_history_page_warning = useStorage('show_history_page_warning', true)
 
 const data = ref({
   id: id,
@@ -450,6 +493,7 @@ const loadContent = async (id) => {
   }
 
   data.value = json
+  data.value._toggle = true
 
   useHead({title: `History : ${json.full_title ?? json.title ?? id}`})
 }

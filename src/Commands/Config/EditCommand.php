@@ -108,10 +108,12 @@ final class EditCommand extends Command
             return self::FAILURE;
         }
 
+        $hasSet = null !== $input->getOption('set');
+
         $json = [];
         if ($input->getOption('delete')) {
             $method = 'DELETE';
-        } elseif ($input->getOption('set')) {
+        } elseif ($hasSet) {
             $method = 'POST';
             $json['value'] = $input->getOption('set');
         } else {
@@ -133,7 +135,7 @@ final class EditCommand extends Command
             return self::SUCCESS;
         }
 
-        if ($input->getOption('set')) {
+        if ($hasSet) {
             if ('bool' === ag($response->body, 'type', 'string')) {
                 $value = true === (bool)ag($response->body, 'value') ? 'On (True)' : 'Off (False)';
             } else {

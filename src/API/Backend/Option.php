@@ -76,7 +76,11 @@ final class Option
             $list->delete("{$name}.{$option}");
         } else {
             if (null !== ($value = $data->get('value'))) {
-                settype($value, ag($spec, 'type', 'string'));
+                if (ag($spec, 'type', 'string') === 'bool') {
+                    $value = $this->castToBool($value);
+                } else {
+                    settype($value, ag($spec, 'type', 'string'));
+                }
             }
 
             if (ag_exists($spec, 'validate')) {
@@ -98,6 +102,7 @@ final class Option
         return api_response(HTTP_STATUS::HTTP_OK, [
             'key' => $option,
             'value' => $value,
+            'real_val' => $data->get('value'),
             'type' => ag($spec, 'type', 'string'),
             'description' => ag($spec, 'description', ''),
         ]);
@@ -117,4 +122,22 @@ final class Option
         ]);
     }
 
+    private function castToBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $value = strtolower($value);
+            if ('true' === $value || 'on' === $value || 'yes' === $value) {
+                return true;
+            }
+            if ('false' === $value || 'off' === $value || 'no' === $value) {
+                return false;
+            }
+        }
+
+        return (bool)$value;
+    }
 }
