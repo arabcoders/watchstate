@@ -86,7 +86,7 @@
             </div>
             <div class="card-footer-item">
               <button class="button is-fullwidth is-danger" type="button"
-                      @click="form_key=null; form_value=null; toggleForm=false">
+                      @click="cancelForm">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-cancel"></i></span>
                   <span>Cancel</span>
@@ -189,6 +189,9 @@ import Message from "~/components/Message.vue"
 
 useHead({title: 'Environment Variables'})
 
+const route = useRoute();
+const router = useRouter();
+
 const envs = ref([])
 const toggleForm = ref(false)
 const form_key = ref('')
@@ -205,6 +208,9 @@ const loadContent = async () => {
   envs.value = json.data
   if (json.file) {
     file.value = json.file
+  }
+  if (route.query.edit) {
+    editEnv(envs.value.find(i => i.key === route.query.edit))
   }
 }
 
@@ -269,6 +275,9 @@ const editEnv = (env) => {
   form_value.value = env.value
   form_type.value = env.type
   toggleForm.value = true
+  if (!route.query.edit) {
+    router.push(`/env?edit=${env.key}`)
+  }
 }
 
 const cancelForm = () => {
@@ -276,6 +285,9 @@ const cancelForm = () => {
   form_value.value = null
   form_type.value = null
   toggleForm.value = false
+  if (route.query.edit) {
+    router.push('/env')
+  }
 }
 
 watch(toggleForm, (value) => {
