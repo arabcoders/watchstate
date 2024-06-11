@@ -1,6 +1,6 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">
         <NuxtLink to="/backends">Backends</NuxtLink>
         - Edit:
@@ -10,13 +10,15 @@
       <div class="is-pulled-right">
         <div class="field is-grouped"></div>
       </div>
+
+      <div class="is-hidden-mobile">
+        <span class="subtitle">Edit the backend settings.</span>
+      </div>
     </div>
 
     <div class="column is-12" v-if="isLoading">
-      <Message message_class="is-info" title="Information">
-        <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-        <span>Loading backend settings, please wait...</span>
-      </Message>
+      <Message message_class="is-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading backend settings. Please wait..."/>
     </div>
 
     <div v-else class="column is-12">
@@ -300,12 +302,14 @@
             </div>
           </div>
           <div class="card-footer">
-            <div class="card-footer-item">
-              <button class="button is-fullwidth is-primary" type="submit">
-                <span class="icon"><i class="fas fa-save"></i></span>
-                <span>Save Settings</span>
-              </button>
-            </div>
+            <button class="button card-footer-item is-fullwidth is-primary" type="submit">
+              <span class="icon"><i class="fas fa-save"></i></span>
+              <span>Save Settings</span>
+            </button>
+            <NuxtLink class="card-footer-item button is-fullwidth is-danger" :to="`/backend/${backend}`">
+              <span class="icon"><i class="fas fa-cancel"></i></span>
+              <span>Cancel changes</span>
+            </NuxtLink>
           </div>
         </div>
       </form>

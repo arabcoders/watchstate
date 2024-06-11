@@ -1,6 +1,6 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <h1 class="title is-4">Console</h1>
       <div class="subtitle">
         You can execute <strong>non-interactive</strong> commands here. This interface is jailed to <code>console</code>
@@ -69,44 +69,27 @@
     </div>
 
     <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark">
-        <div class="is-pulled-right">
-          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
-            <span class="icon"><i class="fas fa-arrow-up"></i></span>
-            <span>Close</span>
-          </NuxtLink>
-          <NuxtLink @click="show_page_tips=true" v-else>
-            <span class="icon"><i class="fas fa-arrow-down"></i></span>
-            <span>Open</span>
-          </NuxtLink>
-        </div>
-        <h5 class="title is-5 is-unselectable">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-info-circle"></i></span>
-            <span>Tips</span>
-          </span>
-        </h5>
-        <div class="content" v-if="show_page_tips">
-          <ul>
-            <li>
-              You can also run a command from the task page by clicking on the <strong>Run via console</strong>. The
-              command will be pre-filled for you.
-            </li>
-            <li>
-              Clicking close connection does not stop the command. It only stops the output from being displayed. The
-              command will continue to run until it finishes.
-            </li>
-            <li>
-              The majority of the commands will not show any output unless error has occurred or important information
-              needs to be communicated. To see all output, add the <code>-vvv</code> flag.
-            </li>
-            <li>
-              There is no need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
-              this interface. Use the command followed by the options directly. For example, <code>db:list --output
-              yaml</code>.
-            </li>
-          </ul>
-        </div>
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>
+            You can also run a command from the task page by clicking on the <strong>Run via console</strong>. The
+            command will be pre-filled for you.
+          </li>
+          <li>
+            Clicking close connection does not stop the command. It only stops the output from being displayed. The
+            command will continue to run until it finishes.
+          </li>
+          <li>
+            The majority of the commands will not show any output unless error has occurred or important information
+            needs to be communicated. To see all output, add the <code>-vvv</code> flag.
+          </li>
+          <li>
+            There is no need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
+            this interface. Use the command followed by the options directly. For example, <code>db:list --output
+            yaml</code>.
+          </li>
+        </ul>
       </Message>
     </div>
   </div>
@@ -114,8 +97,9 @@
 
 <script setup>
 
-import {useStorage} from "@vueuse/core";
-import {notification} from "~/utils/index.js";
+import {useStorage} from '@vueuse/core'
+import {notification} from '~/utils/index.js'
+import Message from '~/components/Message.vue'
 
 const route = useRoute()
 

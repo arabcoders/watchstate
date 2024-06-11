@@ -7,7 +7,7 @@
     </div>
 
     <div class="column is-12">
-      <div class="columns is-multiline" v-if="lastHistory.length>0">
+      <div class="columns is-multiline" v-if="lastHistory.length>1">
         <div class="column is-6-tablet" v-for="history in lastHistory" :key="history.id">
           <div class="card" :class="{ 'is-success': history.watched }">
             <header class="card-header">
@@ -58,11 +58,9 @@
         </div>
       </div>
       <div class="column is-12" v-else>
-        <Message message_class="is-warning">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-exclamation"></i></span>
-            <span>No items were found. There are probably no items in the local database yet.</span>
-          </span>
+        <Message title="Warning" message_class="has-background-warning-90 has-text-dark"
+                 icon="fas fa-exclamation-triangle"
+                 message="No items were found. There are probably no items in the local database yet.">
         </Message>
       </div>
     </div>
@@ -80,7 +78,7 @@
 
     <div class="column is-12">
       <div class="content">
-        <Message message_class="has-background-info-90 has-text-dark">
+        <Message title="Welcome" message_class="has-background-info-90 has-text-dark" icon="fas fa-heart">
           If you have question, or want clarification on something, or just want to chat with other users, you are
           welcome to join our <span class="icon-text is-underlined">
           <span class="icon"><i class="fas fa-brands fa-discord"></i></span>

@@ -5,7 +5,7 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-info" @click.prevent="loadContent">
+            <button class="button is-info" @click="loadContent" :disabled="isLoading" :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
@@ -16,6 +16,13 @@
           This page contains all the stored log files. The naming convention is <code>type.YYYYMMDD.log</code>.
         </span>
       </div>
+    </div>
+
+    <div class="column is-12" v-if="logs.length < 1 || isLoading">
+      <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
+               title="Loading" message="Loading data. Please wait..."/>
+      <Message v-else title="Warning" message_class="is-background-warning-80 has-text-dark"
+               icon="fas fa-exclamation-triangle" message="No logs files found."/>
     </div>
 
     <div class="column is-4-tablet" v-for="(item, index) in logs" :key="'log-'+index">
@@ -59,19 +66,29 @@
 import request from "~/utils/request.js";
 import moment from "moment";
 import {humanFileSize} from "~/utils/index.js";
+import Message from "~/components/Message.vue";
 
 useHead({title: 'Logs'})
 
 const logs = ref([])
+const isLoading = ref(false)
 
 const loadContent = async () => {
   logs.value = []
-  const response = await request('/logs')
-  let data = await response.json();
+  isLoading.value = true
 
-  data.sort((a, b) => new Date(b.modified) - new Date(a.modified));
+  try {
+    const response = await request('/logs')
+    let data = await response.json();
 
-  logs.value = data;
+    data.sort((a, b) => new Date(b.modified) - new Date(a.modified));
+
+    logs.value = data;
+  } catch (e) {
+    notification('error', 'Error', e.message)
+  } finally {
+    isLoading.value = false
+  }
 }
 
 onMounted(() => loadContent())

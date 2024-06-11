@@ -1,7 +1,6 @@
 <template>
   <div class="columns is-multiline">
-
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">
         <NuxtLink to="/backends" v-text="'Backends'"/>
         : {{ backend }}
@@ -9,7 +8,7 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <NuxtLink class="button is-primary" v-tooltip="'Edit Backend'" :to="`/backend/${backend}/edit`">
+            <NuxtLink class="button is-primary" v-tooltip.bottom="'Edit Backend'" :to="`/backend/${backend}/edit`">
               <span class="icon"><i class="fas fa-edit"></i></span>
             </NuxtLink>
           </p>
@@ -27,7 +26,7 @@
         <h1 class="title is-4">Useful Tools</h1>
         <ul>
           <li>
-            <NuxtLink :to="`/backend/${backend}/mismatched`" v-text="'Find possible mismatched content.'"/>
+            <NuxtLink :to="`/backend/${backend}/mismatched`" v-text="'Find possible mis-identified content.'"/>
           </li>
           <li>
             <NuxtLink :to="`/backend/${backend}/unmatched`" v-text="'Find unmatched content.'"/>
@@ -49,7 +48,13 @@
     </div>
   </div>
 
-  <div class="columns is-multiline" v-if="bHistory.length>0">
+  <div class="columns" v-if="bHistory.length<1">
+    <div class="column is-12">
+      <Message message_class="is-background-warning-80 has-text-dark" title="Warning" icon="fas fa-exclamation-circle"
+               message="No items were found. There are probably no items in the local database yet."/>
+    </div>
+  </div>
+  <div class="columns is-multiline" v-else>
     <div class="column is-12">
       <h1 class="title is-4">Recent History</h1>
     </div>
@@ -111,17 +116,17 @@
     </div>
   </div>
 
-  <div class="columns" v-if="bHistory.length<1">
+
+  <div class="columns is-multiline" v-if="info">
     <div class="column is-12">
-      <Message message_class="is-warning">
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-exclamation"></i></span>
-          <span>No items were found. There are probably no items in the local database yet.</span>
-        </span>
-      </Message>
+      <h1 class="title is-4">Basic info</h1>
+    </div>
+    <div class="column is-12">
+      <div class="content">
+        <code class="is-block is-pre-wrap" v-text="info"></code>
+      </div>
     </div>
   </div>
-
 </template>
 
 <script setup>
@@ -130,11 +135,11 @@ import Message from '~/components/Message.vue'
 import {formatDuration, notification} from "~/utils/index.js";
 
 const backend = useRoute().params.backend
-const historyUrl = `/history/?via=${backend}`
 
 useHead({title: `Backends: ${backend}`})
 
 const bHistory = ref([])
+const info = ref({})
 
 const loadRecentHistory = async () => {
   const response = await request(`/history/?perpage=6&via=${backend}`)
@@ -148,5 +153,14 @@ const loadRecentHistory = async () => {
   bHistory.value = json.history
 };
 
-onMounted(() => loadRecentHistory())
+const loadInfo = async () => {
+  const response = await request(`/backend/${backend}/info`)
+  info.value = await response.json()
+}
+
+onMounted(async () => {
+  await loadInfo();
+  await loadRecentHistory()
+})
+
 </script>

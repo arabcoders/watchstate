@@ -1,11 +1,12 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">Tasks</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-info" @click.prevent="loadContent(true)">
+            <button class="button is-info" @click="loadContent()" :disabled="isLoading"
+                    :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
@@ -19,7 +20,10 @@
           </template>
         </span>
       </div>
-
+    </div>
+    <div class="column is-12" v-if="isLoading">
+      <Message message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
     </div>
 
     <div v-for="task in tasks" :key="task.name" class="column is-6-tablet is-12-mobile">
@@ -95,6 +99,23 @@
         </footer>
       </div>
     </div>
+
+    <div class="column is-12">
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>For long running tasks like <code>Import</code> and <code>Export</code>, you should queue the task to run
+            in background. As running them via web console will take longer if you have many backends and/or has large
+            libraries.
+          </li>
+          <li>Use the switch next to the task enable to enable or disable the task from automatically running.</li>
+          <li>To change when task is scheduled to run, please visit
+            <NuxtLink to="/env" v-text="'Environment variables'"/>
+            page. The <code>WS_CRON_(TASK)_*</code> variables are used to control scheduled tasks.
+          </li>
+        </ul>
+      </Message>
+    </div>
   </div>
 </template>
 
@@ -102,50 +123,67 @@
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
-import {notification} from "~/utils/index.js";
+import {notification} from '~/utils/index.js'
 import cronstrue from 'cronstrue'
+import Message from '~/components/Message.vue'
+import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Tasks'})
 
 const tasks = ref([])
 const queued = ref([])
+const isLoading = ref(false)
+const show_page_tips = useStorage('show_page_tips', true)
 
-const loadContent = async (clear = false) => {
-  if (clear) {
-    tasks.value = []
+const loadContent = async () => {
+  isLoading.value = true
+  tasks.value = []
+  try {
+    const response = await request('/tasks')
+    const json = await response.json()
+    tasks.value = json.tasks
+    queued.value = json.queued
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
+  } finally {
+    isLoading.value = false
   }
-  const response = await request('/tasks')
-  const json = await response.json()
-  tasks.value = json.tasks
-  queued.value = json.queued
 }
 
 onMounted(() => loadContent())
 
-const toggleTask = async (task) => {
-  const keyName = `WS_CRON_${task.name.toUpperCase()}`
-  await request(`/system/env/${keyName}`, {
-    method: 'POST',
-    body: JSON.stringify({"value": !task.enabled})
-  });
+const toggleTask = async task => {
+  try {
+    const keyName = `WS_CRON_${task.name.toUpperCase()}`
+    await request(`/system/env/${keyName}`, {
+      method: 'POST',
+      body: JSON.stringify({"value": !task.enabled})
+    });
 
-  const response = await request(`/tasks/${task.name}`)
-  tasks.value[tasks.value.findIndex(b => b.name === task.name)] = await response.json()
+    const response = await request(`/tasks/${task.name}`)
+    tasks.value[tasks.value.findIndex(b => b.name === task.name)] = await response.json()
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
+  }
 }
 
-const queueTask = async (task) => {
+const queueTask = async task => {
   if (!confirm(`Queue '${task.name}' to run in background?`)) {
     return
   }
 
-  const response = await request(`/tasks/${task.name}/queue`, {method: 'POST'})
-  if (response.ok) {
-    notification('success', 'Success', `Task ${task.name} has been queued.`)
-    await loadContent()
+  try {
+    const response = await request(`/tasks/${task.name}/queue`, {method: 'POST'})
+    if (response.ok) {
+      notification('success', 'Success', `Task ${task.name} has been queued.`)
+      await loadContent()
+    }
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
 
-const confirmRun = async (task) => {
+const confirmRun = async task => {
   if (!confirm(`Are you sure you want to run '${task.name}' via web console now?`)) {
     return
   }

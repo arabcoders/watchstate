@@ -1,16 +1,16 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">
         <NuxtLink to="/history">History</NuxtLink>
-        : {{ data?.full_title ?? data?.title ?? id }}
+        : {{ headerTitle }}
       </span>
       <div class="is-pulled-right" v-if="data?.via">
         <div class="field is-grouped">
           <p class="control">
             <button class="button" @click="toggleWatched"
                     :class="{ 'is-success': !data.watched, 'is-danger': data.watched }"
-                    v-tooltip="'Toggle played/unplayed'">
+                    v-tooltip.bottom="'Toggle watch state'">
               <span class="icon">
                 <i class="fas" :class="{'fa-eye-slash':data.watched,'fa-eye':!data.watched}"></i>
               </span>
@@ -23,60 +23,46 @@
           </p>
         </div>
       </div>
-      <div class="subtitle" v-if="data?.via && getTitle !== data.title">
-        {{ getTitle }}
+      <div class="subtitle is-5" v-if="data?.via && headerTitle !== data?.title">
+        <span class="icon">
+          <i class="fas fa-tv" :class="{ 'fa-tv': 'episode' === data.type, 'fa-film': 'movie' === data.type }"></i>
+        </span>
+        {{ data?.title }}
       </div>
     </div>
 
     <div class="column is-12" v-if="!data?.via && isLoading">
-      <Message>
-        <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-        <span>Loading data. Please wait...</span>
-      </Message>
+      <Message message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
     </div>
 
     <div class="column is-12" v-if="data?.not_reported_by && data.not_reported_by.length>0">
-      <Message message_class="has-background-warning-80 has-text-dark">
-        <div class="is-pulled-right">
-          <NuxtLink @click="show_history_page_warning=false" v-if="show_history_page_warning">
-            <span class="icon"><i class="fas fa-arrow-up"></i></span>
-            <span>Close</span>
-          </NuxtLink>
-          <NuxtLink @click="show_history_page_warning=true" v-else>
-            <span class="icon"><i class="fas fa-arrow-down"></i></span>
-            <span>Open</span>
-          </NuxtLink>
-        </div>
-        <h5 class="title is-5 is-unselectable">
+      <Message message_class="has-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle"
+               :toggle="show_history_page_warning" title="Warning" :use-toggle="true"
+               @toggle="show_history_page_warning=!show_history_page_warning">
+        <p>
+          <span class="icon"><i class="fas fa-exclamation"></i></span>
+          There are no metadata regarding this <strong>{{ data.type }}</strong> from (
+          <span class="tag mr-1 has-text-dark" v-for="backend in data.not_reported_by" :key="`nr-${backend}`">
+            <NuxtLink :to="`/backend/${backend}`" v-text="backend"/>
+          </span>).
+        </p>
+        <h5 class="has-text-dark">
           <span class="icon-text">
-            <span class="icon"><i class="fas fa-exclamation-triangle"></i></span>
-            <span>Warning</span>
+            <span class="icon"><i class="fas fa-question-circle"></i></span>
+            <span>Possible reasons</span>
           </span>
         </h5>
-        <div class="content" v-if="show_history_page_warning">
-          <p>
-            <span class="icon"><i class="fas fa-exclamation"></i></span>
-            There are no metadata regarding this <strong>{{ data.type }}</strong> from (
-            <span class="tag mr-1" v-for="backend in data.not_reported_by" :key="`nr-${backend}`">
-              <NuxtLink :to="`/backend/${backend}`" v-text="backend"/>
-            </span>).
-          </p>
-          <h5 class="has-text-dark">Possible reasons:</h5>
-          <ul>
-            <li>Delayed import operation. Might be yet to be imported due to webhooks not being used, or the backend
-              doesn't support webhooks.
-            </li>
-            <li>Item mismatched at the source backend.</li>
-            <li>
-              There are no matching <code>{{ 'episode' === data.type ? 'Series GUIDs' : 'GUIDs' }}</code> in common
-              being reported, And thus it was treated as separate item.
-            </li>
-          </ul>
-          <p class="has-text-danger-50">
-            <span class="icon"><i class="fas fa-info"></i></span> To see if your media backends are reporting different
-            metadata for the same file, click on the file link which will filter your history based on that file.
-          </p>
-        </div>
+        <ul>
+          <li>Delayed import operation. Might be yet to be imported due to webhooks not being used, or the backend
+            doesn't support webhooks.
+          </li>
+          <li>Item mismatched at the source backend.</li>
+          <li>
+            There are no matching <code>{{ 'episode' === data.type ? 'Series GUIDs' : 'GUIDs' }}</code> in common
+            being reported, And thus it was treated as separate item.
+          </li>
+        </ul>
       </Message>
     </div>
 
@@ -406,48 +392,35 @@
     </div>
 
     <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark">
-        <div class="is-pulled-right">
-          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
-            <span class="icon"><i class="fas fa-arrow-up"></i></span>
-            <span>Close</span>
-          </NuxtLink>
-          <NuxtLink @click="show_page_tips=true" v-else>
-            <span class="icon"><i class="fas fa-arrow-down"></i></span>
-            <span>Open</span>
-          </NuxtLink>
-        </div>
-        <h5 class="title is-5 is-unselectable">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-info-circle"></i></span>
-            <span>Tips</span>
-          </span>
-        </h5>
-        <div class="content" v-if="show_page_tips">
-          <ul>
-            <li>Clicking on the ID in <code>metadata via</code> boxes will take you directly to the item in the source
-              backend. While clicking on the GUIDs will take you to that source link, similarly clicking on the series
-              GUIDs will take you to the series link that was provided by the external source.
-            </li>
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>
+            To see if your media backends are reporting different metadata for the same file, click on the file link
+            which will filter your history based on that file.
+          </li>
+          <li>Clicking on the ID in <code>metadata via</code> boxes will take you directly to the item in the source
+            backend. While clicking on the GUIDs will take you to that source link, similarly clicking on the series
+            GUIDs will take you to the series link that was provided by the external source.
+          </li>
+          <li>
+            <code>rGUIDSs</code> are relative globally unique identifiers for episodes based on <code>series
+            GUID</code>. They are formatted as <code>GUID://seriesID/season_number/episode_number</code>. We use
+            <code>rGUIDs</code>, to identify specific episode. This is more reliable than using episode specific
+            <code>GUID</code>, as they are often misreported in the source data.
+          </li>
+          <template v-if="data?.not_reported_by && data.not_reported_by.length > 0">
             <li>
-              <code>rGUIDSs</code> are relative globally unique identifiers for episodes based on <code>series
-              GUID</code>. They are formatted as <code>GUID://seriesID/season_number/episode_number</code>. We use
-              <code>rGUIDs</code>, to identify specific episode. This is more reliable than using episode specific
-              <code>GUID</code>, as they are often misreported in the source data.
+              The warning on top of the page usually is accurate, and it is recommended to check the backend metadata
+              for the item.
+              <template v-if="'episode' === data.type">
+                For episodes, we use <code>rGUIDs</code> to identify the episode, and <strong>important part</strong>
+                of that GUID is the <code>series GUID</code>. We need at least one reported series GUIDs to match
+                between your backends. If none are matching, it will be treated as separate series.
+              </template>
             </li>
-            <template v-if="data?.not_reported_by && data.not_reported_by.length > 0">
-              <li>
-                The warning on top of the page usually is accurate, and it is recommended to check the backend metadata
-                for the item.
-                <template v-if="'episode' === data.type">
-                  For episodes, we use <code>rGUIDs</code> to identify the episode, and <strong>important part</strong>
-                  of that GUID is the <code>series GUID</code>. We need at least one reported series GUIDs to match
-                  between your backends. If none are matching, it will be treated as separate series.
-                </template>
-              </li>
-            </template>
-          </ul>
-        </div>
+          </template>
+        </ul>
       </Message>
     </div>
   </div>
@@ -458,6 +431,7 @@ import request from '~/utils/request.js'
 import {ag, formatDuration, makeGUIDLink, makeSearchLink, notification, ucFirst} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from "@vueuse/core";
+import Message from "~/components/Message.vue";
 
 const id = useRoute().params.id
 
@@ -536,6 +510,8 @@ const toggleWatched = async () => {
     notification('error', 'Error', `Failed to update watched status. ${e}`)
   }
 }
+
+const headerTitle = computed(() => `${data.value?.full_title ?? data.value?.title ?? id}`)
 
 onMounted(async () => loadContent(id))
 </script>

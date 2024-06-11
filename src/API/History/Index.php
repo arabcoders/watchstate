@@ -200,6 +200,22 @@ final class Index
             $filters[iState::COLUMN_META_PATH] = $data->get(iState::COLUMN_META_PATH);
         }
 
+        if ($data->get('subtitle')) {
+            foreach ($this->getBackends() as $backend) {
+                $bName = $backend['name'];
+
+                if ($data->get('exact')) {
+                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') = :subtitle_{$bName}";
+                } else {
+                    $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') LIKE \"%\" || :subtitle_{$bName} || \"%\"";
+                }
+
+                $params["subtitle_{$bName}"] = $data->get('subtitle');
+            }
+
+            $filters['subtitle'] = $data->get('subtitle');
+        }
+
         if ($data->get(iState::COLUMN_EXTRA)) {
             $sField = $data->get('key');
             $sValue = $data->get('value');
@@ -336,6 +352,7 @@ final class Index
                 ],
                 [
                     'key' => 'via',
+                    'display' => 'Backend',
                     'description' => 'Search using the backend name.',
                     'type' => 'string',
                 ],
@@ -369,13 +386,15 @@ final class Index
                 ],
                 [
                     'key' => 'parent',
+                    'display' => 'Series GUID',
                     'description' => 'Search using the parent GUID.',
-                    'type' => 'guid://id',
+                    'type' => 'provider://id',
                 ],
                 [
                     'key' => 'guids',
+                    'display' => 'Content GUID',
                     'description' => 'Search using the GUID.',
-                    'type' => 'guid://id',
+                    'type' => 'provider://id',
                 ],
                 [
                     'key' => 'metadata',
@@ -395,6 +414,12 @@ final class Index
                 [
                     'key' => 'path',
                     'description' => 'Search using file path. Searching this field might be slow.',
+                    'type' => 'string',
+                ],
+                [
+                    'key' => 'subtitle',
+                    'display' => 'Content title',
+                    'description' => 'Search using content title. Searching this field will be slow.',
                     'type' => 'string',
                 ],
             ],
