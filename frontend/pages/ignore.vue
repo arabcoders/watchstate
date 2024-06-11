@@ -1,11 +1,12 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span id="env_page_title" class="title is-4">Ignored GUIDs</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-primary" v-tooltip="'Add New Ignore'" @click="toggleForm = !toggleForm">
+            <button class="button is-primary" v-tooltip.bottom="'Add New Ignore rule'"
+                    @click="toggleForm = !toggleForm">
               <span class="icon">
                 <i class="fas fa-add"></i>
               </span>
@@ -244,53 +245,29 @@
     </div>
 
     <div class="column is-12" v-if="items.length < 1">
-      <Message message_class="is-info" title="Loading..." v-if="isLoading">
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-spinner fa-spin"></i></span>
-          <span>Request ignore list. Please wait...</span>
-        </span>
-      </Message>
-      <Message message_class="has-background-success-90 has-text-dark" title="Information" v-else>
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-check"></i></span>
-          <span>
-            There are no ignore rules currently set. You can add new ignore rules by clicking on the <i
-              class="fas fa-add"></i> button.
-          </span>
-        </span>
+      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+      <Message v-else message_class="has-background-success-90 has-text-dark" title="Information" icon="fas fa-check">
+        There are no ignore rules configured. You can add new ignore rules by clicking on the
+        <i @click="toggleForm=true" class="is-clickable fas fa-add"></i> button.
       </Message>
     </div>
 
     <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark">
-        <div class="is-pulled-right">
-          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
-            <span class="icon"><i class="fas fa-arrow-up"></i></span>
-            <span>Close</span>
-          </NuxtLink>
-          <NuxtLink @click="show_page_tips=true" v-else>
-            <span class="icon"><i class="fas fa-arrow-down"></i></span>
-            <span>Open</span>
-          </NuxtLink>
-        </div>
-        <h5 class="title is-5 is-unselectable">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-info-circle"></i></span>
-            <span>Tips</span>
-          </span>
-        </h5>
-        <div class="content" v-if="show_page_tips">
-          <ul>
-            <li>Ignoring specific GUID sometimes helps in preventing incorrect data being added to WatchState, due to
-              incorrect metadata being provided by backends.
-            </li>
-            <li>
-              <code>GUID</code> means in terms of WatchState is the unique identifier for a specific item in the
-              external data source.
-            </li>
-            <li>To add a new ignore rule click on the <i class="fa fa-add"></i> button.</li>
-          </ul>
-        </div>
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>Ignoring specific GUID sometimes helps in preventing incorrect data being added to WatchState, due to
+            incorrect metadata being provided by backends.
+          </li>
+          <li>
+            <code>GUID</code> means in terms of WatchState is the unique identifier for a specific item in the
+            external data source.
+          </li>
+          <li>To add a new ignore rule click on the <i @click="toggleForm=true" class="is-clickable fa fa-add"></i>
+            button.
+          </li>
+        </ul>
       </Message>
     </div>
   </div>
@@ -302,6 +279,7 @@ import {awaitElement, copyText, notification, stringToRegex} from '~/utils/index
 import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import 'assets/css/bulma-switch.css'
+import Message from "~/components/Message.vue";
 
 useHead({title: 'Ignored GUIDs'})
 

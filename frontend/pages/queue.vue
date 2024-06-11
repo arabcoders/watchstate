@@ -1,6 +1,6 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">Queue</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
@@ -18,18 +18,11 @@
     </div>
 
     <div class="column is-12" v-if="items.length < 1">
-      <Message message_class="is-info" title="Loading..." v-if="isLoading">
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-spinner fa-spin"></i></span>
-          <span>Requesting queued events. Please wait...</span>
-        </span>
-      </Message>
-      <Message message_class="has-background-success-90 has-text-dark" title="Information" v-else>
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-check"></i></span>
-          <span>There are currently no queued events to be sent to backends.</span>
-        </span>
-      </Message>
+      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+      <Message v-else message_class="is-background-success-90 has-text-dark" title="Information"
+               icon="fas fa-info-circle"
+               message="There are currently no queued events."/>
     </div>
 
     <div class="column is-4 is-6-tablet" v-for="item in items" :key="item.id">

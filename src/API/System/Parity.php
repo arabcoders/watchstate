@@ -152,7 +152,7 @@ final class Parity
     #[Delete(self::URL . '[/]', name: 'system.parity.delete')]
     public function deleteRecords(iRequest $request): iResponse
     {
-        $params = DataUtil::fromArray($request->getQueryParams());
+        $params = DataUtil::fromRequest($request, true);
 
         if (0 === ($counter = (int)$params->get('min', 0))) {
             return api_error('Invalid minimum value.', HTTP_STATUS::HTTP_BAD_REQUEST);

@@ -1,11 +1,11 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
-      <span id="env_page_title" class="title is-4">Environment Variables</span>
+    <div class="column is-12 is-clearfix is-unselectable">
+      <span id="env_page_title" class="title is-4">Environment variables</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-primary" v-tooltip="'Add New Variable'" @click="toggleForm = !toggleForm">
+            <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm">
               <span class="icon">
                 <i class="fas fa-add"></i>
               </span>
@@ -13,9 +13,7 @@
           </p>
           <p class="control">
             <button class="button is-info" @click="loadContent">
-              <span class="icon">
-                <i class="fas fa-sync"></i>
-              </span>
+              <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
         </div>
@@ -88,7 +86,7 @@
             </div>
             <div class="card-footer-item">
               <button class="button is-fullwidth is-danger" type="button"
-                      @click="form_key=null; form_value=null; toggleForm=false">
+                      @click="cancelForm">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-cancel"></i></span>
                   <span>Cancel</span>
@@ -161,39 +159,22 @@
     </div>
 
     <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark">
-        <div class="is-pulled-right">
-          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
-            <span class="icon"><i class="fas fa-arrow-up"></i></span>
-            <span>Close</span>
-          </NuxtLink>
-          <NuxtLink @click="show_page_tips=true" v-else>
-            <span class="icon"><i class="fas fa-arrow-down"></i></span>
-            <span>Open</span>
-          </NuxtLink>
-        </div>
-        <h5 class="title is-5 is-unselectable">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-info-circle"></i></span>
-            <span>Tips</span>
-          </span>
-        </h5>
-        <div class="content" v-if="show_page_tips">
-          <ul>
-            <li>
-              Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.
-            </li>
-            <li>
-              Some values are too large to fit into the view, clicking on the value will show the full value.
-            </li>
-            <li>
-              These environment variables are loaded from the <code>{{ file }}</code> file.
-            </li>
-            <li>
-              To add a new variable click on the <i class="fa fa-add"></i> button.
-            </li>
-          </ul>
-        </div>
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>
+            Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.
+          </li>
+          <li>
+            Some values are too large to fit into the view, clicking on the value will show the full value.
+          </li>
+          <li>
+            These environment variables are loaded from the <code>{{ file }}</code> file.
+          </li>
+          <li>
+            To add a new variable click on the <i class="fa fa-add"></i> button.
+          </li>
+        </ul>
       </Message>
     </div>
   </div>
@@ -204,8 +185,12 @@ import 'assets/css/bulma-switch.css'
 import request from '~/utils/request.js'
 import {awaitElement, copyText, notification} from '~/utils/index.js'
 import {useStorage} from '@vueuse/core'
+import Message from "~/components/Message.vue"
 
 useHead({title: 'Environment Variables'})
+
+const route = useRoute();
+const router = useRouter();
 
 const envs = ref([])
 const toggleForm = ref(false)
@@ -223,6 +208,9 @@ const loadContent = async () => {
   envs.value = json.data
   if (json.file) {
     file.value = json.file
+  }
+  if (route.query.edit) {
+    editEnv(envs.value.find(i => i.key === route.query.edit))
   }
 }
 
@@ -287,6 +275,9 @@ const editEnv = (env) => {
   form_value.value = env.value
   form_type.value = env.type
   toggleForm.value = true
+  if (!route.query.edit) {
+    router.push(`/env?edit=${env.key}`)
+  }
 }
 
 const cancelForm = () => {
@@ -294,6 +285,9 @@ const cancelForm = () => {
   form_value.value = null
   form_type.value = null
   toggleForm.value = false
+  if (route.query.edit) {
+    router.push('/env')
+  }
 }
 
 watch(toggleForm, (value) => {

@@ -1,6 +1,6 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">
         <NuxtLink to="/backends">Backends</NuxtLink>
         -
@@ -11,8 +11,7 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-info" @click.prevent="loadContent" :disabled="isLoading"
-                    :class="{'is-loading':isLoading}">
+            <button class="button is-info" @click="loadContent" :disabled="isLoading" :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
@@ -25,18 +24,10 @@
     </div>
 
     <div class="column is-12" v-if="items.length < 1">
-      <Message message_class="is-info" title="Loading..." v-if="isLoading">
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-spinner fa-spin"></i></span>
-          <span>Requesting active play sessions. Please wait...</span>
-        </span>
-      </Message>
-      <Message message_class="has-background-success-90 has-text-dark" title="Information" v-else>
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-check"></i></span>
-          <span>There are no active play sessions currently running.</span>
-        </span>
-      </Message>
+      <Message message_class="is-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
+               v-if="isLoading" message="Requesting active play sessions. Please wait..."/>
+      <Message v-else message_class="has-background-success-90 has-text-dark" title="Information"
+               icon="fa fa-info-circle" message="There are no active play sessions currently running."/>
     </div>
     <template v-else>
       <div class="column is-12">
@@ -122,6 +113,4 @@ const makeItemLink = (item) => {
   return `/history?${params.toString()}`
 }
 onMounted(async () => loadContent())
-
-
 </script>

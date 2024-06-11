@@ -1,6 +1,6 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">
         <NuxtLink to="/logs">Logs</NuxtLink>
         : {{ filename }}
@@ -10,33 +10,33 @@
         <div class="field is-grouped">
 
           <p class="control">
-            <button class="button is-danger" v-tooltip="'Delete Logfile.'" @click="deleteFile">
+            <button class="button is-danger" v-tooltip.bottom="'Delete Logfile.'" @click="deleteFile">
               <span class="icon"><i class="fas fa-trash"></i></span>
             </button>
           </p>
 
           <p class="control">
-            <button class="button is-danger is-light" v-tooltip="'Download the entire logfile.'" @click="downloadFile"
-                    :class="{'is-loading':isDownloading}">
+            <button class="button is-danger is-light" v-tooltip.bottom="'Download the entire logfile.'"
+                    @click="downloadFile" :class="{'is-loading':isDownloading}">
               <span class="icon"><i class="fas fa-download"></i></span>
             </button>
           </p>
 
           <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
-            <button class="button" v-tooltip="'Watch log'" @click="watchLog"
+            <button class="button" v-tooltip.bottom="'Watch log'" @click="watchLog"
                     :class="{'is-primary':!stream,'is-danger':stream}">
               <span class="icon"><i class="fas fa-stream"></i></span>
             </button>
           </p>
 
           <p class="control">
-            <button class="button is-warning" @click.prevent="wrapLines = !wrapLines" v-tooltip="'Toggle wrap line'">
+            <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
               <span class="icon"><i class="fas fa-text-width"></i></span>
             </button>
           </p>
 
           <p class="control">
-            <button class="button is-info" @click.prevent="loadContent">
+            <button class="button is-info" @click="loadContent" :disabled="isLoading" :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
@@ -46,25 +46,22 @@
     </div>
 
     <div class="column is-12">
-      <template v-if="stream">
-        <Message message_class="is-info">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-            <span>Streaming log content...</span>
-          </span>
-        </Message>
-      </template>
+      <div class="notification has-background-info-90 has-text-dark" v-if="stream">
+        <button class="delete" @click="watchLog"></button>
+        <span class="icon-text">
+          <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
+          <span>Streaming log content...</span>
+        </span>
+      </div>
       <code ref="logContainer" class="box logs-container" v-if="!error"
             :class="{'is-pre': !wrapLines, 'is-pre-wrap': wrapLines}">
-        <span class="is-log-line is-block" v-for="(item, index) in data" :key="'log_line-'+index">
+        <span class="is-log-line is-block pt-1" v-for="(item, index) in data" :key="'log_line-'+index">
           {{ item }}
         </span>
       </code>
-      <template v-else>
-        <Message title="Request Error" message_class="is-danger" :message="error"/>
-      </template>
+      <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark"
+               :message="error" :use-close="true" @close="router.push('/logs')"/>
     </div>
-
   </div>
 </template>
 
@@ -84,14 +81,16 @@ import {useStorage} from '@vueuse/core'
 import {notification} from '~/utils/index.js'
 import request from '~/utils/request.js'
 
+const router = useRouter()
 const filename = useRoute().params.filename
 
 useHead({title: `Logs : ${filename}`})
 
 const data = ref([])
 const error = ref('')
-const wrapLines = ref(true)
+const wrapLines = useStorage('logs_wrap_lines', false)
 const isDownloading = ref(false)
+const isLoading = ref(false)
 
 const api_path = useStorage('api_path', '/v1/api')
 const api_url = useStorage('api_url', '')
@@ -105,15 +104,23 @@ const logContainer = ref(null)
 
 const loadContent = async () => {
   try {
+    isLoading.value = true
     const response = await request(`/log/${filename}`)
     if (response.ok) {
       const text = await response.text()
       data.value = text.split('\n')
     } else {
-      error.value = `${response.status}: ${response.statusText}`
+      try {
+        const json = await response.json();
+        error.value = `${json.error.code}: ${json.error.message}`
+      } catch (e) {
+        error.value = `${response.status}: ${response.statusText}`
+      }
     }
   } catch (e) {
     error.value = e
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -205,5 +212,10 @@ const deleteFile = async () => {
 
 const updateScroll = () => logContainer.value.scrollTop = logContainer.value.scrollHeight;
 
-onUpdated(() => updateScroll());
+onUpdated(() => {
+  if (error.value) {
+    return
+  }
+  updateScroll()
+});
 </script>

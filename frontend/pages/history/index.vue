@@ -1,18 +1,18 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
+    <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">History</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-primary" @click.prevent="searchForm = !searchForm">
+            <button class="button is-primary" @click="searchForm = !searchForm">
               <span class="icon">
                 <i class="fas fa-search"></i>
               </span>
             </button>
           </p>
           <p class="control">
-            <button class="button is-info" @click.prevent="loadContent(page, true)">
+            <button class="button is-info" @click="loadContent(page, true)">
               <span class="icon">
                 <i class="fas fa-sync"></i>
               </span>
@@ -73,7 +73,7 @@
                   <select v-model="searchField" class="is-capitalized" :disabled="isLoading">
                     <option value="">Select Field</option>
                     <option v-for="field in searchable" :key="'search-' + field.key" :value="field.key">
-                      {{ field.key }}
+                      {{ field.display ?? field.key }}
                     </option>
                   </select>
                 </div>
@@ -189,18 +189,12 @@
         </div>
       </div>
       <div class="column is-12" v-else>
-        <Message message_class="is-info" v-if="true === isLoading">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-            <span>Loading data please wait...</span>
-          </span>
-        </Message>
-        <Message v-else message_class="is-warning">
-          <button v-if="query" class="delete" @click="clearSearch"></button>
-
+        <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+        <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
+                 icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
           <div class="icon-text">
-            <span class="icon"><i class="fas fa-info"></i></span>
-            <span>No items found.</span>
+            No items found.
             <span v-if="query">For <code><strong>{{ searchField }}</strong> : <strong>{{ query }}</strong></code></span>
           </div>
           <code class="is-block mt-4" v-if="error">{{ error }}</code>
@@ -231,7 +225,7 @@ const total = ref(0)
 const last_page = computed(() => Math.ceil(total.value / perpage.value))
 
 const query = ref(route.query.q ?? '')
-const searchField = ref(route.query.key ?? '')
+const searchField = ref(route.query.key ?? 'title')
 const isLoading = ref(false)
 const searchForm = ref(false)
 
@@ -340,7 +334,6 @@ const makePagination = () => {
 
 const clearSearch = () => {
   query.value = ''
-  searchField.value = ''
   searchForm.value = false
   loadContent(1)
 }

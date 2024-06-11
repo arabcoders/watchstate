@@ -1,7 +1,7 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
-      <span class="title is-4 is-unselectable">
+    <div class="column is-12 is-clearfix is-unselectable">
+      <span class="title is-4">
         <NuxtLink to="/backends">Backends</NuxtLink>
         -
         <NuxtLink :to="'/backend/' + backend">{{ backend }}</NuxtLink>
@@ -10,15 +10,14 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-info" @click.prevent="searchContent">
-              <span class="icon">
-                <i class="fas fa-sync"></i>
-              </span>
+            <button class="button is-info" @click="searchContent" :disabled="isLoading || !searchField || !query"
+                    :class="{'is-loading':isLoading}">
+              <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
         </div>
       </div>
-      <div class="is-hidden-mobile is-unselectable">
+      <div class="is-hidden-mobile">
         <span class="subtitle">This page search the remote backend data not the locally stored data.</span>
       </div>
     </div>
@@ -89,27 +88,16 @@
     </div>
 
     <div class="column is-12" v-if="items?.length<1 && hasSearched">
-      <Message message_class="is-info" v-if="true === isLoading">
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-          <span>Loading data please wait...</span>
-        </span>
-      </Message>
-      <Message v-else class="has-background-warning-80 has-text-dark">
-        <button v-if="query" class="delete" @click="clearSearch"></button>
-
-        <div class="icon-text">
-          <span class="icon"><i class="fas fa-info"></i></span>
+      <Message v-if="isLoading" message_class="is-background-info-90 has-text-dark" icon="fas fa-spinner fa-spin"
+               title="Loading" message="Loading data please wait..."/>
+      <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
+               icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
+        <span v-if="error?.message" v-text="error.message"></span>
+        <template v-else>
           <span>No items found.</span>
-          <span v-if="query">For <code><strong>{{ searchField }}</strong> : <strong>{{ query }}</strong></code></span>
-        </div>
-        <template v-if="error">
-          <div class="content mt-4">
-            <h5 class="has-text-dark">API Response ({{ error?.code ?? 0 }})</h5>
-            <code class="is-pre-wrap is-block mt-4">
-              {{ error?.message ?? error }}
-            </code>
-          </div>
+          <span v-if="query">
+            Search query <code><strong>{{ searchField }}</strong> : <strong>{{ query }}</strong></code>
+          </span>
         </template>
       </Message>
     </div>
@@ -141,9 +129,11 @@
                 </div>
                 <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
-                  <span class="icon"><i class="fas fa-file"></i></span>
-                  <span class="is-hidden-mobile">Path:&nbsp;</span>
-                  <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-file"></i></span>
+                    <span class="is-hidden-mobile">Path:&nbsp;</span>
+                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                  </div>
                 </div>
               </div>
             </div>
@@ -184,37 +174,20 @@
     </div>
 
     <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark">
-        <div class="is-pulled-right">
-          <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
-            <span class="icon"><i class="fas fa-arrow-up"></i></span>
-            <span>Close</span>
-          </NuxtLink>
-          <NuxtLink @click="show_page_tips=true" v-else>
-            <span class="icon"><i class="fas fa-arrow-down"></i></span>
-            <span>Open</span>
-          </NuxtLink>
-        </div>
-        <h5 class="title is-5 is-unselectable">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-info-circle"></i></span>
-            <span>Tips</span>
-          </span>
-        </h5>
-        <div class="content" v-if="show_page_tips">
-          <ul>
-            <li>
-              Items with <code>Referenced locally</code> link are items we were able to find local match for. While
-              items with <code>Not referenced locally</code> are items we were not able to link locally.
-            </li>
-            <li>
-              The items shown here are from the remote backend data queried directly.
-            </li>
-            <li>Clicking directly on the <code>item title</code> will take you to the page associated with that link in
-              the backend. While clicking <code>Referenced locally</code> will take you to the local item page.
-            </li>
-          </ul>
-        </div>
+      <Message message_class="has-background-info-90 has-text-dark" title="Tips" icon="fas fa-info-circle"
+               :toggle="show_page_tips" @toggle="show_page_tips = !show_page_tips" :use-toggle="true">
+        <ul>
+          <li>
+            Items with <code>Referenced locally</code> link are items we were able to find local match for. While
+            items with <code>Not referenced locally</code> are items we were not able to link locally.
+          </li>
+          <li>
+            The items shown here are from the remote backend data queried directly.
+          </li>
+          <li>Clicking directly on the <code>item title</code> will take you to the page associated with that link in
+            the backend. While clicking <code>Referenced locally</code> will take you to the local item page.
+          </li>
+        </ul>
       </Message>
     </div>
   </div>

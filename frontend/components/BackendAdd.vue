@@ -1,23 +1,20 @@
 <template>
-  <Message title="Important Information" message_class="has-background-warning-80 has-text-dark">
-    <div class="content is-bold">
-      <ul>
-        <li>
-          WatchState is single user tool. It doesn't support syncing multiple users play state.
-          <NuxtLink target="_blank" v-text="'Visit this link'"
-                    href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
-          to learn more.
-        </li>
-        <li>
-          If you are adding new backend that is fresh and doesn't have your current watch state, you should turn off
-          import and enable only metadata import at the start to prevent overriding your current play state.
-          <NuxtLink
-              href="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"
-              target="_blank" v-text="'Visit this link'"/>
-          to learn more.
-        </li>
-      </ul>
-    </div>
+  <Message title="Important" message_class="has-background-warning-80 has-text-dark" icon="fas fa-exclamation-triangle">
+    <ul>
+      <li>
+        WatchState is single user tool. It doesn't support syncing multiple users play state.
+        <NuxtLink target="_blank" v-text="'Visit this link'"
+                  to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
+        to learn more.
+      </li>
+      <li>
+        If you are adding new backend that is fresh and doesn't have your current watch state, you should turn off
+        import and enable only metadata import at the start to prevent overriding your current play state.
+        <NuxtLink target="_blank" v-text="'Visit this link'"
+                  to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"/>
+        to learn more.
+      </li>
+    </ul>
   </Message>
   <form id="backend_add_form" @submit.prevent="addBackend" @change="changeStage">
     <div class="card">

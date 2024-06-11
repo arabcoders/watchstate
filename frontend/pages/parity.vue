@@ -1,27 +1,33 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix">
-      <span class="title is-4 is-unselectable">Data Parity</span>
+    <div class="column is-12 is-clearfix is-unselectable">
+      <span class="title is-4 ">Data Parity</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
+          <div class="control" v-if="min && max" v-tooltip.bottom="'Minimum number of backends'">
+            <div class="select">
+              <select v-model="min" :disabled="isDeleting || isLoading">
+                <option v-for="i in numberRange(1,max+1)" :key="`min-${i}`" :value="i">
+                  {{ i }}
+                </option>
+              </select>
+            </div>
+          </div>
           <p class="control">
-            <button class="button is-danger" @click="deleteData" v-tooltip="'Delete The reported records'">
-              <span class="icon">
-                <i class="fas fa-trash"></i>
-              </span>
+            <button class="button is-danger" @click="deleteData" v-tooltip.bottom="'Delete The reported records'"
+                    :disabled="isDeleting || isLoading || items.length<1" :class="{'is-loading':isDeleting}">
+              <span class="icon"><i class="fas fa-trash"></i></span>
             </button>
           </p>
           <p class="control">
             <button class="button is-info" @click.prevent="loadContent(page, true)" :disabled="isLoading"
                     :class="{'is-loading':isLoading}">
-              <span class="icon">
-                <i class="fas fa-sync"></i>
-              </span>
+              <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
         </div>
       </div>
-      <div class="is-hidden-mobile is-unselectable">
+      <div class="is-hidden-mobile">
         <span class="subtitle">This page shows records that aren't reported by all your backends.</span>
       </div>
     </div>
@@ -137,66 +143,28 @@
       </div>
 
       <div class="column is-12" v-else>
-        <Message message_class="is-info" v-if="true === isLoading">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-            <span>Loading data please wait...</span>
-          </span>
-        </Message>
+        <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
 
-        <Message message_class="has-background-success-90 has-text-dark" title="Success!"
-                 v-if="!isLoading && items.length<1">
-          <span class="icon-text">
-            <span class="icon"><i class="fas fa-check"></i></span>
-            <span>WatchState did not find any records matching the criteria.</span>
-          </span>
+        <Message message_class="has-background-success-90 has-text-dark" v-if="!isLoading && items.length<1"
+                 title="Success" icon="fas fa-check">
+          WatchState did not find any records matching the criteria. All records has at least <code>{{ min }}</code>
+          backends reporting it.
         </Message>
       </div>
 
       <div class="column is-12">
-        <Message message_class="has-background-info-90 has-text-dark">
-          <div class="is-pulled-right">
-            <NuxtLink @click="show_page_tips=false" v-if="show_page_tips">
-              <span class="icon"><i class="fas fa-arrow-up"></i></span>
-              <span>Close</span>
-            </NuxtLink>
-            <NuxtLink @click="show_page_tips=true" v-else>
-              <span class="icon"><i class="fas fa-arrow-down"></i></span>
-              <span>Open</span>
-            </NuxtLink>
-          </div>
-          <h5 class="title is-5 is-unselectable">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-info-circle"></i></span>
-              <span>Tips</span>
-            </span>
-          </h5>
-          <div class="content" v-if="show_page_tips">
-            <ul>
-              <li>
-                You can specify the minimum number of backends that need to report the record to be considered valid.
-                Not available via <code>WebUI</code> yet. You can do it via the
-                <NuxtLink :to="makeConsoleCommand('db:parity --min')">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-terminal"></i></span>
-                    <span>Console</span>
-                  </span>
-                </NuxtLink>
-                page, or using the the following command <code>db:parity --min NUM</code> in shell.
-              </li>
-              <li>
-                By clicking the <span class="fa fa-trash"></span> icon you will delete the record from the database.
-                Not available via <code>WebUI</code> yet. You can do it via the
-                <NuxtLink :to="makeConsoleCommand('db:parity -n --prune --min')">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-terminal"></i></span>
-                    <span>Console</span>
-                  </span>
-                </NuxtLink>
-                page, or by using the the following command <code>db:parity --min NUM --prune</code> in shell.
-              </li>
-            </ul>
-          </div>
+        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          <ul>
+            <li>
+              You can specify the minimum number of backends that need to report the record to be considered valid.
+            </li>
+            <li>
+              By clicking the <span class="fa fa-trash"></span> icon you will delete the the reported items from the
+              local database. If the items are not fixed by the time <code>import</code> is run, they will re-appear.
+            </li>
+          </ul>
         </Message>
       </div>
     </div>
@@ -206,7 +174,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {makeConsoleCommand, makeSearchLink, notification} from '~/utils/index.js'
+import {makeSearchLink, notification} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 
@@ -220,7 +188,12 @@ const perpage = ref(route.query.perpage ?? 100)
 const total = ref(0)
 const last_page = computed(() => Math.ceil(total.value / perpage.value))
 const isLoading = ref(false)
+const isDeleting = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+/** @type {Ref<number>} */
+const min = ref(route.query.min ?? null);
+/** @type {Ref<number>} */
+const max = ref();
 
 const loadContent = async (pageNumber, fromPopState = false) => {
   pageNumber = parseInt(pageNumber)
@@ -232,8 +205,17 @@ const loadContent = async (pageNumber, fromPopState = false) => {
   let search = new URLSearchParams()
   search.set('perpage', perpage.value)
   search.set('page', pageNumber)
+  if (min.value) {
+    search.set('min', min.value)
+  }
 
-  useHead({title: `Parity: Page #${pageNumber}`})
+  let pageTitle = `Parity: Page #${pageNumber}`
+
+  if (min.value) {
+    pageTitle += ` - Min: ${min.value}`
+  }
+
+  useHead({title: pageTitle})
 
   let newUrl = window.location.pathname + '?' + search.toString()
   isLoading.value = true
@@ -244,13 +226,13 @@ const loadContent = async (pageNumber, fromPopState = false) => {
     const json = await response.json()
 
     if (200 !== response.status) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
       isLoading.value = false
       return
     }
 
     if (!fromPopState && window.location.href !== newUrl) {
-      window.history.pushState({page: pageNumber}, '', newUrl)
+      window.history.pushState({page: pageNumber, min: min.value}, '', newUrl)
     }
 
     if ('paging' in json) {
@@ -268,7 +250,7 @@ const loadContent = async (pageNumber, fromPopState = false) => {
 
     isLoading.value = false
   } catch (e) {
-    notification('error', 'Error', e.message)
+    notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
 
@@ -290,9 +272,62 @@ const makePagination = () => {
 
   return pagination
 }
-const deleteData = () => {
-  notification('warning', 'Warning', 'This feature is not implemented yet.')
+const deleteData = async () => {
+  if (isDeleting.value) {
+    return
+  }
+  if (!min.value) {
+    notification('error', 'Error', 'Minimum number of backends is not set.')
+    return
+  }
+
+  if (items.value.length < 1) {
+    notification('error', 'Error', 'There are no reported records to delete.')
+    return
+  }
+
+  if (!confirm(`Are you sure you want to delete the reported records?`)) {
+    return
+  }
+
+  isDeleting.value = true
+
+  try {
+    const response = await request(`/system/parity`, {
+      method: 'DELETE',
+      body: JSON.stringify({min: min.value})
+    })
+
+    const json = await response.json()
+
+    if (200 !== response.status) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    notification('success', 'Success!', `Deleted '${json.deleted_records ?? 0}' records.`)
+    items.value = []
+    total.value = 0
+    page.value = 1
+  } catch (e) {
+    notification('error', 'Error', e.message)
+  } finally {
+    isDeleting.value = false
+  }
 };
 
-onMounted(async () => loadContent(page.value ?? 1))
+onMounted(async () => {
+  const response = await request(`/backends/`)
+  const json = await response.json()
+  max.value = json.length
+  if (min.value === null) {
+    min.value = json.length
+  } else {
+    await loadContent(page.value ?? 1)
+  }
+})
+
+const numberRange = (start, end) => new Array(end - start).fill().map((d, i) => i + start)
+
+watch(min, async () => await loadContent(page.value ?? 1))
 </script>
