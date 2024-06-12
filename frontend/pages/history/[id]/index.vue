@@ -173,7 +173,7 @@
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.guids">
                 <NuxtLink target="_blank" :to="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
-                  {{ source.split('guid_')[1] }}-{{ guid }}
+                  {{ source.split('guid_')[1] }}://{{ guid }}
                 </NuxtLink>
               </span>
             </div>
@@ -185,7 +185,7 @@
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.rguids">
                 <NuxtLink :to="makeSearchLink('rguid', `${source.split('guid_')[1]}://${guid}`)">
-                  {{ source.split('guid_')[1] }}-{{ guid }}
+                  {{ source.split('guid_')[1] }}://{{ guid }}
                 </NuxtLink>
               </span>
             </div>
@@ -197,7 +197,7 @@
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.parent">
                 <NuxtLink target="_blank" :to="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
-                  {{ source.split('guid_')[1] }}-{{ guid }}
+                  {{ source.split('guid_')[1] }}://{{ guid }}
                 </NuxtLink>
               </span>
             </div>
@@ -338,7 +338,7 @@
               </span>
               <span class="tag mr-1" v-for="(guid,source) in item.guids">
                 <NuxtLink target="_blank" :to="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
-                  {{ source.split('guid_')[1] }}-{{ guid }}
+                  {{ source.split('guid_')[1] }}://{{ guid }}
                 </NuxtLink>
               </span>
             </div>
@@ -350,7 +350,7 @@
               </span>
               <span class="tag mr-1" v-for="(guid,source) in item.parent">
                 <NuxtLink target="_blank" :to="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
-                  {{ source.split('guid_')[1] }}-{{ guid }}
+                  {{ source.split('guid_')[1] }}://{{ guid }}
                 </NuxtLink>
               </span>
             </div>
