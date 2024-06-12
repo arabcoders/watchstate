@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
+use App\Backends\Common\ClientInterface;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
@@ -478,6 +479,7 @@ class ExportCommand extends Command
         ]);
 
         foreach ($backends as $backend) {
+            assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             $backend['class']->push(
                 entities: $entities,
                 queue: $this->queue,
@@ -560,6 +562,7 @@ class ExportCommand extends Command
                 ]);
             }
 
+            assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             array_push($requests, ...$backend['class']->export($this->mapper, $this->queue, $after));
 
             if (false === $input->getOption('dry-run')) {

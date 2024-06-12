@@ -230,8 +230,9 @@ final class GetLibrary
                 if (200 !== $response->getStatusCode()) {
                     if (false === $noLog) {
                         $this->logger->warning(
-                            'Request for [{backend}] {item.type} [{item.title}] metadata returned with unexpected [{status_code}] status code.',
+                            "Request for '{client}: {backend}' {item.type} '{item.title}' metadata returned with unexpected '{status_code}' status code.",
                             [
+                                'client' => $context->clientName,
                                 'backend' => $context->backendName,
                                 'status_code' => $response->getStatusCode(),
                                 'body' => $response->getContent(false),

@@ -11,8 +11,9 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use DateTimeInterface;
-use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Component\HttpClient\RetryableHttpClient;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 final class Push
@@ -21,8 +22,11 @@ final class Push
 
     private string $action = 'plex.push';
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    private iHttp $http;
+
+    public function __construct(iHttp $http, protected iLogger $logger)
     {
+        $this->http = new RetryableHttpClient($http, maxRetries: 3, logger: $this->logger);
     }
 
     /**
