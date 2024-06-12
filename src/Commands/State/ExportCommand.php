@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
+use App\Backends\Common\ClientInterface;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
@@ -33,9 +34,9 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 class ExportCommand extends Command
 {
-    public const ROUTE = 'state:export';
+    public const string ROUTE = 'state:export';
 
-    public const TASK_NAME = 'export';
+    public const string TASK_NAME = 'export';
 
     /**
      * Class Constructor.
@@ -338,18 +339,12 @@ class ExportCommand extends Command
                             }
 
                             $this->logger->info(
-                                'SYSTEM: Using export mode for [{backend}] as the backend did not register metadata for [{item.title}].',
+                                'SYSTEM: Using export mode for [{backend}] as the backend did not register metadata for [{item.id}: {item.title}].',
                                 [
                                     'backend' => $name,
                                     'item' => [
                                         'id' => $entity->id,
                                         'title' => $entity->getName(),
-                                    ],
-                                    'wait_period' => [
-                                        'added_at' => makeDate($addedDate),
-                                        'extra_margin' => $extraMargin,
-                                        'last_sync_at' => makeDate($lastSync),
-                                        'diff' => $lastSync - ($addedDate + $extraMargin),
                                     ],
                                 ]
                             );
@@ -484,6 +479,7 @@ class ExportCommand extends Command
         ]);
 
         foreach ($backends as $backend) {
+            assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             $backend['class']->push(
                 entities: $entities,
                 queue: $this->queue,
@@ -566,6 +562,7 @@ class ExportCommand extends Command
                 ]);
             }
 
+            assert($backend['class'] instanceof ClientInterface, 'Backend class must implement ClientInterface.');
             array_push($requests, ...$backend['class']->export($this->mapper, $this->queue, $after));
 
             if (false === $input->getOption('dry-run')) {
