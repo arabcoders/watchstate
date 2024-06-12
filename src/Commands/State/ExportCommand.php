@@ -33,9 +33,9 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 class ExportCommand extends Command
 {
-    public const ROUTE = 'state:export';
+    public const string ROUTE = 'state:export';
 
-    public const TASK_NAME = 'export';
+    public const string TASK_NAME = 'export';
 
     /**
      * Class Constructor.
@@ -338,18 +338,12 @@ class ExportCommand extends Command
                             }
 
                             $this->logger->info(
-                                'SYSTEM: Using export mode for [{backend}] as the backend did not register metadata for [{item.title}].',
+                                'SYSTEM: Using export mode for [{backend}] as the backend did not register metadata for [{item.id}: {item.title}].',
                                 [
                                     'backend' => $name,
                                     'item' => [
                                         'id' => $entity->id,
                                         'title' => $entity->getName(),
-                                    ],
-                                    'wait_period' => [
-                                        'added_at' => makeDate($addedDate),
-                                        'extra_margin' => $extraMargin,
-                                        'last_sync_at' => makeDate($lastSync),
-                                        'diff' => $lastSync - ($addedDate + $extraMargin),
                                     ],
                                 ]
                             );
