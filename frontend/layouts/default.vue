@@ -25,7 +25,8 @@
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/history" @click.native="showMenu=false">
+          <NuxtLink class="navbar-item" to="/history"
+                    @click.native="showMenu=false; dEvent('history_main_link_clicked',{'clear':true})">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-history"></i></span>
               <span>History</span>
@@ -272,7 +273,8 @@ import 'assets/css/style.css'
 import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
-import Markdown from "~/components/Markdown.vue";
+import Markdown from '~/components/Markdown.vue'
+import {dEvent} from '~/utils/index.js'
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)

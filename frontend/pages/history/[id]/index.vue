@@ -205,8 +205,8 @@
             <div class="column is-12" v-if="data?.title">
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-heading"></i></span>
-                <span class="is-hidden-mobile">Title:</span>
-                {{ data.title }}
+                <span class="is-hidden-mobile">Title:&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('subtitle', data.title)" v-text="data.title"/>
               </div>
             </div>
 
@@ -214,7 +214,7 @@
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-file"></i></span>
                 <span class="is-hidden-mobile">File:&nbsp;</span>
-                <NuxtLink :to="makeSearchLink('path',data.path)" v-text="data.path"/>
+                <NuxtLink :to="makeSearchLink('path', data.path)" v-text="data.path"/>
               </div>
             </div>
 
@@ -358,8 +358,8 @@
             <div class="column is-12" v-if="item?.extra?.title">
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-heading"></i></span>
-                <span class="is-hidden-mobile">Title:</span>
-                {{ item.extra.title }}
+                <span class="is-hidden-mobile">Title:&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('subtitle', item.extra.title)" v-text="item.extra.title"/>
               </div>
             </div>
 
@@ -367,7 +367,7 @@
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-file"></i></span>
                 <span class="is-hidden-mobile">File:&nbsp;</span>
-                <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                <NuxtLink :to="makeSearchLink('path', item.path)" v-text="item.path"/>
               </div>
             </div>
 
