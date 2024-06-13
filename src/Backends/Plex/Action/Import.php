@@ -38,7 +38,7 @@ class Import
 
     private string $action = 'plex.import';
 
-    private RetryableHttpClient $http;
+    protected RetryableHttpClient $http;
 
     public function __construct(iHttp $http, protected iLogger $logger)
     {
@@ -1113,7 +1113,7 @@ class Import
                 }
 
                 if (empty($item['Guid'])) {
-                    $message .= ' Most likely unmatched {item.type}.';
+                    $message .= " Most likely unmatched '{item.type}'.";
                 }
 
                 $this->logger->info($message, [
