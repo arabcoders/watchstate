@@ -16,19 +16,23 @@ use DateInterval;
 use JsonException;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class GetUsersList
 {
-    private int $maxRetry = 3;
-    private string $action = 'plex.getUsersList';
-
     use CommonTrait;
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    private int $maxRetry = 3;
+    private string $action = 'plex.getUsersList';
+    private iHttp $http;
+
+    public function __construct(HttpClientInterface $http, protected LoggerInterface $logger)
     {
+        $this->http = new RetryableHttpClient(client: $http, maxRetries: $this->maxRetry, logger: $this->logger);
     }
 
     /**

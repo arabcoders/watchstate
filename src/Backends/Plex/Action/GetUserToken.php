@@ -12,18 +12,21 @@ use App\Backends\Common\Response;
 use App\Libs\Container;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Component\HttpClient\RetryableHttpClient;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
 final class GetUserToken
 {
-    private int $maxRetry = 3;
-    private string $action = 'plex.getUserToken';
-
     use CommonTrait;
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    private int $maxRetry = 3;
+    private string $action = 'plex.getUserToken';
+    private iHttp $http;
+
+    public function __construct(iHttp $http, protected LoggerInterface $logger)
     {
+        $this->http = new RetryableHttpClient(client: $http, maxRetries: $this->maxRetry, logger: $this->logger);
     }
 
     /**
