@@ -17,6 +17,12 @@
             </button>
           </p>
           <p class="control">
+            <button class="button is-danger" @click="deleteItem(data)" v-tooltip.bottom="'Delete the record'"
+                    :disabled="isDeleting || isLoading" :class="{'is-loading':isDeleting}">
+              <span class="icon"><i class="fas fa-trash"></i></span>
+            </button>
+          </p>
+          <p class="control">
             <button class="button is-info" @click="loadContent(id)" :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
@@ -441,6 +447,7 @@ const isLoading = ref(false)
 const showRawData = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const show_history_page_warning = useStorage('show_history_page_warning', true)
+const isDeleting = ref(false)
 
 const data = ref({
   id: id,
@@ -463,6 +470,9 @@ const loadContent = async (id) => {
 
   if (200 !== response.status) {
     notification('Error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
+    if (404 === response.status) {
+      await navigateTo({name: 'history'})
+    }
     return
   }
 
@@ -472,17 +482,34 @@ const loadContent = async (id) => {
   useHead({title: `History : ${json.full_title ?? json.title ?? id}`})
 }
 
-const getTitle = computed(() => {
-  if (!data.value) {
-    return id
+const deleteItem = async (item) => {
+  if (isDeleting.value) {
+    return
   }
 
-  if (data.value?.via) {
-    return ag(data.value, `metadata.${data.value.via}.extra.title`, data.value.title)
+  if (!confirm(`Are you sure you want to delete '${item?.full_title ?? item.title ?? id}'?`)) {
+    return
   }
 
-  return data.value.title
-})
+  isDeleting.value = true
+
+  try {
+    const response = await request(`/history/${id}`, {method: 'DELETE'})
+
+    if (200 !== response.status) {
+      const json = await response.json()
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    notification('success', 'Success!', `Deleted '${item.full_title ?? item.title ?? id}'.`)
+    await navigateTo({name: 'history'})
+  } catch (e) {
+    notification('error', 'Error', e.message)
+  } finally {
+    isDeleting.value = false
+  }
+};
 
 const toggleWatched = async () => {
   if (!data.value) {
