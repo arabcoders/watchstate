@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\History;
 
 use App\Commands\Database\ListCommand;
+use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Container;
@@ -518,6 +519,24 @@ final class Index
         $r[iState::COLUMN_META_PATH] = ag($item->getMetadata($item->via), iState::COLUMN_META_PATH);
 
         return api_response(HTTP_STATUS::HTTP_OK, $r);
+    }
+
+    #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.item.delete')]
+    public function historyDelete(iRequest $request, array $args = []): iResponse
+    {
+        if (null === ($id = ag($args, 'id'))) {
+            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $this->db->get($entity))) {
+            return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
+        $this->db->remove($item);
+
+        return api_response(HTTP_STATUS::HTTP_OK);
     }
 
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:\d+}/watch[/]', name: 'history.watch')]

@@ -116,6 +116,7 @@ body {
 }
 
 .vue-notification-wrapper {
+    cursor: pointer;
     padding-top: 0.5em;
 }
 
