@@ -35,7 +35,8 @@ final class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [{backend}] payload.', [
+                $this->logger->debug("Processing '{client}: {backend}' payload.", [
+                    'client' => $context->clientName,
                     'backend' => $context->backendName,
                     ...$logContext,
                     'payload' => $item,
@@ -62,7 +63,7 @@ final class Backup extends Import
                             'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
-                            r('Unexpected Content type [{type}] was received.', [
+                            r("Unexpected Content type '{type}' was received.", [
                                 'type' => $type
                             ])
                         ),
@@ -70,11 +71,21 @@ final class Backup extends Import
                     'type' => $type,
                 ];
             } catch (InvalidArgumentException $e) {
-                $this->logger->info($e->getMessage(), [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'body' => $item,
-                ]);
+                $this->logger->info(
+                    "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                    [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                        'body' => $item,
+                    ]
+                );
                 return;
             }
 
@@ -163,7 +174,7 @@ final class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] backup. Error [{error.message} @ {error.file}:{error.line}].',
+                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' backup. '{error.message}' at '{error.file}:{error.line}'.",
                 context: [
                     'backend' => $context->backendName,
                     'client' => $context->clientName,

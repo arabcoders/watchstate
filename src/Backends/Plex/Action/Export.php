@@ -69,31 +69,43 @@ final class Export extends Import
                             'episode' => str_pad((string)ag($item, 'index', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
-                            r('Unexpected Content type [{type}] was received.', [
-                                'type' => $type
-                            ])
+                            r("Unexpected Content type '{type}' was received.", ['type' => $type])
                         ),
                     },
                     'type' => $type,
                 ];
             } catch (InvalidArgumentException $e) {
-                $this->logger->info($e->getMessage(), [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'body' => $item,
-                ]);
+                $this->logger->error(
+                    "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                    [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                        'body' => $item,
+                    ]
+                );
                 return;
             }
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
-                $this->logger->debug('Ignoring [{backend}] [{item.title}]. No Date is set on object.', [
-                    'backend' => $context->backendName,
-                    'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
-                    ...$logContext,
-                    'response' => [
-                        'body' => $item,
-                    ],
-                ]);
+                $this->logger->debug(
+                    message: "Ignoring '{client}: {backend}' {item.type} '{item.title}'. No Date is set on object.",
+                    context: [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
+                        ...$logContext,
+                        'response' => [
+                            'body' => $item,
+                        ],
+                    ]
+                );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
                 return;
@@ -107,7 +119,7 @@ final class Export extends Import
             );
 
             if (!$rItem->hasGuids() && !$rItem->hasRelativeGuid()) {
-                $message = 'Ignoring [{backend}] [{item.title}]. No valid/supported external ids.';
+                $message = "Ignoring '{client}: {backend}' '{item.title}'. No valid/supported external ids.";
 
                 if (null === ($item['Guid'] ?? null)) {
                     $item['Guid'] = [];
@@ -118,10 +130,11 @@ final class Export extends Import
                 }
 
                 if (empty($item['Guid'])) {
-                    $message .= ' Most likely unmatched {item.type}.';
+                    $message .= " Most likely unmatched '{item.type}'.";
                 }
 
                 $this->logger->info($message, [
+                    'client' => $context->clientName,
                     'backend' => $context->backendName,
                     ...$logContext,
                     'context' => [
@@ -136,14 +149,13 @@ final class Export extends Import
             if (false === ag($context->options, Options::IGNORE_DATE, false)) {
                 if (true === ($after instanceof DateTimeInterface) && $rItem->updated >= $after->getTimestamp()) {
                     $this->logger->debug(
-                        'Ignoring [{backend}] [{item.title}]. Backend date is equal or newer than last sync date.',
-                        [
+                        message: "Ignoring '{client}: {backend}' '{item.title}'. Backend date '{backend_date}' is equal or newer than last sync date '{last_sync}'.",
+                        context: [
+                            'client' => $context->backendName,
                             'backend' => $context->backendName,
+                            'last_sync' => makeDate($after),
+                            'backend_date' => makeDate($rItem->updated),
                             ...$logContext,
-                            'comparison' => [
-                                'lastSync' => makeDate($after),
-                                'backend' => makeDate($rItem->updated),
-                            ],
                         ]
                     );
 
@@ -153,13 +165,16 @@ final class Export extends Import
             }
 
             if (null === ($entity = $mapper->get($rItem))) {
-                $this->logger->info(
-                    'Ignoring [{backend}] [{item.title}]. {item.type} Is not imported yet. Possibly because the backend was imported as metadata only.',
-                    [
-                        'backend' => $context->backendName,
-                        ...$logContext,
-                    ]
-                );
+                $message = "Ignoring '{client}: {backend}' '{item.title}'. {item.type} is not imported yet.";
+                if (true === (bool)ag($context->options, Options::IMPORT_METADATA_ONLY)) {
+                    $message .= " The backend is marked as metadata source only.";
+                }
+
+                $this->logger->info(message: $message, context: [
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    ...$logContext,
+                ]);
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_not_found_in_db");
                 return;
             }
@@ -167,14 +182,11 @@ final class Export extends Import
             if ($rItem->watched === $entity->watched) {
                 if (true === (bool)ag($context->options, Options::DEBUG_TRACE)) {
                     $this->logger->debug(
-                        'Ignoring [{backend}] [{item.title}]. {item.type} play state is identical.',
+                        "Ignoring '{client}: {backend}' '{item.title}'. {item.type} play state is identical.",
                         [
+                            'client' => $context->clientName,
                             'backend' => $context->backendName,
                             ...$logContext,
-                            'comparison' => [
-                                'backend' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                'remote' => $rItem->isWatched() ? 'Played' : 'Unplayed',
-                            ],
                         ]
                     );
                 }
@@ -185,14 +197,13 @@ final class Export extends Import
 
             if ($rItem->updated >= $entity->updated && false === ag($context->options, Options::IGNORE_DATE, false)) {
                 $this->logger->debug(
-                    'Ignoring [{backend}] [{item.title}]. Backend date is equal or newer than database date.',
-                    [
+                    message: "Ignoring '{client}: {backend}' '{item.title}'. Backend date '{backend_date}' is equal or newer than local history date '{db_date}'.",
+                    context: [
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
+                        'db_date' => makeDate($entity->updated),
+                        'backend_date' => makeDate($rItem->updated),
                         ...$logContext,
-                        'comparison' => [
-                            'database' => makeDate($entity->updated),
-                            'backend' => makeDate($rItem->updated),
-                        ],
                     ]
                 );
 
@@ -200,22 +211,17 @@ final class Export extends Import
                 return;
             }
 
-            $url = $context->backendUrl->withPath(
-                '/:' . ($entity->isWatched() ? '/scrobble' : '/unscrobble')
-            )->withQuery(
-                http_build_query(
-                    [
-                        'identifier' => 'com.plexapp.plugins.library',
-                        'key' => $item['ratingKey'],
-                    ]
-                )
+            $url = $context->backendUrl->withPath('/:' . ($entity->isWatched() ? '/scrobble' : '/unscrobble'));
+            $url = $url->withQuery(
+                http_build_query(['identifier' => 'com.plexapp.plugins.library', 'key' => $item['ratingKey']])
             );
 
             $logContext['item']['url'] = $url;
 
             $this->logger->debug(
-                'Queuing Request to change [{backend}] [{item.title}] play state to [{play_state}].',
-                [
+                message: "Requesting '{client}: {backend}' to change '{item.title}' play state to '{play_state}'.",
+                context: [
+                    'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
                     ...$logContext,
@@ -226,23 +232,17 @@ final class Export extends Import
                 return;
             }
 
-            $queue->add(
-                $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($context->backendHeaders, [
-                        'user_data' => [
-                            'context' => $logContext + [
-                                    'backend' => $context->backendName,
-                                    'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                                ],
-                        ]
-                    ])
-                )
-            );
+            $queue->add($this->http->request('GET', (string)$url, array_replace_recursive($context->backendHeaders, [
+                'user_data' => [
+                    'context' => $logContext + [
+                            'backend' => $context->backendName,
+                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                        ],
+                ]
+            ])));
         } catch (Throwable $e) {
             $this->logger->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] backup. Error [{error.message} @ {error.file}:{error.line}].',
+                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' export. '{error.message}' at '{error.file}:{error.line}'.",
                 context: [
                     'backend' => $context->backendName,
                     'client' => $context->clientName,
