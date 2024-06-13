@@ -140,7 +140,8 @@
                        @click="(e) => e.target.classList.toggle('is-text-overflow')">
                     <span class="icon"><i class="fas fa-heading"></i></span>
                     <span class="is-hidden-mobile">Title:&nbsp;</span>
-                    {{ item.title }}
+                    <NuxtLink :to="makeSearchLink('subtitle', item.title)"
+                              @click="triggerSearch('subtitle', item.title)" v-text="item.title"/>
                   </div>
                 </div>
                 <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
@@ -148,7 +149,8 @@
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-file"></i></span>
                     <span class="is-hidden-mobile">Path:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                    <NuxtLink :to="makeSearchLink('path', item.path)" @click="triggerSearch('path', item.path)"
+                              v-text="item.path"/>
                   </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
@@ -211,6 +213,7 @@ import Message from '~/components/Message.vue'
 import {formatDuration, makeSearchLink, notification} from '~/utils/index.js'
 
 const route = useRoute()
+const router = useRouter()
 
 useHead({title: 'History'})
 
@@ -273,17 +276,20 @@ const loadContent = async (pageNumber, fromPopState = false) => {
     isLoading.value = true
     items.value = []
 
-    const response = await request(`/history/?${search.toString()}`)
+    const response = await request(`/history?${search.toString()}`)
     const json = await response.json()
     const currentUrl = window.location.pathname + '?' + (new URLSearchParams(window.location.search)).toString()
 
     if (!fromPopState && currentUrl !== newUrl) {
-      console.log(currentUrl, newUrl)
-      window.history.pushState({
+      let history_query = {
+        perpage: perpage.value,
         page: pageNumber,
-        query: query.value,
-        key: searchField.value
-      }, '', newUrl)
+      }
+      if (searchField.value && query.value) {
+        history_query.q = query.value
+        history_query.key = searchField.value
+      }
+      await router.push({path: '/history', title: title, query: history_query})
     }
 
     if ('paging' in json) {
@@ -366,10 +372,46 @@ const getHelp = (key) => {
   return `<span class="icon-text"><span class="icon"><i class="fas fa-info"></i></span><span>${text}</span></span>`
 }
 
+const triggerSearch = async (search_type, search_query) => {
+  searchForm.value = true
+  perpage.value = 50
+  page.value = 1
+  searchField.value = search_type
+  query.value = search_query
+  await loadContent(1);
+}
+
+const stateCallBack = async e => {
+  if (!e.state && !e.detail) {
+    return
+  }
+  const state = e.detail ?? e.state
+
+
+  const route = useRoute()
+  page.value = route.query.page ?? 1
+  perpage.page = route.query.perpage ?? 50
+  if ('clear' in state) {
+    query.value = ''
+    searchField.value = 'title'
+  } else {
+    query.value = route.query.q ?? ''
+    searchField.value = route.query.key ?? 'title'
+  }
+  await loadContent(page.value, true)
+}
+
 onMounted(async () => {
   if (query.value) {
     searchForm.value = true
   }
+  window.addEventListener('popstate', stateCallBack)
+  window.addEventListener('history_main_link_clicked', stateCallBack);
   await loadContent(page.value ?? 1)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('history_main_link_clicked', stateCallBack)
+  window.removeEventListener('popstate', stateCallBack)
 })
 </script>

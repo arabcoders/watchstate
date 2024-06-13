@@ -306,17 +306,29 @@ const stringToRegex = (str) => new RegExp(str.match(/\/(.+)\/.*/)[1], str.match(
  * Make history search link.
  *
  * @param {string} type
- * @param {string} guid
+ * @param {string} query
  *
  * @returns {string}
  */
-const makeSearchLink = (type, guid) => {
+const makeSearchLink = (type, query) => {
     const params = new URLSearchParams();
     params.append('perpage', 50);
     params.append('page', 1);
-    params.append('q', guid);
+    params.append('q', query);
     params.append('key', type);
-    return `/history/?${params.toString()}`
+    return `/history?${params.toString()}`
+}
+
+/**
+ * Dispatch event.
+ *
+ * @param eventName
+ * @param detail
+ * @returns {void}
+ */
+const dEvent = (eventName, detail = {}) => {
+    console.debug('Dispatching event', eventName, detail);
+    window.dispatchEvent(new CustomEvent(eventName, {detail}))
 }
 
 export {
@@ -331,5 +343,6 @@ export {
     copyText,
     stringToRegex,
     makeConsoleCommand,
-    makeSearchLink
+    makeSearchLink,
+    dEvent
 }
