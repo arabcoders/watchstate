@@ -40,7 +40,7 @@
           <p>Are you sure you want to delete the backend <code>{{ type }}: {{ id }}</code> configuration and all its
             records?</p>
 
-          <h5>Deleting backend will do the following:</h5>
+          <h5 class="has-text-dark">This operation will do the following</h5>
 
           <ul>
             <li>Remove records metadata that references the given backend.</li>
