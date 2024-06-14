@@ -1,7 +1,7 @@
 <template>
   <div class="notification" :class="message_class">
     <button class="delete" @click="$emit('close')" v-if="!useToggle && useClose"></button>
-    <div class="is-pulled-right is-unselectable" v-if="useToggle">
+    <div @click="$emit('toggle')" class="is-clickable is-pulled-right is-unselectable" v-if="useToggle">
       <span class="icon">
         <i class="fas" :class="{'fa-arrow-up':toggle,'fa-arrow-down':!toggle}"></i>
       </span>

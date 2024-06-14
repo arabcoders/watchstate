@@ -118,16 +118,7 @@
                 target="_blank" v-text="'Visit this link'"/>
             to learn more.
           </li>
-          <li>
-            Deleting backend is not available via <code>WebUI</code> yet. You can do it via the
-            <NuxtLink :to="makeConsoleCommand('config:delete -n -s backend_name')">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-terminal"></i></span>
-                <span>Console</span>
-              </span>
-            </NuxtLink>
-            page, or using the the following command <code>config:delete -s backend_name</code> in shell.
-          </li>
+          <li>You can delete a backend by visiting the backend page and clicking the delete button.</li>
         </ul>
       </Message>
     </div>
@@ -139,7 +130,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {copyText, makeConsoleCommand, notification} from '~/utils/index.js'
+import {copyText, notification} from '~/utils/index.js'
 import {useStorage} from "@vueuse/core";
 import Message from "~/components/Message.vue";
 

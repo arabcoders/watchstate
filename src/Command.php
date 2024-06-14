@@ -215,7 +215,7 @@ class Command extends BaseCommand
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
 
         if (null === $configFile->get("{$name}.type", null)) {
-            throw new RuntimeException(r('No backend named [{backend}] was found.', ['backend' => $name]));
+            throw new RuntimeException(r("No backend named '{backend}' was found.", ['backend' => $name]));
         }
 
         $default = $configFile->get($name);
