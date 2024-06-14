@@ -7,14 +7,12 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
-use App\Libs\Database\DatabaseInterface as iDB;
-use PDO;
-use Psr\Log\LoggerInterface;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 
 /**
  * Class DeleteCommand
@@ -27,14 +25,6 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 final class DeleteCommand extends Command
 {
     public const string ROUTE = 'config:delete';
-    private PDO $pdo;
-
-    public function __construct(private LoggerInterface $logger, iDB $db)
-    {
-        $this->pdo = $db->getPDO();
-
-        parent::__construct();
-    }
 
     /**
      * Configure the command.
@@ -113,58 +103,40 @@ final class DeleteCommand extends Command
             return self::FAILURE;
         }
 
-        if (!isValidName($name) || strtolower($name) !== $name) {
-            $output->writeln(
-                r(
-                    '<error>ERROR:</error> Invalid [<value>{name}</value>] name was given. Only [<value>a-z, 0-9, _</value>] are allowed.',
-                    [
-                        'name' => $name
-                    ],
-                )
-            );
-            return self::FAILURE;
-        }
-
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
-        $configFile->setLogger($this->logger);
-
-        if (null === $configFile->get("{$name}.type", null)) {
-            $output->writeln(
-                r('<error>ERROR:</error> No backend named [<value>{backend}</value>] was found.', [
-                    'backend' => $name,
-                ])
-            );
+        try {
+            $this->getBackend($name);
+        } catch (RuntimeException $e) {
+            $output->writeln('<error>ERROR: ' . $e->getMessage() . '</error>');
             return self::FAILURE;
         }
 
         $helper = $this->getHelper('question');
 
         if (!$input->getOption('no-interaction')) {
-            $question = new ConfirmationQuestion(
+            $question = new Question(
                 r(
                     <<<HELP
-                    <question>Are you sure you want to remove [<value>{name}</value>] data?</question> {default}
+                    <question>Are you sure you want to remove '<value>{name}</value>' data?</question>
                     ------------------
                     <notice>WARNING:</notice> This command will remove entries from database related to the backend.
-                    Database records will be removed if [<value>{name}</value>] was the only backend referencing them.
+                    Database records will be removed if '<value>{name}</value>' was the only backend referencing them.
                     Otherwise, they will be kept and only reference to the backend will be removed.
                     ------------------
-                    <notice>For more information please read the FAQ.</notice>
+                    <notice>To confirm deletion please write the backend name</notice>
+
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => $name,
-                        'default' => '[<value>Y|N</value>] [<value>Default: No</value>]',
                     ]
-                ),
-                false
+                )
             );
 
             $response = $helper->ask($input, $output, $question);
             $output->writeln('');
 
-            if (false === $response) {
+            if ($name !== $response) {
                 $output->writeln(
-                    r('Backend [<value>{backend}</value>] removal was cancelled.', [
+                    r("Backend '<value>{backend}</value>' deletion was cancelled. Invalid name was given.", [
                         'backend' => $name
                     ])
                 );
@@ -173,56 +145,28 @@ final class DeleteCommand extends Command
         }
 
         $output->writeln(
-            r('Removing [<value>{backend}</value>] database references. This might take a while. Please wait...', [
+            r("Deleting '<value>{backend}</value>'. This will take a while. Please wait...", [
                 'backend' => $name
             ])
         );
 
-        $sql = "UPDATE
-                    state
-                SET
-                    metadata = json_remove(metadata, '$.{$name}'),
-                    extra = json_remove(extra, '$.{$name}')
-                WHERE
-                    json_extract(metadata,'$.{$name}.via') = :name
-        ";
+        $response = APIRequest('DELETE', '/backend/' . $name);
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(['name' => $name]);
-
-        $output->writeln(
-            r(
-                'Removed [<value>{records}</value>] metadata references related to [<value>{backend}</value>].',
-                [
-                    'records' => number_format($stmt->rowCount()),
-                    'backend' => $name,
-                ]
-            )
-        );
-
-        $output->writeln('Checking data integrity, this might take a while. Please wait...');
-
-        $sql = "DELETE FROM
-                    state
-                WHERE id IN (
-                    SELECT id FROM state WHERE length(metadata) < 10
-                )
-        ";
-        $stmt = $this->pdo->query($sql);
-
-        $deleteCount = $stmt->rowCount();
-
-        if ($deleteCount > 1) {
-            $output->writeln(
-                r('Removed [<value>{records}</value>] records that are no longer valid.', [
-                    'records' => number_format($stmt->rowCount()),
-                ])
-            );
+        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                'key' => $name,
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
+            return self::FAILURE;
         }
 
-        $configFile->delete($name)->persist();
-
-        $output->writeln('<info>Config updated.</info>');
+        $message = "<info>Successfully removed '{backend}' data. Deleted '{references}' references and '{records}' records.</info>";
+        $output->writeln(r($message, [
+            'backend' => $name,
+            'references' => ag($response->body, 'deleted.references', 0),
+            'records' => ag($response->body, 'deleted.records', 0),
+        ]));
 
         return self::SUCCESS;
     }

@@ -8,6 +8,11 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
+            <NuxtLink class="button is-danger" v-tooltip.bottom="'Delete Backend'" :to="`/backend/${backend}/delete`">
+              <span class="icon"><i class="fas fa-trash"></i></span>
+            </NuxtLink>
+          </p>
+          <p class="control">
             <NuxtLink class="button is-primary" v-tooltip.bottom="'Edit Backend'" :to="`/backend/${backend}/edit`">
               <span class="icon"><i class="fas fa-edit"></i></span>
             </NuxtLink>
@@ -107,7 +112,7 @@
       </div>
     </div>
     <div class="column is-12">
-      <NuxtLink :to="`/history/?perpage=50&page=1&q=${backend}&key=via`">
+      <NuxtLink :to="`/history/?perpage=50&page=1&q=${backend}.via://${backend}&key=metadata`">
         <span class="icon-text">
           <span class="icon"><i class="fas fa-history"></i></span>
           <span>View all history related to this backend</span>
@@ -115,7 +120,6 @@
       </NuxtLink>
     </div>
   </div>
-
 
   <div class="columns is-multiline" v-if="info">
     <div class="column is-12">
@@ -142,7 +146,13 @@ const bHistory = ref([])
 const info = ref({})
 
 const loadRecentHistory = async () => {
-  const response = await request(`/history/?perpage=6&via=${backend}`)
+  let search = new URLSearchParams()
+  search.append('perpage', 6)
+  search.append('key', 'metadata')
+  search.append('q', `${backend}.via://${backend}`)
+  search.append('sort', `updated:desc`)
+
+  const response = await request(`/history/?${search.toString()}`)
   const json = await response.json()
 
   if (200 !== response.status) {

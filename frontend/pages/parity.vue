@@ -164,6 +164,11 @@
               By clicking the <span class="fa fa-trash"></span> icon you will delete the the reported items from the
               local database. If the items are not fixed by the time <code>import</code> is run, they will re-appear.
             </li>
+            <li>
+              Deleting records works by deleting everything at or below the specified number of backends. For example,
+              if you set the minimum to <code>3</code>, all records that are reported by <code>3</code> or fewer
+              backends will be deleted.
+            </li>
           </ul>
         </Message>
       </div>

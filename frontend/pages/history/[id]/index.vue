@@ -1,9 +1,10 @@
 <template>
   <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix is-unselectable">
+    <div class="column is-12 is-clearfix">
       <span class="title is-4">
-        <NuxtLink to="/history">History</NuxtLink>
-        : {{ headerTitle }}
+        <span class="is-unselectable">
+          <NuxtLink to="/history">History</NuxtLink>
+          : </span>{{ headerTitle }}
       </span>
       <div class="is-pulled-right" v-if="data?.via">
         <div class="field is-grouped">
@@ -30,7 +31,7 @@
         </div>
       </div>
       <div class="subtitle is-5" v-if="data?.via && headerTitle !== data?.title">
-        <span class="icon">
+        <span class="is-unselectable icon">
           <i class="fas fa-tv" :class="{ 'fa-tv': 'episode' === data.type, 'fa-film': 'movie' === data.type }"></i>
         </span>
         {{ data?.title }}
