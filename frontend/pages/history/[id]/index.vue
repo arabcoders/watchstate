@@ -30,11 +30,11 @@
           </p>
         </div>
       </div>
-      <div class="subtitle is-5" v-if="data?.via && headerTitle !== data?.title">
+      <div class="subtitle is-5" v-if="data?.via && data.content_title">
         <span class="is-unselectable icon">
           <i class="fas fa-tv" :class="{ 'fa-tv': 'episode' === data.type, 'fa-film': 'movie' === data.type }"></i>
         </span>
-        {{ data?.title }}
+        {{ data?.content_title }}
       </div>
     </div>
 
@@ -137,8 +137,8 @@
                 <span class="icon"><i class="fas fa-calendar"></i></span>
                 <span>
                   <span class="is-hidden-mobile">Updated:&nbsp;</span>
-                  <span class="has-tooltip" v-tooltip="moment(data.updated).format('YYYY-MM-DD h:mm:ss A')">
-                    {{ moment(data.updated).fromNow() }}
+                  <span class="has-tooltip" v-tooltip="moment.unix(data.updated).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment.unix(data.updated).fromNow() }}
                   </span>
                 </span>
               </span>
@@ -176,7 +176,7 @@
             <div class="column is-12" v-if="data.guids && Object.keys(data.guids).length>0">
               <span class="icon-text is-clickable" v-tooltip="'Globally unique identifier for this item'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>GUIDs:</span>
+                <span>GUIDs:&nbsp;</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.guids">
                 <NuxtLink target="_blank" :to="makeGUIDLink( data.type, source.split('guid_')[1], guid, data)">
@@ -188,7 +188,7 @@
             <div class="column is-12" v-if="data.rguids && Object.keys(data.rguids).length>0">
               <span class="icon-text is-clickable" v-tooltip="'Relative Globally unique identifier for this episode'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>rGUIDs:</span>
+                <span>rGUIDs:&nbsp;</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.rguids">
                 <NuxtLink :to="makeSearchLink('rguid', `${source.split('guid_')[1]}://${guid}`)">
@@ -200,7 +200,7 @@
             <div class="column is-12" v-if="data.parent && Object.keys(data.parent).length>0">
               <span class="icon-text is-clickable" v-tooltip="'Globally unique identifier for the series'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>Series GUIDs:</span>
+                <span>Series GUIDs:&nbsp;</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in data.parent">
                 <NuxtLink target="_blank" :to="makeGUIDLink( 'series', source.split('guid_')[1], guid, data)">
@@ -209,19 +209,19 @@
               </span>
             </div>
 
-            <div class="column is-12" v-if="data?.title">
+            <div class="column is-12" v-if="data?.content_title">
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-heading"></i></span>
-                <span class="is-hidden-mobile">Title:&nbsp;</span>
-                <NuxtLink :to="makeSearchLink('subtitle', data.title)" v-text="data.title"/>
+                <span class="is-hidden-mobile">Subtitle:&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('subtitle', data.content_title)" v-text="data.content_title"/>
               </div>
             </div>
 
-            <div class="column is-12" v-if="data?.path">
+            <div class="column is-12" v-if="data?.content_path">
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-file"></i></span>
                 <span class="is-hidden-mobile">File:&nbsp;</span>
-                <NuxtLink :to="makeSearchLink('path', data.path)" v-text="data.path"/>
+                <NuxtLink :to="makeSearchLink('path', data.content_path)" v-text="data.content_path"/>
               </div>
             </div>
 
@@ -274,8 +274,7 @@
             <div class="column is-6">
               <span class="icon-text">
                 <span class="icon">
-                  <i class="fas fa-eye-slash" v-if="!parseInt(item.watched)"></i>
-                  <i class="fas fa-eye" v-else></i>
+                  <i class="fas fa-eye-slash" :class="parseInt(item.watched) ?'fa-eye-slash' : 'fa-eye'"></i>
                 </span>
                 <span>
                   <span class="is-hidden-mobile">Status:</span>
@@ -300,8 +299,8 @@
                 <span>
                   <span class="is-hidden-mobile">Updated:&nbsp;</span>
                   <span class="has-tooltip"
-                        v-tooltip="moment(ag(data.extra, `${key}.received_at`, data.updated)).format('YYYY-MM-DD h:mm:ss A')">
-                    {{ moment(ag(data.extra, `${key}.received_at`, data.updated)).fromNow() }}
+                        v-tooltip="getMoment(ag(data.extra, `${key}.received_at`, data.updated)).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ getMoment(ag(data.extra, `${key}.received_at`, data.updated)).fromNow() }}
                   </span>
                 </span>
               </span>
@@ -341,7 +340,7 @@
             <div class="column is-12" v-if="item.guids && Object.keys(item.guids).length>0">
               <span class="icon-text is-clickable" v-tooltip="'Globally unique identifier for this item'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>GUIDs:</span>
+                <span>GUIDs:&nbsp;</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in item.guids">
                 <NuxtLink target="_blank" :to="makeGUIDLink( item.type, source.split('guid_')[1], guid, item)">
@@ -353,7 +352,7 @@
             <div class="column is-12" v-if="item.parent && Object.keys(item.parent).length>0">
               <span class="is-clickable icon-text" v-tooltip="'Globally unique identifier for the series'">
                 <span class="icon"><i class="fas fa-link"></i></span>
-                <span>Series GUIDs:</span>
+                <span>Series GUIDs:&nbsp;</span>
               </span>
               <span class="tag mr-1" v-for="(guid,source) in item.parent">
                 <NuxtLink target="_blank" :to="makeGUIDLink( 'series', source.split('guid_')[1], guid, item)">
@@ -365,7 +364,7 @@
             <div class="column is-12" v-if="item?.extra?.title">
               <div class="is-text-overflow">
                 <span class="icon"><i class="fas fa-heading"></i></span>
-                <span class="is-hidden-mobile">Title:&nbsp;</span>
+                <span class="is-hidden-mobile">Subtitle:&nbsp</span>
                 <NuxtLink :to="makeSearchLink('subtitle', item.extra.title)" v-text="item.extra.title"/>
               </div>
             </div>
@@ -394,7 +393,7 @@
         </span>
       </span>
       <div v-if="showRawData" class="mt-2">
-        <pre><code>{{ JSON.stringify(data, null, 2) }}</code></pre>
+        <code class="is-block is-pre-wrap">{{ JSON.stringify(data, null, 2) }}</code>
       </div>
     </div>
 
@@ -435,7 +434,7 @@
 
 <script setup>
 import request from '~/utils/request.js'
-import {ag, formatDuration, makeGUIDLink, makeSearchLink, notification, ucFirst} from '~/utils/index.js'
+import {ag, formatDuration, makeGUIDLink, makeName, makeSearchLink, notification, ucFirst} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from "@vueuse/core";
 import Message from "~/components/Message.vue";
@@ -444,7 +443,7 @@ const id = useRoute().params.id
 
 useHead({title: `History : ${id}`})
 
-const isLoading = ref(false)
+const isLoading = ref(true)
 const showRawData = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const show_history_page_warning = useStorage('show_history_page_warning', true)
@@ -480,7 +479,7 @@ const loadContent = async (id) => {
   data.value = json
   data.value._toggle = true
 
-  useHead({title: `History : ${json.full_title ?? json.title ?? id}`})
+  useHead({title: `History : ${makeName(json) ?? id}`})
 }
 
 const deleteItem = async (item) => {
@@ -488,7 +487,7 @@ const deleteItem = async (item) => {
     return
   }
 
-  if (!confirm(`Are you sure you want to delete '${item?.full_title ?? item.title ?? id}'?`)) {
+  if (!confirm(`Are you sure you want to delete '${makeName(item)}'?`)) {
     return
   }
 
@@ -503,7 +502,7 @@ const deleteItem = async (item) => {
       return
     }
 
-    notification('success', 'Success!', `Deleted '${item.full_title ?? item.title ?? id}'.`)
+    notification('success', 'Success!', `Deleted '${makeName(item)}'.`)
     await navigateTo({name: 'history'})
   } catch (e) {
     notification('error', 'Error', e.message)
@@ -516,7 +515,7 @@ const toggleWatched = async () => {
   if (!data.value) {
     return
   }
-  if (!confirm(`Mark '${data.value.full_title}' as ${data.value.watched ? 'unplayed' : 'played'}?`)) {
+  if (!confirm(`Mark '${makeName(data.value)}' as ${data.value.watched ? 'unplayed' : 'played'}?`)) {
     return
   }
   try {
@@ -532,14 +531,15 @@ const toggleWatched = async () => {
     }
 
     data.value = json
-    notification('success', '', `Marked '${data.value.full_title}' as ${data.value.watched ? 'played' : 'unplayed'}`)
+    notification('success', '', `Marked '${makeName(data.value)}' as ${data.value.watched ? 'played' : 'unplayed'}`)
 
   } catch (e) {
-    notification('error', 'Error', `Failed to update watched status. ${e}`)
+    notification('error', 'Error', `Request error. ${e}`)
   }
 }
 
-const headerTitle = computed(() => `${data.value?.full_title ?? data.value?.title ?? id}`)
+const getMoment = (time) => time.toString().length < 13 ? moment.unix(time) : moment(time)
+const headerTitle = computed(() => isLoading.value ? id : makeName(data.value))
 
 onMounted(async () => loadContent(id))
 </script>

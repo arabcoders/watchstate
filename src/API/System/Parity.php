@@ -123,25 +123,23 @@ final class Parity
             $reportedBackends = array_keys($row[iState::COLUMN_META_DATA] ?? []);
             $entity = Container::get(iState::class)->fromArray($row);
 
-            $response['items'][] = [
-                iState::COLUMN_ID => ag($row, 'id'),
-                iState::COLUMN_WATCHED => $entity->isWatched(),
-                iState::COLUMN_TYPE => ucfirst($entity->type),
-                iState::COLUMN_TITLE => $entity->isEpisode() ? ag(
-                    $entity->getMetadata($entity->via),
-                    iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-                    null
-                ) : null,
-                'full_title' => $entity->getName(),
-                iState::COLUMN_UPDATED => makeDate($entity->updated),
-                'reported_by' => $reportedBackends,
-                'not_reported_by' => array_values(
-                    array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBackends))
-                ),
-                iState::COLUMN_META_PATH => ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH),
-            ];
-        }
+            $item = $entity->getAll();
+            $item[iState::COLUMN_WATCHED] = $entity->isWatched();
+            $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
+            $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
+            $item['content_title'] = $entity->isEpisode() ? ag(
+                $entity->getMetadata($entity->via),
+                iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+                null
+            ) : null;
+            $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
+            $item['reported_by'] = $reportedBackends;
+            $item['not_reported_by'] = array_values(
+                array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBackends))
+            );
 
+            $response['items'][] = $item;
+        }
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }

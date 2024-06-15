@@ -90,13 +90,12 @@ class SearchId
             )
         );
 
-        $builder[iState::COLUMN_TITLE] = ag(
+        $builder['content_title'] = ag(
             $entity->getMetadata($entity->via),
             iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
             $entity->title
         );
-        $builder['full_title'] = $entity->getName();
-        $builder[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
+        $builder['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
             $builder['raw'] = $item;

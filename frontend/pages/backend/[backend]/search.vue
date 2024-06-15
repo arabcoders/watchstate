@@ -108,7 +108,7 @@
           <div class="card" :class="{ 'is-success': item.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow">
-                <NuxtLink :to="item.url" v-text="item.full_title ?? item.title" target="_blank"/>
+                <NuxtLink :to="item.url" v-text="makeName(item)" target="_blank"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon">
@@ -123,16 +123,14 @@
                   <div class="is-text-overflow is-clickable"
                        @click="(e) => e.target.classList.toggle('is-text-overflow')">
                     <span class="icon"><i class="fas fa-heading"></i></span>
-                    <span class="is-hidden-mobile">Title:&nbsp;</span>
                     {{ item.title }}
                   </div>
                 </div>
-                <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
+                <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">Path:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                    <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
                   </div>
                 </div>
               </div>
@@ -141,7 +139,9 @@
               <div class="card-footer-item">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  {{ moment.unix(item.updated).fromNow() }}
+                  <span class="has-tooltip" v-tooltip="moment.unix(item.updated).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment.unix(item.updated).fromNow() }}
+                  </span>
                 </span>
               </div>
               <div class="card-footer-item">
@@ -196,7 +196,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import moment from 'moment'
-import {makeSearchLink, notification} from '~/utils/index.js'
+import {makeName, makeSearchLink, notification} from '~/utils/index.js'
 import Message from "~/components/Message.vue";
 import {useStorage} from "@vueuse/core";
 

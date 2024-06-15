@@ -71,7 +71,7 @@
               <i class="fas fa-eye-slash" v-if="!history.watched"></i>
               <i class="fas fa-eye" v-else></i>
             </span>
-            <NuxtLink :to="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
+            <NuxtLink :to="`/history/${history.id}`" v-text="makeName(history)"/>
           </p>
           <span class="card-header-icon">
             <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
@@ -83,7 +83,9 @@
             <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                {{ moment(history.updated).fromNow() }}
+                <span class="has-tooltip" v-tooltip="moment.unix(history.updated).format('YYYY-MM-DD h:mm:ss A')">
+                  {{ moment.unix(history.updated).fromNow() }}
+                </span>
               </span>
             </div>
             <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
@@ -136,7 +138,7 @@
 <script setup>
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, notification} from "~/utils/index.js";
+import {formatDuration, makeName, notification} from "~/utils/index.js";
 
 const backend = useRoute().params.backend
 
@@ -150,7 +152,7 @@ const loadRecentHistory = async () => {
   search.append('perpage', 6)
   search.append('key', 'metadata')
   search.append('q', `${backend}.via://${backend}`)
-  search.append('sort', `updated:desc`)
+  search.append('sort', `created_at:desc`)
 
   const response = await request(`/history/?${search.toString()}`)
   const json = await response.json()

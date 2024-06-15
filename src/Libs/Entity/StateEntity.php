@@ -25,6 +25,12 @@ final class StateEntity implements iState
      * @var array $data Holds the original entity data.
      */
     private array $data = [];
+
+    /**
+     * @var array $context Holds the context data for the entity.
+     */
+    private array $context = [];
+
     /**
      * @var bool $tainted Flag indicating if the data is tainted based on its event type.
      */
@@ -92,6 +98,10 @@ final class StateEntity implements iState
      * @var array $extra holds the extra data from various backends.
      */
     public array $extra = [];
+
+    public int $created_at = 0;
+
+    public int $updated_at = 0;
 
     /**
      * Constructor for the StateEntity class
@@ -220,6 +230,8 @@ final class StateEntity implements iState
             iState::COLUMN_GUIDS => $this->guids,
             iState::COLUMN_META_DATA => $this->metadata,
             iState::COLUMN_EXTRA => $this->extra,
+            iState::COLUMN_CREATED_AT => $this->created_at,
+            iState::COLUMN_UPDATED_AT => $this->updated_at,
         ];
     }
 
@@ -614,6 +626,27 @@ final class StateEntity implements iState
     }
 
     /**
+     * @inheritdoc
+     */
+    public function setContext(string $key, mixed $value): iState
+    {
+        $this->context = ag_set($this->context, $key, $value);
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getContext(string|null $key = null, mixed $default = null): mixed
+    {
+        if (null === $key) {
+            return $default ?? $this->context;
+        }
+
+        return ag($this->context, $key, $default);
+    }
+
+    /**
      * Checks if the value of a given key in the entity object is equal to the corresponding value in the current object.
      * Some keys are special and require special logic to compare. For example, the updated and watched keys are special
      * because they are tied together.
@@ -710,5 +743,4 @@ final class StateEntity implements iState
 
         return $difference;
     }
-
 }

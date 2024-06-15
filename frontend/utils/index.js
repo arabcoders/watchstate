@@ -331,6 +331,34 @@ const dEvent = (eventName, detail = {}) => {
     window.dispatchEvent(new CustomEvent(eventName, {detail}))
 }
 
+/**
+ * Make name
+ *
+ * @param item {Object}
+ * @param asMovie {boolean}
+ *
+ * @returns {string|null} The name of the item.
+ */
+const makeName = (item, asMovie = false) => {
+    if (!item) {
+        return null;
+    }
+    const year = ag(item, 'year', '0000');
+    const title = ag(item, 'title', '??');
+    const type = ag(item, 'type', 'movie');
+
+    if (['show', 'movie'].includes(type) || asMovie) {
+        return r('{title} ({year})', {title, year})
+    }
+
+    return r('{title} ({year}) - {season}x{episode}', {
+        title,
+        year,
+        season: ag(item, 'season', 0).toString().padStart(2, '0'),
+        episode: ag(item, 'episode', 0).toString().padStart(3, '0'),
+    })
+}
+
 export {
     ag_set,
     ag,
@@ -344,5 +372,6 @@ export {
     stringToRegex,
     makeConsoleCommand,
     makeSearchLink,
-    dEvent
+    dEvent,
+    makeName,
 }

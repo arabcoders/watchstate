@@ -4,23 +4,22 @@ declare(strict_types=1);
 
 namespace App\Commands\Database;
 
+use App\API\History\Index;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
+use App\Libs\HTTP_STATUS;
 use App\Libs\Mappers\Import\DirectMapper;
-use PDO;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class ListCommand
@@ -33,47 +32,14 @@ final class ListCommand extends Command
     public const string ROUTE = 'db:list';
 
     /**
-     * @var array The array containing the names of the columns that can be modified for viewing purposes.
-     */
-    public const array COLUMNS_CHANGEABLE = [
-        iState::COLUMN_WATCHED,
-        iState::COLUMN_VIA,
-        iState::COLUMN_TITLE,
-        iState::COLUMN_YEAR,
-        iState::COLUMN_SEASON,
-        iState::COLUMN_EPISODE,
-        iState::COLUMN_UPDATED,
-    ];
-
-    /**
-     * @var array The array containing the names of the columns that the list can be sorted by.
-     */
-    public const array COLUMNS_SORTABLE = [
-        iState::COLUMN_ID,
-        iState::COLUMN_TYPE,
-        iState::COLUMN_UPDATED,
-        iState::COLUMN_WATCHED,
-        iState::COLUMN_VIA,
-        iState::COLUMN_TITLE,
-        iState::COLUMN_YEAR,
-        iState::COLUMN_SEASON,
-        iState::COLUMN_EPISODE,
-    ];
-
-    private PDO $pdo;
-
-    /**
      * Class constructor.
      *
-     * @param iDB $db The database object.
      * @param DirectMapper $mapper The direct mapper object.
      *
      * @return void
      */
-    public function __construct(private iDB $db, private DirectMapper $mapper)
+    public function __construct(private DirectMapper $mapper)
     {
-        $this->pdo = $this->db->getPDO();
-
         parent::__construct();
     }
 
@@ -106,6 +72,8 @@ final class ListCommand extends Command
                 'Limit results to this specified type can be [movie or episode].'
             )
             ->addOption('title', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified title.')
+            ->addOption('subtitle', null, InputOption::VALUE_REQUIRED, 'Limit results to this specified content title.')
+            ->addOption('path', null, InputOption::VALUE_REQUIRED, 'Show results that contains this file path.')
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Select season number.')
             ->addOption('episode', null, InputOption::VALUE_REQUIRED, 'Select episode number.')
             ->addOption('year', null, InputOption::VALUE_REQUIRED, 'Select year.')
@@ -113,14 +81,8 @@ final class ListCommand extends Command
             ->addOption(
                 'sort',
                 null,
-                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
-                'Set sort by columns. [Example: <flag>--sort</flag> <value>season:asc</value>].',
-            )
-            ->addOption(
-                'show-as',
-                null,
                 InputOption::VALUE_REQUIRED,
-                'Switch the default metadata display to the chosen backend instead of latest metadata.'
+                'Set sort by columns. [Example: <flag>--sort</flag> <value>season:asc</value>].',
             )
             ->addOption(
                 'guid',
@@ -147,12 +109,6 @@ final class ListCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Search in (<notice>extra</notice>) info by backends JSON field. Expects [<flag>--key</flag>, <flag>--value</flag>] flags.'
-            )
-            ->addOption(
-                'dump-query',
-                null,
-                InputOption::VALUE_NONE,
-                'Dump the generated query and exit.'
             )
             ->addOption(
                 'exact',
@@ -228,37 +184,23 @@ final class ListCommand extends Command
     {
         $limit = (int)$input->getOption('limit');
 
-        if (null !== ($changeState = $input->getOption('mark-as'))) {
-            $limit = PHP_INT_MAX;
-        }
-
-        $es = fn(string $val) => $this->db->identifier($val);
-
         $params = [
-            'limit' => $limit <= 0 ? 20 : $limit,
+            'perpage' => $limit <= 0 ? 20 : $limit,
         ];
 
-        $sql = $where = [];
-
-        $sql[] = sprintf('SELECT * FROM %s', $es('state'));
-
         if ($input->getOption('id')) {
-            $where[] = $es(iState::COLUMN_ID) . ' = :id';
             $params['id'] = $input->getOption('id');
         }
 
         if ($input->getOption('via')) {
-            $where[] = $es(iState::COLUMN_VIA) . ' = :via';
             $params['via'] = $input->getOption('via');
         }
 
         if ($input->getOption('year')) {
-            $where[] = $es(iState::COLUMN_YEAR) . ' = :year';
             $params['year'] = $input->getOption('year');
         }
 
         if ($input->getOption('type')) {
-            $where[] = $es(iState::COLUMN_TYPE) . ' = :type';
             $params['type'] = match ($input->getOption('type')) {
                 iState::TYPE_MOVIE => iState::TYPE_MOVIE,
                 default => iState::TYPE_EPISODE,
@@ -266,17 +208,18 @@ final class ListCommand extends Command
         }
 
         if ($input->getOption('title')) {
-            $where[] = $es(iState::COLUMN_TITLE) . ' LIKE "%" || :title || "%"';
             $params['title'] = $input->getOption('title');
         }
 
+        if ($input->getOption('subtitle')) {
+            $params['subtitle'] = $input->getOption('subtitle');
+        }
+
         if (null !== $input->getOption('season')) {
-            $where[] = $es(iState::COLUMN_SEASON) . ' = :season';
             $params['season'] = $input->getOption('season');
         }
 
         if (null !== $input->getOption('episode')) {
-            $where[] = $es(iState::COLUMN_EPISODE) . ' = :episode';
             $params['episode'] = $input->getOption('episode');
         }
 
@@ -291,7 +234,6 @@ final class ListCommand extends Command
                 return self::INVALID;
             }
 
-            $where[] = "json_extract(" . iState::COLUMN_PARENT . ",'$.{$parent}') = :parent";
             $params['parent'] = array_values($d->getAll())[0];
         }
 
@@ -306,7 +248,6 @@ final class ListCommand extends Command
                 return self::INVALID;
             }
 
-            $where[] = "json_extract(" . iState::COLUMN_GUIDS . ",'$.{$guid}') = :guid";
             $params['guid'] = array_values($d->getAll())[0];
         }
 
@@ -319,13 +260,10 @@ final class ListCommand extends Command
                 );
             }
 
-            if ($input->getOption('exact')) {
-                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') = :jf_metadata_value ";
-            } else {
-                $where[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$sField}') LIKE \"%\" || :jf_metadata_value || \"%\"";
-            }
-
-            $params['jf_metadata_value'] = $sValue;
+            $params['exact'] = (int)$input->getOption('exact');
+            $params[iState::COLUMN_META_DATA] = 1;
+            $params['key'] = $sField;
+            $params['value'] = $sValue;
         }
 
         if ($input->getOption('extra')) {
@@ -337,143 +275,54 @@ final class ListCommand extends Command
                 );
             }
 
-            if ($input->getOption('exact')) {
-                $where[] = "json_extract(" . iState::COLUMN_EXTRA . ",'$.{$sField}') = :jf_extra_value";
-            } else {
-                $where[] = "json_extract(" . iState::COLUMN_EXTRA . ",'$.{$sField}') LIKE \"%\" || :jf_extra_value || \"%\"";
-            }
-
-            $params['jf_extra_value'] = $sValue;
+            $params['exact'] = (int)$input->getOption('exact');
+            $params[iState::COLUMN_EXTRA] = 1;
+            $params['key'] = $sField;
+            $params['value'] = $sValue;
         }
 
-        if (count($where) >= 1) {
-            $sql[] = 'WHERE ' . implode(' AND ', $where);
-        }
-
-        $sorts = [];
-
-        foreach ($input->getOption('sort') as $sort) {
+        if (null !== ($sort = $input->getOption('sort'))) {
             if (1 !== preg_match('/(?P<field>\w+)(:(?P<dir>\w+))?/', $sort, $matches)) {
-                continue;
+                $output->writeln(
+                    '<error>ERROR:</error> Invalid value for [<flag>--sort</flag>] expected value format is [<value>field:dir</value>].'
+                );
+                return self::INVALID;
             }
 
-            if (null === ($matches['field'] ?? null) || false === in_array($matches['field'], self::COLUMNS_SORTABLE)) {
-                continue;
-            }
-
-            $sorts[] = sprintf(
-                '%s %s',
-                $es($matches['field']),
-                match (strtolower($matches['dir'] ?? 'desc')) {
-                    default => 'DESC',
-                    'asc' => 'ASC',
-                }
-            );
+            $params['sort'] = r('{field}:{dir}', $matches);
         }
 
-        if (count($sorts) < 1) {
-            $sorts[] = sprintf('%s DESC', $es('updated'));
-        }
+        $response = APIRequest('GET', '/history', [
+            'query' => $params,
+        ]);
 
-        $sql[] = 'ORDER BY ' . implode(', ', $sorts) . ' LIMIT :limit';
-        $sql = implode(' ', array_map('trim', $sql));
-
-        if ($input->getOption('dump-query')) {
-            $arr = [
-                'query' => $sql,
-                'parameters' => $params,
-            ];
-
-            if ('table' === $input->getOption('output')) {
-                $arr = [$arr];
-
-                $arr[0]['parameters'] = arrayToString($params);
-
-                $arr[1] = [
-                    'query' => $this->db->getRawSQLString($sql, $params),
-                    'parameters' => 'raw sql query',
-                ];
-            } else {
-                $arr['raw'] = $this->db->getRawSQLString($sql, $params);
-            }
-
-            $this->displayContent($arr, $output, $input->getOption('output'));
-            return self::SUCCESS;
-        }
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-
-        $rows = $stmt->fetchAll();
-
-        $rowCount = count($rows);
-
-        if (0 === $rowCount) {
-            $arr = [
-                'Error' => 'No Results.',
-                'Filters' => $params
-            ];
-
-            if (true === ($hasFilters = count($arr['Filters']) > 1)) {
-                $arr['Error'] .= ' Probably invalid filters values were used.';
-            }
-
-            if ($hasFilters && 'table' !== $input->getOption('output')) {
-                array_shift($arr['Filters']);
-                if ('json' === $input->getOption('output')) {
-                    $output->writeln(
-                        json_encode($arr, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-                    );
-                } elseif ('yaml' === $input->getOption('output')) {
-                    $output->writeln(Yaml::dump($arr, 8, 2));
-                }
-            } else {
-                $output->writeln('<error>' . $arr['Error'] . '</error>');
-            }
-
+        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
             return self::FAILURE;
         }
 
-        foreach ($rows as &$row) {
-            foreach (iState::ENTITY_ARRAY_KEYS as $key) {
-                if (null === ($row[$key] ?? null)) {
-                    continue;
-                }
-                $row[$key] = json_decode($row[$key], true);
-            }
+        $rows = ag($response->body, 'history', []);
 
-            if (null !== ($via = $input->getOption('show-as'))) {
-                $path = $row[iState::COLUMN_META_DATA][$via] ?? [];
-
-                foreach (self::COLUMNS_CHANGEABLE as $column) {
-                    if (null === ($path[$column] ?? null)) {
-                        continue;
-                    }
-
-                    $row[$column] = 'int' === get_debug_type($row[$column]) ? (int)$path[$column] : $path[$column];
-                }
-
-                if (null !== ($dateFromBackend = $path[iState::COLUMN_META_DATA_PLAYED_AT] ?? $path[iState::COLUMN_META_DATA_ADDED_AT] ?? null)) {
-                    $row[iState::COLUMN_UPDATED] = $dateFromBackend;
-                }
-            }
-
-            $row[iState::COLUMN_WATCHED] = (bool)$row[iState::COLUMN_WATCHED];
-            $row[iState::COLUMN_UPDATED] = makeDate($row[iState::COLUMN_UPDATED]);
+        if (empty($rows)) {
+            $output->writeln('<info>No results found.</info>');
+            return self::SUCCESS;
         }
-
-        unset($row);
 
         if ('table' === $input->getOption('output')) {
             foreach ($rows as &$row) {
-                $row[iState::COLUMN_UPDATED] = $row[iState::COLUMN_UPDATED]->getTimestamp();
+                $row[iState::COLUMN_UPDATED] = makeDate($row[iState::COLUMN_UPDATED])->getTimestamp();
+                $row[iState::COLUMN_UPDATED_AT] = makeDate($row[iState::COLUMN_UPDATED_AT])->getTimestamp();
+                $row[iState::COLUMN_CREATED_AT] = makeDate($row[iState::COLUMN_CREATED_AT])->getTimestamp();
                 $row[iState::COLUMN_WATCHED] = (int)$row[iState::COLUMN_WATCHED];
                 $entity = Container::get(iState::class)->fromArray($row);
 
                 $row = [
                     'id' => $entity->id,
                     'type' => ucfirst($entity->type),
-                    'title' => $entity->getName(),
+                    'title' => mb_substr($entity->getName(), 0, 59),
                     'via' => $entity->via ?? '??',
                     'date' => makeDate($entity->updated)->format('Y-m-d H:i:s T'),
                     'played' => $entity->isWatched() ? 'Yes' : 'No',
@@ -486,8 +335,9 @@ final class ListCommand extends Command
 
         $this->displayContent($rows, $output, $input->getOption('output'));
 
-        if (null !== $changeState && count($rows) >= 1) {
+        if (null !== ($changeState = $input->getOption('mark-as')) && count($rows) >= 1) {
             $changeState = strtolower($changeState);
+
             if (!$input->getOption('no-interaction')) {
                 $text = r(
                     '<question>Are you sure you want to mark [<notice>{total}</notice>] items as [<notice>{state}</notice>]</question> ? [<value>Y|N</value>] [<value>Default: No</value>]',
@@ -591,7 +441,7 @@ final class ListCommand extends Command
 
             $suggest = [];
 
-            foreach (self::COLUMNS_SORTABLE as $name) {
+            foreach (Index::COLUMNS_SORTABLE as $name) {
                 foreach ([$name . ':desc', $name . ':asc'] as $subName) {
                     if (empty($currentValue) || true === str_starts_with($subName, $currentValue)) {
                         $suggest[] = $subName;

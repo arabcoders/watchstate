@@ -76,7 +76,7 @@
           <div class="card" :class="{ 'is-success': item.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow pr-1">
-                <NuxtLink :to="'/history/'+item.id" v-text="item.full_title ?? item.title"/>
+                <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon">
@@ -87,54 +87,46 @@
             </header>
             <div class="card-content">
               <div class="columns is-multiline is-mobile">
-                <div class="column is-12 " v-if="item?.title">
+                <div class="column is-12 " v-if="item?.content_title">
                   <div class="is-text-overflow is-clickable"
                        @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                    <span class="icon"><i class="fas fa-heading"></i></span>
-                    <span class="is-hidden-mobile">Title:&nbsp;</span>
-                    {{ item.title }}
+                    <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                    <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
                   </div>
                 </div>
-                <div class="column is-12 is-clickable " v-if="item?.path"
+                <div class="column is-12 is-clickable " v-if="item?.content_path"
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
                   <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">File:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                    <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                    <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
                   </div>
                 </div>
                 <div class="column is-12">
-                  <span class="icon"><i class="fas fa-check"></i></span>
+                  <span class="icon"><i class="fas fa-check"></i>&nbsp;</span>
                   <span v-for="backend in item.reported_by">
-                    <NuxtLink :to="'/backend/'+backend" v-text="backend"
-                              class="tag"/>
-                    &nbsp;
+                    <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
                   </span>
                 </div>
                 <div class="column is-12">
-                  <span class="icon"><i class="fas fa-times"></i></span>
+                  <span class="icon"><i class="fas fa-times"></i>&nbsp;</span>
                   <span v-for="backend in item.not_reported_by">
-                    <NuxtLink :to="'/backend/'+backend" v-text="backend"
-                              class="tag"/>
-                    &nbsp;
+                    <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
                   </span>
                 </div>
               </div>
             </div>
             <div class="card-footer">
               <div class="card-footer-item">
-                <span class="icon-text">
-                  <span class="icon">
-                    <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"></i>
-                  </span>
-                  <span class="has-text-success" v-if="item.watched">Played</span>
-                  <span class="has-text-danger" v-else>Unplayed</span>
+                <span class="icon">
+                  <i class="fas" :class="{'fa-eye':item.watched,'fa-eye-slash':!item.watched}"></i>&nbsp;
                 </span>
+                <span class="has-text-success" v-if="item.watched">Played</span>
+                <span class="has-text-danger" v-else>Unplayed</span>
               </div>
               <div class="card-footer-item">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-calendar"></i></span>
-                  <span>{{ moment(item.updated).fromNow() }}</span>
+                <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                <span class="has-tooltip" v-tooltip="moment.unix(item.updated).format('YYYY-MM-DD h:mm:ss A')">
+                  {{ moment.unix(item.updated).fromNow() }}
                 </span>
               </div>
             </div>
@@ -179,7 +171,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {makeSearchLink, notification} from '~/utils/index.js'
+import {makeName, makeSearchLink, notification} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 
