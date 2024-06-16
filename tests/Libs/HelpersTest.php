@@ -319,6 +319,17 @@ class HelpersTest extends TestCase
 
     public function test_api_response(): void
     {
+        Config::append([
+            'api' => [
+                'response' => [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                        'X-Application-Version' => fn() => getAppVersion(),
+                        'Access-Control-Allow-Origin' => '*',
+                    ],
+                ],
+            ]
+        ]);
         $data = ['foo' => 'bar'];
         $response = api_response(HTTP_STATUS::HTTP_OK, $data);
         $this->assertSame(HTTP_STATUS::HTTP_OK->value, $response->getStatusCode());
@@ -329,6 +340,18 @@ class HelpersTest extends TestCase
 
     public function test_error_response(): void
     {
+        Config::append([
+            'api' => [
+                'response' => [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                        'X-Application-Version' => fn() => getAppVersion(),
+                        'Access-Control-Allow-Origin' => '*',
+                    ],
+                ],
+            ]
+        ]);
+
         $data = ['error' => ['code' => HTTP_STATUS::HTTP_BAD_REQUEST->value, 'message' => 'error message']];
         $response = api_error('error message', HTTP_STATUS::HTTP_BAD_REQUEST);
         $this->assertSame(HTTP_STATUS::HTTP_BAD_REQUEST->value, $response->getStatusCode());

@@ -404,7 +404,7 @@ if (!function_exists('api_response')) {
         array $headers = [],
         string|null $reason = null
     ): iResponse {
-        return (new Response(
+        $response = (new Response(
             status: $status->value,
             headers: $headers,
             body: null !== $body ? json_encode(
@@ -412,7 +412,16 @@ if (!function_exists('api_response')) {
                 JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
             ) : null,
             reason: $reason,
-        ))->withHeader('Content-Type', 'application/json')->withHeader('X-Application-Version', getAppVersion());
+        ));
+
+        foreach (Config::get('api.response.headers', []) as $key => $val) {
+            if ($response->hasHeader($key)) {
+                continue;
+            }
+            $response = $response->withHeader($key, getValue($val));
+        }
+
+        return $response;
     }
 }
 
