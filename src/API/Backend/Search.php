@@ -48,7 +48,11 @@ final class Search
             if (null !== $id) {
                 $data = $backend->searchId($id, [Options::RAW_RESPONSE => $raw]);
                 if (!empty($data)) {
-                    $response[] = $this->formatEntity($data);
+                    $item = $this->formatEntity($data);
+                    if (true === $raw) {
+                        $item[Options::RAW_RESPONSE] = ag($data, Options::RAW_RESPONSE, []);
+                    }
+                    $response[] = $item;
                 }
             } else {
                 $data = $backend->search(
@@ -56,8 +60,12 @@ final class Search
                     limit: (int)$params->get('limit', 25),
                     opts: [Options::RAW_RESPONSE => $raw]
                 );
-                foreach ($data as $item) {
-                    $response[] = $this->formatEntity($item);
+                foreach ($data as $entity) {
+                    $item = $this->formatEntity($entity);
+                    if (true === $raw) {
+                        $item[Options::RAW_RESPONSE] = ag($entity, Options::RAW_RESPONSE, []);
+                    }
+                    $response[] = $item;
                 }
             }
         } catch (Throwable $e) {

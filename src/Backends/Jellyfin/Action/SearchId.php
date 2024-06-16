@@ -10,7 +10,6 @@ use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
@@ -81,24 +80,8 @@ class SearchId
         }
 
         $builder = $entity->getAll();
-        $builder['url'] = (string)$this->getWebUrl(
-            $context,
-            $entity->type,
-            (int)ag(
-                $entity->getMetadata($entity->via),
-                iState::COLUMN_ID
-            )
-        );
-
-        $builder['content_title'] = ag(
-            $entity->getMetadata($entity->via),
-            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-            $entity->title
-        );
-        $builder['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
-
         if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-            $builder['raw'] = $item;
+            $builder[Options::RAW_RESPONSE] = $item;
         }
 
         return new Response(status: true, response: $builder);
