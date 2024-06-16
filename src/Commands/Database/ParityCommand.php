@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Input\InputInterface;
@@ -193,12 +194,17 @@ final class ParityCommand extends Command
 
         if ('table' === $input->getOption('output')) {
             foreach ($rows as &$row) {
-                $played = ag($row, iState::COLUMN_WATCHED) ? '✓' : '✕';
-                $row['Reported by'] = join(', ', ag($row, 'reported_by', []));
-                $row['Not reported by'] = join(', ', ag($row, 'not_reported_by', []));
-                $row[iState::COLUMN_TITLE] = $played . ' ' . $row['full_title'];
-                unset($row[iState::COLUMN_WATCHED], $row['full_title'], $row['reported_by'], $row['not_reported_by']);
-                $row[iState::COLUMN_UPDATED] = makeDate($row[iState::COLUMN_UPDATED])->format('Y-m-d');
+                $row[iState::COLUMN_WATCHED] = (int)$row[iState::COLUMN_WATCHED];
+                $entity = Container::get(iState::class)->fromArray($row);
+                $played = $entity->isWatched() ? '✓' : '✕';
+                $item = [
+                    iState::COLUMN_ID => $entity->id,
+                    iState::COLUMN_TITLE => $played . ' ' . $entity->getName(),
+                    istate::COLUMN_UPDATED => makeDate($row[iState::COLUMN_UPDATED])->format('Y-m-d'),
+                    'Reported by' => join(', ', ag($row, 'reported_by', [])),
+                    'Not reported by' => join(', ', ag($row, 'not_reported_by', [])),
+                ];
+                $row = $item;
             }
         }
 

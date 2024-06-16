@@ -42,15 +42,23 @@ final class Search
 
         $raw = $params->get('raw', false) || $params->get(Options::RAW_RESPONSE, false);
 
+        $response = [];
+
         try {
             if (null !== $id) {
                 $data = $backend->searchId($id, [Options::RAW_RESPONSE => $raw]);
+                if (!empty($data)) {
+                    $response[] = $this->formatEntity($data);
+                }
             } else {
                 $data = $backend->search(
                     query: $query,
                     limit: (int)$params->get('limit', 25),
                     opts: [Options::RAW_RESPONSE => $raw]
                 );
+                foreach ($data as $item) {
+                    $response[] = $this->formatEntity($item);
+                }
             }
         } catch (Throwable $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_INTERNAL_SERVER_ERROR);
@@ -61,8 +69,6 @@ final class Search
                 'query' => $id ?? $query
             ]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
-
-        $response = $id ? [$data] : array_values($data);
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }

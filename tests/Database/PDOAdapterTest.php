@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
 declare(strict_types=1);
 
@@ -16,6 +17,7 @@ use Error;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
+use Random\RandomException;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
@@ -63,6 +65,9 @@ class PDOAdapterTest extends TestCase
         $this->assertSame(1, $item->id, 'When inserting new item, id is set to 1 when db is empty.');
     }
 
+    /**
+     * @throws RandomException
+     */
     public function test_get_conditions(): void
     {
         $test = $this->testEpisode;
@@ -153,9 +158,12 @@ class PDOAdapterTest extends TestCase
         $updatedItem = $this->db->update($item);
 
         $this->assertSame($item, $updatedItem, 'When updating item, same object is returned.');
+
+        $r = $this->db->get($item)->getAll();
+        $updatedItem->updated_at = $r[StateInterface::COLUMN_UPDATED_AT];
         $this->assertSame(
             $updatedItem->getAll(),
-            $this->db->get($item)->getAll(),
+            $r,
             'When updating item, getAll should return same values as the recorded item.'
         );
     }

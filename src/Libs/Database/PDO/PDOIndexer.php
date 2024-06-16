@@ -21,7 +21,7 @@ final class PDOIndexer
     /**
      * @var array<string> An array of column names to be ignored in the index.
      */
-    private const INDEX_IGNORE_ON = [
+    private const array INDEX_IGNORE_ON = [
         iState::COLUMN_ID,
         iState::COLUMN_PARENT,
         iState::COLUMN_GUIDS,
@@ -31,7 +31,7 @@ final class PDOIndexer
     /**
      * @var array<string> Extra indexes for backend sub columns.
      */
-    private const BACKEND_INDEXES = [
+    private const array BACKEND_INDEXES = [
         iState::COLUMN_ID,
         iState::COLUMN_META_SHOW,
         iState::COLUMN_META_LIBRARY,

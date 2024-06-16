@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\API\History;
 
-use App\Commands\Database\ListCommand;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
@@ -22,6 +21,23 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 
 final class Index
 {
+    /**
+     * @var array The array containing the names of the columns that the list can be sorted by.
+     */
+    public const array COLUMNS_SORTABLE = [
+        iState::COLUMN_ID,
+        iState::COLUMN_TYPE,
+        iState::COLUMN_UPDATED,
+        iState::COLUMN_WATCHED,
+        iState::COLUMN_VIA,
+        iState::COLUMN_TITLE,
+        iState::COLUMN_YEAR,
+        iState::COLUMN_SEASON,
+        iState::COLUMN_EPISODE,
+        iState::COLUMN_CREATED_AT,
+        iState::COLUMN_UPDATED_AT,
+    ];
+
     use APITraits;
 
     public const string URL = '%{api.prefix}/history';
@@ -279,7 +295,7 @@ final class Index
 
             if (null === ($matches['field'] ?? null) || false === in_array(
                     $matches['field'],
-                    ListCommand::COLUMNS_SORTABLE
+                    self::COLUMNS_SORTABLE
                 )) {
                 continue;
             }
@@ -295,7 +311,7 @@ final class Index
         }
 
         if (count($sorts) < 1) {
-            $sorts[] = sprintf('%s DESC', $es('updated'));
+            $sorts[] = sprintf('%s DESC', $es(iState::COLUMN_UPDATED_AT));
         }
 
         $params['_start'] = $start;
@@ -419,47 +435,15 @@ final class Index
                 ],
                 [
                     'key' => 'subtitle',
-                    'display' => 'Content title',
-                    'description' => 'Search using content title. Searching this field will be slow.',
+                    'display' => 'Subtitle',
+                    'description' => 'Search using subtitle. Searching this field will be slow.',
                     'type' => 'string',
                 ],
             ],
         ];
 
         while ($row = $stmt->fetch()) {
-            $entity = Container::get(iState::class)->fromArray($row);
-            $item = $entity->getAll();
-
-            $item[iState::COLUMN_WATCHED] = $entity->isWatched();
-            $item[iState::COLUMN_UPDATED] = makeDate($entity->updated);
-
-            if (!$data->get('metadata')) {
-                unset($item[iState::COLUMN_META_DATA]);
-            }
-
-            if (!$data->get('extra')) {
-                unset($item[iState::COLUMN_EXTRA]);
-            }
-
-            $item['full_title'] = $entity->getName();
-            $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
-            $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
-            $item[iState::COLUMN_TITLE] = $entity->isEpisode() ? ag(
-                $entity->getMetadata($entity->via),
-                iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-                null
-            ) : null;
-            $item[iState::COLUMN_META_PATH] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
-
-            $item['rguids'] = [];
-
-            if ($entity->isEpisode()) {
-                foreach ($entity->getRelativeGuids() as $rKey => $rGuid) {
-                    $item['rguids'][$rKey] = $rGuid;
-                }
-            }
-
-            $response['history'][] = $item;
+            $response['history'][] = $this->formatEntity($row);
         }
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
@@ -478,47 +462,7 @@ final class Index
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $r = $item->getAll();
-        $r['full_title'] = $item->getName();
-        $r[iState::COLUMN_META_DATA_PROGRESS] = $item->hasPlayProgress() ? $item->getPlayProgress() : null;
-        $r[iState::COLUMN_WATCHED] = $item->isWatched();
-        $r[iState::COLUMN_UPDATED] = makeDate($item->updated);
-        $r[iState::COLUMN_EXTRA_EVENT] = ag($item->getExtra($item->via), iState::COLUMN_EXTRA_EVENT, null);
-        $r['rguids'] = [];
-
-        if ($item->isEpisode()) {
-            foreach ($item->getRelativeGuids() as $rKey => $rGuid) {
-                $r['rguids'][$rKey] = $rGuid;
-            }
-        }
-
-        $reportedBy = [];
-        $r['not_reported_by'] = [];
-
-        if (!empty($r[iState::COLUMN_META_DATA])) {
-            foreach ($r[iState::COLUMN_META_DATA] as $key => &$metadata) {
-                $metadata['webUrl'] = (string)$this->getBackendItemWebUrl(
-                    $key,
-                    ag($metadata, iState::COLUMN_TYPE),
-                    ag($metadata, iState::COLUMN_ID),
-                );
-                $reportedBy[] = $key;
-            }
-        }
-
-        $backendsKeys = array_column($this->getBackends(), 'name');
-
-        $r['not_reported_by'] = array_values(
-            array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBy))
-        );
-        $r[iState::COLUMN_TITLE] = $item->isEpisode() ? ag(
-            $item->getMetadata($item->via),
-            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-            null
-        ) : null;
-        $r[iState::COLUMN_META_PATH] = ag($item->getMetadata($item->via), iState::COLUMN_META_PATH);
-
-        return api_response(HTTP_STATUS::HTTP_OK, $r);
+        return api_response(HTTP_STATUS::HTTP_OK, $this->formatEntity($item));
     }
 
     #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.item.delete')]
@@ -573,13 +517,8 @@ final class Index
 
         $this->mapper->add($item)->commit();
 
-        $response = $item->getAll();
-        $response['full_title'] = $item->getName();
-        $response[iState::COLUMN_WATCHED] = $item->isWatched();
-        $response[iState::COLUMN_UPDATED] = makeDate($item->updated);
-
         queuePush($item);
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return $this->historyView($request, $args);
     }
 }

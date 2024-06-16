@@ -44,4 +44,6 @@ return [
             iState::COLUMN_EXTRA_DATE => 2,
         ],
     ],
+    iState::COLUMN_CREATED_AT => 2,
+    iState::COLUMN_UPDATED_AT => 2,
 ];

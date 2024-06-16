@@ -109,6 +109,14 @@ final class PDOAdapter implements iDB
             }
 
             $data = $entity->getAll();
+
+            if (0 === (int)ag($data, iState::COLUMN_CREATED_AT, 0)) {
+                $data[iState::COLUMN_CREATED_AT] = time();
+            }
+            if (0 === (int)ag($data, iState::COLUMN_UPDATED_AT, 0)) {
+                $data[iState::COLUMN_UPDATED_AT] = $data[iState::COLUMN_CREATED_AT];
+            }
+
             unset($data[iState::COLUMN_ID]);
 
             // -- @TODO i dont like this section, And this should not happen here.
@@ -348,6 +356,7 @@ final class PDOAdapter implements iDB
             }
 
             $data = $entity->getAll();
+            $data[iState::COLUMN_UPDATED_AT] = time();
 
             // -- @TODO i dont like this block, And this should not happen here.
             if (false === $entity->isWatched()) {

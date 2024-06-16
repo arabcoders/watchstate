@@ -857,4 +857,40 @@ class StateEntityTest extends TestCase
             'When hasPlayProgress() when valid play progress is set, returns true'
         );
     }
+
+    public function test_context(): void
+    {
+        $entity = new StateEntity($this->testMovie);
+
+        $ins = $entity->setContext('test', 'context');
+        $this->assertSame($ins, $entity, 'When setContext() is called, it returns the same instance');
+        $this->assertSame(
+            'context',
+            $entity->getContext('test'),
+            'When getContext() is called, the same value is returned'
+        );
+        $this->assertSame(
+            'iam_default',
+            $entity->getContext(null, 'iam_default'),
+            'When getContext() is called with default value, and key is null the default value is returned'
+        );
+        $this->assertSame(
+            'iam_default',
+            $entity->getContext('not_set', 'iam_default'),
+            'When getContext() is called with non-existing key, the default value is returned'
+        );
+        $this->assertSame(
+            ['test' => 'context'],
+            $entity->getContext(),
+            'When getContext() is called with no parameters, all context data is returned'
+        );
+        $this->assertTrue(
+            $entity->hasContext('test'),
+            'When hasContext() is called with existing key, it returns true'
+        );
+        $this->assertFalse(
+            $entity->hasContext('not_set'),
+            'When hasContext() is called with non-existing key, it returns false'
+        );
+    }
 }

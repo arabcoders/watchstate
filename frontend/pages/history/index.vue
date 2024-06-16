@@ -125,7 +125,7 @@
                 <span class="icon" v-if="!item.progress">
                   <i class="fas" :class="{'fa-eye-slash': !item.watched, 'fa-eye': item.watched}"></i>
                 </span>
-                <NuxtLink :to="'/history/'+item.id" v-text="item.full_title ?? item.title"/>
+                <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon">
@@ -135,43 +135,42 @@
             </header>
             <div class="card-content">
               <div class="columns is-multiline is-mobile has-text-centered">
-                <div class="column is-12 has-text-left" v-if="item?.title">
+                <div class="column is-12 has-text-left" v-if="item?.content_title">
                   <div class="is-text-overflow is-clickable"
                        @click="(e) => e.target.classList.toggle('is-text-overflow')">
                     <span class="icon"><i class="fas fa-heading"></i></span>
-                    <span class="is-hidden-mobile">Title:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('subtitle', item.title)"
-                              @click="triggerSearch('subtitle', item.title)" v-text="item.title"/>
+                    <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
+                              @click="triggerSearch('subtitle', item.content_title)" v-text="item.content_title"/>
                   </div>
                 </div>
-                <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
+                <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">Path:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('path', item.path)" @click="triggerSearch('path', item.path)"
-                              v-text="item.path"/>
+                    <NuxtLink :to="makeSearchLink('path', item.content_path)"
+                              @click="triggerSearch('path', item.content_path)"
+                              v-text="item?.content_path"/>
                   </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                  <span class="icon-text">
+                  <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                    {{ moment(item.updated).fromNow() }}
-                  </span>
+                    <span class="has-tooltip" v-tooltip="moment.unix(item.updated_at).format('YYYY-MM-DD h:mm:ss A')">
+                      {{ moment.unix(item.updated_at).fromNow() }}
+                    </span>
+                  </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-server"></i></span>
-                    <span>
-                      <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                    </span>
-                  </span>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                    <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                  </div>
                 </div>
                 <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-envelope"></i></span>
-                    <span>{{ item.event }}</span>
-                  </span>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                    {{ item.event ?? '-' }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -210,7 +209,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeSearchLink, notification} from '~/utils/index.js'
+import {formatDuration, makeName, makeSearchLink, notification} from '~/utils/index.js'
 
 const route = useRoute()
 const router = useRouter()

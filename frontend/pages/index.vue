@@ -16,7 +16,7 @@
                   <i class="fas fa-eye-slash" v-if="!history.watched"></i>
                   <i class="fas fa-eye" v-else></i>
                 </span>
-                <NuxtLink :to="`/history/${history.id}`" v-text="history.full_title ?? history.title"/>
+                <NuxtLink :to="`/history/${history.id}`" v-text="makeName(history)"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon" v-if="'episode' === history.type"><i class="fas fa-tv"></i></span>
@@ -26,24 +26,20 @@
             <div class="card-content">
               <div class="columns is-multiline is-mobile has-text-centered">
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                    {{ moment(history.updated).fromNow() }}
+                  <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                  <span class="has-tooltip" v-tooltip="moment.unix(history.updated).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment.unix(history.updated).fromNow() }}
                   </span>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-server"></i></span>
-                    <span>
-                      <NuxtLink :to="'/backend/'+history.via" v-text="history.via"/>
-                    </span>
-                  </span>
+                  <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                  <NuxtLink :to="'/backend/'+history.via" v-text="history.via"/>
                 </div>
                 <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-envelope"></i></span>
-                    <span>{{ history.event }}</span>
-                  </span>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                    {{ history.event }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -112,7 +108,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration} from '../utils/index.js'
+import {formatDuration, makeName} from '../utils/index.js'
 
 useHead({title: 'Index'})
 

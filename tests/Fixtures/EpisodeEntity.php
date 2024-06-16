@@ -50,4 +50,6 @@ return [
             iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
         ],
     ],
+    iState::COLUMN_CREATED_AT => 2,
+    iState::COLUMN_UPDATED_AT => 2,
 ];

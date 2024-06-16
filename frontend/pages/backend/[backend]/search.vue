@@ -10,7 +10,7 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-info" @click="searchContent" :disabled="isLoading || !searchField || !query"
+            <button class="button is-info" @click="searchContent(true)" :disabled="isLoading || !searchField || !query"
                     :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
@@ -23,7 +23,7 @@
     </div>
 
     <div class="column is-12">
-      <form @submit.prevent="searchContent">
+      <form @submit.prevent="searchContent(false)">
         <div class="field">
           <div class="field-body">
             <div class="field is-grouped-tablet">
@@ -64,7 +64,7 @@
 
               <div class="control">
                 <button class="button is-primary" type="submit" :disabled="!query || '' === searchField || isLoading"
-                        :class="{'is-loading':isLoading}" @click="updateUrl">
+                        :class="{'is-loading':isLoading}">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-search"></i></span>
                     <span>Search</span>
@@ -108,7 +108,7 @@
           <div class="card" :class="{ 'is-success': item.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow">
-                <NuxtLink :to="item.url" v-text="item.full_title ?? item.title" target="_blank"/>
+                <NuxtLink :to="item.webUrl" v-text="makeName(item)" target="_blank"/>
               </p>
               <span class="card-header-icon">
                 <span class="icon">
@@ -122,17 +122,17 @@
                 <div class="column is-12 has-text-left" v-if="item?.title">
                   <div class="is-text-overflow is-clickable"
                        @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                    <span class="icon"><i class="fas fa-heading"></i></span>
-                    <span class="is-hidden-mobile">Title:&nbsp;</span>
-                    {{ item.title }}
+                    <div class="is-text-overflow">
+                      <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                      <NuxtLink :to="makeSearchLink('title',item.title)" v-text="item.title"/>
+                    </div>
                   </div>
                 </div>
-                <div class="column is-12 is-clickable has-text-left" v-if="item?.path"
+                <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
                      @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-file"></i></span>
-                    <span class="is-hidden-mobile">Path:&nbsp;</span>
-                    <NuxtLink :to="makeSearchLink('path',item.path)" v-text="item.path"/>
+                    <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
                   </div>
                 </div>
               </div>
@@ -141,7 +141,9 @@
               <div class="card-footer-item">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  {{ moment.unix(item.updated).fromNow() }}
+                  <span class="has-tooltip" v-tooltip="moment.unix(item.updated).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment.unix(item.updated).fromNow() }}
+                  </span>
                 </span>
               </div>
               <div class="card-footer-item">
@@ -196,11 +198,12 @@
 <script setup>
 import request from '~/utils/request.js'
 import moment from 'moment'
-import {makeSearchLink, notification} from '~/utils/index.js'
+import {makeName, makeSearchLink, notification} from '~/utils/index.js'
 import Message from "~/components/Message.vue";
 import {useStorage} from "@vueuse/core";
 
 const route = useRoute()
+const router = useRouter()
 
 const items = ref([])
 const limits = ref([25, 50, 100, 250, 500])
@@ -216,7 +219,7 @@ const show_page_tips = useStorage('show_page_tips', true)
 
 useHead({title: `Backends: ${backend} - Search`})
 
-const searchContent = async () => {
+const searchContent = async (fromPopState = false) => {
   let search = new URLSearchParams()
 
   if (!query.value || '' === searchField.value) {
@@ -229,18 +232,27 @@ const searchContent = async () => {
   items.value = []
 
   search.set('limit', limit.value)
+  search.set('id' === searchField.value ? 'id' : 'q', query.value)
 
-  if ('id' === searchField.value) {
-    search.set('id', query.value)
-  } else {
-    search.set('q', query.value)
-  }
-
-  useHead({title: `Backends: ${backend} - (Search - ${searchField.value}: ${query.value})`})
+  const title = `Backends: ${backend} - (Search - ${searchField.value}: ${query.value})`;
+  useHead({title})
 
   try {
     const response = await request(`/backend/${backend}/search?${search.toString()}`)
     const json = await response.json()
+    const currentUrl = window.location.pathname + '?' + (new URLSearchParams(window.location.search)).toString()
+    const newUrl = window.location.pathname + '?' + search.toString()
+
+    if (false === fromPopState && currentUrl !== newUrl) {
+      console.log('Updating URL')
+      await router.push({
+        path: `/backend/${backend}/search`, title: title, query: {
+          limit: limit.value,
+          key: searchField.value,
+          q: query.value
+        }
+      })
+    }
 
     if (200 !== response.status) {
       error.value = json.error
@@ -259,15 +271,38 @@ const updateUrl = () => useRouter().push({query: {key: searchField.value, q: que
 
 onMounted(() => {
   if (query.value && searchField.value) {
-    searchContent()
+    searchContent(false)
   }
+  window.addEventListener('popstate', stateCallBack)
 })
 
-const clearSearch = () => {
+onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
+
+const clearSearch = async () => {
   query.value = ''
   items.value = []
   hasSearched.value = false
   error.value = {}
-  useHead({title: `Backends: ${backend} - Search`})
+  const title = `Backends: ${backend} - Search`;
+  useHead({title})
+  await router.push({path: `/backend/${backend}/search`, title: title, query: {}})
 }
+
+const stateCallBack = async e => {
+  const route = useRoute()
+
+  if (route.query.key) {
+    searchField.value = route.query.key
+  }
+
+  if (route.query.limit) {
+    limit.value = parseInt(route.query.limit)
+  }
+
+  if (route.query.q) {
+    query.value = route.query.q
+    await searchContent(true)
+  }
+}
+
 </script>

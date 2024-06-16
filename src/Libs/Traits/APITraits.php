@@ -13,6 +13,7 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
@@ -21,6 +22,8 @@ use Psr\Http\Message\UriInterface as iUri;
 
 trait APITraits
 {
+    private array $_backendsNames = [];
+
     /**
      * Retrieves the backend client for the specified name.
      *
@@ -150,5 +153,72 @@ trait APITraits
         }
 
         return $clients[$backend]->getWebUrl($type, $id);
+    }
+
+    /**
+     * The Standardize entity data for presentation in API responses.
+     *
+     * @param iState|array $entity The entity to format.
+     * @param bool $includeContext (Optional) Include the contextual data.
+     *
+     * @return array The formatted entity.
+     */
+    protected function formatEntity(iState|array $entity, bool $includeContext = false): array
+    {
+        if (true === is_array($entity)) {
+            $entity = Container::get(iState::class)::fromArray($entity);
+        }
+
+        if (empty($this->_backendsNames)) {
+            $this->_backendsNames = array_column($this->getBackends(), 'name');
+        }
+
+        $item = $entity->getAll();
+
+        $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
+        $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
+
+        $item['content_title'] = $entity->isEpisode() ? ag(
+            $entity->getMetadata($entity->via),
+            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
+            null
+        ) : null;
+        $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
+
+        $item['rguids'] = [];
+        $item['reported_by'] = [];
+
+        if ($entity->isEpisode()) {
+            foreach ($entity->getRelativeGuids() as $rKey => $rGuid) {
+                $item['rguids'][$rKey] = $rGuid;
+            }
+        }
+
+        if (!empty($item[iState::COLUMN_META_DATA])) {
+            foreach ($item[iState::COLUMN_META_DATA] as $key => &$metadata) {
+                $metadata['webUrl'] = (string)$this->getBackendItemWebUrl(
+                    $key,
+                    ag($metadata, iState::COLUMN_TYPE),
+                    ag($metadata, iState::COLUMN_ID),
+                );
+                $item['reported_by'][] = $key;
+            }
+        }
+
+        $item['webUrl'] = (string)$this->getBackendItemWebUrl(
+            $entity->via,
+            $entity->type,
+            ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 0),
+        );
+
+        $item['not_reported_by'] = array_values(
+            array_filter($this->_backendsNames, fn($key) => false === in_array($key, ag($item, 'reported_by', [])))
+        );
+
+        if (true === $includeContext) {
+            $item = array_replace_recursive($item, $entity->getContext());
+        }
+
+        return $item;
     }
 }

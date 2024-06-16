@@ -50,6 +50,9 @@ interface StateInterface extends LoggerAwareInterface
     public const string COLUMN_EXTRA_EVENT = 'event';
     public const string COLUMN_EXTRA_DATE = 'received_at';
 
+    public const string COLUMN_CREATED_AT = 'created_at';
+    public const string COLUMN_UPDATED_AT = 'updated_at';
+
     /**
      * List of table keys.
      */
@@ -67,6 +70,8 @@ interface StateInterface extends LoggerAwareInterface
         self::COLUMN_GUIDS,
         self::COLUMN_META_DATA,
         self::COLUMN_EXTRA,
+        self::COLUMN_CREATED_AT,
+        self::COLUMN_UPDATED_AT,
     ];
 
     /**
@@ -79,6 +84,8 @@ interface StateInterface extends LoggerAwareInterface
         self::COLUMN_SEASON,
         self::COLUMN_EPISODE,
         self::COLUMN_EXTRA,
+        self::COLUMN_CREATED_AT,
+        self::COLUMN_UPDATED_AT,
     ];
 
     /**
@@ -374,4 +381,33 @@ interface StateInterface extends LoggerAwareInterface
      * @return int Return the play progress.
      */
     public function getPlayProgress(): int;
+
+    /**
+     * Set entity contextual data.
+     *
+     * @param string $key key
+     * @param mixed $value value
+     *
+     * @return StateInterface Returns the current object.
+     */
+    public function setContext(string $key, mixed $value): StateInterface;
+
+    /**
+     * Get entity contextual data.
+     *
+     * @param string|null $key the key to get, if both key and default are null, the entire context is returned.
+     * @param mixed $default default value.
+     *
+     * @return mixed
+     */
+    public function getContext(string|null $key = null, mixed $default = null): mixed;
+
+    /**
+     * Check if entity has contextual data.
+     *
+     * @param string $key key
+     *
+     * @return bool Return true if the entity has contextual data related to the key.
+     */
+    public function hasContext(string $key): bool;
 }
