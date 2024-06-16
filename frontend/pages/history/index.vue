@@ -4,6 +4,17 @@
       <span class="title is-4">History</span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
+          <div class="control">
+            <div class="select">
+              <select v-model="perpage" :disabled="isLoading" @change="loadContent(1,false)">
+                <option value="" disabled>Per page</option>
+                <option v-for="i in [50,100,200,400,500]" :key="`perpage-${i}`" :value="i">
+                  {{ i }}
+                </option>
+              </select>
+            </div>
+          </div>
+
           <p class="control">
             <button class="button is-primary" @click="searchForm = !searchForm">
               <span class="icon">
@@ -42,7 +53,8 @@
         <div class="control">
           <div class="select">
             <select v-model="page" @change="loadContent(page)" :disabled="isLoading">
-              <option v-for="(item, index) in makePagination()" :key="index" :value="item.page">
+              <option v-for="(item, index) in makePagination(page, last_page)" :key="index" :value="item.page"
+                      :disabled="item.page === 0">
                 {{ item.text }}
               </option>
             </select>
@@ -209,7 +221,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeName, makeSearchLink, notification} from '~/utils/index.js'
+import {formatDuration, makeName, makePagination, makeSearchLink, notification} from '~/utils/index.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -316,25 +328,6 @@ const loadContent = async (pageNumber, fromPopState = false) => {
 
   } catch (e) {
   }
-}
-
-const makePagination = () => {
-  let pagination = []
-  let pages = Math.ceil(total.value / perpage.value)
-
-  if (pages < 2) {
-    return pagination
-  }
-
-  for (let i = 1; i <= pages; i++) {
-    pagination.push({
-      page: i,
-      text: `Page #${i}`,
-      selected: parseInt(page.value) === i,
-    })
-  }
-
-  return pagination
 }
 
 const clearSearch = () => {

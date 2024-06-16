@@ -139,33 +139,32 @@
             </div>
             <div class="card-footer">
               <div class="card-footer-item">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  <span class="has-tooltip" v-tooltip="moment.unix(item.updated).format('YYYY-MM-DD h:mm:ss A')">
-                    {{ moment.unix(item.updated).fromNow() }}
-                  </span>
+                <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                <span class="has-tooltip" v-tooltip="moment.unix(item.updated).format('YYYY-MM-DD h:mm:ss A')">
+                  {{ moment.unix(item.updated).fromNow() }}
                 </span>
               </div>
               <div class="card-footer-item">
-                <span class="icon-text">
-                  <span class="icon">
-                    <i class="fas"
-                       :class="{'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
-                  </span>
-                  <span class="is-capitalized">{{ item.type }}</span>
+                <span class="icon">
+                  <i class="fas"
+                     :class="{'fa-folder': 'show' === item.type, 'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                  &nbsp;
                 </span>
+                <span class="is-capitalized">{{ item.type }}</span>
               </div>
               <div class="card-footer-item">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-database"></i></span>
-                  <span v-if="'show' === item.type" class="is-unselectable">Not applicable</span>
-                  <span v-else>
-                    <NuxtLink :to="`/history/${item.id}`" v-if="item.id">
-                      Referenced locally
-                    </NuxtLink>
-                    <span v-else class="has-text-danger">
-                      Not referenced locally
-                    </span>
+                <span class="icon"><i class="fas fa-database"></i>&nbsp;</span>
+                <span>
+                  <NuxtLink
+                      :to="makeSearchLink(`metadata`,`${item.via}.show://${ag(item,`metadata.${item.via}.id`)}`)"
+                      v-if="'show' === item.type">
+                    View linked items
+                  </NuxtLink>
+                  <NuxtLink :to="`/history/${item.id}`" v-else-if="item.id">
+                    View local item
+                  </NuxtLink>
+                  <span v-else class="has-text-danger">
+                    Not imported
                   </span>
                 </span>
               </div>
@@ -180,14 +179,13 @@
                :toggle="show_page_tips" @toggle="show_page_tips = !show_page_tips" :use-toggle="true">
         <ul>
           <li>
-            Items with <code>Referenced locally</code> link are items we were able to find local match for. While
-            items with <code>Not referenced locally</code> are items we were not able to link locally.
+            items with <code>Not imported</code> text are items not yet imported to local database.
           </li>
           <li>
             The items shown here are from the remote backend data queried directly.
           </li>
           <li>Clicking directly on the <code>item title</code> will take you to the page associated with that link in
-            the backend. While clicking <code>Referenced locally</code> will take you to the local item page.
+            the backend.
           </li>
         </ul>
       </Message>
@@ -267,8 +265,6 @@ const searchContent = async (fromPopState = false) => {
   }
 }
 
-const updateUrl = () => useRouter().push({query: {key: searchField.value, q: query.value, limit: limit.value}})
-
 onMounted(() => {
   if (query.value && searchField.value) {
     searchContent(false)
@@ -288,7 +284,7 @@ const clearSearch = async () => {
   await router.push({path: `/backend/${backend}/search`, title: title, query: {}})
 }
 
-const stateCallBack = async e => {
+const stateCallBack = async () => {
   const route = useRoute()
 
   if (route.query.key) {

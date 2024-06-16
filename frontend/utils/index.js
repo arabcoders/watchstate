@@ -359,6 +359,56 @@ const makeName = (item, asMovie = false) => {
     })
 }
 
+/**
+ * Make pagination
+ *
+ * @param {number} current
+ * @param {number} last
+ * @param {number} delta
+ *
+ * @returns {Array}
+ */
+const makePagination = (current, last, delta = 5) => {
+    let pagination = []
+
+    if (last < 2) {
+        return pagination
+    }
+
+    const strR = '-'.repeat(9 + `${last}`.length)
+
+    const left = current - delta,
+        right = current + delta + 1;
+
+    for (let i = 1; i <= last; i++) {
+        if (i === 1 || i === last || (i >= left && i < right)) {
+            if (i === left && i > 2) {
+                pagination.push({
+                    page: 0,
+                    text: strR,
+                    selected: false,
+                });
+            }
+
+            pagination.push({
+                page: i,
+                text: `Page #${i}`,
+                selected: i === current
+            });
+
+            if (i === right - 1 && i < last - 1) {
+                pagination.push({
+                    page: 0,
+                    text: strR,
+                    selected: false,
+                });
+            }
+        }
+    }
+
+    return pagination;
+}
+
 export {
     ag_set,
     ag,
@@ -374,4 +424,5 @@ export {
     makeSearchLink,
     dEvent,
     makeName,
+    makePagination,
 }
