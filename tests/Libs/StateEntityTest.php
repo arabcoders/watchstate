@@ -884,5 +884,13 @@ class StateEntityTest extends TestCase
             $entity->getContext(),
             'When getContext() is called with no parameters, all context data is returned'
         );
+        $this->assertTrue(
+            $entity->hasContext('test'),
+            'When hasContext() is called with existing key, it returns true'
+        );
+        $this->assertFalse(
+            $entity->hasContext('not_set'),
+            'When hasContext() is called with non-existing key, it returns false'
+        );
     }
 }

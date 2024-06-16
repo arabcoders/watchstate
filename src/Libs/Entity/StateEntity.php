@@ -647,6 +647,14 @@ final class StateEntity implements iState
     }
 
     /**
+     * @inheritdoc
+     */
+    public function hasContext(string $key): bool
+    {
+        return ag_exists($this->context, $key);
+    }
+
+    /**
      * Checks if the value of a given key in the entity object is equal to the corresponding value in the current object.
      * Some keys are special and require special logic to compare. For example, the updated and watched keys are special
      * because they are tied together.

@@ -401,4 +401,13 @@ interface StateInterface extends LoggerAwareInterface
      * @return mixed
      */
     public function getContext(string|null $key = null, mixed $default = null): mixed;
+
+    /**
+     * Check if entity has contextual data.
+     *
+     * @param string $key key
+     *
+     * @return bool Return true if the entity has contextual data related to the key.
+     */
+    public function hasContext(string $key): bool;
 }
