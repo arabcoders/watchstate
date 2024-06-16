@@ -6,10 +6,8 @@ namespace App\API\System;
 
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
-use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\DataUtil;
-use App\Libs\Entity\StateInterface as iState;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Traits\APITraits;
 use PDO;
@@ -52,7 +50,6 @@ final class Parity
 
         $backends = $this->getBackends();
         $backendsCount = count($backends);
-        $backendsKeys = array_column($backends, 'name');
 
         if ($counter > $backendsCount) {
             return api_error(r("Minimum value cannot be greater than the number of backends '({backends})'.", [
@@ -93,10 +90,8 @@ final class Parity
             '_perpage' => $perpage,
         ]);
 
-        $rows = [];
-
         foreach ($stmt as $row) {
-            $rows[] = $row;
+            $response['items'][] = $this->formatEntity($row);
         }
 
         $response['paging'] = [
@@ -111,35 +106,6 @@ final class Parity
                 'min' => $counter,
             ]
         ];
-
-        if (empty($rows)) {
-            return api_response(HTTP_STATUS::HTTP_OK, $response);
-        }
-
-        foreach ($rows as $row) {
-            unset($row['total_md']);
-
-            $row[iState::COLUMN_META_DATA] = json_decode($row[iState::COLUMN_META_DATA], true);
-            $reportedBackends = array_keys($row[iState::COLUMN_META_DATA] ?? []);
-            $entity = Container::get(iState::class)->fromArray($row);
-
-            $item = $entity->getAll();
-            $item[iState::COLUMN_WATCHED] = $entity->isWatched();
-            $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
-            $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
-            $item['content_title'] = $entity->isEpisode() ? ag(
-                $entity->getMetadata($entity->via),
-                iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-                null
-            ) : null;
-            $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
-            $item['reported_by'] = $reportedBackends;
-            $item['not_reported_by'] = array_values(
-                array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBackends))
-            );
-
-            $response['items'][] = $item;
-        }
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
     }

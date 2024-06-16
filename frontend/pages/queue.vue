@@ -29,57 +29,63 @@
       <div class="card" :class="{ 'is-success': 'Yes' === item.played }">
         <header class="card-header">
           <p class="card-header-title is-text-overflow pr-1">
-            <span class="icon" v-if="!item.progress">
-              <i class="fas fa-eye-slash" v-if="!item.watched"></i>
-              <i class="fas fa-eye" v-else></i>
-              &nbsp;
+            <span class="icon">
+              <i class="fas" :class="{'fa-eye-slash': !item.watched,'fa-eye': item.watched}"></i>&nbsp;
             </span>
-            <NuxtLink :to="'/history/'+item.id" v-text="item.title"/>
+            <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
           </p>
           <span class="card-header-icon">
-            <span class="icon" v-if="'episode' === item.type"><i class="fas fa-tv"></i></span>
-            <span class="icon" v-else><i class="fas fa-film"></i></span>
+            <button class="button is-danger is-small" @click="deleteItem(item)">
+              <span class="icon"><i class="fas fa-trash"></i></span>
+            </button>
           </span>
         </header>
         <div class="card-content">
           <div class="columns is-multiline is-mobile has-text-centered">
-            <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                {{ moment(item.updated).fromNow() }}
-              </span>
+            <div class="column is-12 has-text-left" v-if="item?.content_title">
+              <div class="is-text-overflow">
+                <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
+              </div>
             </div>
-            <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-server"></i></span>
-                <span>
-                  <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                </span>
-              </span>
+            <div class="column is-12 has-text-left" v-if="item?.content_path">
+              <div class="is-text-overflow">
+                <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+              </div>
             </div>
-            <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-              <span class="icon-text">
-                <span class="icon"><i class="fas fa-envelope"></i></span>
-                <span>{{ item.event }}</span>
-              </span>
+            <div class="column is-12 has-text-left" v-if="item?.progress">
+              <div class="is-text-overflow">
+                <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                {{ formatDuration(item.progress) }}
+              </div>
             </div>
           </div>
         </div>
-        <div class="card-footer" v-if="item.progress">
+        <div class="card-footer has-text-centered">
           <div class="card-footer-item">
-            <span class="has-text-success" v-if="item.watched">Played</span>
-            <span class="has-text-danger" v-else>Unplayed</span>
+            <div class="is-text-overflow">
+              <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+              <span class="has-tooltip" v-tooltip="moment.unix(item.updated_at).format('YYYY-MM-DD h:mm:ss A')">
+                {{ moment.unix(item.updated_at).fromNow() }}
+              </span>
+            </div>
           </div>
           <div class="card-footer-item">
-            <span class="icon-text">
-              <span class="icon"><i class="fas fa-bars-progress"></i></span>
-              <span>{{ formatDuration(item.progress) }}</span>
-            </span>
+            <div class="is-text-overflow">
+              <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+              <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+            </div>
+          </div>
+          <div class="card-footer-item">
+            <div class="is-text-overflow">
+              <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+              <span>{{ item.event ?? '-' }}</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -87,7 +93,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, notification} from '~/utils/index.js'
+import {formatDuration, makeName, makeSearchLink, notification} from '~/utils/index.js'
 
 useHead({title: 'Queue'})
 
@@ -95,37 +101,68 @@ const items = ref([])
 const isLoading = ref(false)
 
 const loadContent = async () => {
-  isLoading.value = true
-  items.value = []
-
-  let response, json;
-
   try {
-    response = await request(`/system/queue`)
+    isLoading.value = true
+    items.value = []
+
+    const response = await request(`/system/queue`)
+    let json;
+
+    try {
+      json = await response.json()
+    } catch (e) {
+      json = {
+        error: {
+          code: response.status,
+          message: response.statusText
+        }
+      }
+    }
+
+    if (!response.ok) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    items.value = json
   } catch (e) {
     isLoading.value = false
     return notification('error', 'Error', e.message)
+  } finally {
+    isLoading.value = false
   }
+}
 
-  try {
-    json = await response.json()
-  } catch (e) {
-    json = {
-      error: {
-        code: response.status,
-        message: response.statusText
-      }
-    }
-  }
-
-  isLoading.value = false
-
-  if (!response.ok) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+const deleteItem = async (item) => {
+  if (!confirm(`Are you sure you want to delete '${makeName(item)}' from the queue?`)) {
     return
   }
 
-  items.value = json
+  try {
+    const response = await request(`/system/queue/${item.id}`, {method: 'DELETE'})
+    let json;
+
+    try {
+      json = await response.json()
+    } catch (e) {
+      json = {
+        error: {
+          code: response.status,
+          message: response.statusText
+        }
+      }
+    }
+
+    if (!response.ok) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    notification('success', 'Success', 'Item successfully deleted from queue.')
+    items.value = items.value.filter(i => i.id !== item.id)
+  } catch (e) {
+    return notification('error', 'Error', e.message)
+  }
 }
 
 onMounted(async () => loadContent())

@@ -10,6 +10,7 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\HTTP_STATUS;
+use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface as iCache;
@@ -17,6 +18,8 @@ use Psr\SimpleCache\InvalidArgumentException;
 
 final class Queue
 {
+    use APITraits;
+
     public const string URL = '%{api.prefix}/system/queue';
 
     public function __construct(private iCache $cache, private iDB $db)
@@ -48,15 +51,7 @@ final class Queue
         $items = null;
 
         foreach ($entities as $entity) {
-            $response[] = [
-                iState::COLUMN_ID => $entity->id,
-                iState::COLUMN_TITLE => $entity->getName(),
-                iState::COLUMN_WATCHED => $entity->isWatched(),
-                iState::COLUMN_VIA => $entity->via ?? '??',
-                iState::COLUMN_UPDATED => makeDate($entity->updated),
-                iState::COLUMN_EXTRA_EVENT => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
-                iState::COLUMN_META_DATA_PROGRESS => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null
-            ];
+            $response[] = $this->formatEntity($entity);
         }
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);

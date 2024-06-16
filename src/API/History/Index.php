@@ -443,42 +443,7 @@ final class Index
         ];
 
         while ($row = $stmt->fetch()) {
-            $entity = Container::get(iState::class)->fromArray($row);
-            $item = $entity->getAll();
-
-            if (true === (bool)$request->getAttribute('INTERNAL_REQUEST')) {
-                $response['history'][] = $item;
-                continue;
-            }
-
-            $item[iState::COLUMN_WATCHED] = $entity->isWatched();
-
-            if (!$data->get(iState::COLUMN_META_DATA)) {
-                unset($item[iState::COLUMN_META_DATA]);
-            }
-
-            if (!$data->get(iState::COLUMN_EXTRA)) {
-                unset($item[iState::COLUMN_EXTRA]);
-            }
-
-            $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
-            $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
-            $item['content_title'] = $entity->isEpisode() ? ag(
-                $entity->getMetadata($entity->via),
-                iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-                null
-            ) : null;
-            $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
-
-            $item['rguids'] = [];
-
-            if ($entity->isEpisode()) {
-                foreach ($entity->getRelativeGuids() as $rKey => $rGuid) {
-                    $item['rguids'][$rKey] = $rGuid;
-                }
-            }
-
-            $response['history'][] = $item;
+            $response['history'][] = $this->formatEntity($row);
         }
 
         return api_response(HTTP_STATUS::HTTP_OK, $response);
@@ -497,43 +462,7 @@ final class Index
             return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        $r = $item->getAll();
-        $r[iState::COLUMN_META_DATA_PROGRESS] = $item->hasPlayProgress() ? $item->getPlayProgress() : null;
-        $r[iState::COLUMN_WATCHED] = $item->isWatched();
-        $r[iState::COLUMN_EXTRA_EVENT] = ag($item->getExtra($item->via), iState::COLUMN_EXTRA_EVENT, null);
-        $r['rguids'] = [];
-
-        if ($item->isEpisode()) {
-            foreach ($item->getRelativeGuids() as $rKey => $rGuid) {
-                $r['rguids'][$rKey] = $rGuid;
-            }
-        }
-
-        $reportedBy = [];
-        $r['not_reported_by'] = [];
-
-        if (!empty($r[iState::COLUMN_META_DATA])) {
-            foreach ($r[iState::COLUMN_META_DATA] as $key => &$metadata) {
-                $metadata['webUrl'] = (string)$this->getBackendItemWebUrl(
-                    $key,
-                    ag($metadata, iState::COLUMN_TYPE),
-                    ag($metadata, iState::COLUMN_ID),
-                );
-                $reportedBy[] = $key;
-            }
-        }
-
-        $backendsKeys = array_column($this->getBackends(), 'name');
-
-        $r['not_reported_by'] = array_values(array_filter($backendsKeys, fn($key) => !in_array($key, $reportedBy)));
-        $r['content_title'] = $item->isEpisode() ? ag(
-            $item->getMetadata($item->via),
-            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-            null
-        ) : null;
-        $r['content_path'] = ag($item->getMetadata($item->via), iState::COLUMN_META_PATH);
-
-        return api_response(HTTP_STATUS::HTTP_OK, $r);
+        return api_response(HTTP_STATUS::HTTP_OK, $this->formatEntity($item));
     }
 
     #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.item.delete')]

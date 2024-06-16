@@ -74,7 +74,7 @@
     </div>
 
     <div class="column is-12" v-if="data?.via">
-      <div class="card" :class="{ 'is-success': parseInt(data.watched), 'is-danger': !data.watched }">
+      <div class="card" :class="{ 'is-success': parseInt(data.watched) }">
         <header class="card-header">
           <div class="card-header-title is-clickable is-unselectable" @click="data._toggle = !data._toggle">
             <span class="icon">
@@ -232,7 +232,7 @@
 
     <div class="column is-12" v-if="data?.via && Object.keys(data.metadata).length>0">
       <div class="card" v-for="(item, key) in data.metadata" :key="key"
-           :class="{ 'is-success': parseInt(item.watched), 'is-danger': !parseInt(item.watched) }">
+           :class="{ 'is-success': parseInt(item.watched) }">
         <header class="card-header">
           <div class="card-header-title is-clickable is-unselectable" @click="item._toggle = !item._toggle">
             <span class="icon">

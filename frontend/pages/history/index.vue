@@ -153,24 +153,24 @@
                   </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                  <span class="icon-text">
+                  <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                    {{ moment.unix(item.updated_at).fromNow() }}
-                  </span>
+                    <span class="has-tooltip" v-tooltip="moment.unix(item.updated_at).format('YYYY-MM-DD h:mm:ss A')">
+                      {{ moment.unix(item.updated_at).fromNow() }}
+                    </span>
+                  </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-server"></i></span>
-                    <span>
-                      <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                    </span>
-                  </span>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                    <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                  </div>
                 </div>
                 <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-envelope"></i></span>
-                    <span>{{ item.event ?? '-' }}</span>
-                  </span>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                    {{ item.event ?? '-' }}
+                  </div>
                 </div>
               </div>
             </div>
