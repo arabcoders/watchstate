@@ -49,7 +49,7 @@
         <div class="control">
           <div class="select">
             <select v-model="page" @change="loadContent(page)" :disabled="isLoading">
-              <option v-for="(item, index) in makePagination()" :key="index" :value="item.page">
+              <option v-for="(item, index) in makePagination(page, last_page)" :key="index" :value="item.page">
                 {{ item.text }}
               </option>
             </select>
@@ -171,7 +171,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import Message from '~/components/Message.vue'
-import {makeName, makeSearchLink, notification} from '~/utils/index.js'
+import {makeName, makePagination, makeSearchLink, notification} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 
@@ -251,24 +251,6 @@ const loadContent = async (pageNumber, fromPopState = false) => {
   }
 }
 
-const makePagination = () => {
-  let pagination = []
-  let pages = Math.ceil(total.value / perpage.value)
-
-  if (pages < 2) {
-    return pagination
-  }
-
-  for (let i = 1; i <= pages; i++) {
-    pagination.push({
-      page: i,
-      text: `Page #${i}`,
-      selected: parseInt(page.value) === i,
-    })
-  }
-
-  return pagination
-}
 const deleteData = async () => {
   if (isDeleting.value) {
     return
