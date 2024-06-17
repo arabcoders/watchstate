@@ -17,15 +17,15 @@ class LogSuppressorTest extends TestCase
 
     private array $testData = [
         'A7434c91d3440' => [
-            'message' => 'Random string',
+            'rule' => 'Random string',
             'type' => 'contains',
         ],
         'A7434c91d3441' => [
-            'message' => '/some random \'(\d+)\'/',
+            'rule' => '/some random \'(\d+)\'/',
             'type' => 'regex',
         ],
         'A7434c91d3442' => [
-            'message' => '',
+            'rule' => '',
             'type' => 'contains',
         ],
     ];

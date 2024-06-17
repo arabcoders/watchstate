@@ -48,29 +48,29 @@ final class Suppressor
     {
         $params = DataUtil::fromRequest($request);
 
-        if (null === ($message = $params->get('message')) || empty($message)) {
-            return api_error('Message text is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        if (null === ($rule = $params->get('rule')) || empty($rule)) {
+            return api_error('Rule is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         if (null === ($type = $params->get('type')) || empty($type)) {
-            return api_error('Message type is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Rule type is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $type = strtolower($type);
 
         if (null === ($example = $params->get('example')) || empty($example)) {
-            return api_error('Message example is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Rule example is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         if ('regex' === $type) {
-            if (false === @preg_match($message, '')) {
+            if (false === @preg_match($rule, '')) {
                 return api_error('Invalid regex pattern.', HTTP_STATUS::HTTP_BAD_REQUEST);
             }
-            if (false === @preg_match($message, $example)) {
+            if (false === @preg_match($rule, $example)) {
                 return api_error('Example does not match the regex pattern.', HTTP_STATUS::HTTP_BAD_REQUEST);
             }
         } else {
-            if (false === str_contains($example, $message)) {
+            if (false === str_contains($example, $rule)) {
                 return api_error('Example does not contain the message text.', HTTP_STATUS::HTTP_BAD_REQUEST);
             }
         }
@@ -81,7 +81,7 @@ final class Suppressor
 
         $data = [
             'type' => $type,
-            'message' => $message,
+            'rule' => $rule,
             'example' => $example,
         ];
 

@@ -58,18 +58,18 @@ final class LogSuppressor implements iHandler
         }
 
         foreach (self::$suppress as $suppress) {
-            $message = ag($suppress, 'message', '');
-            if (empty($message)) {
+            $rule = ag($suppress, 'rule', '');
+            if (empty($rule)) {
                 continue;
             }
             if ('regex' === ag($suppress, 'type', 'contains')) {
-                if (1 === @preg_match($message, $log)) {
+                if (1 === @preg_match($rule, $log)) {
                     return true;
                 }
                 continue;
             }
 
-            if (str_contains($log, $message)) {
+            if (str_contains($log, $rule)) {
                 return true;
             }
         }
