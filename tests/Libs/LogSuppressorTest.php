@@ -19,10 +19,12 @@ class LogSuppressorTest extends TestCase
         'A7434c91d3440' => [
             'rule' => 'Random string',
             'type' => 'contains',
+            'example' => 'this Random string can be anywhere',
         ],
         'A7434c91d3441' => [
             'rule' => '/some random \'(\d+)\'/',
             'type' => 'regex',
+            'example' => 'some random \'123\'',
         ],
         'A7434c91d3442' => [
             'rule' => '',

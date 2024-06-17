@@ -61,7 +61,7 @@ return (function (): array {
                 $suppress = [];
 
                 $suppressFile = Config::get('path') . '/config/suppress.yaml';
-                if (file_exists($suppressFile) && filesize($suppressFile) > 0) {
+                if (file_exists($suppressFile) && filesize($suppressFile) > 5) {
                     $suppress = Yaml::parseFile($suppressFile);
                 }
 

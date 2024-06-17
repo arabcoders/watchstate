@@ -20,10 +20,10 @@ use Random\RandomException;
 final class Suppressor
 {
     public const string URL = '%{api.prefix}/system/suppressor';
-
+    public const array TYPES = ['regex', 'contains',];
     private ConfigFile $file;
 
-    public function __construct(private readonly LogSuppressor $suppressor)
+    public function __construct()
     {
         $this->file = (new ConfigFile(file: Config::get('path') . '/config/suppress.yaml', autoCreate: true));
     }
@@ -37,7 +37,10 @@ final class Suppressor
             $list[] = ['id' => $id, ...$data,];
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $list);
+        return api_response(HTTP_STATUS::HTTP_OK, [
+            'items' => $list,
+            'types' => self::TYPES
+        ]);
     }
 
     /**
@@ -58,24 +61,47 @@ final class Suppressor
 
         $type = strtolower($type);
 
+        if (false === in_array($type, self::TYPES, true)) {
+            return api_error(r("Invalid rule type '{type}'. Expected '{types}'", [
+                'type' => $type,
+                'types' => implode(', ', self::TYPES),
+            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
         if (null === ($example = $params->get('example')) || empty($example)) {
             return api_error('Rule example is required.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if ('regex' === $type) {
-            if (false === @preg_match($rule, '')) {
-                return api_error('Invalid regex pattern.', HTTP_STATUS::HTTP_BAD_REQUEST);
-            }
-            if (false === @preg_match($rule, $example)) {
-                return api_error('Example does not match the regex pattern.', HTTP_STATUS::HTTP_BAD_REQUEST);
-            }
-        } else {
-            if (false === str_contains($example, $rule)) {
-                return api_error('Example does not contain the message text.', HTTP_STATUS::HTTP_BAD_REQUEST);
-            }
+        if ('regex' === $type && false === @preg_match($rule, '')) {
+            return api_error('Invalid regex pattern.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        if ($this->suppressor->isSuppressed($example)) {
+        $suppressor = new LogSuppressor([
+            [
+                'type' => $type,
+                'rule' => $rule,
+            ]
+        ]);
+
+        if (false === $suppressor->isSuppressed($example)) {
+            return api_error(r("Example '{example}' is not suppressed by the rule '{type}:{rule}'.", [
+                'example' => $example,
+                'type' => $type,
+                'rule' => $rule,
+            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        $id = ag($args, 'id', null);
+
+        $rules = !$id ? $this->file->getAll() : array_filter(
+            $this->file->getAll(),
+            fn($ruleId) => $id !== $ruleId,
+            ARRAY_FILTER_USE_KEY
+        );
+
+        $suppressor = new LogSuppressor($rules);
+
+        if ($suppressor->isSuppressed($example)) {
             return api_error('Example is already suppressed by another rule.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
@@ -85,7 +111,7 @@ final class Suppressor
             'example' => $example,
         ];
 
-        $id = ag($args, 'id', $this->createId());
+        $id = $id ?? $this->createId();
 
         $this->file->set($id, $data)->persist();
 

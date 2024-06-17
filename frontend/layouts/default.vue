@@ -63,10 +63,12 @@
               </span>
             </a>
             <div class="navbar-dropdown">
-              <NuxtLink class="navbar-item" to="/report" @click.native="showMenu=false">
-                <span class="icon"><i class="fas fa-flag"></i></span>
-                <span>Basic Report</span>
+
+              <NuxtLink class="navbar-item" to="/parity" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-database"></i></span>
+                <span>Data Parity</span>
               </NuxtLink>
+              <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/queue" @click.native="showMenu=false">
                 <span class="icon"><i class="fas fa-list"></i></span>
@@ -78,11 +80,16 @@
                 <span>Ignore List</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/parity" @click.native="showMenu=false">
-                <span class="icon"><i class="fas fa-database"></i></span>
-                <span>Data Parity</span>
+              <NuxtLink class="navbar-item" to="/report" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-flag"></i></span>
+                <span>Basic Report</span>
               </NuxtLink>
+              <hr class="navbar-divider">
 
+              <NuxtLink class="navbar-item" to="/suppression" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-bug-slash"></i></span>
+                <span>Log Suppression</span>
+              </NuxtLink>
             </div>
           </div>
 
