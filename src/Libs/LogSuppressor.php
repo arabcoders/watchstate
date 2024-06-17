@@ -53,19 +53,23 @@ final class LogSuppressor implements iHandler
 
         $log = ($record instanceof LogRecord) ? $record->message : $record;
 
+        if (empty($log)) {
+            return false;
+        }
+
         foreach (self::$suppress as $suppress) {
-            $text = ag($suppress, 'text', '');
-            if (empty($text)) {
+            $message = ag($suppress, 'message', '');
+            if (empty($message)) {
                 continue;
             }
             if ('regex' === ag($suppress, 'type', 'contains')) {
-                if (1 === @preg_match($text, $log)) {
+                if (1 === @preg_match($message, $log)) {
                     return true;
                 }
                 continue;
             }
 
-            if (str_contains($log, $text)) {
+            if (str_contains($log, $message)) {
                 return true;
             }
         }
@@ -89,7 +93,9 @@ final class LogSuppressor implements iHandler
     public function handleBatch(array $records): void
     {
         $records = array_filter($records, fn($record) => false === $this->isSuppressed($record));
-        $this->handler?->handleBatch($records);
+        if (!empty($record)) {
+            $this->handler?->handleBatch($records);
+        }
     }
 
     public function close(): void
