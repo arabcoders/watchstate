@@ -18,11 +18,10 @@ use Symfony\Component\Yaml\Yaml;
  */
 final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 {
-    private const array CONTENT_TYPES = ['yaml', 'json'];
+    private const array CONTENT_TYPES = ['yaml', 'json', 'yml'];
     private array $data = [];
     private array $operations = [];
     private string $file_hash = '';
-
     private LoggerInterface|null $logger = null;
 
     /**
@@ -44,14 +43,14 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         private readonly bool $autoBackup = true,
         private readonly array $opts = [],
     ) {
-        if (!in_array($this->type, self::CONTENT_TYPES)) {
+        if (false === in_array($this->type, self::CONTENT_TYPES)) {
             throw new InvalidArgumentException(r("Invalid content type '{type}'. Expecting '{types}'.", [
                 'type' => $type,
                 'types' => implode(', ', self::CONTENT_TYPES)
             ]));
         }
 
-        if (!file_exists($this->file)) {
+        if (false === file_exists($this->file)) {
             if (false === $this->autoCreate) {
                 throw new InvalidArgumentException(r("File '{file}' does not exist.", ['file' => $file]));
             }
@@ -273,7 +272,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
 
         if (!empty($content)) {
             $this->data = match ($this->type) {
-                'yaml' => Yaml::parse($content),
+                'yaml', 'yml' => Yaml::parse($content),
                 'json' => json_decode($content, true, flags: $jsonOpts),
                 default => throw new RuntimeException(r("Invalid content type '{type}'.", ['type' => $this->type])),
             };
@@ -288,9 +287,9 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
                     $this->_delete($operation['key']);
                     break;
                 default:
-                    throw new RuntimeException(
-                        r("Invalid operation type '{type}'.", ['type' => $operation['type']])
-                    );
+                    throw new RuntimeException(r("Invalid operation type '{type}'.", [
+                        'type' => $operation['type']
+                    ]));
             }
         }
     }

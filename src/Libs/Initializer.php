@@ -127,25 +127,20 @@ final class Initializer
 
         $this->setupLoggers($logger, Config::get('logger'));
 
-        set_error_handler(
-            function ($severity, $message, $file, $line) {
-                if (!(error_reporting() & $severity)) {
-                    return;
-                }
-                throw new ErrorException($message, 0, $severity, $file, $line);
+        set_error_handler(function ($severity, $message, $file, $line) {
+            if (!(error_reporting() & $severity)) {
+                return;
             }
-        );
+            throw new ErrorException($message, 0, $severity, $file, $line);
+        });
 
-        set_exception_handler(function (Throwable $e) {
-            Container::get(LoggerInterface::class)->error(
-                message: "{class}: {error} ({file}:{line})." . PHP_EOL,
-                context: [
-                    'class' => $e::class,
-                    'error' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            );
+        set_exception_handler(function (Throwable $e) use ($logger) {
+            $logger->error(message: "{class}: {error} ({file}:{line})." . PHP_EOL, context: [
+                'class' => $e::class,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             exit(1);
         });
 
@@ -186,10 +181,8 @@ final class Initializer
      *
      * @return iResponse Returns the HTTP response.
      */
-    public function http(
-        iRequest|null $request = null,
-        Closure|null $fn = null
-    ): iResponse {
+    public function http(iRequest|null $request = null, Closure|null $fn = null): iResponse
+    {
         if (null === $request) {
             $factory = new Psr17Factory();
             $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))->fromGlobals();
@@ -238,7 +231,7 @@ final class Initializer
             $response = api_error(
                 message: 'Unable to serve request.',
                 httpCode: HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE,
-                body: true !== (bool)Config::get('debug.enabled') ? [] : [
+                body: true !== (bool)Config::get('debug.enabled', false) ? [] : [
                     'exception' => [
                         'message' => $e->getMessage(),
                         'kind' => $e::class,
@@ -429,17 +422,17 @@ final class Initializer
         $fn = function (string $key, string $path): string {
             if (false === file_exists($path)) {
                 if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
-                    throw new RuntimeException(r('Unable to create [{path}] directory.', ['path' => $path]));
+                    throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
                 }
             }
 
             if (false === is_dir($path)) {
-                throw new RuntimeException(r('[{path}] is not a directory.', ['path' => $key]));
+                throw new RuntimeException(r("The path '{path}' is not a directory.", ['path' => $key]));
             }
 
             if (false === is_writable($path)) {
                 throw new RuntimeException(
-                    r('Unable to write to [{path}] directory. Check user permissions and/or user mapping.', [
+                    r("Unable to write to '{path}' directory. Check user permissions and/or user mapping.", [
                         'path' => $path,
                     ])
                 );
@@ -447,7 +440,7 @@ final class Initializer
 
             if (false === is_readable($path)) {
                 throw new RuntimeException(
-                    r('Unable to read data from [{path}] directory. Check user permissions and/or user mapping.', [
+                    r("Unable to read data from '{path}' directory. Check user permissions and/or user mapping.", [
                         'path' => $path,
                     ])
                 );
@@ -466,7 +459,7 @@ final class Initializer
 
             if (false === file_exists($dir)) {
                 if (false === @mkdir($dir, 0755, true) && false === is_dir($dir)) {
-                    throw new RuntimeException(r('Unable to create [{path}] directory.', ['path' => $dir]));
+                    throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $dir]));
                 }
             }
         }
@@ -484,21 +477,23 @@ final class Initializer
     {
         $inContainer = inContainer();
 
+        $wrap = Container::get(LogSuppressor::class);
+
         if (null !== ($logfile = Config::get('api.logfile'))) {
             $this->accessLog = $logger->withName(name: 'http')
-                ->pushHandler(new StreamHandler($logfile, Level::Info, true));
+                ->pushHandler($wrap->withHandler(new StreamHandler($logfile, Level::Info, true)));
 
             if (true === $inContainer) {
-                $this->accessLog->pushHandler(new StreamHandler('php://stderr', Level::Info, true));
+                $this->accessLog->pushHandler($wrap->withHandler(new StreamHandler('php://stderr', Level::Info, true)));
             }
         }
 
         foreach ($loggers as $name => $context) {
-            if (!ag($context, 'type')) {
-                throw new RuntimeException(r('Logger: [{name}] has no type set.', ['name' => $name]));
+            if (null === ag($context, 'type', null)) {
+                throw new RuntimeException(r("Logger '{name}' has no type set.", ['name' => $name]));
             }
 
-            if (true !== (bool)ag($context, 'enabled')) {
+            if (true !== (bool)ag($context, 'enabled', false)) {
                 continue;
             }
 
@@ -516,33 +511,35 @@ final class Initializer
             switch (ag($context, 'type')) {
                 case 'stream':
                     $logger->pushHandler(
-                        new StreamHandler(
-                            ag($context, 'filename'),
-                            ag($context, 'level', Level::Info),
-                            (bool)ag($context, 'bubble', true),
+                        $wrap->withHandler(
+                            new StreamHandler(
+                                ag($context, 'filename'),
+                                ag($context, 'level', Level::Info),
+                                (bool)ag($context, 'bubble', true),
+                            )
                         )
                     );
                     break;
                 case 'console':
-                    $logger->pushHandler(new ConsoleHandler($this->cliOutput));
+                    $logger->pushHandler($wrap->withHandler(new ConsoleHandler($this->cliOutput)));
                     break;
                 case 'syslog':
                     $logger->pushHandler(
-                        new SyslogHandler(
-                            ag($context, 'name', Config::get('name')),
-                            ag($context, 'facility', LOG_USER),
-                            ag($context, 'level', Level::Info),
-                            (bool)Config::get('bubble', true),
+                        $wrap->withHandler(
+                            new SyslogHandler(
+                                ag($context, 'name', Config::get('name')),
+                                ag($context, 'facility', LOG_USER),
+                                ag($context, 'level', Level::Info),
+                                (bool)Config::get('bubble', true),
+                            )
                         )
                     );
                     break;
                 default:
-                    throw new RuntimeException(
-                        r('Unknown Logger type [{type} set by [{name}].', [
-                            'type' => $context['type'],
-                            'name' => $name
-                        ])
-                    );
+                    throw new RuntimeException(r("Logger '{name}' used unknown Logger type '{type}'.", [
+                        'type' => $context['type'],
+                        'name' => $name
+                    ]));
             }
         }
     }
