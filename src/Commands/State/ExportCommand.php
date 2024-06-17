@@ -12,6 +12,7 @@ use App\Libs\ConfigFile;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
+use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Message;
 use App\Libs\Options;
@@ -50,7 +51,8 @@ class ExportCommand extends Command
         private iDB $db,
         private DirectMapper $mapper,
         private QueueRequests $queue,
-        private iLogger $logger
+        private iLogger $logger,
+        private LogSuppressor $suppressor,
     ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -145,7 +147,9 @@ class ExportCommand extends Command
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
-            $this->logger->setHandlers([new StreamLogHandler(new Stream($logfile, 'w'), $output)]);
+            $this->logger->setHandlers([
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+            ]);
         }
 
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');

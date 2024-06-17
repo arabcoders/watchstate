@@ -14,6 +14,7 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
+use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
@@ -37,9 +38,9 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 class ImportCommand extends Command
 {
-    public const ROUTE = 'state:import';
+    public const string ROUTE = 'state:import';
 
-    public const TASK_NAME = 'import';
+    public const string TASK_NAME = 'import';
 
     /**
      * Class Constructor.
@@ -48,8 +49,12 @@ class ImportCommand extends Command
      * @param iImport $mapper The import interface object.
      * @param iLogger $logger The logger interface object.
      */
-    public function __construct(private iDB $db, private iImport $mapper, private iLogger $logger)
-    {
+    public function __construct(
+        private iDB $db,
+        private iImport $mapper,
+        private iLogger $logger,
+        private LogSuppressor $suppressor
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -243,7 +248,9 @@ class ImportCommand extends Command
     protected function process(InputInterface $input, OutputInterface $output): int
     {
         if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
-            $this->logger->setHandlers([new StreamLogHandler(new Stream($logfile, 'w'), $output)]);
+            $this->logger->setHandlers([
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+            ]);
         }
 
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');

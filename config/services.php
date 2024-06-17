@@ -12,6 +12,7 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -29,6 +30,7 @@ use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\HttpClient\CurlHttpClient;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 return (function (): array {
@@ -52,6 +54,19 @@ return (function (): array {
             'args' => [
                 iLogger::class,
             ],
+        ],
+
+        LogSuppressor::class => [
+            'class' => function (): LogSuppressor {
+                $suppress = [];
+
+                $suppressFile = Config::get('path') . '/config/suppress.yaml';
+                if (file_exists($suppressFile) && filesize($suppressFile) > 5) {
+                    $suppress = Yaml::parseFile($suppressFile);
+                }
+
+                return new LogSuppressor($suppress);
+            },
         ],
 
         StateInterface::class => [

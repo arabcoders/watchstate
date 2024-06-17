@@ -10,15 +10,18 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\Stream;
 use Cron\CronExpression;
 use LimitIterator;
+use RuntimeException;
 use SplFileObject;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
@@ -80,25 +83,28 @@ final class ReportCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
+        assert($output instanceof ConsoleOutput, new RuntimeException('Expecting ConsoleOutput instance.'));
+        $output = $output->withNoSuppressor();
+
         $output->writeln('<info>[ Basic Report ]</info>' . PHP_EOL);
-        $output->writeln(r('WatchState Version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
-        $output->writeln(r('PHP Version: <flag>{answer}</flag>', ['answer' => PHP_VERSION]));
+        $output->writeln(r('WatchState version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
+        $output->writeln(r('PHP version: <flag>{answer}</flag>', ['answer' => PHP_VERSION]));
         $output->writeln(r('Timezone: <flag>{answer}</flag>', ['answer' => Config::get('tz', 'UTC')]));
-        $output->writeln(r('Running in Container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
-        $output->writeln(r('Data Path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));
-        $output->writeln(r('Temp Path: <flag>{answer}</flag>', ['answer' => Config::get('tmpDir')]));
+        $output->writeln(r('Running in container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
+        $output->writeln(r('Data path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));
+        $output->writeln(r('Temp path: <flag>{answer}</flag>', ['answer' => Config::get('tmpDir')]));
         $output->writeln(
-            r('Database Migrated?: <flag>{answer}</flag>', ['answer' => $this->db->isMigrated() ? 'Yes' : 'No'])
+            r('Database migrated?: <flag>{answer}</flag>', ['answer' => $this->db->isMigrated() ? 'Yes' : 'No'])
         );
         $output->writeln(
-            r('Has .env file? <flag>{answer}</flag>', [
+            r("Does the '.env' file exists? <flag>{answer}</flag>", [
                 'answer' => file_exists(Config::get('path') . '/config/.env') ? 'Yes' : 'No',
             ])
         );
 
         if (inContainer()) {
             $output->writeln(
-                r('Is Tasks Runner working? <flag>{answer}</flag>', [
+                r('Is the tasks runner working? <flag>{answer}</flag>', [
                     'answer' => (function () {
                         $pidFile = '/tmp/job-runner.pid';
                         if (!file_exists($pidFile)) {
@@ -123,10 +129,14 @@ final class ReportCommand extends Command
             );
         }
 
-        $output->writeln(r('Report Generated At: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
+        $output->writeln(r('Report generated at: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
 
         $output->writeln(PHP_EOL . '<info>[ Backends ]</info>' . PHP_EOL);
         $this->getBackends($input, $output);
+
+        $output->writeln(PHP_EOL . '<info>[ Log suppression ]</info>' . PHP_EOL);
+        $this->getSuppressor($input, $output);
+
         $output->writeln('<info>[ Tasks ]</info>' . PHP_EOL);
         $this->getTasks($output);
         $output->writeln('<info>[ Logs ]</info>' . PHP_EOL);
@@ -225,12 +235,6 @@ final class ReportCommand extends Command
                     ])
                 );
             }
-
-            $output->writeln(
-                r('Has webhook token? <flag>{answer}</flag>', [
-                    'answer' => null !== ag($backend, 'webhook.token') ? 'Yes' : 'No',
-                ])
-            );
 
             $output->writeln(
                 r('Is webhook match user id enabled? <flag>{answer}</flag>', [
@@ -428,5 +432,38 @@ final class ReportCommand extends Command
 
             FOOTER
         );
+    }
+
+    private function getSuppressor(iInput $input, ConsoleOutput $output): void
+    {
+        $suppressFile = Config::get('path') . '/config/suppress.yaml';
+
+        $output->writeln(
+            r("Does the 'suppress.yaml' file exists? <flag>{answer}</flag>", [
+                'answer' => file_exists($suppressFile) ? 'Yes' : 'No',
+            ])
+        );
+
+        if (filesize($suppressFile) > 10) {
+            $output->writeln('');
+            $output->writeln('User defined rules:');
+            $output->writeln('');
+
+            try {
+                $output->writeln(
+                    json_encode(
+                        Yaml::parseFile($suppressFile),
+                        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+                    )
+                );
+            } catch (Throwable $e) {
+                $output->writeln(r("Error during parsing of '{file}.' '{kind}' was thrown unhandled with '{message}'", [
+                    'kind' => $e::class,
+                    'message' => $e->getMessage(),
+                ]));
+            }
+        }
+
+        $output->writeln('');
     }
 }

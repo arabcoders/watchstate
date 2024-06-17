@@ -10,6 +10,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\HTTP_STATUS;
+use App\Libs\LogSuppressor;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
@@ -29,18 +30,20 @@ final class Webhooks
 
     private iLogger $logfile;
 
-    public function __construct(private iCache $cache)
+    public function __construct(private iCache $cache, LogSuppressor $suppressor)
     {
         $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
 
         $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
 
         if (null !== ($logfile = Config::get('webhook.logfile'))) {
-            $this->logfile = $this->logfile->pushHandler(new StreamHandler($logfile, $level, true));
+            $this->logfile = $this->logfile->pushHandler(
+                $suppressor->withHandler(new StreamHandler($logfile, $level, true))
+            );
         }
 
         if (true === inContainer()) {
-            $this->logfile->pushHandler(new StreamHandler('php://stderr', $level, true));
+            $this->logfile->pushHandler($suppressor->withHandler(new StreamHandler('php://stderr', $level, true)));
         }
     }
 

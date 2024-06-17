@@ -3,6 +3,7 @@
     <div class="column is-12 is-clearfix">
       <span class="title is-4">
         <span class="is-unselectable">
+          <span class="icon"><i class="fas fa-history"></i>&nbsp;</span>
           <NuxtLink to="/history">History</NuxtLink>
           : </span>{{ headerTitle }}
       </span>

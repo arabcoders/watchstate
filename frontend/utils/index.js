@@ -54,14 +54,14 @@ const ag = (obj, path, defaultValue = null) => {
     let at = obj
 
     for (let key of keys) {
-        if (typeof at === 'object' && at !== null && key in at) {
+        if (typeof at === 'object' && null !== at && key in at) {
             at = at[key]
         } else {
             return getValue(defaultValue)
         }
     }
 
-    return getValue(at)
+    return getValue(null === at ? defaultValue : at)
 }
 
 /**

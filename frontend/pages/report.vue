@@ -1,7 +1,10 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix is-unselectable">
-      <span class="title is-4">System Report</span>
+      <span class="title is-4">
+        <span class="icon"><i class="fas fa-flag"></i></span>
+        System Report
+      </span>
       <div class="is-pulled-right" v-if="false === show_report_warning">
         <div class="field is-grouped">
           <p class="control">

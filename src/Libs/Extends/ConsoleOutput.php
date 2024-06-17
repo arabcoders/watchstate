@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use App\Libs\Container;
+use App\Libs\LogSuppressor;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface as iOutput;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -18,6 +20,9 @@ use Symfony\Component\Console\Output\ConsoleOutput as baseConsoleOutput;
  */
 final class ConsoleOutput extends baseConsoleOutput
 {
+    private bool $noSuppressor = false;
+    private LogSuppressor|null $suppressor = null;
+
     /**
      * Constructor for the class.
      *
@@ -57,6 +62,15 @@ final class ConsoleOutput extends baseConsoleOutput
      */
     protected function doWrite(string $message, bool $newline): void
     {
+        if (false === $this->noSuppressor) {
+            if (null === $this->suppressor) {
+                $this->suppressor = Container::get(LogSuppressor::class);
+            }
+            if (true === $this->suppressor->isSuppressed($message)) {
+                return;
+            }
+        }
+
         $this->message = $message;
 
         parent::doWrite($message, $newline);
@@ -70,5 +84,18 @@ final class ConsoleOutput extends baseConsoleOutput
     public function getLastMessage(): mixed
     {
         return $this->message;
+    }
+
+    /**
+     * Disable the suppressor
+     * @return $this
+     */
+    public function withNoSuppressor(): self
+    {
+        $instance = $this;
+        $instance->noSuppressor = true;
+        $instance->suppressor = null;
+
+        return $instance;
     }
 }

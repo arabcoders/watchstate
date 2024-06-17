@@ -1,7 +1,10 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix is-unselectable">
-      <span class="title is-4 ">Data Parity</span>
+      <span class="title is-4 ">
+        <span class="icon"><i class="fas fa-database"></i></span>
+        Data Parity
+      </span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <div class="control" v-if="min && max" v-tooltip.bottom="'Minimum number of backends'">

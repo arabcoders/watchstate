@@ -1,7 +1,9 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix is-unselectable">
-      <h1 class="title is-4">Console</h1>
+      <h1 class="title is-4">
+        <span class="icon"><i class="fas fa-terminal"></i></span> Console
+      </h1>
       <div class="subtitle">
         You can execute <strong>non-interactive</strong> commands here. This interface is jailed to <code>console</code>
         command.
