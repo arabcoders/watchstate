@@ -1,7 +1,10 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix is-unselectable">
-      <span id="env_page_title" class="title is-4">Ignored GUIDs</span>
+      <span id="env_page_title" class="title is-4">
+        <span class="icon"><i class="fas fa-ban"></i></span>
+        Ignored GUIDs
+      </span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">

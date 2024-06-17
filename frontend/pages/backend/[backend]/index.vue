@@ -2,6 +2,7 @@
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix is-unselectable">
       <span class="title is-4">
+        <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
         <NuxtLink to="/backends" v-text="'Backends'"/>
         : {{ backend }}
       </span>

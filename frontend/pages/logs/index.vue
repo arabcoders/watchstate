@@ -1,7 +1,10 @@
 <template>
   <div class="columns is-multiline">
     <div class="column is-12 is-clearfix">
-      <span class="title is-4">Logs</span>
+      <span class="title is-4">
+        <span class="icon"><i class="fas fa-globe"></i></span>
+        Logs
+      </span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
