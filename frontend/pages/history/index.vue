@@ -170,8 +170,9 @@
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                    <span class="has-tooltip" v-tooltip="moment.unix(item.updated_at).format('YYYY-MM-DD h:mm:ss A')">
-                      {{ moment.unix(item.updated_at).fromNow() }}
+                    <span class="has-tooltip"
+                          v-tooltip="moment.unix(item.updated_at??item.updated).format('YYYY-MM-DD h:mm:ss A')">
+                      {{ moment.unix(item.updated_at ?? item.updated).fromNow() }}
                     </span>
                   </div>
                 </div>

@@ -28,8 +28,9 @@
               <div class="columns is-multiline is-mobile has-text-centered">
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                   <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  <span class="has-tooltip" v-tooltip="moment.unix(history.updated).format('YYYY-MM-DD h:mm:ss A')">
-                    {{ moment.unix(history.updated).fromNow() }}
+                  <span class="has-tooltip"
+                        v-tooltip="moment.unix(history.updated_at ?? history.updated).format('YYYY-MM-DD h:mm:ss A')">
+                    {{ moment.unix(history.updated_at ?? history.updated).fromNow() }}
                   </span>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
