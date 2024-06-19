@@ -60,6 +60,13 @@
                 input. You should use the command directly, For example i.e <code>db:list --output yaml</code></span>
             </span>
           </p>
+          <p class="help" v-if="hasPlaceholder">
+            <span class="icon-text">
+              <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
+              <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
+                <code>[...]</code> with the intended value if applicable.</span>
+            </span>
+          </p>
         </div>
       </form>
     </div>
@@ -121,6 +128,7 @@ const command = ref(fromCommand);
 const isLoading = ref(false);
 const outputConsole = ref();
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'));
+const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/));
 const show_page_tips = useStorage('show_page_tips', true)
 
 const RunCommand = async () => {
@@ -134,6 +142,13 @@ const RunCommand = async () => {
   if (userCommand.startsWith('console') || userCommand.startsWith('docker')) {
     notification('error', 'Warning', 'Please remove the [console] or [docker exec -ti watchstate console] from the command.')
     return
+  }
+
+  // use regex to check if command contains [...]
+  if (userCommand.match(/\[.*\]/)) {
+    if (!confirm(`The command contains placeholders '[...]'. Are you sure you want to run as it is?`)) {
+      return
+    }
   }
 
   response.value = []
