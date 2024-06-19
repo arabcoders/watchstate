@@ -44,17 +44,18 @@
         <div class="card-content">
           <div class="columns is-multiline is-mobile has-text-centered">
             <div class="column is-6-mobile is-pre">
-              <span v-tooltip="'Last Update'" class="has-tooltip">
+              <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+              <span class="has-tooltip" v-tooltip="`Last Update: ${moment(item.modified).format(TOOLTIP_DATE_FORMAT)}`">
                 {{ moment(item.modified).fromNow() }}
               </span>
             </div>
             <div class="column is-6-mobile">
-              {{ humanFileSize(item.size) }}
+              <span class="icon"><i class="fas fa-hdd"></i>&nbsp;</span>
+              <span>{{ humanFileSize(item.size) }}</span>
             </div>
             <div class="column is-6-mobile">
-              <span v-tooltip="'Log Kind'" class="has-tooltip">
-                {{ item.type }}
-              </span>
+              <span class="icon"><i class="fas fa-tag"></i>&nbsp;</span>
+              <span class="is-capitalized">{{ item.type }}</span>
             </div>
           </div>
         </div>
@@ -68,7 +69,7 @@
 <script setup>
 import request from "~/utils/request.js";
 import moment from "moment";
-import {humanFileSize} from "~/utils/index.js";
+import {humanFileSize, TOOLTIP_DATE_FORMAT} from "~/utils/index.js";
 import Message from "~/components/Message.vue";
 
 useHead({title: 'Logs'})

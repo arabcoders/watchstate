@@ -90,6 +90,11 @@
                 <span class="icon"><i class="fas fa-bug-slash"></i></span>
                 <span>Log Suppression</span>
               </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/backup" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-sd-card"></i></span>
+                <span>Backups</span>
+              </NuxtLink>
             </div>
           </div>
 

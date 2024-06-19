@@ -218,7 +218,9 @@
                 <div class="column is-6 has-text-right">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-calendar"></i></span>
-                    <span>{{ moment(item.created).fromNow() }}</span>
+                    <span class="has-tooltip"
+                          v-tooltip="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
+                      {{ moment(item.created).fromNow() }}</span>
                   </span>
                 </div>
 
@@ -278,7 +280,7 @@
 
 <script setup>
 import request from '~/utils/request.js'
-import {awaitElement, copyText, notification, stringToRegex} from '~/utils/index.js'
+import {awaitElement, copyText, notification, stringToRegex, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import {useStorage} from '@vueuse/core'
 import moment from 'moment'
 import 'assets/css/bulma-switch.css'

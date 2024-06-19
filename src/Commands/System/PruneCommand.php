@@ -77,33 +77,39 @@ final class PruneCommand extends Command
 
         $directories = [
             [
+                'name' => 'logs_remover',
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
                 'filter' => '*.log',
                 'time' => strtotime('-7 DAYS', $time)
             ],
             [
+                'name' => 'webhooks_remover',
                 'path' => Config::get('tmpDir') . '/webhooks',
                 'base' => Config::get('tmpDir'),
                 'filter' => '*.json',
                 'time' => strtotime('-3 DAYS', $time)
             ],
             [
+                'name' => 'profiler_remover',
                 'path' => Config::get('tmpDir') . '/profiler',
                 'base' => Config::get('tmpDir'),
                 'filter' => '*.json',
                 'time' => strtotime('-3 DAYS', $time)
             ],
             [
+                'name' => 'debug_remover',
                 'path' => Config::get('tmpDir') . '/debug',
                 'base' => Config::get('tmpDir'),
                 'filter' => '*.json',
                 'time' => strtotime('-3 DAYS', $time)
             ],
             [
+                'name' => 'backup_remover',
                 'path' => Config::get('path') . '/backup',
                 'base' => Config::get('path'),
                 'filter' => '*.*.json',
+                'validate' => fn(SplFileInfo $f): bool => 1 === @preg_match('/\w+\.\d{8}\.json/i', $f->getBasename()),
                 'time' => strtotime('-9 DAYS', $time)
             ],
         ];
@@ -111,10 +117,12 @@ final class PruneCommand extends Command
         $inDryRunMode = $input->getOption('dry-run');
 
         foreach ($directories as $item) {
+            $name = ag($item, 'name');
             $path = ag($item, 'path');
 
             if (null === ($expiresAt = ag($item, 'time'))) {
-                $this->logger->warning('Error No expected time to live was found for [{path}].', [
+                $this->logger->warning("No expected time to live was found for '{name}' - '{path}'.", [
+                    'name' => $name,
                     'path' => $path
                 ]);
                 continue;
@@ -122,12 +130,15 @@ final class PruneCommand extends Command
 
             if (null === $path || !is_dir($path)) {
                 if (true === (bool)ag($item, 'report', true)) {
-                    $this->logger->warning('Path [{path}] not found or inaccessible.', [
+                    $this->logger->warning("{name}: Path '{path}' not found or is inaccessible.", [
+                        'name' => $name,
                         'path' => $path
                     ]);
                 }
                 continue;
             }
+
+            $validate = ag($item, 'validate', null);
 
             foreach (glob(ag($item, 'path') . '/' . ag($item, 'filter')) as $file) {
                 $file = new SplFileInfo($file);
@@ -135,21 +146,32 @@ final class PruneCommand extends Command
                 $fileName = $file->getBasename();
 
                 if ('.' === $fileName || '..' === $fileName || true === $file->isDir() || false === $file->isFile()) {
-                    $this->logger->debug('Path [{path}] is not considered valid file.', [
+                    $this->logger->debug("{name}: Path '{path}' is not considered valid file.", [
+                        'name' => $name,
                         'path' => $file->getRealPath(),
                     ]);
                     continue;
                 }
 
+                if (null !== $validate && false === $validate($file)) {
+                    $this->logger->debug("{name}: File '{file}' did not pass validation checks.", [
+                        'name' => $name,
+                        'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
+                    ]);
+                    continue;
+                }
+
                 if ($file->getMTime() > $expiresAt) {
-                    $this->logger->debug('File [{file}] Not yet expired. {ttl} left seconds.', [
+                    $this->logger->debug("{name}: File '{file}' Not yet expired. '{ttl}' seconds left.", [
+                        'name' => $name,
                         'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
                         'ttl' => number_format($file->getMTime() - $expiresAt),
                     ]);
                     continue;
                 }
 
-                $this->logger->notice('Removing [{file}].', [
+                $this->logger->notice("{name}: Removing '{file}'. expired TTL.", [
+                    'name' => $name,
                     'file' => after($file->getRealPath(), ag($item, 'base') . '/')
                 ]);
 

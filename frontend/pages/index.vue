@@ -28,8 +28,9 @@
               <div class="columns is-multiline is-mobile has-text-centered">
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
                   <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  <span class="has-tooltip" v-tooltip="moment.unix(history.updated).format('YYYY-MM-DD h:mm:ss A')">
-                    {{ moment.unix(history.updated).fromNow() }}
+                  <span class="has-tooltip"
+                        v-tooltip="`Record updated at: ${moment.unix(history.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                    {{ moment.unix(history.updated_at).fromNow() }}
                   </span>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
@@ -114,7 +115,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeName} from '../utils/index.js'
+import {formatDuration, makeName, TOOLTIP_DATE_FORMAT} from '../utils/index.js'
 
 useHead({title: 'Index'})
 

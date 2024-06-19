@@ -138,7 +138,8 @@
                 <span class="icon"><i class="fas fa-calendar"></i></span>
                 <span>
                   <span class="is-hidden-mobile">Updated:&nbsp;</span>
-                  <span class="has-tooltip" v-tooltip="moment.unix(data.updated).format('YYYY-MM-DD h:mm:ss A')">
+                  <span class="has-tooltip"
+                        v-tooltip="`Backend updated this record at: ${moment.unix(data.updated).format(TOOLTIP_DATE_FORMAT)}`">
                     {{ moment.unix(data.updated).fromNow() }}
                   </span>
                 </span>
@@ -226,6 +227,32 @@
               </div>
             </div>
 
+            <div class="column is-6 has-text-left" v-if="data.created_at">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-database"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Created:&nbsp;</span>
+                  <span class="has-tooltip"
+                        v-tooltip="`DB record created at: ${moment.unix(data.created_at).format(TOOLTIP_DATE_FORMAT)}`">
+                    {{ moment.unix(data.created_at).fromNow() }}
+                  </span>
+                </span>
+              </span>
+            </div>
+
+            <div class="column is-6 has-text-right" v-if="data.updated_at">
+              <span class="icon-text">
+                <span class="icon"><i class="fas fa-database"></i></span>
+                <span>
+                  <span class="is-hidden-mobile">Updated:&nbsp;</span>
+                  <span class="has-tooltip"
+                        v-tooltip="`DB record updated at: ${moment.unix(data.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                    {{ moment.unix(data.updated_at).fromNow() }}
+                  </span>
+                </span>
+              </span>
+            </div>
+
           </div>
         </div>
       </div>
@@ -300,7 +327,7 @@
                 <span>
                   <span class="is-hidden-mobile">Updated:&nbsp;</span>
                   <span class="has-tooltip"
-                        v-tooltip="getMoment(ag(data.extra, `${key}.received_at`, data.updated)).format('YYYY-MM-DD h:mm:ss A')">
+                        v-tooltip="`Backend last activity: ${getMoment(ag(data.extra, `${key}.received_at`, data.updated)).format(TOOLTIP_DATE_FORMAT)}`">
                     {{ getMoment(ag(data.extra, `${key}.received_at`, data.updated)).fromNow() }}
                   </span>
                 </span>
@@ -435,7 +462,16 @@
 
 <script setup>
 import request from '~/utils/request.js'
-import {ag, formatDuration, makeGUIDLink, makeName, makeSearchLink, notification, ucFirst} from '~/utils/index.js'
+import {
+  ag,
+  formatDuration,
+  makeGUIDLink,
+  makeName,
+  makeSearchLink,
+  notification,
+  TOOLTIP_DATE_FORMAT,
+  ucFirst
+} from '~/utils/index.js'
 import moment from 'moment'
 import {useStorage} from "@vueuse/core";
 import Message from "~/components/Message.vue";

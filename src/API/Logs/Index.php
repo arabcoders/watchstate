@@ -186,7 +186,7 @@ final class Index
                 'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
                 'Content-Length' => filesize($filePath),
             ],
-            body: stream::make($filePath, 'r')
+            body: Stream::make($filePath, 'r')
         );
     }
 

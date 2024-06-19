@@ -57,16 +57,50 @@
           </header>
           <div class="card-content">
             <div class="columns is-multiline has-text-centered">
-              <div class="column is-6 has-text-left-mobile" v-if="backend.export.enabled">
-                <strong>Last Export:</strong>
-                {{ backend.export.lastSync ? moment(backend.export.lastSync).fromNow() : 'None' }}
+              <div class="column is-6 has-text-left-mobile">
+                <strong>Last Export:&nbsp;</strong>
+                <template v-if="backend.export.enabled">
+                  <span v-if="backend.export.lastSync" class="has-tooltip"
+                        v-tooltip="moment(backend.export.lastSync).format(TOOLTIP_DATE_FORMAT)">
+                    {{ moment(backend.export.lastSync).fromNow() }}
+                  </span>
+                  <template v-else>Never</template>
+                </template>
+                <template v-else>
+                  <span class="tag is-danger is-light">Disabled</span>
+                </template>
               </div>
-              <div class="column is-6 has-text-left-mobile" v-if="backend.import.enabled">
-                <strong>Last Import:</strong>
-                {{ backend.import.lastSync ? moment(backend.import.lastSync).fromNow() : 'None' }}
+              <div class="column is-6 has-text-left-mobile">
+                <strong>Last Import:&nbsp;</strong>
+                <template v-if="backend.import.enabled">
+                  <span v-if="backend.import.lastSync" class="has-tooltip"
+                        v-tooltip="moment(backend.import.lastSync).format(TOOLTIP_DATE_FORMAT)">
+                    {{ moment(backend.import.lastSync).fromNow() }}
+                  </span>
+                  <template v-else>Never</template>
+                </template>
+                <template v-else>
+                  <span class="tag is-danger is-light">Disabled</span>
+                </template>
               </div>
             </div>
           </div>
+          <footer class="card-footer">
+            <div class="card-footer-item" v-if="backend.export.enabled">
+              <NuxtLink class="button is-danger is-fullwidth"
+                        :to="makeConsoleCommand(`state:export -v -s ${backend.name}`)">
+                <span class="icon"><i class="fas fa-upload"></i></span>
+                <span>Run export now</span>
+              </NuxtLink>
+            </div>
+            <div class="card-footer-item" v-if="backend.import.enabled">
+              <NuxtLink class="button is-primary is-fullwidth"
+                        :to="makeConsoleCommand(`state:import -v -s ${backend.name}`)">
+                <span class="icon"><i class="fas fa-download"></i></span>
+                <span>Run import now</span>
+              </NuxtLink>
+            </div>
+          </footer>
           <footer class="card-footer">
             <div class="card-footer-item">
               <div class="field">
@@ -133,7 +167,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {copyText, notification} from '~/utils/index.js'
+import {copyText, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import {useStorage} from "@vueuse/core";
 import Message from "~/components/Message.vue";
 

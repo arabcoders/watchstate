@@ -50,7 +50,10 @@
             </div>
 
             <div class="column is-6" v-if="item?.updatedAt">
-              <strong>Updated:</strong> {{ moment(item.updatedAt).fromNow() }}
+              <strong>Updated:&nbsp;</strong>
+              <span class="has-tooltip" v-tooltip="moment(item.updatedAt).format(TOOLTIP_DATE_FORMAT)">
+                {{ moment(item.updatedAt).fromNow() }}
+              </span>
             </div>
 
             <div class="column is-6 has-text-right" v-if="undefined !== item?.restricted">
@@ -83,7 +86,7 @@
 </template>
 
 <script setup>
-import {notification} from '~/utils/index.js'
+import {notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
 import moment from "moment";

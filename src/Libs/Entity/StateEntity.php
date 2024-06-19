@@ -143,6 +143,14 @@ final class StateEntity implements iState
             $this->{$key} = $val;
         }
 
+        if (0 === $this->updated_at && $this->updated > 0) {
+            $this->updated_at = $this->updated;
+        }
+
+        if (0 === $this->created_at && $this->updated > 0) {
+            $this->created_at = $this->updated;
+        }
+
         $this->data = $this->getAll();
     }
 
