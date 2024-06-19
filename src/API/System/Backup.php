@@ -32,15 +32,18 @@ final class Backup
                 'filename' => basename($file),
                 'type' => $isAuto ? 'automatic' : 'manual',
                 'size' => filesize($file),
-                'created_at' => filectime($file),
-                'modified_at' => filemtime($file),
+                'date' => filemtime($file),
             ];
 
             $list[] = $builder;
         }
 
-        $sorter = array_column($list, 'created_at');
+        $sorter = array_column($list, 'date');
         array_multisort($sorter, SORT_DESC, $list);
+
+        foreach ($list as &$item) {
+            $item['date'] = makeDate(ag($item, 'date'));
+        }
 
         return api_response(HTTP_STATUS::HTTP_OK, $list);
     }

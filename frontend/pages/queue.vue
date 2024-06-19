@@ -69,7 +69,7 @@
           <div class="card-footer-item">
             <div class="is-text-overflow">
               <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-              <span class="has-tooltip" v-tooltip="moment.unix(item.updated_at).format('YYYY-MM-DD h:mm:ss A')">
+              <span class="has-tooltip" v-tooltip="moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)">
                 {{ moment.unix(item.updated_at).fromNow() }}
               </span>
             </div>
@@ -96,7 +96,7 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeName, makeSearchLink, notification} from '~/utils/index.js'
+import {formatDuration, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 
 useHead({title: 'Queue'})
 

@@ -137,8 +137,8 @@
           <div class="card" :class="{ 'is-success': item.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow pr-1">
-                <span class="icon" v-if="!item.progress">
-                  <i class="fas" :class="{'fa-eye-slash': !item.watched, 'fa-eye': item.watched}"></i>
+                <span class="icon is-unselectable">
+                  <i class="fas" :class="{'fa-eye-slash': !item.watched, 'fa-eye': item.watched}"></i>&nbsp;
                 </span>
                 <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
               </p>
@@ -167,39 +167,33 @@
                               v-text="item?.content_path"/>
                   </div>
                 </div>
-                <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                  <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                    <span class="has-tooltip"
-                          v-tooltip="moment.unix(item.updated_at??item.updated).format('YYYY-MM-DD h:mm:ss A')">
-                      {{ moment.unix(item.updated_at ?? item.updated).fromNow() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                  <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                    <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                  </div>
-                </div>
-                <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
-                  <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
-                    {{ item.event ?? '-' }}
-                  </div>
+                <div class="column is-12 has-text-left" v-if="item?.progress">
+                  <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                  <span>{{ formatDuration(item.progress) }}</span>
                 </div>
               </div>
             </div>
-            <div class="card-footer" v-if="item.progress">
+            <div class="card-footer has-text-centered">
               <div class="card-footer-item">
-                <span class="has-text-success" v-if="item.watched">Played</span>
-                <span class="has-text-danger" v-else>Unplayed</span>
+                <div class="is-text-overflow">
+                  <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                  <span class="has-tooltip"
+                        v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                    {{ moment.unix(item.updated_at).fromNow() }}
+                  </span>
+                </div>
               </div>
               <div class="card-footer-item">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-bars-progress"></i></span>
-                  <span>{{ formatDuration(item.progress) }}</span>
-                </span>
+                <div class="is-text-overflow">
+                  <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                  <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                </div>
+              </div>
+              <div class="card-footer-item">
+                <div class="is-text-overflow">
+                  <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                  {{ item.event ?? '-' }}
+                </div>
               </div>
             </div>
           </div>
@@ -225,7 +219,14 @@
 import request from '~/utils/request.js'
 import moment from 'moment'
 import Message from '~/components/Message.vue'
-import {formatDuration, makeName, makePagination, makeSearchLink, notification} from '~/utils/index.js'
+import {
+  formatDuration,
+  makeName,
+  makePagination,
+  makeSearchLink,
+  notification,
+  TOOLTIP_DATE_FORMAT
+} from '~/utils/index.js'
 
 const route = useRoute()
 const router = useRouter()

@@ -65,7 +65,8 @@
             <div class="column is-6 has-text-left">
               <strong class="is-hidden-mobile">Prev Run:&nbsp;</strong>
               <template v-if="task.enabled">
-                <span class="has-tooltip" v-tooltip="`Prev Run: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`">
+                <span class="has-tooltip"
+                      v-tooltip="`Last run was at: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`">
                   {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
                 </span>
               </template>
@@ -76,7 +77,8 @@
             <div class="column is-6 has-text-right">
               <strong class="is-hidden-mobile">Next Run:&nbsp;</strong>
               <template v-if="task.enabled">
-                <span class="has-tooltip" v-tooltip="`Next Run: ${moment(task.next_run).format(TOOLTIP_DATE_FORMAT)}`">
+                <span class="has-tooltip"
+                      v-tooltip="`Next run will be at: ${moment(task.next_run).format(TOOLTIP_DATE_FORMAT)}`">
                   {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
                 </span>
               </template>

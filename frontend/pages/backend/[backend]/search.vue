@@ -140,8 +140,9 @@
             <div class="card-footer">
               <div class="card-footer-item">
                 <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                <span class="has-tooltip" v-tooltip="moment.unix(item.updated).format('YYYY-MM-DD h:mm:ss A')">
-                  {{ moment.unix(item.updated).fromNow() }}
+                <span class="has-tooltip"
+                      v-tooltip="moment.unix(item.updated_at ?? item.updated).format(TOOLTIP_DATE_FORMAT)">
+                  {{ moment.unix(item.updated_at ?? item.updated).fromNow() }}
                 </span>
               </div>
               <div class="card-footer-item">
@@ -196,7 +197,7 @@
 <script setup>
 import request from '~/utils/request.js'
 import moment from 'moment'
-import {makeName, makeSearchLink, notification} from '~/utils/index.js'
+import {makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import Message from "~/components/Message.vue";
 import {useStorage} from "@vueuse/core";
 

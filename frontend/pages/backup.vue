@@ -55,9 +55,8 @@
         <div class="card-footer-item">
           <div class="card-footer-item">
             <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-            <span v-tooltip="`Last Update: ${moment.unix(item.modified_at).format(TOOLTIP_DATE_FORMAT)} `"
-                  class="has-tooltip">
-              {{ moment.unix(item.created_at).fromNow() }}
+            <span class="has-tooltip" v-tooltip="`Last Update: ${moment(item.date).format(TOOLTIP_DATE_FORMAT)}`">
+              {{ moment(item.date).fromNow() }}
             </span>
           </div>
           <div class="card-footer-item">
