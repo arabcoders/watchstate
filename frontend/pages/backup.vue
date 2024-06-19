@@ -11,6 +11,7 @@
             <button class="button is-primary" @click="queueTask" :disabled="isLoading"
                     :class="{'is-loading':isLoading, 'is-primary':!queued, 'is-danger':queued}">
               <span class="icon"><i class="fas fa-sd-card"></i></span>
+              <span>{{ !queued ? 'Queue backup' : 'Remove from queue' }}</span>
             </button>
           </p>
           <p class="control">
@@ -65,19 +66,45 @@
         </div>
       </div>
     </div>
+
+    <div class="column is-12">
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>
+            Backups that are tagged <code>Automatic</code> are subject to auto deletion after <code>9</code> days from
+            the date of creation.
+          </li>
+          <li>
+            You can trigger a backup task to run in the background by clicking the
+            <code><span class="icon"><i class="fas fa-sd-card"></i></span> Queue backup</code> button. on top right.
+            Those backups will be tagged as <code>Automatic</code>.
+          </li>
+          <li>
+            To generate a manual backup, you need to use the <code>state:backup</code> command from the console.
+            or by <span class="icon"><i class="fas fa-terminal"></i></span>
+            <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')"
+                      v-text="'Web Console'"/>
+            page.
+          </li>
+        </ul>
+      </Message>
+    </div>
   </div>
 </template>
 
 <script setup>
 import request from '~/utils/request.js'
 import moment from 'moment'
-import {humanFileSize, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import Message from '~/components/Message.vue'
+import {useStorage} from "@vueuse/core";
 
 useHead({title: 'Backups'})
 const items = ref([])
 const isLoading = ref(false)
 const queued = ref(true)
+const show_page_tips = useStorage('show_page_tips', true)
 
 const loadContent = async () => {
   items.value = []
