@@ -26,11 +26,11 @@ final class Backup
         $list = [];
 
         foreach (glob($path . '/*.json') as $file) {
-            $isTemp = 1 === preg_match('/\w+\.\d+\.json/i', basename($file));
+            $isAuto = 1 === preg_match('/\w+\.\d{8}\.json/i', basename($file));
 
             $builder = [
                 'filename' => basename($file),
-                'type' => $isTemp ? 'temporary' : 'permanent',
+                'type' => $isAuto ? 'Automatic' : 'Manual',
                 'size' => filesize($file),
                 'created_at' => filectime($file),
                 'modified_at' => filemtime($file),
