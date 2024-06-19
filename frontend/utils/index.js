@@ -4,6 +4,8 @@ const {notify} = useNotification();
 
 const AG_SEPARATOR = '.'
 
+const TOOLTIP_DATE_FORMAT = 'YYYY-MM-DD h:mm:ss A'
+
 const guid_links = {
     'episode': {
         'imdb': 'https://www.imdb.com/title/{_guid}',
@@ -425,4 +427,5 @@ export {
     dEvent,
     makeName,
     makePagination,
+    TOOLTIP_DATE_FORMAT,
 }

@@ -80,6 +80,9 @@ final class Index
         ]);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     #[Get(self::URL . '/{id:[a-zA-Z0-9_-]+}[/]', name: 'tasks.task.view')]
     public function taskView(iRequest $request, array $args = []): iResponse
     {
@@ -93,7 +96,12 @@ final class Index
             return api_error('Task not found.', HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, Index::formatTask($task));
+        $queuedTasks = $this->cache->get('queued_tasks', []);
+
+        $data = Index::formatTask($task);
+        $data['queued'] = in_array(ag($task, 'name'), $queuedTasks);
+
+        return api_response(HTTP_STATUS::HTTP_OK, $data);
     }
 
     private function formatTask(array $task): array

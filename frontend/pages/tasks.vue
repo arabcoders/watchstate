@@ -65,7 +65,9 @@
             <div class="column is-6 has-text-left">
               <strong class="is-hidden-mobile">Prev Run:&nbsp;</strong>
               <template v-if="task.enabled">
-                {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
+                <span class="has-tooltip" v-tooltip="`Prev Run: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`">
+                  {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
+                </span>
               </template>
               <template v-else>
                 <span class="tag is-danger">Disabled</span>
@@ -74,7 +76,9 @@
             <div class="column is-6 has-text-right">
               <strong class="is-hidden-mobile">Next Run:&nbsp;</strong>
               <template v-if="task.enabled">
-                {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
+                <span class="has-tooltip" v-tooltip="`Next Run: ${moment(task.next_run).format(TOOLTIP_DATE_FORMAT)}`">
+                  {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
+                </span>
               </template>
               <template v-else>
                 <span class="tag is-danger">Disabled</span>
@@ -84,12 +88,13 @@
         </div>
         <footer class="card-footer">
           <div class="card-footer-item">
-            <button class="button is-info" @click="queueTask(task)" :disabled="task.queued">
+            <button class="button is-info" @click="queueTask(task)"
+                    :class="{'is-danger':task.queued,'is-info':!task.queued}">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-clock"></i></span>
                 <span>
                   <template v-if="!task.queued">Queue Task</template>
-                  <template v-else>Queued</template>
+                  <template v-else>Remove from queue</template>
                 </span>
               </span>
             </button>
@@ -133,8 +138,8 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
-import request from '~/utils/request.js'
-import {notification} from '~/utils/index.js'
+import request from '~/utils/request'
+import {notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message.vue'
 import {useStorage} from '@vueuse/core'
@@ -169,7 +174,7 @@ const toggleTask = async task => {
     await request(`/system/env/${keyName}`, {
       method: 'POST',
       body: JSON.stringify({"value": !task.enabled})
-    });
+    })
 
     const response = await request(`/tasks/${task.name}`)
     tasks.value[tasks.value.findIndex(b => b.name === task.name)] = await response.json()
@@ -179,15 +184,17 @@ const toggleTask = async task => {
 }
 
 const queueTask = async task => {
-  if (!confirm(`Queue '${task.name}' to run in background?`)) {
+  const is_queued = Boolean(task.queued)
+  const message = is_queued ? `Remove '${task.name}' from the queue?` : `Queue '${task.name}' to run in background?`
+  if (!confirm(message)) {
     return
   }
 
   try {
-    const response = await request(`/tasks/${task.name}/queue`, {method: 'POST'})
+    const response = await request(`/tasks/${task.name}/queue`, {method: is_queued ? 'DELETE' : 'POST'})
     if (response.ok) {
-      notification('success', 'Success', `Task ${task.name} has been queued.`)
-      await loadContent()
+      notification('success', 'Success', `Task '${task.name}' has been ${is_queued ? 'removed from the queue' : 'queued'}.`)
+      task.queued = !is_queued
     }
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
@@ -195,9 +202,9 @@ const queueTask = async task => {
 }
 
 const confirmRun = async task => {
-  if (!confirm(`Are you sure you want to run '${task.name}' via web console now?`)) {
+  if (!confirm(`Run '${task.name}' via web console now?`)) {
     return
   }
-  await navigateTo({path: '/console', query: {task: task.name, keep: 1}})
+  await navigateTo({path: '/console', query: {task: task.name}})
 }
 </script>
