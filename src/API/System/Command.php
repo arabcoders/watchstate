@@ -18,7 +18,12 @@ use Symfony\Component\Process\Process;
 final class Command
 {
     public const string URL = '%{api.prefix}/system/command';
+    private const int TIMES_BEFORE_PING = 6;
+    private const int PING_INTERVAL = 200000;
+
     private int $counter = 1;
+
+    private bool $toBackground = false;
 
     public function __construct()
     {
@@ -59,10 +64,14 @@ final class Command
                     command: "{$path}/bin/console {$command}",
                     cwd: $path,
                     env: $_ENV,
-                    timeout: $data->get('timeout', 3600),
+                    timeout: $data->get('timeout', 7200),
                 );
 
                 $process->start(callback: function ($type, $data) use ($process) {
+                    if (true === $this->toBackground) {
+                        return;
+                    }
+
                     echo "id: " . hrtime(true) . "\n";
                     echo "event: data\n";
                     $data = (string)$data;
@@ -82,26 +91,26 @@ final class Command
 
                     flush();
 
-                    $this->counter = 3;
+                    $this->counter = self::TIMES_BEFORE_PING;
 
                     if (ob_get_length() > 0) {
                         ob_end_flush();
                     }
 
                     if (connection_aborted()) {
-                        $process->stop(1, 9);
+                        $this->toBackground = true;
                     }
                 });
 
-                while ($process->isRunning()) {
-                    usleep(500000);
+                while (false === $this->toBackground && $process->isRunning()) {
+                    usleep(self::PING_INTERVAL);
                     $this->counter--;
 
                     if ($this->counter > 1) {
                         continue;
                     }
 
-                    $this->counter = 3;
+                    $this->counter = self::TIMES_BEFORE_PING;
 
                     echo "id: " . hrtime(true) . "\n";
                     echo "event: ping\n";
@@ -113,13 +122,13 @@ final class Command
                     }
 
                     if (connection_aborted()) {
-                        $process->stop(1, 9);
+                        $this->toBackground = true;
                     }
                 }
             } catch (ProcessTimedOutException) {
             }
 
-            if (!connection_aborted()) {
+            if (false === $this->toBackground && !connection_aborted()) {
                 echo "id: " . hrtime(true) . "\n";
                 echo "event: close\n";
                 echo 'data: ' . makeDate() . "\n\n";
@@ -132,16 +141,12 @@ final class Command
             exit;
         };
 
-        return new Response(
-            status: HTTP_STATUS::HTTP_OK->value,
-            headers: [
-                'Content-Type' => 'text/event-stream',
-                'Cache-Control' => 'no-cache',
-                'Connection' => 'keep-alive',
-                'X-Accel-Buffering' => 'no',
-                'Last-Event-Id' => time(),
-            ],
-            body: StreamClosure::create($callable)
-        );
+        return new Response(status: HTTP_STATUS::HTTP_OK->value, headers: [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+            'Last-Event-Id' => time(),
+        ], body: StreamClosure::create($callable));
     }
 }

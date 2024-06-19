@@ -180,6 +180,15 @@ const finished = () => {
   }
 
   isLoading.value = false;
+
+  const route = useRoute();
+  const router = useRouter();
+
+  if (route.query?.cmd || route.query?.task) {
+    route.query.cmd = '';
+    route.query.task = '';
+    router.push({path: '/console'});
+  }
 }
 
 onUpdated(() => outputConsole.value.scrollTop = outputConsole.value.scrollHeight);
