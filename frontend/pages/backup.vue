@@ -41,10 +41,15 @@
       <div class="card">
         <header class="card-header">
           <p class="card-header-title is-text-overflow pr-1">
-            <NuxtLink @click="downloadFile(item)" v-text="item.filename"/>
+            <span class="icon"><i class="fas fa-download" :class="{'fa-spin':item?.isDownloading}"></i>&nbsp;</span>
+            <span>
+              <NuxtLink @click="downloadFile(item)" v-text="item.filename"/>
+            </span>
           </p>
           <span class="card-header-icon">
-            <span class="icon"><i class="fas fa-download" :class="{'fa-spin':item?.isDownloading}"></i></span>
+            <NuxtLink @click="deleteFile(item)" class="has-text-danger" v-tooltip="'Delete this backup file.'">
+              <span class="icon"><i class="fas fa-trash"></i></span>
+            </NuxtLink>
           </span>
         </header>
         <div class="card-footer-item">
@@ -98,7 +103,7 @@ import request from '~/utils/request.js'
 import moment from 'moment'
 import {humanFileSize, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import Message from '~/components/Message.vue'
-import {useStorage} from "@vueuse/core";
+import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Backups'})
 const items = ref([])
@@ -165,6 +170,34 @@ const queueTask = async () => {
       notification('success', 'Success', `Task backup has been ${is_queued ? 'removed from the queue' : 'queued'}.`)
       queued.value = !is_queued
     }
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
+  }
+}
+
+const deleteFile = async (item) => {
+  if (!confirm(`Delete backup file '${item.filename}'?`)) {
+    return
+  }
+
+  try {
+    const response = await request(`/system/backup/${item.filename}`, {method: 'DELETE'})
+
+    if (200 === response.status) {
+      notification('success', 'Success', `Backup file '${item.filename}' has been deleted.`)
+      items.value = items.value.filter(i => i.filename !== item.filename)
+      return
+    }
+
+    let json
+
+    try {
+      json = await response.json()
+    } catch (e) {
+      json = {error: {code: response.status, message: response.statusText}}
+    }
+
+    notification('error', 'Error', `API error. ${json.error.code}: ${json.error.message}`)
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
   }

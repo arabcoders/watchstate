@@ -30,7 +30,7 @@ final class Backup
 
             $builder = [
                 'filename' => basename($file),
-                'type' => $isAuto ? 'Automatic' : 'Manual',
+                'type' => $isAuto ? 'automatic' : 'manual',
                 'size' => filesize($file),
                 'created_at' => filectime($file),
                 'modified_at' => filemtime($file),

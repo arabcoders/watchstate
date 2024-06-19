@@ -195,6 +195,11 @@ const queueTask = async task => {
     if (response.ok) {
       notification('success', 'Success', `Task '${task.name}' has been ${is_queued ? 'removed from the queue' : 'queued'}.`)
       task.queued = !is_queued
+      if (task.queued) {
+        queued.value.push(task.name)
+      } else {
+        queued.value = queued.value.filter(t => t !== task.name)
+      }
     }
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
