@@ -77,6 +77,41 @@ return (function (): array {
             'class' => fn() => new QueueRequests()
         ],
 
+        Redis::class => [
+            'class' => function (): Redis {
+                $cacheUrl = Config::get('cache.url');
+
+                if (empty($cacheUrl)) {
+                    throw new RuntimeException('No cache server was set.');
+                }
+
+                if (!extension_loaded('redis')) {
+                    throw new RuntimeException('Redis extension is not loaded.');
+                }
+
+                $uri = new Uri($cacheUrl);
+                $params = [];
+
+                if (!empty($uri->getQuery())) {
+                    parse_str($uri->getQuery(), $params);
+                }
+
+                $redis = new Redis();
+
+                $redis->connect($uri->getHost(), $uri->getPort() ?? 6379);
+
+                if (null !== ag($params, 'password')) {
+                    $redis->auth(ag($params, 'password'));
+                }
+
+                if (null !== ag($params, 'db')) {
+                    $redis->select((int)ag($params, 'db'));
+                }
+
+                return $redis;
+            }
+        ],
+
         CacheInterface::class => [
             'class' => function () {
                 if (true === (bool)env('WS_CACHE_NULL', false)) {

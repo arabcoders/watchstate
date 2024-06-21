@@ -168,6 +168,13 @@ interface DatabaseInterface
     public function makeMigration(string $name, array $opts = []): mixed;
 
     /**
+     * Reset database to initial state.
+     *
+     * @return bool
+     */
+    public function reset(): bool;
+
+    /**
      * Inject Logger.
      *
      * @param LoggerInterface $logger

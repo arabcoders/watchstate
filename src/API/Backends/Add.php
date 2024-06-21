@@ -132,11 +132,11 @@ final class Add
             'uuid' => $data->get('uuid'),
             'export' => [
                 'enabled' => (bool)$data->get('export.enabled', false),
-                'lastSync' => (int)$data->get('export.lastSync', 0),
+                'lastSync' => (int)$data->get('export.lastSync', null),
             ],
             'import' => [
                 'enabled' => (bool)$data->get('import.enabled', false),
-                'lastSync' => (int)$data->get('import.lastSync', 0),
+                'lastSync' => (int)$data->get('import.lastSync', null),
             ],
             'webhook' => [
                 'token' => $data->get('webhook.token'),

@@ -583,6 +583,20 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
+    public function reset(): bool
+    {
+        $this->pdo->exec('DELETE FROM `state` WHERE `id` > 0');
+
+        if ('sqlite' === $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME)) {
+            $this->pdo->exec('DELETE FROM sqlite_sequence WHERE name = "state"');
+        }
+
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function setLogger(LoggerInterface $logger): iDB
     {
         $this->logger = $logger;

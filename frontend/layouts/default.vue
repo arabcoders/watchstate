@@ -95,6 +95,12 @@
                 <span class="icon"><i class="fas fa-sd-card"></i></span>
                 <span>Backups</span>
               </NuxtLink>
+              <hr class="navbar-divider">
+
+              <NuxtLink class="navbar-item" to="/reset" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-redo"></i></span>
+                <span>System reset</span>
+              </NuxtLink>
             </div>
           </div>
 
