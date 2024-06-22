@@ -70,9 +70,9 @@
               </NuxtLink>
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/queue" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/events" @click.native="showMenu=false">
                 <span class="icon"><i class="fas fa-list"></i></span>
-                <span>Queue</span>
+                <span>Events</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/ignore" @click.native="showMenu=false">
