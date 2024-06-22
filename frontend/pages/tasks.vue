@@ -48,19 +48,23 @@
             </div>
             <div class="column is-12 has-text-left">
               <strong class="is-hidden-mobile">Runs: </strong>
-              <NuxtLink class="has-tooltip" :to="`/env?edit=WS_CRON_${task.name.toUpperCase()}_AT`">
+              <NuxtLink class="has-tooltip" target="_blank"
+                        :to="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`">
                 {{ cronstrue.toString(task.timer) }}
               </NuxtLink>
             </div>
             <div class="column is-6 has-text-left">
               <strong class="is-hidden-mobile">Timer:&nbsp;</strong>
-              <NuxtLink class="has-tooltip" target="_blank"
-                        :to="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`">
+              <NuxtLink class="has-tooltip"
+                        :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`,`"${task.timer}"`)'>
                 {{ task.timer }}
               </NuxtLink>
             </div>
             <div class="column is-6 has-text-right" v-if="task.args">
-              <strong class="is-hidden-mobile">Args:</strong> <code>{{ task.args }}</code>
+              <strong class="is-hidden-mobile">Args:&nbsp;</strong>
+              <NuxtLink class="has-tooltip" :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)">
+                {{ task.args }}
+              </NuxtLink>
             </div>
             <div class="column is-6 has-text-left">
               <strong class="is-hidden-mobile">Prev Run:&nbsp;</strong>
@@ -124,12 +128,13 @@
           </li>
           <li>Use the switch next to the task to enable or disable the task from being run automatically.</li>
           <li>To change when task is scheduled to run, please visit
+            <span class="icon"><i class="fas fa-cogs"></i>&nbsp;</span>
             <NuxtLink to="/env" v-text="'Environment variables'"/>
             page. The <code>WS_CRON_(TASK)_*</code> variables are used to control scheduled tasks.
           </li>
-          <li>Clicking on the Runs link will take you directly to the environment variable for the task. While on the
-            timer link will take you to external page that will show for you more information about the cron timer
-            syntax.
+          <li>Clicking on the <code>Runs</code> link will take you to external page that will show for you more
+            information about the cron timer syntax. While clicking on <code>Timer</code> or <code>Args</code>
+            link will take you to edit the related environment variable.
           </li>
         </ul>
       </Message>
@@ -206,6 +211,16 @@ const queueTask = async task => {
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
   }
+}
+
+const makeEnvLink = (key, val = null) => {
+  let search = new URLSearchParams();
+  search.set('callback', '/tasks')
+  search.set('edit', key)
+  if (val) {
+    search.set('value', val)
+  }
+  return `/env?${search.toString()}`
 }
 
 const confirmRun = async task => {

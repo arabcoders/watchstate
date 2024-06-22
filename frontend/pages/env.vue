@@ -15,7 +15,8 @@
             </button>
           </p>
           <p class="control">
-            <button class="button is-info" @click="loadContent">
+            <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
+                    :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
             </button>
           </p>
@@ -26,6 +27,18 @@
           This page allow you alter the environment variables that are used to configure the application.
         </span>
       </div>
+    </div>
+
+    <div class="column is-12" v-if="!toggleForm && items.length < 1">
+      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+      <Message v-else message_class="has-background-warning-90 has-text-dark" title="Information"
+               icon="fas fa-info-circle">
+        <p>
+          No environment variables configured yet. Click on the
+          <i @click="toggleForm=true" class="is-clickable fa fa-add"></i> button to add a new variable.
+        </p>
+      </Message>
     </div>
 
     <div class="column is-12" v-if="toggleForm">
@@ -41,8 +54,8 @@
                 <div class="select is-fullwidth">
                   <select v-model="form_key" id="form_key" @change="keyChanged">
                     <option value="" disabled>Select Key</option>
-                    <option v-for="env in envs" :key="env.key" :value="env.key">
-                      {{ env.key }}
+                    <option v-for="item in items" :key="`opt-${item.key}`" :value="item.key">
+                      {{ item.key }}
                     </option>
                   </select>
                 </div>
@@ -100,39 +113,38 @@
         </div>
       </form>
     </div>
-
-    <div class="column is-12" v-if="envs">
+    <div v-else class="column is-12" v-if="items">
       <div class="columns is-multiline">
-        <div class="column is-4" v-for="env in filteredRows(envs)" :key="env.key">
+        <div class="column is-4" v-for="item in filteredRows(items)" :key="item.key">
           <div class="card">
             <header class="card-header">
               <p class="card-header-title is-unselectable">
-                <span class="has-tooltip is-clickable" v-tooltip="env.description">{{ env.key }}</span>
+                <span class="has-tooltip is-clickable" v-tooltip="item.description">{{ item.key }}</span>
               </p>
-              <span class="card-header-icon" v-if="env.mask" @click="env.mask = false" v-tooltip="'Unmask the value'">
+              <span class="card-header-icon" v-if="item.mask" @click="item.mask = false" v-tooltip="'Unmask the value'">
                 <span class="icon"><i class="fas fa-unlock"></i></span>
               </span>
             </header>
             <div class="card-content">
               <div class="content">
-                <p v-if="'bool' === env.type">
+                <p v-if="'bool' === item.type">
                   <span class="icon-text">
                     <span class="icon">
-                      <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(env.value)"></i>
+                      <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(item.value)"></i>
                       <i class="fas fa-toggle-off" v-else></i>
                     </span>
-                    <span>{{ fixBool(env.value) ? 'On (True)' : 'Off (False)' }}</span>
+                    <span>{{ fixBool(item.value) ? 'On (True)' : 'Off (False)' }}</span>
                   </span>
                 </p>
                 <p v-else class="is-text-overflow is-clickable is-unselectable"
-                   :class="{ 'is-masked': env.mask, 'is-unselectable': env.mask }"
+                   :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
                    @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                  {{ env.value }}</p>
+                  {{ item.value }}</p>
               </div>
             </div>
             <footer class="card-footer">
               <div class="card-footer-item">
-                <button class="button is-primary is-fullwidth" @click="editEnv(env)">
+                <button class="button is-primary is-fullwidth" @click="editEnv(item)">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-edit"></i></span>
                     <span>Edit</span>
@@ -140,7 +152,7 @@
                 </button>
               </div>
               <div class="card-footer-item">
-                <button class="button is-fullwidth is-warning" @click="copyText(env.value)">
+                <button class="button is-fullwidth is-warning" @click="copyText(item.value)">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-copy"></i></span>
                     <span>Copy</span>
@@ -148,7 +160,7 @@
                 </button>
               </div>
               <div class="card-footer-item">
-                <button class="button is-fullwidth is-danger" @click="deleteEnv(env)">
+                <button class="button is-fullwidth is-danger" @click="deleteEnv(item)">
                   <span class="icon-text">
                     <span class="icon"><i class="fas fa-trash"></i></span>
                     <span>Delete</span>
@@ -180,54 +192,67 @@
         </ul>
       </Message>
     </div>
+
   </div>
 </template>
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import {awaitElement, copyText, notification} from '~/utils/index.js'
+import request from '~/utils/request'
+import {awaitElement, copyText, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
-import Message from "~/components/Message.vue"
+import Message from '~/components/Message'
 
 useHead({title: 'Environment Variables'})
 
 const route = useRoute();
 const router = useRouter();
 
-const envs = ref([])
+const items = ref([])
 const toggleForm = ref(false)
 const form_key = ref('')
 const form_value = ref()
 const form_type = ref()
 const show_page_tips = useStorage('show_page_tips', true)
+const isLoading = ref(true)
 
 const file = ref('.env')
 
 const loadContent = async () => {
-  envs.value = []
-  const response = await request('/system/env')
-  const json = await response.json();
-  envs.value = json.data
-  if (json.file) {
-    file.value = json.file
-  }
-  if (route.query.edit) {
-    editEnv(envs.value.find(i => i.key === route.query.edit))
+  try {
+    isLoading.value = true
+    items.value = []
+    const response = await request('/system/env')
+    const json = await response.json();
+    items.value = json.data
+    if (json.file) {
+      file.value = json.file
+    }
+    if (route.query.edit) {
+      let item = items.value.find(i => i.key === route.query.edit);
+      if (item && route.query?.value) {
+        item.value = route.query.value
+      }
+      editEnv(item)
+    }
+  } catch (e) {
+    notification('error', 'Error', e.message, 5000)
+  } finally {
+    isLoading.value = false
   }
 }
 
 onMounted(() => loadContent())
 
 const deleteEnv = async (env) => {
-  if (!confirm(`Are you sure you want to delete the environment variable '${env.key}'?`)) {
+  if (!confirm(`Delete '${env.key}'?`)) {
     return
   }
 
   const response = await request(`/system/env/${env.key}`, {method: 'DELETE'})
 
   if (response.ok) {
-    envs.value = envs.value.filter(i => i.key !== env.key)
+    items.value = items.value.filter(i => i.key !== env.key)
     notification('success', 'Success', `Environment variable ${env.key} successfully deleted.`, 5000)
   }
 }
@@ -246,7 +271,7 @@ const addVariable = async () => {
     return
   }
 
-  const data = envs.value.filter(i => i.key === key)
+  const data = items.value.filter(i => i.key === key)
   if (data.length > 0 && data[0].value === form_value.value) {
     return cancelForm();
   }
@@ -267,13 +292,13 @@ const addVariable = async () => {
     return
   }
 
-  envs.value[envs.value.findIndex(i => i.key === key)] = json
+  items.value[items.value.findIndex(i => i.key === key)] = json
 
   notification('success', 'Success', 'Environment variable successfully updated.', 5000)
   return cancelForm();
 }
 
-const editEnv = (env) => {
+const editEnv = env => {
   form_key.value = env.key
   form_value.value = env.value
   form_type.value = env.type
@@ -283,20 +308,29 @@ const editEnv = (env) => {
   }
 }
 
-const cancelForm = () => {
+const cancelForm = async () => {
   form_key.value = ''
   form_value.value = null
   form_type.value = null
   toggleForm.value = false
-  if (route.query.edit) {
-    router.push('/env')
+  if (route.query?.callback) {
+    await navigateTo(`${route.query.callback}`)
+    return
+  }
+
+  if (route.query?.edit || route.query?.value) {
+    await router.push('/env')
   }
 }
 
-watch(toggleForm, (value) => {
+watch(toggleForm, async value => {
   if (!value) {
     form_key.value = ''
     form_value.value = null
+
+    if (route.query?.edit || route.query?.value) {
+      await router.push('/env')
+    }
   } else {
     awaitElement('#env_page_title', (_, el) => el.scrollIntoView({
       behavior: 'smooth',
@@ -311,17 +345,17 @@ const keyChanged = () => {
     return
   }
 
-  let data = envs.value.filter(i => i.key === form_key.value)
+  let data = items.value.filter(i => i.key === form_key.value)
   form_value.value = (data.length > 0) ? data[0].value : ''
   form_type.value = (data.length > 0) ? data[0].type : 'string'
 }
 
-const getHelp = (key) => {
+const getHelp = key => {
   if (!key) {
     return ''
   }
 
-  let data = envs.value.filter(i => i.key === key)
+  let data = items.value.filter(i => i.key === key)
   if (data.length === 0) {
     return ''
   }
@@ -335,7 +369,7 @@ const getHelp = (key) => {
   return (data[0].deprecated) ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
 }
 
-const fixBool = (value) => [true, 'true', '1'].includes(value)
+const fixBool = value => [true, 'true', '1'].includes(value)
 
-const filteredRows = (rows) => rows.filter(i => i.value !== undefined);
+const filteredRows = rows => rows.filter(i => i.value !== undefined);
 </script>
