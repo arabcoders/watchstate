@@ -208,10 +208,10 @@ final class Webhooks
 
         $this->cache->set('requests', $items, new DateInterval('P3D'));
 
-        if (false === $metadataOnly && true === $entity->hasPlayProgress()) {
+        if (false === $metadataOnly && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
             $progress = $this->cache->get('progress', []);
-            $progress[$itemId] = $entity;
-            $this->cache->set('progress', $progress, new DateInterval('P1D'));
+            $progress[str_replace($itemId, ':tainted@', ':untainted@')] = $entity;
+            $this->cache->set('progress', $progress, new DateInterval('P3D'));
         }
 
         $this->write($request, Level::Info, 'Queued [{backend}: {event}] {item.type} [{item.title}].', [
