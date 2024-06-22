@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <div class="column is-12" v-if="queue.length < 1 && progress.length < 1">
+    <div class="column is-12" v-if="queue.length < 1 && progress.length < 1 && requests.length < 1">
       <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
                icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
       <Message v-else message_class="is-background-success-90 has-text-dark" title="Information"
