@@ -214,6 +214,8 @@ trait APITraits
         $item['not_reported_by'] = array_values(
             array_filter($this->_backendsNames, fn($key) => false === in_array($key, ag($item, 'reported_by', [])))
         );
+        
+        $item['isTainted'] = $entity->isTainted();
 
         if (true === $includeContext) {
             $item = array_replace_recursive($item, $entity->getContext());
