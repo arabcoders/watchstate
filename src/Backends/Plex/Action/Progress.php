@@ -121,17 +121,24 @@ class Progress
             ];
 
             if ($context->backendName === $entity->via) {
-                $this->logger->info('Ignoring [{item.title}] for [{backend}]. Event originated from this backend.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->info(
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. Event originated from this backend.",
+                    [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    'Ignoring [{item.title}] for [{backend}]. No metadata was found.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. No metadata was found.",
                     [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
                     ]
@@ -141,10 +148,15 @@ class Progress
 
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
-                $this->logger->warning('Ignoring [{item.title}] for [{backend}]. Sender did not set a date.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->warning(
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. The event originator did not set a date.",
+                    [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
             $senderDate = makeDate($senderDate)->getTimestamp();
@@ -154,8 +166,10 @@ class Progress
 
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend date.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. Event date is older than backend local item date.",
                     [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
                     ]
@@ -167,8 +181,10 @@ class Progress
 
             if (array_key_exists($logContext['remote']['id'], $sessions)) {
                 $this->logger->notice(
-                    'Ignoring [{item.title}] watch progress update for [{backend}]. The item is being played right now.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. The item is playing right now.",
                     [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
                     ]
@@ -189,8 +205,10 @@ class Progress
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        'Ignoring [{item.title}] for [{backend}]. Sender date is older than backend item date.',
+                        "{action}: Not processing '{item.title}' for '{client}: {backend}'. Event date is older than backend remote item date.",
                         [
+                            'action' => $this->action,
+                            'client' => $context->clientName,
                             'backend' => $context->backendName,
                             ...$logContext,
                         ]
@@ -200,8 +218,10 @@ class Progress
 
                 if ($remoteItem->isWatched()) {
                     $this->logger->info(
-                        'Ignoring [{item.title}] for [{backend}]. The backend reported the item as watched.',
+                        "{action}: Not processing '{item.title}' for '{client}: {backend}'. The backend says the item is marked as watched.",
                         [
+                            'action' => $this->action,
+                            'client' => $context->clientName,
                             'backend' => $context->backendName,
                             ...$logContext,
                         ]
@@ -210,8 +230,9 @@ class Progress
                 }
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
-                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request to get {item.type} [{item.title}] status. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' get {item.type} '{item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
+                        'action' => $this->action,
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'error' => [
@@ -235,59 +256,58 @@ class Progress
 
             try {
                 if (true === (bool)ag($context->options, Options::PLEX_USE_OLD_PROGRESS_ENDPOINT, false)) {
-                    $url = $context->backendUrl->withPath('/:/progress/')->withQuery(
-                        http_build_query([
-                            'key' => $logContext['remote']['id'],
-                            'identifier' => 'com.plexapp.plugins.library',
-                            'state' => 'stopped',
-                            'time' => $entity->getPlayProgress(),
-                        ])
-                    );
+                    $url = $context->backendUrl->withPath('/:/progress/')->withQuery(http_build_query([
+                        'key' => $logContext['remote']['id'],
+                        'identifier' => 'com.plexapp.plugins.library',
+                        'state' => 'stopped',
+                        'time' => $entity->getPlayProgress(),
+                    ]));
                 } else {
                     // -- it seems /:/timeline/ allow us to update external user progress, while /:/progress/ does not.
-                    $url = $context->backendUrl
-                        ->withPath('/:/timeline/')
-                        ->withQuery(
-                            http_build_query([
-                                'ratingKey' => $logContext['remote']['id'],
-                                'key' => '/library/metadata/' . $logContext['remote']['id'],
-                                'identifier' => 'com.plexapp.plugins.library',
-                                'state' => 'stopped',
-                                'time' => $entity->getPlayProgress(),
-                                // -- Without duration & client identifier plex ignore watch progress update.
-                                'duration' => ag($remoteData, 'duration', 0),
-                                'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
-                            ])
-                        );
+                    $url = $context->backendUrl->withPath('/:/timeline/')->withQuery(http_build_query([
+                        'ratingKey' => $logContext['remote']['id'],
+                        'key' => '/library/metadata/' . $logContext['remote']['id'],
+                        'identifier' => 'com.plexapp.plugins.library',
+                        'state' => 'stopped',
+                        'time' => $entity->getPlayProgress(),
+                        // -- Without duration & client identifier plex ignore watch progress update.
+                        'duration' => ag($remoteData, 'duration', 0),
+                        'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
+                    ]));
                 }
 
                 $logContext['remote']['url'] = (string)$url;
 
-                $this->logger->debug('Updating [{backend}] {item.type} [{item.title}] watch progress.', [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->debug(
+                    "{action}: Updating '{client}: {backend}' {item.type} '{item.title}' watch progress to '{progress}'.",
+                    [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'progress' => formatDuration($entity->getPlayProgress()),
+                        // -- No need to convert as we are using the same position ticks.
+                        'time' => $entity->getPlayProgress(),
+                        ...$logContext,
+                    ]
+                );
 
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
-                        $this->http->request(
-                            'POST',
-                            (string)$url,
-                            array_replace_recursive($context->backendHeaders, [
-                                'user_data' => [
-                                    'id' => $key,
-                                    'context' => $logContext + [
-                                            'backend' => $context->backendName,
-                                        ],
-                                ],
-                            ])
-                        )
+                        $this->http->request('POST', (string)$url, array_replace_recursive($context->backendHeaders, [
+                            'user_data' => [
+                                'id' => $key,
+                                'context' => $logContext + [
+                                        'backend' => $context->backendName,
+                                    ],
+                            ]
+                        ]))
                     );
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] request to change {item.type} [{item.title}] watch progress. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' change {item.type} '{item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
+                        'action' => $this->action,
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'error' => [

@@ -16,7 +16,8 @@
             </button>
           </p>
           <p class="control">
-            <button class="button is-info" @click="loadContent">
+            <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
+                    :class="{'is-loading':isLoading}">
               <span class="icon">
                 <i class="fas fa-sync"></i>
               </span>
@@ -29,6 +30,15 @@
           This page allow you to ignore specific <code>GUID</code> from being processed by the system.
         </span>
       </div>
+    </div>
+
+    <div class="column is-12" v-if="!toggleForm && items.length < 1">
+      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+      <Message v-else message_class="has-background-success-90 has-text-dark" title="Information" icon="fas fa-check">
+        There are no ignore rules configured. You can add new ignore rules by clicking on the
+        <i @click="toggleForm=true" class="is-clickable fas fa-add"></i> button.
+      </Message>
     </div>
 
     <div class="column is-12" v-if="toggleForm">
@@ -172,7 +182,7 @@
       </form>
     </div>
 
-    <div class="column is-12" v-if="items">
+    <div v-else class="column is-12" v-if="items">
       <div class="columns is-multiline">
         <div class="column is-6" v-for="item in items" :key="item.rule">
           <div class="card">
@@ -247,15 +257,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="column is-12" v-if="items.length < 1">
-      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
-      <Message v-else message_class="has-background-success-90 has-text-dark" title="Information" icon="fas fa-check">
-        There are no ignore rules configured. You can add new ignore rules by clicking on the
-        <i @click="toggleForm=true" class="is-clickable fas fa-add"></i> button.
-      </Message>
     </div>
 
     <div class="column is-12">

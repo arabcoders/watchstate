@@ -418,10 +418,11 @@ final class DirectMapper implements iImport
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
                     $changes = $local->diff(fields: $keys);
+                    $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
 
                     if (count($changes) >= 1) {
                         $this->logger->notice(
-                            $playChanged ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
+                            $progress ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
                             [
                                 'id' => $cloned->id,
                                 'backend' => $entity->via,
@@ -434,11 +435,11 @@ final class DirectMapper implements iImport
                     if (false === $inDryRunMode) {
                         $this->db->update($local);
 
-                        if (true === $entity->hasPlayProgress()) {
+                        if (true === $entity->hasPlayProgress() && !$entity->isWatched()) {
                             $itemId = r('{type}://{id}:{tainted}@{backend}', [
                                 'type' => $entity->type,
                                 'backend' => $entity->via,
-                                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                                'tainted' => 'untainted',
                                 'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                             ]);
 
@@ -732,7 +733,7 @@ final class DirectMapper implements iImport
                 foreach ($this->progressItems as $itemId => $entity) {
                     $progress[$itemId] = $entity;
                 }
-                $this->cache->set('progress', $progress, new DateInterval('P1D'));
+                $this->cache->set('progress', $progress, new DateInterval('P3D'));
             } catch (\Psr\SimpleCache\InvalidArgumentException) {
             }
         }
