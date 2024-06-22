@@ -112,8 +112,9 @@ class Progress
 
             if ($context->backendName === $entity->via) {
                 $this->logger->info(
-                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Event generator.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. Event originated from this backend.",
                     [
+                        'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -124,8 +125,9 @@ class Progress
 
             if (null === ag($metadata, iState::COLUMN_ID, null)) {
                 $this->logger->warning(
-                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. No metadata.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. No metadata was found.",
                     [
+                        'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -137,8 +139,9 @@ class Progress
             $senderDate = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_DATE);
             if (null === $senderDate) {
                 $this->logger->warning(
-                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Sender date is not set.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. The event originator did not set a date.",
                     [
+                        'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
@@ -152,10 +155,15 @@ class Progress
             $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
             if (false === $ignoreDate && null !== $datetime && makeDate($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
-                    'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Sender date is older than recorded backend date.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. Event date is older than backend local item date.",
                     [
+                        'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
+                        'compare' => [
+                            'remote' => makeDate($datetime),
+                            'sender' => makeDate($senderDate),
+                        ],
                         ...$logContext,
                     ]
                 );
@@ -166,8 +174,10 @@ class Progress
 
             if (array_key_exists($logContext['remote']['id'], $sessions)) {
                 $this->logger->notice(
-                    'Ignoring [{item.title}] watch progress update for [{backend}]. The item is being played right now.',
+                    "{action}: Not processing '{item.title}' for '{client}: {backend}'. The item is playing right now.",
                     [
+                        'action' => $this->action,
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContext,
                     ]
@@ -187,10 +197,15 @@ class Progress
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
-                        'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. Sender date is older than backend remote item date.',
+                        "{action}: Not processing '{item.title}' for '{client}: {backend}'. Event date is older than backend remote item date.",
                         [
+                            'action' => $this->action,
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
+                            'compare' => [
+                                'remote' => makeDate($remoteItem->updated),
+                                'sender' => makeDate($senderDate),
+                            ],
                             ...$logContext,
                         ]
                     );
@@ -199,8 +214,9 @@ class Progress
 
                 if ($remoteItem->isWatched()) {
                     $this->logger->info(
-                        'Emby.Progress: Ignoring [{item.title}] for [{client}: {backend}]. The backend reported the item as watched.',
+                        "{action}: Not processing '{item.title}' for '{client}: {backend}'. The backend says the item is marked as watched.",
                         [
+                            'action' => $this->action,
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
                             ...$logContext,
@@ -210,10 +226,11 @@ class Progress
                 }
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
-                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] get {item.type} [{item.title}] status. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' get {item.type} '{item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
                     contexT: [
-                        'backend' => $context->backendName,
+                        'action' => $this->action,
                         'client' => $context->clientName,
+                        'backend' => $context->backendName,
                         ...$logContext,
                         'error' => [
                             'kind' => $e::class,
@@ -244,44 +261,43 @@ class Progress
                 $logContext['remote']['url'] = (string)$url;
 
                 $this->logger->debug(
-                    'Emby.Progress: Updating [{client}: {backend}] {item.type} [{item.title}] watch progress.',
+                    "{action}: Updating '{client}: {backend}' {item.type} '{item.title}' watch progress to '{progress}'.",
                     [
-                        // -- convert time to ticks for emby to understand it.
-                        'time' => floor($entity->getPlayProgress() * 1_00_00),
+                        'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
+                        'progress' => formatDuration($entity->getPlayProgress()),
+                        // -- convert secs to ms for emby to understand it.
+                        'time' => floor($entity->getPlayProgress() * 1_00_00),
                         ...$logContext,
                     ]
                 );
 
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
-                        $this->http->request(
-                            'POST',
-                            (string)$url,
-                            array_replace_recursive($context->backendHeaders, [
-                                'headers' => [
-                                    'Content-Type' => 'application/json',
-                                ],
-                                'json' => [
-                                    'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
-                                ],
-                                'user_data' => [
-                                    'id' => $key,
-                                    'context' => $logContext + [
-                                            'backend' => $context->backendName,
-                                        ],
-                                ],
-                            ])
-                        )
+                        $this->http->request('POST', (string)$url, array_replace_recursive($context->backendHeaders, [
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                            ],
+                            'json' => [
+                                'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
+                            ],
+                            'user_data' => [
+                                'id' => $key,
+                                'context' => $logContext + [
+                                        'backend' => $context->backendName,
+                                    ],
+                            ],
+                        ]))
                     );
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] change {item.type} [{item.title}] watch progress. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' change {item.type} '{item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
-                        'backend' => $context->backendName,
+                        'action' => $this->action,
                         'client' => $context->clientName,
+                        'backend' => $context->backendName,
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
