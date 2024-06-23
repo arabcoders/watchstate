@@ -11,6 +11,7 @@ use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use Throwable;
 
@@ -50,10 +51,12 @@ class JellyfinManage implements ManageInterface
 
             $backend = ag_set($backend, 'url', $url);
         })();
+
         $this->output->writeln('');
 
         // -- $backend.token
-        (function () use (&$backend) {
+        (function () use (&$backend, $opts) {
+            re_goto_token:
             $chosen = ag($backend, 'token');
 
             $question = new Question(
@@ -84,26 +87,35 @@ class JellyfinManage implements ManageInterface
 
             $token = $this->questionHelper->ask($this->input, $this->output, $question);
             $backend = ag_set($backend, 'token', $token);
-        })();
-        $this->output->writeln('');
 
-        // -- $backend.uuid
-        (function () use (&$backend, $opts) {
+            $this->output->writeln('');
+
+            $chosen = null;
+            $custom = array_replace_recursive($backend, [
+                'options' => [
+                    'client' => [
+                        'timeout' => 20
+                    ],
+                    Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
+                ]
+            ]);
+
+            // -- $backend.uuid
             try {
                 $this->output->writeln(
                     '<info>Attempting to automatically get the server unique identifier from API. Please wait...</info>'
                 );
 
-                $custom = array_replace_recursive($backend, [
-                    'options' => [
-                        'client' => [
-                            'timeout' => 20
-                        ],
-                        Options::DEBUG_TRACE => (bool)ag($opts, Options::DEBUG_TRACE, false),
-                    ]
-                ]);
+                $chosen = ag(
+                    $backend,
+                    'uuid',
+                    fn() => ag(makeBackend($custom, ag($custom, 'name'))->getInfo(), 'identifier')
+                );
 
-                $chosen = ag($backend, 'uuid', fn() => makeBackend($custom, ag($custom, 'name'))->getIdentifier(true));
+                if (empty($chosen)) {
+                    throw new RuntimeException('Backend returned empty unique identifier.');
+                }
+
                 $this->output->writeln(
                     r(
                         '<notice>Backend responded with [{id}] as it\'s unique identifier. setting it as default value.</notice>',
@@ -119,6 +131,9 @@ class JellyfinManage implements ManageInterface
                     'message' => $e->getMessage(),
                 ]));
                 $chosen = null;
+                $backend = ag_set($backend, 'token', null);
+
+                goto re_goto_token;
             }
 
             $question = new Question(
@@ -135,13 +150,13 @@ class JellyfinManage implements ManageInterface
                     HELP. PHP_EOL . '> ',
                     [
                         'name' => ag($backend, 'name'),
-                        'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
+                        'default' => "<value>[Default: {$chosen}]</value>",
                     ]
                 ),
                 $chosen
             );
 
-            $question->setValidator(function ($answer) {
+            $question->setValidator(function ($answer) use ($custom) {
                 if (empty($answer)) {
                     throw new RuntimeException('Backend unique identifier cannot be empty.');
                 }
@@ -156,12 +171,32 @@ class JellyfinManage implements ManageInterface
                         )
                     );
                 }
+
+                $backendUUid = makeBackend($custom, ag($custom, 'name'))->getIdentifier(true);
+
+                if ('auto' === $answer && !empty($backendUUid)) {
+                    return $backendUUid;
+                }
+
+                if ($answer !== $backendUUid) {
+                    throw new RuntimeException(
+                        r(
+                            'Invalid backend unique identifier was given. Expecting "{uuid}", but got "{answer}" instead.',
+                            [
+                                'uuid' => $backendUUid,
+                                'answer' => $answer
+                            ]
+                        )
+                    );
+                }
+
                 return $answer;
             });
 
             $uuid = $this->questionHelper->ask($this->input, $this->output, $question);
             $backend = ag_set($backend, 'uuid', $uuid);
         })();
+
         $this->output->writeln('');
 
         // -- $backend.user
@@ -169,6 +204,7 @@ class JellyfinManage implements ManageInterface
             $chosen = ag($backend, 'user');
 
             try {
+                retry_getUsers:
                 $this->output->writeln(
                     '<info>Trying to get users list from backend. Please wait...</info>'
                 );
@@ -210,7 +246,7 @@ class JellyfinManage implements ManageInterface
 
                 $question->setAutocompleterValues($list);
 
-                $question->setErrorMessage('Invalid value [%s] was selected.');
+                $question->setErrorMessage("Invalid value '%s' was selected.");
 
                 $user = $this->questionHelper->ask($this->input, $this->output, $question);
                 $backend = ag_set($backend, 'user', $map[$user]);
@@ -224,39 +260,26 @@ class JellyfinManage implements ManageInterface
                         $e->getMessage()
                     )
                 );
+
+                $question = new ConfirmationQuestion(
+                    r(
+                        "<question>Failed to get users list for '<value>{name}</value>'. Do you want to retry?</question>. {default}" . PHP_EOL . '> ',
+                        [
+                            'name' => ag($backend, 'name'),
+                            'default' => "<value>[Default: yes]</value>",
+                        ]
+                    ),
+                    true,
+                );
+
+                if (!$this->questionHelper->ask($this->input, $this->output, $question)) {
+                    exit(1);
+                }
+
+                goto retry_getUsers;
             }
-
-            $question = new Question(
-                r(
-                    '<question>Please enter [<value>{name}</value>] user id to associate this config to</question>. {default}' . PHP_EOL . '> ',
-                    [
-                        'name' => ag($backend, 'name'),
-                        'default' => null !== $chosen ? "- <value>[Default: {$chosen}]</value>" : '',
-                    ]
-                ),
-                $chosen
-            );
-            $question->setValidator(function ($answer) {
-                if (empty($answer)) {
-                    throw new RuntimeException('Backend user id cannot be empty.');
-                }
-
-                if (!is_string($answer) && !is_int($answer)) {
-                    throw new RuntimeException(
-                        r(
-                            'Backend user id is invalid. Expecting string or integer, but got \'{type}\' instead.',
-                            [
-                                'type' => get_debug_type($answer)
-                            ]
-                        )
-                    );
-                }
-                return $answer;
-            });
-
-            $user = $this->questionHelper->ask($this->input, $this->output, $question);
-            $backend = ag_set($backend, 'user', $user);
         })();
+
         $this->output->writeln('');
 
         return $backend;

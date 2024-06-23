@@ -267,6 +267,27 @@
       </div>
     </div>
   </div>
+
+  <div class="columns is-multiline">
+    <div class="column is-12">
+      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+        <ul>
+          <li>
+            Events marked with <code>is Tainted: Yes</code>, are interesting but are too chaotic to be useful be used to
+            determine play state. However, we do use them to update local metadata & play progress.
+          </li>
+          <li>
+            Events marked with <code>is Tainted: No</code>, are events that are used to determine play state.
+          </li>
+          <li>
+            If you are fast enough, you might be able to see the event before it is consumed by the backend. which allow
+            you to delete it from the queue if you desire.
+          </li>
+        </ul>
+      </Message>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -274,6 +295,7 @@ import request from '~/utils/request'
 import moment from 'moment'
 import Message from '~/components/Message'
 import {ag, formatDuration, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Queue'})
 
@@ -281,6 +303,7 @@ const queue = ref([])
 const progress = ref([])
 const requests = ref([])
 const isLoading = ref(false)
+const show_page_tips = useStorage('show_page_tips', true)
 
 const loadContent = async () => {
   try {

@@ -47,7 +47,8 @@ class GetInfo
             fn: function () use ($context, $opts) {
                 $url = $context->backendUrl->withPath('/system/Info');
 
-                $this->logger->debug('Requesting [{client}: {backend}] info.', [
+                $this->logger->debug("{action}: Requesting '{client}: {backend}' info.", [
+                    'action' => $this->action,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'url' => $url
@@ -65,7 +66,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with unexpected [{status_code}] status code.',
+                            message: "{action}: '{client}: {backend}' request returned with unexpected '{status_code}' status code.",
                             context: [
                                 'action' => $this->action,
                                 'client' => $context->clientName,
@@ -83,7 +84,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with empty response. Please make sure the container can communicate with the backend.',
+                            message: "{action}: '{client}: {backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
                             context: [
                                 'action' => $this->action,
                                 'client' => $context->clientName,
@@ -103,7 +104,7 @@ class GetInfo
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [{client}: {backend}] {action} payload.', [
+                    $this->logger->debug("{action}: Processing '{client}: {backend}' request payload.", [
                         'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
