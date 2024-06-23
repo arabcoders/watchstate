@@ -8,7 +8,8 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
-            <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm">
+            <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm"
+                    :disabled="isLoading">
               <span class="icon">
                 <i class="fas fa-add"></i>
               </span>
@@ -101,8 +102,7 @@
               </button>
             </div>
             <div class="card-footer-item">
-              <button class="button is-fullwidth is-danger" type="button"
-                      @click="cancelForm">
+              <button class="button is-fullwidth is-danger" type="button" @click="cancelForm">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-cancel"></i></span>
                   <span>Cancel</span>
@@ -177,18 +177,10 @@
       <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
                @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
         <ul>
-          <li>
-            Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.
-          </li>
-          <li>
-            Some values are too large to fit into the view, clicking on the value will show the full value.
-          </li>
-          <li>
-            These environment variables are loaded from the <code>{{ file }}</code> file.
-          </li>
-          <li>
-            To add a new variable click on the <i class="fa fa-add"></i> button.
-          </li>
+          <li>Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.</li>
+          <li>Some values are too large to fit into the view, clicking on the value will show the full value.</li>
+          <li>These values are loaded from the <code>{{ file }}</code> file.</li>
+          <li>To add a new variable click on the <i class="fa fa-add"></i> button.</li>
         </ul>
       </Message>
     </div>
@@ -205,9 +197,6 @@ import Message from '~/components/Message'
 
 useHead({title: 'Environment Variables'})
 
-const route = useRoute();
-const router = useRouter();
-
 const items = ref([])
 const toggleForm = ref(false)
 const form_key = ref('')
@@ -215,22 +204,22 @@ const form_value = ref()
 const form_type = ref()
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(true)
-
 const file = ref('.env')
 
 const loadContent = async () => {
+  const route = useRoute()
   try {
     isLoading.value = true
     items.value = []
     const response = await request('/system/env')
-    const json = await response.json();
+    const json = await response.json()
     items.value = json.data
     if (json.file) {
       file.value = json.file
     }
     if (route.query.edit) {
-      let item = items.value.find(i => i.key === route.query.edit);
-      if (item && route.query?.value) {
+      let item = items.value.find(i => i.key === route.query.edit)
+      if (item && route.query?.value && !item?.value) {
         item.value = route.query.value
       }
       editEnv(item)
@@ -242,18 +231,29 @@ const loadContent = async () => {
   }
 }
 
-onMounted(() => loadContent())
-
 const deleteEnv = async (env) => {
   if (!confirm(`Delete '${env.key}'?`)) {
     return
   }
 
-  const response = await request(`/system/env/${env.key}`, {method: 'DELETE'})
+  try {
+    const response = await request(`/system/env/${env.key}`, {method: 'DELETE'})
 
-  if (response.ok) {
+    if (200 !== response.status) {
+      let json
+      try {
+        json = await response.json()
+      } catch (e) {
+        json = {error: {code: response.status, message: response.statusText}}
+      }
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      return
+    }
+
     items.value = items.value.filter(i => i.key !== env.key)
-    notification('success', 'Success', `Environment variable ${env.key} successfully deleted.`, 5000)
+    notification('success', 'Success', `Environment variable '${env.key}' successfully deleted.`, 5000)
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
 }
 
@@ -273,29 +273,33 @@ const addVariable = async () => {
 
   const data = items.value.filter(i => i.key === key)
   if (data.length > 0 && data[0].value === form_value.value) {
-    return cancelForm();
+    return cancelForm()
   }
 
-  const response = await request(`/system/env/${key}`, {
-    method: 'POST',
-    body: JSON.stringify({value: form_value.value})
-  })
+  try {
+    const response = await request(`/system/env/${key}`, {
+      method: 'POST',
+      body: JSON.stringify({value: form_value.value})
+    })
 
-  if (304 === response.status) {
-    return cancelForm();
+    if (304 === response.status) {
+      return cancelForm()
+    }
+
+    const json = await response.json()
+
+    if (200 !== response.status) {
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      return
+    }
+
+    items.value[items.value.findIndex(i => i.key === key)] = json
+
+    notification('success', 'Success', `Environment variable '${key}' successfully updated.`, 5000)
+    return cancelForm()
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
-
-  const json = await response.json()
-
-  if (!response.ok) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
-    return
-  }
-
-  items.value[items.value.findIndex(i => i.key === key)] = json
-
-  notification('success', 'Success', 'Environment variable successfully updated.', 5000)
-  return cancelForm();
 }
 
 const editEnv = env => {
@@ -303,42 +307,34 @@ const editEnv = env => {
   form_value.value = env.value
   form_type.value = env.type
   toggleForm.value = true
-  if (!route.query.edit) {
-    router.push(`/env?edit=${env.key}`)
+  if (!useRoute().query.edit) {
+    useRouter().push({'path': '/env', query: {'edit': env.key}})
   }
 }
 
 const cancelForm = async () => {
+  const route = useRoute()
   form_key.value = ''
   form_value.value = null
   form_type.value = null
   toggleForm.value = false
   if (route.query?.callback) {
-    await navigateTo(`${route.query.callback}`)
+    await navigateTo({path: route.query.callback})
     return
   }
 
   if (route.query?.edit || route.query?.value) {
-    await router.push('/env')
+    await useRouter().push({path: '/env'})
   }
 }
 
 watch(toggleForm, async value => {
   if (!value) {
-    form_key.value = ''
-    form_value.value = null
-
-    if (route.query?.edit || route.query?.value) {
-      await router.push('/env')
-    }
+    await cancelForm()
   } else {
-    awaitElement('#env_page_title', (_, el) => el.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-      inline: 'nearest'
-    }))
+    awaitElement('#env_page_title', (_, el) => el.scrollIntoView({behavior: 'smooth'}))
   }
-});
+})
 
 const keyChanged = () => {
   if (!form_key.value) {
@@ -348,6 +344,7 @@ const keyChanged = () => {
   let data = items.value.filter(i => i.key === form_key.value)
   form_value.value = (data.length > 0) ? data[0].value : ''
   form_type.value = (data.length > 0) ? data[0].type : 'string'
+  useRouter().push({'path': '/env', query: {'edit': form_key.value}})
 }
 
 const getHelp = key => {
@@ -356,20 +353,49 @@ const getHelp = key => {
   }
 
   let data = items.value.filter(i => i.key === key)
-  if (data.length === 0) {
+  if (0 === data.length) {
     return ''
   }
 
-  let text = `${data[0].description}`;
+  let text = `${data[0].description}`
 
-  if (data[0].type) {
+  if (data[0]?.type) {
     text += ` Expects: <code>${data[0].type}</code>`
   }
 
-  return (data[0].deprecated) ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
+  return data[0]?.deprecated ? `<strong><code class="is-strike-through"">Deprecated</code></strong> - ${text}` : text
 }
 
-const fixBool = value => [true, 'true', '1'].includes(value)
+const fixBool = v => [true, 'true', '1'].includes(v)
 
-const filteredRows = rows => rows.filter(i => i.value !== undefined);
+const filteredRows = rows => rows.filter(i => i.value !== undefined)
+
+const stateCallBack = async e => {
+  if (!e.state && !e.detail) {
+    return
+  }
+  const state = e.detail ?? e.state
+
+  console.log(state)
+
+  const route = useRoute()
+  if (!route.query?.edit) {
+    await cancelForm()
+    return
+  }
+
+  let item = items.value.find(i => i.key === route.query.edit)
+  if (item && route.query?.value && !item?.value) {
+    item.value = route.query.value
+  }
+
+  editEnv(item)
+}
+
+onMounted(async () => {
+  await loadContent()
+  window.addEventListener('popstate', stateCallBack)
+})
+
+onUnmounted(() => window.removeEventListener('popstate', stateCallBack))
 </script>

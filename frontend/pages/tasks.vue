@@ -62,7 +62,8 @@
             </div>
             <div class="column is-6 has-text-right" v-if="task.args">
               <strong class="is-hidden-mobile">Args:&nbsp;</strong>
-              <NuxtLink class="has-tooltip" :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)">
+              <NuxtLink class="has-tooltip"
+                        :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, `"${task.args}"`)'>
                 {{ task.args }}
               </NuxtLink>
             </div>
