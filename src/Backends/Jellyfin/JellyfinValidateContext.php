@@ -67,7 +67,7 @@ class JellyfinValidateContext
             throw new InvalidContextException(
                 r("User id '{uid}' was not found in list of users. '{user_list}'.", [
                     'uid' => $context->backendUser,
-                    'actual' => arrayToString($list),
+                    'user_list' => arrayToString($list),
                 ])
             );
         }
