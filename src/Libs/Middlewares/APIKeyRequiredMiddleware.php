@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Middlewares;
 
+use App\API\System\AutoConfig;
 use App\API\System\HealthCheck;
 use App\Libs\Config;
 use App\Libs\HTTP_STATUS;
@@ -22,6 +23,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
      */
     private const array PUBLIC_ROUTES = [
         HealthCheck::URL,
+        AutoConfig::URL,
     ];
 
     /**

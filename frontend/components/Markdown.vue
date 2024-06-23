@@ -26,7 +26,7 @@ onMounted(() => fetch(`${api_url.value}${props.file}`).then(response => response
         text = text.replace(/\[!IMPORTANT\]/g, `
         <span class="is-block title is-4">
             <span class="icon-text">
-                <span class="icon"><i class="fas fa-exclamation-triangle has-text-danger"></i></span>
+                <span class="icon"><i class="fas fa-exclamation-triangle has-text-danger fa-fade"></i></span>
                 <span>Important</span>
             </span>
         </span>`)

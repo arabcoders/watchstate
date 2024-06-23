@@ -150,6 +150,12 @@ return (function () {
             'description' => 'Expose debug information in the API when an error occurs.',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_API_AUTO',
+            'description' => 'PUBLICLY EXPOSE the api token for automated WebUI configuration. This should NEVER be enabled if WatchState is exposed to the internet.',
+            'danger' => true,
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {

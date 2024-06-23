@@ -1,5 +1,21 @@
 # Old Updates
 
+### 2024-05-14
+
+We are happy to announce the beta testing of the `WebUI`. To get started on using it you just need to visit the url `http://localhost:8080` We are supposed to
+enabled it by default tomorrow, but we decided to give you a head start. We are looking forward to your feedback. If you don't use the `WebUI` then you need to
+add the environment variable `WEBUI_ENABLED=0` in your `compose.yaml` file. and restart the container.
+
+### 2024-05-13
+
+In preparation for the beta testing of `WebUI` in two days, we have made little breaking change, we have changed the
+environment variable `WS_WEBUI_ENABLED` to just `WEBUI_ENABLED`, We made this change to make sure people don't disable
+the `WebUI`by mistake via the environment page in the `WebUI`. The `WebUI` will be enabled by default, in two days from
+now, to disable it from now add `WEBUI_ENABLED=false` to your `compose.yaml` file. As this environment variable is
+system level, it cannot be set via `.env` file.
+
+Note: `WS_WEBUI_ENABLED` will be gone in few weeks, However it will still work for now, if `WEBUI_ENABLED` is not set.
+
 ### 2024-05-05
 
 **Edit** - We received requests that people are exposing watchstate externally, and there was concern that having open
