@@ -36,7 +36,7 @@ trait CommonTrait
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Exception [{error.kind}] was thrown unhandled in [{client}: {backend}] {action}. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "Exception '{error.kind}' was thrown unhandled in '{client}: {backend}' {action}. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'action' => $action ?? 'not_set',
                         'backend' => $context->backendName,

@@ -128,37 +128,21 @@
           </footer>
         </div>
       </div>
+      <div class="column is-12">
+        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          <ul>
+            <li>
+              <strong>Import</strong> means pulling data from the backends into the local database.
+            </li>
+            <li>
+              <strong>Export</strong> means pushing data from the local database to the backends.
+            </li>
+            <li>You can delete a backend by visiting the backend page and clicking the delete button.</li>
+          </ul>
+        </Message>
+      </div>
     </template>
-
-    <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
-        <ul>
-          <li>
-            <strong>Import</strong> means pulling data from the backends into the local database.
-          </li>
-          <li>
-            <strong>Export</strong> means pushing data from the local database to the backends.
-          </li>
-          <li>
-            WatchState is single user tool. It doesn't support syncing multiple users play state.
-            <NuxtLink target="_blank" v-text="'Visit this link'"
-                      to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#is-there-support-for-multi-user-setup"/>
-            to learn more.
-          </li>
-          <li>
-            If you are adding new backend that is fresh and doesn't have your correct watch state, you should
-            turn off import and enable only metadata import at the start to prevent overriding your current play
-            state.
-            <NuxtLink
-                to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#my-new-backend-overriding-my-old-backend-state--my-watch-state-is-not-correct"
-                target="_blank" v-text="'Visit this link'"/>
-            to learn more.
-          </li>
-          <li>You can delete a backend by visiting the backend page and clicking the delete button.</li>
-        </ul>
-      </Message>
-    </div>
   </div>
 </template>
 

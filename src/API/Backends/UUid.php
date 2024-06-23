@@ -26,8 +26,11 @@ final class UUid
         try {
             $client = $this->getBasicClient($type, DataUtil::fromRequest($request, true));
 
+            $info = $client->getInfo();
+
             return api_response(HTTP_STATUS::HTTP_OK, [
-                'identifier' => $client->getIdentifier(true)
+                'type' => strtolower((string)ag($info, 'type')),
+                'identifier' => ag($info, 'identifier'),
             ]);
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);

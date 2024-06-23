@@ -65,7 +65,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with unexpected [{status_code}] status code.',
+                            message: "Request for '{backend}' {action} returned with unexpected '{status_code}' status code.",
                             context: [
                                 'action' => $this->action,
                                 'client' => $context->clientName,
@@ -83,7 +83,7 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with empty response. Please make sure the container can communicate with the backend.',
+                            message: "Request for '{backend}' {action} returned with empty response. Please make sure the container can communicate with the backend.",
                             context: [
                                 'action' => $this->action,
                                 'client' => $context->clientName,
@@ -103,7 +103,7 @@ class GetInfo
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [{client}: {backend}] {action} payload.', [
+                    $this->logger->debug("Processing '{client}: {backend}' {action} payload.", [
                         'action' => $this->action,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,

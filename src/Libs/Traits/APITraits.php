@@ -124,7 +124,7 @@ trait APITraits
         return $instance->withContext(
             new Context(
                 clientName: $type,
-                backendName: 'basic_' . $type,
+                backendName: $data->get('name', 'basic_' . $type),
                 backendUrl: new Uri($data->get('url')),
                 cache: Container::get(BackendCache::class),
                 backendId: $data->get('uuid'),
@@ -214,7 +214,7 @@ trait APITraits
         $item['not_reported_by'] = array_values(
             array_filter($this->_backendsNames, fn($key) => false === in_array($key, ag($item, 'reported_by', [])))
         );
-        
+
         $item['isTainted'] = $entity->isTainted();
 
         if (true === $includeContext) {
