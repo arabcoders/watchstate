@@ -25,18 +25,7 @@ final class EnvFile
             }
         }
 
-        if (false === ($data = @file($this->file, FILE_IGNORE_NEW_LINES))) {
-            $data = [];
-        }
-
-        foreach ($data as $line) {
-            $line = trim($line);
-            if (empty($line) || str_starts_with($line, '#')) {
-                continue;
-            }
-            [$key, $value] = explode('=', $line, 2);
-            $this->data[$key] = $value;
-        }
+        $this->data = parseEnvFile($this->file);
     }
 
     /**
