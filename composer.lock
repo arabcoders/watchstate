@@ -4,7 +4,7 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "0ee505d4fae765b6b830886bb694ac15",
+  "content-hash": "1aac4505fd9a6fa51ceef1181c194d7a",
   "packages": [
     {
       "name": "dragonmantank/cron-expression",
@@ -1603,80 +1603,6 @@
       "time": "2024-04-18T09:32:20+00:00"
     },
     {
-      "name": "symfony/dotenv",
-      "version": "v6.4.8",
-      "source": {
-        "type": "git",
-        "url": "https://github.com/symfony/dotenv.git",
-        "reference": "55aefa0029adff89ecffdb560820e945c7983f06"
-      },
-      "dist": {
-        "type": "zip",
-        "url": "https://api.github.com/repos/symfony/dotenv/zipball/55aefa0029adff89ecffdb560820e945c7983f06",
-        "reference": "55aefa0029adff89ecffdb560820e945c7983f06",
-        "shasum": ""
-      },
-      "require": {
-        "php": ">=8.1"
-      },
-      "conflict": {
-        "symfony/console": "<5.4",
-        "symfony/process": "<5.4"
-      },
-      "require-dev": {
-        "symfony/console": "^5.4|^6.0|^7.0",
-        "symfony/process": "^5.4|^6.0|^7.0"
-      },
-      "type": "library",
-      "autoload": {
-        "psr-4": {
-          "Symfony\\Component\\Dotenv\\": ""
-        },
-        "exclude-from-classmap": [
-          "/Tests/"
-        ]
-      },
-      "notification-url": "https://packagist.org/downloads/",
-      "license": [
-        "MIT"
-      ],
-      "authors": [
-        {
-          "name": "Fabien Potencier",
-          "email": "fabien@symfony.com"
-        },
-        {
-          "name": "Symfony Community",
-          "homepage": "https://symfony.com/contributors"
-        }
-      ],
-      "description": "Registers environment variables from a .env file",
-      "homepage": "https://symfony.com",
-      "keywords": [
-        "dotenv",
-        "env",
-        "environment"
-      ],
-      "support": {
-        "source": "https://github.com/symfony/dotenv/tree/v6.4.8"
-      },
-      "funding": [
-        {
-          "url": "https://symfony.com/sponsor",
-          "type": "custom"
-        },
-        {
-          "url": "https://github.com/fabpot",
-          "type": "github"
-        },
-        {
-          "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-          "type": "tidelift"
-        }
-      ],
-      "time": "2024-05-31T14:49:08+00:00"
-    },
-    {
       "name": "symfony/http-client",
       "version": "v6.4.8",
       "source": {
@@ -2522,16 +2448,16 @@
     },
     {
       "name": "myclabs/deep-copy",
-      "version": "1.11.1",
+      "version": "1.12.0",
       "source": {
         "type": "git",
         "url": "https://github.com/myclabs/DeepCopy.git",
-        "reference": "7284c22080590fb39f2ffa3e9057f10a4ddd0e0c"
+        "reference": "3a6b9a42cd8f8771bd4295d13e1423fa7f3d942c"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/myclabs/DeepCopy/zipball/7284c22080590fb39f2ffa3e9057f10a4ddd0e0c",
-        "reference": "7284c22080590fb39f2ffa3e9057f10a4ddd0e0c",
+        "url": "https://api.github.com/repos/myclabs/DeepCopy/zipball/3a6b9a42cd8f8771bd4295d13e1423fa7f3d942c",
+        "reference": "3a6b9a42cd8f8771bd4295d13e1423fa7f3d942c",
         "shasum": ""
       },
       "require": {
@@ -2539,11 +2465,12 @@
       },
       "conflict": {
         "doctrine/collections": "<1.6.8",
-        "doctrine/common": "<2.13.3 || >=3,<3.2.2"
+        "doctrine/common": "<2.13.3 || >=3 <3.2.2"
       },
       "require-dev": {
         "doctrine/collections": "^1.6.8",
         "doctrine/common": "^2.13.3 || ^3.2.2",
+        "phpspec/prophecy": "^1.10",
         "phpunit/phpunit": "^7.5.20 || ^8.5.23 || ^9.5.13"
       },
       "type": "library",
@@ -2569,7 +2496,7 @@
       ],
       "support": {
         "issues": "https://github.com/myclabs/DeepCopy/issues",
-        "source": "https://github.com/myclabs/DeepCopy/tree/1.11.1"
+        "source": "https://github.com/myclabs/DeepCopy/tree/1.12.0"
       },
       "funding": [
         {
@@ -2577,7 +2504,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2023-03-08T13:26:56+00:00"
+      "time": "2024-06-12T14:39:25+00:00"
     },
     {
       "name": "perftools/php-profiler",
@@ -3187,12 +3114,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "cde5826457b1afd988a50206946cf6512b75ac7c"
+        "reference": "64eaaecdc0e915ce201f399e4707f83155389e96"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/cde5826457b1afd988a50206946cf6512b75ac7c",
-        "reference": "cde5826457b1afd988a50206946cf6512b75ac7c",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/64eaaecdc0e915ce201f399e4707f83155389e96",
+        "reference": "64eaaecdc0e915ce201f399e4707f83155389e96",
         "shasum": ""
       },
       "conflict": {
@@ -3201,7 +3128,7 @@
         "adodb/adodb-php": "<=5.20.20|>=5.21,<=5.21.3",
         "aheinze/cockpit": "<2.2",
         "aimeos/ai-client-html": ">=2020.04.1,<2020.10.27|>=2021.04.1,<2021.10.21|>=2022.04.1,<2022.10.12|>=2023.04.1,<2023.10.14|>=2024.04.1,<2024.04.4",
-        "aimeos/aimeos-core": "<2024.04.7",
+        "aimeos/aimeos-core": ">=2022.04.1,<2022.10.17|>=2023.04.1,<2023.10.17|>=2024.04.1,<2024.04.7",
         "aimeos/aimeos-typo3": "<19.10.12|>=20,<20.10.5",
         "airesvsg/acf-to-rest-api": "<=3.1",
         "akaunting/akaunting": "<2.1.13",
@@ -3284,7 +3211,7 @@
         "codeigniter4/framework": "<4.4.7",
         "codeigniter4/shield": "<1.0.0.0-beta8",
         "codiad/codiad": "<=2.8.4",
-        "composer/composer": "<1.10.27|>=2,<2.2.23|>=2.3,<2.7",
+        "composer/composer": "<1.10.27|>=2,<2.2.24|>=2.3,<2.7.7",
         "concrete5/concrete5": "<9.2.8",
         "concrete5/core": "<8.5.8|>=9,<9.1",
         "contao-components/mediaelement": ">=2.14.2,<2.21.1",
@@ -3418,7 +3345,7 @@
         "gos/web-socket-bundle": "<1.10.4|>=2,<2.6.1|>=3,<3.3",
         "gree/jose": "<2.2.1",
         "gregwar/rst": "<1.0.3",
-        "grumpydictator/firefly-iii": "<6.1.7",
+        "grumpydictator/firefly-iii": "<6.1.17",
         "gugoan/economizzer": "<=0.9.0.0-beta1",
         "guzzlehttp/guzzle": "<6.5.8|>=7,<7.4.5",
         "guzzlehttp/psr7": "<1.9.1|>=2,<2.4.5",
@@ -3475,6 +3402,7 @@
         "jsdecena/laracom": "<2.0.9",
         "jsmitty12/phpwhois": "<5.1",
         "juzaweb/cms": "<=3.4",
+        "jweiland/events2": "<8.3.8|>=9,<9.0.6",
         "kazist/phpwhois": "<=4.2.6",
         "kelvinmo/simplexrd": "<3.1.1",
         "kevinpapst/kimai2": "<1.16.7",
@@ -3512,7 +3440,7 @@
         "lms/routes": "<2.1.1",
         "localizationteam/l10nmgr": "<7.4|>=8,<8.7|>=9,<9.2",
         "luyadev/yii-helpers": "<1.2.1",
-        "magento/community-edition": "<2.4.3.0-patch3|>=2.4.4,<2.4.5",
+        "magento/community-edition": "<2.4.5|==2.4.5|>=2.4.5.0-patch1,<2.4.5.0-patch8|==2.4.6|>=2.4.6.0-patch1,<2.4.6.0-patch6|==2.4.7",
         "magento/core": "<=1.9.4.5",
         "magento/magento1ce": "<1.9.4.3-dev",
         "magento/magento1ee": ">=1,<1.14.4.3-dev",
@@ -3545,7 +3473,7 @@
         "mojo42/jirafeau": "<4.4",
         "mongodb/mongodb": ">=1,<1.9.2",
         "monolog/monolog": ">=1.8,<1.12",
-        "moodle/moodle": "<4.3.4",
+        "moodle/moodle": "<4.3.5|>=4.4.0.0-beta,<4.4.1",
         "mos/cimage": "<0.7.19",
         "movim/moxl": ">=0.8,<=0.10",
         "movingbytes/social-network": "<=1.2.1",
@@ -3738,7 +3666,7 @@
         "slim/slim": "<2.6",
         "slub/slub-events": "<3.0.3",
         "smarty/smarty": "<4.5.3|>=5,<5.1.1",
-        "snipe/snipe-it": "<=6.2.2",
+        "snipe/snipe-it": "<6.4.2",
         "socalnick/scn-social-auth": "<1.15.2",
         "socialiteproviders/steam": "<1.1",
         "spatie/browsershot": "<3.57.4",
@@ -3751,6 +3679,7 @@
         "statamic/cms": "<4.46|>=5.3,<5.6.2",
         "stormpath/sdk": "<9.9.99",
         "studio-42/elfinder": "<2.1.62",
+        "studiomitte/friendlycaptcha": "<0.1.4",
         "subhh/libconnect": "<7.0.8|>=8,<8.1",
         "sukohi/surpass": "<1",
         "sulu/form-bundle": ">=2,<2.5.3",
@@ -3817,7 +3746,7 @@
         "thorsten/phpmyfaq": "<3.2.2",
         "tikiwiki/tiki-manager": "<=17.1",
         "timber/timber": ">=0.16.6,<1.23.1|>=1.24,<1.24.1|>=2,<2.1",
-        "tinymce/tinymce": "<7",
+        "tinymce/tinymce": "<7.2",
         "tinymighty/wiki-seo": "<1.2.2",
         "titon/framework": "<9.9.99",
         "tobiasbg/tablepress": "<=2.0.0.0-RC1",
@@ -3880,7 +3809,7 @@
         "winter/wn-dusk-plugin": "<2.1",
         "winter/wn-system-module": "<1.2.4",
         "wintercms/winter": "<=1.2.3",
-        "woocommerce/woocommerce": "<6.6",
+        "woocommerce/woocommerce": "<6.6|>=8.8,<8.8.5|>=8.9,<8.9.3",
         "wp-cli/wp-cli": ">=0.12,<2.5",
         "wp-graphql/wp-graphql": "<=1.14.5",
         "wp-premium/gravityforms": "<2.4.21",
@@ -3982,7 +3911,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-06-07T22:04:16+00:00"
+      "time": "2024-06-21T16:04:36+00:00"
     },
     {
       "name": "sebastian/cli-parser",
@@ -5021,7 +4950,8 @@
     "ext-curl": "*",
     "ext-sodium": "*",
     "ext-simplexml": "*",
-    "ext-fileinfo": "*"
+    "ext-fileinfo": "*",
+    "ext-redis": "*"
   },
   "platform-dev": [],
   "plugin-api-version": "2.6.0"

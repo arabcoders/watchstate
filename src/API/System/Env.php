@@ -127,14 +127,6 @@ final class Env
         try {
             $value = $this->setType($spec, $value);
 
-            if (true === is_string($value)) {
-                // -- check if the string contains space but not quoted.
-                // symfony/dotenv throws an exception if the value contains a space but not quoted.
-                if (str_contains($value, ' ') && (!str_starts_with($value, '"') || !str_ends_with($value, '"'))) {
-                    throw new ValidationException('The value must be "quoted string", as it contains a space.');
-                }
-            }
-
             if (true === ag_exists($spec, 'validate')) {
                 $value = $spec['validate']($value, $spec);
             }

@@ -27,7 +27,6 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
-use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
@@ -58,13 +57,13 @@ final class Initializer
         (function () {
             // -- This env file should only be used during development or direct installation.
             if (file_exists(__DIR__ . '/../../.env')) {
-                (new Dotenv())->usePutenv(true)->overload(__DIR__ . '/../../.env');
+                loadEnvFile(file: __DIR__ . '/../../.env', usePutEnv: true, override: true);
             }
 
             // -- This is the official place where users are supposed to store .env file.
             $dataPath = env('WS_DATA_PATH', fn() => inContainer() ? '/config' : __DIR__ . '/../../var');
             if (file_exists($dataPath . '/config/.env')) {
-                (new Dotenv())->usePutenv(true)->overload($dataPath . '/config/.env');
+                loadEnvFile(file: $dataPath . '/config/.env', usePutEnv: true, override: true);
             }
         })();
 

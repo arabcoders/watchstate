@@ -29,13 +29,6 @@ final class EnvCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Show/edit environment variables.')
-            ->addOption(
-                'envfile',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Environment file.',
-                Config::get('path') . '/config/.env'
-            )
             ->addOption('key', 'k', InputOption::VALUE_REQUIRED, 'Key to update.')
             ->addOption('set', 'e', InputOption::VALUE_REQUIRED, 'Value to set.')
             ->addOption('delete', 'd', InputOption::VALUE_NONE, 'Delete key.')
@@ -51,10 +44,11 @@ final class EnvCommand extends Command
                     <notice>[ Environment variables rules ]</notice>
                     -------------------------------
 
-                    * the key MUST be in CAPITAL LETTERS. For example [<flag>WS_CRON_IMPORT</flag>].
-                    * the key MUST start with [<flag>WS_</flag>]. For example [<flag>WS_CRON_EXPORT</flag>].
-                    * the value is usually simple type, usually string unless otherwise stated.
-                    * the key SHOULD attempt to mirror the key path in default config, If not applicable or otherwise impossible it
+                    * The key MUST be in CAPITAL LETTERS. For example [<flag>WS_CRON_IMPORT</flag>].
+                    * The key MUST start with [<flag>WS_</flag>]. For example [<flag>WS_CRON_EXPORT</flag>].
+                    * The value is simple string. No complex data types are allowed. or shell expansion variables.
+                    * The value MUST be in one line. No multi-line values are allowed.
+                    * The key SHOULD attempt to mirror the key path in default config, If not applicable or otherwise impossible it
                     should then use an approximate path.
 
                     -------
@@ -63,13 +57,17 @@ final class EnvCommand extends Command
 
                     <question># How to load environment variables?</question>
 
-                    You can load environment variables in many ways. However, the recommended methods are:
+                    For <comment>WatchState</comment> specific environment variables, we recommend using the <comment>WebUI</comment>,
+                    to manage the environment variables. However, you can also use this command to manage the environment variables.
 
-                    <question>(1) Via Docker compose file</>
+                    We use this file to load your environment variables:
 
-                    You can load environment variables via [<comment>compose.yaml</comment>] file by adding them under the [<comment>environment</comment>] key.
-                    For example, to enable import task, do the following:
+                    - <flag>{path}</flag>/<comment>.env</comment>
 
+                    To load container specific variables i,e, the keys that does not start with <comment>WS_</comment> prefix,
+                    you can use the <comment>compose.yaml</comment> file.
+
+                    For example,
                     -------------------------------
                     services:
                       watchstate:
@@ -77,22 +75,48 @@ final class EnvCommand extends Command
                         restart: unless-stopped
                         container_name: watchstate
                         <flag>environment:</flag>
-                          - <flag>WS_CRON_IMPORT</flag>=<value>1</value>
+                          - <flag>HTTP_PORT</flag>=<value>8080</value>
+                          - <flag>DISABLE_CACHE</flag>=<value>1</value>
+                    .......
                     -------------------------------
 
-                    <question>(2) Via .env file</question>
+                    <question># How to set environment variables?</question>
 
-                    We automatically look for [<value>.env</value>] in this path [<value>{path}</value>]. The file usually
-                    does not exist unless you have created it.
+                    To set an environment variable, you can use the following command:
 
-                    The file format is simple <flag>key</flag>=<value>value</value> per line. For example, to enable import task, edit the [<value>.env</value>] and add
+                    {cmd} <cmd>{route}</cmd> <flag>-k <value>ENV_NAME</value> -e <value>ENV_VALUE</value></flag>
 
-                    -------------------------------
-                    <flag>WS_CRON_IMPORT</flag>=<value>1</value>
-                    -------------------------------
+                    <notice>Note: if you are using a space within the value you need to use the long form --set, for example:
+
+                    {cmd} <cmd>{route}</cmd> <flag>-k <value>ENV_NAME</value> --set=<notice>"</notice><value>ENV VALUE</value><notice>"</notice></flag>
+
+                    As you can notice the spaced value is wrapped with double <value>""</value> quotes.</notice>
+
+                    <question># How to see all possible environment variables?</question>
+
+                    {cmd} <cmd>{route}</cmd> <flag>--list</flag>
+
+                    <question># How to delete environment variable?</question>
+
+                    {cmd} <cmd>{route}</cmd> <flag>-d -k</flag> <value>ENV_NAME</value>
+
+                    <question># How to get specific environment variable value?</question>
+
+                    {cmd} <cmd>{route}</cmd> <flag>-k</flag> <value>ENV_NAME</value>
+
+                    <notice>This will show the hidden value if the environment variable marked as sensitive.</notice>
+
+                    <question># How to expose the hidden values for secret environment variables?</question>
+
+                    You can use the <flag>--expose</flag> flag to expose the hidden values. for both <flag>--list</flag>
+                    or just the normal table display. For example:
+
+                    {cmd} <cmd>{route}</cmd> <flag>--expose</flag>
 
                     HELP,
                     [
+                        'cmd' => trim(commandContext()),
+                        'route' => self::ROUTE,
                         'path' => after(Config::get('path') . '/config', ROOT_PATH),
                     ]
                 )
