@@ -1,0 +1,12 @@
+WS_TZ=Asia/Kuwait
+WS_CRON_IMPORT=1
+WS_CRON_EXPORT=0
+WS_FOO_BAR=" "
+WS_CRON_IMPORT_AT=16 */1 * * *
+WS_CRON_EXPORT_AT="30 */3 * * *"
+WS_CRON_PUSH_AT='*/10 * * * *'
+# Commit_line=foo
+# Next is empty line
+
+# Intentionally left "=" from the string
+FOOBAR_KAZ

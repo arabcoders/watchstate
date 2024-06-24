@@ -582,6 +582,31 @@ https://watchstate.example.org {
 
 ---
 
+### WS_API_AUTO
+
+The purpose of this environment variable is to automate the configuration process. It's mainly used for people who uses many browsers
+to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to be configured before it
+can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in `${WS_DATA_PATH}/config/.env`.
+
+#### Why you should use it?
+
+You normally should not use it, as it's a **GREAT SECURITY RISK**. However, if you are using the tool in a secure environment
+and not worried about exposing your API key, you can use it to automate the configuration process.
+
+#### Why you should not use it?
+
+Because, by exposing your API key, you are also exposing every data you have in the tool. This is a **GREAT SECURITY RISK**,
+any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get your API key. And with this key
+they can do anything they want with your data. including viewing your media servers api keys.
+
+So, please while we have this option available, we strongly recommend not to use it if `WatchState` is exposed to the internet.
+
+> [!IMPORTANT]
+> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is exposed to the internet.
+> I cannot stress this enough, please do not use it unless you are in a secure environment.
+
+---
+
 ### How to disable the included cache server and use external cache server?
 
 Set this environment variable in your `compose.yaml` file `DISABLE_CACHE` with value of `1`. to use external redis server
@@ -745,7 +770,7 @@ Once that is done you are ready to compile the `WebUI`.
 
 ```bash
 $ cd frontend
-$ yarn install --production --prefer-offline --frozen-lockfile
+$ yarn install --production --prefer-offline --frozen-lockfile && yarn run generate
 ```
 
 There should be a new directory called `exported`, you need to move that folder to the `public` directory.
@@ -761,7 +786,7 @@ ws:/opt/app/public$ ls
 exported   index.php
 ```
 
-There must be exactly one `index.php` file and one `exported` directory. inside that directory.
+There must be exactly one `index.php` file and one `exported` directory. inside that directory, or if you prefer, you can add `WS_WEBUI_PATH` environment variable to point to the `exported` directory.
 
 * link the app to the frontend proxy. For caddy, you can use the following configuration.
 

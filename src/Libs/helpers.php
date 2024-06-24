@@ -1506,3 +1506,89 @@ if (!function_exists('getEnvSpec')) {
         return [];
     }
 }
+
+
+if (!function_exists('parseEnvFile')) {
+    /**
+     * Parse the environment file, and returns key/value pairs.
+     *
+     * @param string $file The file to load.
+     *
+     * @return array<string, string> The environment variables.
+     * @throws InvalidArgumentException Throws an exception if the file does not exist.
+     */
+    function parseEnvFile(string $file): array
+    {
+        $env = [];
+
+        if (false === file_exists($file)) {
+            throw new InvalidArgumentException(r("The file '{file}' does not exist.", ['file' => $file]));
+        }
+
+        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if (empty($line)) {
+                continue;
+            }
+
+            if (true === str_starts_with($line, '#') || false === str_contains($line, '=')) {
+                continue;
+            }
+
+            [$name, $value] = explode('=', $line, 2);
+
+            // -- check if value is quoted.
+            if ((true === str_starts_with($value, '"') && true === str_ends_with($value, '"')) ||
+                (true === str_starts_with($value, "'") && true === str_ends_with($value, "'"))) {
+                $value = substr($value, 1, -1);
+            }
+
+            $value = trim($value);
+            if ('' === $value) {
+                continue;
+            }
+            $env[$name] = $value;
+        }
+
+        return $env;
+    }
+}
+
+if (!function_exists('loadEnvFile')) {
+    /**
+     * Load the environment file.
+     *
+     * @param string $file The file to load.
+     * @param bool $usePutEnv (Optional) Whether to use putenv.
+     * @param bool $override (Optional) Whether to override existing values.
+     *
+     * @return void
+     */
+    function loadEnvFile(string $file, bool $usePutEnv = false, bool $override = true): void
+    {
+        try {
+            $env = parseEnvFile($file);
+
+            if (count($env) < 1) {
+                return;
+            }
+        } catch (InvalidArgumentException) {
+            return;
+        }
+
+        foreach ($env as $name => $value) {
+            if (false === $override && true === array_key_exists($name, $_ENV)) {
+                continue;
+            }
+
+            if (true === $usePutEnv) {
+                putenv("{$name}={$value}");
+            }
+
+            $_ENV[$name] = $value;
+
+            if (!str_starts_with($name, 'HTTP_')) {
+                $_SERVER[$name] = $value;
+            }
+        }
+    }
+}

@@ -7,29 +7,29 @@
 This tool primary goal is to sync your backends play state without relying on third party services,
 out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
-## updates
+## Updates
 
-### 2024-05-14
+### 2024-06-23
 
-We are happy to announce the beta testing of the `WebUI`. To get started on using it you just need to visit the url `http://localhost:8080` We are supposed to
-enabled it by default tomorrow, but we decided to give you a head start. We are looking forward to your feedback. If you don't use the `WebUI` then you need to
-add the environment variable `WEBUI_ENABLED=0` in your `compose.yaml` file. and restart the container.
+WE are happy to announce that the `WebUI` is ready for wider usage and we are planning to release it in the next few months.
+We are actively working on it to improve it. If you have any feedback or suggestions, please let us know. We feel it's almost future complete
+for the things that we want.
 
-### 2024-05-13
+On another related news, we have added new environment variable `WS_API_AUTO` "disabled by default" which can be used
+to automatically expose your **API KEY/TOKEN**. This is useful for users who are using the `WebUI` from many different browsers
+and want to automate the configuration process.
 
-In preparation for the beta testing of `WebUI` in two days, we have made little breaking change, we have changed the
-environment variable `WS_WEBUI_ENABLED` to just `WEBUI_ENABLED`, We made this change to make sure people don't disable
-the `WebUI`by mistake via the environment page in the `WebUI`. The `WebUI` will be enabled by default, in two days from
-now, to disable it from now add `WEBUI_ENABLED=false` to your `compose.yaml` file. As this environment variable is
-system level, it cannot be set via `.env` file.
+While the `WebUI` is included in the main project, it's a standalone feature and requires the API settings to be configured before it
+can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in `${WS_DATA_PATH}/config/.env`.
 
-Note: `WS_WEBUI_ENABLED` will be gone in few weeks, However it will still work for now, if `WEBUI_ENABLED` is not set.
+> [!IMPORTANT]
+> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is exposed to the internet.
 
 Refer to [NEWS](NEWS.md) for old updates.
 
 # Features
 
-* **NEW** WebUI. (Preview).
+* WebUI.
 * Sync backends play state (from many to many).
 * Backup your backends play state into `portable` format.
 * Receive Webhook events from media backends.

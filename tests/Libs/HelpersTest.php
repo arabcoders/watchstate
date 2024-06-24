@@ -6,6 +6,7 @@ namespace Tests\Libs;
 
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\HTTP_STATUS;
 use App\Libs\TestCase;
@@ -704,5 +705,58 @@ class HelpersTest extends TestCase
             'When invalid url is passed, false is returned.'
         );
         $this->assertFalse(isValidURL('example.com'), 'When invalid url is passed, false is returned.');
+    }
+
+    public function test_parseEnvFile(): void
+    {
+        $envFile = __DIR__ . '/../Fixtures/test_env_vars';
+
+        $parsed = parseEnvFile($envFile);
+        $correctData = [
+            "WS_TZ" => "Asia/Kuwait",
+            "WS_CRON_IMPORT" => "1",
+            "WS_CRON_EXPORT" => "0",
+            "WS_CRON_IMPORT_AT" => "16 */1 * * *",
+            "WS_CRON_EXPORT_AT" => "30 */3 * * *",
+            "WS_CRON_PUSH_AT" => "*/10 * * * *",
+        ];
+
+        $this->assertCount(count($correctData), $parsed, 'When parsing env file, filter out garbage data.');
+
+        foreach ($correctData as $key => $value) {
+            $this->assertSame($value, $parsed[$key], 'Make sure correct values are returned when parsing env file.');
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        parseEnvFile(__DIR__ . '/../Fixtures/non_existing_file');
+    }
+
+    public function test_loadEnvFile(): void
+    {
+        $envFile = __DIR__ . '/../Fixtures/test_env_vars';
+        $correctData = [
+            "WS_TZ" => "Asia/Kuwait",
+            "WS_CRON_IMPORT" => "1",
+            "WS_CRON_EXPORT" => "0",
+            "WS_CRON_IMPORT_AT" => "16 */1 * * *",
+            "WS_CRON_EXPORT_AT" => "30 */3 * * *",
+            "WS_CRON_PUSH_AT" => "*/10 * * * *",
+        ];
+
+        $_ENV['WS_TZ'] = 'Asia/Kuwait';
+        putenv('WS_TZ=Asia/Kuwait');
+
+        loadEnvFile($envFile, usePutEnv: true, override: false);
+
+        foreach ($correctData as $key => $value) {
+            $this->assertSame($value, env($key), 'Make sure correct values are returned when parsing env file.');
+        }
+
+        // -- if given invalid file. it should not throw exception.
+        try {
+            loadEnvFile(__DIR__ . '/../Fixtures/non_existing_file');
+        } catch (\Throwable) {
+            $this->fail('This function shouldn\'t throw exception when invalid file is given.');
+        }
     }
 }

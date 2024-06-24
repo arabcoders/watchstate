@@ -88,7 +88,9 @@
                   <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
                   <div class="icon is-small is-left"><i class="fas fa-font"></i></div>
                 </template>
-                <p class="help" v-html="getHelp(form_key)"></p>
+                <div>
+                  <p class="help" v-html="getHelp(form_key)"></p>
+                </div>
               </div>
             </div>
           </div>
@@ -115,11 +117,23 @@
     </div>
     <div v-else class="column is-12" v-if="items">
       <div class="columns is-multiline">
-        <div class="column is-4" v-for="item in filteredRows(items)" :key="item.key">
-          <div class="card">
+        <div class="column" v-for="item in filteredRows(items)" :key="item.key"
+             :class="{'is-4':!item?.danger,'is-12':item.danger}">
+          <div class="card" :class="{ 'is-danger': item?.danger }">
             <header class="card-header">
               <p class="card-header-title is-unselectable">
-                <span class="has-tooltip is-clickable" v-tooltip="item.description">{{ item.key }}</span>
+                <template v-if="item?.danger">
+                  <span class="title is-5 ">
+                    <span class="icon" v-tooltip="'This option is considered dangerous.'">
+                      <i class="has-text-danger fas fa-exclamation-triangle"></i>&nbsp;
+                    </span> {{ item.key }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="has-tooltip is-clickable" v-tooltip="item.description">
+                    {{ item.key }}
+                  </span>
+                </template>
               </p>
               <span class="card-header-icon" v-if="item.mask" @click="item.mask = false" v-tooltip="'Unmask the value'">
                 <span class="icon"><i class="fas fa-unlock"></i></span>
@@ -140,6 +154,10 @@
                    :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
                    @click="(e) => e.target.classList.toggle('is-text-overflow')">
                   {{ item.value }}</p>
+
+                <p v-if="item?.danger" class="title is-5 has-text-danger">
+                  {{ item.description }}
+                </p>
               </div>
             </div>
             <footer class="card-footer">
@@ -181,6 +199,10 @@
           <li>Some values are too large to fit into the view, clicking on the value will show the full value.</li>
           <li>These values are loaded from the <code>{{ file }}</code> file.</li>
           <li>To add a new variable click on the <i class="fa fa-add"></i> button.</li>
+          <li>Environment variables with <span class="has-text-danger">red borders</span> and <i
+              class="fas fa-exclamation-triangle"></i> icon are considered
+            dangerous. Please be careful when editing them.
+          </li>
         </ul>
       </Message>
     </div>
@@ -358,6 +380,10 @@ const getHelp = key => {
   }
 
   let text = `${data[0].description}`
+
+  if (data[0]?.danger) {
+    text = `<span class="has-text-danger title is-5"> <i class="has-text-warning fas fa-exclamation-triangle fa-bounce"></i> ${text}</span>`
+  }
 
   if (data[0]?.type) {
     text += ` Expects: <code>${data[0].type}</code>`

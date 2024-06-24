@@ -252,13 +252,38 @@
             </div>
           </div>
         </div>
+
+        <div class="column is-12 mt-2">
+          <Message title="Information" message_class="has-background-info-90 has-text-dark"
+                   icon="fas fa-info-circle">
+            <p>
+              It's possible to automatically setup the API connection for this client and <strong
+                class="has-text-danger">ALL VISITORS</strong> by setting the following environment variable <code>WS_API_AUTO=true</code>
+              in <code>/config/.env</code> file. Understand that this option <strong class="has-text-danger">PUBLICLY
+              EXPOSES YOUR API TOKEN</strong> to <u>ALL VISITORS</u>. Anyone who is able to reach this page will be
+              granted access to your <code>WatchState API</code> which exposes your other media backends data including
+              their secrets. <strong>this option is great security risk and SHOULD NEVER be used if
+              <code>WatchState</code> is exposed to the internet.</strong>
+            </p>
+
+            <p>Please visit
+              <span class="icon">
+                <i class="fab fa-github"></i>
+              </span>
+              <NuxtLink target="_blank" to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#ws_api_auto">
+                This link
+              </NuxtLink>
+              . to learn more, this environment variable is important enough to have its own section entry in the FAQ.
+            </p>
+          </Message>
+        </div>
       </div>
 
-      <template v-if="!api_url || !api_token">
+      <template v-if="!hasAPISettings">
         <no-api/>
       </template>
       <template v-else>
-        <slot v-if="!showConnection"/>
+        <slot v-if="!showConnection && hasAPISettings"/>
       </template>
 
       <div class="columns is-multiline is-mobile mt-3">
@@ -297,7 +322,7 @@ import {dEvent} from '~/utils/index.js'
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
 
-const real_api_url = useStorage('api_url', '')
+const real_api_url = useStorage('api_url', window.location.origin)
 const real_api_path = useStorage('api_path', '/v1/api')
 const real_api_token = useStorage('api_token', '')
 
@@ -357,8 +382,11 @@ const applyPreferredColorScheme = scheme => {
 
 onMounted(async () => {
   try {
-
     applyPreferredColorScheme(selectedTheme.value)
+
+    if ('' === api_token.value) {
+      await autoConfig()
+    }
 
     if ('' === api_token.value || '' === api_url.value) {
       showConnection.value = true
@@ -430,9 +458,41 @@ const getVersion = async (updateStatus = true) => {
       api_status.value = true
       api_response.value = 'Status: OK'
     }
-
   } catch (e) {
     return 'Unknown'
+  }
+}
+
+const autoConfig = async () => {
+  try {
+    const response = await fetch(`${api_url.value}${api_path.value}/system/auto`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({'origin': window.location.origin})
+    })
+
+    const json = await response.json()
+
+    if (200 !== response.status) {
+      return;
+    }
+
+    if (!api_url.value) {
+      api_url.value = json.url
+    }
+
+    if (!api_path.value) {
+      api_path.value = json.path
+    }
+
+    if (!api_token.value) {
+      api_token.value = json.token
+    }
+
+    await testApi();
+  } catch (e) {
   }
 }
 
@@ -440,8 +500,5 @@ const setOrigin = () => api_url.value = window.location.origin;
 
 const hasAPISettings = computed(() => '' !== real_api_token.value && '' !== real_api_url.value)
 
-const closeOverlay = () => {
-  loadFile.value = ''
-}
-
+const closeOverlay = () => loadFile.value = ''
 </script>
