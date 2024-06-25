@@ -29,12 +29,27 @@ export XDG_RUNTIME_DIR=/tmp
 
 if [ -f "${ENV_FILE}" ]; then
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: Loading environment variables from [${ENV_FILE}]."
+  sourced=()
   while read -r LINE; do
-    if [[ $LINE == *'='* ]] && [[ $LINE != '#'* ]]; then
-      ENV_VAR="$(echo "${LINE}" | envsubst)"
-      eval "declare -x $ENV_VAR"
+    if [[ ${LINE} == *'='* ]] && [[ ${LINE} != '#'* ]]; then
+      # spilt the line into key and value
+      ENV_NAME="$(echo "${LINE}" | cut -d '=' -f 1)"
+      ENV_VALUE="$(echo "${LINE}" | cut -d '=' -f 2-)"
+      # check if the value starts with quote
+      if [[ ${ENV_VALUE} == \"*\" ]] || [[ ${ENV_VALUE} == \'*\' ]]; then
+        ENV_VAR="$(echo "${ENV_NAME}=${ENV_VALUE}" | envsubst)"
+      else
+        ENV_VAR="$(echo "${ENV_NAME}=\"${ENV_VALUE}\"" | envsubst)"
+      fi
+
+      sourced+=("${ENV_NAME}")
+      eval "declare -x ${ENV_VAR}"
     fi
   done <"${ENV_FILE}"
+
+  if [ ${#sourced[@]} -gt 0 ]; then
+    echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: Loaded '${#sourced[@]}' environment variables from '${ENV_FILE}'."
+  fi
 else
   echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] INFO: No environment file present at [${ENV_FILE}]."
 fi
