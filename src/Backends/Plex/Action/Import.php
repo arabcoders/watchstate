@@ -328,7 +328,7 @@ class Import
                         ])
                     );
 
-                    $this->logger->debug("Requesting '{client}: {backend}' '{library.title}' tv shows count.", [
+                    $this->logger->debug("Requesting '{client}: {backend}' '{library.title}' series count.", [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         ...$logContextSub,
@@ -361,14 +361,14 @@ class Import
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
-                        ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
                             'kind' => get_class($e),
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
-                        ]
+                        ],
+                        ...$logContext,
                     ]
                 );
                 continue;
@@ -384,7 +384,6 @@ class Import
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
-                        ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
@@ -392,6 +391,7 @@ class Import
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
+                        ...$logContext,
                     ]
                 );
                 continue;
@@ -448,7 +448,6 @@ class Import
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
-                        ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
@@ -456,12 +455,13 @@ class Import
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
+                        ...$logContext,
                     ]
                 );
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' request for libraries. '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' request for items count. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
@@ -471,7 +471,6 @@ class Import
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
-                        ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
@@ -479,6 +478,7 @@ class Import
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
+                        ...$logContext,
                     ]
                 );
                 continue;
@@ -515,7 +515,7 @@ class Import
             if (false === array_key_exists('show_' . $key, $total)) {
                 $ignored++;
                 $this->logger->warning(
-                    message: "Ignoring '{client}: {backend}' '{library.title}'. No tv shows items count was found.",
+                    message: "Ignoring '{client}: {backend}' '{library.title}'. No series items count was found.",
                     context: [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
@@ -552,7 +552,7 @@ class Import
                     $logContext['library']['url'] = $url;
 
                     $this->logger->debug(
-                        message: "Requesting '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' series external ids.",
+                        message: "Requesting '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' series external ids.",
                         context: [
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
@@ -576,7 +576,7 @@ class Import
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
-                        message: "Request for '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' series external ids has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Request for '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' series external ids has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
@@ -586,7 +586,6 @@ class Import
                                 'message' => $e->getMessage(),
                                 'file' => after($e->getFile(), ROOT_PATH),
                             ],
-                            ...$logContext,
                             'exception' => [
                                 'file' => $e->getFile(),
                                 'line' => $e->getLine(),
@@ -594,12 +593,13 @@ class Import
                                 'message' => $e->getMessage(),
                                 'trace' => $e->getTrace(),
                             ],
+                            ...$logContext,
                         ]
                     );
                     continue;
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'backend' => $context->backendName,
                             'client' => $context->clientName,
@@ -642,11 +642,14 @@ class Import
 
             if (true === in_array($key, $ignoreIds ?? [])) {
                 $ignored++;
-                $this->logger->info("Ignoring '{client}: {backend}' '{library.title}'. Requested by user config.", [
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                ]);
+                $this->logger->info(
+                    "Ignoring '{client}: {backend}' library '{library.title}'. Requested by user.",
+                    [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        ...$logContext,
+                    ]
+                );
                 continue;
             }
 
@@ -688,25 +691,24 @@ class Import
 
                     $isMovieLibrary = PlexClient::TYPE_MOVIE === ag($logContext, 'library.type');
 
-                    $url = $context->backendUrl->withPath(
-                        r('/library/sections/{library_id}/all', ['library_id' => $key])
-                    )
-                        ->withQuery(
-                            http_build_query(
-                                [
-                                    'includeGuids' => 1,
-                                    'type' => $isMovieLibrary ? 1 : 4,
-                                    'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
-                                    'X-Plex-Container-Size' => $segmentSize,
-                                    'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
-                                ]
-                            )
-                        );
+                    $url = $context->backendUrl->withPath(r('/library/sections/{library_id}/all', [
+                        'library_id' => $key
+                    ]))->withQuery(
+                        http_build_query(
+                            [
+                                'includeGuids' => 1,
+                                'type' => $isMovieLibrary ? 1 : 4,
+                                'sort' => $isMovieLibrary ? 'addedAt' : 'episode.addedAt',
+                                'X-Plex-Container-Size' => $segmentSize,
+                                'X-Plex-Container-Start' => $i < 1 ? 0 : ($segmentSize * $i),
+                            ]
+                        )
+                    );
 
                     $logContext['library']['url'] = $url;
 
                     $this->logger->debug(
-                        "Requesting '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' content list.",
+                        "Requesting '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list.",
                         [
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
@@ -730,7 +732,7 @@ class Import
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
-                        "Request for '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' content list has failed. {error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        "Request for '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list has failed. {error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
                         [
                             'client' => $context->clientName,
                             'backend' => $context->backendName,
@@ -753,7 +755,7 @@ class Import
                     continue;
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' content list request. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list request. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'backend' => $context->backendName,
                             'client' => $context->clientName,
@@ -803,7 +805,7 @@ class Import
     {
         if (200 !== $response->getStatusCode()) {
             $this->logger->error(
-                "Request for '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' content returned with unexpected '{status_code}' status code.",
+                "Request for '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content returned with unexpected '{status_code}' status code.",
                 [
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
@@ -814,9 +816,9 @@ class Import
             return;
         }
 
-        $start = makeDate();
+        $start = microtime(true);
         $this->logger->info(
-            "Parsing '{client}: {backend}' library '{library.title}' '{segment.number}/{segment.of}' response.",
+            "Parsing '{client}: {backend}' library '{library.title} {segment.number}/{segment.of}' response.",
             [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
@@ -845,7 +847,7 @@ class Import
                 try {
                     if ($entity instanceof DecodingError) {
                         $this->logger->warning(
-                            "Failed to decode one item of '{client}: {backend}' '{library.title}' '{segment.number}/{segment.of}' content.",
+                            "Failed to decode one item of '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content.",
                             [
                                 'client' => $context->clientName,
                                 'backend' => $context->backendName,
@@ -861,7 +863,7 @@ class Import
                     $callback(item: $entity, logContext: $logContext);
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{library.title}' '{segment.number}/{segment.of}' item response. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'backend' => $context->backendName,
                             'client' => $context->clientName,
@@ -872,7 +874,6 @@ class Import
                                 'file' => after($e->getFile(), ROOT_PATH),
                             ],
                             'entity' => $entity,
-                            ...$logContext,
                             'exception' => [
                                 'kind' => $e::class,
                                 'line' => $e->getLine(),
@@ -880,13 +881,14 @@ class Import
                                 'message' => $e->getMessage(),
                                 'file' => after($e->getFile(), ROOT_PATH),
                             ],
+                            ...$logContext,
                         ]
                     );
                 }
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing of '{library.title}' '{segment.number}/{segment.of}' response. '{error.message}' at '{error.file}:{error.line}'.",
+                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. '{error.message}' at '{error.file}:{error.line}'.",
                 context: [
                     'backend' => $context->backendName,
                     'client' => $context->clientName,
@@ -896,7 +898,6 @@ class Import
                         'message' => $e->getMessage(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ],
-                    ...$logContext,
                     'exception' => [
                         'line' => $e->getLine(),
                         'kind' => get_class($e),
@@ -904,13 +905,14 @@ class Import
                         'trace' => $e->getTrace(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ],
+                    ...$logContext,
                 ]
             );
         }
 
-        $end = makeDate();
+        $end = microtime(true);
         $this->logger->info(
-            "Parsing '{client}: {backend}' library '{library.title}' '{segment.number}/{segment.of}' response is complete.",
+            "Parsing '{client}: {backend}' library '{library.title} {segment.number}/{segment.of}' completed in '{time.duration}s'.",
             [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
@@ -918,7 +920,7 @@ class Import
                 'time' => [
                     'start' => $start,
                     'end' => $end,
-                    'duration' => number_format($end->getTimestamp() - $start->getTimestamp()),
+                    'duration' => round($end - $start, 2),
                 ],
             ]
         );
@@ -957,8 +959,8 @@ class Import
             $this->logger->debug("Processing '{client}: {backend}' {item.type} '{item.title} ({item.year})' payload.", [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
-                ...$logContext,
                 'body' => $item,
+                ...$logContext,
             ]);
         }
 
@@ -972,10 +974,8 @@ class Import
             $this->logger->info($message, [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
+                'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None',
                 ...$logContext,
-                'data' => [
-                    'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
-                ],
             ]);
 
             return;
@@ -1070,13 +1070,13 @@ class Import
 
             if (null === ag($item, true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt')) {
                 $this->logger->debug(
-                    message: "Ignoring '{client}: {backend}' {item.type} '{item.title}'. No Date is set on object.",
+                    message: "Ignoring '{client}: {backend}' {item.type} '{item.id}: {item.title}'. No Date '{date_key}' is set on object. '{body}'",
                     context: [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
                         'date_key' => true === (bool)ag($item, 'viewCount', false) ? 'lastViewedAt' : 'addedAt',
+                        'body' => arrayToString($item),
                         ...$logContext,
-                        'body' => $item,
                     ]
                 );
 
@@ -1084,22 +1084,40 @@ class Import
                 return;
             }
 
-            $entity = $this->createEntity(
-                context: $context,
-                guid: $guid,
-                item: $item,
-                opts: $opts + [
-                    iState::COLUMN_META_LIBRARY => ag($logContext, 'library.id'),
-                    'override' => [
-                        iState::COLUMN_EXTRA => [
-                            $context->backendName => [
-                                iState::COLUMN_EXTRA_EVENT => 'task.import',
-                                iState::COLUMN_EXTRA_DATE => makeDate('now'),
+            try {
+                $entity = $this->createEntity(
+                    context: $context,
+                    guid: $guid,
+                    item: $item,
+                    opts: $opts + [
+                        iState::COLUMN_META_LIBRARY => ag($logContext, 'library.id'),
+                        'override' => [
+                            iState::COLUMN_EXTRA => [
+                                $context->backendName => [
+                                    iState::COLUMN_EXTRA_EVENT => 'task.import',
+                                    iState::COLUMN_EXTRA_DATE => makeDate('now'),
+                                ],
                             ],
                         ],
-                    ],
-                ]
-            );
+                    ]
+                );
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    message: "Exception '{error.kind}' occurred during '{client}: {backend}' '{library.title}' '{item.id}: {item.title}' entity creation. '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                    ]
+                );
+                return;
+            }
 
             if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
                 $message = "Ignoring '{client}: {backend}' '{item.title}'. No valid/supported external ids.";
@@ -1119,8 +1137,8 @@ class Import
                 $this->logger->info($message, [
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
+                    'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None',
                     ...$logContext,
-                    'guids' => !empty($item['Guid']) ? $item['Guid'] : 'None'
                 ]);
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_supported_guid");
@@ -1133,8 +1151,9 @@ class Import
             ]);
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' '{item.title}' import. '{error.message}' at '{error.file}:{error.line}'.",
+                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' '{item.title}' {action}. '{error.message}' at '{error.file}:{error.line}'.",
                 context: [
+                    'action' => property_exists($this, 'action') ? $this->action : 'import',
                     'backend' => $context->backendName,
                     'client' => $context->clientName,
                     'error' => [
@@ -1143,7 +1162,6 @@ class Import
                         'message' => $e->getMessage(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ],
-                    ...$logContext,
                     'exception' => [
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
@@ -1151,6 +1169,7 @@ class Import
                         'message' => $e->getMessage(),
                         'trace' => $e->getTrace(),
                     ],
+                    ...$logContext,
                 ]
             );
         }

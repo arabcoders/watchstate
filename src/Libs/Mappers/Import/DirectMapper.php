@@ -12,10 +12,10 @@ use App\Libs\Message;
 use App\Libs\Options;
 use DateInterval;
 use DateTimeInterface as iDate;
-use Exception;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Throwable;
 
 /**
  * DirectMapper Class.
@@ -118,7 +118,7 @@ final class DirectMapper implements iImport
             $this->addPointers($entity, $pointer);
         }
 
-        $this->logger->info('MAPPER: Preloaded [{pointers}] pointers into memory.', [
+        $this->logger->info("MAPPER: Preloaded '{pointers}' pointers into memory.", [
             'mapper' => afterLast(self::class, '\\'),
             'pointers' => number_format(count($this->pointers)),
         ]);
@@ -145,7 +145,7 @@ final class DirectMapper implements iImport
             Message::increment("{$entity->via}.{$entity->type}.failed");
 
             $this->logger->notice(
-                'MAPPER: Ignoring [{backend}] [{title}]. Does not exist in database. And backend set as metadata source only.',
+                "MAPPER: Ignoring '{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
                 [
                     'metaOnly' => true,
                     'backend' => $entity->via,
@@ -189,11 +189,10 @@ final class DirectMapper implements iImport
                 }
             }
 
-            $this->logger->notice('MAPPER: [{backend}] added [{title}] as new item.', [
-                'id' => $entity->id,
+            $this->logger->notice("MAPPER: '{backend}' added '{title}' as new item.", [
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
-                $this->inTraceMode() ? 'trace' : 'metadata' => $data,
+                true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
             ]);
 
             $this->addPointers($entity, $entity->id);
@@ -204,11 +203,11 @@ final class DirectMapper implements iImport
             }
 
             $this->changed[$entity->id] = $this->objects[$entity->id] = $entity->id;
-        } catch (PDOException|Exception $e) {
+        } catch (PDOException|Throwable $e) {
             $this->actions[$entity->type]['failed']++;
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->error(
-                message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                message: "MAPPER: Exception '{error.kind}' was thrown unhandled in adding '{backend}' '{title}'. '{error.message}' at '{error.file}:{error.line}'.",
                 context: [
                     'error' => [
                         'kind' => $e::class,
@@ -247,7 +246,7 @@ final class DirectMapper implements iImport
 
                 $this->removePointers($local)->addPointers($local, $local->id);
 
-                $this->logger->notice('MAPPER: [{backend}] updated [{title}] metadata.', [
+                $this->logger->notice("MAPPER: '{backend}' updated '{title}' metadata.", [
                     'id' => $local->id,
                     'backend' => $entity->via,
                     'title' => $local->getName(),
@@ -268,7 +267,7 @@ final class DirectMapper implements iImport
                 $this->actions[$local->type]['failed']++;
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
-                    message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "MAPPER: Exception '{error.kind}' was thrown unhandled in '{backend}' '{title}' handle tainted. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'error' => [
                             'kind' => $e::class,
@@ -305,7 +304,7 @@ final class DirectMapper implements iImport
             }
 
             $this->logger->notice(
-                'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the following reason ({reason}) it was not considered as valid state.',
+                "MAPPER: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
                 [
                     'id' => $local->id,
                     'backend' => $entity->via,
@@ -320,7 +319,7 @@ final class DirectMapper implements iImport
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->info("MAPPER: Ignoring [{backend}] [{title}]. No metadata changes detected.", [
+            $this->logger->info("MAPPER: '{backend}' '{title}' No metadata changes detected.", [
                 'id' => $local->id,
                 'backend' => $entity->via,
                 'title' => $local->getName(),
@@ -363,7 +362,7 @@ final class DirectMapper implements iImport
                     }
                 }
 
-                $this->logger->notice('MAPPER: [{backend}] marked [{title}] as [unplayed].', [
+                $this->logger->notice("MAPPER: '{backend}' marked '{title}' as 'unplayed'.", [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
@@ -380,7 +379,7 @@ final class DirectMapper implements iImport
                 $this->actions[$local->type]['failed']++;
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
-                    message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "MAPPER: Exception '{error.kind}' was thrown unhandled in '{backend}' '{title}' handle old entity unplayed. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'error' => [
                             'kind' => $e::class,
@@ -422,7 +421,7 @@ final class DirectMapper implements iImport
 
                     if (count($changes) >= 1) {
                         $this->logger->notice(
-                            $progress ? 'MAPPER: [{backend}] updated [{title}] due to play progress change.' : 'MAPPER: [{backend}] updated [{title}] metadata.',
+                            $progress ? "MAPPER: '{backend}' updated '{title}' due to play progress change." : "MAPPER: '{backend}' updated '{title}' metadata.",
                             [
                                 'id' => $cloned->id,
                                 'backend' => $entity->via,
@@ -457,7 +456,7 @@ final class DirectMapper implements iImport
                     $this->actions[$local->type]['failed']++;
                     Message::increment("{$entity->via}.{$local->type}.failed");
                     $this->logger->error(
-                        message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                        message: "MAPPER: Exception '{error.kind}' was thrown unhandled in '{backend}' '{title}' handle old entity always update metadata. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'error' => [
                                 'kind' => $e::class,
@@ -484,7 +483,7 @@ final class DirectMapper implements iImport
 
         if ($entity->isWatched() !== $local->isWatched()) {
             $this->logger->notice(
-                'MAPPER: [{backend}] item [{id}: {title}] is marked as [{state}] vs local state [{local_state}], However due to the remote item date [{remote_date}] being older than the last backend sync date [{local_date}]. it was not considered as valid state.',
+                "MAPPER: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
                 [
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -499,7 +498,7 @@ final class DirectMapper implements iImport
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug('MAPPER: Ignoring [{backend}] [{title}]. No changes detected.', [
+            $this->logger->debug("MAPPER: Ignoring '{backend}' '{title}'. No changes detected.", [
                 'id' => $cloned->id,
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
@@ -515,7 +514,7 @@ final class DirectMapper implements iImport
     public function add(iState $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->warning('MAPPER: Ignoring [{backend}] [{title}] no valid/supported external ids.', [
+            $this->logger->warning("MAPPER: Ignoring '{backend}' '{title}'. No valid/supported external ids.", [
                 'id' => $entity->id,
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -564,7 +563,7 @@ final class DirectMapper implements iImport
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $hasAfter && true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = 'MAPPER: Watch state conflict detected in [{backend}: {title}] [{new_state}] vs db [{id}: {current_state}].';
+            $message = "MAPPER: Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -610,10 +609,10 @@ final class DirectMapper implements iImport
 
                 $changes = $local->diff(fields: $keys);
 
-                $message = 'MAPPER: [{backend}] Updated [{title}].';
+                $message = "MAPPER: '{backend}' Updated '{title}'.";
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = 'MAPPER: [{backend}] updated and marked [{title}] as [{state}].';
+                    $message = "MAPPER: '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
 
                     if (null !== $onStateUpdate) {
                         $onStateUpdate($local);
@@ -644,7 +643,7 @@ final class DirectMapper implements iImport
                 $this->actions[$local->type]['failed']++;
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
-                    message: 'MAPPER: Exception [{error.kind}] was thrown unhandled in [{backend}] {title}. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "MAPPER: Exception '{error.kind}' was thrown unhandled in '{backend}' '{title}' add. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'error' => [
                             'kind' => $e::class,
@@ -679,7 +678,7 @@ final class DirectMapper implements iImport
             ];
         }
 
-        $this->logger->debug('MAPPER: [{backend}] [{title}] metadata and play state is identical.', $context);
+        $this->logger->debug("MAPPER: Ignoring '{backend}' '{title}'. Metadata & play state are identical.", $context);
 
         Message::increment("{$entity->via}.{$entity->type}.ignored_no_change");
 
