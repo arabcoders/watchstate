@@ -85,7 +85,7 @@
               </div>
             </div>
           </div>
-          <footer class="card-footer">
+          <div class="card-footer">
             <div class="card-footer-item" v-if="backend.export.enabled">
               <NuxtLink class="button is-danger is-fullwidth"
                         :to="makeConsoleCommand(`state:export -v -s ${backend.name}`)">
@@ -100,8 +100,8 @@
                 <span>Run import now</span>
               </NuxtLink>
             </div>
-          </footer>
-          <footer class="card-footer">
+          </div>
+          <div class="card-footer">
             <div class="card-footer-item">
               <div class="field">
                 <input :id="backend.name+'_export'" type="checkbox" class="switch is-success"
@@ -124,6 +124,18 @@
                 <span class="is-hidden-mobile">Copy Webhook URL</span>
                 <span class="is-hidden-tablet">Webhook</span>
               </NuxtLink>
+            </div>
+          </div>
+          <footer class="card-footer">
+            <div class="card-footer-item">
+              <div class="select is-fullwidth">
+                <select v-model="selectedCommand" @change="forwardCommand(backend)">
+                  <option value="" disabled>Quick commands</option>
+                  <option v-for="(command, index) in usefulCommands" :key="`command_${index}`" :value="index">
+                    {{ command.title }}
+                  </option>
+                </select>
+              </div>
             </div>
           </footer>
         </div>
@@ -151,7 +163,7 @@ import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request.js'
 import BackendAdd from '~/components/BackendAdd.vue'
-import {copyText, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
+import {copyText, makeConsoleCommand, notification, r, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
 import {useStorage} from "@vueuse/core";
 import Message from "~/components/Message.vue";
 
@@ -162,6 +174,36 @@ const toggleForm = ref(false)
 const api_url = useStorage('api_url', '')
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
+const selectedCommand = ref('')
+
+const usefulCommands = [
+  {
+    title: "Force export local play state to this backend.",
+    command: 'state:export -fi -v -s {name}'
+  },
+  {
+    title: "Backup this backend play state.",
+    command: "state:backup -v -s {name} --file '{date}.manual_{name}.json'",
+  },
+  {
+    title: "Import backend metadata only.",
+    command: "state:import -v --metadata-only -s {name}",
+  },
+]
+
+const forwardCommand = async backend => {
+  if ('' === selectedCommand.value) {
+    return
+  }
+  const Index = selectedCommand.value
+  selectedCommand.value = ''
+
+  const util = {
+    date: moment().format('YYYYMMDD'),
+  }
+
+  await navigateTo(makeConsoleCommand(r(usefulCommands[Index].command, {...backend, ...util})));
+}
 
 const loadContent = async () => {
   backends.value = []
@@ -191,5 +233,4 @@ const updateValue = async (backend, key, newValue) => {
 
   backends.value[backends.value.findIndex(b => b.name === backend.name)] = await response.json()
 }
-
 </script>

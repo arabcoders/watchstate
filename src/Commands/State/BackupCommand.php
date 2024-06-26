@@ -26,9 +26,9 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 class BackupCommand extends Command
 {
-    public const ROUTE = 'state:backup';
+    public const string ROUTE = 'state:backup';
 
-    public const TASK_NAME = 'backup';
+    public const string TASK_NAME = 'backup';
 
     /**
      * Constructs a new instance of the class.
@@ -180,31 +180,35 @@ class BackupCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected, true)) {
-                $this->logger->info('SYSTEM: Ignoring [{backend}] as requested by select backends flag.', [
-                    'backend' => $backendName,
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as requested by [-s, --select-backend].", [
+                    'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (true !== (bool)ag($backend, 'import.enabled')) {
-                $this->logger->info('SYSTEM: Ignoring [{backend}] imports are disabled for this backend.', [
-                    'backend' => $backendName,
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has import disabled.", [
+                    'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('SYSTEM: Ignoring [{backend}] because of the unexpected type [{type}].', [
-                    'type' => $type,
-                    'backend' => $backendName,
-                ]);
+                $this->logger->error(
+                    "SYSTEM: Ignoring '{backend}' due to unexpected type '{type}'. Expecting '{types}'.",
+                    [
+                        'type' => $type,
+                        'backend' => $backendName,
+                        'types' => implode(', ', array_keys($supported)),
+                    ]
+                );
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error('SYSTEM: Ignoring [{backend}] because of invalid URL.', [
-                    'backend' => $backendName,
+                $this->logger->error("SYSTEM: Ignoring '{backend}' due to invalid URL. '{url}'.", [
                     'url' => $url ?? 'None',
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -221,7 +225,7 @@ class BackupCommand extends Command
         }
 
         if (true !== $input->getOption('no-enhance')) {
-            $this->logger->notice('SYSTEM: Preloading {mapper} data.', [
+            $this->logger->notice("SYSTEM: Preloading '{mapper}' data.", [
                 'mapper' => afterLast($this->mapper::class, '\\'),
                 'memory' => [
                     'now' => getMemoryUsage(),
@@ -229,10 +233,12 @@ class BackupCommand extends Command
                 ],
             ]);
 
+            $start = microtime(true);
             $this->mapper->loadData();
 
-            $this->logger->notice('SYSTEM: Preloading {mapper} data is complete.', [
+            $this->logger->notice("SYSTEM: Preloading '{mapper}' data completed in '{duration}s'.", [
                 'mapper' => afterLast($this->mapper::class, '\\'),
+                'duration' => round(microtime(true) - $start, 2),
                 'memory' => [
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
@@ -243,7 +249,7 @@ class BackupCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
+        $this->logger->notice("Using WatchState version - '{version}'.", ['version' => getAppVersion()]);
 
         foreach ($list as $name => &$backend) {
             $opts = ag($backend, 'options', []);
@@ -275,8 +281,8 @@ class BackupCommand extends Command
                 $fileName = Config::get('path') . '/backup/{backend}.json';
             }
 
-            if (count($list) <= 1 && null === ($file = $input->getOption('file'))) {
-                $fileName = $file;
+            if (count($list) <= 1 && null !== ($file = $input->getOption('file'))) {
+                $fileName = str_starts_with($file, '/') ? $file : Config::get('path') . '/backup' . '/' . $file;
             }
 
             if (false === $input->getOption('dry-run')) {
@@ -288,6 +294,11 @@ class BackupCommand extends Command
                 if (!file_exists($fileName)) {
                     touch($fileName);
                 }
+
+                $this->logger->notice("SYSTEM: '{backend}' is using '{file}' as backup target.", [
+                    'file' => realpath($fileName),
+                    'backend' => $name,
+                ]);
 
                 $backend['fp'] = new Stream($fileName, 'wb+');
                 $backend['fp']->write('[');
@@ -308,12 +319,9 @@ class BackupCommand extends Command
 
         unset($backend);
 
-        $start = makeDate();
-        $this->logger->notice('SYSTEM: Waiting on [{total}] requests.', [
+        $start = microtime(true);
+        $this->logger->notice("SYSTEM: Waiting on '{total}' requests.", [
             'total' => number_format(count($queue)),
-            'time' => [
-                'start' => $start,
-            ],
             'memory' => [
                 'now' => getMemoryUsage(),
                 'peak' => getPeakMemoryUsage(),
@@ -347,13 +355,8 @@ class BackupCommand extends Command
             }
         }
 
-        $end = makeDate();
-        $this->logger->notice('SYSTEM: Operation is finished.', [
-            'time' => [
-                'start' => $start,
-                'end' => $end,
-                'duration' => $end->getTimestamp() - $start->getTimestamp(),
-            ],
+        $this->logger->notice("SYSTEM: Backup operation finished in '{duration}s'.", [
+            'duration' => round(microtime(true) - $start, 2),
             'memory' => [
                 'now' => getMemoryUsage(),
                 'peak' => getPeakMemoryUsage(),
