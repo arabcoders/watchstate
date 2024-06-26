@@ -291,8 +291,8 @@ class ImportCommand extends Command
             $metadata = false;
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info('SYSTEM: Ignoring [{backend}] as requested by select backends flag.', [
-                    'backend' => $backendName,
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as requested by [-s, --select-backend].", [
+                    'backend' => $backendName
                 ]);
                 continue;
             }
@@ -313,24 +313,28 @@ class ImportCommand extends Command
             }
 
             if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
-                $this->logger->info('SYSTEM: Ignoring [{backend}] imports are disabled for this backend.', [
-                    'backend' => $backendName,
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has import disabled.", [
+                    'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('SYSTEM: Ignoring [{backend}] because of the unexpected type [{type}].', [
-                    'type' => $type,
-                    'backend' => $backendName,
-                ]);
+                $this->logger->error(
+                    "SYSTEM: Ignoring '{backend}' due to unexpected type '{type}'. Expecting '{types}'.",
+                    [
+                        'type' => $type,
+                        'backend' => $backendName,
+                        'types' => implode(', ', array_keys($supported)),
+                    ]
+                );
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error('SYSTEM: Ignoring [{backend}] because of invalid URL.', [
-                    'backend' => $backendName,
+                $this->logger->error("SYSTEM: Ignoring '{backend}' due to invalid URL. '{url}'.", [
                     'url' => $url ?? 'None',
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -349,9 +353,9 @@ class ImportCommand extends Command
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
-        $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
+        $this->logger->notice("Using WatchState Version - '{version}'.", ['version' => getAppVersion()]);
 
-        $this->logger->notice('SYSTEM: Preloading {mapper} data.', [
+        $this->logger->notice("SYSTEM: Preloading '{mapper}' data.", [
             'mapper' => afterLast($this->mapper::class, '\\'),
             'memory' => [
                 'now' => getMemoryUsage(),
@@ -359,10 +363,12 @@ class ImportCommand extends Command
             ],
         ]);
 
+        $time = microtime(true);
         $this->mapper->loadData();
 
-        $this->logger->notice('SYSTEM: Preloading {mapper} data is complete.', [
+        $this->logger->notice("SYSTEM: Preloading '{mapper}' data completed in '{duration}s'.", [
             'mapper' => afterLast($this->mapper::class, '\\'),
+            'duration' => round(microtime(true) - $time, 2),
             'memory' => [
                 'now' => getMemoryUsage(),
                 'peak' => getPeakMemoryUsage(),
@@ -406,9 +412,9 @@ class ImportCommand extends Command
                 $after = makeDate($after);
             }
 
-            $this->logger->notice('SYSTEM: Importing [{backend}] {import_type} changes.', [
+            $this->logger->notice("SYSTEM: Importing '{backend}' {import_type} changes.", [
                 'backend' => $name,
-                'import_type' => true === $metadata ? 'METADATA ONLY' : 'METADATA & PLAY STATE',
+                'import_type' => true === $metadata ? 'metadata' : 'metadata & play state',
                 'since' => null === $after ? 'Beginning' : $after->format('Y-m-d H:i:s T'),
             ]);
 
@@ -418,9 +424,12 @@ class ImportCommand extends Command
 
             if (false === $inDryMode) {
                 if (true === (bool)Message::get("{$name}.has_errors")) {
-                    $this->logger->warning('SYSTEM: Not updating last import date. [{backend}] reported an error.', [
-                        'backend' => $name,
-                    ]);
+                    $this->logger->warning(
+                        "SYSTEM: Not updating '{backend}' import last sync date. There was errors recorded during the operation.",
+                        [
+                            'backend' => $name,
+                        ]
+                    );
                 } else {
                     $configFile->set("{$name}.import.lastSync", time());
                 }
@@ -430,7 +439,7 @@ class ImportCommand extends Command
         unset($backend);
 
         $start = makeDate();
-        $this->logger->notice('SYSTEM: Waiting on [{total}] requests.', [
+        $this->logger->notice("SYSTEM: Waiting on '{total}' requests.", [
             'total' => number_format(count($queue)),
             'time' => [
                 'start' => $start,
@@ -457,7 +466,7 @@ class ImportCommand extends Command
 
         $end = makeDate();
 
-        $this->logger->notice('SYSTEM: Finished waiting on [{total}] requests.', [
+        $this->logger->notice("SYSTEM: Completed waiting on '{total}' requests in '{time.duration}s'.", [
             'total' => number_format(count($queue)),
             'time' => [
                 'start' => $start,
@@ -478,7 +487,7 @@ class ImportCommand extends Command
         $total = count($this->mapper);
 
         if ($total >= 1) {
-            $this->logger->notice('SYSTEM: Found [{total}] updated objects.', [
+            $this->logger->notice("SYSTEM: Found '{total}' updated items.", [
                 'total' => $total,
                 'memory' => [
                     'now' => getMemoryUsage(),

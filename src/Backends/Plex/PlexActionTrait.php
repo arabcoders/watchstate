@@ -47,7 +47,7 @@ trait PlexActionTrait
             $date = $opts['override'][iState::COLUMN_UPDATED] ?? ag($item, 'addedAt');
         } else {
             $isPlayed = (bool)ag($item, 'viewCount', false);
-            $date = ag($item, true === $isPlayed ? 'lastViewedAt' : 'addedAt');
+            $date = ag($item, true === $isPlayed ? ['lastViewedAt', 'addedAt'] : 'addedAt');
         }
 
         // -- For Progress action we need to use the latest date.

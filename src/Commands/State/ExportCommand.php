@@ -169,32 +169,35 @@ class ExportCommand extends Command
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info('{backend}: Ignoring backend as requested by [-s, --select-backend].', [
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as requested by [-s, --select-backend].", [
                     'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (true !== ag($backend, 'export.enabled')) {
-                $this->logger->info('{backend}: Ignoring backend as requested by user config.', [
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has export disabled.", [
                     'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error('{backend}: Is using unexpected type \'{type}\'. Expecting \'{types}\'.', [
-                    'type' => $type,
-                    'backend' => $backendName,
-                    'types' => implode(', ', array_keys($supported)),
-                ]);
+                $this->logger->error(
+                    "SYSTEM: Ignoring '{backend}' due to unexpected type '{type}'. Expecting '{types}'.",
+                    [
+                        'type' => $type,
+                        'backend' => $backendName,
+                        'types' => implode(', ', array_keys($supported)),
+                    ]
+                );
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error('{backend}: Backend does not have valid url.', [
+                $this->logger->error("SYSTEM: Ignoring '{backend}' due to invalid URL. '{url}'.", [
                     'url' => $url ?? 'None',
-                    $backendName,
+                    'backend' => $backendName,
                 ]);
                 continue;
             }
@@ -244,12 +247,9 @@ class ExportCommand extends Command
 
             foreach ($backends as $backend) {
                 if (null === ($lastSync = ag($backend, 'export.lastSync', null))) {
-                    $this->logger->info(
-                        'SYSTEM: Using export mode for [{backend}] as the backend did have last export date.',
-                        [
-                            'backend' => ag($backend, 'name'),
-                        ]
-                    );
+                    $this->logger->info("SYSTEM: Using export mode for '{backend}'. No export last Sync date found.", [
+                        'backend' => ag($backend, 'name'),
+                    ]);
 
                     $export[ag($backends, 'name')] = $backend;
                     continue;
@@ -257,7 +257,7 @@ class ExportCommand extends Command
 
                 if (null === ag($backend, 'import.lastSync', null)) {
                     $this->logger->warning(
-                        'SYSTEM: Using export mode for [{backend}]. server data is not yet imported. please run state:import',
+                        "SYSTEM: Using export mode for '{backend}'. The backend metadata not imported. You need to run import to populate the database.",
                         [
                             'backend' => ag($backend, 'name'),
                         ]
@@ -274,14 +274,14 @@ class ExportCommand extends Command
 
             $lastSync = makeDate($minDate);
 
-            $this->logger->notice('DATABASE: Loading changed items since [{date}].', [
+            $this->logger->notice("SYSTEM: Loading database items that has changed since '{date}'.", [
                 'date' => $lastSync->format('Y-m-d H:i:s T')
             ]);
 
             $entities = $this->db->getAll($lastSync);
 
             if (count($entities) < 1 && count($export) < 1) {
-                $this->logger->notice('DATABASE: No play state change detected since [{date}].', [
+                $this->logger->notice("SYSTEM: No play state changes detected since '{date}'.", [
                     'date' => $lastSync->format('Y-m-d H:i:s T')
                 ]);
                 return self::SUCCESS;
@@ -289,7 +289,7 @@ class ExportCommand extends Command
 
             if (count($entities) >= 1) {
                 $this->logger->info(
-                    'SYSTEM: Checking [{total}] media items for push mode compatibility.',
+                    "SYSTEM: Checking '{total}' media items for push mode compatibility.",
                     (function () use ($entities, $input): array {
                         $context = [
                             'total' => number_format(count($entities)),
@@ -317,9 +317,26 @@ class ExportCommand extends Command
                             $addedDate = ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_ADDED_AT);
                             $extraMargin = (int)Config::get('export.not_found');
 
-                            if (null !== $addedDate && $lastSync > ($addedDate + $extraMargin)) {
+                            if (null === $addedDate || false === ctype_digit($addedDate)) {
                                 $this->logger->info(
-                                    'SYSTEM: Ignoring [{item.title}] for [{backend}] waiting period for metadata expired.',
+                                    "SYSTEM: Ignoring '{item.id}: {item.title}' for '{backend}' received invalid added_at '{added_at}' date. Expecting integer timestamp, but got '{type}'.",
+                                    [
+                                        'type' => get_debug_type($addedDate),
+                                        'backend' => $name,
+                                        'item' => [
+                                            'id' => $entity->id,
+                                            'title' => $entity->getName(),
+                                        ],
+                                        'added_at' => makeDate($addedDate),
+                                        'data' => $input->getOption('trace') ? $entity->getAll() : [],
+                                    ]
+                                );
+                                continue;
+                            }
+
+                            if ($lastSync > ($addedDate + $extraMargin)) {
+                                $this->logger->info(
+                                    "SYSTEM: Ignoring '{item.id}: {item.title}' for '{backend}' waiting period for metadata expired.",
                                     [
                                         'backend' => $name,
                                         'item' => [
@@ -343,7 +360,7 @@ class ExportCommand extends Command
                             }
 
                             $this->logger->info(
-                                'SYSTEM: Using export mode for [{backend}] as the backend did not register metadata for [{item.id}: {item.title}].',
+                                "SYSTEM: Using export mode for '{backend}'. Backend local database entries did not have metadata for '{item.id}: {item.title}'.",
                                 [
                                     'backend' => $name,
                                     'item' => [
@@ -364,11 +381,11 @@ class ExportCommand extends Command
             }
         } else {
             $export = $backends;
-            $this->logger->notice('Not possible to use push mode when [-f, --force-full] flag is used.');
+            $this->logger->notice("SYSTEM: Not possible to use push mode when '-f, --force-full' flag is used.");
         }
 
         $this->logger->notice(
-            'SYSTEM: Using push mode for [{push.total}] backends and export mode for [{export.total}] backends.',
+            "SYSTEM: Using push mode for '{push.total}' backends and export mode for '{export.total}' backends.",
             [
                 'push' => [
                     'total' => count($push),
@@ -393,7 +410,7 @@ class ExportCommand extends Command
         $total = count($this->queue->getQueue());
 
         if ($total >= 1) {
-            $this->logger->notice('SYSTEM: Sending [{total}] change play state requests.', [
+            $this->logger->notice("SYSTEM: Sending '{total}' change play state requests.", [
                 'total' => $total
             ]);
 
@@ -403,7 +420,7 @@ class ExportCommand extends Command
                 try {
                     if (200 !== ($statusCode = $response->getStatusCode())) {
                         $this->logger->error(
-                            'Request to change [{backend}] [{item.title}] play state returned with unexpected [{status_code}] status code.',
+                            "Request to change '{backend}' '{item.title}' play state returned with unexpected '{status_code}' status code.",
                             [
                                 'status_code' => $statusCode,
                                 ...$context,
@@ -412,10 +429,10 @@ class ExportCommand extends Command
                         continue;
                     }
 
-                    $this->logger->notice('Marked [{backend}] [{item.title}] as [{play_state}].', $context);
+                    $this->logger->notice("Marked '{backend}' '{item.title}' as '{play_state}'.", $context);
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: 'Exception [{error.kind}] was thrown unhandled during [{backend}] request to change play state of {item.type} [{item.title}]. Error [{error.message} @ {error.file}:{error.line}].',
+                        message: "Exception '{error.kind}' was thrown unhandled during '{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'error' => [
                                 'kind' => $e::class,
@@ -435,11 +452,11 @@ class ExportCommand extends Command
                 }
             }
 
-            $this->logger->notice('SYSTEM: Sent [{total}] change play state requests.', [
+            $this->logger->notice("SYSTEM: Sent '{total}' change play state requests.", [
                 'total' => $total
             ]);
 
-            $this->logger->notice('Using WatchState Version - \'{version}\'.', ['version' => getAppVersion()]);
+            $this->logger->notice("Using WatchState version - '{version}'.", ['version' => getAppVersion()]);
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');
         }
@@ -454,7 +471,7 @@ class ExportCommand extends Command
                     $configFile->set("{$name}.export.lastSync", time());
                 } else {
                     $this->logger->warning(
-                        'SYSTEM: Not updating last export date for [{backend}]. Backend reported an error.',
+                        "SYSTEM: Not updating '{backend}' export last sync date. There was errors recorded during the operation.",
                         [
                             'backend' => $name,
                         ]
@@ -478,7 +495,7 @@ class ExportCommand extends Command
      */
     protected function push(array $backends, array $entities): int
     {
-        $this->logger->notice('Push mode start.', [
+        $this->logger->notice("Push mode started for '{backends}'.", [
             'backends' => implode(', ', array_keys($backends)),
         ]);
 
@@ -491,7 +508,7 @@ class ExportCommand extends Command
             );
         }
 
-        $this->logger->notice('Push mode ends.', [
+        $this->logger->notice("Push mode ended for '{backends}'.", [
             'backends' => implode(', ', array_keys($backends)),
         ]);
 
@@ -507,7 +524,7 @@ class ExportCommand extends Command
      */
     protected function export(array $backends, InputInterface $input, ConfigFile $configFile): void
     {
-        $this->logger->notice('Export mode start.', [
+        $this->logger->notice("Export mode started for '{backends}'.", [
             'backends' => implode(', ', array_keys($backends)),
         ]);
 
@@ -525,7 +542,7 @@ class ExportCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        $this->logger->notice('SYSTEM: Preloading {mapper} data.', [
+        $this->logger->notice("SYSTEM: Preloading '{mapper}' data.", [
             'mapper' => afterLast($this->mapper::class, '\\'),
             'memory' => [
                 'now' => getMemoryUsage(),
@@ -535,7 +552,7 @@ class ExportCommand extends Command
 
         $this->mapper->reset()->loadData();
 
-        $this->logger->notice('SYSTEM: Preloading {mapper} data is complete.', [
+        $this->logger->notice("SYSTEM: Preloading '{mapper}' data is complete.", [
             'mapper' => afterLast($this->mapper::class, '\\'),
             'memory' => [
                 'now' => getMemoryUsage(),
@@ -555,12 +572,10 @@ class ExportCommand extends Command
             $after = true === $input->getOption('force-full') ? null : ag($backend, 'export.lastSync', null);
 
             if (null === $after) {
-                $this->logger->notice('SYSTEM: Exporting play state to [{backend}].', [
-                    'backend' => $name,
-                ]);
+                $this->logger->notice("SYSTEM: Exporting play state to '{backend}'.", ['backend' => $name]);
             } else {
                 $after = makeDate($after);
-                $this->logger->notice('SYSTEM: Exporting play state changes since [{date}] to [{backend}].', [
+                $this->logger->notice("SYSTEM: Exporting play state changes since '{date}' to '{backend}'.", [
                     'backend' => $name,
                     'date' => $after->format('Y-m-d H:i:s T')
                 ]);
@@ -571,16 +586,19 @@ class ExportCommand extends Command
 
             if (false === $input->getOption('dry-run')) {
                 if (true === (bool)Message::get("{$name}.has_errors")) {
-                    $this->logger->warning('SYSTEM: Not updating last export date. [{backend}] report an error.', [
-                        'backend' => $name,
-                    ]);
+                    $this->logger->warning(
+                        "SYSTEM: Not updating '{backend}' export last sync date. There was errors recorded during the operation.",
+                        [
+                            'backend' => $name,
+                        ]
+                    );
                 } else {
                     $configFile->set("{$name}.export.lastSync", time());
                 }
             }
         }
 
-        $this->logger->notice('SYSTEM: Sending [{total}] play state comparison requests.', [
+        $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests.", [
             'total' => count($requests),
         ]);
 
@@ -593,11 +611,11 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice('SYSTEM: Sent [{total}] play state comparison requests.', [
+        $this->logger->notice("SYSTEM: Sent '{total}' play state comparison requests.", [
             'total' => count($requests),
         ]);
 
-        $this->logger->notice('Export mode ends.', [
+        $this->logger->notice("Export mode ended for '{backends}'.", [
             'backends' => implode(', ', array_keys($backends)),
         ]);
     }
