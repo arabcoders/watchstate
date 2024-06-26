@@ -86,22 +86,6 @@
             </div>
           </div>
           <div class="card-footer">
-            <div class="card-footer-item" v-if="backend.export.enabled">
-              <NuxtLink class="button is-danger is-fullwidth"
-                        :to="makeConsoleCommand(`state:export -v -s ${backend.name}`)">
-                <span class="icon"><i class="fas fa-upload"></i></span>
-                <span>Run export now</span>
-              </NuxtLink>
-            </div>
-            <div class="card-footer-item" v-if="backend.import.enabled">
-              <NuxtLink class="button is-primary is-fullwidth"
-                        :to="makeConsoleCommand(`state:import -v -s ${backend.name}`)">
-                <span class="icon"><i class="fas fa-download"></i></span>
-                <span>Run import now</span>
-              </NuxtLink>
-            </div>
-          </div>
-          <div class="card-footer">
             <div class="card-footer-item">
               <div class="field">
                 <input :id="backend.name+'_export'" type="checkbox" class="switch is-success"
@@ -127,14 +111,20 @@
             </div>
           </div>
           <footer class="card-footer">
-            <div class="card-footer-item">
-              <div class="select is-fullwidth">
-                <select v-model="selectedCommand" @change="forwardCommand(backend)">
-                  <option value="" disabled>Quick commands</option>
-                  <option v-for="(command, index) in usefulCommands" :key="`command_${index}`" :value="index">
-                    {{ command.title }}
-                  </option>
-                </select>
+            <div class="card-footer-item is-block">
+              <div class="control is-fullwidth has-icons-left">
+                <div class="select is-fullwidth">
+                  <select v-model="selectedCommand" @change="forwardCommand(backend)">
+                    <option value="" disabled>Frequently used commands</option>
+                    <option v-for="(command, index) in usefulCommands" :key="`qc-${index}`" :value="index"
+                            :disabled="false === Boolean(ag(backend, command.state_key, false))">
+                      {{ command.title }}
+                    </option>
+                  </select>
+                </div>
+                <div class="icon is-left">
+                  <i class="fas fa-terminal"></i>
+                </div>
               </div>
             </div>
           </footer>
@@ -161,11 +151,11 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
-import request from '~/utils/request.js'
-import BackendAdd from '~/components/BackendAdd.vue'
-import {copyText, makeConsoleCommand, notification, r, TOOLTIP_DATE_FORMAT} from '~/utils/index.js'
-import {useStorage} from "@vueuse/core";
-import Message from "~/components/Message.vue";
+import request from '~/utils/request'
+import BackendAdd from '~/components/BackendAdd'
+import {ag, copyText, makeConsoleCommand, notification, r, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {useStorage} from '@vueuse/core'
+import Message from '~/components/Message'
 
 useHead({title: 'Backends'})
 
@@ -176,33 +166,49 @@ const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
 const selectedCommand = ref('')
 
-const usefulCommands = [
-  {
-    title: "Force export local play state to this backend.",
-    command: 'state:export -fi -v -s {name}'
+const usefulCommands = {
+  export_now: {
+    title: "Run normal export.",
+    command: 'state:export -v -s {name}',
+    state_key: 'export.enabled',
   },
-  {
+  import_now: {
+    title: "Run normal import.",
+    command: 'state:import -v -s {name}',
+    state_key: 'import.enabled'
+  },
+  force_export: {
+    title: "Force export local play state to this backend.",
+    command: 'state:export -fi -v -s {name}',
+    state_key: 'export.enabled',
+  },
+  backup_now: {
     title: "Backup this backend play state.",
     command: "state:backup -v -s {name} --file '{date}.manual_{name}.json'",
+    state_key: 'import.enabled',
   },
-  {
-    title: "Import backend metadata only.",
+  metadata_only: {
+    title: "Import this backend metadata.",
     command: "state:import -v --metadata-only -s {name}",
+    state_key: 'import.enabled',
   },
-]
+}
 
 const forwardCommand = async backend => {
   if ('' === selectedCommand.value) {
     return
   }
-  const Index = selectedCommand.value
+
+  const index = selectedCommand.value
   selectedCommand.value = ''
+
+  console.log(index)
 
   const util = {
     date: moment().format('YYYYMMDD'),
   }
 
-  await navigateTo(makeConsoleCommand(r(usefulCommands[Index].command, {...backend, ...util})));
+  await navigateTo(makeConsoleCommand(r(usefulCommands[index].command, {...backend, ...util})));
 }
 
 const loadContent = async () => {
