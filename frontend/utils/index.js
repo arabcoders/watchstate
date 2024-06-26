@@ -379,30 +379,23 @@ const makePagination = (current, last, delta = 5) => {
 
     const strR = '-'.repeat(9 + `${last}`.length)
 
-    const left = current - delta,
-        right = current + delta + 1;
+    const left = current - delta, right = current + delta + 1;
 
     for (let i = 1; i <= last; i++) {
         if (i === 1 || i === last || (i >= left && i < right)) {
             if (i === left && i > 2) {
                 pagination.push({
-                    page: 0,
-                    text: strR,
-                    selected: false,
+                    page: 0, text: strR, selected: false,
                 });
             }
 
             pagination.push({
-                page: i,
-                text: `Page #${i}`,
-                selected: i === current
+                page: i, text: `Page #${i}`, selected: i === current
             });
 
             if (i === right - 1 && i < last - 1) {
                 pagination.push({
-                    page: 0,
-                    text: strR,
-                    selected: false,
+                    page: 0, text: strR, selected: false,
                 });
             }
         }
@@ -412,6 +405,7 @@ const makePagination = (current, last, delta = 5) => {
 }
 
 export {
+    r,
     ag_set,
     ag,
     humanFileSize,

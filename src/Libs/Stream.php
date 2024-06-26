@@ -42,21 +42,23 @@ final class Stream implements StreamInterface, Stringable
         $resource = $stream;
 
         if (is_string($stream)) {
-            set_error_handler(function ($e) use (&$error) {
-                if ($e !== E_WARNING) {
+            set_error_handler(function ($severity, $message, $file, $line) use (&$error) {
+                if ($severity !== E_WARNING) {
                     return;
                 }
 
-                $error = $e;
+                $error = r("Stream: Failed to open stream. '{message}' at '{file}:{line}'", [
+                    'message' => trim($message),
+                    'file' => $file,
+                    'line' => $line
+                ]);
             });
             $resource = fopen($stream, $mode);
             restore_error_handler();
         }
 
-        if ($error) {
-            throw new RuntimeException(r('Stream: Invalid stream reference provided. Error {error}.', [
-                'error' => ag(error_get_last() ?? [], 'message', '??'),
-            ]));
+        if (null !== $error) {
+            throw new RuntimeException($error);
         }
 
         if (!self::isValidStreamResourceType($resource)) {
