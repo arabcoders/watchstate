@@ -49,11 +49,20 @@
                 {{ backend.name }}
               </NuxtLink>
             </p>
-            <span class="card-header-icon" v-tooltip="'Edit Backend settings'">
-              <NuxtLink :to="`/backend/${backend.name}/edit`">
-                <span class="icon"><i class="fas fa-cog"></i></span>
-              </NuxtLink>
-            </span>
+            <div class="card-header-icon">
+              <div class="field is-grouped">
+                <div class="control">
+                  <NuxtLink :to="`/backend/${backend.name}/edit`" v-tooltip="'Edit backend settings'">
+                    <span class="icon has-text-warning"><i class="fas fa-cog"></i></span>
+                  </NuxtLink>
+                </div>
+                <div class="control">
+                  <NuxtLink :to="`/backend/${backend.name}/delete`" v-tooltip="'Delete backend'">
+                    <span class="icon has-text-danger"><i class="fas fa-trash"></i></span>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
           </header>
           <div class="card-content">
             <div class="columns is-multiline has-text-centered">
@@ -140,7 +149,6 @@
             <li>
               <strong>Export</strong> means pushing data from the local database to the backends.
             </li>
-            <li>You can delete a backend by visiting the backend page and clicking the delete button.</li>
           </ul>
         </Message>
       </div>

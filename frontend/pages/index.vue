@@ -13,10 +13,6 @@
           <div class="card" :class="{ 'is-success': history.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow">
-                <span class="icon" v-if="!history.progress">
-                  <i class="fas fa-eye-slash" v-if="!history.watched"></i>
-                  <i class="fas fa-eye" v-else></i>
-                </span>
                 <NuxtLink :to="`/history/${history.id}`" v-text="makeName(history)"/>
               </p>
               <span class="card-header-icon">

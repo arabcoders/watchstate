@@ -51,31 +51,46 @@
           </ul>
 
           <p>There is no undo operation. This action is irreversible.</p>
-          <p class="is-bold">
-            Depending on your hardware speed, the delete operation might take long time. do not interrupt the process,
-            or close the browser tab. You will be redirected to the backends page automatically once the process is
-            complete. Otherwise, you might end up with a corrupted database.
-          </p>
+        </Message>
 
-          <div class="columns is-mobile">
-            <div class="column is-6">
-              <p class="control " v-if="!isDeleting">
-                <NuxtLink to="/backends" class="button is-fullwidth is-primary">
+        <form @submit.prevent="deleteBackend()">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">Delete backend</p>
+              <p class="card-header-icon"><span class="icon"><i class="fas fa-trash"></i></span></p>
+            </header>
+            <div class="card-content">
+              <div class="field">
+                <label class="label">
+                  To confirm, please write '<code>{{ random_secret }}</code>' in the box below.
+                </label>
+                <div class="control">
+                  <input class="input" type="text" v-model="user_secret" placeholder="Enter the secret key"/>
+                </div>
+                <p class="help">
+                  <span class="icon has-text-warning"><i class="fas fa-info-circle"></i></span>
+                  Depending on your hardware speed, the delete operation might take long time. do not interrupt the
+                  process, or close the browser tab. You will be redirected to the backends page automatically once the
+                  process is complete. Otherwise, you might end up with a corrupted database.
+                </p>
+              </div>
+            </div>
+            <footer class="card-footer">
+              <div class="card-footer-item">
+                <NuxtLink to="/backends/" class="button is-fullwidth is-primary">
                   <span class="icon"><i class="fas fa-cancel"></i></span>
                   <span>Cancel</span>
                 </NuxtLink>
-              </p>
-            </div>
-            <div class="column">
-              <p class="control">
-                <button class="button is-danger is-fullwidth" @click="deleteBackend">
-                  <span class="icon"><i class="fas fa-trash"></i></span>
-                  <span>Yes, Delete it!</span>
+              </div>
+              <div class="card-footer-item">
+                <button class="button is-danger is-fullwidth" type="submit" :disabled="user_secret !== random_secret">
+                  <span class="icon"><i class="fas fa-redo"></i></span>
+                  <span>Proceed</span>
                 </button>
-              </p>
-            </div>
+              </div>
+            </footer>
           </div>
-        </Message>
+        </form>
       </div>
     </template>
   </div>
@@ -83,14 +98,17 @@
 
 <script setup>
 import 'assets/css/bulma-switch.css'
-import request from '~/utils/request.js'
-import Message from "~/components/Message.vue";
+import request from '~/utils/request'
+import Message from "~/components/Message"
+import {makeSecret, notification} from '~/utils/index'
 
 const id = useRoute().params.backend
 const error = ref()
 const type = ref('')
 const isLoading = ref(false)
 const isDeleting = ref(false)
+const random_secret = ref('')
+const user_secret = ref('')
 
 const loadBackend = async () => {
   isLoading.value = true
@@ -128,6 +146,11 @@ const loadBackend = async () => {
 }
 
 const deleteBackend = async () => {
+  if (user_secret.value !== random_secret.value) {
+    notification('error', 'Error', 'Invalid secret key. Please try again.')
+    return
+  }
+
   if (!confirm('Last chance! Are you sure you want to delete the backend?')) {
     return
   }
@@ -170,5 +193,8 @@ const deleteBackend = async () => {
   }
 }
 
-onMounted(async () => await loadBackend())
+onMounted(async () => {
+  await loadBackend()
+  random_secret.value = makeSecret(8)
+})
 </script>

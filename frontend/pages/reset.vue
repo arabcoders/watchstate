@@ -98,7 +98,7 @@
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import Message from '~/components/Message'
-import {notification} from '~/utils/index'
+import {makeSecret, notification} from '~/utils/index'
 
 const error = ref()
 const isResetting = ref(false)
@@ -152,16 +152,6 @@ const resetSystem = async () => {
 }
 
 onMounted(() => {
-  const strLength = 8;
-
-  let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let counter = 0;
-  while (counter < strLength) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-    counter += 1;
-  }
-
-  random_secret.value = result
+  random_secret.value = makeSecret(8)
 })
 </script>

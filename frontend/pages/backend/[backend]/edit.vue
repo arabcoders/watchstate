@@ -195,7 +195,7 @@
             </div>
 
             <div class="field" v-if="backend.import && !backend.import.enabled">
-              <label class="label" for="backend_import_metadata">Import metadata only from from this backend?</label>
+              <label class="label" for="backend_import_metadata">Import metadata only from this backend?</label>
               <div class="control">
                 <input id="backend_import_metadata" type="checkbox" class="switch is-success"
                        v-model="backend.options.IMPORT_METADATA_ONLY">
@@ -359,6 +359,10 @@ useHead({title: 'Backends - Edit: ' + id})
 const loadContent = async () => {
   const content = await request(`/backend/${id}`)
   backend.value = await content.json()
+
+  if (!backend.value?.options) {
+    backend.value.options = {}
+  }
 
   if ('plex' === backend.value.type) {
     await getServers()

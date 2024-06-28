@@ -7,6 +7,21 @@
       </span>
       <div class="is-pulled-right">
         <div class="field is-grouped">
+
+          <div class="control has-icons-left" v-if="showFilter">
+            <input type="search" v-model.lazy="filter" class="input" id="filter"
+                   placeholder="Filter displayed results.">
+            <span class="icon is-left">
+              <i class="fas fa-filter"></i>
+            </span>
+          </div>
+
+          <div class="control">
+            <button class="button is-danger is-light" @click="toggleFilter">
+              <span class="icon"><i class="fas fa-filter"></i></span>
+            </button>
+          </div>
+
           <div class="control">
             <div class="select">
               <select v-model="perpage" :disabled="isLoading" @change="loadContent(1,false)">
@@ -25,6 +40,17 @@
               </span>
             </button>
           </p>
+
+          <div class="control">
+            <button class="button is-info is-light" @click="selectAll = !selectAll"
+                    data-tooltip="Toggle select all">
+              <span class="icon">
+                <i class="fas fa-check-square"
+                   :class="{'fa-check-square': !selectAll,'fa-square':selectAll}"></i>
+              </span>
+            </button>
+          </div>
+
           <p class="control">
             <button class="button is-info" @click="loadContent(page, true)">
               <span class="icon">
@@ -131,102 +157,134 @@
       </form>
     </div>
 
-    <div class="column is-12">
-      <div class="columns is-multiline" v-if="items?.length>0">
-        <div class="column is-6-tablet" v-for="item in items" :key="item.id">
-          <div class="card" :class="{ 'is-success': item.watched }">
-            <header class="card-header">
-              <p class="card-header-title is-text-overflow pr-1">
-                <span class="icon is-unselectable">
-                  <i class="fas" :class="{'fa-eye-slash': !item.watched, 'fa-eye': item.watched}"></i>&nbsp;
-                </span>
-                <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
-              </p>
-              <span class="card-header-icon">
-                <span class="icon">
-                  <i class="fas" :class="{'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
-                </span>
-              </span>
-            </header>
-            <div class="card-content">
-              <div class="columns is-multiline is-mobile has-text-centered">
-                <div class="column is-12 has-text-left" v-if="item?.content_title">
-                  <div class="is-text-overflow is-clickable"
-                       @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                    <span class="icon"><i class="fas fa-heading"></i></span>
-                    <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
-                              @click="triggerSearch('subtitle', item.content_title)" v-text="item.content_title"/>
-                  </div>
-                </div>
-                <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
-                     @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
-                  <div class="is-text-overflow">
-                    <span class="icon"><i class="fas fa-file"></i></span>
-                    <NuxtLink :to="makeSearchLink('path', item.content_path)"
-                              @click="triggerSearch('path', item.content_path)"
-                              v-text="item?.content_path"/>
-                  </div>
-                </div>
-                <div class="column is-12 has-text-left" v-if="item?.progress">
-                  <span class="icon"><i class="fas fa-bars-progress"></i></span>
-                  <span>{{ formatDuration(item.progress) }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="card-footer has-text-centered">
-              <div class="card-footer-item">
-                <div class="is-text-overflow">
-                  <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  <span class="has-tooltip"
-                        v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
-                    {{ moment.unix(item.updated_at).fromNow() }}
-                  </span>
-                </div>
-              </div>
-              <div class="card-footer-item">
-                <div class="is-text-overflow">
-                  <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                  <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
-                </div>
-              </div>
-              <div class="card-footer-item">
-                <div class="is-text-overflow">
-                  <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
-                  {{ item.event ?? '-' }}
-                </div>
-              </div>
-            </div>
-          </div>
+    <div class="column is-12" v-if="selected_ids.length > 0">
+      <div class="field is-grouped is-justify-content-center">
+        <div class="control">
+          <button class="button is-danger" @click="massAction('delete')" :disabled="massActionInProgress">
+            <span class="icon"><i class="fas fa-trash"></i></span>
+            <span class="is-hidden-mobile">Delete '{{ selected_ids.length }}' item/s</span>
+          </button>
+        </div>
+        <div class="control">
+          <button class="button is-primary" @click="massAction('mark_played')" :disabled="massActionInProgress">
+            <span class="icon"><i class="fas fa-eye"></i></span>
+            <span class="is-hidden-mobile">Mark '{{ selected_ids.length }}' item/s as played</span>
+          </button>
+        </div>
+        <div class="control">
+          <button class="button is-warning" @click="massAction('mark_unplayed')" :disabled="massActionInProgress">
+            <span class="icon"><i class="fas fa-eye-slash"></i></span>
+            <span class="is-hidden-mobile">Mark '{{ selected_ids.length }}' item/s as unplayed</span>
+          </button>
         </div>
       </div>
-      <div class="column is-12" v-else>
-        <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
-        <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
-          <div class="icon-text">
-            No items found.
-            <span v-if="query">For <code><strong>{{ searchField }}</strong> : <strong>{{ query }}</strong></code></span>
-          </div>
-          <code class="is-block mt-4" v-if="error">{{ error }}</code>
-        </Message>
+    </div>
+
+    <div class="column is-12" v-if="items?.length <  1 || filteredRows(items).length < 1">
+      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+      <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
+               icon="fas fa-exclamation-triangle" :use-close="true" @close="clearSearch">
+        <div class="icon-text">
+          No items found.
+          <span v-if="query">For <code><strong>{{ searchField }}</strong> : <strong>{{ query }}</strong></code></span>
+          <span v-if="filter">For <code><strong>Filter</strong> : <strong>{{ filter }}</strong></code></span>
+        </div>
+        <code class="is-block mt-4" v-if="error">{{ error }}</code>
+      </Message>
+    </div>
+
+    <div class="column is-12">
+      <div class="columns is-multiline" v-if="items?.length>0">
+        <template v-for="item in items" :key="item.id">
+          <Lazy :unrender="true" :min-height="240" class="column is-6-tablet" v-if="filterItem(item)">
+            <div class="card" :class="{ 'is-success': item.watched }">
+              <header class="card-header">
+                <p class="card-header-title is-text-overflow pr-1">
+                  <span class="icon is-unselectable">
+                    <label class="checkbox">
+                      <input type="checkbox" :value="item.id" v-model="selected_ids">
+                    </label>&nbsp;
+                  </span>
+                  <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title ?? makeName(item)"/>
+                </p>
+                <span class="card-header-icon">
+                  <span class="icon">
+                    <i class="fas" :class="{'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
+                  </span>
+                </span>
+              </header>
+              <div class="card-content">
+                <div class="columns is-multiline is-mobile has-text-centered">
+                  <div class="column is-12 has-text-left" v-if="item?.content_title">
+                    <div class="is-text-overflow is-clickable"
+                         @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                      <span class="icon"><i class="fas fa-heading"></i></span>
+                      <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
+                                @click="triggerSearch('subtitle', item.content_title)" v-text="item.content_title"/>
+                    </div>
+                  </div>
+                  <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
+                       @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
+                    <div class="is-text-overflow">
+                      <span class="icon"><i class="fas fa-file"></i></span>
+                      <NuxtLink :to="makeSearchLink('path', item.content_path)"
+                                @click="triggerSearch('path', item.content_path)"
+                                v-text="item?.content_path"/>
+                    </div>
+                  </div>
+                  <div class="column is-12 has-text-left" v-if="item?.progress">
+                    <span class="icon"><i class="fas fa-bars-progress"></i></span>
+                    <span>{{ formatDuration(item.progress) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer has-text-centered">
+                <div class="card-footer-item">
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                    <span class="has-tooltip"
+                          v-tooltip="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                      {{ moment.unix(item.updated_at).fromNow() }}
+                    </span>
+                  </div>
+                </div>
+                <div class="card-footer-item">
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                    <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                  </div>
+                </div>
+                <div class="card-footer-item">
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-envelope"></i>&nbsp;</span>
+                    {{ item.event ?? '-' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Lazy>
+        </template>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import request from '~/utils/request.js'
+import request from '~/utils/request'
 import moment from 'moment'
-import Message from '~/components/Message.vue'
+import Message from '~/components/Message'
 import {
+  awaitElement,
   formatDuration,
   makeName,
   makePagination,
   makeSearchLink,
   notification,
   TOOLTIP_DATE_FORMAT
-} from '~/utils/index.js'
+} from '~/utils/index'
+import Lazy from '~/components/Lazy'
 
 const route = useRoute()
 const router = useRouter()
@@ -246,7 +304,14 @@ const last_page = computed(() => Math.ceil(total.value / perpage.value))
 const query = ref(route.query.q ?? '')
 const searchField = ref(route.query.key ?? 'title')
 const isLoading = ref(false)
+const filter = ref(route.query.filter ?? '')
+const showFilter = ref(!!filter.value)
 const searchForm = ref(false)
+const selectAll = ref(false)
+const selected_ids = ref([])
+const massActionInProgress = ref(false)
+
+watch(selectAll, v => selected_ids.value = v ? items.value.map(i => i.id) : []);
 
 const loadContent = async (pageNumber, fromPopState = false) => {
   pageNumber = parseInt(pageNumber)
@@ -265,6 +330,10 @@ const loadContent = async (pageNumber, fromPopState = false) => {
     search.set('q', query.value)
     search.set('key', searchField.value)
     title += `. (Search: ${query.value})`
+  }
+
+  if (filter.value) {
+    title += `. (Filter: ${filter.value})`
   }
 
   useHead({title})
@@ -305,6 +374,11 @@ const loadContent = async (pageNumber, fromPopState = false) => {
         history_query.q = query.value
         history_query.key = searchField.value
       }
+
+      if (filter.value) {
+        history_query.filter = filter.value
+      }
+
       await router.push({path: '/history', title: title, query: history_query})
     }
 
@@ -318,7 +392,10 @@ const loadContent = async (pageNumber, fromPopState = false) => {
     }
 
     if (json.history) {
-      items.value = json.history
+      json.history.forEach(item => {
+        item['full_title'] = makeName(item)
+        items.value.push(item)
+      })
     }
 
     if (json.searchable) {
@@ -337,7 +414,9 @@ const loadContent = async (pageNumber, fromPopState = false) => {
 
 const clearSearch = () => {
   query.value = ''
+  filter.value = ''
   searchForm.value = false
+  showFilter.value = false
   loadContent(1)
 }
 
@@ -378,6 +457,79 @@ const triggerSearch = async (search_type, search_query) => {
   await loadContent(1);
 }
 
+const toggleFilter = () => {
+  showFilter.value = !showFilter.value
+  if (!showFilter.value) {
+    return
+  }
+
+  awaitElement('#filter', (_, elm) => elm.focus())
+}
+
+const massAction = async (action) => {
+  if (selected_ids.value.length === 0) {
+    return
+  }
+
+  const title = {
+    delete: 'Delete',
+    mark_played: 'Mark as played',
+    mark_unplayed: 'Mark as unplayed'
+  }[action]
+
+  if (!confirm(`Are you sure you want to '${title}' ${selected_ids.value.length} item/s?`)) {
+    return
+  }
+
+  let urls = [];
+  let opts = {};
+  let callback = null;
+
+  massActionInProgress.value = true
+
+  if ('delete' === action) {
+    opts = {method: 'DELETE'}
+    urls = selected_ids.value.map(id => `/history/${id}`)
+    callback = () => items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
+  }
+
+  if ('mark_played' === action || 'mark_unplayed' === action) {
+    opts = {method: 'mark_played' === action ? 'POST' : 'DELETE'}
+    let ids = selected_ids.value.map(id => items.value.find(i => i.id === id)).filter(i => 'mark_played' === action ? !i.watched : i.watched).map(i => i.id)
+    urls = ids.map(i => `/history/${i}/watch`)
+    callback = () => items.value.forEach(i => {
+      if (ids.includes(i.id)) {
+        i.watched = 'mark_played' === action
+      }
+    })
+  }
+
+  try {
+    notification('success', 'Action in progress', `Processing Mass ''${title}' request. Please wait...`)
+
+    // -- check each request response after all requests are done
+    const requests = await Promise.all(urls.map(url => request(url, opts)))
+
+    const all_ok = requests.every(response => 200 === response.status)
+    if (!all_ok) {
+      notification('error', 'Error', `Some requests failed. Please check the console for more details.`)
+    }
+
+    if (all_ok && callback) {
+      callback()
+    }
+
+    notification('success', 'Success', `Mass '${title}' request completed.`)
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
+  } finally {
+    massActionInProgress.value = false
+    selected_ids.value = []
+    selectAll.value = false
+  }
+}
+
+
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
     return
@@ -388,14 +540,39 @@ const stateCallBack = async e => {
   const route = useRoute()
   page.value = route.query.page ?? 1
   perpage.page = route.query.perpage ?? 50
+  filter.value = route.query.filter ?? ''
+  if (filter.value) {
+    showFilter.value = true
+  }
+
   if ('clear' in state) {
     query.value = ''
     searchField.value = 'title'
   } else {
     query.value = route.query.q ?? ''
     searchField.value = route.query.key ?? 'title'
+    if (query.value) {
+      searchForm.value = true
+    }
   }
+
   await loadContent(page.value, true)
+}
+
+const filteredRows = items => {
+  if (!filter.value) {
+    return items
+  }
+
+  return items.filter(i => Object.values(i).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false))
+}
+
+const filterItem = item => {
+  if (!filter.value || !item) {
+    return true
+  }
+
+  return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
 }
 
 onMounted(async () => {
