@@ -22,6 +22,17 @@
               <span class="icon"><i class="fas fa-trash"></i></span>
             </button>
           </p>
+
+          <div class="control">
+            <button class="button is-info is-light" @click="selectAll = !selectAll"
+                    data-tooltip="Toggle select all">
+              <span class="icon">
+                <i class="fas fa-check-square"
+                   :class="{'fa-check-square': !selectAll,'fa-square':selectAll}"></i>
+              </span>
+            </button>
+          </div>
+
           <p class="control">
             <button class="button is-info" @click.prevent="loadContent(page, true)" :disabled="isLoading"
                     :class="{'is-loading':isLoading}">
@@ -73,12 +84,29 @@
       </div>
     </div>
 
+    <div class="column is-12" v-if="selected_ids.length > 0">
+      <div class="field is-grouped is-justify-content-center">
+        <div class="control">
+          <button class="button is-danger" @click="massDelete()" :disabled="massActionInProgress"
+                  :class="{'is-loading':massActionInProgress}">
+            <span class="icon"><i class="fas fa-trash"></i></span>
+            <span class="is-hidden-mobile">Delete '{{ selected_ids.length }}' selected item/s</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="column is-12">
       <div class="columns is-multiline" v-if="items?.length>0">
-        <div class="column is-6-tablet" v-for="item in items" :key="item.id">
+        <div v-for="item in items" :key="item.id" class="column is-6-tablet">
           <div class="card" :class="{ 'is-success': item.watched }">
             <header class="card-header">
               <p class="card-header-title is-text-overflow pr-1">
+                <span class="icon">
+                  <label class="checkbox">
+                    <input type="checkbox" :value="item.id" v-model="selected_ids">
+                  </label>&nbsp;
+                </span>
                 <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
               </p>
               <span class="card-header-icon">
@@ -196,6 +224,11 @@ const min = ref(route.query.min ?? null);
 /** @type {Ref<number>} */
 const max = ref();
 
+const selectAll = ref(false)
+const selected_ids = ref([])
+const massActionInProgress = ref(false)
+watch(selectAll, v => selected_ids.value = v ? items.value.map(i => i.id) : []);
+
 const loadContent = async (pageNumber, fromPopState = false) => {
   pageNumber = parseInt(pageNumber)
 
@@ -252,6 +285,40 @@ const loadContent = async (pageNumber, fromPopState = false) => {
     isLoading.value = false
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
+  }
+}
+
+const massDelete = async () => {
+  if (0 === selected_ids.value.length) {
+    return
+  }
+
+  if (!confirm(`Are you sure you want to delete '${selected_ids.value.length}' item/s?`)) {
+    return
+  }
+
+  try {
+    massActionInProgress.value = true
+    const urls = selected_ids.value.map(id => `/history/${id}`)
+
+    notification('success', 'Action in progress', `Deleting '${urls.length}' item/s. Please wait...`)
+
+    // -- check each request response after all requests are done
+    const requests = await Promise.all(urls.map(url => request(url, {method: 'DELETE'})))
+
+    if (!requests.every(response => 200 === response.status)) {
+      notification('error', 'Error', `Some requests failed. Please check the console for more details.`)
+    } else {
+      items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
+    }
+
+    notification('success', 'Success', `Deleting '${urls.length}' item/s completed.`)
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
+  } finally {
+    massActionInProgress.value = false
+    selected_ids.value = []
+    selectAll.value = false
   }
 }
 

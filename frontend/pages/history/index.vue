@@ -25,6 +25,17 @@
               </span>
             </button>
           </p>
+
+          <div class="control">
+            <button class="button is-info is-light" @click="selectAll = !selectAll"
+                    data-tooltip="Toggle select all">
+              <span class="icon">
+                <i class="fas fa-check-square"
+                   :class="{'fa-check-square': !selectAll,'fa-square':selectAll}"></i>
+              </span>
+            </button>
+          </div>
+
           <p class="control">
             <button class="button is-info" @click="loadContent(page, true)">
               <span class="icon">
@@ -131,6 +142,29 @@
       </form>
     </div>
 
+    <div class="column is-12" v-if="selected_ids.length > 0">
+      <div class="field is-grouped is-justify-content-center">
+        <div class="control">
+          <button class="button is-danger" @click="massAction('delete')" :disabled="massActionInProgress">
+            <span class="icon"><i class="fas fa-trash"></i></span>
+            <span class="is-hidden-mobile">Delete '{{ selected_ids.length }}' item/s</span>
+          </button>
+        </div>
+        <div class="control">
+          <button class="button is-primary" @click="massAction('mark_played')" :disabled="massActionInProgress">
+            <span class="icon"><i class="fas fa-eye"></i></span>
+            <span class="is-hidden-mobile">Mark '{{ selected_ids.length }}' item/s as played</span>
+          </button>
+        </div>
+        <div class="control">
+          <button class="button is-warning" @click="massAction('mark_unplayed')" :disabled="massActionInProgress">
+            <span class="icon"><i class="fas fa-eye-slash"></i></span>
+            <span class="is-hidden-mobile">Mark '{{ selected_ids.length }}' item/s as unplayed</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="column is-12">
       <div class="columns is-multiline" v-if="items?.length>0">
         <div class="column is-6-tablet" v-for="item in items" :key="item.id">
@@ -138,7 +172,9 @@
             <header class="card-header">
               <p class="card-header-title is-text-overflow pr-1">
                 <span class="icon is-unselectable">
-                  <i class="fas" :class="{'fa-eye-slash': !item.watched, 'fa-eye': item.watched}"></i>&nbsp;
+                  <label class="checkbox">
+                    <input type="checkbox" :value="item.id" v-model="selected_ids">
+                  </label>&nbsp;
                 </span>
                 <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
               </p>
@@ -247,6 +283,11 @@ const query = ref(route.query.q ?? '')
 const searchField = ref(route.query.key ?? 'title')
 const isLoading = ref(false)
 const searchForm = ref(false)
+const selectAll = ref(false)
+const selected_ids = ref([])
+const massActionInProgress = ref(false)
+
+watch(selectAll, v => selected_ids.value = v ? items.value.map(i => i.id) : []);
 
 const loadContent = async (pageNumber, fromPopState = false) => {
   pageNumber = parseInt(pageNumber)
@@ -377,6 +418,70 @@ const triggerSearch = async (search_type, search_query) => {
   query.value = search_query
   await loadContent(1);
 }
+
+const massAction = async (action) => {
+  if (selected_ids.value.length === 0) {
+    return
+  }
+
+  const title = {
+    delete: 'Delete',
+    mark_played: 'Mark as played',
+    mark_unplayed: 'Mark as unplayed'
+  }[action]
+
+  if (!confirm(`Are you sure you want to '${title}' ${selected_ids.value.length} item/s?`)) {
+    return
+  }
+
+  let urls = [];
+  let opts = {};
+  let callback = null;
+
+  massActionInProgress.value = true
+
+  if ('delete' === action) {
+    opts = {method: 'DELETE'}
+    urls = selected_ids.value.map(id => `/history/${id}`)
+    callback = () => items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
+  }
+
+  if ('mark_played' === action || 'mark_unplayed' === action) {
+    opts = {method: 'mark_played' === action ? 'POST' : 'DELETE'}
+    let ids = selected_ids.value.map(id => items.value.find(i => i.id === id)).filter(i => 'mark_played' === action ? !i.watched : i.watched).map(i => i.id)
+    urls = ids.map(i => `/history/${i}/watch`)
+    callback = () => items.value.forEach(i => {
+      if (ids.includes(i.id)) {
+        i.watched = 'mark_played' === action
+      }
+    })
+  }
+
+  try {
+    notification('success', 'Action in progress', `Processing Mass ''${title}' request. Please wait...`)
+
+    // -- check each request response after all requests are done
+    const requests = await Promise.all(urls.map(url => request(url, opts)))
+
+    const all_ok = requests.every(response => 200 === response.status)
+    if (!all_ok) {
+      notification('error', 'Error', `Some requests failed. Please check the console for more details.`)
+    }
+
+    if (all_ok && callback) {
+      callback()
+    }
+
+    notification('success', 'Success', `Mass '${title}' request completed.`)
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
+  } finally {
+    massActionInProgress.value = false
+    selected_ids.value = []
+    selectAll.value = false
+  }
+}
+
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
