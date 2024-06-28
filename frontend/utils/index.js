@@ -404,6 +404,17 @@ const makePagination = (current, last, delta = 5) => {
     return pagination;
 }
 
+const makeSecret = (len = 8) => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    let counter = 0;
+    while (counter < len) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+        counter += 1;
+    }
+    return result;
+}
+
 export {
     r,
     ag_set,
@@ -422,4 +433,5 @@ export {
     makeName,
     makePagination,
     TOOLTIP_DATE_FORMAT,
+    makeSecret,
 }
