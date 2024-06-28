@@ -1,5 +1,5 @@
 <template>
-  <div ref="targetEl" :style="`min-height:${fixedMinHeight ? fixedMinHeight : (minHeight ?? min_height)}px`">
+  <div ref="targetEl" :style="`min-height:${fixedMinHeight ? fixedMinHeight : (minHeight)}px`">
     <slot v-if="shouldRender"/>
   </div>
 </template>
@@ -38,7 +38,7 @@ export default {
           if (isIntersecting) {
             // perhaps the user re-scrolled to a component that was set to unrender. In that case stop the un-rendering timer
             clearTimeout(unrenderTimer);
-            // if we're dealing underrndering lets add a waiting period of 200ms before rendering.
+            // if we're dealing under-rendering lets add a waiting period of 200ms before rendering.
             // If a component enters the viewport and also leaves it within 200ms it will not render at all.
             // This saves work and improves performance when user scrolls very fast
             renderTimer = setTimeout(() => (shouldRender.value = true), props.unrender ? 200 : 0);
@@ -50,7 +50,9 @@ export default {
             // if the component was set to render, cancel that
             clearTimeout(renderTimer);
             unrenderTimer = setTimeout(() => {
-              fixedMinHeight.value = targetEl.value.clientHeight;
+              if (targetEl.value?.clientHeight) {
+                fixedMinHeight.value = targetEl.value.clientHeight;
+              }
               shouldRender.value = false;
             }, props.unrenderDelay);
           }
