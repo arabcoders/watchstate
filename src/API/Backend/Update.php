@@ -16,6 +16,7 @@ use App\Libs\DataUtil;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\ValidationException;
 use App\Libs\HTTP_STATUS;
+use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use JsonException;
@@ -74,7 +75,16 @@ final class Update
                 return api_error('Context information validation failed.', HTTP_STATUS::HTTP_BAD_REQUEST);
             }
 
-            $this->backendFile->set($name, $config->getAll())->persist();
+            $this->backendFile->set($name, $config->getAll());
+
+            // -- sanity check.
+            if (true === (bool)$this->backendFile->get("{$name}.import.enabled", false)) {
+                if ($this->backendFile->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
+                    $this->backendFile->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
+                }
+            }
+
+            $this->backendFile->persist();
 
             $backend = $this->getBackends(name: $name);
 

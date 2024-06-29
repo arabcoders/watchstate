@@ -325,6 +325,8 @@ import {notification, ucFirst} from '~/utils/index.js'
 import {ref} from "vue";
 
 const id = useRoute().params.backend
+const redirect = useRoute().query?.redirect ?? `/backend/${id}`
+
 const backend = ref({
   name: '',
   type: '',
@@ -374,22 +376,27 @@ const loadContent = async () => {
 }
 
 const saveContent = async () => {
-  const response = await request(`/backend/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(backend.value)
-  })
+  try {
+    const response = await request(`/backend/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(backend.value)
+    })
 
-  const json = await response.json()
-  if (200 !== response.status) {
-    notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
-    return
+    const json = await response.json()
+    if (200 !== response.status) {
+      notification('error', 'Error', `Failed to save backend settings. (${json.error.code}: ${json.error.message}).`)
+      return
+    }
+
+    notification('success', 'Success', `Successfully updated '${id}' settings.`)
+    const to = !redirect.startsWith('/') ? `/backend/${id}` : redirect
+    await navigateTo({path: to})
+  } catch (e) {
+    notification('error', 'Error', `Request error. ${e.message}`)
   }
-
-  notification('success', 'Information', `Backend settings saved successfully.`)
-
 }
 
 const removeOption = async (key) => {

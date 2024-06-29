@@ -52,12 +52,13 @@
             <div class="card-header-icon">
               <div class="field is-grouped">
                 <div class="control">
-                  <NuxtLink :to="`/backend/${backend.name}/edit`" v-tooltip="'Edit backend settings'">
+                  <NuxtLink :to="`/backend/${backend.name}/edit?redirect=/backends`"
+                            v-tooltip="'Edit backend settings'">
                     <span class="icon has-text-warning"><i class="fas fa-cog"></i></span>
                   </NuxtLink>
                 </div>
                 <div class="control">
-                  <NuxtLink :to="`/backend/${backend.name}/delete`" v-tooltip="'Delete backend'">
+                  <NuxtLink :to="`/backend/${backend.name}/delete?redirect=/backends`" v-tooltip="'Delete backend'">
                     <span class="icon has-text-danger"><i class="fas fa-trash"></i></span>
                   </NuxtLink>
                 </div>
