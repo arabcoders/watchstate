@@ -53,44 +53,12 @@
           <p>There is no undo operation. This action is irreversible.</p>
         </Message>
 
-        <form @submit.prevent="deleteBackend()">
-          <div class="card">
-            <header class="card-header">
-              <p class="card-header-title">Delete backend</p>
-              <p class="card-header-icon"><span class="icon"><i class="fas fa-trash"></i></span></p>
-            </header>
-            <div class="card-content">
-              <div class="field">
-                <label class="label">
-                  To confirm, please write '<code>{{ random_secret }}</code>' in the box below.
-                </label>
-                <div class="control">
-                  <input class="input" type="text" v-model="user_secret" placeholder="Enter the secret key"/>
-                </div>
-                <p class="help">
-                  <span class="icon has-text-warning"><i class="fas fa-info-circle"></i></span>
-                  Depending on your hardware speed, the delete operation might take long time. do not interrupt the
+        <Confirm @confirmed="deleteBackend()"
+                 title="Delete backend"
+                 title-icon="fa-trash"
+                 warning="Depending on your hardware speed, the delete operation might take long time. do not interrupt the
                   process, or close the browser tab. You will be redirected to the backends page automatically once the
-                  process is complete. Otherwise, you might end up with a corrupted database.
-                </p>
-              </div>
-            </div>
-            <footer class="card-footer">
-              <div class="card-footer-item">
-                <NuxtLink to="/backends/" class="button is-fullwidth is-primary">
-                  <span class="icon"><i class="fas fa-cancel"></i></span>
-                  <span>Cancel</span>
-                </NuxtLink>
-              </div>
-              <div class="card-footer-item">
-                <button class="button is-danger is-fullwidth" type="submit" :disabled="user_secret !== random_secret">
-                  <span class="icon"><i class="fas fa-redo"></i></span>
-                  <span>Proceed</span>
-                </button>
-              </div>
-            </footer>
-          </div>
-        </form>
+                  process is complete. Otherwise, you might end up with a corrupted database."/>
       </div>
     </template>
   </div>
@@ -99,16 +67,15 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
-import Message from "~/components/Message"
-import {makeSecret, notification} from '~/utils/index'
+import Message from '~/components/Message'
+import {notification} from '~/utils/index'
+import Confirm from '~/components/Confirm'
 
 const id = useRoute().params.backend
 const error = ref()
 const type = ref('')
 const isLoading = ref(false)
 const isDeleting = ref(false)
-const random_secret = ref('')
-const user_secret = ref('')
 
 const loadBackend = async () => {
   isLoading.value = true
@@ -146,11 +113,6 @@ const loadBackend = async () => {
 }
 
 const deleteBackend = async () => {
-  if (user_secret.value !== random_secret.value) {
-    notification('error', 'Error', 'Invalid secret key. Please try again.')
-    return
-  }
-
   if (!confirm('Last chance! Are you sure you want to delete the backend?')) {
     return
   }
@@ -193,8 +155,5 @@ const deleteBackend = async () => {
   }
 }
 
-onMounted(async () => {
-  await loadBackend()
-  random_secret.value = makeSecret(8)
-})
+onMounted(async () => await loadBackend())
 </script>
