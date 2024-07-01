@@ -81,7 +81,7 @@ trait APITraits
             ];
 
             if (empty($backend['options'])) {
-                $backend['options'] = (object)[];
+                $backend['options'] = [];
             }
 
             $backends[] = $backend;
