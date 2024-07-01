@@ -23,13 +23,9 @@ final class Index
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
-        $data = $this->getBackends(name: $name);
-
-        if (empty($data)) {
+        if (null === ($data = $this->getBackend(name: $name))) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
-
-        $data = array_pop($data);
 
         return api_response(HTTP_STATUS::HTTP_OK, $data);
     }

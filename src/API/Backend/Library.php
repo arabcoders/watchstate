@@ -28,6 +28,10 @@ final class Library
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
         try {
             $client = $this->getClient(name: $name);
             return api_response(HTTP_STATUS::HTTP_OK, $client->listLibraries());
@@ -43,6 +47,10 @@ final class Library
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         if (null === ($id = ag($args, 'id'))) {

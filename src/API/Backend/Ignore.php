@@ -34,6 +34,10 @@ final class Ignore
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
         $list = [];
 
         foreach ($this->file->getAll() as $guid => $date) {
@@ -72,6 +76,10 @@ final class Ignore
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
+
         $data = $this->getBackends(name: $name);
 
         if (empty($data)) {
@@ -104,6 +112,10 @@ final class Ignore
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+        }
+
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
         }
 
         $data = $this->getBackends(name: $name);

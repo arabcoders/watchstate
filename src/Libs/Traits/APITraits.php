@@ -80,6 +80,10 @@ trait APITraits
                 'webhook' => $webhookUrl,
             ];
 
+            if (empty($backend['options'])) {
+                $backend['options'] = (object)[];
+            }
+
             $backends[] = $backend;
         }
 
@@ -88,6 +92,12 @@ trait APITraits
         }
 
         return $backends;
+    }
+
+    protected function getBackend(string $name): array|null
+    {
+        $backends = $this->getBackends($name);
+        return count($backends) > 0 ? array_pop($backends) : null;
     }
 
     /**
