@@ -18,12 +18,26 @@
       <div class="is-hidden-mobile">
         <span class="subtitle">
           This page contains all the tasks that are currently configured.
-          <template v-if="queued.length > 0">
-            <p>The following tasks <code>{{ queued.join(', ') }}</code> are queued to be run in background soon.</p>
-          </template>
         </span>
       </div>
     </div>
+
+    <div id="queued_tasks" class="column is-12" v-if="queued.length > 0">
+      <Message message_class="has-background-success-90 has-text-dark" title="Queued Tasks"
+               icon="fas fa-circle-notch fa-spin">
+        <p>
+          The following tasks
+          <template v-for="(task, index) in queued" :key="`queued-${index}`">
+            <NuxtLink :to="`#${task}`">
+              <span class="tag has-text-dark is-capitalized">{{ task }}</span>
+            </NuxtLink>
+            <template v-if="queued.length > index+1">,&nbsp;</template>
+          </template>
+          are queued to be run in background soon.
+        </p>
+      </Message>
+    </div>
+
     <div class="column is-12" v-if="isLoading">
       <Message message_class="has-background-info-90 has-text-dark" title="Loading"
                icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
@@ -96,7 +110,7 @@
             <button class="button is-info" @click="queueTask(task)"
                     :class="{'is-danger':task.queued,'is-info':!task.queued}">
               <span class="icon-text">
-                <span class="icon"><i class="fas fa-clock"></i></span>
+                <span class="icon"><i class="fas fa-clock" :class="{ 'fa-spin': task.queued }"></i></span>
                 <span>
                   <template v-if="!task.queued">Queue Task</template>
                   <template v-else>Remove from queue</template>
@@ -145,9 +159,9 @@
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request'
-import {notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {awaitElement, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import cronstrue from 'cronstrue'
-import Message from '~/components/Message.vue'
+import Message from '~/components/Message'
 import {useStorage} from '@vueuse/core'
 
 useHead({title: 'Tasks'})
@@ -205,6 +219,14 @@ const queueTask = async task => {
         queued.value.push(task.name)
       } else {
         queued.value = queued.value.filter(t => t !== task.name)
+      }
+
+      if (true === task.queued) {
+        awaitElement('#queued_tasks', (_, e) => e.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+          inline: 'nearest'
+        }))
       }
     }
   } catch (e) {

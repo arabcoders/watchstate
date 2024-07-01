@@ -49,46 +49,11 @@
       </div>
 
       <div class="column is-12">
-        <form @submit.prevent="resetSystem()">
-          <div class="card">
-            <header class="card-header">
-              <p class="card-header-title">System reset</p>
-              <p class="card-header-icon"><span class="icon"><i class="fas fa-redo"></i></span></p>
-            </header>
-            <div class="card-content">
-              <div class="field">
-                <label class="label">
-                  To confirm, please write '<code>{{ random_secret }}</code>' in the box below.
-                </label>
-                <div class="control">
-                  <input class="input" type="text" v-model="user_secret" placeholder="Enter the secret key"/>
-                </div>
-                <p class="help">
-                  <span class="icon has-text-warning">
-                    <i class="fas fa-info-circle"></i>
-                  </span>
-                  Depending on your hardware speed, the reset operation might take long time. do not interrupt the
-                  process, or close the browser tab. You will be redirected to the index page automatically once the
-                  process is complete. Otherwise, you might end up with a corrupted database and/or state.
-                </p>
-              </div>
-            </div>
-            <footer class="card-footer">
-              <div class="card-footer-item">
-                <NuxtLink to="/" class="button is-fullwidth is-primary">
-                  <span class="icon"><i class="fas fa-cancel"></i></span>
-                  <span>Cancel</span>
-                </NuxtLink>
-              </div>
-              <div class="card-footer-item">
-                <button class="button is-danger is-fullwidth" type="submit" :disabled="user_secret !== random_secret">
-                  <span class="icon"><i class="fas fa-redo"></i></span>
-                  <span>Proceed</span>
-                </button>
-              </div>
-            </footer>
-          </div>
-        </form>
+        <Confirm @confirmed="resetSystem()"
+                 title="Perform system reset"
+                 title-icon="fa-redo"
+                 warning="Depending on your hardware speed, the reset operation might take long time. do not interrupt the process, or close the browser tab. You will be redirected to the index page automatically once the process is complete. Otherwise, you might end up with a corrupted database and/or state."
+        />
       </div>
     </template>
   </div>
@@ -98,19 +63,13 @@
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import Message from '~/components/Message'
-import {makeSecret, notification} from '~/utils/index'
+import {notification} from '~/utils/index'
+import Confirm from '~/components/Confirm'
 
 const error = ref()
 const isResetting = ref(false)
-const random_secret = ref('')
-const user_secret = ref('')
 
 const resetSystem = async () => {
-  if (user_secret.value !== random_secret.value) {
-    notification('error', 'Error', 'Invalid secret key. Please try again.')
-    return
-  }
-
   if (!confirm('Last chance! Are you sure you want to reset the system state?')) {
     return
   }
@@ -150,8 +109,4 @@ const resetSystem = async () => {
     isResetting.value = false
   }
 }
-
-onMounted(() => {
-  random_secret.value = makeSecret(8)
-})
 </script>

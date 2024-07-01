@@ -360,11 +360,13 @@ useHead({title: 'Backends - Edit: ' + id})
 
 const loadContent = async () => {
   const content = await request(`/backend/${id}`)
-  backend.value = await content.json()
+  let json = await content.json()
 
-  if (!backend.value?.options) {
-    backend.value.options = {}
+  if (!json?.options || typeof json.options !== 'object') {
+    json.options = {}
   }
+
+  backend.value = json;
 
   if ('plex' === backend.value.type) {
     await getServers()
@@ -427,7 +429,12 @@ const addOption = async () => {
   }
 
   backend.value.options = backend.value.options || {}
-  backend.value.options[selectedOption.value] = ''
+  if (backend.value.options.length < 1) {
+    backend.value.options = {[selectedOption.value]: ''}
+  } else {
+    backend.value.options[selectedOption.value] = ''
+  }
+
   newOptions.value[selectedOption.value] = true
   selectedOption.value = ''
 }

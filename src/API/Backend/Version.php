@@ -22,6 +22,10 @@ final class Version
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
+        
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
 
         try {
             return api_response(HTTP_STATUS::HTTP_OK, ['version' => $this->getClient(name: $name)->getVersion()]);

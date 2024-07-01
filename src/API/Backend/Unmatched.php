@@ -26,6 +26,10 @@ final class Unmatched
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for name path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
+        
+        if (null === $this->getBackend(name: $name)) {
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), HTTP_STATUS::HTTP_NOT_FOUND);
+        }
 
         $params = DataUtil::fromArray($request->getQueryParams());
 
