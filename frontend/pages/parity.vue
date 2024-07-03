@@ -263,7 +263,7 @@ const cacheKey = computed(() => `parity-${min.value}-${page.value}-${perpage.val
 const selectAll = ref(false)
 const selected_ids = ref([])
 const massActionInProgress = ref(false)
-watch(selectAll, v => selected_ids.value = v ? items.value.map(i => i.id) : []);
+watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []);
 
 
 const toggleFilter = () => {
