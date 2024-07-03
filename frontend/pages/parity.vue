@@ -222,6 +222,11 @@
               many reasons, including using different external databases i.e. <code>TheMovieDB</code> vs
               <code>TheTVDB</code>.
             </li>
+            <li>
+              The results are cached in your browser temporarily to provide faster response, as the operation to
+              generate the report is quite intensive. If you want to refresh the data, click the <span
+                class="fa fa-sync"></span> icon.
+            </li>
           </ul>
         </Message>
       </div>
