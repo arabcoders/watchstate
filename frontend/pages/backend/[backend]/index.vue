@@ -159,8 +159,7 @@ import moment from 'moment'
 import Message from '~/components/Message.vue'
 import {formatDuration, makeName, notification, TOOLTIP_DATE_FORMAT} from "~/utils/index.js";
 
-const backend = useRoute().params.backend
-
+const backend = ref(useRoute().params.backend)
 const bHistory = ref([])
 const info = ref({})
 const isLoading = ref(true)
@@ -168,11 +167,14 @@ const isError = ref(false)
 const error = ref()
 
 const loadRecentHistory = async () => {
+  if (!backend.value) {
+    return
+  }
   let search = new URLSearchParams()
   search.append('perpage', 6)
   search.append('key', 'metadata')
-  search.append('q', `${backend}.via://${backend}`)
-  search.append('sort', `created_at:desc`)
+  search.append('q', `${backend.value}.via://${backend.value}`)
+  search.append('sort', `updated_at:desc`)
 
   const response = await request(`/history/?${search.toString()}`)
   const json = await response.json()
@@ -188,7 +190,7 @@ const loadRecentHistory = async () => {
 const loadInfo = async () => {
   try {
     isLoading.value = false
-    const response = await request(`/backend/${backend}/info`)
+    const response = await request(`/backend/${backend.value}/info`)
     info.value = await response.json()
     if (200 !== response.status) {
       isError.value = true
@@ -197,7 +199,7 @@ const loadInfo = async () => {
       return;
     }
     await loadRecentHistory()
-    useHead({title: `Backends: ${backend}`})
+    useHead({title: `Backends: ${backend.value}`})
   } catch (e) {
     error.value = e
     isError.value = true
