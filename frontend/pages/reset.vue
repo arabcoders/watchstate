@@ -98,6 +98,12 @@ const resetSystem = async () => {
 
     notification('success', 'Success', `System has been successfully reset.`)
     await navigateTo('/')
+
+    // -- remove all session storage due to the reset.
+    try {
+      Object.keys(sessionStorage).forEach(k => sessionStorage.removeItem(k))
+    } catch (e) {
+    }
   } catch (e) {
     error.value = {
       error: {

@@ -8,6 +8,8 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Exceptions\DatabaseException;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
 use App\Libs\Message;
@@ -45,7 +47,7 @@ abstract class AbstractTestsMapper extends TestCase
         $this->testEpisode = require __DIR__ . '/../../Fixtures/EpisodeEntity.php';
 
         $this->handler = new TestHandler();
-        $this->logger = new Logger('logger');
+        $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
         $this->logger->pushHandler($this->handler);
         Guid::setLogger($this->logger);
 
@@ -520,4 +522,50 @@ abstract class AbstractTestsMapper extends TestCase
         );
     }
 
+    /**
+     * @throws RandomException
+     */
+    public function test_commit_with_no_episode_number(): void
+    {
+        $testEpisode = new StateEntity($this->testEpisode);
+        $testEpisode->episode = 0;
+        $this->expectException(DatabaseException::class);
+        $this->db->commit([$testEpisode]);
+    }
+
+    /**
+     * @throws RandomException
+     */
+    public function test_insert_with_no_episode_number(): void
+    {
+        $testEpisode = new StateEntity($this->testEpisode);
+        $testEpisode->episode = 0;
+        $this->expectException(DatabaseException::class);
+        $this->db->insert($testEpisode);
+    }
+
+    /**
+     * @throws RandomException
+     */
+    public function test_update_with_no_episode_number(): void
+    {
+        $testEpisode = new StateEntity($this->testEpisode);
+        $testEpisode->episode = 0;
+        $this->expectException(DatabaseException::class);
+        $this->db->update($testEpisode);
+    }
+
+    public function test_mapper_add_with_no_episode_number(): void
+    {
+        $testEpisode = new StateEntity($this->testEpisode);
+        $testEpisode->episode = 0;
+        $this->mapper->add($testEpisode);
+        $this->mapper->setLogger($this->logger);
+
+        $this->assertSame(
+            0,
+            $this->mapper->getObjectsCount(),
+            "getObjectsCount() should return 0 as as the episode number is 0 and shouldn't be processed."
+        );
+    }
 }

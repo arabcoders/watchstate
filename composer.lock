@@ -3114,12 +3114,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "27714b56f04815b654c3805502ab77207505ac19"
+        "reference": "fed98f59fae0ca97a0753263270f4a8680d09f03"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/27714b56f04815b654c3805502ab77207505ac19",
-        "reference": "27714b56f04815b654c3805502ab77207505ac19",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/fed98f59fae0ca97a0753263270f4a8680d09f03",
+        "reference": "fed98f59fae0ca97a0753263270f4a8680d09f03",
         "shasum": ""
       },
       "conflict": {
@@ -3127,6 +3127,8 @@
         "admidio/admidio": "<4.2.13",
         "adodb/adodb-php": "<=5.20.20|>=5.21,<=5.21.3",
         "aheinze/cockpit": "<2.2",
+        "aimeos/ai-admin-graphql": ">=2022.04.1,<2022.10.10|>=2023.04.1,<2023.10.6|>=2024.04.1,<2024.04.6",
+        "aimeos/ai-admin-jsonadm": "<2020.10.13|>=2021.04.1,<2021.10.6|>=2022.04.1,<2022.10.3|>=2023.04.1,<2023.10.4|==2024.04.1",
         "aimeos/ai-client-html": ">=2020.04.1,<2020.10.27|>=2021.04.1,<2021.10.22|>=2022.04.1,<2022.10.13|>=2023.04.1,<2023.10.15|>=2024.04.1,<2024.04.7",
         "aimeos/aimeos-core": ">=2022.04.1,<2022.10.17|>=2023.04.1,<2023.10.17|>=2024.04.1,<2024.04.7",
         "aimeos/aimeos-typo3": "<19.10.12|>=20,<20.10.5",
@@ -3911,7 +3913,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-06-26T15:05:17+00:00"
+      "time": "2024-07-02T22:05:16+00:00"
     },
     {
       "name": "sebastian/cli-parser",

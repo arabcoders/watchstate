@@ -367,6 +367,20 @@ final class MemoryMapper implements iImport
             return $this;
         }
 
+        if (true === $entity->isEpisode() && $entity->episode < 1) {
+            $this->logger->warning(
+                "MAPPER: Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
+                [
+                    'id' => $entity->id ?? '',
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                    'data' => $entity->getAll(),
+                ]
+            );
+            Message::increment("{$entity->via}.{$entity->type}.failed_no_episode_number");
+            return $this;
+        }
+
         $metadataOnly = true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY);
 
         if (false === ($pointer = $this->getPointer($entity))) {
