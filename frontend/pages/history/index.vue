@@ -460,6 +460,7 @@ const triggerSearch = async (search_type, search_query) => {
 const toggleFilter = () => {
   showFilter.value = !showFilter.value
   if (!showFilter.value) {
+    filter.value = ''
     return
   }
 
@@ -574,6 +575,37 @@ const filterItem = item => {
 
   return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
 }
+
+watch(filter, val => {
+  const route = useRoute()
+  const router = useRouter()
+  if (!val) {
+    if (!route?.query['filter']) {
+      return;
+    }
+
+    router.push({
+      'path': '/parity',
+      'query': {
+        ...route.query,
+        'filter': undefined
+      }
+    })
+    return;
+  }
+
+  if (route?.query['filter'] === val) {
+    return;
+  }
+
+  router.push({
+    'path': '/parity',
+    'query': {
+      ...route.query,
+      'filter': val
+    }
+  })
+})
 
 onMounted(async () => {
   if (query.value) {
