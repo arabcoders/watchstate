@@ -273,13 +273,19 @@ const formatDuration = (milliseconds) => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-const copyText = (str) => {
+const copyText = (str, showNotification = true) => {
     if (navigator.clipboard) {
         navigator.clipboard.writeText(str).then(() => {
-            notification('success', 'Success', 'Report has been copied to clipboard.')
+            if (!showNotification) {
+                return
+            }
+            notification('success', 'Success', 'Text copied to clipboard.')
         }).catch((error) => {
             console.error('Failed to copy: ', error)
-            notification('error', 'Error', 'Failed to copy to clipboard.')
+            if (!showNotification) {
+                return
+            }
+            notification('error', 'Error', 'Failed to copy text to clipboard.')
         });
         return
     }
@@ -290,7 +296,9 @@ const copyText = (str) => {
     el.select()
     document.execCommand('copy')
     document.body.removeChild(el)
-
+    if (!showNotification) {
+        return
+    }
     notification('success', 'Success', 'Text copied to clipboard.')
 }
 

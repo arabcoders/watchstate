@@ -208,7 +208,7 @@
                   </span>
                   <NuxtLink :to="'/history/'+item.id" v-text="item?.full_title ?? makeName(item)"/>
                 </p>
-                <span class="card-header-icon">
+                <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                   <span class="icon">
                     <i class="fas" :class="{'fa-tv': 'episode' === item.type, 'fa-film': 'movie' === item.type}"></i>
                   </span>
@@ -217,20 +217,31 @@
               <div class="card-content">
                 <div class="columns is-multiline is-mobile has-text-centered">
                   <div class="column is-12 has-text-left" v-if="item?.content_title">
-                    <div class="is-text-overflow is-clickable"
-                         @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                      <span class="icon"><i class="fas fa-heading"></i></span>
-                      <NuxtLink :to="makeSearchLink('subtitle', item.content_title)"
-                                @click="triggerSearch('subtitle', item.content_title)" v-text="item.content_title"/>
+                    <div class="field is-grouped">
+                      <div class="control is-clickable"
+                           :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
+                           @click="item.expand_title = !item?.expand_title">
+                        <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                        <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
+                      </div>
+                      <div class="control">
+                        <span class="icon is-clickable" @click="copyText(item.content_title, false)">
+                          <i class="fas fa-copy"></i></span>
+                      </div>
                     </div>
                   </div>
-                  <div class="column is-12 is-clickable has-text-left" v-if="item?.content_path"
-                       @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
-                    <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-file"></i></span>
-                      <NuxtLink :to="makeSearchLink('path', item.content_path)"
-                                @click="triggerSearch('path', item.content_path)"
-                                v-text="item?.content_path"/>
+                  <div class="column is-12  has-text-left" v-if="item?.content_path">
+                    <div class="field is-grouped">
+                      <div class="control is-clickable"
+                           :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
+                           @click="item.expand_path = !item?.expand_path">
+                        <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                        <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+                      </div>
+                      <div class="control">
+                        <span class="icon is-clickable" @click="copyText(item.content_path, false)">
+                          <i class="fas fa-copy"></i></span>
+                      </div>
                     </div>
                   </div>
                   <div class="column is-12 has-text-left" v-if="item?.progress">
@@ -238,6 +249,14 @@
                     <span>{{ formatDuration(item.progress) }}</span>
                   </div>
                 </div>
+              </div>
+              <div class="card-content p-0 m-0" v-if="item?.showRawData">
+                <pre style="position: relative; max-height: 343px;"><code>{{ JSON.stringify(item, null, 2) }}</code>
+                  <button class="button m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
+                          style="position: absolute; top:0; right:0;">
+                    <span class="icon"><i class="fas fa-copy"></i></span>
+                  </button>
+                </pre>
               </div>
               <div class="card-footer has-text-centered">
                 <div class="card-footer-item">
@@ -253,6 +272,10 @@
                   <div class="is-text-overflow">
                     <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
                     <NuxtLink :to="'/backend/'+item.via" v-text="item.via"/>
+                    <span v-if="item?.metadata && Object.keys(item?.metadata).length > 1"
+                          v-tooltip="`Also reported by: ${Object.keys(item.metadata).filter(i => i !== item.via).join(', ')}.`">
+                      (<span class="has-tooltip">+{{ Object.keys(item.metadata).length - 1 }}</span>)
+                    </span>
                   </div>
                 </div>
                 <div class="card-footer-item">
@@ -277,6 +300,7 @@ import moment from 'moment'
 import Message from '~/components/Message'
 import {
   awaitElement,
+  copyText,
   formatDuration,
   makeName,
   makePagination,
@@ -311,7 +335,7 @@ const selectAll = ref(false)
 const selected_ids = ref([])
 const massActionInProgress = ref(false)
 
-watch(selectAll, v => selected_ids.value = v ? items.value.map(i => i.id) : []);
+watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []);
 
 const loadContent = async (pageNumber, fromPopState = false) => {
   pageNumber = parseInt(pageNumber)
@@ -585,7 +609,7 @@ watch(filter, val => {
     }
 
     router.push({
-      'path': '/parity',
+      'path': '/history',
       'query': {
         ...route.query,
         'filter': undefined
@@ -599,7 +623,7 @@ watch(filter, val => {
   }
 
   router.push({
-    'path': '/parity',
+    'path': '/history',
     'query': {
       ...route.query,
       'filter': val

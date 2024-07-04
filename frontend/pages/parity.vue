@@ -125,7 +125,7 @@
                   </span>
                   <NuxtLink :to="'/history/'+item.id" v-text="makeName(item)"/>
                 </p>
-                <span class="card-header-icon">
+                <span class="card-header-icon" @click="item.showRawData = !item?.showRawData">
                   <span class="icon">
                     <i class="fas"
                        :class="{ 'fa-tv': 'episode' === item.type.toLowerCase(), 'fa-film': 'movie' === item.type.toLowerCase()}"></i>
@@ -134,33 +134,72 @@
               </header>
               <div class="card-content">
                 <div class="columns is-multiline is-mobile">
-                  <div class="column is-12 " v-if="item?.content_title">
-                    <div class="is-text-overflow is-clickable"
-                         @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                      <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
-                      <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
+                  <div class="column is-12" v-if="item?.content_title">
+                    <div class="field is-grouped">
+                      <div class="control is-clickable"
+                           :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
+                           @click="item.expand_title = !item?.expand_title">
+                        <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
+                        <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
+                      </div>
+                      <div class="control">
+                        <span class="icon is-clickable" @click="copyText(item.content_title, false)">
+                          <i class="fas fa-copy"></i></span>
+                      </div>
                     </div>
                   </div>
-                  <div class="column is-12 is-clickable " v-if="item?.content_path"
-                       @click="(e) => e.target.firstChild?.classList?.toggle('is-text-overflow')">
-                    <div class="is-text-overflow">
-                      <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
-                      <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+                  <div class="column is-12" v-if="item?.content_path">
+                    <div class="field is-grouped">
+                      <div class="control is-clickable"
+                           :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
+                           @click="item.expand_path = !item?.expand_path">
+                        <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                        <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+                      </div>
+                      <div class="control">
+                        <span class="icon is-clickable" @click="copyText(item.content_path, false)">
+                          <i class="fas fa-copy"></i></span>
+                      </div>
                     </div>
                   </div>
                   <div class="column is-12">
-                    <span class="icon"><i class="fas fa-check"></i>&nbsp;</span>
-                    <span v-for="backend in item.reported_by">
-                      <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
-                    </span>
+                    <div class="field is-grouped">
+                      <div class="control is-expanded is-unselectable">
+                        <span class="icon"><i class="fas fa-check"></i>&nbsp;</span>
+                        <span>Reported By</span>
+                      </div>
+                      <div class="control">
+                        <template v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`">
+                          <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
+                          &nbsp;
+                        </template>
+                      </div>
+                    </div>
                   </div>
+
                   <div class="column is-12">
-                    <span class="icon"><i class="fas fa-times"></i>&nbsp;</span>
-                    <span v-for="backend in item.not_reported_by">
-                      <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
-                    </span>
+                    <div class="field is-grouped">
+                      <div class="control is-expanded is-unselectable">
+                        <span class="icon"><i class="fas fa-times"></i>&nbsp;</span>
+                        <span>Not Reported By</span>
+                      </div>
+                      <div class="control">
+                        <template v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`">
+                          <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
+                          &nbsp;
+                        </template>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+              <div class="card-content p-0 m-0" v-if="item?.showRawData">
+                <pre style="position: relative; max-height: 343px;"><code>{{ JSON.stringify(item, null, 2) }}</code>
+                  <button class="button m-4" @click="() => copyText(JSON.stringify(item, null, 2))"
+                          style="position: absolute; top:0; right:0;">
+                    <span class="icon"><i class="fas fa-copy"></i></span>
+                  </button>
+                </pre>
               </div>
               <div class="card-footer">
                 <div class="card-footer-item">
@@ -237,7 +276,15 @@
 <script setup>
 import request from '~/utils/request'
 import Message from '~/components/Message'
-import {awaitElement, makeName, makePagination, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {
+  awaitElement,
+  copyText,
+  makeName,
+  makePagination,
+  makeSearchLink,
+  notification,
+  TOOLTIP_DATE_FORMAT
+} from '~/utils/index'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 import Lazy from '~/components/Lazy'
