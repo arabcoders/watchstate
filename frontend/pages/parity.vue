@@ -269,6 +269,7 @@ watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i =
 const toggleFilter = () => {
   showFilter.value = !showFilter.value
   if (!showFilter.value) {
+    filter.value = ''
     return
   }
 
@@ -475,6 +476,36 @@ const filterItem = item => {
 }
 
 watch(min, async () => await loadContent(page.value ?? 1))
+watch(filter, val => {
+  const route = useRoute()
+  const router = useRouter()
+  if (!val) {
+    if (!route?.query['filter']) {
+      return;
+    }
+
+    router.push({
+      'path': '/parity',
+      'query': {
+        ...route.query,
+        'filter': undefined
+      }
+    })
+    return;
+  }
+
+  if (route?.query['filter'] === val) {
+    return;
+  }
+
+  router.push({
+    'path': '/parity',
+    'query': {
+      ...route.query,
+      'filter': val
+    }
+  })
+})
 
 const clearCache = () => Object.keys(sessionStorage).filter(k => /^parity/.test(k)).forEach(k => sessionStorage.removeItem(k))
 

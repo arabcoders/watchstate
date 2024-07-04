@@ -172,3 +172,7 @@ body {
 .is-strike-through {
     text-decoration: line-through;
 }
+
+.is-pointer-help {
+    cursor: help;
+}

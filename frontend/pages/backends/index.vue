@@ -77,20 +77,29 @@
                   <template v-else>Never</template>
                 </template>
                 <template v-else>
-                  <span class="tag is-danger is-light">Disabled</span>
+                  <span class="tag is-danger is-light is-pointer-help"
+                        v-tooltip="'Local database is not being sync to this backend.'">Disabled</span>
                 </template>
               </div>
               <div class="column is-6 has-text-left-mobile">
                 <strong>Last Import:&nbsp;</strong>
-                <template v-if="backend.import.enabled">
-                  <span v-if="backend.import.lastSync" class="has-tooltip"
-                        v-tooltip="moment(backend.import.lastSync).format(TOOLTIP_DATE_FORMAT)">
-                    {{ moment(backend.import.lastSync).fromNow() }}
-                  </span>
+                <template v-if="backend.import.enabled || backend.options?.IMPORT_METADATA_ONLY">
+                  <template v-if="backend.import.lastSync">
+                    <span class="has-tooltip" v-tooltip="moment(backend.import.lastSync).format(TOOLTIP_DATE_FORMAT)">
+                      {{ moment(backend.import.lastSync).fromNow() }}
+                    </span>
+                    <template v-if="!backend.import.enabled && backend.options?.IMPORT_METADATA_ONLY">
+                      &nbsp;
+                      <span class="tag is-warning is-light is-pointer-help"
+                            v-tooltip="'Only metadata being imported from this backend'">
+                        Metadata</span>
+                    </template>
+                  </template>
                   <template v-else>Never</template>
                 </template>
                 <template v-else>
-                  <span class="tag is-danger is-light">Disabled</span>
+                  <span class="tag is-danger is-light is-pointer-help"
+                        v-tooltip="'All data import from this backend is disabled.'">Disabled</span>
                 </template>
               </div>
             </div>

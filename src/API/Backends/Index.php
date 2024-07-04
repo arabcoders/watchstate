@@ -29,11 +29,19 @@ final class Index
         $list = [];
 
         foreach ($this->getBackends() as $backend) {
-            $list[] = array_filter(
+            $item = array_filter(
                 $backend,
                 fn($key) => false === in_array($key, ['options', 'webhook'], true),
                 ARRAY_FILTER_USE_KEY
             );
+
+            $item = ag_set(
+                $item,
+                'options.' . Options::IMPORT_METADATA_ONLY,
+                (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY, false)
+            );
+
+            $list[] = $item;
         }
 
         return api_response(HTTP_STATUS::HTTP_OK, $list);
