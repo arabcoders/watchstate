@@ -176,3 +176,7 @@ body {
 .is-pointer-help {
     cursor: help;
 }
+
+.is-text-contents {
+    display: contents;
+}

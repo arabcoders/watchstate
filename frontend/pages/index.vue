@@ -23,15 +23,23 @@
             <div class="card-content">
               <div class="columns is-multiline is-mobile has-text-centered">
                 <div class="column is-4-tablet is-6-mobile has-text-left-mobile">
-                  <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
-                  <span class="has-tooltip"
-                        v-tooltip="`Record updated at: ${moment.unix(history.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
-                    {{ moment.unix(history.updated_at).fromNow() }}
-                  </span>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-calendar"></i>&nbsp;</span>
+                    <span class="has-tooltip"
+                          v-tooltip="`Record updated at: ${moment.unix(history.updated_at).format(TOOLTIP_DATE_FORMAT)}`">
+                      {{ moment.unix(history.updated_at).fromNow() }}
+                    </span>
+                  </div>
                 </div>
                 <div class="column is-4-tablet is-6-mobile has-text-right-mobile">
-                  <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
-                  <NuxtLink :to="'/backend/'+history.via" v-text="history.via"/>
+                  <div class="is-text-overflow">
+                    <span class="icon"><i class="fas fa-server"></i>&nbsp;</span>
+                    <NuxtLink :to="'/backend/'+history.via" v-text="history.via"/>
+                    <span v-if="history?.metadata && Object.keys(history?.metadata).length > 1"
+                          v-tooltip="`Also reported by: ${Object.keys(history.metadata).filter(i => i !== history.via).join(', ')}.`">
+                      (<span class="has-tooltip">+{{ Object.keys(history.metadata).length - 1 }}</span>)
+                    </span>
+                  </div>
                 </div>
                 <div class="column is-4-tablet is-12-mobile has-text-left-mobile">
                   <div class="is-text-overflow">
