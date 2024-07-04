@@ -94,6 +94,19 @@ final class PDOAdapter implements iDB
                 );
             }
 
+            if (true === $entity->isEpisode() && $entity->episode < 1) {
+                throw new DBException(
+                    r(
+                        "PDOAdapter: Unexpected episode number '{number}' was given for '{via}: {title}'.",
+                        [
+                            'via' => $entity->via,
+                            'title' => $entity->getName(),
+                            'number' => $entity->episode,
+                        ]
+                    )
+                );
+            }
+
             if (false === in_array($entity->type, [iState::TYPE_MOVIE, iState::TYPE_EPISODE])) {
                 throw new DBException(
                     r(
@@ -352,6 +365,20 @@ final class PDOAdapter implements iDB
                     r("PDOAdapter: Unable to update '{title}' without primary key defined.", [
                         'title' => $entity->getName() ?? 'Unknown'
                     ]), 51
+                );
+            }
+
+            if (true === $entity->isEpisode() && $entity->episode < 1) {
+                throw new DBException(
+                    r(
+                        "PDOAdapter: Unexpected episode number '{number}' was given for '#{id}' '{via}: {title}'.",
+                        [
+                            'id' => $entity->id,
+                            'via' => $entity->via,
+                            'title' => $entity->getName(),
+                            'number' => $entity->episode,
+                        ]
+                    )
                 );
             }
 
