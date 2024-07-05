@@ -295,4 +295,15 @@ interface ClientInterface
      */
     public function getVersion(array $opts = []): string;
 
+    /**
+     * Generate Access Token
+     *
+     * @param string|int $identifier username.
+     * @param string $password password.
+     * @param array $opts options.
+     *
+     * @return array
+     */
+    public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array;
+
 }

@@ -9,7 +9,6 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Libs\Container;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -21,14 +20,14 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
  *
  * This class is responsible for retrieving the users list from Jellyfin API.
  */
-class GetUsersList
+class GetUser
 {
     use CommonTrait;
 
     /**
      * @var string Action name.
      */
-    protected string $action = 'jellyfin.getUsersList';
+    protected string $action = 'jellyfin.getUser';
 
     /**
      * Class Constructor.
@@ -52,7 +51,7 @@ class GetUsersList
     {
         return $this->tryResponse(
             context: $context,
-            fn: fn() => $this->getUsers($context, $opts),
+            fn: fn() => $this->getUser($context, $opts),
             action: $this->action
         );
     }
@@ -63,19 +62,26 @@ class GetUsersList
      * @throws ExceptionInterface When the request fails.
      * @throws JsonException When the response is not a valid JSON.
      */
-    private function getUsers(Context $context, array $opts = []): Response
+    private function getUser(Context $context, array $opts = []): Response
     {
-        if (true === (bool)ag($context->options, Options::IS_LIMITED_TOKEN, false) && null !== $context->backendUser) {
-            $limited = Container::get(GetUser::class)($context);
-            if ($limited->isSuccessful()) {
-                return new Response(status: true, response: [$limited->response]);
-            }
-            return $limited;
+        if (null === $context->backendUser) {
+            return new Response(
+                status: false,
+                error: new Error(
+                    message: "Request for '{client}: {backend}' user info failed. User not set.",
+                    context: [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                    ],
+                    level: Levels::ERROR
+                ),
+            );
         }
 
-        $url = $context->backendUrl->withPath('/Users/');
+        $url = $context->backendUrl->withPath('/Users/' . $context->backendUser);
 
-        $this->logger->debug("Requesting '{client}: {backend}' users list.", [
+        $this->logger->debug("Requesting '{client}: {backend}' user '{user}' info.", [
+            'user' => $context->backendUrl,
             'client' => $context->clientName,
             'backend' => $context->backendName,
             'url' => (string)$url,
@@ -92,14 +98,16 @@ class GetUsersList
         }
 
         $response = $this->http->request('GET', (string)$url, $headers);
+
         if (200 !== $response->getStatusCode()) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{client}: {backend}' users list returned with unexpected '{status_code}' status code.",
+                    message: "Request for '{client}: {backend}' user '{user}' info returned with unexpected '{status_code}' status code.",
                     context: [
                         'client' => $context->clientName,
                         'backend' => $context->backendName,
+                        'user' => $context->backendUser,
                         'status_code' => $response->getStatusCode(),
                     ],
                     level: Levels::ERROR
@@ -114,38 +122,30 @@ class GetUsersList
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing [{backend}] user list payload.', [
+            $this->logger->debug("Parsing '{client}: {backend}' user '{user}' info payload.", [
+                'client' => $context->clientName,
                 'backend' => $context->backendName,
+                'user' => $context->backendUser,
                 'url' => (string)$url,
                 'trace' => $json,
             ]);
         }
 
-        $list = [];
+        $date = ag($json, ['LastActivityDate', 'LastLoginDate'], null);
 
-        foreach ($json ?? [] as $user) {
-            $date = ag($user, ['LastActivityDate', 'LastLoginDate'], null);
+        $data = [
+            'id' => ag($json, 'Id'),
+            'name' => ag($json, 'Name'),
+            'admin' => (bool)ag($json, 'Policy.IsAdministrator'),
+            'hidden' => (bool)ag($json, 'Policy.IsHidden'),
+            'disabled' => (bool)ag($json, 'Policy.IsDisabled'),
+            'updatedAt' => null !== $date ? makeDate($date) : 'Never',
+        ];
 
-            $data = [
-                'id' => ag($user, 'Id'),
-                'name' => ag($user, 'Name'),
-                'admin' => (bool)ag($user, 'Policy.IsAdministrator'),
-                'hidden' => (bool)ag($user, 'Policy.IsHidden'),
-                'disabled' => (bool)ag($user, 'Policy.IsDisabled'),
-                'updatedAt' => null !== $date ? makeDate($date) : 'Never',
-            ];
-
-            if (true === (bool)ag($opts, 'tokens')) {
-                $data['token'] = $context->backendToken;
-            }
-
-            if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
-                $data['raw'] = $user;
-            }
-
-            $list[] = $data;
+        if (true === (bool)ag($opts, Options::RAW_RESPONSE)) {
+            $data[Options::RAW_RESPONSE] = $json;
         }
 
-        return new Response(status: true, response: $list);
+        return new Response(status: true, response: $data);
     }
 }

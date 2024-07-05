@@ -423,6 +423,35 @@ const makeSecret = (len = 8) => {
     return result;
 }
 
+/**
+ * Explode string by delimiter.
+ *
+ * @param {string} delimiter
+ * @param {string} string
+ * @param {number} limit
+ *
+ * @returns {string[]}
+ */
+const explode = (delimiter, string, limit = undefined) => {
+    if ('' === delimiter) {
+        return [string];
+    }
+
+    const parts = string.split(delimiter);
+
+    if (undefined === limit || 0 === limit) {
+        return parts;
+    }
+
+    if (limit > 0) {
+        return parts.slice(0, limit - 1).concat(parts.slice(limit - 1).join(delimiter));
+    }
+
+    if (limit < 0) {
+        return parts.slice(0, limit);
+    }
+}
+
 export {
     r,
     ag_set,
@@ -442,4 +471,5 @@ export {
     makePagination,
     TOOLTIP_DATE_FORMAT,
     makeSecret,
+    explode,
 }

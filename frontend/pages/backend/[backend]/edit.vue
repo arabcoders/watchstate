@@ -18,6 +18,21 @@
       </div>
     </div>
 
+    <div class="column is-12" v-if="isLimitedToken">
+      <Message title="For your information" message_class="has-background-warning-90 has-text-dark"
+               icon="fas fa-info-circle">
+        <p>
+          This backend is using accesstoken instead of API keys, And this method untested and may not work as expected.
+          Please make sure you know what you are doing. Simple operations like <code>Import</code>, <code>Export</code>
+          should work fine.
+        </p>
+        <p>
+          How the access token interact with the rest of the API is undefined and untested by us. Please use with
+          caution. If you notice any issue, please report it to us.
+        </p>
+      </Message>
+    </div>
+
     <div class="column is-12" v-if="isLoading">
       <Message message_class="is-background-info-90 has-text-dark" title="Loading"
                icon="fas fa-spinner fa-spin" message="Loading backend settings. Please wait..."/>
@@ -125,7 +140,7 @@
             <div class="field">
               <label class="label">Backend Unique ID</label>
               <div class="control has-icons-left">
-                <input class="input" type="text" v-model="backend.uuid" required>
+                <input class="input" type="text" v-model="backend.uuid" required :disabled="isLimitedToken">
                 <div class="icon is-left">
                   <i class="fas fa-cloud" v-if="!uuidLoading"></i>
                   <i class="fas fa-spinner fa-pulse" v-else></i>
@@ -142,7 +157,7 @@
                     backend
                     uniquely. This is used for webhook matching and filtering.
                   </span>
-                  <a href="javascript:void(0)" @click="getUUid">Get from the backend.</a>
+                  <NuxtLink @click="getUUid" v-if="!isLimitedToken" v-text="'Get from the backend.'"/>
                 </p>
               </div>
             </div>
@@ -154,7 +169,7 @@
               </label>
               <div class="control has-icons-left">
                 <div class="select is-fullwidth" v-if="users.length>0">
-                  <select v-model="backend.user" class="is-capitalized">
+                  <select v-model="backend.user" class="is-capitalized" :disabled="isLimitedToken">
                     <option v-for="user in users" :key="'uid-'+user.id" :value="user.id">
                       {{ user.name }}
                     </option>
@@ -176,7 +191,7 @@
                     data we get from the backend. And for webhook matching and filtering.
                   </span>
                   This tool is meant for single user use.
-                  <a href="javascript:void(0)" @click="getUsers">
+                  <a href="javascript:void(0)" @click="getUsers" v-if="!isLimitedToken">
                     Retrieve User ids from backend.
                   </a>
                 </p>
@@ -258,6 +273,12 @@
                   <template v-for="(val, key) in backend?.options" :key="'bo-'+key">
                     <div class="column is-5">
                       <input type="text" class="input" :value="key" readonly disabled>
+                      <p class="help is-unselectable">
+                        <span class="icon has-text-info">
+                          <i class="fas fa-info-circle" :class="{'fa-bounce': newOptions[key]}"></i>
+                        </span>
+                        {{ optionsList.find(v => v.key === key)?.description }}
+                      </p>
                     </div>
                     <div class="column is-6">
                       <input type="text" class="input" v-model="backend.options[key]" required>
@@ -308,7 +329,7 @@
               <span class="icon"><i class="fas fa-save"></i></span>
               <span>Save Settings</span>
             </button>
-            <NuxtLink class="card-footer-item button is-fullwidth is-danger" :to="`/backend/${backend}`">
+            <NuxtLink class="card-footer-item button is-fullwidth is-danger" :to="`/backend/${id}`">
               <span class="icon"><i class="fas fa-cancel"></i></span>
               <span>Cancel changes</span>
             </NuxtLink>
@@ -323,6 +344,7 @@
 import 'assets/css/bulma-switch.css'
 import {notification, ucFirst} from '~/utils/index.js'
 import {ref} from "vue";
+import Message from "~/components/Message.vue";
 
 const id = useRoute().params.backend
 const redirect = useRoute().query?.redirect ?? `/backend/${id}`
@@ -350,6 +372,7 @@ const newOptions = ref({})
 const exposeToken = ref(false)
 const servers = ref([])
 const serversLoading = ref(false)
+const isLimitedToken = computed(() => Boolean(backend.value.options?.is_limited_token))
 
 const selectedOptionHelp = computed(() => {
   const option = optionsList.value.find(v => v.key === selectedOption.value)
@@ -485,11 +508,17 @@ const getUsers = async (showAlert = true) => {
     token: backend.value.token,
     url: backend.value.url,
     uuid: backend.value.uuid,
+    user: backend.value.user
   };
 
-  if (backend.value.options && backend.value.options.ADMIN_TOKEN) {
+  if (backend.value.options && backend.value.options?.ADMIN_TOKEN) {
     data.options = {
       ADMIN_TOKEN: backend.value.options.ADMIN_TOKEN
+    }
+  }
+  if (backend.value.options && backend.value.options?.is_limited_token) {
+    data.options = {
+      is_limited_token: Boolean(backend.value.options.is_limited_token)
     }
   }
 
