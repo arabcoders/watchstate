@@ -329,7 +329,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
     pageNumber = 1
   }
 
-  let search = new URLSearchParams()
+  const search = new URLSearchParams()
   search.set('perpage', perpage.value)
   search.set('page', pageNumber)
 
@@ -360,7 +360,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
       clearCache();
     }
 
-    if (sessionStorage.getItem(cacheKey.value)) {
+    if (sessionStorage?.getItem(cacheKey.value)) {
       json = JSON.parse(sessionStorage.getItem(cacheKey.value))
     } else {
       const response = await request(`/system/parity/?${search.toString()}`)
@@ -378,10 +378,7 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
       await useRouter().push({
         path: '/parity',
         title: pageTitle,
-        query: search.entries().reduce((acc, [k, v]) => {
-          acc[k] = v
-          return acc
-        }, {})
+        query: Object.fromEntries(search)
       })
     }
 
@@ -427,7 +424,7 @@ const massDelete = async () => {
     } else {
       items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
       try {
-        sessionStorage.removeItem(cacheKey.value)
+        sessionStorage?.removeItem(cacheKey.value)
       } catch (e) {
       }
     }
@@ -554,7 +551,7 @@ watch(filter, val => {
   })
 })
 
-const clearCache = () => Object.keys(sessionStorage).filter(k => /^parity/.test(k)).forEach(k => sessionStorage.removeItem(k))
+const clearCache = () => Object.keys(sessionStorage ?? {}).filter(k => /^parity/.test(k)).forEach(k => sessionStorage.removeItem(k))
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {
