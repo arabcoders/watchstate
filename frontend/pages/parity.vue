@@ -134,30 +134,39 @@
               </header>
               <div class="card-content">
                 <div class="columns is-multiline is-mobile">
-                  <div class="column is-12" v-if="item?.content_title">
+                  <div class="column is-12">
                     <div class="field is-grouped">
                       <div class="control is-clickable"
                            :class="{'is-text-overflow': !item?.expand_title, 'is-text-contents': item?.expand_title}"
                            @click="item.expand_title = !item?.expand_title">
                         <span class="icon"><i class="fas fa-heading"></i>&nbsp;</span>
-                        <NuxtLink :to="makeSearchLink('subtitle',item.content_title)" v-text="item.content_title"/>
+                        <template v-if="item?.content_title">
+                          <NuxtLink :to="makeSearchLink('subtitle', item.content_title)" v-text="item.content_title"/>
+                        </template>
+                        <template v-else>
+                          <NuxtLink :to="makeSearchLink('subtitle', item.title)" v-text="item.title"/>
+                        </template>
                       </div>
                       <div class="control">
-                        <span class="icon is-clickable" @click="copyText(item.content_title, false)">
+                        <span class="icon is-clickable"
+                              @click="copyText(item?.content_title ?? item.title, false)">
                           <i class="fas fa-copy"></i></span>
                       </div>
                     </div>
                   </div>
-                  <div class="column is-12" v-if="item?.content_path">
+                  <div class="column is-12">
                     <div class="field is-grouped">
                       <div class="control is-clickable"
                            :class="{'is-text-overflow': !item?.expand_path, 'is-text-contents': item?.expand_path}"
                            @click="item.expand_path = !item?.expand_path">
                         <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
-                        <NuxtLink :to="makeSearchLink('path',item.content_path)" v-text="item.content_path"/>
+                        <NuxtLink v-if="item?.content_path" :to="makeSearchLink('path', item.content_path)"
+                                  v-text="item.content_path"/>
+                        <span v-else>No path found.</span>
                       </div>
                       <div class="control">
-                        <span class="icon is-clickable" @click="copyText(item.content_path, false)">
+                        <span class="icon is-clickable"
+                              @click="copyText(item?.content_path ?item.content_path : null, false)">
                           <i class="fas fa-copy"></i></span>
                       </div>
                     </div>
