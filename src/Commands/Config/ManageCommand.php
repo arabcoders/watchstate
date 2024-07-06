@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Commands\Config;
 
 use App\Command;
-use App\Commands\State\ImportCommand;
 use App\Commands\System\IndexCommand;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Exception\ExceptionInterface;
@@ -30,7 +30,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class ManageCommand extends Command
 {
-    public const ROUTE = 'config:manage';
+    public const string ROUTE = 'config:manage';
 
     public function __construct(private LoggerInterface $logger)
     {
@@ -116,6 +116,8 @@ final class ManageCommand extends Command
             );
             return self::FAILURE;
         }
+
+        go_start:
 
         if (true === $add) {
             if (null !== $configFile->get("{$name}.type", null)) {
@@ -384,7 +386,24 @@ final class ManageCommand extends Command
         );
 
         if (false === $helper->ask($input, $output, $question)) {
-            return $this->runCommand($input, $output, $u);
+            goto go_start;
+        }
+
+        try {
+            $output->writeln('<info>Validating backend context. Please wait...</info>');
+            $client = makeBackend($u, $name);
+            $client->setLogger($this->logger);
+            if (false === $client->validateContext($client->getContext())) {
+                $output->writeln('<error>ERROR:</error> Backend context is invalid.');
+                goto go_start;
+            }
+        } catch (InvalidContextException $e) {
+            $output->writeln(
+                r('<error>ERROR:</error> Backend context validation has failed. {error}', [
+                    'error' => $e->getMessage()
+                ])
+            );
+            goto go_start;
         }
 
         $configFile->set($name, $u)->persist();
@@ -410,41 +429,6 @@ final class ManageCommand extends Command
 
             if (true === $helper->ask($input, $output, $question)) {
                 $this->getApplication()?->find(IndexCommand::ROUTE)->run(new ArrayInput([]), $output);
-            }
-
-            $importEnabled = (bool)ag($u, 'import.enabled');
-            $metaEnabled = (bool)ag($u, 'options.' . Options::IMPORT_METADATA_ONLY);
-
-            if (true === $importEnabled || true === $metaEnabled) {
-                $importType = $importEnabled ? 'play state & metadata' : 'metadata only.';
-
-                $helper = $this->getHelper('question');
-                $text =
-                    <<<TEXT
-
-                <question>Would you like to import <flag>{type}</flag> from the backend now</question>? [<value>Y|N</value>] [<value>Default: No</value>]
-                -----------------
-                <value>P.S: this could take few minutes to execute.</value>
-
-                TEXT;
-
-                $text = r($text, ['type' => $importType]);
-
-                $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
-
-                if (true === $helper->ask($input, $output, $question)) {
-                    $output->writeln(
-                        r('<info>Importing {type} from {name}</info>', [
-                            'name' => $name,
-                            'type' => $importType
-                        ])
-                    );
-
-                    $cmd = $this->getApplication()?->find(ImportCommand::ROUTE);
-                    $cmd->run(new ArrayInput(['--quiet', '--select-backend' => [$name]]), $output);
-                }
-
-                $output->writeln('<info>Import complete</info>');
             }
         }
 

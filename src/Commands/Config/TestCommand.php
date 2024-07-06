@@ -144,7 +144,7 @@ final class TestCommand extends Command
         foreach ($backends as $backendName => $backend) {
             $backend = $this->getBackend($backendName);
             $context = $backend->getContext();
-            $output->writeln(r("Running '{client}' functional tests on '{backend}'.", [
+            $output->writeln(r("Running '{client}' client functional tests on '{backend}'.", [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
             ]));
