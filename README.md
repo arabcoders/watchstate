@@ -11,11 +11,15 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ### 2024-07-06
 
-We recently added experimental support for jellyfin & emby oauth access tokens, This way you are able to sync your
-play state even if you don't own the server and cant generate API keys.
+Recently we have introduced a new feature that allows you to use Jellyfin and Emby OAuth access tokens for syncing
+your play state. This is especially handy if you're not the server owner and can't create API keys. Please note, this
+feature is in its experimental phase, so you might encounter some issues as we yet to explorer the full depth of the
+implementation. We're actively working on making it better, If you have any feedback or suggestions, please let us know.
 
-The support is experimental and might not work as expected, but we are working on improving it. If you have any feedback
-or suggestions, please let us know.
+Getting your OAuth token is easy. When prompted, simply enter your `username:password` in place of the API key through
+the `WebUI` or the `config:add/manage` command. `WatchState` will automatically contact the backend and generate the
+token for you, as this step is required to get more information like your `User ID` which is sadly inaccessible without
+us generating the token. Both Emby & Jellyfin doesn't provide an api to inquire about the current user.
 
 We have also added new `config:test` command to run functional tests on your backends, this will not alter your state,
 And it's quite useful to know if the tool is able to communicate with your backends. without problems, It will report

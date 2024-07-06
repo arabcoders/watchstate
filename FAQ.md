@@ -44,7 +44,8 @@ While we think they are reasonable defaults, you can change them by setting the 
 #### Via WebUI
 
 Go to the `env` page, click on `+` button, then select the key in this case `WS_CRON_IMPORT_AT`, `WS_CRON_EXPORT_AT`
-and set the value to a valid cron expression. Then click save to apply the new timer. This will be change later to be included with
+and set the value to a valid cron expression. Then click save to apply the new timer. This will be change later to be
+included with
 the tasks page.
 
 #### Via CLI
@@ -95,7 +96,8 @@ Use the ids as parameters for `user:` in this case it should be `user:"1000:1000
 
 ### How to find the apikey?
 
-You can find the apikey inside the following file `/config/config/.env`. The apikey is stored inside this variable `WS_API_KEY=`.
+You can find the apikey inside the following file `/config/config/.env`. The apikey is stored inside this
+variable `WS_API_KEY=`.
 Or you can run the following command to get it directly:
 
 ```bash
@@ -108,9 +110,11 @@ $ docker exec -ti console system:apikey
 
 The API key is used to authenticate the requests to the tool, it's used to prevent unauthorized access. The API key is
 required for all endpoints except the `/v1/api/[backend_name]/webhook` endpoint which is open by default unless you have
-enabled `WS_SECURE_API_ENDPOINTS` environment variable. which then you also need to use the apikey for it webhook endpoint.
+enabled `WS_SECURE_API_ENDPOINTS` environment variable. which then you also need to use the apikey for it webhook
+endpoint.
 
-The new `WebUI` will also require the API key to access data as it's decoupled from the backend and run in standalone mode.
+The new `WebUI` will also require the API key to access data as it's decoupled from the backend and run in standalone
+mode.
 
 ----
 
@@ -128,18 +132,33 @@ $ docker exec -ti console state:export -fi -s [BACKEND_NAME]
 
 ----
 
+### How to use Jellyfin, Emby oauth tokens?
+
+Due to limitation on jellyfin/emby side, the way we implemented support for oauth token require that you provide the
+username and password in `username:password` format, This is due to the API not providing a way for us to inquiry about
+the current user.
+
+Simply, when asked for API Key, provide the username and password in the following format `username:password`.
+`WatchState` will then generate the token for you. and replace the username and password with the generated token. This
+is a one time process, and you should not need to do it again. Your `username` and `password` will not be stored.
+
+----
+
 ### My new backend overriding my old backend state / My watch state is not correct?
 
 This likely due to the new backend reporting newer date than your old backend. as such the typical setup is to
 prioritize items with newer date compared to old ones. This is what you want to happen normally. However, if the new
-media backend state is not correct this might override your current watch state. The solution to get both in sync, and to do so follow these steps:
+media backend state is not correct this might override your current watch state. The solution to get both in sync, and
+to do so follow these steps:
 
 Add your backend that has correct watch state and enable full import. Second, add your new backend as metadata source.
 
-In `CLI` context Answer `N` to the question `Enable importing of metadata and play state from this backend?`. Make sure to select yes
+In `CLI` context Answer `N` to the question `Enable importing of metadata and play state from this backend?`. Make sure
+to select yes
 for export to get the option to select the backend as metadata source.
 
-In `WebUI` if you disable import, you will get an extra option that is normally hidden to select the backend as metadata source.
+In `WebUI` if you disable import, you will get an extra option that is normally hidden to select the backend as metadata
+source.
 
 After that, do single backend export by using the following command:
 
@@ -193,7 +212,8 @@ database state back to the selected backend.
 ### Is there support for Multi-user setup?
 
 No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
-use single container for all users, however it's not really easy refer to [issue #136](https://github.com/arabcoders/watchstate/issues/136).
+use single container for all users, however it's not really easy refer
+to [issue #136](https://github.com/arabcoders/watchstate/issues/136).
 
 For `Jellyfin` and `Emby`, you can just generate new API tokens and link it to a user.
 
@@ -213,7 +233,8 @@ $ docker exec -ti console backend:users:list -s backend_name --with-tokens
 ### How do i migrate invited friends i.e. (external user) data from from plex to emby/jellyfin?
 
 As this tool is designed to work with single user, You have to treat each invited friend as a separate user. what is
-needed, you need to contact that friend of yours and ask him/her to give you a copy of the [X-Plex-Token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/),
+needed, you need to contact that friend of yours and ask him/her to give you a copy of
+the [X-Plex-Token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/),
 then create new container and add the backend with the token you got from your friend.
 
 After that, add your other backends like emby/jellyfin using your regular API key. jellyfin/emby differentiate between
@@ -238,8 +259,10 @@ No, You can use the `task scheduler` or on `on demand sync` if you want.
 
 ### I get tired of writing the whole command everytime is there an easy way run the commands?
 
-Good News, There is a way to make your life easier, We recently added a `WebUI` which should cover most of the use cases.
-However, if you still want to use the `CLI` You can create a shell script to omit the `docker exec -ti watchstate console`
+Good News, There is a way to make your life easier, We recently added a `WebUI` which should cover most of the use
+cases.
+However, if you still want to use the `CLI` You can create a shell script to omit
+the `docker exec -ti watchstate console`
 
 ```bash
 $ echo 'docker exec -ti watchstate console "$@"' > ws
@@ -258,7 +281,8 @@ Sometimes there are problems related to HTTP/2, so before reporting bug please t
 $ docker exec -ti watchstate console config:edit --key options.client.http_version --set 1.0 -s backend_name 
 ```
 
-This will force set the internal http client to use `http/v1` if it does not fix your problem, please open bug report about it.
+This will force set the internal http client to use `http/v1` if it does not fix your problem, please open bug report
+about it.
 
 ---
 
@@ -310,8 +334,11 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * com.plexapp.agents.xbmcnfo://(id)?lang=en `(XBMC NFO Movies agent)`
 * com.plexapp.agents.xbmcnfotv://(id)?lang=en `(XBMC NFO TV agent)`
 * com.plexapp.agents.hama://(db)\d?-(id)?lang=en `(HAMA multi source db agent mainly for anime)`
-* com.plexapp.agents.ytinforeader://(id)?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent) With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
-* com.plexapp.agents.cmdb://(id)?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
+* com.plexapp.agents.ytinforeader://(id)
+  ?lang=en [ytinforeader.bundle](https://github.com/arabcoders/plex-ytdlp-info-reader-agent)
+  With [jp_scanner.py](https://github.com/arabcoders/plex-daily-scanner) as scanner.
+* com.plexapp.agents.cmdb://(id)
+  ?lang=en [cmdb.bundle](https://github.com/arabcoders/cmdb.bundle) `(User custom metadata database)`.
 
 ---
 
@@ -323,15 +350,18 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvmaze://(id)
 * tvrage://(id)
 * anidb://(id)
-* ytinforeader://(id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). `(A yt-dlp info reader plugin)`.
-* cmdb://(id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db). `(User custom metadata database)`.
+* ytinforeader://(
+  id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). `(A yt-dlp info reader plugin)`.
+* cmdb://(
+  id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db). `(User custom metadata database)`.
 
 ---
 
 ### Environment Variables
 
 The recommended approach is for keys that starts with `WS_` use the `WebUI > Env` page, or `system:env` command via CLI.
-For other keys that aren't directly related to the tool, you **MUST** load them via container environment or the `compose.yaml` file.
+For other keys that aren't directly related to the tool, you **MUST** load them via container environment or
+the `compose.yaml` file.
 
 to see list of loaded environment variables
 
@@ -347,7 +377,8 @@ $ docker exec -ti watchstate console system:env
 
 #### Tool specific environment variables.
 
-These environment variables relates to the tool itself, You should manage them via `WebUI > Env` page or `system:env` command via CLI.
+These environment variables relates to the tool itself, You should manage them via `WebUI > Env` page or `system:env`
+command via CLI.
 
 | Key                     | Type    | Description                                                             | Default                  |
 |-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
@@ -391,7 +422,8 @@ $ docker exec -ti watchstate console system:env --list
 #### Container specific environment variables.
 
 > [!IMPORTANT]
-> These environment variables relates to the container itself, and MUST be added via container environment or by the `compose.yaml` file.
+> These environment variables relates to the container itself, and MUST be added via container environment or by
+> the `compose.yaml` file.
 
 | Key           | Type    | Description                          | Default  |
 |---------------|---------|--------------------------------------|----------|
@@ -408,7 +440,8 @@ $ docker exec -ti watchstate console system:env --list
 
 The Webhook URL is backend specific, the request path is `/v1/api/backend/[BACKEND_NAME]/webhook`,
 Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for. Typically, the full URL
-is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`. Or simply go to the `WebUI > Backends` and click on `Copy Webhook URL`.
+is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`. Or simply go to the `WebUI > Backends` and click
+on `Copy Webhook URL`.
 
 > [!NOTE]
 > You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the
@@ -533,7 +566,8 @@ Those are some webhook limitations we discovered for the following media backend
 #### Emby
 
 * Emby does not send webhooks events for newly added items.
-  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~ implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
+  ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
+  implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
 * Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
   played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
 
@@ -578,40 +612,51 @@ https://watchstate.example.org {
 ```
 
 > [!IMPORTANT]
-> If you change the FastCGI Process Manager TCP port via FPM_PORT environment variable, you should change the port in the caddy file as well.
+> If you change the FastCGI Process Manager TCP port via FPM_PORT environment variable, you should change the port in
+> the caddy file as well.
 
 ---
 
 ### WS_API_AUTO
 
-The purpose of this environment variable is to automate the configuration process. It's mainly used for people who uses many browsers
-to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to be configured before it
+The purpose of this environment variable is to automate the configuration process. It's mainly used for people who uses
+many browsers
+to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to be configured
+before it
 can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in `${WS_DATA_PATH}/config/.env`.
 
 #### Why you should use it?
 
-You normally should not use it, as it's a **GREAT SECURITY RISK**. However, if you are using the tool in a secure environment
+You normally should not use it, as it's a **GREAT SECURITY RISK**. However, if you are using the tool in a secure
+environment
 and not worried about exposing your API key, you can use it to automate the configuration process.
 
 #### Why you should not use it?
 
-Because, by exposing your API key, you are also exposing every data you have in the tool. This is a **GREAT SECURITY RISK**,
-any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get your API key. And with this key
+Because, by exposing your API key, you are also exposing every data you have in the tool. This is a **GREAT SECURITY
+RISK**,
+any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get your API
+key. And with this key
 they can do anything they want with your data. including viewing your media servers api keys.
 
-So, please while we have this option available, we strongly recommend not to use it if `WatchState` is exposed to the internet.
+So, please while we have this option available, we strongly recommend not to use it if `WatchState` is exposed to the
+internet.
 
 > [!IMPORTANT]
-> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is exposed to the internet.
+> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is
+> exposed to the internet.
 > I cannot stress this enough, please do not use it unless you are in a secure environment.
 
 ---
 
 ### How to disable the included cache server and use external cache server?
 
-Set this environment variable in your `compose.yaml` file `DISABLE_CACHE` with value of `1`. to use external redis server
-you need to alter the value of `WS_CACHE_URL` environment variable. the format for this variable is `redis://host:port?password=auth&db=db_num`,
-for example to use redis from another container you could use something like `redis://172.23.1.10:6379?password=my_secert_password&db=8`.
+Set this environment variable in your `compose.yaml` file `DISABLE_CACHE` with value of `1`. to use external redis
+server
+you need to alter the value of `WS_CACHE_URL` environment variable. the format for this variable
+is `redis://host:port?password=auth&db=db_num`,
+for example to use redis from another container you could use something
+like `redis://172.23.1.10:6379?password=my_secert_password&db=8`.
 We only support `redis` and API compatible alternative.
 
 Once that done, restart the container.
@@ -621,7 +666,8 @@ Once that done, restart the container.
 ### How to get WatchState working with YouTube content/library?
 
 Due to the nature on how people name their youtube files i had to pick something specific for it to work cross supported
-media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to name your files. Please be aware these plugins and scanners `REQUIRE`
+media agents. Please visit [this link](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin#usage) to know how to
+name your files. Please be aware these plugins and scanners `REQUIRE`
 that you have a `yt-dlp` `.info.json` files named exactly as your media file.
 
 For example, if you have `20231030 my awesome youtube video [youtube-RandomString].mkv`you should
@@ -636,11 +682,13 @@ I plan to make `.info.json` optional However at the moment the file is required 
 
 #### Jellyfin Setup
 
-* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
+* Download this plugin [jf-ytdlp-info-reader-plugin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin). Please
+  refer to the link on how to install it.
 
 #### Emby Setup
 
-* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). Please refer to the link on how to install it.
+* Download this plugin [emby-ytdlp-info-reader-plugin](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
+  Please refer to the link on how to install it.
 
 If your media is not matching correctly or not marking it as expected, it's most likely scanners issues as plex and
 jellyfin/emby reports the GUID differently, and we try our best to match them. So, please hop on discord with the
@@ -693,8 +741,10 @@ If everything is working correctly you should see something like this previous j
 
 ### I keep receiving this warning in log `INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
 
-We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see this,
-this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to `3` episodes.
+We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
+this,
+this likely means your backend mis-identified episodes range. By default, we allow an episode to cover up to `3`
+episodes.
 
 If this is not enough for your library content. fear not we have you covered you can increase the limit by running the
 following command:
@@ -786,7 +836,8 @@ ws:/opt/app/public$ ls
 exported   index.php
 ```
 
-There must be exactly one `index.php` file and one `exported` directory. inside that directory, or if you prefer, you can add `WS_WEBUI_PATH` environment variable to point to the `exported` directory.
+There must be exactly one `index.php` file and one `exported` directory. inside that directory, or if you prefer, you
+can add `WS_WEBUI_PATH` environment variable to point to the `exported` directory.
 
 * link the app to the frontend proxy. For caddy, you can use the following configuration.
 
