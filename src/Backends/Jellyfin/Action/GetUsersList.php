@@ -65,7 +65,7 @@ class GetUsersList
      */
     private function getUsers(Context $context, array $opts = []): Response
     {
-        if (true === (bool)ag($context->options, Options::IS_LIMITED_TOKEN, false) && null !== $context->backendUser) {
+        if ($context->isLimitedToken(true) && false === (bool)ag($opts, Options::NO_FALLBACK, false)) {
             $limited = Container::get(GetUser::class)($context);
             if ($limited->isSuccessful()) {
                 return new Response(status: true, response: [$limited->response]);

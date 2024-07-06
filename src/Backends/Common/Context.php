@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
+use App\Libs\Options;
 use Psr\Http\Message\UriInterface;
 
 readonly class Context
@@ -34,5 +35,18 @@ readonly class Context
         public bool $trace = false,
         public array $options = []
     ) {
+    }
+
+    /**
+     * Check if the used token is limited access token.
+     *
+     * @param bool $withUser Include user check.
+     *
+     * @return bool
+     */
+    public function isLimitedToken(bool $withUser = false): bool
+    {
+        $status = true === (bool)ag($this->options, Options::IS_LIMITED_TOKEN, false);
+        return true === $withUser ? $status && null !== $this->backendUser : $status;
     }
 }

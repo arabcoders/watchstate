@@ -9,21 +9,39 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-07-06
+
+We recently added experimental support for jellyfin & emby oauth access tokens, This way you are able to sync your
+play state even if you don't own the server and cant generate API keys.
+
+The support is experimental and might not work as expected, but we are working on improving it. If you have any feedback
+or suggestions, please let us know.
+
+We have also added new `config:test` command to run functional tests on your backends, this will not alter your state,
+And it's quite useful to know if the tool is able to communicate with your backends. without problems, It will report
+the following, `OK` which mean the indicated test has passed, `FA` which mean the indicated test has failed. And `SK`
+which mean the indicated test has been skipped or not yet implemented.
+
 ### 2024-06-23
 
-WE are happy to announce that the `WebUI` is ready for wider usage and we are planning to release it in the next few months.
-We are actively working on it to improve it. If you have any feedback or suggestions, please let us know. We feel it's almost future complete
+WE are happy to announce that the `WebUI` is ready for wider usage and we are planning to release it in the next few
+months.
+We are actively working on it to improve it. If you have any feedback or suggestions, please let us know. We feel it's
+almost future complete
 for the things that we want.
 
 On another related news, we have added new environment variable `WS_API_AUTO` "disabled by default" which can be used
-to automatically expose your **API KEY/TOKEN**. This is useful for users who are using the `WebUI` from many different browsers
+to automatically expose your **API KEY/TOKEN**. This is useful for users who are using the `WebUI` from many different
+browsers
 and want to automate the configuration process.
 
-While the `WebUI` is included in the main project, it's a standalone feature and requires the API settings to be configured before it
+While the `WebUI` is included in the main project, it's a standalone feature and requires the API settings to be
+configured before it
 can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in `${WS_DATA_PATH}/config/.env`.
 
 > [!IMPORTANT]
-> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is exposed to the internet.
+> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is
+> exposed to the internet.
 
 Refer to [NEWS](NEWS.md) for old updates.
 
@@ -88,7 +106,8 @@ $ mkdir -p ./data && docker-compose pull && docker-compose up -d
 
 After starting the container, you can access the WebUI by visiting `http://localhost:8080` in your browser.
 
-At the start you won't see anything as the `WebUI` is decoupled from the WatchState and need to be configured to be able to access the API.
+At the start you won't see anything as the `WebUI` is decoupled from the WatchState and need to be configured to be able
+to access the API.
 In the top right corner, you will see a cogwheel icon, click on it and then Configure the connection settings.
 
 ![Connection settings](screenshots/api_settings.png)
@@ -99,21 +118,27 @@ As shown in the screenshot, to get your `API Token`, run the following command
 $ docker exec -ti watchstate console system:apikey 
 ```
 
-Copy the random string in dark yellow, into the `API Token` field Make sure to set the `API URL` or click the `current page URL` link. If everything is set, then the Status field will turn
+Copy the random string in dark yellow, into the `API Token` field Make sure to set the `API URL` or click
+the `current page URL` link. If everything is set, then the Status field will turn
 green. and `Status: OK` will be shown, and the reset of the navbar will show up. Which hopefully means everything is ok.
 
 To add a backend, click on the `Backends` link in the navbar, then `+` button. as showing in the following screenshot
 
 ![Add backend](screenshots/add_backend.png)
 
-Fill the required information, if you get a green notification, then the backend is added successfully. If you get a red/yellow notification, Then most likely incorrect information was provided.
-You can check the message in the notification itself to know what went wrong. Or check the logs page, Most likely an error has been logged to a file named `app.YYYYMMDD.log`.
+Fill the required information, if you get a green notification, then the backend is added successfully. If you get a
+red/yellow notification, Then most likely incorrect information was provided.
+You can check the message in the notification itself to know what went wrong. Or check the logs page, Most likely an
+error has been logged to a file named `app.YYYYMMDD.log`.
 
-If everything went ok, you should see the backend shows up in the same page. You can then go to the Tasks page and click on `Qeueu Task`, for first time import we recommand letting
+If everything went ok, you should see the backend shows up in the same page. You can then go to the Tasks page and click
+on `Qeueu Task`, for first time import we recommand letting
 the task run in the background, as it might take a while to import all the data.
 
-Once you have done all for your backends, You should go back again to `Tasks` page and enable the `Import` and `Export` tasks. This will make sure your data is always in sync.
-To enable/disable the task, simply click on the slider next to the task name if it's green then it's enabled, if it's gray then it's disabled.
+Once you have done all for your backends, You should go back again to `Tasks` page and enable the `Import` and `Export`
+tasks. This will make sure your data is always in sync.
+To enable/disable the task, simply click on the slider next to the task name if it's green then it's enabled, if it's
+gray then it's disabled.
 
 Once that is done, you can let the tool do its job, and you can start using the tool to track your play state.
 
@@ -124,8 +149,10 @@ Once that is done, you can let the tool do its job, and you can start using the 
 After starting the container you should start adding your backends and to do so run the following command:
 
 > [!NOTE]
-> to get your plex token, please visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to
-> know how to extract your plex token. For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api keys.
+> to get your plex token, please
+> visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to
+> know how to extract your plex token. For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api
+> keys.
 
 ```bash
 $ docker exec -ti watchstate console config:add
@@ -217,12 +244,14 @@ support and answers to many questions.
 
 # Social channels
 
-If you have short or quick questions, or just want to chat with other users, feel free to join my [discord server](https://discord.gg/haUXHJyj6Y).
+If you have short or quick questions, or just want to chat with other users, feel free to join
+my [discord server](https://discord.gg/haUXHJyj6Y).
 keep in mind it's solo project, as such it might take me a bit of time to reply to questions.
 
 ---
 
 # Donate
 
-If you feel like donating and appreciate my work, you can do so by donating to children charity. For example [Make-A-Wish](https://worldwish.org).
+If you feel like donating and appreciate my work, you can do so by donating to children charity. For
+example [Make-A-Wish](https://worldwish.org).
 I Personally don't need the money, but I do appreciate the gesture.

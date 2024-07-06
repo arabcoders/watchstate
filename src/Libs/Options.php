@@ -34,6 +34,7 @@ final class Options
     public const string PLEX_USE_OLD_PROGRESS_ENDPOINT = 'use_old_progress_endpoint';
     public const string IS_LIMITED_TOKEN = 'is_limited_token';
     public const string TO_ENTITY = 'TO_ENTITY';
+    public const string NO_FALLBACK = 'NO_FALLBACK';
 
     private function __construct()
     {
