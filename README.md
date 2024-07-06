@@ -19,7 +19,7 @@ implementation. We're actively working on making it better, If you have any feed
 Getting your OAuth token is easy. When prompted, simply enter your `username:password` in place of the API key through
 the `WebUI` or the `config:add/manage` command. `WatchState` will automatically contact the backend and generate the
 token for you, as this step is required to get more information like your `User ID` which is sadly inaccessible without
-us generating the token. Both Emby & Jellyfin doesn't provide an api to inquire about the current user.
+us generating the token. Both Emby & Jellyfin doesn't provide an API endpoint to inquiry about the current user.
 
 We have also added new `config:test` command to run functional tests on your backends, this will not alter your state,
 And it's quite useful to know if the tool is able to communicate with your backends. without problems, It will report
