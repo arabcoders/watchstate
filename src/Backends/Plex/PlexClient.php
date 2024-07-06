@@ -761,6 +761,14 @@ class PlexClient implements iClient
     }
 
     /**
+     * @inheritdoc
+     */
+    public function getGuid(): iGuid
+    {
+        return $this->guid;
+    }
+
+    /**
      * Throws an exception with the specified message and previous exception.
      *
      * @template T

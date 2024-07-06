@@ -306,4 +306,10 @@ interface ClientInterface
      */
     public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array;
 
+    /**
+     * Get The client specific Guid parser.
+     *
+     * @return GuidInterface
+     */
+    public function getGuid(): GuidInterface;
 }

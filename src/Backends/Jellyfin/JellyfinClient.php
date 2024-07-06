@@ -656,6 +656,14 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
+    public function getGuid(): iGuid
+    {
+        return $this->guid;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public static function manage(array $backend, array $opts = []): array
     {
         return Container::get(JellyfinManage::class)->manage(backend: $backend, opts: $opts);

@@ -10,6 +10,7 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexClient;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use DateInterval;
@@ -112,6 +113,12 @@ final class GetLibrariesList
                 ])
             );
 
+            $contentType = match ($type) {
+                PlexClient::TYPE_SHOW => iState::TYPE_SHOW,
+                PlexClient::TYPE_MOVIE => iState::TYPE_MOVIE,
+                default => 'Unknown',
+            };
+
             $builder = [
                 'id' => $key,
                 'title' => ag($section, 'title', '???'),
@@ -120,6 +127,7 @@ final class GetLibrariesList
                 'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
                 'agent' => ag($section, 'agent'),
                 'scanner' => ag($section, 'scanner'),
+                'contentType' => $contentType,
                 'webUrl' => (string)$webUrl,
             ];
 

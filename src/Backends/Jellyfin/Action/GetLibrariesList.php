@@ -9,7 +9,8 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
-use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Jellyfin\JellyfinClient as JFC;
+use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use DateInterval;
@@ -112,7 +113,7 @@ class GetLibrariesList
             $key = (string)ag($section, 'Id');
             $type = ag($section, 'CollectionType', 'unknown');
 
-            if (JellyfinClient::CLIENT_NAME === $context->clientName) {
+            if (JFC::CLIENT_NAME === $context->clientName) {
                 $fragment = '/tv.html?topParentId={id}&serverId={backend_id}';
             } else {
                 $fragment = '!/tv?serverId={backend_id}&parentId={id}';
@@ -123,15 +124,19 @@ class GetLibrariesList
                 'id' => $key,
             ]));
 
+            $contentType = match ($type) {
+                JFC::COLLECTION_TYPE_SHOWS => iState::TYPE_SHOW,
+                JFC::COLLECTION_TYPE_MOVIES => iState::TYPE_MOVIE,
+                default => 'Unknown',
+            };
+
             $builder = [
                 'id' => $key,
                 'title' => ag($section, 'Name', '???'),
                 'type' => ucfirst($type),
                 'ignored' => null !== $ignoreIds && in_array($key, $ignoreIds),
-                'supported' => in_array(
-                    $type,
-                    [JellyfinClient::COLLECTION_TYPE_MOVIES, JellyfinClient::COLLECTION_TYPE_SHOWS]
-                ),
+                'supported' => in_array($contentType, [iState::TYPE_SHOW, iState::TYPE_MOVIE]),
+                'contentType' => $contentType,
                 'webUrl' => (string)$webUrl,
             ];
 
