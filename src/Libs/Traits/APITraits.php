@@ -129,6 +129,10 @@ trait APITraits
             $options[Options::ADMIN_TOKEN] = $data->get('options.' . Options::ADMIN_TOKEN);
         }
 
+        if (null !== $data->get('options.' . Options::IS_LIMITED_TOKEN)) {
+            $options[Options::IS_LIMITED_TOKEN] = (bool)$data->get('options.' . Options::IS_LIMITED_TOKEN, false);
+        }
+
         $instance = Container::getNew($class);
         assert($instance instanceof ClientInterface, new InvalidArgumentException('Invalid client class.'));
         return $instance->withContext(

@@ -24,14 +24,15 @@ final class Users
             return api_error('Invalid value for type path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
+        $params = DataUtil::fromRequest($request, true);
+
         try {
-            $client = $this->getBasicClient($type, DataUtil::fromRequest($request, true));
+            $client = $this->getBasicClient($type, $params);
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
         }
 
         $users = $opts = [];
-        $params = DataUtil::fromRequest($request, true);
 
         if (true === (bool)$params->get('tokens', false)) {
             $opts['tokens'] = true;

@@ -87,6 +87,7 @@ class GetLibrariesListTest extends TestCase
                 'supported' => $supportedType && true === in_array($agent, PlexClient::SUPPORTED_AGENTS),
                 'agent' => $agent,
                 'scanner' => ag($item, 'scanner'),
+                'contentType' => strtolower($type),
                 'webUrl' => (string)$webUrl,
             ];
         }

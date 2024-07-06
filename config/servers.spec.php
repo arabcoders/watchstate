@@ -167,5 +167,11 @@ return [
         'visible' => false,
         'description' => 'Whether to use the old progress endpoint for plex progress sync.',
     ],
+    [
+        'key' => 'options.is_limited_token',
+        'type' => 'bool',
+        'visible' => false,
+        'description' => 'Whether the token has limited access.',
+    ],
 ];
 

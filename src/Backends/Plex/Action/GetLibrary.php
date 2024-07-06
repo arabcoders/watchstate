@@ -110,6 +110,15 @@ final class GetLibrary
             );
         }
 
+        $extraHeaders = [
+            'headers' => [],
+        ];
+
+        if (null !== ($limit = ag($opts, Options::LIMIT_RESULTS))) {
+            $extraHeaders['headers']['X-Plex-Container-Start'] = 0;
+            $extraHeaders['headers']['X-Plex-Container-Size'] = (int)$limit;
+        }
+
         $url = $context->backendUrl
             ->withPath(r('/library/sections/{library_id}/all', ['library_id' => $id]))
             ->withQuery(
@@ -126,7 +135,11 @@ final class GetLibrary
             ...$logContext,
         ]);
 
-        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
+        $response = $this->http->request(
+            'GET',
+            (string)$url,
+            array_replace_recursive($context->backendHeaders, $extraHeaders)
+        );
 
         if (200 !== $response->getStatusCode()) {
             return new Response(

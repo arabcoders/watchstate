@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Backends\Jellyfin;
 
 use App\Backends\Common\Context;
-use App\Backends\Jellyfin\Action\GetUsersList;
+use App\Backends\Jellyfin\Action\GetUser;
 use App\Libs\Container;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\HTTP_STATUS;
@@ -45,29 +45,18 @@ class JellyfinValidateContext
             );
         }
 
-        $action = Container::get(GetUsersList::class)($context);
+        $action = Container::get(GetUser::class)($context);
         if ($action->hasError()) {
             throw new InvalidContextException(r('Failed to get user info. {error}', [
                 'error' => $action->error->format()
             ]));
         }
 
-        $found = false;
-        $list = [];
-
-        foreach ($action->response as $user) {
-            $list[ag($user, 'name')] = ag($user, 'id');
-            if ((string)ag($user, 'id') === (string)$context->backendUser) {
-                $found = true;
-                break;
-            }
-        }
-
-        if (false === $found) {
+        if (ag($action->response, 'id') !== $context->backendUser) {
             throw new InvalidContextException(
-                r("User id '{uid}' was not found in list of users. '{user_list}'.", [
+                r("Expected user id to be '{uid}' but the server responded with '{remote_id}'.", [
                     'uid' => $context->backendUser,
-                    'user_list' => arrayToString($list),
+                    'remote_id' => ag($action->response, 'id'),
                 ])
             );
         }

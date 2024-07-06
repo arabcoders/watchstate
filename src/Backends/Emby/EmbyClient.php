@@ -11,6 +11,7 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Response;
 use App\Backends\Emby\Action\Backup;
 use App\Backends\Emby\Action\Export;
+use App\Backends\Emby\Action\GenerateAccessToken;
 use App\Backends\Emby\Action\GetIdentifier;
 use App\Backends\Emby\Action\GetInfo;
 use App\Backends\Emby\Action\GetLibrariesList;
@@ -128,7 +129,7 @@ class EmbyClient implements iClient
                             'token' => $context->backendToken,
                             'app' => Config::get('name') . '/' . static::CLIENT_NAME,
                             'os' => PHP_OS,
-                            'id' => md5(Config::get('name') . '/' . static::CLIENT_NAME . $context->backendUser),
+                            'id' => md5(Config::get('name') . '/' . static::CLIENT_NAME),
                             'version' => getAppVersion(),
                             'user' => $context->backendUser,
                         ]
@@ -599,9 +600,40 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
+    public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array
+    {
+        $response = Container::get(GenerateAccessToken::class)(
+            context: $this->context,
+            identifier: $identifier,
+            password: $password,
+            opts: $opts
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        return $response->response;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public static function manage(array $backend, array $opts = []): array
     {
         return Container::get(EmbyManage::class)->manage(backend: $backend, opts: $opts);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getGuid(): iGuid
+    {
+        return $this->guid;
     }
 
     /**

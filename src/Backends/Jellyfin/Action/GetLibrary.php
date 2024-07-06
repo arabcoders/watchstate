@@ -126,6 +126,12 @@ class GetLibrary
             );
         }
 
+        $extraQueryParams = [];
+
+        if (null !== ($limit = ag($opts, Options::LIMIT_RESULTS))) {
+            $extraQueryParams['Limit'] = (int)$limit;
+        }
+
         $url = $context->backendUrl->withPath(
             r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
         )->withQuery(
@@ -135,7 +141,8 @@ class GetLibrary
                 'enableImages' => 'false',
                 'excludeLocationTypes' => 'Virtual',
                 'include' => implode(',', [JellyfinClient::TYPE_SHOW, JellyfinClient::TYPE_MOVIE]),
-                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS)
+                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                ...$extraQueryParams,
             ])
         );
 

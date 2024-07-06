@@ -97,7 +97,11 @@
                               v-text="'Visit This article for more information.'"/>
                   </template>
                   <template v-else>
-                    Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.
+                    Generate a new API Key from <code>Dashboard > Settings > API Keys</code>.<br>
+                    <span class="icon has-text-warning"><i class="fas fa-info-circle"></i></span>
+                    You can use <code>username:password</code> as API key and we will automatically generate limited
+                    token if you are unable to generate API Key. This should be used as last resort. and it's mostly
+                    untested. and things might not work as expected.
                   </template>
                 </p>
               </div>
@@ -121,7 +125,7 @@
             <label class="label">Plex Server URL</label>
             <div class="control has-icons-left">
               <div class="select is-fullwidth">
-                <select v-model="backend.url" class="is-capital" @change="stage=1; backend.uuid = ''" required
+                <select v-model="backend.url" class="is-capital" @change="stage=1; updateIdentifier()" required
                         :disabled="stage > 1">
                   <option value="" disabled>Select Server URL</option>
                   <option v-for="server in servers" :key="'server-'+server.uuid" :value="server.uri">
@@ -149,13 +153,13 @@
           </div>
         </template>
 
-        <div class="field" v-if="stage >= 2">
+        <div class="field" v-if="stage >= 3">
           <label class="label">
             Associated User
           </label>
           <div class="control has-icons-left">
             <div class="select is-fullwidth">
-              <select v-model="backend.user" class="is-capitalized" :disabled="stage > 2">
+              <select v-model="backend.user" class="is-capitalized" :disabled="stage > 3">
                 <option value="" disabled>Select User</option>
                 <option v-for="user in users" :key="'uid-'+user.id" :value="user.id">
                   {{ user.name }}
@@ -168,12 +172,12 @@
             </div>
             <p class="help">
               Which user we should associate this backend with?
-              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 3"/>
+              <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4"/>
             </p>
           </div>
         </div>
 
-        <template v-if="stage >= 3">
+        <template v-if="stage >= 4">
           <div class="field" v-if="backend.import">
             <label class="label" for="backend_import">Import data from this backend</label>
             <div class="control">
@@ -237,7 +241,7 @@
       </div>
 
       <div class="card-footer">
-        <div class="card-footer-item" v-if="stage < 4">
+        <div class="card-footer-item" v-if="stage < 5">
           <button class="button is-fullwidth is-primary" type="submit" @click="changeStep()">
             <span class="icon">
               <i class="fas fa-arrow-right"></i>
@@ -259,7 +263,7 @@
 <script setup>
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
-import {awaitElement, notification} from '~/utils/index'
+import {awaitElement, explode, notification} from '~/utils/index'
 
 const emit = defineEmits(['addBackend'])
 
@@ -302,8 +306,15 @@ const serversLoading = ref(false)
 const exposeToken = ref(false)
 const error = ref()
 
+const isLimited = ref(false)
+const accessTokenResponse = ref({})
+
 const getUUid = async () => {
   const required_values = ['type', 'token', 'url'];
+
+  if (true === isLimited.value || Object.keys(accessTokenResponse.value) > 0) {
+    return
+  }
 
   if (required_values.some(v => !backend.value[v])) {
     notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
@@ -313,14 +324,19 @@ const getUUid = async () => {
   try {
     error.value = null
     uuidLoading.value = true
+    let data = {
+      name: backend.value?.name,
+      token: backend.value.token,
+      url: backend.value.url
+    }
+
+    if (backend.value.user) {
+      data.user = backend.value.user
+    }
 
     const response = await request(`/backends/uuid/${backend.value.type}`, {
       method: 'POST',
-      body: JSON.stringify({
-        name: backend.value?.name,
-        token: backend.value.token,
-        url: backend.value.url
-      })
+      body: JSON.stringify(data)
     })
 
     const json = await response.json()
@@ -331,10 +347,67 @@ const getUUid = async () => {
     }
 
     backend.value.uuid = json.identifier
+
+    return backend.value.uuid
   } catch (e) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
     uuidLoading.value = false
+  }
+}
+
+const getAccessToken = async () => {
+  const required_values = ['type', 'token', 'url'];
+
+  if (required_values.some(v => !backend.value[v])) {
+    notification('error', 'Error', `Please fill all the required fields. ${required_values.join(', ')}.`)
+    return
+  }
+
+  if (Object.keys(accessTokenResponse.value) > 0) {
+    return
+  }
+
+  const [username, password] = explode(':', backend.value.token, 2)
+
+  if (!username || !password) {
+    return
+  }
+
+  try {
+    error.value = null
+
+    const response = await request(`/backends/accesstoken/${backend.value.type}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: backend.value?.name,
+        url: backend.value.url,
+        username: username,
+        password: password,
+      })
+    })
+
+    const json = await response.json()
+
+    if (200 !== response.status) {
+      n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`)
+      return
+    }
+
+    accessTokenResponse.value = json
+    backend.value.token = json?.accesstoken
+    backend.value.user = json?.user
+    backend.value.uuid = json?.identifier
+    users.value = [{
+      id: json?.user,
+      name: username
+    }]
+
+    isLimited.value = true
+    return true
+  } catch (e) {
+    n_proxy('error', 'Error', `Request error. ${e.message}`, e)
+    return false
   }
 }
 
@@ -378,6 +451,8 @@ const getUsers = async (showAlert = true) => {
     }
 
     users.value = json
+
+    return users.value
   } catch (e) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {
@@ -391,12 +466,14 @@ onMounted(async () => {
   backend.value.type = supported.value[0]
 })
 
+watch(stage, v => {
+  console.log(v);
+}, {immediate: true})
+
 const changeStep = async () => {
-  console.log('was called');
-  stage.value = 0
+  let _
 
-  if (stage.value >= 0) {
-
+  if (stage.value <= 0) {
     // -- basic validation.
     const required = ['name', 'type', 'token']
     if (required.some(v => !backend.value[v])) {
@@ -414,13 +491,11 @@ const changeStep = async () => {
     }
 
     stage.value = 1
-    console.log('stage 1')
-
   }
 
-  if (stage.value >= 1) {
+  if (stage.value <= 1) {
     if ('plex' === backend.value.type && servers.value.length < 1) {
-      await getServers()
+      _ = await getServers()
       if (servers.value.length < 1) {
         stage.value = 0
         return
@@ -431,21 +506,36 @@ const changeStep = async () => {
       return
     }
 
+    if (false === isLimited.value && backend.value.token.includes(':')) {
+      _ = await getAccessToken()
+      if (!accessTokenResponse.value) {
+        stage.value = 0
+        return
+      }
+    }
+
+    if (backend.value.token.includes(':')) {
+      return
+    }
+
+    stage.value = 2
+  }
+
+  if (stage.value <= 2) {
     if (!backend.value.uuid) {
-      await getUUid();
+      _ = await getUUid();
       if (!backend.value.uuid) {
         stage.value = 1
         return
       }
     }
 
-    stage.value = 2
-    console.log('stage 2')
+    stage.value = 3
   }
 
-  if (stage.value >= 2) {
-    if (users.value.length < 1) {
-      await getUsers()
+  if (stage.value <= 3) {
+    if (false === isLimited.value && users.value.length < 1) {
+      _ = await getUsers()
       if (users.value.length < 1) {
         stage.value = 1
         return
@@ -456,13 +546,11 @@ const changeStep = async () => {
       return
     }
 
-    stage.value = 3
-    console.log('stage 3')
+    stage.value = 4
   }
 
-  if (stage.value >= 3) {
-    stage.value = 4
-    console.log('stage 4')
+  if (stage.value <= 4) {
+    stage.value = 5
   }
 }
 
@@ -484,6 +572,10 @@ const addBackend = async () => {
       backend.value.options.ADMIN_TOKEN = backend.value.token;
       backend.value.token = token
     }
+  }
+
+  if (isLimited.value) {
+    backend.value.options.is_limited_token = true
   }
 
   const response = await request(`/backends/`, {
@@ -538,6 +630,8 @@ const getServers = async () => {
     }
 
     servers.value = json
+
+    return servers.value
   } catch (e) {
     n_proxy('error', 'Error', `Request error. ${e.message}`, e)
   } finally {

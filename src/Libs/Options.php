@@ -32,7 +32,11 @@ final class Options
     public const string MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';
     public const string IGNORE = 'ignore';
     public const string PLEX_USE_OLD_PROGRESS_ENDPOINT = 'use_old_progress_endpoint';
+    public const string IS_LIMITED_TOKEN = 'is_limited_token';
     public const string TO_ENTITY = 'TO_ENTITY';
+    public const string NO_FALLBACK = 'NO_FALLBACK';
+    public const string LIMIT_RESULTS = 'LIMIT_RESULTS';
+    public const string NO_CHECK = 'NO_CHECK';
 
     private function __construct()
     {

@@ -60,10 +60,13 @@ class JellyfinManage implements ManageInterface
             $chosen = ag($backend, 'token');
 
             $question = new Question(
-                r('<question>Enter [<value>{name}</value>] API token</question>. {default}' . PHP_EOL . '> ', [
-                    'name' => ag($backend, 'name'),
-                    'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
-                ]),
+                r(
+                    '<question>Enter [<value>{name}</value>] API key or "username:password" for oauth token generation</question>. {default}' . PHP_EOL . '> ',
+                    [
+                        'name' => ag($backend, 'name'),
+                        'default' => null !== $chosen ? "<value>[Default: {$chosen}]</value>" : '',
+                    ]
+                ),
                 $chosen
             );
 
@@ -86,7 +89,47 @@ class JellyfinManage implements ManageInterface
             });
 
             $token = $this->questionHelper->ask($this->input, $this->output, $question);
-            $backend = ag_set($backend, 'token', $token);
+
+            if (true === str_contains($token, ':')) {
+                [$username, $password] = explode(':', $token, 2);
+                if (empty($username) || empty($password)) {
+                    $this->output->writeln('<error>Invalid username or password was given.</error>');
+                    goto re_goto_token;
+                }
+
+                // we are probably dealing with a username:password, try to generate oAuth token.
+                $this->output->writeln(
+                    '<info>Attempting to generate oAuth token from username and password. Please wait...</info>'
+                );
+
+                $backend = ag_set($backend, 'token', 'oauth_token');
+
+                try {
+                    $accessToken = makeBackend($backend)->generateAccessToken($username, $password);
+                } catch (Throwable $e) {
+                    $this->output->writeln('<error>Failed to generate oAuth token from username and password.</error>');
+                    $this->output->writeln(
+                        sprintf(
+                            '<error>ERROR - %s: %s.</error>' . PHP_EOL,
+                            afterLast(get_class($e), '\\'),
+                            $e->getMessage()
+                        )
+                    );
+                    $backend = ag_set($backend, 'token', null);
+                    goto re_goto_token;
+                }
+
+                $backend = ag_set($backend, 'token', ag($accessToken, 'accesstoken'));
+                $backend = ag_set($backend, 'user', ag($accessToken, 'user'));
+                $backend = ag_set($backend, 'uuid', ag($accessToken, 'identifier'));
+                $backend = ag_set($backend, 'options.' . Options::IS_LIMITED_TOKEN, true);
+            } else {
+                $backend = ag_set($backend, 'token', $token);
+            }
+
+            if (true === (bool)ag($backend, 'options.' . Options::IS_LIMITED_TOKEN, false)) {
+                return;
+            }
 
             $this->output->writeln('');
 
@@ -124,6 +167,8 @@ class JellyfinManage implements ManageInterface
                         ]
                     )
                 );
+                $backend = ag_set($backend, 'uuid', $chosen);
+                return;
             } catch (Throwable $e) {
                 $this->output->writeln('<error>Failed to get the backend unique identifier.</error>');
                 $this->output->writeln(r('<error>ERROR - {kind}: {message}.</error>' . PHP_EOL, [
@@ -135,66 +180,6 @@ class JellyfinManage implements ManageInterface
 
                 goto re_goto_token;
             }
-
-            $question = new Question(
-                r(
-                    <<<HELP
-                    <question>Enter [<value>{name}</value>] Unique identifier</question>. {default}
-                    ------------------
-                    The Server Unique identifier is randomly generated string on server setup.
-                    ------------------
-                    <notice>If you select invalid or give incorrect server unique identifier, Some checks will
-                    fail And you may not be able to sync your backend.</notice>
-                    ------------------
-                    <error>DO NOT CHANGE the default value unless you know what you are doing, or was told by devs.</error>
-                    HELP. PHP_EOL . '> ',
-                    [
-                        'name' => ag($backend, 'name'),
-                        'default' => "<value>[Default: {$chosen}]</value>",
-                    ]
-                ),
-                $chosen
-            );
-
-            $question->setValidator(function ($answer) use ($custom) {
-                if (empty($answer)) {
-                    throw new RuntimeException('Backend unique identifier cannot be empty.');
-                }
-
-                if (!is_string($answer) && !is_int($answer)) {
-                    throw new RuntimeException(
-                        r(
-                            "Backend unique identifier is invalid. Expecting string or integer, but got '{type}' instead.",
-                            [
-                                'type' => get_debug_type($answer)
-                            ]
-                        )
-                    );
-                }
-
-                $backendUUid = makeBackend($custom, ag($custom, 'name'))->getIdentifier(true);
-
-                if ('auto' === $answer && !empty($backendUUid)) {
-                    return $backendUUid;
-                }
-
-                if ($answer !== $backendUUid) {
-                    throw new RuntimeException(
-                        r(
-                            'Invalid backend unique identifier was given. Expecting "{uuid}", but got "{answer}" instead.',
-                            [
-                                'uuid' => $backendUUid,
-                                'answer' => $answer
-                            ]
-                        )
-                    );
-                }
-
-                return $answer;
-            });
-
-            $uuid = $this->questionHelper->ask($this->input, $this->output, $question);
-            $backend = ag_set($backend, 'uuid', $uuid);
         })();
 
         $this->output->writeln('');

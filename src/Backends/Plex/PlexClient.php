@@ -632,6 +632,14 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
+    public function generateAccessToken(string|int $identifier, string $password, array $opts = []): array
+    {
+        return [];
+    }
+
+    /**
+     * @inheritdoc
+     */
     public static function manage(array $backend, array $opts = []): array
     {
         return Container::get(PlexManage::class)->manage(backend: $backend, opts: $opts);
@@ -750,6 +758,14 @@ class PlexClient implements iClient
         }
 
         return $list;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getGuid(): iGuid
+    {
+        return $this->guid;
     }
 
     /**

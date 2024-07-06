@@ -23,7 +23,7 @@ use Symfony\Component\Console\Question\Question;
 #[Cli(command: self::ROUTE)]
 final class AddCommand extends Command
 {
-    public const ROUTE = 'config:add';
+    public const string ROUTE = 'config:add';
 
     /**
      * Configures the command.
