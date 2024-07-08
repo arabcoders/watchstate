@@ -33,6 +33,7 @@ final class Index
         $response = [
             'tasks' => [],
             'queued' => $queuedTasks,
+            'status' => isTaskWorkerRunning(),
         ];
 
         foreach (TasksCommand::getTasks() as $task) {

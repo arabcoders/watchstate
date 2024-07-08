@@ -302,15 +302,17 @@ const copyText = (str, showNotification = true) => {
     notification('success', 'Success', 'Text copied to clipboard.')
 }
 
-const makeConsoleCommand = (cmd) => {
+const makeConsoleCommand = (cmd, run = false) => {
     const params = new URLSearchParams();
+    if (run) {
+        params.append('run', 'true');
+    }
     // -- base64 encode the command to prevent XSS
     params.append('cmd', btoa(cmd));
     return `/console?${params.toString()}`
 }
 
 const stringToRegex = (str) => new RegExp(str.match(/\/(.+)\/.*/)[1], str.match(/\/.+\/(.*)/)[1])
-
 
 /**
  * Make history search link.

@@ -1592,3 +1592,46 @@ if (!function_exists('loadEnvFile')) {
         }
     }
 }
+
+
+if (!function_exists('isTaskWorkerRunning')) {
+    /**
+     * Check if the task worker is running. This function is only available when running in a container.
+     *
+     * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
+     *
+     * @return array{ status: bool, message: string }
+     */
+    function isTaskWorkerRunning(bool $ignoreContainer = false): array
+    {
+        if (false === $ignoreContainer && !inContainer()) {
+            return [
+                'status' => true,
+                'message' => 'We can only track the task worker status when running in a container.'
+            ];
+        }
+
+        $pidFile = '/tmp/ws-job-runner.pid';
+
+        if (!file_exists($pidFile)) {
+            return ['status' => false, 'message' => 'No PID file was found - Likely means task worker failed to run.'];
+        }
+
+        try {
+            $pid = trim((string)(new Stream($pidFile)));
+        } catch (Throwable $e) {
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+
+        if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
+            return ['status' => true, 'message' => 'Task worker is running.'];
+        }
+
+        return [
+            'status' => false,
+            'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", [
+                'pid' => $pid
+            ])
+        ];
+    }
+}

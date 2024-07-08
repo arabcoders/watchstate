@@ -371,7 +371,7 @@ final class MemoryMapper implements iImport
             $this->logger->warning(
                 "MAPPER: Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
-                    'id' => $entity->id ?? '',
+                    'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, ''),
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
                     'data' => $entity->getAll(),
