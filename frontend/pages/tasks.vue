@@ -8,6 +8,13 @@
       <div class="is-pulled-right">
         <div class="field is-grouped">
           <p class="control">
+            <button class="button has-text-dark" @click="show_worker_status=!show_worker_status" :disabled="isLoading"
+                    :class="{'has-background-success-90':status?.status, 'has-background-warning-90': !status?.status}"
+                    v-tooltip.bottom="'Toggle worker status'">
+              <span class="icon"><i :class="`fas fa-microchip`"></i></span>
+            </button>
+          </p>
+          <p class="control">
             <button class="button is-info" @click="loadContent()" :disabled="isLoading"
                     :class="{'is-loading':isLoading}">
               <span class="icon"><i class="fas fa-sync"></i></span>
@@ -41,6 +48,20 @@
     <div class="column is-12" v-if="isLoading">
       <Message message_class="has-background-info-90 has-text-dark" title="Loading"
                icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+    </div>
+
+    <div class="column is-12" v-if="status && (show_worker_status || !status.status)">
+      <Message
+          class="is-2"
+          :message_class="`has-text-dark ${status.status ? 'has-background-success-90' : 'has-background-warning-90'}`"
+          :title="`Task runner process is ${status.status ? 'active' : 'not active'}`"
+          :icon="`fas fa-${status.status ? 'pause' : 'exclamation-circle'}`">
+        {{ status.message }}
+        <p v-if="!status.status">
+          <span class="icon"><i class="fas fa-info-circle"></i></span>
+          To restart the task runner, you have to restart the container.
+        </p>
+      </Message>
     </div>
 
     <div v-for="task in tasks" :key="task.name" class="column is-6-tablet is-12-mobile">
@@ -168,8 +189,10 @@ useHead({title: 'Tasks'})
 
 const tasks = ref([])
 const queued = ref([])
+const status = ref({})
 const isLoading = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const show_worker_status = useStorage('show_worker_status', false)
 
 const loadContent = async () => {
   isLoading.value = true
@@ -179,6 +202,7 @@ const loadContent = async () => {
     const json = await response.json()
     tasks.value = json.tasks
     queued.value = json.queued
+    status.value = json.status
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
   } finally {

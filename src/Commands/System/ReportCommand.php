@@ -13,7 +13,6 @@ use App\Libs\Entity\StateEntity;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
-use App\Libs\Stream;
 use Cron\CronExpression;
 use LimitIterator;
 use RuntimeException;
@@ -90,7 +89,6 @@ final class ReportCommand extends Command
         $output->writeln(r('WatchState version: <flag>{answer}</flag>', ['answer' => getAppVersion()]));
         $output->writeln(r('PHP version: <flag>{answer}</flag>', ['answer' => PHP_VERSION]));
         $output->writeln(r('Timezone: <flag>{answer}</flag>', ['answer' => Config::get('tz', 'UTC')]));
-        $output->writeln(r('Running in container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
         $output->writeln(r('Data path: <flag>{answer}</flag>', ['answer' => Config::get('path')]));
         $output->writeln(r('Temp path: <flag>{answer}</flag>', ['answer' => Config::get('tmpDir')]));
         $output->writeln(
@@ -102,32 +100,19 @@ final class ReportCommand extends Command
             ])
         );
 
-        if (inContainer()) {
-            $output->writeln(
-                r('Is the tasks runner working? <flag>{answer}</flag>', [
-                    'answer' => (function () {
-                        $pidFile = '/tmp/job-runner.pid';
-                        if (!file_exists($pidFile)) {
-                            return 'No PID file was found - Likely means job-runner failed to run.';
-                        }
-
-                        try {
-                            $pid = trim((string)(new Stream($pidFile)));
-                        } catch (Throwable $e) {
-                            return $e->getMessage();
-                        }
-
-                        if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
-                            return 'Yes';
-                        }
-
-                        return r('No. Found PID ({pid}) in file, but it seems the process crashed.', [
-                            'pid' => $pid
-                        ]);
-                    })(),
-                ])
-            );
-        }
+        $output->writeln(
+            r('Is the tasks runner working? <flag>{answer}</flag>', [
+                'answer' => (function () {
+                    $info = isTaskWorkerRunning(true);
+                    return r("{status} '{container}' - {message}", [
+                        'status' => $info['status'] ? 'Yes' : 'No',
+                        'message' => $info['message'],
+                        'container' => inContainer() ? 'Container' : 'Unknown',
+                    ]);
+                })(),
+            ])
+        );
+        $output->writeln(r('Running in container? <flag>{answer}</flag>', ['answer' => inContainer() ? 'Yes' : 'No']));
 
         $output->writeln(r('Report generated at: <flag>{answer}</flag>', ['answer' => gmdate(Date::ATOM)]));
 
