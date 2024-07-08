@@ -105,30 +105,22 @@
 </template>
 
 <script setup>
-
 import {useStorage} from '@vueuse/core'
-import {notification} from '~/utils/index.js'
-import Message from '~/components/Message.vue'
-
-const route = useRoute()
-
-const fromTask = route.query.task || '';
-let fromCommand = route.query.cmd || '';
-if (fromCommand) {
-  // -- decode base64
-  fromCommand = atob(fromCommand);
-}
+import {notification} from '~/utils/index'
+import Message from '~/components/Message'
 
 useHead({title: `Console`})
 
-let sse;
+const route = useRoute()
+const fromCommand = route.query.cmd || false ? atob(route.query.cmd) : ''
 
-const response = ref([]);
-const command = ref(fromCommand);
-const isLoading = ref(false);
-const outputConsole = ref();
-const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'));
-const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/));
+let sse
+const response = ref([])
+const command = ref(fromCommand)
+const isLoading = ref(false)
+const outputConsole = ref()
+const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
+const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/))
 const show_page_tips = useStorage('show_page_tips', true)
 
 const RunCommand = async () => {
@@ -153,60 +145,47 @@ const RunCommand = async () => {
 
   response.value = []
 
-  const searchParams = new URLSearchParams();
-  searchParams.append('apikey', api_token.value);
-  searchParams.append('json', btoa(JSON.stringify({command: userCommand})));
+  const searchParams = new URLSearchParams()
+  searchParams.append('apikey', api_token.value)
+  searchParams.append('json', btoa(JSON.stringify({command: userCommand})))
 
+  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/?${searchParams.toString()}`)
 
-  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/?${searchParams.toString()}`);
-
-  isLoading.value = true;
+  isLoading.value = true
 
   sse.addEventListener('data', async e => {
-    let lines = e.data.split(/\n/g);
+    let lines = e.data.split(/\n/g)
     for (let x = 0; x < lines.length; x++) {
-      response.value.push(lines[x]);
+      response.value.push(lines[x])
     }
-  });
+  })
 
-  sse.addEventListener('close', () => finished());
-  sse.onclose = () => finished();
-  sse.onerror = () => finished();
+  sse.addEventListener('close', () => finished())
+  sse.onclose = () => finished()
+  sse.onerror = () => finished()
 }
 
 const finished = () => {
   if (sse) {
-    sse.close();
+    sse.close()
   }
 
-  isLoading.value = false;
+  isLoading.value = false
 
-  const route = useRoute();
-  const router = useRouter();
+  const route = useRoute()
 
-  if (route.query?.cmd || route.query?.task) {
-    route.query.cmd = '';
-    route.query.task = '';
-    router.push({path: '/console'});
+  if (route.query?.cmd || route.query?.run) {
+    route.query.cmd = ''
+    route.query.run = ''
+    useRouter().push({path: '/console'})
   }
 }
 
-onUpdated(() => outputConsole.value.scrollTop = outputConsole.value.scrollHeight);
+onUpdated(() => outputConsole.value.scrollTop = outputConsole.value.scrollHeight)
 
 onMounted(async () => {
-  if (!fromTask && '' === command.value) {
-    await RunCommand();
-    return
+  if (Boolean(route.query?.run ?? '0') || '' === command.value) {
+    await RunCommand()
   }
-
-  if (!fromTask) {
-    return
-  }
-
-  const response = await request(`/tasks/${fromTask}`);
-  const json = await response.json();
-  command.value = `${json.command} ${json.args || ''}`;
-  await RunCommand();
-});
-
+})
 </script>

@@ -26,7 +26,8 @@
     </div>
 
     <div class="column is-12" v-if="toggleForm">
-      <BackendAdd @addBackend="toggleForm = false; loadContent()" :backends="backends"/>
+      <BackendAdd @forceExport="e => handleEvents('forceExport', e)" :backends="backends"
+                  @runImport="e => handleEvents('runImport', e)" @addBackend="e => handleEvents('addBackend', e)"/>
     </div>
     <template v-else>
       <div class="column is-12" v-if="backends.length<1">
@@ -256,5 +257,22 @@ const updateValue = async (backend, key, newValue) => {
   })
 
   backends.value[backends.value.findIndex(b => b.name === backend.name)] = await response.json()
+}
+
+const handleEvents = async (event, backend) => {
+  switch (event) {
+    case 'forceExport':
+      notification('warning', 'Warning', `We are going to sync '${backend.value.name}' play state to match the current local database.`, 10000)
+      await navigateTo(makeConsoleCommand(`state:export -fi -v -s ${backend.value.name}`, true))
+      break
+    case 'runImport':
+      notification('info', 'Info', `We are going to import '${backend.value.name}' play state to the local database.`, 10000)
+      await navigateTo(makeConsoleCommand(`state:import -v -s ${backend.value.name}`, true))
+      break
+    case 'addBackend':
+      toggleForm.value = false
+      await loadContent()
+      break
+  }
 }
 </script>

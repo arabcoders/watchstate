@@ -237,11 +237,42 @@
               </p>
             </div>
           </div>
+          <div class="field" v-if="backends.length > 0">
+            <hr>
+            <label class="label has-text-danger" for="force_export">
+              Export current local database state to this backend?
+            </label>
+            <div class="control">
+              <input id="force_export" type="checkbox" class="switch is-success"
+                     v-model="forceExport">
+              <label for="force_export">Yes</label>
+              <p class="help">
+                <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
+                If this is a new backend, you need to get it in sync with your current database,
+                enabling this option will initiate a one time force export the current local database state to the
+                backend. This will override the backend state to be inline with the local database state.
+              </p>
+            </div>
+          </div>
+          <div class="field" v-else>
+            <hr>
+            <label class="label has-text-danger" for="run_import">
+              Export current local database state to this backend?
+            </label>
+            <div class="control">
+              <input id="run_import" type="checkbox" class="switch is-success" v-model="runImport">
+              <label for="run_import">Yes</label>
+              <p class="help">
+                <span class="icon has-text-danger"><i class="fas fa-info-circle"></i></span>
+                Do you want to run a one time import for this backend after adding this backend?
+              </p>
+            </div>
+          </div>
         </template>
       </div>
 
       <div class="card-footer">
-        <div class="card-footer-item" v-if="stage < 5">
+        <div class="card-footer-item" v-if="stage < maxStages">
           <button class="button is-fullwidth is-primary" type="submit" @click="changeStep()">
             <span class="icon">
               <i class="fas fa-arrow-right"></i>
@@ -265,7 +296,7 @@ import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import {awaitElement, explode, notification} from '~/utils/index'
 
-const emit = defineEmits(['addBackend'])
+const emit = defineEmits(['addBackend', 'forceExport', 'runImport'])
 
 const props = defineProps({
   backends: {
@@ -299,12 +330,15 @@ const users = ref([])
 const supported = ref([])
 const servers = ref([])
 
+const maxStages = 5
 const stage = ref(0)
 const usersLoading = ref(false)
 const uuidLoading = ref(false)
 const serversLoading = ref(false)
 const exposeToken = ref(false)
 const error = ref()
+const forceExport = ref(false)
+const runImport = ref(false)
 
 const isLimited = ref(false)
 const accessTokenResponse = ref({})
@@ -593,7 +627,18 @@ const addBackend = async () => {
   }
 
   notification('success', 'Information', `Backend ${backend.value.name} added successfully.`)
-  emit('addBackend', backend)
+
+  let event
+  if (true === Boolean(forceExport?.value ?? false)) {
+    event = 'forceExport'
+  } else if (true === Boolean(runImport?.value ?? false)) {
+    event = 'runImport'
+  } else {
+    event = 'addBackend'
+  }
+
+  emit(event, backend)
+
   return true
 }
 

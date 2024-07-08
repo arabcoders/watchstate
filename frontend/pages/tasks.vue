@@ -180,7 +180,7 @@
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request'
-import {awaitElement, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {awaitElement, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message'
 import {useStorage} from '@vueuse/core'
@@ -272,6 +272,6 @@ const confirmRun = async task => {
   if (!confirm(`Run '${task.name}' via web console now?`)) {
     return
   }
-  await navigateTo({path: '/console', query: {task: task.name}})
+  await navigateTo(makeConsoleCommand(`${task.command} ${task.args || ''}`, true));
 }
 </script>
