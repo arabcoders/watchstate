@@ -34,8 +34,9 @@
             <div class="field-body">
               <div class="field is-grouped-tablet">
                 <p class="control is-expanded has-icons-left">
-                  <input type="text" class="input" v-model="command"
+                  <input type="text" class="input is-fullwidth" v-model="command"
                          :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`"
+                         list="recent_commands"
                          autocomplete="off" ref="command_input" @keydown.enter="RunCommand" :disabled="isLoading">
                   <span class="icon is-left"><i class="fas fa-terminal" :class="{'fa-spin':isLoading}"></i></span>
                 </p>
@@ -98,6 +99,9 @@
         </ul>
       </Message>
     </div>
+    <datalist id="recent_commands">
+      <option v-for="item in executedCommands" :key="item" :value="item"/>
+    </datalist>
   </div>
 </template>
 
@@ -124,6 +128,8 @@ const command = ref(fromCommand)
 const isLoading = ref(false)
 const outputConsole = ref()
 const command_input = ref()
+const executedCommands = useStorage('executedCommands', [])
+
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
 const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/))
 const show_page_tips = useStorage('show_page_tips', true)
@@ -157,6 +163,12 @@ const RunCommand = async () => {
     return
   }
 
+  if (userCommand === 'clear_ac') {
+    executedCommands.value = []
+    command.value = ''
+    return
+  }
+
   const searchParams = new URLSearchParams()
   searchParams.append('apikey', api_token.value)
   searchParams.append('json', btoa(JSON.stringify({command: userCommand})))
@@ -177,8 +189,9 @@ const RunCommand = async () => {
 
   sse = new EventSource(`${api_url.value}${api_path.value}/system/command/?${searchParams.toString()}`)
 
-
-  terminal.value.writeln(`~ ${userCommand}`)
+  if ('' !== command.value) {
+    terminal.value.writeln(`~ ${userCommand}`)
+  }
   sse.addEventListener('data', async e => terminal.value.write(atob(e.data)))
   sse.addEventListener('close', async () => finished())
   sse.onclose = async () => finished()
@@ -198,6 +211,10 @@ const finished = async () => {
     route.query.cmd = ''
     route.query.run = ''
     await useRouter().push({path: '/console'})
+  }
+
+  if (!executedCommands.value.includes(command.value)) {
+    executedCommands.value.push(command.value)
   }
 
   command.value = ''

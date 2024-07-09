@@ -313,10 +313,16 @@ class ImportCommand extends Command
             }
 
             if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
-                $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has import disabled.", [
-                    'backend' => $backendName
-                ]);
-                continue;
+                if ($isCustom) {
+                    $this->logger->warning("SYSTEM: Importing from import disabled backend '{backend}' as requested.", [
+                        'backend' => $backendName
+                    ]);
+                } else {
+                    $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has import disabled.", [
+                        'backend' => $backendName
+                    ]);
+                    continue;
+                }
             }
 
             if (!isset($supported[$type])) {
