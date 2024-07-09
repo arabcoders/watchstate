@@ -96,11 +96,13 @@
             There is an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that can be set to <code>true</code>
             to enable all commands to be run from the console. This is disabled by default.
           </li>
+          <li>To clear the recent commands auto-suggestions, you can use the <code>clear_ac</code> command.</li>
         </ul>
       </Message>
     </div>
+
     <datalist id="recent_commands">
-      <option v-for="item in executedCommands" :key="item" :value="item"/>
+      <option v-for="item in recentCommands" :key="item" :value="item"/>
     </datalist>
   </div>
 </template>
@@ -213,8 +215,14 @@ const finished = async () => {
     await useRouter().push({path: '/console'})
   }
 
-  if (!executedCommands.value.includes(command.value)) {
-    executedCommands.value.push(command.value)
+  if (executedCommands.value.includes(command.value)) {
+    executedCommands.value.splice(executedCommands.value.indexOf(command.value), 1)
+  }
+
+  executedCommands.value.push(command.value)
+
+  if (executedCommands.value.length > 30) {
+    executedCommands.value.shift()
   }
 
   command.value = ''
@@ -222,6 +230,8 @@ const finished = async () => {
 
   command_input.value.focus()
 }
+
+const recentCommands = computed(() => executedCommands.value.reverse().slice(-10))
 
 const reSizeTerminal = () => {
   if (!terminal.value) {
