@@ -156,6 +156,11 @@ return (function () {
             'danger' => true,
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_CONSOLE_ENABLE_ALL',
+            'description' => 'All executing all commands in the console. They must be prefixed with $',
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {

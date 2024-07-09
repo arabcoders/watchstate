@@ -20,7 +20,9 @@
         "nuxt": "^3.11.2",
         "nuxt3-notifications": "^1.2.0",
         "vue": "^3.4.21",
-        "vue-router": "^4.3.0"
+        "vue-router": "^4.3.0",
+        "@xterm/addon-fit": "^0.10.0",
+        "@xterm/xterm": "^5.5.0"
     },
     "devDependencies": {}
 }

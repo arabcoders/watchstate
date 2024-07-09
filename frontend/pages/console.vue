@@ -5,76 +5,69 @@
         <span class="icon"><i class="fas fa-terminal"></i></span> Console
       </h1>
       <div class="subtitle">
-        You can execute <strong>non-interactive</strong> commands here. This interface is jailed to <code>console</code>
-        command.
+        You can execute <strong>non-interactive</strong> commands here.
+        <template v-if="allEnabled">
+          The console defaults to <code>console</code> command, if you want to run a different command, prefix
+          the command with <code>$</code>. For example <code>$ ls</code>.
+        </template>
+        <template v-else>
+          This interface is jailed to <code>console</code> command.
+        </template>
       </div>
     </div>
 
     <div class="column is-12">
-      <form @submit.prevent="RunCommand">
-        <div class="field">
-          <div class="field-body">
-            <div class="field is-grouped-tablet">
-              <p class="control is-expanded has-icons-left">
-                <input type="text" class="input" v-model="command" placeholder="system:view" autocomplete="off"
-                       autofocus
-                       :disabled="isLoading">
-                <span class="icon is-left">
-                  <i class="fas fa-terminal"></i>
-                </span>
-              </p>
-              <p class="control">
-                <button class="button is-primary" type="submit" :disabled="isLoading ||hasPrefix"
-                        :class="{'is-loading':isLoading}">
-                  <span class="icon-text">
-                    <span class="icon">
-                      <i class="fa fa-server"></i>
-                    </span>
-                    <span>Run</span>
-                  </span>
-                </button>
-              </p>
-              <p class="control">
-                <button class="button is-info" type="button" v-tooltip="'Clear output'"
-                        @click="response = []" :disabled="response.length < 1">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fa fa-broom"></i></span>
-                    <span>Clear</span>
-                  </span>
-                </button>
-              </p>
-              <p class="control" v-if="isLoading">
-                <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
-                  <span class="icon-text">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            <span class="icon"><i class="fas fa-terminal"></i>&nbsp;</span> Terminal
+          </p>
+          <p class="card-header-icon">
+            <span class="icon" @click="clearOutput"><i class="fa fa-broom"></i></span>
+          </p>
+        </header>
+        <section class="card-content p-0 m-0">
+          <div ref="outputConsole" style="min-height: 60vh;max-height:70vh;"/>
+        </section>
+        <section class="card-content p-1 m-1">
+          <div class="field">
+            <div class="field-body">
+              <div class="field is-grouped-tablet">
+                <p class="control is-expanded has-icons-left">
+                  <input type="text" class="input" v-model="command"
+                         :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`"
+                         autocomplete="off" ref="command_input" @keydown.enter="RunCommand" :disabled="isLoading">
+                  <span class="icon is-left"><i class="fas fa-terminal" :class="{'fa-spin':isLoading}"></i></span>
+                </p>
+                <p class="control" v-if="!isLoading">
+                  <button class="button is-primary" type="button" :disabled="hasPrefix" @click="RunCommand">
+                    <span class="icon"><i class="fa fa-paper-plane"></i></span>
+                  </button>
+                </p>
+                <p class="control" v-if="isLoading">
+                  <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
                     <span class="icon"><i class="fa fa-power-off"></i></span>
-                    <span>Close Connection</span>
-                  </span>
-                </button>
-              </p>
+                  </button>
+                </p>
+              </div>
             </div>
+            <p class="help" v-if="hasPrefix">
+              <span class="icon-text">
+                <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
+                <span>Remove the <code>console</code> or <code>docker exec -ti watchstate console</code> from the
+                  input. You should use the command directly, For example i.e <code>db:list --output yaml</code></span>
+              </span>
+            </p>
+            <p class="help" v-if="hasPlaceholder">
+              <span class="icon-text">
+                <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
+                <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
+                  <code>[...]</code> with the intended value if applicable.</span>
+              </span>
+            </p>
           </div>
-          <p class="help" v-if="hasPrefix">
-            <span class="icon-text">
-              <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
-              <span>Remove the <code>console</code> or <code>docker exec -ti watchstate console</code> from the
-                input. You should use the command directly, For example i.e <code>db:list --output yaml</code></span>
-            </span>
-          </p>
-          <p class="help" v-if="hasPlaceholder">
-            <span class="icon-text">
-              <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
-              <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
-                <code>[...]</code> with the intended value if applicable.</span>
-            </span>
-          </p>
-        </div>
-      </form>
-    </div>
-    <div class="column is-12">
-        <pre ref="outputConsole" style="min-height: 60vh;max-height:70vh; overflow-y: scroll"
-        ><code><span v-for="(item, index) in response" :key="'log_line-'+index" class="is-block">{{
-            item
-          }}</span></code></pre>
+        </section>
+      </div>
     </div>
 
     <div class="column is-12">
@@ -98,6 +91,10 @@
             this interface. Use the command followed by the options directly. For example, <code>db:list --output
             yaml</code>.
           </li>
+          <li>
+            There is an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that can be set to <code>true</code>
+            to enable all commands to be run from the console. This is disabled by default.
+          </li>
         </ul>
       </Message>
     </div>
@@ -105,6 +102,11 @@
 </template>
 
 <script setup>
+import "@xterm/xterm/css/xterm.css"
+// noinspection ES6UnusedImports
+import {Terminal} from "@xterm/xterm"
+// noinspection ES6UnusedImports
+import {FitAddon} from "@xterm/addon-fit"
 import {useStorage} from '@vueuse/core'
 import {notification} from '~/utils/index'
 import Message from '~/components/Message'
@@ -115,13 +117,17 @@ const route = useRoute()
 const fromCommand = route.query.cmd || false ? atob(route.query.cmd) : ''
 
 let sse
+const terminal = ref()
+const terminalFit = ref()
 const response = ref([])
 const command = ref(fromCommand)
 const isLoading = ref(false)
 const outputConsole = ref()
+const command_input = ref()
 const hasPrefix = computed(() => command.value.startsWith('console') || command.value.startsWith('docker'))
 const hasPlaceholder = computed(() => command.value && command.value.match(/\[.*\]/))
 const show_page_tips = useStorage('show_page_tips', true)
+const allEnabled = ref(false)
 
 const RunCommand = async () => {
   const api_path = useStorage('api_path', '/v1/api')
@@ -145,27 +151,41 @@ const RunCommand = async () => {
 
   response.value = []
 
+  if (userCommand === 'clear') {
+    command.value = ''
+    terminal.value.clear()
+    return
+  }
+
   const searchParams = new URLSearchParams()
   searchParams.append('apikey', api_token.value)
   searchParams.append('json', btoa(JSON.stringify({command: userCommand})))
 
-  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/?${searchParams.toString()}`)
+
+  if (userCommand.startsWith('$')) {
+    if (!allEnabled.value) {
+      notification('error', 'Error', 'The option to execute all commands is disabled.')
+      command_input.value.focus()
+      return
+    }
+    userCommand = userCommand.slice(1)
+  } else {
+    userCommand = `console ${userCommand}`
+  }
 
   isLoading.value = true
 
-  sse.addEventListener('data', async e => {
-    let lines = e.data.split(/\n/g)
-    for (let x = 0; x < lines.length; x++) {
-      response.value.push(lines[x])
-    }
-  })
+  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/?${searchParams.toString()}`)
 
-  sse.addEventListener('close', () => finished())
-  sse.onclose = () => finished()
-  sse.onerror = () => finished()
+
+  terminal.value.writeln(`~ ${userCommand}`)
+  sse.addEventListener('data', async e => terminal.value.write(atob(e.data)))
+  sse.addEventListener('close', async () => finished())
+  sse.onclose = async () => finished()
+  sse.onerror = async () => finished()
 }
 
-const finished = () => {
+const finished = async () => {
   if (sse) {
     sse.close()
   }
@@ -177,13 +197,68 @@ const finished = () => {
   if (route.query?.cmd || route.query?.run) {
     route.query.cmd = ''
     route.query.run = ''
-    useRouter().push({path: '/console'})
+    await useRouter().push({path: '/console'})
   }
+
+  command.value = ''
+  await nextTick()
+
+  command_input.value.focus()
 }
 
-onUpdated(() => outputConsole.value.scrollTop = outputConsole.value.scrollHeight)
+const reSizeTerminal = () => {
+  if (!terminal.value) {
+    return
+  }
+  terminalFit.value.fit()
+}
+
+const clearOutput = async () => {
+  if (terminal.value) {
+    terminal.value ? terminal.value.clear() : ''
+  }
+  command_input.value.focus()
+}
+
+onUnmounted(() => {
+  window.removeEventListener("resize", reSizeTerminal)
+  if (sse) {
+    sse.close()
+  }
+})
 
 onMounted(async () => {
+  window.addEventListener("resize", reSizeTerminal);
+  command_input.value.focus()
+
+  if (!terminal.value) {
+    terminalFit.value = new FitAddon()
+    terminal.value = new Terminal({
+      fontSize: 16,
+      fontFamily: "'JetBrains Mono', monospace",
+      cursorBlink: false,
+      cursorStyle: 'underline',
+      cols: 108,
+      rows: 10,
+      disableStdin: true,
+    })
+    terminal.value.open(outputConsole.value)
+    terminal.value.loadAddon(terminalFit.value)
+    terminalFit.value.fit()
+  }
+
+  try {
+    const response = await request('/system/env/WS_CONSOLE_ENABLE_ALL')
+    const json = await response.json()
+    if (200 !== response.status) {
+      allEnabled.value = false
+      return
+    }
+    allEnabled.value = Boolean(json.value)
+  } catch (e) {
+    allEnabled.value = false
+  }
+
   if (Boolean(route.query?.run ?? '0') || '' === command.value) {
     await RunCommand()
   }

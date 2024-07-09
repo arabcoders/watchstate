@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\HTTP_STATUS;
 use App\Libs\StreamClosure;
@@ -60,12 +61,23 @@ final class Command
             $path = realpath(__DIR__ . '/../../../');
 
             try {
+                $userCommand = "{$path}/bin/console -n {$command}";
+                if (true === (bool)Config::get('console.enable.all') && str_starts_with($command, '$')) {
+                    $userCommand = trim(after($command, '$'));
+                }
                 $process = Process::fromShellCommandline(
-                    command: "{$path}/bin/console {$command}",
+                    command: $userCommand,
                     cwd: $path,
-                    env: $_ENV,
+                    env: array_replace_recursive([
+                        'LANG' => 'en_US.UTF-8',
+                        'LC_ALL' => 'en_US.UTF-8',
+                        'TERM' => 'xterm-256color',
+                        'PWD' => $path,
+                    ], $_ENV),
                     timeout: $data->get('timeout', 7200),
                 );
+
+                $process->setPty(true);
 
                 $process->start(callback: function ($type, $data) use ($process) {
                     if (true === $this->toBackground) {
@@ -74,19 +86,7 @@ final class Command
 
                     echo "id: " . hrtime(true) . "\n";
                     echo "event: data\n";
-                    $data = (string)$data;
-                    echo implode(
-                        PHP_EOL,
-                        array_map(
-                            function ($data) {
-                                if (!is_string($data)) {
-                                    return null;
-                                }
-                                return 'data: ' . $data;
-                            },
-                            (array)preg_split("/\R/", $data)
-                        )
-                    );
+                    echo "data: " . base64_encode((string)$data);
                     echo "\n\n";
 
                     flush();
