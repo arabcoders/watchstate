@@ -6,7 +6,10 @@ namespace Tests\Libs;
 
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\TestCase;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
 use RuntimeException;
 
 class StateEntityTest extends TestCase
@@ -14,10 +17,16 @@ class StateEntityTest extends TestCase
     private array $testMovie = [];
     private array $testEpisode = [];
 
+    private TestHandler|null $lHandler = null;
+    private Logger|null $logger = null;
+
     protected function setUp(): void
     {
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
+        $this->lHandler = new TestHandler();
+        $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
+        $this->logger->pushHandler($this->lHandler);
     }
 
     public function test_init_bad_type(): void
@@ -891,6 +900,64 @@ class StateEntityTest extends TestCase
         $this->assertFalse(
             $entity->hasContext('not_set'),
             'When hasContext() is called with non-existing key, it returns false'
+        );
+    }
+
+    public function test_getMeta(): void
+    {
+        $real = $this->testEpisode;
+        $entity = new StateEntity($real);
+        $entity->via = '';
+        $this->assertSame(
+            '__not_set',
+            $entity->getMeta('extra.title', '__not_set'),
+            'When no via is set, returns the default value'
+        );
+
+        $real = $this->testEpisode;
+
+        unset($real['metadata']['home_jellyfin']);
+        $entity = new StateEntity($real);
+
+        $this->assertSame(
+            ag($real, 'metadata.home_plex.extra.title'),
+            $entity->getMeta('extra.title'),
+            'When quorum is not met returns the entity via backend metadata.'
+        );
+
+        $entity->via = 'home_emby';
+        $this->assertNotSame(
+            ag($real, 'metadata.home_plex.extra.title'),
+            $entity->getMeta('extra.title'),
+            'When quorum is not met returns the entity via backend metadata.'
+        );
+
+        $entity = new StateEntity($this->testEpisode);
+
+        $this->assertSame(
+            ag($this->testEpisode, 'metadata.home_jellyfin.extra.title'),
+            $entity->getMeta('extra.title'),
+            'When quorum is met for key return that value instead of the default via metadata.'
+        );
+
+        $entity = new StateEntity(
+            ag_set($this->testEpisode, 'metadata.home_jellyfin.extra.title', 'random')
+        );
+
+        $this->assertSame(
+            ag($real, 'metadata.home_plex.extra.title'),
+            $entity->getMeta('extra.title'),
+            'When no quorum for value reached, return default via metadata.'
+        );
+
+        $entity = new StateEntity(
+            ag_set($this->testEpisode, 'metadata.home_jellyfin.extra.title', null)
+        );
+
+        $this->assertSame(
+            ag($real, 'metadata.home_plex.extra.title'),
+            $entity->getMeta('extra.title'),
+            'Quorum will not be met if one of the values is null.'
         );
     }
 }

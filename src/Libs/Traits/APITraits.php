@@ -192,11 +192,7 @@ trait APITraits
         $item[iState::COLUMN_META_DATA_PROGRESS] = $entity->hasPlayProgress() ? $entity->getPlayProgress() : null;
         $item[iState::COLUMN_EXTRA_EVENT] = ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, null);
 
-        $item['content_title'] = $entity->isEpisode() ? ag(
-            $entity->getMetadata($entity->via),
-            iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE,
-            null
-        ) : null;
+        $item['content_title'] = $entity->getMeta(iState::COLUMN_EXTRA . '.' . iState::COLUMN_TITLE, null);
         $item['content_path'] = ag($entity->getMetadata($entity->via), iState::COLUMN_META_PATH);
 
         $item['rguids'] = [];
