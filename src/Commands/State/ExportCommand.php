@@ -175,11 +175,17 @@ class ExportCommand extends Command
                 continue;
             }
 
-            if (true !== ag($backend, 'export.enabled')) {
-                $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has export disabled.", [
-                    'backend' => $backendName
-                ]);
-                continue;
+            if (true !== (bool)ag($backend, 'export.enabled')) {
+                if ($isCustom) {
+                    $this->logger->warning("SYSTEM: Exporting to a export disabled backend '{backend}' as requested.", [
+                        'backend' => $backendName
+                    ]);
+                } else {
+                    $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has export disabled.", [
+                        'backend' => $backendName
+                    ]);
+                    continue;
+                }
             }
 
             if (!isset($supported[$type])) {
@@ -251,7 +257,7 @@ class ExportCommand extends Command
                         'backend' => ag($backend, 'name'),
                     ]);
 
-                    $export[ag($backends, 'name')] = $backend;
+                    $export[ag($backend, 'name')] = $backend;
                     continue;
                 }
 
@@ -263,7 +269,7 @@ class ExportCommand extends Command
                         ]
                     );
 
-                    $export[ag($backends, 'name')] = $backend;
+                    $export[ag($backend, 'name')] = $backend;
                     continue;
                 }
 
@@ -452,10 +458,7 @@ class ExportCommand extends Command
                 }
             }
 
-            $this->logger->notice("SYSTEM: Sent '{total}' change play state requests.", [
-                'total' => $total
-            ]);
-
+            $this->logger->notice("SYSTEM: Sent '{total}' change play state requests.", ['total' => $total]);
             $this->logger->notice("Using WatchState version - '{version}'.", ['version' => getAppVersion()]);
         } else {
             $this->logger->notice('SYSTEM: No play state changes detected.');

@@ -403,6 +403,18 @@ interface StateInterface extends LoggerAwareInterface
     public function getContext(string|null $key = null, mixed $default = null): mixed;
 
     /**
+     * Get the metadata that is likely to be correct based on the quorum.
+     * To constitute a quorum, 2/3 of the backends must have the same metadata, otherwise fallback to
+     * {@see ag($this->getMetadata($this->via), $key, $default)}
+     *
+     * @param string $key key
+     * @param mixed|null $default default value.
+     *
+     * @return mixed
+     */
+    public function getMeta(string $key, mixed $default = null): mixed;
+
+    /**
      * Check if entity has contextual data.
      *
      * @param string $key key

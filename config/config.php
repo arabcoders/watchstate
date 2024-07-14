@@ -188,6 +188,11 @@ return (function () {
     ];
 
     $config['servers'] = [];
+    $config['console'] = [
+        'enable' => [
+            'all' => (bool)env('WS_CONSOLE_ENABLE_ALL', false),
+        ],
+    ];
 
     $config['php'] = [
         'ini' => [

@@ -657,6 +657,46 @@ final class StateEntity implements iState
     /**
      * @inheritdoc
      */
+    public function getMeta(string $key, mixed $default = null): mixed
+    {
+        if (empty($this->via)) {
+            $this->logger?->warning('StateEntity: No backend was set in $this->via parameter.');
+            return $default;
+        }
+
+        $values = [];
+        $total = count($this->metadata);
+        $quorum = round($total / 2, 0, PHP_ROUND_HALF_UP);
+
+        if ($quorum < 2) {
+            $this->logger?->warning("StateEntity: Quorum is less than 2. '{quorum}' Using default value.", [
+                'quorum' => $quorum
+            ]);
+            return ag($this->metadata[$this->via], $key, $default);
+        }
+
+        foreach ($this->metadata as $data) {
+            if (null === ($value = ag($data, $key, null))) {
+                continue;
+            }
+
+            $values[$value] = isset($values[$value]) ? $values[$value] + 1 : 1;
+        }
+
+        foreach ($values as $value => $count) {
+            if ($count >= $quorum) {
+                $this->logger?->info('StateEntity: quorum found. Using value from {value}.', ['value' => $value]);
+                return $value;
+            }
+        }
+
+        $this->logger?->warning('StateEntity: no quorum found. Using default value.');
+        return ag($this->metadata[$this->via], $key, $default);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function hasContext(string $key): bool
     {
         return ag_exists($this->context, $key);
