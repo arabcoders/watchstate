@@ -250,6 +250,7 @@ import Message from '~/components/Message'
 import {awaitElement, copyText, makeName, makeSearchLink, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import moment from 'moment'
 import Lazy from '~/components/Lazy'
+import {useSessionCache} from '~/utils/cache'
 
 useHead({title: 'File Integrity'})
 
@@ -261,6 +262,7 @@ const isDeleting = ref(false)
 const filter = ref('')
 const showFilter = ref(false)
 const isCached = ref(false)
+const cache = useSessionCache();
 
 const selectAll = ref(false)
 const massActionInProgress = ref(false)
@@ -299,7 +301,13 @@ const loadContent = async () => {
 
     isLoading.value = false
     isCached.value = Boolean(json?.fromCache ?? false)
+
+    cache.set('integrity', {
+      items: items.value,
+      fromCache: isCached.value
+    })
   } catch (e) {
+    console.error(e)
     notification('error', 'Error', `Request error. ${e.message}`)
   }
 }
@@ -358,6 +366,9 @@ const emptyCache = async () => {
     isCached.value = false
     selectAll.value = false
     selected_ids.value = []
+    if (cache.has('integrity')) {
+      cache.remove('integrity')
+    }
 
     notification('success', 'Success', `Cache purged.`)
   } catch (e) {
@@ -384,4 +395,13 @@ const filterItem = item => {
 
   return Object.values(item).some(v => typeof v === 'string' ? v.toLowerCase().includes(filter.value.toLowerCase()) : false)
 }
+
+onMounted(() => {
+  if (items.value.length < 1 && cache.has('integrity')) {
+    const cachedData = cache.get('integrity')
+    items.value = cachedData.items
+    isCached.value = cachedData.fromCache
+    isLoaded.value = true
+  }
+})
 </script>
