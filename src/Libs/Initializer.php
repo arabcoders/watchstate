@@ -143,6 +143,22 @@ final class Initializer
             exit(1);
         });
 
+        register_shutdown_function(function () use ($logger) {
+            if (null === ($error = error_get_last())) {
+                return;
+            }
+
+            gc_collect_cycles();
+
+            $logger->error(message: "{class}: {error} at '{file}:{line}'. '{URI}'", context: [
+                'class' => 'PHP.Engine',
+                'error' => $error['message'],
+                'file' => $error['file'],
+                'line' => $error['line'],
+                'URI' => before($_SERVER['REQUEST_URI'], '?'),
+            ]);
+        });
+
         return $this;
     }
 
