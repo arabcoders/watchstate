@@ -1,13 +1,17 @@
 <template>
   <div class="container">
-    <nav class="navbar is-dark mb-4">
+    <nav class="navbar is-dark mb-4 is-unselectable">
       <div class="navbar-brand pl-5">
-        <NuxtLink class="navbar-item" to="/" @click.native="showMenu=false">
+        <NuxtLink class="navbar-item" to="/" @click.native="(e) => changeRoute(e)">
           <span class="icon-text">
             <span class="icon"><i class="fas fa-home"></i></span>
             <span>Home</span>
           </span>
         </NuxtLink>
+
+        <a class="navbar-item is-hidden-tablet" id="top" href="#bottom">
+          <span class="icon"><i class="fas fa-arrow-down"></i></span>
+        </a>
 
         <button class="navbar-burger burger" @click="showMenu = !showMenu">
           <span aria-hidden="true"></span>
@@ -18,7 +22,7 @@
 
       <div class="navbar-menu" :class="{'is-active':showMenu}">
         <div class="navbar-start" v-if="hasAPISettings">
-          <NuxtLink class="navbar-item" to="/backends" @click.native="showMenu=false">
+          <NuxtLink class="navbar-item" to="/backends" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-server"></i></span>
               <span>Backends</span>
@@ -26,37 +30,36 @@
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/history"
-                    @click.native="showMenu=false; dEvent('history_main_link_clicked',{'clear':true})">
+                    @click.native="(e) => changeRoute(e,() => dEvent('history_main_link_clicked',{'clear':true}))">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-history"></i></span>
               <span>History</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/tasks" @click.native="showMenu=false">
+          <NuxtLink class="navbar-item" to="/tasks" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-tasks"></i></span>
               <span>Tasks</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/env" @click.native="showMenu=false">
+          <NuxtLink class="navbar-item" to="/env" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-cogs"></i></span>
               <span>Env</span>
             </span>
           </NuxtLink>
 
-          <NuxtLink class="navbar-item" to="/logs" @click.native="showMenu=false">
+          <NuxtLink class="navbar-item" to="/logs" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-globe"></i></span>
               <span>Logs</span>
             </span>
           </NuxtLink>
 
-
-          <div class="navbar-item has-dropdown is-hoverable">
-            <a class="navbar-link">
+          <div class="navbar-item has-dropdown">
+            <a class="navbar-link" @click="(e) => openMenu(e)">
               <span class="icon-text">
                 <span class="icon"><i class="fas fa-ellipsis-vertical"></i></span>
                 <span>More</span>
@@ -64,54 +67,53 @@
             </a>
             <div class="navbar-dropdown">
 
-              <NuxtLink class="navbar-item" to="/parity" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/parity" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-database"></i></span>
                 <span>Data Parity</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/integrity" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/integrity" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-file"></i></span>
                 <span>Files Integrity</span>
               </NuxtLink>
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/events" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/events" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-list"></i></span>
                 <span>Events</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/ignore" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/ignore" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-ban"></i></span>
                 <span>Ignore List</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/report" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/report" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-flag"></i></span>
                 <span>Basic Report</span>
               </NuxtLink>
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/suppression" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/suppression" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-bug-slash"></i></span>
                 <span>Log Suppression</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/backup" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/backup" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-sd-card"></i></span>
                 <span>Backups</span>
               </NuxtLink>
               <hr class="navbar-divider">
 
-              <NuxtLink class="navbar-item" to="/reset" @click.native="showMenu=false">
+              <NuxtLink class="navbar-item" to="/reset" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-redo"></i></span>
                 <span>System reset</span>
               </NuxtLink>
             </div>
           </div>
-
         </div>
         <div class="navbar-end pr-3">
-          <NuxtLink class="navbar-item" to="/console" @click.native="showMenu=false" v-if="hasAPISettings">
+          <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-terminal"></i></span>
               <span>Console</span>
@@ -284,14 +286,19 @@
         </div>
       </div>
 
-      <template v-if="!hasAPISettings">
-        <no-api/>
-      </template>
-      <template v-else>
-        <slot v-if="!showConnection && hasAPISettings"/>
-      </template>
-
+      <div>
+        <NuxtPage v-if="!showConnection && hasAPISettings"/>
+        <no-api v-else/>
+      </div>
+      
       <div class="columns is-multiline is-mobile mt-3">
+        <div class="column is-12 is-hidden-tablet has-text-centered">
+          <a href="#top" id="bottom" class="button">
+            <span class="icon"><i class="fas fa-arrow-up"></i>&nbsp;</span>
+            <span>Go to Top</span>
+          </a>
+        </div>
+
         <div class="column is-6 is-9-mobile has-text-left">
           <NuxtLink @click="loadFile = '/README.md'" v-text="'README'"/>
           -
@@ -506,4 +513,24 @@ const setOrigin = () => api_url.value = window.location.origin;
 const hasAPISettings = computed(() => '' !== real_api_token.value && '' !== real_api_url.value)
 
 const closeOverlay = () => loadFile.value = ''
+
+const openMenu = e => {
+  const elm = e.target.closest('div.has-dropdown')
+
+  document.querySelectorAll('div.has-dropdown').forEach(el => {
+    if (el !== elm) {
+      el.classList.remove('is-active')
+    }
+  })
+
+  e.target.closest('div.has-dropdown').classList.toggle('is-active')
+}
+
+const changeRoute = async (e, callback) => {
+  showMenu.value = false
+  document.querySelectorAll('div.has-dropdown').forEach(el => el.classList.remove('is-active'))
+  if (callback) {
+    callback()
+  }
+}
 </script>

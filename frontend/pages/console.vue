@@ -1,109 +1,112 @@
 <template>
-  <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix is-unselectable">
-      <h1 class="title is-4">
-        <span class="icon"><i class="fas fa-terminal"></i></span> Console
-      </h1>
-      <div class="subtitle">
-        You can execute <strong>non-interactive</strong> commands here.
-        <template v-if="allEnabled">
-          The console defaults to <code>console</code> command, if you want to run a different command, prefix
-          the command with <code>$</code>. For example <code>$ ls</code>.
-        </template>
-        <template v-else>
-          This interface is jailed to <code>console</code> command.
-        </template>
+  <div>
+    <div class="columns is-multiline">
+      <div class="column is-12 is-clearfix is-unselectable">
+        <h1 class="title is-4">
+          <span class="icon"><i class="fas fa-terminal"></i></span> Console
+        </h1>
+        <div class="subtitle">
+          You can execute <strong>non-interactive</strong> commands here.
+          <template v-if="allEnabled">
+            The console defaults to <code>console</code> command, if you want to run a different command, prefix
+            the command with <code>$</code>. For example <code>$ ls</code>.
+          </template>
+          <template v-else>
+            This interface is jailed to <code>console</code> command.
+          </template>
+        </div>
       </div>
-    </div>
 
-    <div class="column is-12">
-      <div class="card">
-        <header class="card-header">
-          <p class="card-header-title">
-            <span class="icon"><i class="fas fa-terminal"></i>&nbsp;</span> Terminal
-          </p>
-          <p class="card-header-icon">
-            <span class="icon" @click="clearOutput"><i class="fa fa-broom"></i></span>
-          </p>
-        </header>
-        <section class="card-content p-0 m-0">
-          <div ref="outputConsole" style="min-height: 60vh;max-height:70vh;"/>
-        </section>
-        <section class="card-content p-1 m-1">
-          <div class="field">
-            <div class="field-body">
-              <div class="field is-grouped-tablet">
-                <p class="control is-expanded has-icons-left">
-                  <input type="text" class="input is-fullwidth" v-model="command"
-                         :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`"
-                         list="recent_commands"
-                         autocomplete="off" ref="command_input" @keydown.enter="RunCommand" :disabled="isLoading">
-                  <span class="icon is-left"><i class="fas fa-terminal" :class="{'fa-spin':isLoading}"></i></span>
-                </p>
-                <p class="control" v-if="!isLoading">
-                  <button class="button is-primary" type="button" :disabled="hasPrefix" @click="RunCommand">
-                    <span class="icon"><i class="fa fa-paper-plane"></i></span>
-                  </button>
-                </p>
-                <p class="control" v-if="isLoading">
-                  <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
-                    <span class="icon"><i class="fa fa-power-off"></i></span>
-                  </button>
-                </p>
+      <div class="column is-12">
+        <div class="card">
+          <header class="card-header">
+            <p class="card-header-title">
+              <span class="icon"><i class="fas fa-terminal"></i>&nbsp;</span> Terminal
+            </p>
+            <p class="card-header-icon">
+              <span class="icon" @click="clearOutput"><i class="fa fa-broom"></i></span>
+            </p>
+          </header>
+          <section class="card-content p-0 m-0">
+            <div ref="outputConsole" style="min-height: 60vh;max-height:70vh;"/>
+          </section>
+          <section class="card-content p-1 m-1">
+            <div class="field">
+              <div class="field-body">
+                <div class="field is-grouped-tablet">
+                  <p class="control is-expanded has-icons-left">
+                    <input type="text" class="input is-fullwidth" v-model="command"
+                           :placeholder="`system:view ${allEnabled ? 'or $ ls' : ''}`"
+                           list="recent_commands"
+                           autocomplete="off" ref="command_input" @keydown.enter="RunCommand" :disabled="isLoading">
+                    <span class="icon is-left"><i class="fas fa-terminal" :class="{'fa-spin':isLoading}"></i></span>
+                  </p>
+                  <p class="control" v-if="!isLoading">
+                    <button class="button is-primary" type="button" :disabled="hasPrefix" @click="RunCommand">
+                      <span class="icon"><i class="fa fa-paper-plane"></i></span>
+                    </button>
+                  </p>
+                  <p class="control" v-if="isLoading">
+                    <button class="button is-danger" type="button" @click="finished" v-tooltip="'Close connection.'">
+                      <span class="icon"><i class="fa fa-power-off"></i></span>
+                    </button>
+                  </p>
+                </div>
               </div>
+              <p class="help" v-if="hasPrefix">
+                <span class="icon-text">
+                  <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
+                  <span>Remove the <code>console</code> or <code>docker exec -ti watchstate console</code> from the
+                    input. You should use the command directly, For example i.e <code>db:list --output
+                      yaml</code></span>
+                </span>
+              </p>
+              <p class="help" v-if="hasPlaceholder">
+                <span class="icon-text">
+                  <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
+                  <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
+                    <code>[...]</code> with the intended value if applicable.</span>
+                </span>
+              </p>
             </div>
-            <p class="help" v-if="hasPrefix">
-              <span class="icon-text">
-                <span class="icon has-text-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                <span>Remove the <code>console</code> or <code>docker exec -ti watchstate console</code> from the
-                  input. You should use the command directly, For example i.e <code>db:list --output yaml</code></span>
-              </span>
-            </p>
-            <p class="help" v-if="hasPlaceholder">
-              <span class="icon-text">
-                <span class="icon has-text-warning"><i class="fas fa-exclamation-circle"></i></span>
-                <span>The command contains <code>[...]</code> which are considered a placeholder, So, please replace
-                  <code>[...]</code> with the intended value if applicable.</span>
-              </span>
-            </p>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
-    </div>
 
-    <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
-        <ul>
-          <li>
-            You can also run a command from the task page by clicking on the <strong>Run via console</strong>. The
-            command will be pre-filled for you.
-          </li>
-          <li>
-            Clicking close connection does not stop the command. It only stops the output from being displayed. The
-            command will continue to run until it finishes.
-          </li>
-          <li>
-            The majority of the commands will not show any output unless error has occurred or important information
-            needs to be communicated. To see all output, add the <code>-vvv</code> flag.
-          </li>
-          <li>
-            There is no need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
-            this interface. Use the command followed by the options directly. For example, <code>db:list --output
-            yaml</code>.
-          </li>
-          <li>
-            There is an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that can be set to <code>true</code>
-            to enable all commands to be run from the console. This is disabled by default.
-          </li>
-          <li>To clear the recent commands auto-suggestions, you can use the <code>clear_ac</code> command.</li>
-        </ul>
-      </Message>
-    </div>
+      <div class="column is-12">
+        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          <ul>
+            <li>
+              You can also run a command from the task page by clicking on the <strong>Run via console</strong>. The
+              command will be pre-filled for you.
+            </li>
+            <li>
+              Clicking close connection does not stop the command. It only stops the output from being displayed. The
+              command will continue to run until it finishes.
+            </li>
+            <li>
+              The majority of the commands will not show any output unless error has occurred or important information
+              needs to be communicated. To see all output, add the <code>-vvv</code> flag.
+            </li>
+            <li>
+              There is no need to write <code>console</code> or <code>docker exec -ti watchstate console</code> Using
+              this interface. Use the command followed by the options directly. For example, <code>db:list --output
+              yaml</code>.
+            </li>
+            <li>
+              There is an environment variable <code>WS_CONSOLE_ENABLE_ALL</code> that can be set to <code>true</code>
+              to enable all commands to be run from the console. This is disabled by default.
+            </li>
+            <li>To clear the recent commands auto-suggestions, you can use the <code>clear_ac</code> command.</li>
+          </ul>
+        </Message>
+      </div>
 
-    <datalist id="recent_commands">
-      <option v-for="item in recentCommands" :key="item" :value="item"/>
-    </datalist>
+      <datalist id="recent_commands">
+        <option v-for="item in recentCommands" :key="item" :value="item"/>
+      </datalist>
+    </div>
   </div>
 </template>
 
