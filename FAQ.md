@@ -872,15 +872,25 @@ For more information, please refer to the [Dockerfile](/Dockerfile). On how we d
 
 ### How does the file integrity feature works?
 
-The feature first scan your entire history for reported media file paths. then we will do stat check on each point of the path starting from lowest to highest.
+The feature first scan your entire history for reported media file paths. Depending on the results we do the following:
 
-For example lets say your media file is `/media/series/season 1/episode 1.mkv`
+* If metadata reports a path, then we will run stat check on each component of the path from lowest to highest.
+* If no metadata reports a path, then simply the record will be marked as OK.
 
-We do the following. `/media` exists or not? if it does we move to the next path `/media/series` exists or not? if it does we move to the next path `/media/series/season 1` exists or not? if it does we move to the next path `/media/series/season 1/episode 1.mkv` exists or not? if it does we move to the next path.
+#### Here is the break-down example
+
+Lets says you have a media file `/media/series/season 1/episode 1.mkv` The scanner does the following:
+
+* `/media` Does this path component exists? if not mark everything starting from `/media` as not found. if it exists simply move to the next component until we reach the end of the path.
+* `/media/series` Do same as above.
+* `/media/series/season 1` Do same as above.
+* `/media/series/season 1/episode 1.mkv` Do same as above.
 
 Using this approach allow us to cache calls and reduce unnecessary calls to the filesystem. If you have for example `/media/seriesX/` with thousands of files,
-and the root `/media/seriesX` doesn't exists we dont have to call stat for every file, instead using the cache we determine that the file doesn't exist.
+and the path component `/media/seriesX` doesn't exists, we simply ignore everything that starts with `/media/seriesX/` and treat them as not found.
 
-Of course, every stat call is cached, so if 1 or more backends are reporting the same file path, we only do the stat check once. This is to reduce the load on the filesystem.
+This helps with slow stat calls in network shares, or cloud storage.
+
+Everytime we do a stat call we cache it for 1 hour, so if we have multiple records reporting the same path, we only do the stat check once.
 
 ---
