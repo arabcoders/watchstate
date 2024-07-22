@@ -1,67 +1,70 @@
 <template>
-  <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix is-unselectable">
-      <span class="title is-4">
-        <span class="icon"><i class="fas fa-globe"></i>&nbsp;</span>
-        <NuxtLink to="/logs">Logs</NuxtLink>
-        : {{ filename }}
-      </span>
+  <div>
+    <div class="columns is-multiline">
+      <div class="column is-12 is-clearfix is-unselectable">
+        <span class="title is-4">
+          <span class="icon"><i class="fas fa-globe"></i>&nbsp;</span>
+          <NuxtLink to="/logs">Logs</NuxtLink>
+          : {{ filename }}
+        </span>
 
-      <div class="is-pulled-right" v-if="!error">
-        <div class="field is-grouped">
+        <div class="is-pulled-right" v-if="!error">
+          <div class="field is-grouped">
 
-          <p class="control">
-            <button class="button is-danger" v-tooltip.bottom="'Delete Logfile.'" @click="deleteFile">
-              <span class="icon"><i class="fas fa-trash"></i></span>
-            </button>
-          </p>
+            <p class="control">
+              <button class="button is-danger" v-tooltip.bottom="'Delete Logfile.'" @click="deleteFile">
+                <span class="icon"><i class="fas fa-trash"></i></span>
+              </button>
+            </p>
 
-          <p class="control">
-            <button class="button is-danger is-light" v-tooltip.bottom="'Download the entire logfile.'"
-                    @click="downloadFile" :class="{'is-loading':isDownloading}">
-              <span class="icon"><i class="fas fa-download"></i></span>
-            </button>
-          </p>
+            <p class="control">
+              <button class="button is-danger is-light" v-tooltip.bottom="'Download the entire logfile.'"
+                      @click="downloadFile" :class="{'is-loading':isDownloading}">
+                <span class="icon"><i class="fas fa-download"></i></span>
+              </button>
+            </p>
 
-          <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
-            <button class="button" v-tooltip.bottom="'Watch log'" @click="watchLog"
-                    :class="{'is-primary':!stream,'is-danger':stream}">
-              <span class="icon"><i class="fas fa-stream"></i></span>
-            </button>
-          </p>
+            <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
+              <button class="button" v-tooltip.bottom="'Watch log'" @click="watchLog"
+                      :class="{'is-primary':!stream,'is-danger':stream}">
+                <span class="icon"><i class="fas fa-stream"></i></span>
+              </button>
+            </p>
 
-          <p class="control">
-            <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
-              <span class="icon"><i class="fas fa-text-width"></i></span>
-            </button>
-          </p>
+            <p class="control">
+              <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
+                <span class="icon"><i class="fas fa-text-width"></i></span>
+              </button>
+            </p>
 
-          <p class="control">
-            <button class="button is-info" @click="loadContent" :disabled="isLoading" :class="{'is-loading':isLoading}">
-              <span class="icon"><i class="fas fa-sync"></i></span>
-            </button>
-          </p>
+            <p class="control">
+              <button class="button is-info" @click="loadContent" :disabled="isLoading"
+                      :class="{'is-loading':isLoading}">
+                <span class="icon"><i class="fas fa-sync"></i></span>
+              </button>
+            </p>
 
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="column is-12">
-      <div class="notification has-background-info-90 has-text-dark" v-if="stream">
-        <button class="delete" @click="watchLog"></button>
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
-          <span>Streaming log content...</span>
-        </span>
+      <div class="column is-12">
+        <div class="notification has-background-info-90 has-text-dark" v-if="stream">
+          <button class="delete" @click="watchLog"></button>
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-spinner fa-pulse"></i></span>
+            <span>Streaming log content...</span>
+          </span>
+        </div>
+        <code ref="logContainer" class="box logs-container" v-if="!error"
+              :class="{'is-pre': !wrapLines, 'is-pre-wrap': wrapLines}">
+          <span class="is-log-line is-block pt-1" v-for="(item, index) in data" :key="'log_line-'+index">
+            {{ item }}
+          </span>
+        </code>
+        <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark"
+                 :message="error" :use-close="true" @close="router.push('/logs')"/>
       </div>
-      <code ref="logContainer" class="box logs-container" v-if="!error"
-            :class="{'is-pre': !wrapLines, 'is-pre-wrap': wrapLines}">
-        <span class="is-log-line is-block pt-1" v-for="(item, index) in data" :key="'log_line-'+index">
-          {{ item }}
-        </span>
-      </code>
-      <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark"
-               :message="error" :use-close="true" @close="router.push('/logs')"/>
     </div>
   </div>
 </template>
@@ -75,12 +78,11 @@
 </style>
 
 <script setup>
-
-import Message from '~/components/Message.vue'
+import Message from '~/components/Message'
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
-import {notification} from '~/utils/index.js'
-import request from '~/utils/request.js'
+import {notification} from '~/utils/index'
+import request from '~/utils/request'
 
 const router = useRouter()
 const filename = useRoute().params.filename

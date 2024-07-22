@@ -1,212 +1,215 @@
 <template>
-  <div class="columns is-multiline">
-    <div class="column is-12 is-clearfix is-unselectable">
-      <span id="env_page_title" class="title is-4">
-        <span class="icon"><i class="fas fa-cogs"></i></span>
-        Environment variables
-      </span>
-      <div class="is-pulled-right">
-        <div class="field is-grouped">
-          <p class="control">
-            <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm"
-                    :disabled="isLoading">
-              <span class="icon">
-                <i class="fas fa-add"></i>
-              </span>
-            </button>
-          </p>
-          <p class="control">
-            <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
-                    :class="{'is-loading':isLoading}">
-              <span class="icon"><i class="fas fa-sync"></i></span>
-            </button>
-          </p>
-        </div>
-      </div>
-      <div class="is-hidden-mobile">
-        <span class="subtitle">
-          This page allow you alter the environment variables that are used to configure the application.
+  <div>
+    <div class="columns is-multiline">
+      <div class="column is-12 is-clearfix is-unselectable">
+        <span id="env_page_title" class="title is-4">
+          <span class="icon"><i class="fas fa-cogs"></i></span>
+          Environment variables
         </span>
-      </div>
-    </div>
-
-    <div class="column is-12" v-if="!toggleForm && items.length < 1">
-      <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-               icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
-      <Message v-else message_class="has-background-warning-90 has-text-dark" title="Information"
-               icon="fas fa-info-circle">
-        <p>
-          No environment variables configured yet. Click on the
-          <i @click="toggleForm=true" class="is-clickable fa fa-add"></i> button to add a new variable.
-        </p>
-      </Message>
-    </div>
-
-    <div class="column is-12" v-if="toggleForm">
-      <form id="env_add_form" @submit.prevent="addVariable">
-        <div class="card">
-          <header class="card-header">
-            <p class="card-header-title is-unselectable is-justify-center">Manage Environment Variable</p>
-          </header>
-          <div class="card-content">
-            <div class="field">
-              <label class="label is-unselectable" for="form_key">Environment key</label>
-              <div class="control has-icons-left">
-                <div class="select is-fullwidth">
-                  <select v-model="form_key" id="form_key" @change="keyChanged">
-                    <option value="" disabled>Select Key</option>
-                    <option v-for="item in items" :key="`opt-${item.key}`" :value="item.key">
-                      {{ item.key }}
-                    </option>
-                  </select>
-                </div>
-                <div class="icon is-left">
-                  <i class="fas fa-key"></i>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="label is-unselectable" for="form_value">Environment value</label>
-              <div class="control has-icons-left">
-                <template v-if="'bool' === form_type">
-                  <input id="form_value" type="checkbox" class="switch is-success"
-                         :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
-                  <label for="form_value">
-                    <template v-if="fixBool(form_value)">On (True)</template>
-                    <template v-else>Off (False)</template>
-                  </label>
-                </template>
-                <template v-else-if=" 'int' === form_type ">
-                  <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
-                         pattern="[0-9]*" inputmode="numeric">
-                  <div class="icon is-small is-left">
-                    <i class="fas fa-font"></i>
-                  </div>
-                </template>
-                <template v-else>
-                  <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
-                  <div class="icon is-small is-left"><i class="fas fa-font"></i></div>
-                </template>
-                <div>
-                  <p class="help" v-html="getHelp(form_key)"></p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="card-footer">
-            <div class="card-footer-item">
-              <button class="button is-fullwidth is-primary" type="submit" :disabled="!form_key || '' === form_value">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-save"></i></span>
-                  <span>Save</span>
+        <div class="is-pulled-right">
+          <div class="field is-grouped">
+            <p class="control">
+              <button class="button is-primary" v-tooltip.bottom="'Add new variable'" @click="toggleForm = !toggleForm"
+                      :disabled="isLoading">
+                <span class="icon">
+                  <i class="fas fa-add"></i>
                 </span>
               </button>
-            </div>
-            <div class="card-footer-item">
-              <button class="button is-fullwidth is-danger" type="button" @click="cancelForm">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-cancel"></i></span>
-                  <span>Cancel</span>
-                </span>
+            </p>
+            <p class="control">
+              <button class="button is-info" @click="loadContent" :disabled="isLoading || toggleForm"
+                      :class="{'is-loading':isLoading}">
+                <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
-            </div>
+            </p>
           </div>
         </div>
-      </form>
-    </div>
-    <div v-else class="column is-12" v-if="items">
-      <div class="columns is-multiline">
-        <div class="column" v-for="item in filteredRows(items)" :key="item.key"
-             :class="{'is-4':!item?.danger,'is-12':item.danger}">
-          <div class="card" :class="{ 'is-danger': item?.danger }">
+        <div class="is-hidden-mobile">
+          <span class="subtitle">
+            This page allow you alter the environment variables that are used to configure the application.
+          </span>
+        </div>
+      </div>
+
+      <div class="column is-12" v-if="!toggleForm && items.length < 1">
+        <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
+                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+        <Message v-else message_class="has-background-warning-90 has-text-dark" title="Information"
+                 icon="fas fa-info-circle">
+          <p>
+            No environment variables configured yet. Click on the
+            <i @click="toggleForm=true" class="is-clickable fa fa-add"></i> button to add a new variable.
+          </p>
+        </Message>
+      </div>
+
+      <div class="column is-12" v-if="toggleForm">
+        <form id="env_add_form" @submit.prevent="addVariable">
+          <div class="card">
             <header class="card-header">
-              <p class="card-header-title is-unselectable">
-                <template v-if="item?.danger">
-                  <span class="title is-5 ">
-                    <span class="icon" v-tooltip="'This option is considered dangerous.'">
-                      <i class="has-text-danger fas fa-exclamation-triangle"></i>&nbsp;
-                    </span> {{ item.key }}
-                  </span>
-                </template>
-                <template v-else>
-                  <span class="has-tooltip is-clickable" v-tooltip="item.description">
-                    {{ item.key }}
-                  </span>
-                </template>
-              </p>
-              <span class="card-header-icon" v-if="item.mask" @click="item.mask = false" v-tooltip="'Unmask the value'">
-                <span class="icon"><i class="fas fa-unlock"></i></span>
-              </span>
+              <p class="card-header-title is-unselectable is-justify-center">Manage Environment Variable</p>
             </header>
             <div class="card-content">
-              <div class="content">
-                <p v-if="'bool' === item.type">
-                  <span class="icon-text">
-                    <span class="icon">
-                      <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(item.value)"></i>
-                      <i class="fas fa-toggle-off" v-else></i>
-                    </span>
-                    <span>{{ fixBool(item.value) ? 'On (True)' : 'Off (False)' }}</span>
-                  </span>
-                </p>
-                <p v-else class="is-text-overflow is-clickable is-unselectable"
-                   :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
-                   @click="(e) => e.target.classList.toggle('is-text-overflow')">
-                  {{ item.value }}</p>
+              <div class="field">
+                <label class="label is-unselectable" for="form_key">Environment key</label>
+                <div class="control has-icons-left">
+                  <div class="select is-fullwidth">
+                    <select v-model="form_key" id="form_key" @change="keyChanged">
+                      <option value="" disabled>Select Key</option>
+                      <option v-for="item in items" :key="`opt-${item.key}`" :value="item.key">
+                        {{ item.key }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="icon is-left">
+                    <i class="fas fa-key"></i>
+                  </div>
+                </div>
+              </div>
 
-                <p v-if="item?.danger" class="title is-5 has-text-danger">
-                  {{ item.description }}
-                </p>
+              <div class="field">
+                <label class="label is-unselectable" for="form_value">Environment value</label>
+                <div class="control has-icons-left">
+                  <template v-if="'bool' === form_type">
+                    <input id="form_value" type="checkbox" class="switch is-success"
+                           :checked="fixBool(form_value)" @change="form_value = !fixBool(form_value)">
+                    <label for="form_value">
+                      <template v-if="fixBool(form_value)">On (True)</template>
+                      <template v-else>Off (False)</template>
+                    </label>
+                  </template>
+                  <template v-else-if=" 'int' === form_type ">
+                    <input class="input" id="form_value" type="number" placeholder="Value" v-model="form_value"
+                           pattern="[0-9]*" inputmode="numeric">
+                    <div class="icon is-small is-left">
+                      <i class="fas fa-font"></i>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <input class="input" id="form_value" type="text" placeholder="Value" v-model="form_value">
+                    <div class="icon is-small is-left"><i class="fas fa-font"></i></div>
+                  </template>
+                  <div>
+                    <p class="help" v-html="getHelp(form_key)"></p>
+                  </div>
+                </div>
               </div>
             </div>
-            <footer class="card-footer">
+            <div class="card-footer">
               <div class="card-footer-item">
-                <button class="button is-primary is-fullwidth" @click="editEnv(item)">
+                <button class="button is-fullwidth is-primary" type="submit" :disabled="!form_key || '' === form_value">
                   <span class="icon-text">
-                    <span class="icon"><i class="fas fa-edit"></i></span>
-                    <span>Edit</span>
+                    <span class="icon"><i class="fas fa-save"></i></span>
+                    <span>Save</span>
                   </span>
                 </button>
               </div>
               <div class="card-footer-item">
-                <button class="button is-fullwidth is-warning" @click="copyText(item.value)">
+                <button class="button is-fullwidth is-danger" type="button" @click="cancelForm">
                   <span class="icon-text">
-                    <span class="icon"><i class="fas fa-copy"></i></span>
-                    <span>Copy</span>
+                    <span class="icon"><i class="fas fa-cancel"></i></span>
+                    <span>Cancel</span>
                   </span>
                 </button>
               </div>
-              <div class="card-footer-item">
-                <button class="button is-fullwidth is-danger" @click="deleteEnv(item)">
-                  <span class="icon-text">
-                    <span class="icon"><i class="fas fa-trash"></i></span>
-                    <span>Delete</span>
-                  </span>
-                </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div v-else class="column is-12" v-if="items">
+        <div class="columns is-multiline">
+          <div class="column" v-for="item in filteredRows(items)" :key="item.key"
+               :class="{'is-4':!item?.danger,'is-12':item.danger}">
+            <div class="card" :class="{ 'is-danger': item?.danger }">
+              <header class="card-header">
+                <p class="card-header-title is-unselectable">
+                  <template v-if="item?.danger">
+                    <span class="title is-5 ">
+                      <span class="icon" v-tooltip="'This option is considered dangerous.'">
+                        <i class="has-text-danger fas fa-exclamation-triangle"></i>&nbsp;
+                      </span> {{ item.key }}
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span class="has-tooltip is-clickable" v-tooltip="item.description">
+                      {{ item.key }}
+                    </span>
+                  </template>
+                </p>
+                <span class="card-header-icon" v-if="item.mask" @click="item.mask = false"
+                      v-tooltip="'Unmask the value'">
+                  <span class="icon"><i class="fas fa-unlock"></i></span>
+                </span>
+              </header>
+              <div class="card-content">
+                <div class="content">
+                  <p v-if="'bool' === item.type">
+                    <span class="icon-text">
+                      <span class="icon">
+                        <i class="fas fa-toggle-on has-text-primary" v-if="fixBool(item.value)"></i>
+                        <i class="fas fa-toggle-off" v-else></i>
+                      </span>
+                      <span>{{ fixBool(item.value) ? 'On (True)' : 'Off (False)' }}</span>
+                    </span>
+                  </p>
+                  <p v-else class="is-text-overflow is-clickable is-unselectable"
+                     :class="{ 'is-masked': item.mask, 'is-unselectable': item.mask }"
+                     @click="(e) => e.target.classList.toggle('is-text-overflow')">
+                    {{ item.value }}</p>
+
+                  <p v-if="item?.danger" class="title is-5 has-text-danger">
+                    {{ item.description }}
+                  </p>
+                </div>
               </div>
-            </footer>
+              <footer class="card-footer">
+                <div class="card-footer-item">
+                  <button class="button is-primary is-fullwidth" @click="editEnv(item)">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-edit"></i></span>
+                      <span>Edit</span>
+                    </span>
+                  </button>
+                </div>
+                <div class="card-footer-item">
+                  <button class="button is-fullwidth is-warning" @click="copyText(item.value)">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-copy"></i></span>
+                      <span>Copy</span>
+                    </span>
+                  </button>
+                </div>
+                <div class="card-footer-item">
+                  <button class="button is-fullwidth is-danger" @click="deleteEnv(item)">
+                    <span class="icon-text">
+                      <span class="icon"><i class="fas fa-trash"></i></span>
+                      <span>Delete</span>
+                    </span>
+                  </button>
+                </div>
+              </footer>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="column is-12">
-      <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-               @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
-        <ul>
-          <li>Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.</li>
-          <li>Some values are too large to fit into the view, clicking on the value will show the full value.</li>
-          <li>These values are loaded from the <code>{{ file }}</code> file.</li>
-          <li>To add a new variable click on the <i class="fa fa-add"></i> button.</li>
-          <li>Environment variables with <span class="has-text-danger">red borders</span> and <i
-              class="fas fa-exclamation-triangle"></i> icon are considered
-            dangerous. Please be careful when editing them.
-          </li>
-        </ul>
-      </Message>
-    </div>
+      <div class="column is-12">
+        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
+                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          <ul>
+            <li>Some variables values are masked, to unmask them click on icon <i class="fa fa-unlock"></i>.</li>
+            <li>Some values are too large to fit into the view, clicking on the value will show the full value.</li>
+            <li>These values are loaded from the <code>{{ file }}</code> file.</li>
+            <li>To add a new variable click on the <i class="fa fa-add"></i> button.</li>
+            <li>Environment variables with <span class="has-text-danger">red borders</span> and <i
+                class="fas fa-exclamation-triangle"></i> icon are considered
+              dangerous. Please be careful when editing them.
+            </li>
+          </ul>
+        </Message>
+      </div>
 
+    </div>
   </div>
 </template>
 

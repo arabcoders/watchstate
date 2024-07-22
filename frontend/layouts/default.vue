@@ -286,13 +286,11 @@
         </div>
       </div>
 
-      <template v-if="!hasAPISettings">
-        <no-api/>
-      </template>
-      <template v-else>
-        <slot v-if="!showConnection && hasAPISettings"/>
-      </template>
-
+      <div>
+        <NuxtPage v-if="!showConnection && hasAPISettings"/>
+        <no-api v-else/>
+      </div>
+      
       <div class="columns is-multiline is-mobile mt-3">
         <div class="column is-12 is-hidden-tablet has-text-centered">
           <a href="#top" id="bottom" class="button">

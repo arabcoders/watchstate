@@ -18,7 +18,7 @@ export default defineNuxtConfig({
             ],
         },
         buildAssetsDir: "assets",
-
+        pageTransition: {name: 'page', mode: 'out-in'}
     },
     router: {
         options: {
