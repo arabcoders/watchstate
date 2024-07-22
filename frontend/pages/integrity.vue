@@ -201,9 +201,10 @@
                       <template v-for="record in item.integrity" :key="`integrity-${record.backend}`">
                         <p>
                           <span class="icon">
-                            <i class="fas" :class="{'fa-exclamation-triangle':!item.status,'fa-check':item.status}"></i>&nbsp;
+                            <i class="fas"
+                               :class="{'fa-xmark':!record.status,'fa-check':record.status}"></i>&nbsp;
                           </span>
-                          <span :class="{'has-text-danger':!item.status,'has-text-success':item.status}">
+                          <span :class="{'has-text-danger':!record.status,'has-text-success':record.status}">
                             {{ record.backend }}: {{ record.message }}</span>
                         </p>
                       </template>
