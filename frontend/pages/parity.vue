@@ -174,29 +174,14 @@
                   <div class="column is-12">
                     <div class="field is-grouped">
                       <div class="control is-expanded is-unselectable">
-                        <span class="icon"><i class="fas fa-check"></i>&nbsp;</span>
-                        <span>Reported By</span>
+                        <span class="icon"><i class="fas fa-info"></i>&nbsp;</span>
+                        <span>Has metadata from</span>
                       </div>
                       <div class="control">
-                        <template v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`">
-                          <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
-                          &nbsp;
-                        </template>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="column is-12">
-                    <div class="field is-grouped">
-                      <div class="control is-expanded is-unselectable">
-                        <span class="icon"><i class="fas fa-times"></i>&nbsp;</span>
-                        <span>Not Reported By</span>
-                      </div>
-                      <div class="control">
-                        <template v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`">
-                          <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag"/>
-                          &nbsp;
-                        </template>
+                        <NuxtLink v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`"
+                                  :to="'/backend/'+backend" v-text="backend" class="tag is-primary ml-1"/>
+                        <NuxtLink v-for="backend in item.not_reported_by" :key="`${item.id}-nrb-${backend}`"
+                                  :to="'/backend/'+backend" v-text="backend" class="tag is-danger ml-1"/>
                       </div>
                     </div>
                   </div>

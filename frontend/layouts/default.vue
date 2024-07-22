@@ -68,6 +68,11 @@
                 <span class="icon"><i class="fas fa-database"></i></span>
                 <span>Data Parity</span>
               </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/integrity" @click.native="showMenu=false">
+                <span class="icon"><i class="fas fa-file"></i></span>
+                <span>Files Integrity</span>
+              </NuxtLink>
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/events" @click.native="showMenu=false">

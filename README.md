@@ -9,43 +9,20 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
-### 2024-07-06
+### 2024-07-22
 
-Recently we have introduced a new feature that allows you to use Jellyfin and Emby OAuth access tokens for syncing
-your play state. This is especially handy if you're not the server owner and can't create API keys. Please note, this
-feature is in its experimental phase, so you might encounter some issues as we yet to explorer the full depth of the
-implementation. We're actively working on making it better, If you have any feedback or suggestions, please let us know.
+We have recently added a new WebUI feature, `File integrity`, this feature will help you to check if your media backends
+are reporting files that are not available on the disk. This feature is still in alpha, and we are working on improving
+it.
 
-Getting your OAuth token is easy. When prompted, simply enter your `username:password` in place of the API key through
-the `WebUI` or the `config:add/manage` command. `WatchState` will automatically contact the backend and generate the
-token for you, as this step is required to get more information like your `User ID` which is sadly inaccessible without
-us generating the token. Both Emby & Jellyfin doesn't provide an API endpoint to inquiry about the current user.
+This feature `REQUIRES` that you mount your media directories to the `WatchState` container preferably as readonly. There is plans to add
+a path replacement feature to allow you change the pathing, but it's not implemented yet.
 
-We have also added new `config:test` command to run functional tests on your backends, this will not alter your state,
-And it's quite useful to know if the tool is able to communicate with your backends. without problems, It will report
-the following, `OK` which mean the indicated test has passed, `FA` which mean the indicated test has failed. And `SK`
-which mean the indicated test has been skipped or not yet implemented.
+This feature will work on both local and remote cloud storages provided they are mounted into the container. We also may recommend not to
+use this feature depending on how your cloud storage provider treats file stat calls. As it might lead to unnecessary money spending. and of course
+it will be slower.
 
-### 2024-06-23
-
-WE are happy to announce that the `WebUI` is ready for wider usage and we are planning to release it in the next few
-months.
-We are actively working on it to improve it. If you have any feedback or suggestions, please let us know. We feel it's
-almost future complete
-for the things that we want.
-
-On another related news, we have added new environment variable `WS_API_AUTO` "disabled by default" which can be used
-to automatically expose your **API KEY/TOKEN**. This is useful for users who are using the `WebUI` from many different
-browsers
-and want to automate the configuration process.
-
-While the `WebUI` is included in the main project, it's a standalone feature and requires the API settings to be
-configured before it
-can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in `${WS_DATA_PATH}/config/.env`.
-
-> [!IMPORTANT]
-> This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is
-> exposed to the internet.
+For more information about how we cache the stat calls, please refer to the [FAQ](FAQ.md#How-does-the-file-integrity-feature-works).
 
 Refer to [NEWS](NEWS.md) for old updates.
 

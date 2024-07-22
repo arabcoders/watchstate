@@ -867,3 +867,20 @@ $ ./bin/console help
 ```
 
 For more information, please refer to the [Dockerfile](/Dockerfile). On how we do things to get the tool running.
+
+---
+
+### How does the file integrity feature works?
+
+The feature first scan your entire history for reported media file paths. then we will do stat check on each point of the path starting from lowest to highest.
+
+For example lets say your media file is `/media/series/season 1/episode 1.mkv`
+
+We do the following. `/media` exists or not? if it does we move to the next path `/media/series` exists or not? if it does we move to the next path `/media/series/season 1` exists or not? if it does we move to the next path `/media/series/season 1/episode 1.mkv` exists or not? if it does we move to the next path.
+
+Using this approach allow us to cache calls and reduce unnecessary calls to the filesystem. If you have for example `/media/seriesX/` with thousands of files,
+and the root `/media/seriesX` doesn't exists we dont have to call stat for every file, instead using the cache we determine that the file doesn't exist.
+
+Of course, every stat call is cached, so if 1 or more backends are reporting the same file path, we only do the stat check once. This is to reduce the load on the filesystem.
+
+---
