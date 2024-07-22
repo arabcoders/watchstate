@@ -8,6 +8,7 @@ use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\HTTP_STATUS;
 use App\Libs\Middlewares\ExceptionHandlerMiddleware;
@@ -37,6 +38,7 @@ final class Integrity
      */
     public function __construct(private iDB $db, private readonly iCache $cache)
     {
+        set_time_limit(0);
         $this->pdo = $this->db->getPDO();
     }
 
@@ -46,6 +48,8 @@ final class Integrity
     #[Get(self::URL . '[/]', middleware: [ExceptionHandlerMiddleware::class], name: 'system.integrity')]
     public function __invoke(iRequest $request): iResponse
     {
+        $params = DataUtil::fromArray($request->getQueryParams());
+
         if ($this->cache->has('system.integrity')) {
             $data = $this->cache->get('system.integrity', []);
             $this->dirExists = ag($data, 'dir_exists', []);
@@ -53,8 +57,11 @@ final class Integrity
             $this->fromCache = true;
         }
 
+        $limit = $params->get('limit', 1000);
+
         $response = [
             'items' => [],
+            'total' => 0,
             'fromCache' => $this->fromCache,
         ];
 
@@ -65,9 +72,15 @@ final class Integrity
         $base = Container::get(iState::class);
 
         foreach ($stmt as $row) {
+            if ($response['total'] > $limit) {
+                break;
+            }
+
             $entity = $base::fromArray($row);
+
             if (false === $this->checkIntegrity($entity)) {
                 $response['items'][] = $this->formatEntity($entity, true);
+                $response['total']++;
             }
         }
 
@@ -153,9 +166,9 @@ final class Integrity
         return api_response(HTTP_STATUS::HTTP_OK);
     }
 
-    private function checkPath(string $dir): bool
+    private function checkPath(string $file): bool
     {
-        $dirs = explode(DIRECTORY_SEPARATOR, $dir);
+        $dirs = explode(DIRECTORY_SEPARATOR, $file);
         foreach ($dirs as $i => $dir) {
             $path = implode(DIRECTORY_SEPARATOR, array_slice($dirs, 0, $i + 1));
             if (empty($path)) {
