@@ -9,6 +9,15 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-08-01
+
+We recently enabled listening on tls connections via `8443` which can be controlled by `HTTPS_PORT` environment variable.
+Before today, we simply only exposed the port via the `Dockerfile`, but we weren't listening for connections on it.
+
+However, please keep in mind that the certificate is self-signed, and you might get a warning from your browser. You can
+either accept the warning or add the certificate to your trusted certificates. We strongly recommend using a reverse proxy.
+instead of relying on self-signed certificates.
+
 ### 2024-07-22
 
 We have recently added a new WebUI feature, `File integrity`, this feature will help you to check if your media backends
