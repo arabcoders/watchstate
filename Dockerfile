@@ -1,4 +1,4 @@
-FROM node:lts-alpine as npm_builder
+FROM node:lts-alpine AS npm_builder
 
 WORKDIR /frontend
 COPY ./frontend ./
@@ -31,10 +31,7 @@ ENV FPM_PORT="${PHP_FPM_PORT}"
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
     for ext in ${PHP_PACKAGES}; do PACKAGES="${PACKAGES} ${PHP_V}-${ext}"; done && \
     apk add --no-cache bash caddy icu-data-full nano curl procps net-tools iproute2  \
-    shadow sqlite redis tzdata gettext fcgi ${PHP_V} ${PACKAGES} && \
-    # Update Caddy and add packages to it. disabled as workaround for arm/v7 build
-    #echo 'Adding non standard modules to http server.' && \
-    #caddy add-package github.com/caddyserver/transform-encoder >/dev/null 2>&1 && \
+    shadow sqlite redis tzdata gettext fcgi ca-certificates nss mailcap libcap ${PHP_V} ${PACKAGES} && \
     # Basic setup
     echo '' && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100

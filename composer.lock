@@ -1271,16 +1271,16 @@
     },
     {
       "name": "symfony/cache",
-      "version": "v6.4.8",
+      "version": "v6.4.10",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/cache.git",
-        "reference": "287142df5579ce223c485b3872df3efae8390984"
+        "reference": "6702d2d777260e6ff3451fee2d7d78ab5f715cdc"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/cache/zipball/287142df5579ce223c485b3872df3efae8390984",
-        "reference": "287142df5579ce223c485b3872df3efae8390984",
+        "url": "https://api.github.com/repos/symfony/cache/zipball/6702d2d777260e6ff3451fee2d7d78ab5f715cdc",
+        "reference": "6702d2d777260e6ff3451fee2d7d78ab5f715cdc",
         "shasum": ""
       },
       "require": {
@@ -1347,7 +1347,7 @@
         "psr6"
       ],
       "support": {
-        "source": "https://github.com/symfony/cache/tree/v6.4.8"
+        "source": "https://github.com/symfony/cache/tree/v6.4.10"
       },
       "funding": [
         {
@@ -1363,7 +1363,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-05-31T14:49:08+00:00"
+      "time": "2024-07-17T06:05:49+00:00"
     },
     {
       "name": "symfony/cache-contracts",
@@ -1443,16 +1443,16 @@
     },
     {
       "name": "symfony/console",
-      "version": "v6.4.9",
+      "version": "v6.4.10",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/console.git",
-        "reference": "6edb5363ec0c78ad4d48c5128ebf4d083d89d3a9"
+        "reference": "504974cbe43d05f83b201d6498c206f16fc0cdbc"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/console/zipball/6edb5363ec0c78ad4d48c5128ebf4d083d89d3a9",
-        "reference": "6edb5363ec0c78ad4d48c5128ebf4d083d89d3a9",
+        "url": "https://api.github.com/repos/symfony/console/zipball/504974cbe43d05f83b201d6498c206f16fc0cdbc",
+        "reference": "504974cbe43d05f83b201d6498c206f16fc0cdbc",
         "shasum": ""
       },
       "require": {
@@ -1517,7 +1517,7 @@
         "terminal"
       ],
       "support": {
-        "source": "https://github.com/symfony/console/tree/v6.4.9"
+        "source": "https://github.com/symfony/console/tree/v6.4.10"
       },
       "funding": [
         {
@@ -1533,7 +1533,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-06-28T09:49:33+00:00"
+      "time": "2024-07-26T12:30:32+00:00"
     },
     {
       "name": "symfony/deprecation-contracts",
@@ -1604,16 +1604,16 @@
     },
     {
       "name": "symfony/http-client",
-      "version": "v6.4.9",
+      "version": "v6.4.10",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/http-client.git",
-        "reference": "6e9db0025db565bcf8f1d46ed734b549e51e6045"
+        "reference": "b5e498f763e0bf5eed8dcd946e50a3b3f71d4ded"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/http-client/zipball/6e9db0025db565bcf8f1d46ed734b549e51e6045",
-        "reference": "6e9db0025db565bcf8f1d46ed734b549e51e6045",
+        "url": "https://api.github.com/repos/symfony/http-client/zipball/b5e498f763e0bf5eed8dcd946e50a3b3f71d4ded",
+        "reference": "b5e498f763e0bf5eed8dcd946e50a3b3f71d4ded",
         "shasum": ""
       },
       "require": {
@@ -1677,7 +1677,7 @@
         "http"
       ],
       "support": {
-        "source": "https://github.com/symfony/http-client/tree/v6.4.9"
+        "source": "https://github.com/symfony/http-client/tree/v6.4.10"
       },
       "funding": [
         {
@@ -1693,7 +1693,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-06-28T07:59:05+00:00"
+      "time": "2024-07-15T09:26:24+00:00"
     },
     {
       "name": "symfony/http-client-contracts",
@@ -1998,16 +1998,16 @@
     },
     {
       "name": "symfony/string",
-      "version": "v7.1.2",
+      "version": "v7.1.3",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/string.git",
-        "reference": "14221089ac66cf82e3cf3d1c1da65de305587ff8"
+        "reference": "ea272a882be7f20cad58d5d78c215001617b7f07"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/string/zipball/14221089ac66cf82e3cf3d1c1da65de305587ff8",
-        "reference": "14221089ac66cf82e3cf3d1c1da65de305587ff8",
+        "url": "https://api.github.com/repos/symfony/string/zipball/ea272a882be7f20cad58d5d78c215001617b7f07",
+        "reference": "ea272a882be7f20cad58d5d78c215001617b7f07",
         "shasum": ""
       },
       "require": {
@@ -2065,7 +2065,7 @@
         "utf8"
       ],
       "support": {
-        "source": "https://github.com/symfony/string/tree/v7.1.2"
+        "source": "https://github.com/symfony/string/tree/v7.1.3"
       },
       "funding": [
         {
@@ -2081,20 +2081,20 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-06-28T09:27:18+00:00"
+      "time": "2024-07-22T10:25:37+00:00"
     },
     {
       "name": "symfony/var-dumper",
-      "version": "v6.4.9",
+      "version": "v6.4.10",
       "source": {
         "type": "git",
         "url": "https://github.com/symfony/var-dumper.git",
-        "reference": "c31566e4ca944271cc8d8ac6887cbf31b8c6a172"
+        "reference": "a71cc3374f5fb9759da1961d28c452373b343dd4"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/symfony/var-dumper/zipball/c31566e4ca944271cc8d8ac6887cbf31b8c6a172",
-        "reference": "c31566e4ca944271cc8d8ac6887cbf31b8c6a172",
+        "url": "https://api.github.com/repos/symfony/var-dumper/zipball/a71cc3374f5fb9759da1961d28c452373b343dd4",
+        "reference": "a71cc3374f5fb9759da1961d28c452373b343dd4",
         "shasum": ""
       },
       "require": {
@@ -2150,7 +2150,7 @@
         "dump"
       ],
       "support": {
-        "source": "https://github.com/symfony/var-dumper/tree/v6.4.9"
+        "source": "https://github.com/symfony/var-dumper/tree/v6.4.10"
       },
       "funding": [
         {
@@ -2166,7 +2166,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-06-27T13:23:14+00:00"
+      "time": "2024-07-26T12:30:32+00:00"
     },
     {
       "name": "symfony/var-exporter",
@@ -3114,17 +3114,17 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "d8b471f69a97a8929180bbface097ac2b4e70d05"
+        "reference": "0cc79cfabcebf66307fe5a686367bc425a7b96b6"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/d8b471f69a97a8929180bbface097ac2b4e70d05",
-        "reference": "d8b471f69a97a8929180bbface097ac2b4e70d05",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/0cc79cfabcebf66307fe5a686367bc425a7b96b6",
+        "reference": "0cc79cfabcebf66307fe5a686367bc425a7b96b6",
         "shasum": ""
       },
       "conflict": {
         "3f/pygmentize": "<1.2",
-        "admidio/admidio": "<4.2.13",
+        "admidio/admidio": "<4.3.10",
         "adodb/adodb-php": "<=5.20.20|>=5.21,<=5.21.3",
         "aheinze/cockpit": "<2.2",
         "aimeos/ai-admin-graphql": ">=2022.04.1,<2022.10.10|>=2023.04.1,<2023.10.6|>=2024.04.1,<2024.04.6",
@@ -3162,7 +3162,7 @@
         "awesome-support/awesome-support": "<=6.0.7",
         "aws/aws-sdk-php": "<3.288.1",
         "azuracast/azuracast": "<0.18.3",
-        "backdrop/backdrop": "<1.24.2",
+        "backdrop/backdrop": "<1.27.3|>=1.28,<1.28.2",
         "backpack/crud": "<3.4.9",
         "bacula-web/bacula-web": "<8.0.0.0-RC2-dev",
         "badaso/core": "<2.7",
@@ -3177,7 +3177,7 @@
         "bcosca/fatfree": "<3.7.2",
         "bedita/bedita": "<4",
         "bigfork/silverstripe-form-capture": ">=3,<3.1.1",
-        "billz/raspap-webgui": "<2.9.5",
+        "billz/raspap-webgui": "<=3.1.4",
         "bk2k/bootstrap-package": ">=7.1,<7.1.2|>=8,<8.0.8|>=9,<9.0.4|>=9.1,<9.1.3|>=10,<10.0.10|>=11,<11.0.3",
         "blueimp/jquery-file-upload": "==6.4.4",
         "bmarshall511/wordpress_zero_spam": "<5.2.13",
@@ -3227,7 +3227,7 @@
         "contao/managed-edition": "<=1.5",
         "corveda/phpsandbox": "<1.3.5",
         "cosenary/instagram": "<=2.3",
-        "craftcms/cms": "<4.6.2",
+        "craftcms/cms": "<4.6.2|>=5.0.0.0-beta1,<=5.2.2",
         "croogo/croogo": "<4",
         "cuyz/valinor": "<0.12",
         "czproject/git-php": "<4.0.3",
@@ -3280,7 +3280,7 @@
         "ezsystems/ezdemo-ls-extension": ">=5.4,<5.4.2.1-dev",
         "ezsystems/ezfind-ls": ">=5.3,<5.3.6.1-dev|>=5.4,<5.4.11.1-dev|>=2017.12,<2017.12.0.1-dev",
         "ezsystems/ezplatform": "<=1.13.6|>=2,<=2.5.24",
-        "ezsystems/ezplatform-admin-ui": ">=1.3,<1.3.5|>=1.4,<1.4.6|>=1.5,<1.5.29|>=2.3,<2.3.26",
+        "ezsystems/ezplatform-admin-ui": ">=1.3,<1.3.5|>=1.4,<1.4.6|>=1.5,<1.5.29|>=2.3,<2.3.26|>=3.3,<3.3.39",
         "ezsystems/ezplatform-admin-ui-assets": ">=4,<4.2.1|>=5,<5.0.1|>=5.1,<5.1.1",
         "ezsystems/ezplatform-graphql": ">=1.0.0.0-RC1-dev,<1.0.13|>=2.0.0.0-beta1,<2.3.12",
         "ezsystems/ezplatform-kernel": "<1.2.5.1-dev|>=1.3,<1.3.35",
@@ -3325,7 +3325,7 @@
         "friendsofsymfony/rest-bundle": ">=1.2,<1.2.2",
         "friendsofsymfony/user-bundle": ">=1,<1.3.5",
         "friendsofsymfony1/swiftmailer": ">=4,<5.4.13|>=6,<6.2.5",
-        "friendsofsymfony1/symfony1": ">=1.1,<1.15.19",
+        "friendsofsymfony1/symfony1": ">=1.1,<1.5.19",
         "friendsoftypo3/mediace": ">=7.6.2,<7.6.5",
         "friendsoftypo3/openid": ">=4.5,<4.5.31|>=4.7,<4.7.16|>=6,<6.0.11|>=6.1,<6.1.6",
         "froala/wysiwyg-editor": "<3.2.7|>=4.0.1,<=4.1.3",
@@ -3363,7 +3363,7 @@
         "hov/jobfair": "<1.0.13|>=2,<2.0.2",
         "httpsoft/http-message": "<1.0.12",
         "hyn/multi-tenant": ">=5.6,<5.7.2",
-        "ibexa/admin-ui": ">=4.2,<4.2.3",
+        "ibexa/admin-ui": ">=4.2,<4.2.3|>=4.6.0.0-beta1,<4.6.9",
         "ibexa/core": ">=4,<4.0.7|>=4.1,<4.1.4|>=4.2,<4.2.3|>=4.5,<4.5.6|>=4.6,<4.6.2",
         "ibexa/graphql": ">=2.5,<2.5.31|>=3.3,<3.3.28|>=4.2,<4.2.3",
         "ibexa/post-install": "<=1.0.4",
@@ -3521,7 +3521,7 @@
         "open-web-analytics/open-web-analytics": "<1.7.4",
         "opencart/opencart": ">=0",
         "openid/php-openid": "<2.3",
-        "openmage/magento-lts": "<20.5",
+        "openmage/magento-lts": "<20.10.1",
         "opensolutions/vimbadmin": "<=3.0.15",
         "opensource-workshop/connect-cms": "<1.7.2|>=2,<2.3.2",
         "orchid/platform": ">=9,<9.4.4|>=14.0.0.0-alpha4,<14.5",
@@ -3531,6 +3531,7 @@
         "oro/crm-call-bundle": ">=4.2,<=4.2.5|>=5,<5.0.4|>=5.1,<5.1.1",
         "oro/customer-portal": ">=4.1,<=4.1.13|>=4.2,<=4.2.10|>=5,<=5.0.11|>=5.1,<=5.1.3",
         "oro/platform": ">=1.7,<1.7.4|>=3.1,<3.1.29|>=4.1,<4.1.17|>=4.2,<=4.2.10|>=5,<=5.0.12|>=5.1,<=5.1.3",
+        "oveleon/contao-cookiebar": "<1.16.3|>=2,<2.1.3",
         "oxid-esales/oxideshop-ce": "<4.5",
         "oxid-esales/paymorrow-module": ">=1,<1.0.2|>=2,<2.0.1",
         "packbackbooks/lti-1-3-php-library": "<5",
@@ -3572,7 +3573,7 @@
         "phpxmlrpc/extras": "<0.6.1",
         "phpxmlrpc/phpxmlrpc": "<4.9.2",
         "pi/pi": "<=2.5",
-        "pimcore/admin-ui-classic-bundle": "<=1.4.2",
+        "pimcore/admin-ui-classic-bundle": "<=1.5.1",
         "pimcore/customer-management-framework-bundle": "<4.0.6",
         "pimcore/data-hub": "<1.2.4",
         "pimcore/demo": "<10.3",
@@ -3683,7 +3684,7 @@
         "ssddanbrown/bookstack": "<24.05.1",
         "statamic/cms": "<4.46|>=5.3,<5.6.2",
         "stormpath/sdk": "<9.9.99",
-        "studio-42/elfinder": "<2.1.62",
+        "studio-42/elfinder": "<=2.1.64",
         "studiomitte/friendlycaptcha": "<0.1.4",
         "subhh/libconnect": "<7.0.8|>=8,<8.1",
         "sukohi/surpass": "<1",
@@ -3917,7 +3918,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2024-07-19T23:04:29+00:00"
+      "time": "2024-07-31T17:04:31+00:00"
     },
     {
       "name": "sebastian/cli-parser",

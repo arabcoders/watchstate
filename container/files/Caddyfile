@@ -4,7 +4,7 @@
     https_port {$HTTPS_PORT}
 }
 
-http:// {
+(app) {
     root * /opt/app/public
     log {
         output discard
@@ -16,4 +16,15 @@ http:// {
         trusted_proxies private_ranges
         env X_REQUEST_ID "{http.request.uuid}"
     }
+}
+
+http:// {
+    import app
+}
+
+https:// {
+    tls internal {
+        on_demand
+    }
+    import app
 }
