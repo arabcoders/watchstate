@@ -65,7 +65,7 @@ watch(show_report_warning, async v => {
   const response = await request(`/system/report`)
   const json = await response.json()
 
-  if (useRoute().name === 'report') {
+  if (useRoute().name !== 'report') {
     return
   }
 
