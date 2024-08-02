@@ -66,9 +66,15 @@ class Cache {
 
     /**
      * Clear the cache
+     *
+     * @param {function|null} filter - A filter function to remove only specific keys. Or null to clear all.
      */
-    clear() {
-        this.storage.clear()
+    clear(filter = null) {
+        if (null !== filter) {
+            Object.keys(this.storage ?? {}).filter(filter).forEach(k => this.storage.removeItem(k))
+        } else {
+            this.storage.clear()
+        }
     }
 
     /**

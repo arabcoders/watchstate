@@ -50,17 +50,25 @@
 
 <script setup>
 import {copyText} from '~/utils/index'
+import request from '~/utils/request'
 
 useHead({title: `System Report`})
 
 const data = ref([])
 const show_report_warning = ref(true)
 
-watch(show_report_warning, async (value) => {
-  if (false !== value) {
+watch(show_report_warning, async v => {
+  if (false !== v) {
     return
   }
+
   const response = await request(`/system/report`)
-  data.value = await response.json()
+  const json = await response.json()
+
+  if (useRoute().name !== 'report') {
+    return
+  }
+
+  data.value = json
 })
 </script>

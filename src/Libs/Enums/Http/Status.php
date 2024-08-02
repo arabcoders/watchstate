@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Libs;
+namespace App\Libs\Enums\Http;
 
 /**
  * Http Status Codes
  */
-enum HTTP_STATUS: int
+enum Status: int
 {
     case HTTP_CONTINUE = 100;
     case HTTP_SWITCHING_PROTOCOLS = 101;

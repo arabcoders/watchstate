@@ -6,7 +6,7 @@ namespace App\Commands\Config;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
@@ -122,7 +122,7 @@ final class EditCommand extends Command
 
         $response = apiRequest($method, "/backend/{$name}/option/{$key}", $json);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')

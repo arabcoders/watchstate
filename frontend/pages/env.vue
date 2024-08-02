@@ -312,6 +312,9 @@ const addVariable = async () => {
     }
 
     const json = await response.json()
+    if (useRoute().name !== 'env') {
+      return
+    }
 
     if (200 !== response.status) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)

@@ -8,7 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -112,7 +112,7 @@ final class UnmatchedCommand extends Command
 
         $response = APIRequest('GET', $url, opts: ['query' => $query]);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r('<error>API error. {status}: {message}</error>', [
                 'id' => $id,
                 'status' => $response->status->value,

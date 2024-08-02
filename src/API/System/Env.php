@@ -8,9 +8,9 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\DataUtil;
+use App\Libs\Enums\Http\Status;
 use App\Libs\EnvFile;
 use App\Libs\Exceptions\ValidationException;
-use App\Libs\HTTP_STATUS;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
@@ -57,7 +57,7 @@ final class Env
             $list = array_filter($list, fn($info) => $this->envFile->has($info['key']));
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, [
+        return api_response(Status::HTTP_OK, [
             'data' => array_values($list),
             'file' => Config::get('path') . '/config/.env',
         ]);
@@ -68,20 +68,20 @@ final class Env
     {
         $key = strtoupper((string)ag($args, 'key', ''));
         if (empty($key)) {
-            return api_error('Invalid value for key path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for key path parameter.', Status::HTTP_BAD_REQUEST);
         }
 
         $spec = $this->getSpec($key);
 
         if (empty($spec)) {
-            return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::HTTP_BAD_REQUEST);
         }
 
         if (false === $this->envFile->has($key)) {
-            return api_error(r("Key '{key}' is not set.", ['key' => $key]), HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error(r("Key '{key}' is not set.", ['key' => $key]), Status::HTTP_NOT_FOUND);
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, [
+        return api_response(Status::HTTP_OK, [
             'key' => $key,
             'value' => $this->settype($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
             'description' => ag($spec, 'description'),
@@ -94,19 +94,19 @@ final class Env
     {
         $key = strtoupper((string)ag($args, 'key', ''));
         if (empty($key)) {
-            return api_error('Invalid value for key path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for key path parameter.', Status::HTTP_BAD_REQUEST);
         }
 
         $spec = $this->getSpec($key);
 
         if (empty($spec)) {
-            return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::HTTP_BAD_REQUEST);
         }
 
         if ('DELETE' === $request->getMethod()) {
             $this->envFile->remove($key)->persist();
 
-            return api_response(HTTP_STATUS::HTTP_OK, [
+            return api_response(Status::HTTP_OK, [
                 'key' => $key,
                 'value' => $this->setType($spec, ag($spec, 'value', fn() => $this->envFile->get($key))),
                 'description' => ag($spec, 'description'),
@@ -117,11 +117,11 @@ final class Env
         $params = DataUtil::fromRequest($request);
 
         if (null === ($value = $params->get('value', null))) {
-            return api_error(r("No value was provided for '{key}'.", ['key' => $key]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error(r("No value was provided for '{key}'.", ['key' => $key]), Status::HTTP_BAD_REQUEST);
         }
 
         if ($value === ag($spec, 'value')) {
-            return api_response(HTTP_STATUS::HTTP_NOT_MODIFIED);
+            return api_response(Status::HTTP_NOT_MODIFIED);
         }
 
         try {
@@ -134,12 +134,12 @@ final class Env
             return api_error(r("Value validation for '{key}' failed. {error}", [
                 'key' => $key,
                 'error' => $e->getMessage()
-            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            ]), Status::HTTP_BAD_REQUEST);
         }
 
         $this->envFile->set($key, $value)->persist();
 
-        return api_response(HTTP_STATUS::HTTP_OK, [
+        return api_response(Status::HTTP_OK, [
             'key' => $key,
             'value' => $value,
             'description' => ag($spec, 'description'),

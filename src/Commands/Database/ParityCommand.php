@@ -10,7 +10,7 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -112,7 +112,7 @@ final class ParityCommand extends Command
 
         $response = APIRequest('GET', '/system/parity/', opts: ['query' => $params]);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -177,7 +177,7 @@ final class ParityCommand extends Command
 
             $response = APIRequest('DELETE', '/system/parity/', opts: ['query' => ['min' => $min]]);
 
-            if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            if (Status::HTTP_OK !== $response->status) {
                 $output->writeln(r("<error>API error. {status}: {message}</error>", [
                     'status' => $response->status->value,
                     'message' => ag($response->body, 'error.message', 'Unknown error.')

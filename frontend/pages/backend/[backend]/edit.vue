@@ -388,6 +388,9 @@ useHead({title: 'Backends - Edit: ' + id})
 const loadContent = async () => {
   const content = await request(`/backend/${id}`)
   let json = await content.json()
+  if (useRoute().name !== 'backend-backend-edit') {
+    return
+  }
 
   if (!json?.options || typeof json.options !== 'object') {
     json.options = {}

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Command;
 use App\Libs\Emitter;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 
 error_reporting(E_ALL);
 ini_set('error_reporting', 'On');
@@ -74,7 +74,7 @@ try {
     );
 
     if (!headers_sent()) {
-        http_response_code(HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value);
+        http_response_code(Status::HTTP_SERVICE_UNAVAILABLE->value);
     }
 
     exit(Command::FAILURE);
@@ -98,7 +98,7 @@ try {
     );
 
     if (!headers_sent()) {
-        http_response_code(HTTP_STATUS::HTTP_SERVICE_UNAVAILABLE->value);
+        http_response_code(Status::HTTP_SERVICE_UNAVAILABLE->value);
     }
 
     exit(Command::FAILURE);

@@ -67,6 +67,7 @@ import request from '~/utils/request'
 import Message from '~/components/Message'
 import {notification} from '~/utils/index'
 import Confirm from '~/components/Confirm'
+import {useSessionCache} from '~/utils/cache'
 
 const error = ref()
 const isResetting = ref(false)
@@ -93,6 +94,10 @@ const resetSystem = async () => {
       }
     }
 
+    if (useRoute().name !== 'reset') {
+      return
+    }
+
     if (200 !== response.status) {
       error.value = json
       return
@@ -103,7 +108,7 @@ const resetSystem = async () => {
 
     // -- remove all session storage due to the reset.
     try {
-      Object.keys(sessionStorage).forEach(k => sessionStorage.removeItem(k))
+      useSessionCache().clear()
     } catch (e) {
     }
   } catch (e) {

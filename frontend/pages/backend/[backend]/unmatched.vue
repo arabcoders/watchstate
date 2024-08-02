@@ -11,7 +11,7 @@
         <div class="is-pulled-right" v-if="hasLooked">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-info" @click.prevent="loadContent" :disabled="isLoading"
+              <button class="button is-info" @click.prevent="loadContent(false)" :disabled="isLoading"
                       :class="{'is-loading':isLoading}">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
@@ -130,47 +130,49 @@
 
 <script setup>
 import {makeSearchLink, notification} from '~/utils/index'
+import {useSessionCache} from '~/utils/cache'
 
 const backend = useRoute().params.backend
 const items = ref([])
 const isLoading = ref(false)
 const hasLooked = ref(false)
+const cache = useSessionCache()
+const cacheKey = `backend-${backend}-unmatched`
 
 useHead({title: `Backends: ${backend} - Unmatched items.`})
 
-const loadContent = async () => {
+const loadContent = async (useCache = true) => {
   hasLooked.value = true
   isLoading.value = true
   items.value = []
 
   let response, json;
 
-  try {
-    response = await request(`/backend/${backend}/unmatched`)
-  } catch (e) {
-    isLoading.value = false
-    return notification('error', 'Error', e.message)
-  }
 
   try {
-    json = await response.json()
-  } catch (e) {
-    json = {
-      error: {
-        code: response.status,
-        message: response.statusText
+    if (useCache && cache.has(cacheKey)) {
+      items.value = cache.get(cacheKey)
+    } else {
+      response = await request(`/backend/${backend}/unmatched`)
+      json = await response.json()
+      cache.set(cacheKey, json)
+
+      if (useRoute().name !== 'backend-backend-unmatched') {
+        return
       }
+
+      if (!response.ok) {
+        notification('error', 'Error', `${json.error.code ?? response.status}: ${json.error.message ?? response.statusText}`)
+        return
+      }
+      items.value = json
     }
+  } catch (e) {
+    hasLooked.value = false
+    return notification('error', 'Error', e.message)
+  } finally {
+    isLoading.value = false
   }
-
-  isLoading.value = false
-
-  if (!response.ok) {
-    notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
-    return
-  }
-
-  items.value = json
 }
 
 const fixTitle = (title) => title.replace(/([\[(]).*?([\])])/g, '').replace(/-\w+$/, '').trim()

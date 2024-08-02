@@ -203,6 +203,9 @@ const loadContent = async () => {
   try {
     const response = await request('/tasks')
     const json = await response.json()
+    if (useRoute().name !== 'tasks') {
+      return
+    }
     tasks.value = json.tasks
     queued.value = json.queued
     status.value = json.status
@@ -262,7 +265,7 @@ const queueTask = async task => {
 }
 
 const makeEnvLink = (key, val = null) => {
-  let search = new URLSearchParams();
+  let search = new URLSearchParams()
   search.set('callback', '/tasks')
   search.set('edit', key)
   if (val) {
@@ -275,6 +278,6 @@ const confirmRun = async task => {
   if (!confirm(`Run '${task.name}' via web console now?`)) {
     return
   }
-  await navigateTo(makeConsoleCommand(`${task.command} ${task.args || ''}`, true));
+  await navigateTo(makeConsoleCommand(`${task.command} ${task.args || ''}`, true))
 }
 </script>

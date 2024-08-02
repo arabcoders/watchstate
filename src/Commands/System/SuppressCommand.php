@@ -7,8 +7,8 @@ namespace App\Commands\System;
 use App\API\System\Suppressor;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\ConsoleOutput;
-use App\Libs\HTTP_STATUS;
 use RuntimeException;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -120,7 +120,7 @@ final class SuppressCommand extends Command
         }
 
         $response = APIRequest('GET', '/system/suppressor/' . $id);
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -184,7 +184,7 @@ final class SuppressCommand extends Command
 
         $response = APIRequest($id ? 'PUT' : 'POST', '/system/suppressor' . ($id ? '/' . $id : ''), $data);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -206,7 +206,7 @@ final class SuppressCommand extends Command
         }
 
         $response = APIRequest('DELETE', '/system/suppressor/' . $id);
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -222,7 +222,7 @@ final class SuppressCommand extends Command
     {
         $response = APIRequest('GET', '/system/suppressor');
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')

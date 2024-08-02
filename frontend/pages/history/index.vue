@@ -389,6 +389,12 @@ const loadContent = async (pageNumber, fromPopState = false) => {
 
     const response = await request(`/history?${search.toString()}`)
     const json = await response.json()
+
+    if (useRoute().name !== 'history') {
+      await unloadPage()
+      return
+    }
+
     const currentUrl = window.location.pathname + '?' + (new URLSearchParams(window.location.search)).toString()
 
     if (!fromPopState && currentUrl !== newUrl) {
@@ -472,15 +478,6 @@ const getHelp = (key) => {
   }
 
   return `<span class="icon-text"><span class="icon"><i class="fas fa-info"></i></span><span>${text}</span></span>`
-}
-
-const triggerSearch = async (search_type, search_query) => {
-  searchForm.value = true
-  perpage.value = 50
-  page.value = 1
-  searchField.value = search_type
-  query.value = search_query
-  await loadContent(1);
 }
 
 const toggleFilter = () => {
@@ -642,8 +639,10 @@ onMounted(async () => {
   await loadContent(page.value ?? 1)
 })
 
-onUnmounted(() => {
+const unloadPage = async () => {
   window.removeEventListener('history_main_link_clicked', stateCallBack)
   window.removeEventListener('popstate', stateCallBack)
-})
+}
+
+onUnmounted(async () => await unloadPage())
 </script>

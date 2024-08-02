@@ -7,7 +7,7 @@ namespace App\API\System;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Config;
 use App\Libs\DataUtil;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\StreamClosure;
 use JsonException;
 use Nyholm\Psr7\Response;
@@ -35,24 +35,24 @@ final class Command
     public function __invoke(iRequest $request): iResponse
     {
         if (null === ($json = ag($request->getQueryParams(), 'json'))) {
-            return api_error('No command was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('No command was given.', Status::HTTP_BAD_REQUEST);
         }
 
         try {
             $json = json_decode(base64_decode(rawurldecode($json)), true, flags: JSON_THROW_ON_ERROR);
             $data = DataUtil::fromArray($json);
             if (null === ($command = $data->get('command'))) {
-                return api_error('No command was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+                return api_error('No command was given.', Status::HTTP_BAD_REQUEST);
             }
         } catch (JsonException $e) {
             return api_error(
                 r('Unable to decode json data. {error}', ['error' => $e->getMessage()]),
-                HTTP_STATUS::HTTP_BAD_REQUEST
+                Status::HTTP_BAD_REQUEST
             );
         }
 
         if (!is_string($command)) {
-            return api_error('Command is invalid.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Command is invalid.', Status::HTTP_BAD_REQUEST);
         }
 
         $callable = function () use ($command, $data, $request) {
@@ -141,7 +141,7 @@ final class Command
             exit;
         };
 
-        return new Response(status: HTTP_STATUS::HTTP_OK->value, headers: [
+        return new Response(status: Status::HTTP_OK->value, headers: [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',

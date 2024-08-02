@@ -6,9 +6,9 @@ namespace Tests\Libs;
 
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\HTTP_STATUS;
 use App\Libs\TestCase;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -332,8 +332,8 @@ class HelpersTest extends TestCase
             ]
         ]);
         $data = ['foo' => 'bar'];
-        $response = api_response(HTTP_STATUS::HTTP_OK, $data);
-        $this->assertSame(HTTP_STATUS::HTTP_OK->value, $response->getStatusCode());
+        $response = api_response(Status::HTTP_OK, $data);
+        $this->assertSame(Status::HTTP_OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
         $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
@@ -353,9 +353,9 @@ class HelpersTest extends TestCase
             ]
         ]);
 
-        $data = ['error' => ['code' => HTTP_STATUS::HTTP_BAD_REQUEST->value, 'message' => 'error message']];
-        $response = api_error('error message', HTTP_STATUS::HTTP_BAD_REQUEST);
-        $this->assertSame(HTTP_STATUS::HTTP_BAD_REQUEST->value, $response->getStatusCode());
+        $data = ['error' => ['code' => Status::HTTP_BAD_REQUEST->value, 'message' => 'error message']];
+        $response = api_error('error message', Status::HTTP_BAD_REQUEST);
+        $this->assertSame(Status::HTTP_BAD_REQUEST->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
         $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));

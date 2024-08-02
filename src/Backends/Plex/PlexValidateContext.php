@@ -7,8 +7,8 @@ namespace App\Backends\Plex;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetUser;
 use App\Libs\Container;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
-use App\Libs\HTTP_STATUS;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -89,11 +89,11 @@ final readonly class PlexValidateContext
                 ],
             ]);
 
-            if (HTTP_STATUS::HTTP_UNAUTHORIZED->value === $request->getStatusCode()) {
+            if (Status::HTTP_UNAUTHORIZED->value === $request->getStatusCode()) {
                 throw new InvalidContextException('Backend responded with 401. Most likely means token is invalid.');
             }
 
-            if (HTTP_STATUS::HTTP_NOT_FOUND->value === $request->getStatusCode()) {
+            if (Status::HTTP_NOT_FOUND->value === $request->getStatusCode()) {
                 throw new InvalidContextException('Backend responded with 404. Most likely means url is incorrect.');
             }
 

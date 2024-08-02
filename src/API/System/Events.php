@@ -10,7 +10,7 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Traits\APITraits;
 use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -69,7 +69,7 @@ final class Events
             $response['requests'][] = ['key' => $key, 'item' => $this->formatEntity($item)];
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(Status::HTTP_OK, $response);
     }
 
     /**
@@ -81,7 +81,7 @@ final class Events
         $params = DataUtil::fromRequest($request, true);
 
         if (null === ($id = $params->get('id', ag($args, 'id')))) {
-            return api_error('Invalid id.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid id.', Status::HTTP_BAD_REQUEST);
         }
 
         $type = $params->get('type', 'queue');
@@ -90,20 +90,20 @@ final class Events
             return api_error(r("Invalid type '{type}'. Only '{types}' are supported.", [
                 'type' => $type,
                 'types' => implode(", ", self::TYPES),
-            ]), HTTP_STATUS::HTTP_BAD_REQUEST);
+            ]), Status::HTTP_BAD_REQUEST);
         }
 
         $items = $this->cache->get($type, []);
 
         if (empty($items)) {
-            return api_error(r('{type} is empty.', ['type' => $type]), HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error(r('{type} is empty.', ['type' => $type]), Status::HTTP_NOT_FOUND);
         }
 
         if (false === array_key_exists($id, $items)) {
             return api_error(r("Record id '{id}' doesn't exists. for '{type}' list.", [
                 'id' => $id,
                 'type' => $type,
-            ]), HTTP_STATUS::HTTP_NOT_FOUND);
+            ]), Status::HTTP_NOT_FOUND);
         }
 
         if ('queue' === $type) {
@@ -114,6 +114,6 @@ final class Events
             $this->cache->set($type, $items, new DateInterval('P3D'));
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, ['id' => $id, 'type' => $type, 'status' => 'deleted']);
+        return api_response(Status::HTTP_OK, ['id' => $id, 'type' => $type, 'status' => 'deleted']);
     }
 }

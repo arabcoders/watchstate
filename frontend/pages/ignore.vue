@@ -306,16 +306,24 @@ const loadContent = async () => {
   items.value = []
 
   if (!guids.value.length) {
-    const guid_response = await request('/system/guids')
-    guids.value = await guid_response.json()
+    const guid_request = await request('/system/guids')
+    const guid_response = await guid_request.json()
+    if (useRoute().name !== 'ignore') {
+      return
+    }
+    guids.value = guid_response
   }
 
   if (!backends.value.length) {
-    const backends_response = await request('/backends')
-    backends.value = await backends_response.json()
+    const backends_request = await request('/backends')
+    const backends_response = await backends_request.json()
+    if (useRoute().name !== 'ignore') {
+      return
+    }
+    backends.value = backends_response
   }
 
-  let response, json;
+  let response, json
 
   try {
     response = await request(`/ignore`)
@@ -326,6 +334,9 @@ const loadContent = async () => {
 
   try {
     json = await response.json()
+    if (useRoute().name !== 'ignore') {
+      return
+    }
   } catch (e) {
     json = {
       error: {
@@ -371,7 +382,7 @@ const makeItemLink = (item) => {
 
   const type = item.type === 'Show' ? 'show' : 'id'
 
-  const params = new URLSearchParams();
+  const params = new URLSearchParams()
   params.append('perpage', '50')
   params.append('page', '1')
   params.append('q', `${item.backend}.${type}://${item.scoped_to}`)
@@ -409,7 +420,7 @@ const addIgnoreRule = async () => {
     return
   }
 
-  return cancelForm();
+  return cancelForm()
 }
 
 const cancelForm = () => {
@@ -420,7 +431,7 @@ const cancelForm = () => {
 watch(toggleForm, (value) => {
   if (!value) {
     cancelForm()
-    return;
+    return
   }
 
   awaitElement('#page_form', (_, el) => el.scrollIntoView({
@@ -428,7 +439,7 @@ watch(toggleForm, (value) => {
     block: 'start',
     inline: 'nearest'
   }))
-});
+})
 
 const checkForm = computed(() => {
   const {id, type, backend, db} = form.value

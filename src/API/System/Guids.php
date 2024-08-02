@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
-use App\Libs\HTTP_STATUS;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
@@ -31,6 +31,6 @@ final class Guids
             $list[] = $item;
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $list);
+        return api_response(Status::HTTP_OK, $list);
     }
 }

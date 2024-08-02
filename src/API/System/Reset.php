@@ -8,7 +8,7 @@ use App\Libs\Attributes\Route\Delete;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Redis;
@@ -41,6 +41,6 @@ final class Reset
 
         $list->persist();
 
-        return api_response(HTTP_STATUS::HTTP_OK, ['message' => 'System reset.']);
+        return api_response(Status::HTTP_OK, ['message' => 'System reset.']);
     }
 }

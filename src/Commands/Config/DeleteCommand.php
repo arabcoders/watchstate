@@ -7,8 +7,8 @@ namespace App\Commands\Config;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -152,7 +152,7 @@ final class DeleteCommand extends Command
 
         $response = APIRequest('DELETE', '/backend/' . $name);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $name,
                 'status' => $response->status->value,

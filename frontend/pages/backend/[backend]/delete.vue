@@ -98,7 +98,6 @@ const loadBackend = async () => {
 
     if (200 !== response.status) {
       error.value = json
-
       return
     }
 
