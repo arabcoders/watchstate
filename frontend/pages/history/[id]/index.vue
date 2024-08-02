@@ -505,6 +505,12 @@ const loadContent = async (id) => {
   const response = await request(`/history/${id}`)
   const json = await response.json()
 
+  if (useRoute().name !== 'history-id') {
+    return
+  }
+
+  console.log(useRoute().name)
+
   isLoading.value = false
 
   if (200 !== response.status) {

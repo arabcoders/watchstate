@@ -23,7 +23,7 @@
         </div>
       </div>
 
-      <div class="column is-12" v-if="items.length < 1">
+      <div class="column is-12" v-if="!items || items?.length < 1">
         <Message message_class="has-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
                  message="Loading users list. Please wait..." v-if="isLoading"/>
         <Message v-else message_class="has-background-warning-80 has-text-dark" title="Warning"
@@ -121,6 +121,10 @@ const loadContent = async () => {
         message: response.statusText
       }
     }
+  }
+
+  if (useRoute().name !== 'backend-backend-users') {
+    return
   }
 
   isLoading.value = false

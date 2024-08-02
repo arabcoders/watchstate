@@ -89,6 +89,10 @@ const loadContent = async () => {
     const response = await request('/logs')
     let data = await response.json();
 
+    if (useRoute().name !== 'logs') {
+      return
+    }
+
     data.sort((a, b) => new Date(b.modified) - new Date(a.modified));
 
     logs.value = data;

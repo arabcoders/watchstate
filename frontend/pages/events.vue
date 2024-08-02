@@ -317,10 +317,13 @@ const loadContent = async () => {
     requests.value = []
 
     const response = await request(`/system/events`)
-    let json;
+    let json
 
     try {
       json = await response.json()
+      if (useRoute().name !== 'events') {
+        return
+      }
     } catch (e) {
       json = {
         error: {
@@ -357,7 +360,7 @@ const deleteItem = async (item, type, key) => {
     })
 
     if (200 !== response.status) {
-      let json;
+      let json
 
       try {
         json = await response.json()

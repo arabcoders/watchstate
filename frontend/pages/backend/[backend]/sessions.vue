@@ -95,6 +95,10 @@ const loadContent = async () => {
     }
   }
 
+  if (useRoute().name !== 'backend-backend-sessions') {
+    return
+  }
+  
   isLoading.value = false
 
   if (!response.ok) {

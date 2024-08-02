@@ -122,6 +122,10 @@ const loadContent = async () => {
       }
     }
 
+    if (useRoute().name !== 'backend-backend-libraries') {
+      return
+    }
+    
     if (200 !== response.status) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return

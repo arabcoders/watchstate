@@ -284,6 +284,7 @@ import {
 import moment from 'moment'
 import {useStorage} from '@vueuse/core'
 import Lazy from '~/components/Lazy'
+import {useSessionCache} from '~/utils/cache'
 
 const route = useRoute()
 
@@ -299,14 +300,16 @@ const isDeleting = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
 const filter = ref(route.query.filter ?? '')
 const showFilter = ref(!!filter.value)
-const min = ref(route.query.min ?? null);
-const max = ref();
-const cacheKey = computed(() => `parity-${min.value}-${page.value}-${perpage.value}`)
+const min = ref(route.query.min ?? null)
+const max = ref()
+const cacheKey = computed(() => `parity_v1-${min.value}-${page.value}-${perpage.value}`)
 
 const selectAll = ref(false)
 const selected_ids = ref([])
 const massActionInProgress = ref(false)
-watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []);
+watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : [])
+
+const cache = useSessionCache()
 
 
 const toggleFilter = () => {
@@ -350,18 +353,22 @@ const loadContent = async (pageNumber, fromPopState = false, fromReload = false)
   page.value = pageNumber
 
   try {
-    let json;
+    let json
 
     if (true === fromReload) {
-      clearCache();
+      clearCache()
     }
 
-    if (sessionStorage?.getItem(cacheKey.value)) {
-      json = JSON.parse(sessionStorage.getItem(cacheKey.value))
+    if (cache.has(cacheKey.value)) {
+      json = cache.get(cacheKey.value)
     } else {
       const response = await request(`/system/parity/?${search.toString()}`)
       json = await response.json()
-      sessionStorage.setItem(cacheKey.value, JSON.stringify(json))
+      cache.set(cacheKey.value, json)
+
+      if (useRoute().name !== 'parity') {
+        return
+      }
 
       if (200 !== response.status) {
         notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
@@ -420,7 +427,7 @@ const massDelete = async () => {
     } else {
       items.value = items.value.filter(i => !selected_ids.value.includes(i.id))
       try {
-        sessionStorage?.removeItem(cacheKey.value)
+        cache.remove(cacheKey.value)
       } catch (e) {
       }
     }
@@ -475,13 +482,13 @@ const deleteData = async () => {
     filter.value = ''
     page.value = 1
 
-    clearCache();
+    clearCache()
   } catch (e) {
     notification('error', 'Error', e.message)
   } finally {
     isDeleting.value = false
   }
-};
+}
 
 onMounted(async () => {
   const response = await request(`/backends/`)
@@ -521,7 +528,7 @@ watch(filter, val => {
   const router = useRouter()
   if (!val) {
     if (!route?.query['filter']) {
-      return;
+      return
     }
 
     router.push({
@@ -531,11 +538,11 @@ watch(filter, val => {
         'filter': undefined
       }
     })
-    return;
+    return
   }
 
   if (route?.query['filter'] === val) {
-    return;
+    return
   }
 
   router.push({
@@ -547,7 +554,7 @@ watch(filter, val => {
   })
 })
 
-const clearCache = () => Object.keys(sessionStorage ?? {}).filter(k => /^parity/.test(k)).forEach(k => sessionStorage.removeItem(k))
+const clearCache = () => cache.clear(k => /^parity/.test(k))
 
 const stateCallBack = async e => {
   if (!e.state && !e.detail) {

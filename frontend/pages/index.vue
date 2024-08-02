@@ -132,8 +132,12 @@ const loadContent = async () => {
   try {
     const response = await request(`/history?perpage=6`)
     if (response.ok) {
-      const json = await response.json();
-      lastHistory.value = json.history;
+      const historyResponse = await response.json()
+      if (useRoute().name !== 'index') {
+        return
+      }
+
+      lastHistory.value = historyResponse.history
     }
   } catch (e) {
   }
@@ -141,11 +145,15 @@ const loadContent = async () => {
   try {
     const response = await request(`/logs/recent`)
     if (response.ok) {
-      logs.value = await response.json();
+      const logsResponse = await response.json()
+      if (useRoute().name !== 'index') {
+        return
+      }
+      logs.value = logsResponse
     }
   } catch (e) {
   }
-};
+}
 
 onMounted(async () => loadContent())
 onUpdated(() => document.querySelectorAll('.logs-container').forEach((el) => el.scrollTop = el.scrollHeight))

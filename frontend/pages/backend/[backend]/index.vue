@@ -182,6 +182,9 @@ const loadRecentHistory = async () => {
 
   const response = await request(`/history/?${search.toString()}`)
   const json = await response.json()
+  if (useRoute().name !== 'backend-backend') {
+    return
+  }
 
   if (200 !== response.status) {
     notification('error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
@@ -195,7 +198,13 @@ const loadInfo = async () => {
   try {
     isLoading.value = false
     const response = await request(`/backend/${backend.value}/info`)
-    info.value = await response.json()
+    const json = await response.json()
+    if (useRoute().name !== 'backend-backend') {
+      return
+    }
+
+    info.value = json
+
     if (200 !== response.status) {
       isError.value = true
       error.value = `${info.value.error.code}: ${info.value.error.message}`

@@ -240,7 +240,11 @@ const loadContent = async () => {
   isLoading.value = true
   try {
     const response = await request('/backends')
-    backends.value = await response.json()
+    const json = await response.json()
+    if (useRoute().name !== 'backends') {
+      return
+    }
+    backends.value = json
   } catch (e) {
     notification('error', 'Error', `Failed to load backends. ${e.message}`)
   } finally {

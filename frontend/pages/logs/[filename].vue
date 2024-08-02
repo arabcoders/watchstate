@@ -106,15 +106,22 @@ const stream = ref(null)
 const logContainer = ref(null)
 
 const loadContent = async () => {
+  console.log(useRoute().name)
   try {
     isLoading.value = true
     const response = await request(`/log/${filename}`)
     if (response.ok) {
       const text = await response.text()
+      if (useRoute().name !== 'logs-filename') {
+        return
+      }
       data.value = text.split('\n')
     } else {
       try {
         const json = await response.json();
+        if (useRoute().name !== 'logs-filename') {
+          return
+        }
         error.value = `${json.error.code}: ${json.error.message}`
       } catch (e) {
         error.value = `${response.status}: ${response.statusText}`

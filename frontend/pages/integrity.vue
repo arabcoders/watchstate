@@ -262,11 +262,11 @@ const isDeleting = ref(false)
 const filter = ref('')
 const showFilter = ref(false)
 const isCached = ref(false)
-const cache = useSessionCache();
+const cache = useSessionCache()
 
 const selectAll = ref(false)
 const massActionInProgress = ref(false)
-watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : []);
+watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : [])
 
 const toggleFilter = () => {
   showFilter.value = !showFilter.value
@@ -288,6 +288,10 @@ const loadContent = async () => {
   try {
     const response = await request(`/system/integrity`)
     const json = await response.json()
+
+    if (useRoute().name !== 'integrity') {
+      return
+    }
 
     if (200 !== response.status) {
       notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
@@ -360,7 +364,7 @@ const emptyCache = async () => {
       return notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`)
     }
 
-    items.value = [];
+    items.value = []
     isLoaded.value = false
     isLoading.value = false
     isCached.value = false

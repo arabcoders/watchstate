@@ -11,7 +11,7 @@
         <div class="is-pulled-right" v-if="hasLooked">
           <div class="field is-grouped">
             <p class="control">
-              <button class="button is-info" @click="loadContent" :disabled="isLoading"
+              <button class="button is-info" @click="loadContent(false)" :disabled="isLoading"
                       :class="{'is-loading':isLoading}">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
@@ -139,31 +139,42 @@
 import {makeSearchLink, notification} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message'
+import {useSessionCache} from '~/utils/cache'
 
 const backend = useRoute().params.backend
 const items = ref([])
 const isLoading = ref(false)
 const hasLooked = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const cache = useSessionCache()
+const cacheKey = `backend-${backend}-mismatched`
 
 useHead({title: `Backends: ${backend} - Misidentified items`})
-const loadContent = async () => {
+const loadContent = async (useCache = true) => {
   hasLooked.value = true
   isLoading.value = true
   items.value = []
 
   let response, json;
 
+
   try {
-    response = await request(`/backend/${backend}/mismatched`)
-    json = await response.json()
+    if (useCache && cache.has(cacheKey)) {
+      items.value = cache.get(cacheKey)
+    } else {
+      response = await request(`/backend/${backend}/mismatched`)
+      json = await response.json()
+      cache.set(cacheKey, json)
 
-    if (!response.ok) {
-      notification('error', 'Error', `${json.error.code ?? response.status}: ${json.error.message ?? response.statusText}`)
-      return
+      if (useRoute().name !== 'backend-backend-mismatched') {
+        return
+      }
+      if (!response.ok) {
+        notification('error', 'Error', `${json.error.code ?? response.status}: ${json.error.message ?? response.statusText}`)
+        return
+      }
+      items.value = json
     }
-
-    items.value = json
   } catch (e) {
     hasLooked.value = false
     return notification('error', 'Error', e.message)

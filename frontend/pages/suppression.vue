@@ -228,7 +228,7 @@ import Message from '~/components/Message'
 
 useHead({title: 'Log Suppressor'})
 
-const form_data = {id: null, rule: '', example: '', type: 'contains'};
+const form_data = {id: null, rule: '', example: '', type: 'contains'}
 
 const isLoading = ref(false)
 const items = ref([])
@@ -240,11 +240,14 @@ const loadContent = async () => {
   isLoading.value = true
   items.value = []
 
-  let response, json;
+  let response, json
 
   try {
     response = await request(`/system/suppressor`)
     json = await response.json()
+    if (useRoute().name !== 'suppression') {
+      return
+    }
 
     if (!response.ok) {
       notification('error', 'Error', `${json.error.code ?? response.status}: ${json.error.message ?? response.statusText}`)
@@ -294,7 +297,7 @@ const sendData = async () => {
     })
 
     if (304 === response.status) {
-      return cancelForm();
+      return cancelForm()
     }
 
     const json = await response.json()
@@ -312,7 +315,7 @@ const sendData = async () => {
 
     const action = formData.value.id ? 'updated' : 'added'
     notification('success', 'Success', `Suppression rule successfully ${action}.`, 5000)
-    return cancelForm();
+    return cancelForm()
   } catch (e) {
     return notification('error', 'Error', `Request error. ${e.message}`, 5000)
   }
@@ -337,5 +340,5 @@ watch(toggleForm, (value) => {
   if (!value) {
     formData.value = form_data
   }
-});
+})
 </script>

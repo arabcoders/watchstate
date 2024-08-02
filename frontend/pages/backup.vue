@@ -120,6 +120,9 @@ const loadContent = async () => {
   try {
     const response = await request('/system/backup')
     items.value = await response.json()
+    if (useRoute().name !== 'backup') {
+      return
+    }
 
     queued.value = await isQueued()
   } catch (e) {
