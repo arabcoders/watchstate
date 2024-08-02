@@ -8,9 +8,9 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Guid;
-use App\Libs\HTTP_STATUS;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -127,7 +127,7 @@ final class ManageCommand extends Command
         if ($input->getOption('remove')) {
             $response = APIRequest('DELETE', '/ignore/', ['rule' => $rule]);
 
-            if (HTTP_STATUS::HTTP_OK !== $response->status) {
+            if (Status::HTTP_OK !== $response->status) {
                 $output->writeln(r("<error>API error. {status}: {message}</error>", [
                     'key' => $rule,
                     'status' => $response->status->value,
@@ -142,7 +142,7 @@ final class ManageCommand extends Command
 
         $response = APIRequest('POST', '/ignore/', ['rule' => $rule]);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $rule,
                 'status' => $response->status->value,

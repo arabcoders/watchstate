@@ -12,9 +12,9 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\HTTP_STATUS;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -34,23 +34,23 @@ final class Add
         $requestData = $request->getParsedBody();
 
         if (!is_array($requestData)) {
-            return api_error('Invalid request data.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid request data.', Status::HTTP_BAD_REQUEST);
         }
 
         $data = DataUtil::fromArray($request->getParsedBody());
 
         if (null === ($type = $data->get('type'))) {
-            return api_error('No type was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('No type was given.', Status::HTTP_BAD_REQUEST);
         }
 
         $type = strtolower($type);
 
         if (null === ($name = $data->get('name'))) {
-            return api_error('No name was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('No name was given.', Status::HTTP_BAD_REQUEST);
         }
 
         if (false === isValidName($name)) {
-            return api_error('Invalid name was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid name was given.', Status::HTTP_BAD_REQUEST);
         }
 
         $backend = $this->getBackends(name: $name);
@@ -58,24 +58,24 @@ final class Add
         if (!empty($backend)) {
             return api_error(r("Backend '{backend}' already exists.", [
                 'backend' => $name
-            ]), HTTP_STATUS::HTTP_CONFLICT);
+            ]), Status::HTTP_CONFLICT);
         }
 
         if (null === ($url = $data->get('url'))) {
-            return api_error('No url was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('No url was given.', Status::HTTP_BAD_REQUEST);
         }
 
         if (false === isValidUrl($url)) {
-            return api_error('Invalid url was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid url was given.', Status::HTTP_BAD_REQUEST);
         }
 
         if (null === ($token = $data->get('token'))) {
-            return api_error('No access token was given.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('No access token was given.', Status::HTTP_BAD_REQUEST);
         }
 
         if (null === ($class = Config::get("supported.{$type}", null))) {
             return api_error(r("Unexpected client type '{type}' was given.", ['type' => $type]),
-                HTTP_STATUS::HTTP_BAD_REQUEST);
+                Status::HTTP_BAD_REQUEST);
         }
 
         $instance = Container::getNew($class);
@@ -96,7 +96,7 @@ final class Add
             );
 
             if (false === $instance->validateContext($context)) {
-                return api_error('Context information validation failed.', HTTP_STATUS::HTTP_BAD_REQUEST);
+                return api_error('Context information validation failed.', Status::HTTP_BAD_REQUEST);
             }
 
             if (!$config->get('uuid')) {
@@ -111,13 +111,13 @@ final class Add
                 ->set($name, $config->getAll())
                 ->persist();
         } catch (InvalidContextException $e) {
-            return api_error($e->getMessage(), HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error($e->getMessage(), Status::HTTP_BAD_REQUEST);
         }
 
         $data = $this->getBackends(name: $name);
         $data = array_pop($data);
 
-        return api_response(HTTP_STATUS::HTTP_CREATED, $data);
+        return api_response(Status::HTTP_CREATED, $data);
     }
 
     private function fromRequest(string $type, iRequest $request, iClient $client): array

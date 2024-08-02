@@ -11,8 +11,8 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
-use App\Libs\HTTP_STATUS;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Traits\APITraits;
 use PDO;
@@ -73,7 +73,7 @@ final class Index
             if (1 !== preg_match($regex, $data->get('rguid'), $matches)) {
                 return api_error(
                     'Invalid value for rguid query string expected value format is guid://parentID/seasonNumber[/episodeNumber].',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
@@ -144,7 +144,7 @@ final class Index
             if (null === $parent) {
                 return api_error(
                     'Invalid value for parent query string expected value format is db://id.',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
@@ -161,7 +161,7 @@ final class Index
             if (null === $guid) {
                 return api_error(
                     'Invalid value for guid query string expected value format is db://id.',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
@@ -176,14 +176,14 @@ final class Index
             if (null === $sField || null === $sValue) {
                 return api_error(
                     'When searching using JSON fields the query string \'key\' and \'value\' must be set.',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
             if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
@@ -239,14 +239,14 @@ final class Index
             if (null === $sField || null === $sValue) {
                 return api_error(
                     'When searching using JSON fields the query string \'key\' and \'value\' must be set.',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
             if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
-                    HTTP_STATUS::HTTP_BAD_REQUEST
+                    Status::HTTP_BAD_REQUEST
                 );
             }
 
@@ -283,7 +283,7 @@ final class Index
                 $message .= ' Probably invalid filters values were used.';
             }
 
-            return api_error($message, HTTP_STATUS::HTTP_NOT_FOUND, ['filters' => $filters]);
+            return api_error($message, Status::HTTP_NOT_FOUND, ['filters' => $filters]);
         }
 
         $sorts = [];
@@ -446,66 +446,66 @@ final class Index
             $response['history'][] = $this->formatEntity($row);
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(Status::HTTP_OK, $response);
     }
 
     #[Get(self::URL . '/{id:\d+}[/]', name: 'history.view')]
     public function historyView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for id path parameter.', Status::HTTP_BAD_REQUEST);
         }
 
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
         if (null === ($item = $this->db->get($entity))) {
-            return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error('Not found', Status::HTTP_NOT_FOUND);
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $this->formatEntity($item));
+        return api_response(Status::HTTP_OK, $this->formatEntity($item));
     }
 
     #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.item.delete')]
     public function historyDelete(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for id path parameter.', Status::HTTP_BAD_REQUEST);
         }
 
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
         if (null === ($item = $this->db->get($entity))) {
-            return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error('Not found', Status::HTTP_NOT_FOUND);
         }
 
         $this->db->remove($item);
 
-        return api_response(HTTP_STATUS::HTTP_OK);
+        return api_response(Status::HTTP_OK);
     }
 
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:\d+}/watch[/]', name: 'history.watch')]
     public function historyPlayStatus(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for id path parameter.', Status::HTTP_BAD_REQUEST);
         }
 
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
         if (null === ($item = $this->db->get($entity))) {
-            return api_error('Not found', HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error('Not found', Status::HTTP_NOT_FOUND);
         }
 
         if ('GET' === $request->getMethod()) {
-            return api_response(HTTP_STATUS::HTTP_OK, ['watched' => $item->isWatched()]);
+            return api_response(Status::HTTP_OK, ['watched' => $item->isWatched()]);
         }
 
         if ('POST' === $request->getMethod() && true === $item->isWatched()) {
-            return api_error('Already watched', HTTP_STATUS::HTTP_CONFLICT);
+            return api_error('Already watched', Status::HTTP_CONFLICT);
         }
 
         if ('DELETE' === $request->getMethod() && false === $item->isWatched()) {
-            return api_error('Already unwatched', HTTP_STATUS::HTTP_CONFLICT);
+            return api_error('Already unwatched', Status::HTTP_CONFLICT);
         }
 
         $item->watched = 'POST' === $request->getMethod() ? 1 : 0;

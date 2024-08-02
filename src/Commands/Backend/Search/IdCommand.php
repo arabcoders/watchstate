@@ -7,7 +7,7 @@ namespace App\Commands\Backend\Search;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -84,7 +84,7 @@ final class IdCommand extends Command
 
         $response = APIRequest('GET', r('/backend/{backend}/search', ['backend' => $name]), opts: ['query' => $query]);
 
-        if (HTTP_STATUS::HTTP_NOT_FOUND === $response->status) {
+        if (Status::HTTP_NOT_FOUND === $response->status) {
             $output->writeln(r("<error>No results for '{key}'. {status}: {message}</error>", [
                 'key' => $id,
                 'status' => $response->status->value,
@@ -93,7 +93,7 @@ final class IdCommand extends Command
             return self::FAILURE;
         }
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $id,
                 'status' => $response->status->value,

@@ -7,7 +7,7 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
@@ -159,7 +159,7 @@ final class EnvCommand extends Command
             $response = APIRequest('POST', '/system/env/' . $key, ['value' => $input->getOption('set')]);
         }
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $key,
                 'status' => $response->status->value,

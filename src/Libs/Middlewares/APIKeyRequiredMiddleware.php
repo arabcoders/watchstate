@@ -8,7 +8,7 @@ use App\API\Backends\AccessToken;
 use App\API\System\AutoConfig;
 use App\API\System\HealthCheck;
 use App\Libs\Config;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -71,7 +71,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
         if (empty($apikey)) {
             return api_error(
                 'API key is required to access the API.',
-                HTTP_STATUS::HTTP_BAD_REQUEST,
+                Status::HTTP_BAD_REQUEST,
                 reason: 'API key is required to access the API.',
             );
         }
@@ -80,7 +80,7 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        return api_error('API key is incorrect.', HTTP_STATUS::HTTP_FORBIDDEN, reason: 'API key is incorrect.');
+        return api_error('API key is incorrect.', Status::HTTP_FORBIDDEN, reason: 'API key is incorrect.');
     }
 
     /**

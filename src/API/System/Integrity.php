@@ -10,7 +10,7 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Middlewares\ExceptionHandlerMiddleware;
 use App\Libs\Traits\APITraits;
 use DateInterval;
@@ -89,7 +89,7 @@ final class Integrity
             'checked_file' => $this->checkedFile,
         ], new DateInterval('PT1H'));
 
-        return api_response(HTTP_STATUS::HTTP_OK, $response);
+        return api_response(Status::HTTP_OK, $response);
     }
 
     private function checkIntegrity(iState $entity): bool
@@ -163,7 +163,7 @@ final class Integrity
             $this->cache->delete('system.integrity');
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK);
+        return api_response(Status::HTTP_OK);
     }
 
     private function checkPath(string $file): bool

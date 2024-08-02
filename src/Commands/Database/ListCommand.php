@@ -10,9 +10,9 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
-use App\Libs\HTTP_STATUS;
 use App\Libs\Mappers\Import\DirectMapper;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -296,7 +296,7 @@ final class ListCommand extends Command
             'query' => $params,
         ]);
 
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')

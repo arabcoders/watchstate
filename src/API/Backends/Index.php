@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\API\Backends;
 
 use App\Libs\Attributes\Route\Get;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -44,6 +44,6 @@ final class Index
             $list[] = $item;
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $list);
+        return api_response(Status::HTTP_OK, $list);
     }
 }

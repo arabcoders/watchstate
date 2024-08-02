@@ -6,7 +6,7 @@ namespace App\Commands\System;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Console\Question\Question;
@@ -128,7 +128,7 @@ final class ResetCommand extends Command
         );
 
         $response = APIRequest('DELETE', '/system/reset');
-        if (HTTP_STATUS::HTTP_OK !== $response->status) {
+        if (Status::HTTP_OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')

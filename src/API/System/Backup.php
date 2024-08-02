@@ -7,7 +7,7 @@ namespace App\API\System;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Stream;
 use finfo;
 use Nyholm\Psr7\Response;
@@ -45,14 +45,14 @@ final class Backup
             $item['date'] = makeDate(ag($item, 'date'));
         }
 
-        return api_response(HTTP_STATUS::HTTP_OK, $list);
+        return api_response(Status::HTTP_OK, $list);
     }
 
     #[Route(['GET', 'DELETE'], self::URL . '/{filename}[/]', name: 'system.backup.view')]
     public function logView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($filename = ag($args, 'filename'))) {
-            return api_error('Invalid value for filename path parameter.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for filename path parameter.', Status::HTTP_BAD_REQUEST);
         }
 
         $path = realpath(fixPath(Config::get('path') . '/backup'));
@@ -60,22 +60,22 @@ final class Backup
         $filePath = realpath($path . '/' . $filename);
 
         if (false === $filePath) {
-            return api_error('File not found.', HTTP_STATUS::HTTP_NOT_FOUND);
+            return api_error('File not found.', Status::HTTP_NOT_FOUND);
         }
 
         if (false === str_starts_with($filePath, $path)) {
-            return api_error('Invalid file path.', HTTP_STATUS::HTTP_BAD_REQUEST);
+            return api_error('Invalid file path.', Status::HTTP_BAD_REQUEST);
         }
 
         if ('DELETE' === $request->getMethod()) {
             unlink($filePath);
-            return api_response(HTTP_STATUS::HTTP_OK);
+            return api_response(Status::HTTP_OK);
         }
 
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($filePath);
 
         return new Response(
-            status: HTTP_STATUS::HTTP_OK->value,
+            status: Status::HTTP_OK->value,
             headers: [
                 'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
                 'Content-Length' => filesize($filePath),

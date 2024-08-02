@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Extends;
 
 use App\Libs\Container;
-use App\Libs\Enums\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use League\Route\Route;
 use League\Route\Strategy\ApplicationStrategy;
 use League\Route\Strategy\OptionsHandlerInterface;
@@ -23,7 +23,7 @@ class RouterStrategy extends ApplicationStrategy implements OptionsHandlerInterf
             'Allow' => implode(', ', $methods),
         ];
 
-        $response = new Response(status: HTTP_STATUS::HTTP_NO_CONTENT->value, headers: $headers);
+        $response = new Response(status: Status::HTTP_NO_CONTENT->value, headers: $headers);
 
         if ('cors' === ag($_SERVER, 'HTTP_SEC_FETCH_MODE')) {
             return fn(): iResponse => addCors($response, $headers, $methods);

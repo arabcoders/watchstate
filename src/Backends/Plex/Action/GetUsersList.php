@@ -10,7 +10,7 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
-use App\Libs\HTTP_STATUS;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use DateInterval;
 use JsonException;
@@ -97,7 +97,7 @@ final class GetUsersList
             'url' => (string)$url,
         ]);
 
-        if (HTTP_STATUS::HTTP_OK->value !== $response->getStatusCode()) {
+        if (Status::HTTP_OK->value !== $response->getStatusCode()) {
             $message = "Request for '{backend}' users list returned with unexpected '{status_code}' status code. Using {type} token.";
 
             if (null !== ag($context->options, Options::ADMIN_TOKEN)) {
@@ -109,7 +109,7 @@ final class GetUsersList
                     ],
                 ]);
 
-                if (HTTP_STATUS::HTTP_OK->value === $adminResponse->getStatusCode()) {
+                if (Status::HTTP_OK->value === $adminResponse->getStatusCode()) {
                     return $this->process($context, $url, $adminResponse, $opts);
                 }
                 $tokenType = 'user and admin';
