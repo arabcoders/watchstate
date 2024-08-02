@@ -50,7 +50,7 @@
 
 <script setup>
 import {copyText} from '~/utils/index'
-import {request} from '~/utils/request'
+import request from '~/utils/request'
 
 useHead({title: `System Report`})
 
