@@ -35,24 +35,24 @@ final class Command
     public function __invoke(iRequest $request): iResponse
     {
         if (null === ($json = ag($request->getQueryParams(), 'json'))) {
-            return api_error('No command was given.', Status::HTTP_BAD_REQUEST);
+            return api_error('No command was given.', Status::BAD_REQUEST);
         }
 
         try {
             $json = json_decode(base64_decode(rawurldecode($json)), true, flags: JSON_THROW_ON_ERROR);
             $data = DataUtil::fromArray($json);
             if (null === ($command = $data->get('command'))) {
-                return api_error('No command was given.', Status::HTTP_BAD_REQUEST);
+                return api_error('No command was given.', Status::BAD_REQUEST);
             }
         } catch (JsonException $e) {
             return api_error(
                 r('Unable to decode json data. {error}', ['error' => $e->getMessage()]),
-                Status::HTTP_BAD_REQUEST
+                Status::BAD_REQUEST
             );
         }
 
         if (!is_string($command)) {
-            return api_error('Command is invalid.', Status::HTTP_BAD_REQUEST);
+            return api_error('Command is invalid.', Status::BAD_REQUEST);
         }
 
         $callable = function () use ($command, $data, $request) {
@@ -86,7 +86,7 @@ final class Command
 
                     echo "id: " . hrtime(true) . "\n";
                     echo "event: data\n";
-                    echo "data: " . base64_encode((string)$data);
+                    echo "data: " . json_encode(['type' => $type, 'data' => $data]) . "\n";
                     echo "\n\n";
 
                     flush();
@@ -141,7 +141,7 @@ final class Command
             exit;
         };
 
-        return new Response(status: Status::HTTP_OK->value, headers: [
+        return new Response(status: Status::OK->value, headers: [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
