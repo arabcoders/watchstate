@@ -7,10 +7,10 @@ namespace App\API\System;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Stream;
 use finfo;
-use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 
@@ -19,7 +19,7 @@ final class Backup
     public const string URL = '%{api.prefix}/system/backup';
 
     #[Get(self::URL . '[/]', name: 'system.backup')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function list(): iResponse
     {
         $path = fixPath(Config::get('path') . '/backup');
 
@@ -49,12 +49,8 @@ final class Backup
     }
 
     #[Route(['GET', 'DELETE'], self::URL . '/{filename}[/]', name: 'system.backup.view')]
-    public function logView(iRequest $request, array $args = []): iResponse
+    public function read(iRequest $request, string $filename): iResponse
     {
-        if (null === ($filename = ag($args, 'filename'))) {
-            return api_error('Invalid value for filename path parameter.', Status::BAD_REQUEST);
-        }
-
         $path = realpath(fixPath(Config::get('path') . '/backup'));
 
         $filePath = realpath($path . '/' . $filename);
@@ -67,20 +63,15 @@ final class Backup
             return api_error('Invalid file path.', Status::BAD_REQUEST);
         }
 
-        if ('DELETE' === $request->getMethod()) {
+        if (Method::DELETE === Method::from($request->getMethod())) {
             unlink($filePath);
             return api_response(Status::OK);
         }
 
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($filePath);
 
-        return new Response(
-            status: Status::OK->value,
-            headers: [
-                'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
-                'Content-Length' => filesize($filePath),
-            ],
-            body: Stream::make($filePath, 'r')
-        );
+        return api_response(Status::OK, Stream::make($filePath, 'r'), headers: [
+            'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
+        ]);
     }
 }

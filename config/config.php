@@ -40,6 +40,7 @@ return (function () {
             ],
             'logInternal' => (bool)env('WS_API_LOG_INTERNAL', false),
             'response' => [
+                'encode' => JSON_INVALID_UTF8_IGNORE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'X-Application-Version' => fn() => getAppVersion(),

@@ -10,7 +10,6 @@ use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\StreamClosure;
 use JsonException;
-use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
@@ -141,12 +140,12 @@ final class Command
             exit;
         };
 
-        return new Response(status: Status::OK->value, headers: [
+        return api_response(Status::OK, body: StreamClosure::create($callable), headers: [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
             'Last-Event-Id' => time(),
-        ], body: StreamClosure::create($callable));
+        ]);
     }
 }

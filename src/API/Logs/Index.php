@@ -13,7 +13,6 @@ use App\Libs\Stream;
 use App\Libs\StreamClosure;
 use finfo;
 use LimitIterator;
-use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use SplFileObject;
@@ -170,24 +169,20 @@ final class Index
 
         $stream->rewind();
 
-        return new Response(status: Status::OK->value, headers: [
+        return api_response(Status::OK, $stream, headers: [
             'Content-Type' => 'text/plain',
             'X-No-AccessLog' => '1'
-        ], body: $stream);
+        ]);
     }
 
     private function download(string $filePath): iResponse
     {
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($filePath);
 
-        return new Response(
-            status: Status::OK->value,
-            headers: [
-                'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
-                'Content-Length' => filesize($filePath),
-            ],
-            body: Stream::make($filePath, 'r')
-        );
+        return api_response(Status::OK, Stream::make($filePath, 'r'), headers: [
+            'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
+            'Content-Length' => filesize($filePath),
+        ]);
     }
 
     private function stream(string $filePath): iResponse
@@ -261,15 +256,11 @@ final class Index
             return '';
         };
 
-        return (new Response(
-            status: Status::OK->value,
-            headers: [
-                'Content-Type' => 'text/event-stream; charset=UTF-8',
-                'Cache-Control' => 'no-cache',
-                'Connection' => 'keep-alive',
-                'X-Accel-Buffering' => 'no',
-            ],
-            body: StreamClosure::create($callable)
-        ))->withoutHeader('Content-Length');
+        return api_response(Status::OK, StreamClosure::create($callable), headers: [
+            'Content-Type' => 'text/event-stream; charset=UTF-8',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 }

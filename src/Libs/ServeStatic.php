@@ -8,7 +8,6 @@ use App\Libs\Enums\Http\Status;
 use finfo;
 use League\Route\Http\Exception\BadRequestException;
 use League\Route\Http\Exception\NotFoundException;
-use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use SplFileInfo;
@@ -132,7 +131,7 @@ final class ServeStatic
             try {
                 $ifModifiedSince = makeDate($ifModifiedSince)->getTimestamp();
                 if ($ifModifiedSince >= $file->getMTime()) {
-                    return new Response(Status::NOT_MODIFIED->value, [
+                    return api_response(Status::NOT_MODIFIED, headers: [
                         'Last-Modified' => gmdate('D, d M Y H:i:s T', $file->getMTime())
                     ]);
                 }
@@ -154,7 +153,7 @@ final class ServeStatic
             $stream = Stream::make($file->getRealPath());
         }
 
-        return new Response(Status::OK->value, $headers, $stream);
+        return api_response(Status::OK, body: $stream, headers: $headers);
     }
 
     /**

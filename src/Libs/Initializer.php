@@ -245,7 +245,7 @@ final class Initializer
             );
         } catch (Throwable $e) {
             $response = api_error(
-                message: 'Unable to serve request.',
+                message: 'Unable to serve request check logs.',
                 httpCode: Status::SERVICE_UNAVAILABLE,
                 body: true !== (bool)Config::get('debug.enabled', false) ? [] : [
                     'exception' => [
