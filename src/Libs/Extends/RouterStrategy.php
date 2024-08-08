@@ -9,7 +9,6 @@ use App\Libs\Enums\Http\Status;
 use League\Route\Route;
 use League\Route\Strategy\ApplicationStrategy;
 use League\Route\Strategy\OptionsHandlerInterface;
-use Nyholm\Psr7\Response;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -23,7 +22,7 @@ class RouterStrategy extends ApplicationStrategy implements OptionsHandlerInterf
             'Allow' => implode(', ', $methods),
         ];
 
-        $response = new Response(status: Status::HTTP_NO_CONTENT->value, headers: $headers);
+        $response = api_response(Status::NO_CONTENT, headers: $headers);
 
         if ('cors' === ag($_SERVER, 'HTTP_SEC_FETCH_MODE')) {
             return fn(): iResponse => addCors($response, $headers, $methods);

@@ -19,12 +19,12 @@ final class AutoConfig
     public function __invoke(iRequest $request): iResponse
     {
         if (false === (bool)Config::get('api.auto', false)) {
-            return api_error('auto configuration is disabled.', Status::HTTP_FORBIDDEN);
+            return api_error('auto configuration is disabled.', Status::FORBIDDEN);
         }
 
         $data = DataUtil::fromRequest($request);
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'url' => $data->get('origin', ag($_SERVER, 'HTTP_ORIGIN', 'localhost')),
             'path' => Config::get('api.prefix'),
             'token' => Config::get('api.key'),

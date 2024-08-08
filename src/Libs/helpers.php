@@ -18,12 +18,12 @@ use App\Libs\Extends\Date;
 use App\Libs\Guid;
 use App\Libs\Initializer;
 use App\Libs\Options;
+use App\Libs\Response;
 use App\Libs\Router;
 use App\Libs\Stream;
 use App\Libs\Uri;
 use Monolog\Utils;
 use Nyholm\Psr7\Factory\Psr17Factory;
-use Nyholm\Psr7\Response;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -389,30 +389,39 @@ if (!function_exists('saveRequestPayload')) {
 
 if (!function_exists('api_response')) {
     /**
-     * Create a API response.
+     * Create a raw API response.
      *
-     * @param Status $status Optional. The HTTP status code. Default is {@see Status::HTTP_OK}.
-     * @param array|null $body The JSON data to include in the response body.
+     * @param Status|int $status Optional. The HTTP status code. Default is {@see Status::OK}.
+     * @param array|iStream|null $body The body to include in the response body.
      * @param array $headers Optional. Additional headers to include in the response.
      * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
      *
      * @return iResponse A PSR-7 compatible response object.
      */
     function api_response(
-        Status $status = Status::HTTP_OK,
-        array|null $body = null,
+        Status|int $status = Status::OK,
+        array|null|iStream $body = null,
         array $headers = [],
         string|null $reason = null
     ): iResponse {
-        $response = (new Response(
+        if (is_int($status)) {
+            $status = Status::from($status);
+        }
+
+        $response = new Response(
             status: $status->value,
             headers: $headers,
-            body: null !== $body ? json_encode(
-                $body,
-                JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-            ) : null,
+            body: is_array($body) ? json_encode($body, flags: Config::get('api.response.encode', 0)) : $body,
             reason: $reason,
-        ));
+        );
+
+        if (null !== $body && !$response->hasHeader('Content-Length') && ($size = $response->getBody()->getSize())) {
+            $response = $response->withHeader('Content-Length', (string)$size);
+        }
+
+        if (is_array($body) && false === $response->hasHeader('Content-Type')) {
+            $response = $response->withHeader('Content-Type', 'application/json');
+        }
 
         foreach (Config::get('api.response.headers', []) as $key => $val) {
             if ($response->hasHeader($key)) {
@@ -430,7 +439,7 @@ if (!function_exists('api_error')) {
      * Create a API error response.
      *
      * @param string $message The error message.
-     * @param Status $httpCode Optional. The HTTP status code. Default is {@see Status::HTTP_BAD_REQUEST}.
+     * @param Status $httpCode Optional. The HTTP status code. Default is {@see Status::BAD_REQUEST}.
      * @param array $body Optional. Additional fields to include in the response body.
      * @param array $opts Optional. Additional options.
      *
@@ -438,7 +447,7 @@ if (!function_exists('api_error')) {
      */
     function api_error(
         string $message,
-        Status $httpCode = Status::HTTP_BAD_REQUEST,
+        Status $httpCode = Status::BAD_REQUEST,
         array $body = [],
         array $headers = [],
         string|null $reason = null,
@@ -1433,7 +1442,7 @@ if (!function_exists('APIRequest')) {
             )->withAttribute('INTERNAL_REQUEST', true)
         );
 
-        $statusCode = Status::tryFrom($response->getStatusCode()) ?? Status::HTTP_SERVICE_UNAVAILABLE;
+        $statusCode = Status::tryFrom($response->getStatusCode()) ?? Status::SERVICE_UNAVAILABLE;
 
         if ($response->getBody()->getSize() < 1) {
             return new APIResponse($statusCode, $response->getHeaders());

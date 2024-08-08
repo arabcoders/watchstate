@@ -112,7 +112,7 @@ final class ParityCommand extends Command
 
         $response = APIRequest('GET', '/system/parity/', opts: ['query' => $params]);
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -177,7 +177,7 @@ final class ParityCommand extends Command
 
             $response = APIRequest('DELETE', '/system/parity/', opts: ['query' => ['min' => $min]]);
 
-            if (Status::HTTP_OK !== $response->status) {
+            if (Status::OK !== $response->status) {
                 $output->writeln(r("<error>API error. {status}: {message}</error>", [
                     'status' => $response->status->value,
                     'message' => ag($response->body, 'error.message', 'Unknown error.')

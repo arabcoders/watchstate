@@ -25,20 +25,20 @@ final class Library
     public function listLibraries(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
             $client = $this->getClient(name: $name);
-            return api_response(Status::HTTP_OK, $client->listLibraries());
+            return api_response(Status::OK, $client->listLibraries());
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::HTTP_NOT_FOUND);
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         } catch (Throwable $e) {
-            return api_error($e->getMessage(), Status::HTTP_INTERNAL_SERVER_ERROR);
+            return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -46,15 +46,15 @@ final class Library
     public function ignoreLibrary(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
         }
 
         $remove = 'DELETE' === $request->getMethod();
@@ -62,7 +62,7 @@ final class Library
         $config = ConfigFile::open(Config::get('backends_file'), 'yaml');
 
         if (null === $config->get($name)) {
-            return api_error(r("Backend '{backend}' not found.", ['backend' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{backend}' not found.", ['backend' => $name]), Status::NOT_FOUND);
         }
 
         $ignoreIds = array_map(
@@ -75,7 +75,7 @@ final class Library
             return api_error(r("Library id '{id}' is {message} ignored.", [
                 'id' => $id,
                 'message' => $remove ? "not" : 'already',
-            ]), Status::HTTP_CONFLICT);
+            ]), Status::CONFLICT);
         }
 
         $found = false;
@@ -92,7 +92,7 @@ final class Library
         }
 
         if (false === $found) {
-            return api_error(r("The library id '{id}' is incorrect.", ['id' => $name]), Status::HTTP_NOT_FOUND, [
+            return api_error(r("The library id '{id}' is incorrect.", ['id' => $name]), Status::NOT_FOUND, [
                 'possible_ids' => array_column($libraries, 'id'),
             ]);
         }
@@ -103,6 +103,6 @@ final class Library
 
         $config->set("{$name}.options." . Options::IGNORE, implode(',', array_values($ignoreIds)))->persist();
 
-        return api_response(Status::HTTP_OK, $libraries);
+        return api_response(Status::OK, $libraries);
     }
 }

@@ -22,11 +22,11 @@ final class Search
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $params = DataUtil::fromRequest($request, true);
@@ -35,13 +35,13 @@ final class Search
         $query = $params->get('q', null);
 
         if (null === $id && null === $query) {
-            return api_error('No search id or query string was provided.', Status::HTTP_BAD_REQUEST);
+            return api_error('No search id or query string was provided.', Status::BAD_REQUEST);
         }
 
         try {
             $backend = $this->getClient(name: $name);
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::HTTP_NOT_FOUND);
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
         $raw = $params->get('raw', false) || $params->get(Options::RAW_RESPONSE, false);
@@ -73,16 +73,16 @@ final class Search
                 }
             }
         } catch (Throwable $e) {
-            return api_error($e->getMessage(), Status::HTTP_INTERNAL_SERVER_ERROR);
+            return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
 
         if (count($data) < 1) {
             return api_error(r("No results were found for '{query}'.", [
                 'query' => $id ?? $query
-            ]), Status::HTTP_NOT_FOUND);
+            ]), Status::NOT_FOUND);
         }
 
-        return api_response(Status::HTTP_OK, $response);
+        return api_response(Status::OK, $response);
     }
 
 }

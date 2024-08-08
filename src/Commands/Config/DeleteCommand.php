@@ -152,7 +152,7 @@ final class DeleteCommand extends Command
 
         $response = APIRequest('DELETE', '/backend/' . $name);
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $name,
                 'status' => $response->status->value,

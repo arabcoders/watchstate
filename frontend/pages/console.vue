@@ -197,7 +197,7 @@ const RunCommand = async () => {
   if ('' !== command.value) {
     terminal.value.writeln(`~ ${userCommand}`)
   }
-  sse.addEventListener('data', async e => terminal.value.write(atob(e.data)))
+  sse.addEventListener('data', async e => terminal.value.write(JSON.parse(e.data).data))
   sse.addEventListener('close', async () => finished())
   sse.onclose = async () => finished()
   sse.onerror = async () => finished()

@@ -76,7 +76,7 @@ final class Index
             $response[] = $item;
         }
 
-        return api_response(Status::HTTP_OK, $response);
+        return api_response(Status::OK, $response);
     }
 
     #[Post(self::URL . '[/]', name: 'ignore.add')]
@@ -88,7 +88,7 @@ final class Index
             foreach (['id', 'db', 'backend', 'type'] as $key) {
                 if (null === $params->get($key)) {
                     return api_error(r('Missing required parameter: {key}', ['key' => $key]),
-                        Status::HTTP_BAD_REQUEST);
+                        Status::BAD_REQUEST);
                 }
             }
 
@@ -104,19 +104,19 @@ final class Index
         try {
             checkIgnoreRule($id);
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::HTTP_BAD_REQUEST);
+            return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
         $filtered = (string)makeIgnoreId($id);
         $date = time();
 
         if ($this->config->has($id) || $this->config->has($filtered)) {
-            return api_error(r('Rule already exists: {id}', ['id' => $id]), Status::HTTP_CONFLICT);
+            return api_error(r('Rule already exists: {id}', ['id' => $id]), Status::CONFLICT);
         }
 
         $this->config->set($filtered, $date)->persist();
 
-        return api_response(Status::HTTP_OK, $this->ruleAsArray($filtered, $date));
+        return api_response(Status::OK, $this->ruleAsArray($filtered, $date));
     }
 
     #[Delete(self::URL . '[/]', name: 'ignore.delete')]
@@ -125,26 +125,26 @@ final class Index
         $params = DataUtil::fromRequest($request);
 
         if (null === ($rule = $params->get('rule'))) {
-            return api_error('Missing required parameter: rule', Status::HTTP_BAD_REQUEST);
+            return api_error('Missing required parameter: rule', Status::BAD_REQUEST);
         }
 
         try {
             checkIgnoreRule($rule);
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::HTTP_BAD_REQUEST);
+            return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
         $filtered = (string)makeIgnoreId($rule);
 
         if (!$this->config->has($filtered)) {
-            return api_error(r('Rule does not exist: {rule}', ['rule' => $rule]), Status::HTTP_NOT_FOUND);
+            return api_error(r('Rule does not exist: {rule}', ['rule' => $rule]), Status::NOT_FOUND);
         }
 
         $date = $this->config->get($filtered);
 
         $this->config->delete($filtered)->persist();
 
-        return api_response(Status::HTTP_OK, $this->ruleAsArray($filtered, $date));
+        return api_response(Status::OK, $this->ruleAsArray($filtered, $date));
     }
 
     /**

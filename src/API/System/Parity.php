@@ -54,7 +54,7 @@ final class Parity
         if ($counter > $backendsCount) {
             return api_error(r("Minimum value cannot be greater than the number of backends '({backends})'.", [
                 'backends' => $backendsCount,
-            ]), Status::HTTP_BAD_REQUEST);
+            ]), Status::BAD_REQUEST);
         }
 
         $counter = 0 === $counter ? $backendsCount : $counter;
@@ -68,7 +68,7 @@ final class Parity
             return api_error(r("Invalid page number. '{page}' is higher than what the last page is '{last_page}'.", [
                 'page' => $page,
                 'last_page' => $lastPage,
-            ]), Status::HTTP_NOT_FOUND);
+            ]), Status::NOT_FOUND);
         }
 
         $sql = "SELECT
@@ -107,7 +107,7 @@ final class Parity
             ]
         ];
 
-        return api_response(Status::HTTP_OK, $response);
+        return api_response(Status::OK, $response);
     }
 
     /**
@@ -119,7 +119,7 @@ final class Parity
         $params = DataUtil::fromRequest($request, true);
 
         if (0 === ($counter = (int)$params->get('min', 0))) {
-            return api_error('Invalid minimum value.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid minimum value.', Status::BAD_REQUEST);
         }
 
         $count = count($this->getBackends());
@@ -127,7 +127,7 @@ final class Parity
         if ($counter > $count) {
             return api_error(r("Minimum value cannot be greater than the number of backends '({backends})'.", [
                 'backends' => $count,
-            ]), Status::HTTP_BAD_REQUEST);
+            ]), Status::BAD_REQUEST);
         }
 
         $sql = "DELETE FROM
@@ -137,7 +137,7 @@ final class Parity
         ";
         $stmt = $this->db->getPDO()->query($sql);
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'deleted_records' => $stmt->rowCount(),
         ]);
     }

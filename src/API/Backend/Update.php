@@ -48,11 +48,11 @@ final class Update
     public function update(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (false === $this->backendFile->has($name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
@@ -72,7 +72,7 @@ final class Update
             );
 
             if (false === $client->validateContext($context)) {
-                return api_error('Context information validation failed.', Status::HTTP_BAD_REQUEST);
+                return api_error('Context information validation failed.', Status::BAD_REQUEST);
             }
 
             $this->backendFile->set($name, $config->getAll());
@@ -89,14 +89,14 @@ final class Update
             $backend = $this->getBackends(name: $name);
 
             if (empty($backend)) {
-                return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+                return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
             }
 
             $backend = array_pop($backend);
 
-            return api_response(Status::HTTP_OK, $backend);
+            return api_response(Status::OK, $backend);
         } catch (InvalidContextException|ValidationException $e) {
-            return api_error($e->getMessage(), Status::HTTP_BAD_REQUEST);
+            return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
     }
 
@@ -104,18 +104,18 @@ final class Update
     public function patchUpdate(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (false === $this->backendFile->has($name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
             $data = json_decode((string)$request->getBody(), true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             return api_error(r('Invalid JSON data. {error}', ['error' => $e->getMessage()]),
-                Status::HTTP_BAD_REQUEST);
+                Status::BAD_REQUEST);
         }
 
         $updates = [];
@@ -124,13 +124,13 @@ final class Update
             $value = ag($update, 'value');
 
             if (null === ($key = ag($update, 'key'))) {
-                return api_error('No key to update was present.', Status::HTTP_BAD_REQUEST);
+                return api_error('No key to update was present.', Status::BAD_REQUEST);
             }
 
             $spec = getServerColumnSpec($key);
 
             if (empty($spec)) {
-                return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::HTTP_BAD_REQUEST);
+                return api_error(r("Invalid key '{key}' was given.", ['key' => $key]), Status::BAD_REQUEST);
             }
 
             settype($value, ag($spec, 'type', 'string'));
@@ -142,12 +142,12 @@ final class Update
                     return api_error(r("Value validation for '{key}' failed. {error}", [
                         'key' => $key,
                         'error' => $e->getMessage()
-                    ]), Status::HTTP_BAD_REQUEST);
+                    ]), Status::BAD_REQUEST);
                 }
             }
 
             if (in_array($key, self::IMMUTABLE_KEYS, true)) {
-                return api_error(r('Key {key} is immutable.', ['key' => $key]), Status::HTTP_BAD_REQUEST);
+                return api_error(r('Key {key} is immutable.', ['key' => $key]), Status::BAD_REQUEST);
             }
 
             $updates["{$name}.{$key}"] = $value;
@@ -162,12 +162,12 @@ final class Update
         $backend = $this->getBackends(name: $name);
 
         if (empty($backend)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $backend = array_pop($backend);
 
-        return api_response(Status::HTTP_OK, $backend);
+        return api_response(Status::OK, $backend);
     }
 
     private function fromRequest(array $config, iRequest $request, iClient $client): array

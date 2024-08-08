@@ -8,7 +8,6 @@ use App\Libs\Enums\Http\Status;
 use finfo;
 use League\Route\Http\Exception\BadRequestException;
 use League\Route\Http\Exception\NotFoundException;
-use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use SplFileInfo;
@@ -65,7 +64,7 @@ final class ServeStatic
         if (false === in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'])) {
             throw new BadRequestException(
                 message: r("Method '{method}' is not allowed.", ['method' => $request->getMethod()]),
-                code: Status::HTTP_METHOD_NOT_ALLOWED->value
+                code: Status::METHOD_NOT_ALLOWED->value
             );
         }
 
@@ -99,7 +98,7 @@ final class ServeStatic
                             'looked' => $this->looked,
                         ]
                     ),
-                    code: Status::HTTP_NOT_FOUND->value
+                    code: Status::NOT_FOUND->value
                 );
             }
             $filePath = $checkIndex;
@@ -108,7 +107,7 @@ final class ServeStatic
         if (false === ($realBasePath = realpath($this->staticPath))) {
             throw new BadRequestException(
                 message: r("The static path '{path}' doesn't exists.", ['path' => $this->staticPath]),
-                code: Status::HTTP_SERVICE_UNAVAILABLE->value
+                code: Status::SERVICE_UNAVAILABLE->value
             );
         }
 
@@ -117,7 +116,7 @@ final class ServeStatic
         if (false === $filePath || false === str_starts_with($filePath, $realBasePath)) {
             throw new BadRequestException(
                 message: r("Request '{file}' is invalid.", ['file' => $requestPath]),
-                code: Status::HTTP_BAD_REQUEST->value
+                code: Status::BAD_REQUEST->value
             );
         }
 
@@ -132,7 +131,7 @@ final class ServeStatic
             try {
                 $ifModifiedSince = makeDate($ifModifiedSince)->getTimestamp();
                 if ($ifModifiedSince >= $file->getMTime()) {
-                    return new Response(Status::HTTP_NOT_MODIFIED->value, [
+                    return api_response(Status::NOT_MODIFIED, headers: [
                         'Last-Modified' => gmdate('D, d M Y H:i:s T', $file->getMTime())
                     ]);
                 }
@@ -154,7 +153,7 @@ final class ServeStatic
             $stream = Stream::make($file->getRealPath());
         }
 
-        return new Response(Status::HTTP_OK->value, $headers, $stream);
+        return api_response(Status::OK, body: $stream, headers: $headers);
     }
 
     /**

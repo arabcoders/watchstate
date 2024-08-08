@@ -8,12 +8,12 @@ use App\API\Backends\AccessToken;
 use App\API\System\AutoConfig;
 use App\API\System\HealthCheck;
 use App\Libs\Config;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-use Random\RandomException;
+use Psr\Http\Server\RequestHandlerInterface as iHandler;
 
 final class APIKeyRequiredMiddleware implements MiddlewareInterface
 {
@@ -35,19 +35,20 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
         '/webhook'
     ];
 
-    /**
-     * @throws RandomException if random_bytes() fails
-     */
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    public function process(iRequest $request, iHandler $handler): iResponse
     {
-        if ('OPTIONS' === $request->getMethod() || true === (bool)$request->getAttribute('INTERNAL_REQUEST', false)) {
+        if (true === (bool)$request->getAttribute('INTERNAL_REQUEST')) {
+            return $handler->handle($request);
+        }
+
+        if (Method::OPTIONS === Method::from($request->getMethod())) {
             return $handler->handle($request);
         }
 
         $requestPath = rtrim($request->getUri()->getPath(), '/');
 
         $openRoutes = self::PUBLIC_ROUTES;
-        if (false === (bool)Config::get('api.secure')) {
+        if (false === (bool)Config::get('api.secure', false)) {
             $openRoutes = array_merge($openRoutes, self::OPEN_ROUTES);
         }
 
@@ -58,77 +59,50 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             }
         }
 
-        $headerApiKey = $request->getHeaderLine('x-' . self::KEY_NAME);
+        $tokens = $this->parseTokens($request);
 
-        if (!empty($headerApiKey)) {
-            $apikey = $headerApiKey;
-        } elseif (null !== ($headerApiKey = $this->parseAuthorization($request->getHeaderLine('Authorization')))) {
-            $apikey = $headerApiKey;
-        } else {
-            $apikey = (string)ag($request->getQueryParams(), self::KEY_NAME, '');
+        if (count($tokens) < 1) {
+            return api_error('API key is required to access the API.', Status::BAD_REQUEST);
         }
 
-        if (empty($apikey)) {
-            return api_error(
-                'API key is required to access the API.',
-                Status::HTTP_BAD_REQUEST,
-                reason: 'API key is required to access the API.',
-            );
+        foreach ($tokens as $token) {
+            if (true === $this->validate($token)) {
+                return $handler->handle($request);
+            }
         }
 
-        if (true === $this->validateKey(rawurldecode($apikey))) {
-            return $handler->handle($request);
-        }
-
-        return api_error('API key is incorrect.', Status::HTTP_FORBIDDEN, reason: 'API key is incorrect.');
+        return api_error('incorrect API key.', Status::FORBIDDEN);
     }
 
-    /**
-     * @throws RandomException if random_bytes() fails
-     */
-    private function validateKey(?string $token): bool
+    private function validate(?string $token): bool
     {
-        if (empty($token)) {
+        if (empty($token) || !($storedKey = Config::get('api.key')) || empty($storedKey)) {
             return false;
         }
 
-        // -- we generate random key if not set, to prevent timing attacks or unauthorized access.
-        $storedKey = getValue(Config::get('api.key'));
-
-        if (empty($storedKey)) {
-            $storedKey = bin2hex(random_bytes(16));
-        }
-
-        return hash_equals(getValue($storedKey), $token);
+        return hash_equals($storedKey, $token);
     }
 
-    private function parseAuthorization(string $header): null|string
+    private function parseTokens(iRequest $request): array
     {
-        if (empty($header)) {
-            return null;
+        $tokens = [];
+
+        if (true === $request->hasHeader('x-' . self::KEY_NAME)) {
+            $tokens['header'] = $request->getHeaderLine('x-' . self::KEY_NAME);
         }
 
-        $headerLower = strtolower(trim($header));
-        if (true === str_starts_with($headerLower, 'bearer')) {
-            return trim(substr($header, 6));
+        if (true === ag_exists($request->getQueryParams(), self::KEY_NAME)) {
+            $tokens['param'] = ag($request->getQueryParams(), self::KEY_NAME);
         }
 
-        if (false === str_starts_with($headerLower, 'basic')) {
-            return null;
+        $auth = $request->getHeaderLine('Authorization');
+        if (!empty($auth)) {
+            [$type, $key] = explode(' ', $auth, 2);
+            if (true === in_array(strtolower($type), ['bearer', 'token'])) {
+                $tokens['auth'] = trim($key);
+            }
         }
 
-        /** @phpstan-ignore-next-line */
-        if (false === ($decoded = base64_decode(substr($header, 6)))) {
-            return null;
-        }
-
-        if (false === str_contains($decoded, ':')) {
-            return null;
-        }
-
-        [, $password] = explode(':', $decoded, 2);
-
-        return empty($password) ? null : $password;
+        return array_map(fn($val) => rawurldecode($val), array_values(array_unique(array_filter($tokens))));
     }
-
 }

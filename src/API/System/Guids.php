@@ -31,6 +31,6 @@ final class Guids
             $list[] = $item;
         }
 
-        return api_response(Status::HTTP_OK, $list);
+        return api_response(Status::OK, $list);
     }
 }

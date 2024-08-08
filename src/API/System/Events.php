@@ -69,7 +69,7 @@ final class Events
             $response['requests'][] = ['key' => $key, 'item' => $this->formatEntity($item)];
         }
 
-        return api_response(Status::HTTP_OK, $response);
+        return api_response(Status::OK, $response);
     }
 
     /**
@@ -81,7 +81,7 @@ final class Events
         $params = DataUtil::fromRequest($request, true);
 
         if (null === ($id = $params->get('id', ag($args, 'id')))) {
-            return api_error('Invalid id.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid id.', Status::BAD_REQUEST);
         }
 
         $type = $params->get('type', 'queue');
@@ -90,20 +90,20 @@ final class Events
             return api_error(r("Invalid type '{type}'. Only '{types}' are supported.", [
                 'type' => $type,
                 'types' => implode(", ", self::TYPES),
-            ]), Status::HTTP_BAD_REQUEST);
+            ]), Status::BAD_REQUEST);
         }
 
         $items = $this->cache->get($type, []);
 
         if (empty($items)) {
-            return api_error(r('{type} is empty.', ['type' => $type]), Status::HTTP_NOT_FOUND);
+            return api_error(r('{type} is empty.', ['type' => $type]), Status::NOT_FOUND);
         }
 
         if (false === array_key_exists($id, $items)) {
             return api_error(r("Record id '{id}' doesn't exists. for '{type}' list.", [
                 'id' => $id,
                 'type' => $type,
-            ]), Status::HTTP_NOT_FOUND);
+            ]), Status::NOT_FOUND);
         }
 
         if ('queue' === $type) {
@@ -114,6 +114,6 @@ final class Events
             $this->cache->set($type, $items, new DateInterval('P3D'));
         }
 
-        return api_response(Status::HTTP_OK, ['id' => $id, 'type' => $type, 'status' => 'deleted']);
+        return api_response(Status::OK, ['id' => $id, 'type' => $type, 'status' => 'deleted']);
     }
 }

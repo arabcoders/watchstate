@@ -22,19 +22,19 @@ final class Option
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         if (false === $list->has($name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $data = DataUtil::fromRequest($request);
 
         if (null === ($option = ag($args, 'option', $data->get('key')))) {
-            return api_error('No option key was given.', Status::HTTP_BAD_REQUEST);
+            return api_error('No option key was given.', Status::BAD_REQUEST);
         }
 
         $isInternalRequest = true === (bool)$request->getAttribute('INTERNAL_REQUEST', false);
@@ -42,13 +42,13 @@ final class Option
         if (false === str_starts_with($option, 'options.') && !$isInternalRequest) {
             return api_error(
                 "Invalid option key was given. Option keys must start with 'options.'",
-                Status::HTTP_BAD_REQUEST
+                Status::BAD_REQUEST
             );
         }
 
         $spec = getServerColumnSpec($option);
         if (empty($spec)) {
-            return api_error(r("Invalid option '{key}'.", ['key' => $option]), Status::HTTP_BAD_REQUEST);
+            return api_error(r("Invalid option '{key}'.", ['key' => $option]), Status::BAD_REQUEST);
         }
 
         if ('GET' === $request->getMethod()) {
@@ -56,7 +56,7 @@ final class Option
                 return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                     'option' => $option,
                     'name' => $name
-                ]), Status::HTTP_NOT_FOUND);
+                ]), Status::NOT_FOUND);
             }
 
             return $this->viewOption($spec, $list->get("{$name}.{$option}"));
@@ -66,7 +66,7 @@ final class Option
             return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                 'option' => $option,
                 'name' => $name
-            ]), Status::HTTP_NOT_FOUND);
+            ]), Status::NOT_FOUND);
         }
 
         if ('DELETE' === $request->getMethod()) {
@@ -90,7 +90,7 @@ final class Option
                     return api_error(r("Value validation for '{key}' failed. {error}", [
                         'key' => $option,
                         'error' => $e->getMessage()
-                    ]), Status::HTTP_BAD_REQUEST);
+                    ]), Status::BAD_REQUEST);
                 }
             }
 
@@ -99,7 +99,7 @@ final class Option
 
         $list->persist();
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'key' => $option,
             'value' => $value,
             'real_val' => $data->get('value'),
@@ -114,7 +114,7 @@ final class Option
             settype($value, ag($spec, 'type', 'string'));
         }
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'key' => $spec['key'],
             'value' => $value,
             'type' => ag($spec, 'type', 'string'),

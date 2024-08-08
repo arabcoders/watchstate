@@ -54,11 +54,11 @@ final class Mismatched
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $params = DataUtil::fromArray($request->getQueryParams());
@@ -84,13 +84,13 @@ final class Mismatched
                 'method' => $method,
                 'methods' => implode(", ", self::METHODS),
 
-            ]), Status::HTTP_BAD_REQUEST);
+            ]), Status::BAD_REQUEST);
         }
 
         try {
             $client = $this->getClient(name: $name, config: $backendOpts);
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::HTTP_NOT_FOUND);
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
         $ids = [];
@@ -121,7 +121,7 @@ final class Mismatched
             }
         }
 
-        return api_response(Status::HTTP_OK, $list);
+        return api_response(Status::OK, $list);
     }
 
     protected function compare(iClient $client, array $item, string $method): array

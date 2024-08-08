@@ -37,7 +37,7 @@ final class Suppressor
             $list[] = ['id' => $id, ...$data,];
         }
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'items' => $list,
             'types' => self::TYPES
         ]);
@@ -52,11 +52,11 @@ final class Suppressor
         $params = DataUtil::fromRequest($request);
 
         if (null === ($rule = $params->get('rule')) || empty($rule)) {
-            return api_error('Rule is required.', Status::HTTP_BAD_REQUEST);
+            return api_error('Rule is required.', Status::BAD_REQUEST);
         }
 
         if (null === ($type = $params->get('type')) || empty($type)) {
-            return api_error('Rule type is required.', Status::HTTP_BAD_REQUEST);
+            return api_error('Rule type is required.', Status::BAD_REQUEST);
         }
 
         $type = strtolower($type);
@@ -65,15 +65,15 @@ final class Suppressor
             return api_error(r("Invalid rule type '{type}'. Expected '{types}'", [
                 'type' => $type,
                 'types' => implode(', ', self::TYPES),
-            ]), Status::HTTP_BAD_REQUEST);
+            ]), Status::BAD_REQUEST);
         }
 
         if (null === ($example = $params->get('example')) || empty($example)) {
-            return api_error('Rule example is required.', Status::HTTP_BAD_REQUEST);
+            return api_error('Rule example is required.', Status::BAD_REQUEST);
         }
 
         if ('regex' === $type && false === @preg_match($rule, '')) {
-            return api_error('Invalid regex pattern.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid regex pattern.', Status::BAD_REQUEST);
         }
 
         $suppressor = new LogSuppressor([
@@ -88,7 +88,7 @@ final class Suppressor
                 'example' => $example,
                 'type' => $type,
                 'rule' => $rule,
-            ]), Status::HTTP_BAD_REQUEST);
+            ]), Status::BAD_REQUEST);
         }
 
         $id = ag($args, 'id', null);
@@ -102,7 +102,7 @@ final class Suppressor
         $suppressor = new LogSuppressor($rules);
 
         if ($suppressor->isSuppressed($example)) {
-            return api_error('Example is already suppressed by another rule.', Status::HTTP_BAD_REQUEST);
+            return api_error('Example is already suppressed by another rule.', Status::BAD_REQUEST);
         }
 
         $data = [
@@ -115,7 +115,7 @@ final class Suppressor
 
         $this->file->set($id, $data)->persist();
 
-        return api_response(Status::HTTP_OK, ['id' => $id, ...$data]);
+        return api_response(Status::OK, ['id' => $id, ...$data]);
     }
 
     /**
@@ -131,30 +131,30 @@ final class Suppressor
     public function deleteSuppressor(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id')) || empty($id)) {
-            return api_error('Invalid suppressor id.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid suppressor id.', Status::BAD_REQUEST);
         }
 
         if (null === ($rule = $this->file->get($id))) {
-            return api_error('Suppressor rule not found.', Status::HTTP_NOT_FOUND);
+            return api_error('Suppressor rule not found.', Status::NOT_FOUND);
         }
 
         $this->file->delete($id)->persist();
 
-        return api_response(Status::HTTP_OK, ['id' => $id, ...$rule]);
+        return api_response(Status::OK, ['id' => $id, ...$rule]);
     }
 
     #[Get(self::URL . '/{id:\w{11}}[/]', name: 'system.suppressor.view')]
     public function viewSuppressor(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id')) || empty($id)) {
-            return api_error('Invalid suppressor id.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid suppressor id.', Status::BAD_REQUEST);
         }
 
         if (null === ($rule = $this->file->get($id))) {
-            return api_error('Suppressor rule not found.', Status::HTTP_NOT_FOUND);
+            return api_error('Suppressor rule not found.', Status::NOT_FOUND);
         }
 
-        return api_response(Status::HTTP_OK, ['id' => $id, ...$rule]);
+        return api_response(Status::OK, ['id' => $id, ...$rule]);
     }
 
     /**

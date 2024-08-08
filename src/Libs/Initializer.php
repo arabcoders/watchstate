@@ -226,10 +226,10 @@ final class Initializer
 
             $response = api_error(
                 message: "{$realStatusCode}: {$e->getMessage()}",
-                httpCode: Status::tryFrom($realStatusCode) ?? Status::HTTP_SERVICE_UNAVAILABLE,
+                httpCode: Status::tryFrom($realStatusCode) ?? Status::SERVICE_UNAVAILABLE,
             );
 
-            if (Status::HTTP_SERVICE_UNAVAILABLE->value === $statusCode) {
+            if (Status::SERVICE_UNAVAILABLE->value === $statusCode) {
                 Container::get(LoggerInterface::class)->error($e->getMessage(), [
                     'kind' => $e::class,
                     'file' => $e->getFile(),
@@ -245,8 +245,8 @@ final class Initializer
             );
         } catch (Throwable $e) {
             $response = api_error(
-                message: 'Unable to serve request.',
-                httpCode: Status::HTTP_SERVICE_UNAVAILABLE,
+                message: 'Unable to serve request check logs.',
+                httpCode: Status::SERVICE_UNAVAILABLE,
                 body: true !== (bool)Config::get('debug.enabled', false) ? [] : [
                     'exception' => [
                         'message' => $e->getMessage(),
@@ -289,7 +289,7 @@ final class Initializer
 
         // -- health endpoint.
         if (true === str_starts_with($requestPath, '/healthcheck')) {
-            return api_response(Status::HTTP_OK);
+            return api_response(Status::OK);
         }
 
         // -- Forward requests to API server.
@@ -301,7 +301,7 @@ final class Initializer
 
         if (empty($apikey)) {
             if (false === (bool)Config::get('webui.enabled', false)) {
-                $response = api_response(Status::HTTP_UNAUTHORIZED);
+                $response = api_response(Status::UNAUTHORIZED);
                 $this->write(
                     $request,
                     Level::Info,
@@ -332,7 +332,7 @@ final class Initializer
         }
 
         if (empty($backend)) {
-            $response = api_response(Status::HTTP_UNAUTHORIZED);
+            $response = api_response(Status::UNAUTHORIZED);
             $this->write($request, Level::Info, $this->formatLog($request, $response, 'Invalid token was given.'));
             return $response;
         }

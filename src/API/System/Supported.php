@@ -17,6 +17,6 @@ final class Supported
     #[Get(self::URL . '[/]', name: 'system.supported')]
     public function __invoke(iRequest $request): iResponse
     {
-        return api_response(Status::HTTP_OK, array_keys(Config::get('supported')));
+        return api_response(Status::OK, array_keys(Config::get('supported')));
     }
 }

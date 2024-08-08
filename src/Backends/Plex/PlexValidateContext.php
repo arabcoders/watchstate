@@ -89,11 +89,11 @@ final readonly class PlexValidateContext
                 ],
             ]);
 
-            if (Status::HTTP_UNAUTHORIZED->value === $request->getStatusCode()) {
+            if (Status::UNAUTHORIZED->value === $request->getStatusCode()) {
                 throw new InvalidContextException('Backend responded with 401. Most likely means token is invalid.');
             }
 
-            if (Status::HTTP_NOT_FOUND->value === $request->getStatusCode()) {
+            if (Status::NOT_FOUND->value === $request->getStatusCode()) {
                 throw new InvalidContextException('Backend responded with 404. Most likely means url is incorrect.');
             }
 

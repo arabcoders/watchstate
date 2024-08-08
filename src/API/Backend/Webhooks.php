@@ -60,7 +60,7 @@ final class Webhooks
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for id path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
         }
 
         return $this->process($name, $request);
@@ -87,7 +87,7 @@ final class Webhooks
 
             $client = $this->getClient(name: $name);
         } catch (RuntimeException $e) {
-            return api_error($e->getMessage(), Status::HTTP_NOT_FOUND);
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
         if (true === Config::get('webhook.dumpRequest')) {
@@ -101,7 +101,7 @@ final class Webhooks
             if (null === ($requestUser = ag($attr, 'user.id'))) {
                 $message = "Request payload didn't contain a user id. Backend requires a user check.";
                 $this->write($request, Level::Info, $message);
-                return api_error($message, Status::HTTP_BAD_REQUEST);
+                return api_error($message, Status::BAD_REQUEST);
             }
 
             if (false === hash_equals((string)$userId, (string)$requestUser)) {
@@ -110,7 +110,7 @@ final class Webhooks
                     'config_user' => $userId,
                 ]);
                 $this->write($request, Level::Info, $message);
-                return api_error($message, Status::HTTP_BAD_REQUEST);
+                return api_error($message, Status::BAD_REQUEST);
             }
         }
 
@@ -118,7 +118,7 @@ final class Webhooks
             if (null === ($requestBackendId = ag($attr, 'backend.id'))) {
                 $message = "Request payload didn't contain the backend unique id.";
                 $this->write($request, Level::Info, $message);
-                return api_error($message, Status::HTTP_BAD_REQUEST);
+                return api_error($message, Status::BAD_REQUEST);
             }
 
             if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
@@ -127,7 +127,7 @@ final class Webhooks
                     'config_uid' => $uuid,
                 ]);
                 $this->write($request, Level::Info, $message);
-                return api_error($message, Status::HTTP_BAD_REQUEST);
+                return api_error($message, Status::BAD_REQUEST);
             }
         }
 
@@ -140,7 +140,7 @@ final class Webhooks
         $metadataOnly = true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
-            $response = api_response(Status::HTTP_NOT_ACCEPTABLE);
+            $response = api_response(Status::NOT_ACCEPTABLE);
             $this->write($request, Level::Error, r('Import are disabled for [{backend}].', [
                 'backend' => $client->getName(),
             ]), forceContext: true);
@@ -168,7 +168,7 @@ final class Webhooks
                 ]
             );
 
-            return api_response(Status::HTTP_NOT_MODIFIED);
+            return api_response(Status::NOT_MODIFIED);
         }
 
         if ((0 === (int)$entity->episode || null === $entity->season) && $entity->isEpisode()) {
@@ -187,7 +187,7 @@ final class Webhooks
                 ]
             );
 
-            return api_response(Status::HTTP_NOT_MODIFIED);
+            return api_response(Status::NOT_MODIFIED);
         }
 
         $items = $this->cache->get('requests', []);
@@ -228,7 +228,7 @@ final class Webhooks
             ]
         );
 
-        return api_response(Status::HTTP_OK);
+        return api_response(Status::OK);
     }
 
     /**

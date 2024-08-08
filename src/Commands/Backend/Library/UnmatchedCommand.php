@@ -112,7 +112,7 @@ final class UnmatchedCommand extends Command
 
         $response = APIRequest('GET', $url, opts: ['query' => $query]);
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r('<error>API error. {status}: {message}</error>', [
                 'id' => $id,
                 'status' => $response->status->value,

@@ -159,7 +159,7 @@ final class EnvCommand extends Command
             $response = APIRequest('POST', '/system/env/' . $key, ['value' => $input->getOption('set')]);
         }
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $key,
                 'status' => $response->status->value,
