@@ -22,17 +22,17 @@ final class Sessions
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
             $client = $this->getClient(name: $name);
         } catch (InvalidArgumentException $e) {
-            return api_error($e->getMessage(), Status::HTTP_NOT_FOUND);
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
         $opts = [];
@@ -44,9 +44,9 @@ final class Sessions
 
         try {
             $sessions = $client->getSessions($opts);
-            return api_response(Status::HTTP_OK, ag($sessions, 'sessions', []));
+            return api_response(Status::OK, ag($sessions, 'sessions', []));
         } catch (Throwable $e) {
-            return api_error($e->getMessage(), Status::HTTP_INTERNAL_SERVER_ERROR);
+            return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }
 }

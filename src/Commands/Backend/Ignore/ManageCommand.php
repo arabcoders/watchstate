@@ -127,7 +127,7 @@ final class ManageCommand extends Command
         if ($input->getOption('remove')) {
             $response = APIRequest('DELETE', '/ignore/', ['rule' => $rule]);
 
-            if (Status::HTTP_OK !== $response->status) {
+            if (Status::OK !== $response->status) {
                 $output->writeln(r("<error>API error. {status}: {message}</error>", [
                     'key' => $rule,
                     'status' => $response->status->value,
@@ -142,7 +142,7 @@ final class ManageCommand extends Command
 
         $response = APIRequest('POST', '/ignore/', ['rule' => $rule]);
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $rule,
                 'status' => $response->status->value,

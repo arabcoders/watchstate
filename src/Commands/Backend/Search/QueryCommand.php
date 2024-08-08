@@ -88,7 +88,7 @@ final class QueryCommand extends Command
 
         $response = APIRequest('GET', r('/backend/{backend}/search', ['backend' => $name]), opts: ['query' => $query]);
 
-        if (Status::HTTP_NOT_FOUND === $response->status) {
+        if (Status::NOT_FOUND === $response->status) {
             $output->writeln(r("<error>No results for '{key}'. {status}: {message}</error>", [
                 'key' => $query,
                 'status' => $response->status->value,
@@ -97,7 +97,7 @@ final class QueryCommand extends Command
             return self::FAILURE;
         }
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'key' => $query,
                 'status' => $response->status->value,

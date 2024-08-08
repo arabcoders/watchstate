@@ -53,7 +53,7 @@ final class Index
             $list[] = $builder;
         }
 
-        return api_response(Status::HTTP_OK, $list);
+        return api_response(Status::OK, $list);
     }
 
     #[Get(Index::URL . '/recent[/]', name: 'logs.recent')]
@@ -105,14 +105,14 @@ final class Index
             $list[] = $builder;
         }
 
-        return api_response(Status::HTTP_OK, $list);
+        return api_response(Status::OK, $list);
     }
 
     #[Route(['GET', 'DELETE'], Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
     public function logView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($filename = ag($args, 'filename'))) {
-            return api_error('Invalid value for filename path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for filename path parameter.', Status::BAD_REQUEST);
         }
 
         $path = realpath(fixPath(Config::get('tmpDir') . '/logs'));
@@ -120,16 +120,16 @@ final class Index
         $filePath = realpath($path . '/' . $filename);
 
         if (false === $filePath) {
-            return api_error('File not found.', Status::HTTP_NOT_FOUND);
+            return api_error('File not found.', Status::NOT_FOUND);
         }
 
         if (false === str_starts_with($filePath, $path)) {
-            return api_error('Invalid file path.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid file path.', Status::BAD_REQUEST);
         }
 
         if ('DELETE' === $request->getMethod()) {
             unlink($filePath);
-            return api_response(Status::HTTP_OK);
+            return api_response(Status::OK);
         }
 
         $params = DataUtil::fromArray($request->getQueryParams());
@@ -144,7 +144,7 @@ final class Index
         }
 
         if ($file->getSize() < 1) {
-            return api_response(Status::HTTP_OK);
+            return api_response(Status::OK);
         }
 
         $limit = (int)$params->get('limit', self::DEFAULT_LIMIT);
@@ -170,7 +170,7 @@ final class Index
 
         $stream->rewind();
 
-        return new Response(status: Status::HTTP_OK->value, headers: [
+        return new Response(status: Status::OK->value, headers: [
             'Content-Type' => 'text/plain',
             'X-No-AccessLog' => '1'
         ], body: $stream);
@@ -181,7 +181,7 @@ final class Index
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($filePath);
 
         return new Response(
-            status: Status::HTTP_OK->value,
+            status: Status::OK->value,
             headers: [
                 'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,
                 'Content-Length' => filesize($filePath),
@@ -262,7 +262,7 @@ final class Index
         };
 
         return (new Response(
-            status: Status::HTTP_OK->value,
+            status: Status::OK->value,
             headers: [
                 'Content-Type' => 'text/event-stream; charset=UTF-8',
                 'Cache-Control' => 'no-cache',

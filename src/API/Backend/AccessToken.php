@@ -26,17 +26,17 @@ final class AccessToken
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $data = DataUtil::fromArray($request->getParsedBody());
 
         if (null === ($id = $data->get('id'))) {
-            return api_error('No id was given.', Status::HTTP_BAD_REQUEST);
+            return api_error('No id was given.', Status::BAD_REQUEST);
         }
 
         try {
@@ -47,7 +47,7 @@ final class AccessToken
             );
 
             if (!is_string($token)) {
-                return api_error('Failed to generate access token.', Status::HTTP_INTERNAL_SERVER_ERROR);
+                return api_error('Failed to generate access token.', Status::INTERNAL_SERVER_ERROR);
             }
 
             $arr = [
@@ -58,11 +58,11 @@ final class AccessToken
                 $arr['username'] = $data->get('username');
             }
 
-            return api_response(Status::HTTP_OK, $arr);
+            return api_response(Status::OK, $arr);
         } catch (InvalidArgumentException $e) {
-            return api_error($e->getMessage(), Status::HTTP_NOT_FOUND);
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         } catch (Throwable $e) {
-            return api_error($e->getMessage(), Status::HTTP_INTERNAL_SERVER_ERROR);
+            return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
     }
 }

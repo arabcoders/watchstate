@@ -24,11 +24,11 @@ final class Delete
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 
         if (null === ($data = $this->getBackend(name: $name))) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::HTTP_NOT_FOUND);
+            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         set_time_limit(0);
@@ -59,7 +59,7 @@ final class Delete
 
         ConfigFile::open(Config::get('backends_file'), 'yaml')->delete($name)->persist();
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'deleted' => [
                 'references' => $removedReference,
                 'records' => $deletedRecords,

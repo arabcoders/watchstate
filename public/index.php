@@ -74,7 +74,7 @@ try {
     );
 
     if (!headers_sent()) {
-        http_response_code(Status::HTTP_SERVICE_UNAVAILABLE->value);
+        http_response_code(Status::SERVICE_UNAVAILABLE->value);
     }
 
     exit(Command::FAILURE);
@@ -98,7 +98,7 @@ try {
     );
 
     if (!headers_sent()) {
-        http_response_code(Status::HTTP_SERVICE_UNAVAILABLE->value);
+        http_response_code(Status::SERVICE_UNAVAILABLE->value);
     }
 
     exit(Command::FAILURE);

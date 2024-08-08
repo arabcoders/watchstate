@@ -42,7 +42,7 @@ final class Index
             $response['tasks'][] = $task;
         }
 
-        return api_response(Status::HTTP_OK, $response);
+        return api_response(Status::OK, $response);
     }
 
     /**
@@ -52,13 +52,13 @@ final class Index
     public function taskQueue(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
-            return api_error('No id was given.', Status::HTTP_BAD_REQUEST);
+            return api_error('No id was given.', Status::BAD_REQUEST);
         }
 
         $task = TasksCommand::getTasks($id);
 
         if (empty($task)) {
-            return api_error('Task not found.', Status::HTTP_NOT_FOUND);
+            return api_error('Task not found.', Status::NOT_FOUND);
         }
 
         $queuedTasks = $this->cache->get('queued_tasks', []);
@@ -66,16 +66,16 @@ final class Index
         if ('POST' === $request->getMethod()) {
             $queuedTasks[] = $id;
             $this->cache->set('queued_tasks', $queuedTasks, new DateInterval('P3D'));
-            return api_response(Status::HTTP_ACCEPTED, ['queue' => $queuedTasks]);
+            return api_response(Status::ACCEPTED, ['queue' => $queuedTasks]);
         }
 
         if ('DELETE' === $request->getMethod()) {
             $queuedTasks = array_filter($queuedTasks, fn($v) => $v !== $id);
             $this->cache->set('queued_tasks', $queuedTasks, new DateInterval('P3D'));
-            return api_response(Status::HTTP_OK, ['queue' => $queuedTasks]);
+            return api_response(Status::OK, ['queue' => $queuedTasks]);
         }
 
-        return api_response(Status::HTTP_OK, [
+        return api_response(Status::OK, [
             'task' => $id,
             'is_queued' => in_array($id, $queuedTasks),
         ]);
@@ -88,13 +88,13 @@ final class Index
     public function taskView(iRequest $request, array $args = []): iResponse
     {
         if (null === ($id = ag($args, 'id'))) {
-            return api_error('No id was given.', Status::HTTP_BAD_REQUEST);
+            return api_error('No id was given.', Status::BAD_REQUEST);
         }
 
         $task = TasksCommand::getTasks($id);
 
         if (empty($task)) {
-            return api_error('Task not found.', Status::HTTP_NOT_FOUND);
+            return api_error('Task not found.', Status::NOT_FOUND);
         }
 
         $queuedTasks = $this->cache->get('queued_tasks', []);
@@ -102,7 +102,7 @@ final class Index
         $data = Index::formatTask($task);
         $data['queued'] = in_array(ag($task, 'name'), $queuedTasks);
 
-        return api_response(Status::HTTP_OK, $data);
+        return api_response(Status::OK, $data);
     }
 
     private function formatTask(array $task): array

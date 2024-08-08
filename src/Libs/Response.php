@@ -125,7 +125,7 @@ class Response implements iResponse
      * @param string|resource|iStream|null $body Stream identifier and/or actual stream resource
      */
     public function __construct(
-        Status|int $status = Status::HTTP_OK,
+        Status|int $status = Status::OK,
         array $headers = [],
         mixed $body = null,
         string $version = '1.1',

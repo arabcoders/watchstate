@@ -16,6 +16,6 @@ final class Report
     #[Get(self::URL . '[/]', name: 'system.report')]
     public function __invoke(iRequest $request): iResponse
     {
-        return api_response(Status::HTTP_OK, runCommand('system:report', asArray: true));
+        return api_response(Status::OK, runCommand('system:report', asArray: true));
     }
 }

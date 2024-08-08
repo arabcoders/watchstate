@@ -41,6 +41,6 @@ final class Reset
 
         $list->persist();
 
-        return api_response(Status::HTTP_OK, ['message' => 'System reset.']);
+        return api_response(Status::OK, ['message' => 'System reset.']);
     }
 }

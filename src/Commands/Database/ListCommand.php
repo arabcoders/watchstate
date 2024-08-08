@@ -296,7 +296,7 @@ final class ListCommand extends Command
             'query' => $params,
         ]);
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')

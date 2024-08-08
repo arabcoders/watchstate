@@ -23,7 +23,7 @@ final class AccessToken
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($type = ag($args, 'type'))) {
-            return api_error('Invalid value for type path parameter.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid value for type path parameter.', Status::BAD_REQUEST);
         }
 
         $params = DataUtil::fromRequest($request);
@@ -31,25 +31,25 @@ final class AccessToken
         $password = $params->get('password');
 
         if (empty($username) || empty($password)) {
-            return api_error('Invalid username or password.', Status::HTTP_BAD_REQUEST);
+            return api_error('Invalid username or password.', Status::BAD_REQUEST);
         }
 
         if (false === in_array($type, ['jellyfin', 'emby'])) {
-            return api_error('Access token endpoint only supported on jellyfin, emby.', Status::HTTP_BAD_REQUEST);
+            return api_error('Access token endpoint only supported on jellyfin, emby.', Status::BAD_REQUEST);
         }
 
         try {
             $client = $this->getBasicClient($type, $params->with('token', 'accesstoken_request'));
         } catch (InvalidArgumentException $e) {
-            return api_error($e->getMessage(), Status::HTTP_BAD_REQUEST);
+            return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
         try {
             $info = $client->generateAccessToken($username, $password);
         } catch (Throwable $e) {
-            return api_error($e->getMessage(), Status::HTTP_INTERNAL_SERVER_ERROR);
+            return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
 
-        return api_response(Status::HTTP_OK, $info);
+        return api_response(Status::OK, $info);
     }
 }

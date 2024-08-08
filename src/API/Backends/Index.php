@@ -44,6 +44,6 @@ final class Index
             $list[] = $item;
         }
 
-        return api_response(Status::HTTP_OK, $list);
+        return api_response(Status::OK, $list);
     }
 }

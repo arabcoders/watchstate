@@ -391,7 +391,7 @@ if (!function_exists('api_response')) {
     /**
      * Create a API response.
      *
-     * @param Status $status Optional. The HTTP status code. Default is {@see Status::HTTP_OK}.
+     * @param Status $status Optional. The HTTP status code. Default is {@see Status::OK}.
      * @param array|null $body The JSON data to include in the response body.
      * @param array $headers Optional. Additional headers to include in the response.
      * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
@@ -399,7 +399,7 @@ if (!function_exists('api_response')) {
      * @return iResponse A PSR-7 compatible response object.
      */
     function api_response(
-        Status $status = Status::HTTP_OK,
+        Status $status = Status::OK,
         array|null $body = null,
         array $headers = [],
         string|null $reason = null
@@ -430,7 +430,7 @@ if (!function_exists('api_error')) {
      * Create a API error response.
      *
      * @param string $message The error message.
-     * @param Status $httpCode Optional. The HTTP status code. Default is {@see Status::HTTP_BAD_REQUEST}.
+     * @param Status $httpCode Optional. The HTTP status code. Default is {@see Status::BAD_REQUEST}.
      * @param array $body Optional. Additional fields to include in the response body.
      * @param array $opts Optional. Additional options.
      *
@@ -438,7 +438,7 @@ if (!function_exists('api_error')) {
      */
     function api_error(
         string $message,
-        Status $httpCode = Status::HTTP_BAD_REQUEST,
+        Status $httpCode = Status::BAD_REQUEST,
         array $body = [],
         array $headers = [],
         string|null $reason = null,
@@ -1433,7 +1433,7 @@ if (!function_exists('APIRequest')) {
             )->withAttribute('INTERNAL_REQUEST', true)
         );
 
-        $statusCode = Status::tryFrom($response->getStatusCode()) ?? Status::HTTP_SERVICE_UNAVAILABLE;
+        $statusCode = Status::tryFrom($response->getStatusCode()) ?? Status::SERVICE_UNAVAILABLE;
 
         if ($response->getBody()->getSize() < 1) {
             return new APIResponse($statusCode, $response->getHeaders());

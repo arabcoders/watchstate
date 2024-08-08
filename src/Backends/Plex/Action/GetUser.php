@@ -78,7 +78,7 @@ final class GetUser
             'url' => (string)$url,
         ]);
 
-        if (Status::HTTP_OK->value !== $response->getStatusCode()) {
+        if (Status::OK->value !== $response->getStatusCode()) {
             $message = "Request for '{backend}' user info returned with unexpected '{status_code}' status code. Using {type} token.";
 
             if (null !== ag($context->options, Options::ADMIN_TOKEN)) {
@@ -89,7 +89,7 @@ final class GetUser
                         'X-Plex-Client-Identifier' => $context->backendId,
                     ],
                 ]);
-                if (Status::HTTP_OK->value === $adminResponse->getStatusCode()) {
+                if (Status::OK->value === $adminResponse->getStatusCode()) {
                     return $this->process($context, $url, $adminResponse, $opts);
                 }
 

@@ -89,7 +89,7 @@ final class Integrity
             'checked_file' => $this->checkedFile,
         ], new DateInterval('PT1H'));
 
-        return api_response(Status::HTTP_OK, $response);
+        return api_response(Status::OK, $response);
     }
 
     private function checkIntegrity(iState $entity): bool
@@ -163,7 +163,7 @@ final class Integrity
             $this->cache->delete('system.integrity');
         }
 
-        return api_response(Status::HTTP_OK);
+        return api_response(Status::OK);
     }
 
     private function checkPath(string $file): bool

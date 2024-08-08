@@ -120,7 +120,7 @@ final class SuppressCommand extends Command
         }
 
         $response = APIRequest('GET', '/system/suppressor/' . $id);
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -184,7 +184,7 @@ final class SuppressCommand extends Command
 
         $response = APIRequest($id ? 'PUT' : 'POST', '/system/suppressor' . ($id ? '/' . $id : ''), $data);
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -206,7 +206,7 @@ final class SuppressCommand extends Command
         }
 
         $response = APIRequest('DELETE', '/system/suppressor/' . $id);
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -222,7 +222,7 @@ final class SuppressCommand extends Command
     {
         $response = APIRequest('GET', '/system/suppressor');
 
-        if (Status::HTTP_OK !== $response->status) {
+        if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
