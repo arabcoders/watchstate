@@ -72,7 +72,7 @@ readonly class Playlist
             foreach (findSideCarFiles(new SplFileInfo($path)) as $sideFile) {
                 $extension = getExtension($sideFile);
 
-                if (false === in_array($extension, self::ALLOWED_SUBS)) {
+                if (false === in_array($extension, array_keys(Subtitle::FORMATS))) {
                     continue;
                 }
 
@@ -161,6 +161,10 @@ readonly class Playlist
 
             foreach (ag($ffprobe, 'streams', []) as $id => $x) {
                 if ('subtitle' !== ag($x, 'codec_type')) {
+                    continue;
+                }
+
+                if (false === in_array(ag($x, 'codec_name'), Subtitle::INTERNAL_NAMING)) {
                     continue;
                 }
 
