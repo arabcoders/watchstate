@@ -24,6 +24,7 @@
         "ext-simplexml": "*",
         "ext-fileinfo": "*",
         "ext-redis": "*",
+        "ext-posix": "*",
         "monolog/monolog": "^3.4",
         "symfony/console": "^6.1.4",
         "symfony/cache": "^6.1.3",
@@ -43,8 +44,7 @@
         "psy/psysh": "^0.11.22"
     },
     "suggest": {
-        "ext-sockets": "For UDP commincations.",
-        "ext-posix": "to check if running under super user."
+        "ext-sockets": "For UDP commincations."
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",

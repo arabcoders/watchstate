@@ -1093,7 +1093,6 @@ if (false === function_exists('isValidURL')) {
     }
 }
 
-
 if (false === function_exists('getSystemMemoryInfo')) {
     /**
      * Get system memory information.
@@ -1620,6 +1619,13 @@ if (!function_exists('isTaskWorkerRunning')) {
             ];
         }
 
+        if (true === (bool)env('DISABLE_CRON', false)) {
+            return [
+                'status' => false,
+                'message' => "Task runner is disabled via 'DISABLE_CRON' environment variable."
+            ];
+        }
+
         $pidFile = '/tmp/ws-job-runner.pid';
 
         if (!file_exists($pidFile)) {
@@ -1641,6 +1647,54 @@ if (!function_exists('isTaskWorkerRunning')) {
             'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", [
                 'pid' => $pid
             ])
+        ];
+    }
+}
+
+if (!function_exists('restartTaskWorker')) {
+    /**
+     * Restart the task worker.
+     *
+     * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
+     * @param bool $force (Optional) Whether to force kill the task worker.
+     *
+     * @return array{ status: bool, message: string }
+     */
+    function restartTaskWorker(bool $ignoreContainer = false, bool $force = false): array
+    {
+        if (false === $ignoreContainer && !inContainer()) {
+            return [
+                'status' => true,
+                'message' => 'We can only restart the task worker when running in a container.'
+            ];
+        }
+
+        $pidFile = '/tmp/ws-job-runner.pid';
+
+        if (true === file_exists($pidFile)) {
+            try {
+                $pid = trim((string)(new Stream($pidFile)));
+            } catch (Throwable $e) {
+                return ['status' => false, 'message' => $e->getMessage()];
+            }
+
+            if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
+                @posix_kill((int)$pid, $force ? SIGKILL : SIGHUP);
+            }
+
+            clearstatcache(true, $pidFile);
+
+            if (true === file_exists($pidFile)) {
+                @unlink($pidFile);
+            }
+        }
+
+        $process = Process::fromShellCommandline('/opt/bin/job-runner 2>&1 &');
+        $process->run();
+
+        return [
+            'status' => $process->isSuccessful(),
+            'message' => $process->isSuccessful() ? 'Task worker restarted.' : $process->getErrorOutput(),
         ];
     }
 }
