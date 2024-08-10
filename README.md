@@ -9,6 +9,22 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-08-10
+
+I have recently added new experimental feature, to play your content directly from the WebUI. This feature is still in
+alpha, and missing a lot of features. But it's a start. Right now it does auto transcode on the fly to play any content in the browser.
+
+The feature requires that you mount your media directories to the `WatchState` container similar to the `File integrity` feature. I have plans to expand
+the feature to support more controls, however, right now it's only support basic subtitles streams and default audio stream or first audio stream.
+
+The transcoder works by converting the media on the fly to `HLS` segments, and the subtitles are selectable via the player ui which are also converted to `vtt` format.
+
+Expects bugs and issues, as the feature is still in alpha. But I would love to hear your feedback. You can play the media by visiting
+the history page of the item you will see red play button on top right corner of the page. If the items has a play button, then you correctly mounted
+the media directories. otherwise, the button be disabled with tooltip of `Media is inaccessible`.
+
+The feature is not meant to replace your backend media player, the purpose of this feature is to quickly check the media without leaving the WebUI.
+
 ### 2024-08-01
 
 We recently enabled listening on tls connections via `8443` which can be controlled by `HTTPS_PORT` environment variable.

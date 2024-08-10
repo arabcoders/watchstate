@@ -450,6 +450,20 @@ const explode = (delimiter, string, limit = undefined) => {
         return parts.slice(0, limit);
     }
 }
+const basename = (path, ext = '') => {
+    if (!path) {
+        return ''
+    }
+    const segments = path.replace(/\\/g, '/').split('/')
+    let base = segments.pop()
+    while (segments.length && base === '') {
+        base = segments.pop()
+    }
+    if (ext && base.endsWith(ext) && base !== ext) {
+        base = base.substring(0, base.length - ext.length)
+    }
+    return base
+}
 
 export {
     r,
@@ -471,4 +485,5 @@ export {
     TOOLTIP_DATE_FORMAT,
     makeSecret,
     explode,
+    basename
 }

@@ -1707,3 +1707,133 @@ if (!function_exists('restartTaskWorker')) {
         ];
     }
 }
+
+if (!function_exists('findSideCarFiles')) {
+    function findSideCarFiles(SplFileInfo $path): array
+    {
+        $list = [];
+
+        $possibleExtensions = ['jpg', 'jpeg', 'png'];
+        foreach ($possibleExtensions as $ext) {
+            if (file_exists($path->getPath() . "/poster.{$ext}")) {
+                $list[] = $path->getPath() . "/poster.{$ext}";
+            }
+
+            if (file_exists($path->getPath() . "/fanart.{$ext}")) {
+                $list[] = $path->getPath() . "/fanart.{$ext}";
+            }
+        }
+
+        $pat = $path->getPath() . '/' . before($path->getFilename(), '.');
+        $pat = preg_replace('/([*?\[])/', '[$1]', $pat);
+
+        $glob = glob($pat . '*');
+
+        if (false === $glob) {
+            return $list;
+        }
+
+        foreach ($glob as $item) {
+            $item = new SplFileInfo($item);
+
+            if (!$item->isFile() || $item->getFilename() === $path->getFilename()) {
+                continue;
+            }
+
+            $list[] = $item->getRealPath();
+        }
+
+        return $list;
+    }
+}
+
+if (!function_exists('array_change_key_case_recursive')) {
+    function array_change_key_case_recursive(array $input, int $case = CASE_LOWER): array
+    {
+        if (!in_array($case, [CASE_UPPER, CASE_LOWER])) {
+            throw new RuntimeException("Case parameter '{$case}' is invalid.");
+        }
+
+        $input = array_change_key_case($input, $case);
+
+        foreach ($input as $key => $array) {
+            if (is_array($array)) {
+                $input[$key] = array_change_key_case_recursive($array, $case);
+            }
+        }
+
+        return $input;
+    }
+}
+
+if (!function_exists('getMimeType')) {
+    function getMimeType(string $file): string
+    {
+        static $fileInfo = null;
+
+        if (null === $fileInfo) {
+            $fileInfo = new finfo(FILEINFO_MIME_TYPE);
+        }
+
+        return $fileInfo->file($file);
+    }
+}
+
+if (!function_exists('getExtension')) {
+    function getExtension(string $filename): string
+    {
+        return (new SplFileInfo($filename))->getExtension();
+    }
+}
+
+if (!function_exists('ffprobe_file')) {
+    /**
+     * Get FFProbe Info.
+     *
+     * @param string $path
+     * @param iCache|null $cache
+     * @return array
+     * @noinspection PhpDocMissingThrowsInspection
+     */
+    function ffprobe_file(string $path, iCache|null $cache = null): array
+    {
+        $cacheKey = md5($path . filesize($path));
+
+        if (null !== $cache && $cache->has($cacheKey)) {
+            $data = $cache->get($cacheKey);
+            return (is_array($data) ? $data : json_decode($data, true));
+        }
+
+        $mimeType = getMimeType($path);
+
+        $isTs = str_ends_with($path, '.ts') && 'application/octet-stream' === $mimeType;
+        if (!str_starts_with($mimeType, 'video/') && !str_starts_with($mimeType, 'audio/') && !$isTs) {
+            throw new RuntimeException(sprintf("Unable to run ffprobe on '%s'", $path));
+        }
+
+        $process = new Process([
+            'ffprobe',
+            '-v',
+            'quiet',
+            '-print_format',
+            'json',
+            '-show_format',
+            '-show_streams',
+            'file:' . basename($path)
+        ], cwd: dirname($path));
+
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            throw new RuntimeException(sprintf("Failed to run ffprobe on '%s'. %s", $path, $process->getErrorOutput()));
+        }
+
+        $json = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+
+        $data = array_change_key_case_recursive($json, CASE_LOWER);
+
+        $cache?->set($cacheKey, $data, new DateInterval('PT24H'));
+
+        return $data;
+    }
+}
