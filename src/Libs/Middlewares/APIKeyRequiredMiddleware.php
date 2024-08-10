@@ -32,7 +32,8 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
      * Routes that follow the open route policy. However, those routes are subject to user configuration.
      */
     private const array OPEN_ROUTES = [
-        '/webhook'
+        '/webhook',
+        '%{api.prefix}/player/'
     ];
 
     public function process(iRequest $request, iHandler $handler): iResponse

@@ -48,8 +48,8 @@ final class Index
         $this->pdo = $this->db->getPDO();
     }
 
-    #[Get(self::URL . '[/]', name: 'history')]
-    public function historyIndex(iRequest $request): iResponse
+    #[Get(self::URL . '[/]', name: 'history.list')]
+    public function list(iRequest $request): iResponse
     {
         $es = fn(string $val) => $this->db->identifier($val);
         $data = DataUtil::fromArray($request->getQueryParams());
@@ -449,29 +449,27 @@ final class Index
         return api_response(Status::OK, $response);
     }
 
-    #[Get(self::URL . '/{id:\d+}[/]', name: 'history.view')]
-    public function historyView(iRequest $request, array $args = []): iResponse
+    #[Get(self::URL . '/{id:\d+}[/]', name: 'history.read')]
+    public function read(string $id): iResponse
     {
-        if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
-        }
-
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
         if (null === ($item = $this->db->get($entity))) {
             return api_error('Not found', Status::NOT_FOUND);
         }
 
-        return api_response(Status::OK, $this->formatEntity($item));
-    }
+        $entity = $this->formatEntity($item);
 
-    #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.item.delete')]
-    public function historyDelete(iRequest $request, array $args = []): iResponse
-    {
-        if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
+        if (!empty($entity['content_path'])) {
+            $entity['content_exists'] = file_exists($entity['content_path']);
         }
 
+        return api_response(Status::OK, $entity);
+    }
+
+    #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.delete')]
+    public function delete(string $id): iResponse
+    {
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
         if (null === ($item = $this->db->get($entity))) {
@@ -484,12 +482,8 @@ final class Index
     }
 
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:\d+}/watch[/]', name: 'history.watch')]
-    public function historyPlayStatus(iRequest $request, array $args = []): iResponse
+    public function changePlayState(iRequest $request, string $id): iResponse
     {
-        if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
-        }
-
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
         if (null === ($item = $this->db->get($entity))) {
@@ -519,6 +513,6 @@ final class Index
 
         queuePush($item);
 
-        return $this->historyView($request, $args);
+        return $this->read($id);
     }
 }

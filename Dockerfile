@@ -30,7 +30,7 @@ ENV FPM_PORT="${PHP_FPM_PORT}"
 #
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
     for ext in ${PHP_PACKAGES}; do PACKAGES="${PACKAGES} ${PHP_V}-${ext}"; done && \
-    apk add --no-cache bash caddy icu-data-full nano curl procps net-tools iproute2  \
+    apk add --no-cache bash caddy icu-data-full nano curl procps net-tools iproute2 ffmpeg \
     shadow sqlite redis tzdata gettext fcgi ca-certificates nss mailcap libcap ${PHP_V} ${PACKAGES} && \
     # Basic setup
     echo '' && \

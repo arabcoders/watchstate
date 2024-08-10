@@ -10,6 +10,13 @@
         </span>
         <div class="is-pulled-right" v-if="data?.via">
           <div class="field is-grouped">
+            <p class="control" v-if="data?.content_path">
+              <button @click="navigateTo(`/play/${data.id}`)" class="button has-text-white has-background-danger-50"
+                      v-tooltip.bottom="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
+                      :disabled="!data.content_exists">
+                <span class="icon"><i class="fas fa-play"></i></span>
+              </button>
+            </p>
             <p class="control">
               <button class="button" @click="toggleWatched"
                       :class="{ 'is-success': !data.watched, 'is-danger': data.watched }"

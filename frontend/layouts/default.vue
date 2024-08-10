@@ -130,6 +130,16 @@
               <span class="icon"><i class="fas fa-moon"></i></span>
             </button>
           </div>
+
+          <div class="navbar-item" v-if="hasAPISettings">
+            <button class="button is-dark" @click="showTaskRunner = !showTaskRunner" v-tooltip="'Task Runner Status'">
+              <span class="icon">
+                <i class="fas fa-microchip"
+                   :class="{ 'has-text-success': taskRunner.status, 'has-text-warning': !taskRunner.status}"></i>
+              </span>
+            </button>
+          </div>
+
           <div class="navbar-item">
             <button class="button is-dark" @click="showConnection = !showConnection" v-tooltip="'Configure connection'">
               <span class="icon"><i class="fas fa-cog"></i></span>
@@ -287,10 +297,12 @@
       </div>
 
       <div>
+        <TaskRunnerStatus v-if="showTaskRunner || false === taskRunner?.status"
+                          :status="taskRunner" @taskrunner_update="e => taskRunner = e"/>
         <NuxtPage v-if="!showConnection && hasAPISettings"/>
         <no-api v-else/>
       </div>
-      
+
       <div class="columns is-multiline is-mobile mt-3">
         <div class="column is-12 is-hidden-tablet has-text-centered">
           <a href="#top" id="bottom" class="button">
@@ -330,9 +342,13 @@ import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
 import Markdown from '~/components/Markdown.vue'
 import {dEvent} from '~/utils/index.js'
+import TaskRunnerStatus from "~/components/TaskRunnerStatus.vue";
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
+
+const taskRunner = ref({status: true, message: '', restartable: false})
+const showTaskRunner = ref(false)
 
 const real_api_url = useStorage('api_url', window.location.origin)
 const real_api_path = useStorage('api_path', '/v1/api')
@@ -406,6 +422,10 @@ onMounted(async () => {
     }
 
     await getVersion()
+    const response = await request('/system/taskrunner')
+    taskRunner.value = await response.json();
+
+    window.addEventListener('taskrunner_update', e => taskRunner.value = e.detail)
   } catch (e) {
   }
 })
