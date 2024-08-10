@@ -1615,6 +1615,7 @@ if (!function_exists('isTaskWorkerRunning')) {
         if (false === $ignoreContainer && !inContainer()) {
             return [
                 'status' => true,
+                'restartable' => false,
                 'message' => 'We can only track the task worker status when running in a container.'
             ];
         }
@@ -1622,6 +1623,7 @@ if (!function_exists('isTaskWorkerRunning')) {
         if (true === (bool)env('DISABLE_CRON', false)) {
             return [
                 'status' => false,
+                'restartable' => false,
                 'message' => "Task runner is disabled via 'DISABLE_CRON' environment variable."
             ];
         }
@@ -1629,7 +1631,11 @@ if (!function_exists('isTaskWorkerRunning')) {
         $pidFile = '/tmp/ws-job-runner.pid';
 
         if (!file_exists($pidFile)) {
-            return ['status' => false, 'message' => 'No PID file was found - Likely means task worker failed to run.'];
+            return [
+                'status' => false,
+                'restartable' => true,
+                'message' => 'No PID file was found - Likely means task worker failed to run.'
+            ];
         }
 
         try {
@@ -1639,11 +1645,12 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
-            return ['status' => true, 'message' => 'Task worker is running.'];
+            return ['status' => true, 'restartable' => true, 'message' => 'Task worker is running.'];
         }
 
         return [
             'status' => false,
+            'restartable' => true,
             'message' => r("Found PID '{pid}' in file, but it seems the process is not active.", [
                 'pid' => $pid
             ])
@@ -1665,6 +1672,7 @@ if (!function_exists('restartTaskWorker')) {
         if (false === $ignoreContainer && !inContainer()) {
             return [
                 'status' => true,
+                'restartable' => false,
                 'message' => 'We can only restart the task worker when running in a container.'
             ];
         }
@@ -1675,7 +1683,7 @@ if (!function_exists('restartTaskWorker')) {
             try {
                 $pid = trim((string)(new Stream($pidFile)));
             } catch (Throwable $e) {
-                return ['status' => false, 'message' => $e->getMessage()];
+                return ['status' => false, 'restartable' => true, 'message' => $e->getMessage()];
             }
 
             if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
@@ -1694,6 +1702,7 @@ if (!function_exists('restartTaskWorker')) {
 
         return [
             'status' => $process->isSuccessful(),
+            'restartable' => true,
             'message' => $process->isSuccessful() ? 'Task worker restarted.' : $process->getErrorOutput(),
         ];
     }

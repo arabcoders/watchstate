@@ -336,12 +336,9 @@ const makeSearchLink = (type, query) => {
  *
  * @param eventName
  * @param detail
- * @returns {void}
+ * @returns {boolean}
  */
-const dEvent = (eventName, detail = {}) => {
-    console.debug('Dispatching event', eventName, detail);
-    window.dispatchEvent(new CustomEvent(eventName, {detail}))
-}
+const dEvent = (eventName, detail = {}) => window.dispatchEvent(new CustomEvent(eventName, {detail}))
 
 /**
  * Make name
