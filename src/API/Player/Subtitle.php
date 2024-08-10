@@ -20,14 +20,14 @@ use Throwable;
 
 final readonly class Subtitle
 {
-    private const array FORMATS = [
+    public const array FORMATS = [
         'vtt' => 'text/vtt',
         'webvtt' => 'text/vtt',
         'srt' => 'text/srt',
         'ass' => 'text/ass',
     ];
 
-    private const array INTERNAL_NAMING = [
+    public const array INTERNAL_NAMING = [
         'subrip',
         'ass',
         'vtt'
