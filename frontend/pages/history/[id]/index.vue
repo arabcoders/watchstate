@@ -10,7 +10,7 @@
         </span>
         <div class="is-pulled-right" v-if="data?.via">
           <div class="field is-grouped">
-            <p class="control" v-if="data?.content_path">
+            <p class="control" v-if="data?.files?.length>0">
               <button @click="navigateTo(`/play/${data.id}`)" class="button has-text-white has-background-danger-50"
                       v-tooltip.bottom="`${data.content_exists ? 'Play media' : 'Media is inaccessible'}`"
                       :disabled="!data.content_exists">
@@ -509,7 +509,7 @@ const data = ref({
 const loadContent = async (id) => {
   isLoading.value = true
 
-  const response = await request(`/history/${id}`)
+  const response = await request(`/history/${id}?files=true`)
   const json = await response.json()
 
   if (useRoute().name !== 'history-id') {

@@ -54,7 +54,7 @@ final readonly class Sign
             'id' => $id,
             'path' => $path,
             'time' => $time,
-            'config' => [],
+            'config' => $params->get('config'),
             'version' => getAppVersion(),
         ], $expires, $this->cache);
 

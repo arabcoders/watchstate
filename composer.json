@@ -25,6 +25,7 @@
         "ext-fileinfo": "*",
         "ext-redis": "*",
         "ext-posix": "*",
+        "ext-openssl": "*",
         "monolog/monolog": "^3.4",
         "symfony/console": "^6.1.4",
         "symfony/cache": "^6.1.3",
