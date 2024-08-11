@@ -193,14 +193,13 @@ readonly class Playlist
                     }
 
                     $lines[] = r(
-                        '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="(i) {name} ({codec})",DEFAULT={default},AUTOSELECT=NO,FORCED=NO,LANGUAGE="{lang}",URI="{uri}"',
+                        '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="(i) {name} ({codec})",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,LANGUAGE="{lang}",URI="{uri}"',
                         [
                             'lang' => $lang,
                             'name' => $title,
                             'codec' => ag($x, 'codec_name'),
                             'uri' => $link,
                             'index' => $id,
-                            'default' => true === (bool)ag($x, 'disposition.default') ? 'YES' : 'NO',
                         ]
                     );
                 }
