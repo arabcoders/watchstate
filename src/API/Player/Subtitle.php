@@ -8,6 +8,7 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\Config;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Stream;
+use App\Libs\VttConverter;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -153,7 +154,12 @@ final readonly class Subtitle
                 ]), Status::BAD_REQUEST);
         }
 
-        $response = $this->make($path, $stream, (bool)ag($data, 'config.debug', false));
+        $response = $this->make(
+            $path,
+            $stream,
+            (bool)ag($data, 'config.debug', false),
+            (bool)ag($request->getQueryParams(), 'reload', false)
+        );
 
         if (Status::OK !== Status::from($response->getStatusCode())) {
             return $response;
@@ -178,7 +184,7 @@ final readonly class Subtitle
     /**
      * @throws InvalidArgumentException
      */
-    private function make(string $file, int|null $stream = null, bool $debug = false): iResponse
+    private function make(string $file, int|null $stream = null, bool $debug = false, bool $noCache = false): iResponse
     {
         if (false === file_exists($file)) {
             return api_error(r("Path '{path}' is not found.", ['path' => $file]), Status::NOT_FOUND);
@@ -196,7 +202,7 @@ final readonly class Subtitle
         }
 
         $cacheKey = md5("{$file}{$kStream}:{$size}");
-        if ($this->cache->has($cacheKey)) {
+        if (false === $noCache && $this->cache->has($cacheKey)) {
             return api_response(Status::OK, Stream::create($this->cache->get($cacheKey)), [
                 'Content-Type' => 'text/vtt',
                 'X-Accel-Buffering' => 'no',
@@ -273,6 +279,25 @@ final readonly class Subtitle
             }
 
             $body = $process->getOutput();
+
+            try {
+                $vtt = VttConverter::parse($body);
+                if (!empty($vtt) && count($vtt) > 2) {
+                    $firstKey = array_key_first($vtt);
+                    $lastKey = array_key_last($vtt);
+
+                    if (null !== $firstKey && null !== $lastKey && $firstKey !== $lastKey) {
+                        $firstEndTime = $vtt[$firstKey]['end'];
+                        $lastEndTime = $vtt[$lastKey]['end'];
+                        if ($firstEndTime === $lastEndTime) {
+                            unset($vtt[$firstKey]);
+                            $body = VttConverter::export($vtt);
+                        }
+                    }
+                }
+            } catch (Throwable) {
+                // -- pass subtitles as it is.
+            }
 
             $this->cache->set($cacheKey, $body);
 

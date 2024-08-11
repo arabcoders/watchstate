@@ -23,7 +23,6 @@ readonly class Playlist
 {
     public const string URL = '%{api.prefix}/player/playlist';
     public const float SEGMENT_DUR = 6.000;
-    private const array ALLOWED_SUBS = ['vtt', 'srt', 'ass'];
 
     public function __construct(private iCache $cache, private iLogger $logger)
     {
@@ -57,6 +56,8 @@ readonly class Playlist
 
         $isSecure = (bool)Config::get('api.secure', false);
 
+        $hasSelectedSubs = !empty(ag($sConfig, ['subtitle', 'external'], null));
+
         try {
             $ffprobe = ffprobe_file($path, $this->cache);
 
@@ -68,40 +69,44 @@ readonly class Playlist
             $sConfig['externals'] = [];
             $sConfig['segment_size'] = number_format((float)$params->get('sd', self::SEGMENT_DUR), 6);
 
-            // -- Include sidecar subtitles in the playlist.
-            foreach (findSideCarFiles(new SplFileInfo($path)) as $sideFile) {
-                $extension = getExtension($sideFile);
+            if (false === $hasSelectedSubs) {
+                // -- Include sidecar subtitles in the playlist.
+                foreach (findSideCarFiles(new SplFileInfo($path)) as $sideFile) {
+                    $extension = getExtension($sideFile);
 
-                if (false === in_array($extension, array_keys(Subtitle::FORMATS))) {
-                    continue;
-                }
+                    if (false === in_array($extension, array_keys(Subtitle::FORMATS))) {
+                        continue;
+                    }
 
-                preg_match('#\.(\w{2,3})\.\w{3}$#', $sideFile, $lang);
-                $sConfig['externals'][] = [
-                    'path' => $sideFile,
-                    'title' => 'External',
-                    'language' => strtolower($lang[1] ?? 'und'),
-                    'forced' => false,
-                    'codec' => [
-                        'short' => afterLast($sideFile, '.'),
-                        'long' => 'text/' . afterLast($sideFile, '.'),
-                    ],
-                ];
-            }
-
-            foreach (ag($ffprobe, 'streams', []) as $id => $stream) {
-                if ('audio' === ag($stream, 'codec_type') && true === ag($stream, 'disposition.default', false)) {
-                    $sConfig['audio'] = (int)$id;
-                    break;
+                    preg_match('#\.(\w{2,3})\.\w{3}$#', $sideFile, $lang);
+                    $sConfig['externals'][] = [
+                        'path' => $sideFile,
+                        'title' => 'External',
+                        'language' => strtolower($lang[1] ?? 'und'),
+                        'forced' => false,
+                        'codec' => [
+                            'short' => afterLast($sideFile, '.'),
+                            'long' => 'text/' . afterLast($sideFile, '.'),
+                        ],
+                    ];
                 }
             }
 
-            // -- if no default audio stream, pick the first audio stream.
             if (!ag_exists($sConfig, 'audio')) {
                 foreach (ag($ffprobe, 'streams', []) as $id => $stream) {
-                    if ('audio' === ag($stream, 'codec_type')) {
+                    if ('audio' === ag($stream, 'codec_type') && true === ag($stream, 'disposition.default', false)) {
                         $sConfig['audio'] = (int)$id;
                         break;
+                    }
+                }
+
+                // -- if no default audio stream, pick the first audio stream.
+                if (!ag_exists($sConfig, 'audio')) {
+                    foreach (ag($ffprobe, 'streams', []) as $id => $stream) {
+                        if ('audio' === ag($stream, 'codec_type')) {
+                            $sConfig['audio'] = (int)$id;
+                            break;
+                        }
                     }
                 }
             }
@@ -116,87 +121,88 @@ readonly class Playlist
 
             $subtitleUrl = parseConfigValue(Subtitle::URL);
 
-            foreach (ag($sConfig, 'externals', []) as $id => $x) {
-                $ext = getExtension(ag($x, 'path'));
-                $file = ag($x, 'path');
+            if (false === $hasSelectedSubs) {
+                foreach (ag($sConfig, 'externals', []) as $id => $x) {
+                    $ext = getExtension(ag($x, 'path'));
+                    $file = ag($x, 'path');
 
-                $lang = ag($x, 'language', 'und');
-                $lang = $lc['short'][$lang] ?? $lang;
+                    $lang = ag($x, 'language', 'und');
+                    $lang = $lc['short'][$lang] ?? $lang;
 
-                if (isset($lc['names'][$lang])) {
-                    $name = r('{name} ({type})', [
-                        'name' => $lc['names'][$lang],
-                        'type' => strtoupper($ext),
+                    if (isset($lc['names'][$lang])) {
+                        $name = r('{name} ({type})', [
+                            'name' => $lc['names'][$lang],
+                            'type' => strtoupper($ext),
+                        ]);
+                    } else {
+                        $name = basename($file);
+                    }
+
+                    $link = r('{api_url}/{token}/{type}.x{id}.m3u8{auth}', [
+                        'api_url' => $subtitleUrl,
+                        'id' => $id,
+                        'type' => 'webvtt',
+                        'token' => $token,
+                        'duration' => round((int)$duration),
+                        'auth' => $isSecure ? '?apikey=' . Config::get('api.key') : '',
                     ]);
-                } else {
-                    $name = basename($file);
+
+                    // -- flag lang to 2 chars
+                    $k = array_filter($lc['short'], fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
+                    if (!empty($k)) {
+                        $lang = array_keys($k);
+                        $lang = array_shift($lang);
+                    }
+
+                    $lines[] = r(
+                        '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="(x) {name}",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,LANGUAGE="{lang}",URI="{uri}"',
+                        [
+                            'lang' => $lang,
+                            'name' => $name,
+                            'uri' => $link,
+                            'index' => $id,
+                        ]
+                    );
                 }
 
-                $link = r('{api_url}/{token}/{type}.x{id}.m3u8{auth}', [
-                    'api_url' => $subtitleUrl,
-                    'id' => $id,
-                    'type' => 'webvtt',
-                    'token' => $token,
-                    'duration' => round((int)$duration),
-                    'auth' => $isSecure ? '?apikey=' . Config::get('api.key') : '',
-                ]);
+                foreach (ag($ffprobe, 'streams', []) as $id => $x) {
+                    if ('subtitle' !== ag($x, 'codec_type')) {
+                        continue;
+                    }
 
-                // -- flag lang to 2 chars
-                $k = array_filter($lc['short'], fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
-                if (!empty($k)) {
-                    $lang = array_keys($k);
-                    $lang = array_shift($lang);
+                    if (false === in_array(ag($x, 'codec_name'), Subtitle::INTERNAL_NAMING)) {
+                        continue;
+                    }
+
+                    $lang = ag($x, 'tags.language', 'und');
+                    $title = ag($x, 'tags.title', 'Unknown');
+
+                    $link = r('{api_url}/{token}/{type}.i{id}.m3u8{auth}', [
+                        'api_url' => $subtitleUrl,
+                        'id' => $id,
+                        'type' => 'webvtt',
+                        'token' => $token,
+                        'auth' => $isSecure ? '?apikey=' . Config::get('api.key') : '',
+                    ]);
+
+                    // -- flip lang to 2 chars
+                    $k = array_filter($lc['short'], fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
+                    if (!empty($k)) {
+                        $lang = array_keys($k);
+                        $lang = array_shift($lang);
+                    }
+
+                    $lines[] = r(
+                        '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="(i) {name} ({codec})",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,LANGUAGE="{lang}",URI="{uri}"',
+                        [
+                            'lang' => $lang,
+                            'name' => $title,
+                            'codec' => ag($x, 'codec_name'),
+                            'uri' => $link,
+                            'index' => $id,
+                        ]
+                    );
                 }
-
-                $lines[] = r(
-                    '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="(x) {name}",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,LANGUAGE="{lang}",URI="{uri}"',
-                    [
-                        'lang' => $lang,
-                        'name' => $name,
-                        'uri' => $link,
-                        'index' => $id,
-                    ]
-                );
-            }
-
-            foreach (ag($ffprobe, 'streams', []) as $id => $x) {
-                if ('subtitle' !== ag($x, 'codec_type')) {
-                    continue;
-                }
-
-                if (false === in_array(ag($x, 'codec_name'), Subtitle::INTERNAL_NAMING)) {
-                    continue;
-                }
-
-                $lang = ag($x, 'tags.language', 'und');
-                $title = ag($x, 'tags.title', 'Unknown');
-
-                $link = r('{api_url}/{token}/{type}.i{id}.m3u8{auth}', [
-                    'api_url' => $subtitleUrl,
-                    'id' => $id,
-                    'type' => 'webvtt',
-                    'token' => $token,
-                    'auth' => $isSecure ? '?apikey=' . Config::get('api.key') : '',
-                ]);
-
-                // -- flip lang to 2 chars
-                $k = array_filter($lc['short'], fn($v, $k) => $v === $lang, ARRAY_FILTER_USE_BOTH);
-                if (!empty($k)) {
-                    $lang = array_keys($k);
-                    $lang = array_shift($lang);
-                }
-
-                $lines[] = r(
-                    '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="(i) {name} ({codec})",DEFAULT={default},AUTOSELECT=NO,FORCED=NO,LANGUAGE="{lang}",URI="{uri}"',
-                    [
-                        'lang' => $lang,
-                        'name' => $title,
-                        'codec' => ag($x, 'codec_name'),
-                        'uri' => $link,
-                        'index' => $id,
-                        'default' => true === (bool)ag($x, 'disposition.default') ? 'YES' : 'NO',
-                    ]
-                );
             }
 
             $lines[] = r('#EXT-X-STREAM-INF:PROGRAM-ID=1{subs}', [

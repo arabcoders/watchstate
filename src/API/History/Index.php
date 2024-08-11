@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\API\History;
 
+use App\API\Player\Subtitle;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
@@ -15,9 +16,13 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Traits\APITraits;
+use JsonException;
 use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\SimpleCache\CacheInterface as iCache;
+use RuntimeException;
+use SplFileInfo;
 
 final class Index
 {
@@ -43,7 +48,7 @@ final class Index
     public const string URL = '%{api.prefix}/history';
     private PDO $pdo;
 
-    public function __construct(private readonly iDB $db, private DirectMapper $mapper)
+    public function __construct(private readonly iDB $db, private DirectMapper $mapper, private iCache $cache)
     {
         $this->pdo = $this->db->getPDO();
     }
@@ -450,7 +455,7 @@ final class Index
     }
 
     #[Get(self::URL . '/{id:\d+}[/]', name: 'history.read')]
-    public function read(string $id): iResponse
+    public function read(iRequest $request, string $id): iResponse
     {
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
@@ -462,6 +467,45 @@ final class Index
 
         if (!empty($entity['content_path'])) {
             $entity['content_exists'] = file_exists($entity['content_path']);
+        }
+
+        $params = DataUtil::fromArray($request->getQueryParams());
+
+        if ($params->get('files')) {
+            $ffprobe = [];
+
+            foreach ($item->getMetadata() as $backend => $metadata) {
+                if (null === ($file = ag($metadata, 'path', null))) {
+                    continue;
+                }
+
+                if (false !== ($key = array_search($file, array_column($ffprobe, 'path'), true))) {
+                    $ffprobe[$key]['source'][] = $backend;
+                    continue;
+                }
+
+                if (false === file_exists($file)) {
+                    continue;
+                }
+
+                try {
+                    $data = ffprobe_file($file, $this->cache);
+                } catch (RuntimeException|JsonException) {
+                    continue;
+                }
+
+                $ffprobe[] = [
+                    'path' => $file,
+                    'source' => [$backend],
+                    'ffprobe' => $data,
+                    'subtitles' => array_filter(
+                        findSideCarFiles(new SplFileInfo($file)),
+                        fn($sideCar) => isset(Subtitle::FORMATS[getExtension($sideCar)])
+                    )
+                ];
+            }
+
+            $entity['files'] = $ffprobe;
         }
 
         return api_response(Status::OK, $entity);
@@ -513,6 +557,6 @@ final class Index
 
         queuePush($item);
 
-        return $this->read($id);
+        return $this->read($request, $id);
     }
 }
