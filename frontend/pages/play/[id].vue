@@ -86,9 +86,12 @@
                     <option value="">Select audio stream...</option>
                     <template v-for="item in filterStreams('audio')" :key="`audio-${item.index}`">
                       <option :value="item.index">
-                        {{ item.index }} - {{ item.codec_name }} - {{ ag(item.tags, 'title') }}
+                        {{ item.index }} - {{ String(item.codec_name).toUpperCase() }}
+                        <template v-if="ag(item.tags, 'title')">
+                          - {{ ucFirst(String(ag(item.tags, 'title'))) }}
+                        </template>
                         <template v-if="ag(item.tags, 'language')">
-                          - {{ ag(item.tags, 'language') }}
+                          - ({{ String(ag(item.tags, 'language')).toUpperCase() }})
                         </template>
                       </option>
                     </template>
@@ -110,14 +113,17 @@
                       <optgroup label="Internal Subtitles">
                         <option v-for="item in filterStreams('subtitle')" :key="`subtitle-${item.index}`"
                                 :value="item.index">
-                          {{ item.index }} - {{ item.codec_name }} - {{ ag(item.tags, 'title') }}
+                          {{ item.index }} - {{ String(item.codec_name).toUpperCase() }}
+                          <template v-if="ag(item.tags, 'title')">
+                            - {{ ucFirst(String(ag(item.tags, 'title'))) }}
+                          </template>
                           <template v-if="ag(item.tags, 'language')">
-                            - {{ ag(item.tags, 'language') }}
+                            - ({{ String(ag(item.tags, 'language')).toUpperCase() }})
                           </template>
                         </option>
                       </optgroup>
                     </template>
-                    <template v-if="selectedItem?.subtitles">
+                    <template v-if="selectedItem?.subtitles.length > 0">
                       <optgroup label="External Subtitles">
                         <option v-for="item in selectedItem.subtitles" :key="`subtitle-${item}`" :value="item">
                           {{ basename(item) }}
