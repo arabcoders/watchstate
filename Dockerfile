@@ -45,12 +45,11 @@ COPY ./ /opt/app
 # Copy frontend to public directory.
 COPY --chown=app:app --from=npm_builder /frontend/exported/ /opt/app/public/exported/
 
-# Link PHP if needed.
-RUN if [ ! -f /usr/bin/php ]; then ln -s /usr/bin/php${PHP_V:3} /usr/bin/php; fi
-
 # install composer & packages.
 #
 RUN echo '' && \
+    # Link PHP if needed. \
+    if [ ! -f /usr/bin/php ]; then ln -s /usr/bin/php${PHP_V:3} /usr/bin/php; fi && \
     # Create basic directories.
     bash -c 'umask 0000 && mkdir -p /temp_data/ /opt/{app,bin,config} /config/{backup,cache,config,db,debug,logs,webhooks,profiler}' && \
     # Link console & php.
