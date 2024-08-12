@@ -112,13 +112,12 @@
 
 <script setup>
 import "@xterm/xterm/css/xterm.css"
-// noinspection ES6UnusedImports
 import {Terminal} from "@xterm/xterm"
-// noinspection ES6UnusedImports
 import {FitAddon} from "@xterm/addon-fit"
 import {useStorage} from '@vueuse/core'
 import {notification} from '~/utils/index'
 import Message from '~/components/Message'
+import request from "~/utils/request.js";
 
 useHead({title: `Console`})
 
@@ -174,10 +173,7 @@ const RunCommand = async () => {
     return
   }
 
-  const searchParams = new URLSearchParams()
-  searchParams.append('apikey', api_token.value)
-  searchParams.append('json', btoa(JSON.stringify({command: userCommand})))
-
+  const commandBody = JSON.parse(JSON.stringify({command: userCommand}))
 
   if (userCommand.startsWith('$')) {
     if (!allEnabled.value) {
@@ -191,12 +187,34 @@ const RunCommand = async () => {
   }
 
   isLoading.value = true
+  let token;
 
-  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/?${searchParams.toString()}`)
+  try {
+    const response = await request('/system/command', {
+      method: 'POST',
+      body: JSON.stringify(commandBody)
+    })
+    const json = await response.json()
+
+    if (201 !== response.status) {
+      await finished()
+      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000)
+      return;
+    }
+
+    token = json.token
+  } catch (e) {
+    await finished()
+    notification('error', 'Error', e.message, 5000)
+    return;
+  }
+
+  sse = new EventSource(`${api_url.value}${api_path.value}/system/command/${token}?apikey=${api_token.value}`)
 
   if ('' !== command.value) {
     terminal.value.writeln(`~ ${userCommand}`)
   }
+
   sse.addEventListener('data', async e => terminal.value.write(JSON.parse(e.data).data))
   sse.addEventListener('close', async () => finished())
   sse.onclose = async () => finished()

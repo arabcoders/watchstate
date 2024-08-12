@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Extends\Date;
 use App\Libs\StreamClosure;
-use JsonException;
+use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException;
+use Random\RandomException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -25,39 +30,72 @@ final class Command
 
     private bool $toBackground = false;
 
-    public function __construct()
+    public function __construct(private iCache $cache)
     {
-        set_time_limit(0);
     }
 
-    #[Get(self::URL . '[/]', name: 'system.command')]
-    public function __invoke(iRequest $request): iResponse
+    /**
+     * @throws InvalidArgumentException
+     * @throws RandomException
+     */
+    #[Post(self::URL . '[/]', name: 'system.command.queue')]
+    public function queue(iRequest $request): iResponse
     {
-        if (null === ($json = ag($request->getQueryParams(), 'json'))) {
+        $params = $request->getParsedBody();
+
+        if (!is_array($params) || empty($params)) {
+            return api_error('No json data was given.', Status::BAD_REQUEST);
+        }
+
+        if (null === ($cmd = ag($params, 'command', null))) {
             return api_error('No command was given.', Status::BAD_REQUEST);
         }
 
-        try {
-            $json = json_decode(base64_decode(rawurldecode($json)), true, flags: JSON_THROW_ON_ERROR);
-            $data = DataUtil::fromArray($json);
-            if (null === ($command = $data->get('command'))) {
-                return api_error('No command was given.', Status::BAD_REQUEST);
-            }
-        } catch (JsonException $e) {
-            return api_error(
-                r('Unable to decode json data. {error}', ['error' => $e->getMessage()]),
-                Status::BAD_REQUEST
-            );
+        if (!is_string($cmd)) {
+            return api_error('Command is invalid.', Status::BAD_REQUEST);
+        }
+
+        $code = hash('sha256', random_bytes(12) . $cmd);
+
+        $ttl = new DateInterval('PT5M');
+        $this->cache->set($code, $params, $ttl);
+
+        return api_response(Status::CREATED, [
+            'token' => $code,
+            'tracking' => r("{url}/{code}", ['url' => parseConfigValue(self::URL), 'code' => $code]),
+            'expires' => makeDate()->add($ttl)->format(Date::ATOM),
+        ]);
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    #[Get(self::URL . '/{token}[/]', name: 'system.command.stream')]
+    public function stream(string $token): iResponse
+    {
+        if (null === ($data = $this->cache->get($token))) {
+            return api_error('Token is invalid or has expired.', Status::BAD_REQUEST);
+        }
+
+        if ($this->cache->has($token)) {
+            $this->cache->delete($token);
+        }
+
+        $data = DataUtil::fromArray($data);
+
+        if (null === ($command = $data->get('command'))) {
+            return api_error('No command was given.', Status::BAD_REQUEST);
         }
 
         if (!is_string($command)) {
             return api_error('Command is invalid.', Status::BAD_REQUEST);
         }
 
-        $callable = function () use ($command, $data, $request) {
+        $callable = function () use ($command, $data) {
             ignore_user_abort(true);
 
             $path = realpath(__DIR__ . '/../../../');
+            $cwd = $data->get('cwd', Config::get('path', fn() => getcwd()));
 
             try {
                 $userCommand = "{$path}/bin/console -n {$command}";
@@ -66,7 +104,7 @@ final class Command
                 }
                 $process = Process::fromShellCommandline(
                     command: $userCommand,
-                    cwd: $path,
+                    cwd: $cwd,
                     env: array_replace_recursive([
                         'LANG' => 'en_US.UTF-8',
                         'LC_ALL' => 'en_US.UTF-8',
@@ -76,25 +114,20 @@ final class Command
                     timeout: $data->get('timeout', 7200),
                 );
 
+                $this->write('cwd', (string)$cwd);
+
                 $process->setPty(true);
 
                 $process->start(callback: function ($type, $data) use ($process) {
                     if (true === $this->toBackground) {
                         return;
                     }
-
-                    echo "id: " . hrtime(true) . "\n";
-                    echo "event: data\n";
-                    echo "data: " . json_encode(['type' => $type, 'data' => $data]) . "\n";
-                    echo "\n\n";
-
-                    flush();
-
                     $this->counter = self::TIMES_BEFORE_PING;
 
-                    if (ob_get_length() > 0) {
-                        ob_end_flush();
-                    }
+                    $this->write(
+                        'data',
+                        json_encode(['data' => $data, 'type' => $type], flags: JSON_INVALID_UTF8_IGNORE)
+                    );
 
                     if (connection_aborted()) {
                         $this->toBackground = true;
@@ -111,34 +144,24 @@ final class Command
 
                     $this->counter = self::TIMES_BEFORE_PING;
 
-                    echo "id: " . hrtime(true) . "\n";
-                    echo "event: ping\n";
-                    echo 'data: ' . makeDate() . "\n\n";
-                    flush();
-
-                    if (ob_get_length() > 0) {
-                        ob_end_flush();
-                    }
+                    $this->write('ping', (string)makeDate());
 
                     if (connection_aborted()) {
                         $this->toBackground = true;
                     }
                 }
+
+                $this->write('exit_code', (string)$process->getExitCode());
             } catch (ProcessTimedOutException) {
             }
 
             if (false === $this->toBackground && !connection_aborted()) {
-                echo "id: " . hrtime(true) . "\n";
-                echo "event: close\n";
-                echo 'data: ' . makeDate() . "\n\n";
-                flush();
-
-                if (ob_get_length() > 0) {
-                    ob_end_flush();
-                }
+                $this->write('close', (string)makeDate());
             }
             exit;
         };
+
+        set_time_limit(0);
 
         return api_response(Status::OK, body: StreamClosure::create($callable), headers: [
             'Content-Type' => 'text/event-stream',
@@ -147,5 +170,23 @@ final class Command
             'X-Accel-Buffering' => 'no',
             'Last-Event-Id' => time(),
         ]);
+    }
+
+    private function write(string $event, string $data, bool $multiLine = false): void
+    {
+        echo "id: " . hrtime(true) . "\n";
+        echo "event: {$event}\n";
+        if (true === $multiLine) {
+            foreach (explode(PHP_EOL, $data) as $line) {
+                echo "data: {$line}\n";
+            }
+        } else {
+            echo "data: {$data}\n";
+        }
+        echo "\n\n";
+        flush();
+        if (ob_get_length() > 0) {
+            ob_end_flush();
+        }
     }
 }
