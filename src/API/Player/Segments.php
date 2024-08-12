@@ -281,17 +281,17 @@ readonly class Segments
             $end = microtime(true);
 
             if (!$process->isSuccessful()) {
-                if (true === $debug) {
-                    return api_error($process->getErrorOutput(), Status::INTERNAL_SERVER_ERROR, [
+                $this->logger->error(
+                    r("Failed to generate segment. '{error}'", ['error' => $process->getErrorOutput()]), [
                         'stdout' => $process->getOutput(),
                         'stderr' => $process->getErrorOutput(),
                         'Ffmpeg' => $process->getCommandLine(),
                         'config' => $sConfig,
                         'command' => implode(' ', $cmd),
-                    ]);
-                }
+                    ]
+                );
 
-                return api_error('Failed to generate segment.', Status::INTERNAL_SERVER_ERROR, headers: [
+                return api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR, headers: [
                     'X-Transcode-Time' => round($end - $start, 6),
                 ]);
             }
@@ -318,7 +318,19 @@ readonly class Segments
 
             return $response;
         } catch (Throwable $e) {
-            return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
+            $this->logger->error("Failed to generate segment. '{error}' at {file}:{line}", [
+                'stdout' => isset($process) ? $process->getOutput() : null,
+                'stderr' => isset($process) ? $process->getErrorOutput() : null,
+                'Ffmpeg' => isset($process) ? $process->getCommandLine() : null,
+                'config' => $sConfig,
+                'command' => implode(' ', $cmd),
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTrace(),
+            ]);
+
+            return api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR);
         } finally {
             if (file_exists($tmpVidLock)) {
                 unlink($tmpVidLock);
@@ -369,7 +381,12 @@ readonly class Segments
             $process->wait();
 
             if (!$process->isSuccessful()) {
-                $this->logger->error(join(' ', $cmd) . $process->getErrorOutput());
+                $this->logger->error('Failed to extract subtitle.', [
+                    'stdout' => $process->getOutput(),
+                    'stderr' => $process->getErrorOutput(),
+                    'Ffmpeg' => $process->getCommandLine(),
+                    'command' => implode(' ', $cmd),
+                ]);
                 return "{$path}:stream_index={$stream}";
             }
 
@@ -381,7 +398,16 @@ readonly class Segments
             $stream->close();
             return $cacheFile;
         } catch (Throwable $e) {
-            $this->logger->error($e->getMessage(), ['trace' => $e->getTrace()]);
+            $this->logger->error("Failed to extract subtitles. '{error}' at {file}:{line}", [
+                'stdout' => isset($process) ? $process->getOutput() : null,
+                'stderr' => isset($process) ? $process->getErrorOutput() : null,
+                'Ffmpeg' => isset($process) ? $process->getCommandLine() : null,
+                'command' => implode(' ', $cmd),
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTrace(),
+            ]);
             return "{$path}:stream_index={$stream}";
         }
     }
