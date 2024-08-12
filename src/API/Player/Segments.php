@@ -8,9 +8,11 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Stream;
+use DateInterval;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
@@ -26,7 +28,7 @@ readonly class Segments
         'dvd_subtitle',
     ];
 
-    public function __construct(private iCache $cache)
+    public function __construct(private iCache $cache, private iLogger $logger)
     {
     }
 
@@ -69,11 +71,13 @@ readonly class Segments
 
         $incr = 0;
         $subIndex = [];
+        $internalSubs = [];
         foreach (ag($json, 'streams', []) as $id => $stream) {
             if ('subtitle' !== ag($stream, 'codec_type')) {
                 continue;
             }
             $subIndex[$id] = $incr;
+            $internalSubs[$incr] = $stream;
             $incr++;
         }
 
@@ -235,8 +239,22 @@ readonly class Segments
             $cmd[] = '-vf';
             $cmd[] = "subtitles={$tmpSubFile}" . ($isIntel ? ',format=nv12,hwupload' : '');
         } elseif (null !== $subtitle && !$overlay) {
+            $subStreamIndex = (int)$subIndex[$subtitle];
+            $tmpSubFile = r("{path}/t-{name}-internal-sub-{index}.{type}", [
+                'path' => sys_get_temp_dir(),
+                'name' => $token,
+                'index' => $subStreamIndex,
+                'type' => $internalSubs[$subStreamIndex]['codec_name'],
+            ]);
+            $streamLink = $this->extractTextSubTitle(
+                $tmpVidFile,
+                $internalSubs[$subStreamIndex]['codec_name'],
+                $subStreamIndex,
+                $tmpSubFile
+            );
+
             $cmd[] = '-vf';
-            $cmd[] = "subtitles={$tmpVidFile}:stream_index=" . (int)$subIndex[$subtitle] . ($isIntel ? ',format=nv12,hwupload' : '');
+            $cmd[] = "subtitles={$streamLink}" . ($isIntel ? ',format=nv12,hwupload' : '');
         } else {
             $cmd[] = '-sn';
         }
@@ -313,6 +331,58 @@ readonly class Segments
             if (null !== $tmpSubFile && file_exists($tmpSubFile) && is_link($tmpSubFile)) {
                 unlink($tmpSubFile);
             }
+        }
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    private function extractTextSubTitle(string $path, string $type, int $stream, string $cacheFile): string
+    {
+        $cacheKey = md5("{$path}:" . filesize($path) . ":{$stream}");
+        if (null !== ($cached = $this->cache->get($cacheKey, null))) {
+            $stream = Stream::make($cacheFile, 'w');
+            $stream->write($cached);
+            $stream->close();
+            return $cacheFile;
+        }
+
+        $cmd = [
+            'ffmpeg',
+            '-xerror',
+            '-hide_banner',
+            '-loglevel',
+            'error',
+            '-i',
+            'file:' . $path,
+            '-map',
+            "0:s:{$stream}",
+            '-f',
+            $type,
+            'pipe:1',
+        ];
+
+        try {
+            $process = new Process($cmd);
+            $process->setTimeout($stream ? 120 : 60);
+            $process->start();
+            $process->wait();
+
+            if (!$process->isSuccessful()) {
+                $this->logger->error(join(' ', $cmd) . $process->getErrorOutput());
+                return "{$path}:stream_index={$stream}";
+            }
+
+            $body = $process->getOutput();
+            $this->cache->set($cacheKey, $body, new DateInterval('PT1H'));
+
+            $stream = Stream::make($cacheFile, 'w');
+            $stream->write($body);
+            $stream->close();
+            return $cacheFile;
+        } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), ['trace' => $e->getTrace()]);
+            return "{$path}:stream_index={$stream}";
         }
     }
 
