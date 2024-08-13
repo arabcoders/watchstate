@@ -31,8 +31,8 @@ ENV FPM_PORT="${PHP_FPM_PORT}"
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone && \
     for ext in ${PHP_PACKAGES}; do PACKAGES="${PACKAGES} ${PHP_V}-${ext}"; done && \
     apk add --no-cache bash caddy icu-data-full nano curl procps net-tools iproute2 ffmpeg \
-    shadow sqlite redis tzdata gettext fcgi ca-certificates nss mailcap libcap fontconfig \
-    ttf-freefont font-noto terminus-font font-dejavu ${PHP_V} ${PACKAGES} && \
+    shadow sqlite redis tzdata gettext fcgi ca-certificates nss mailcap libcap ${PHP_V} ${PACKAGES} \
+    fontconfig ttf-freefont font-noto terminus-font font-dejavu libva-utils intel-media-driver  && \
     # Delete unused users change users group gid to allow unRaid users to use gid 100
     deluser redis && deluser caddy && groupmod -g 1588787 users && \
     # Create our own user.

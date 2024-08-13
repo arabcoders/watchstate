@@ -178,7 +178,7 @@ readonly class Segments
         $cmd[] = '-1';
 
         $cmd[] = '-pix_fmt';
-        $cmd[] = $isVAAPI ? 'vaapi_vld' : 'yuv420p';
+        $cmd[] = $params->get('pix_fmt', 'yuv420p');
 
         $cmd[] = '-g';
         $cmd[] = '52';
