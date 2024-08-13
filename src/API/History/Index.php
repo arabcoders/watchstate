@@ -23,6 +23,7 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface as iCache;
 use RuntimeException;
 use SplFileInfo;
+use Throwable;
 
 final class Index
 {
@@ -506,6 +507,44 @@ final class Index
             }
 
             $entity['files'] = $ffprobe;
+
+            $entity['hardware'] = [
+                'codecs' => [
+                    [
+                        'codec' => 'libx264',
+                        'name' => 'H.264 (CPU) (All)',
+                        'hwaccel' => false,
+                    ],
+                    [
+                        'codec' => 'h264_vaapi',
+                        'name' => 'H.264 (VA-API) (VAAPI)',
+                        'hwaccel' => true,
+                    ],
+                    [
+                        'codec' => 'h264_nvenc',
+                        'name' => 'H.264 (NVENC) (Nvidia)',
+                        'hwaccel' => true,
+                    ],
+                    [
+                        'codec' => 'h264_qsv',
+                        'name' => 'H.264 (QSV) (Intel)',
+                        'hwaccel' => true,
+                    ],
+                ],
+                'devices' => [],
+            ];
+
+            if (is_dir('/dev/dri/') && is_readable('/dev/dri/')) {
+                try {
+                    foreach (scandir('/dev/dri') as $dev) {
+                        if (false === str_starts_with($dev, 'render')) {
+                            continue;
+                        }
+                        $entity['hardware']['devices'][] = '/dev/dri/' . $dev;
+                    }
+                } catch (Throwable) {
+                }
+            }
         }
 
         return api_response(Status::OK, $entity);
