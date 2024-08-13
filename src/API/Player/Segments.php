@@ -91,10 +91,11 @@ readonly class Segments
         $hwaccel = (bool)$params->get('hwaccel', false);
         $vaapi_device = $params->get('vaapi_device', '/dev/dri/renderD128');
         $vCodec = $params->get('video_codec', $hwaccel ? 'h264_vaapi' : 'libx264');
-        $isIntel = $hwaccel && 'h264_vaapi' === $vCodec;
+        $isVAAPI = $hwaccel && 'h264_vaapi' === $vCodec;
+        $isQSV = $hwaccel && 'h264_qsv' === $vCodec;
         $segmentSize = number_format((int)$params->get('segment_size', Playlist::SEGMENT_DUR), 6);
 
-        if ($hwaccel && false === file_exists($vaapi_device)) {
+        if ($isVAAPI && false === file_exists($vaapi_device)) {
             return api_error(r("VAAPI device '{device}' not found.", ['device' => $vaapi_device]), Status::BAD_REQUEST);
         }
 
@@ -146,7 +147,17 @@ readonly class Segments
         }
 
         $cmd[] = '-copyts';
-        if ($isIntel) {
+
+        if ($isQSV) {
+            $cmd[] = '-hwaccel';
+            $cmd[] = 'qsv';
+            if ($overlay) {
+                $cmd[] = '-hwaccel_output_format';
+                $cmd[] = 'qsv';
+            }
+        }
+
+        if ($isVAAPI) {
             $cmd[] = '-hwaccel';
             $cmd[] = 'vaapi';
             $cmd[] = '-vaapi_device';
@@ -167,14 +178,14 @@ readonly class Segments
         $cmd[] = '-1';
 
         $cmd[] = '-pix_fmt';
-        $cmd[] = $isIntel ? 'vaapi_vld' : 'yuv420p';
+        $cmd[] = $params->get('pix_fmt', 'yuv420p');
 
         $cmd[] = '-g';
         $cmd[] = '52';
 
         if ($overlay && empty($external) && null !== $subtitle) {
             $cmd[] = '-filter_complex';
-            if ($isIntel) {
+            if ($isVAAPI) {
                 $cmd[] = "[0:0]hwdownload,format=nv12[base];[base][0:" . $subtitle . "]overlay[v];[v]hwupload[k]";
                 $cmd[] = '-map';
                 $cmd[] = '[k]';
@@ -190,7 +201,7 @@ readonly class Segments
 
         $cmd[] = '-strict';
         $cmd[] = '-2';
-        if (empty($external) && $isIntel) {
+        if (empty($external) && $isVAAPI) {
             $cmd[] = '-vf';
             $cmd[] = 'format=nv12,hwupload';
         }
@@ -237,7 +248,7 @@ readonly class Segments
                 symlink($external, $tmpSubFile);
             }
             $cmd[] = '-vf';
-            $cmd[] = "subtitles={$tmpSubFile}" . ($isIntel ? ',format=nv12,hwupload' : '');
+            $cmd[] = "subtitles={$tmpSubFile}" . ($isVAAPI ? ',format=nv12,hwupload' : '');
         } elseif (null !== $subtitle && !$overlay) {
             $subStreamIndex = (int)$subIndex[$subtitle];
             $tmpSubFile = r("{path}/t-{name}-internal-sub-{index}.{type}", [
@@ -254,7 +265,7 @@ readonly class Segments
             );
 
             $cmd[] = '-vf';
-            $cmd[] = "subtitles={$streamLink}" . ($isIntel ? ',format=nv12,hwupload' : '');
+            $cmd[] = "subtitles={$streamLink}" . ($isVAAPI ? ',format=nv12,hwupload' : '');
         } else {
             $cmd[] = '-sn';
         }
@@ -291,9 +302,26 @@ readonly class Segments
                     ]
                 );
 
-                return api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR, headers: [
-                    'X-Transcode-Time' => round($end - $start, 6),
-                ]);
+                $response = api_error(
+                    r("Failed to generate segment. '{error}'", [
+                        'error' => $debug ? $process->getErrorOutput() : 'check logs.',
+                    ]),
+                    Status::INTERNAL_SERVER_ERROR,
+                    headers: [
+                        'X-Transcode-Time' => round($end - $start, 6),
+                    ]
+                );
+
+                if (true === $debug) {
+                    $response = $response
+                        ->withHeader('X-Ffmpeg', $process->getCommandLine())
+                        ->withHeader(
+                            'X-Transcode-Config',
+                            json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                        );
+                }
+
+                return $response;
             }
 
             $response = api_response(Status::OK, body: Stream::create($process->getOutput()), headers: [
@@ -330,7 +358,18 @@ readonly class Segments
                 'trace' => $e->getTrace(),
             ]);
 
-            return api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR);
+            $response = api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR);
+            if (true === $debug) {
+                if (isset($process)) {
+                    $response = $response->withHeader('X-Ffmpeg', $process->getCommandLine());
+                }
+
+                $response = $response->withHeader(
+                    'X-Transcode-Config',
+                    json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                );
+            }
+            return $response;
         } finally {
             if (file_exists($tmpVidLock)) {
                 unlink($tmpVidLock);

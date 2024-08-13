@@ -139,14 +139,70 @@
               <p class="help">
                 <span class="icon"><i class="fas fa-info"></i></span>
                 We recommend using the burn subtitle function only when you are using a picture based subtitles,
-                Text based subtitles are able to be selected and converted on the fly using the player.
+                Text based subtitles are able to be selected and converted on the fly using the player. We plan to
+                support direct play of compatible streams in the future.
               </p>
             </div>
 
+            <template v-if="showAdvanced">
+              <div class="field">
+                <label class="label">Video transcoding codec.</label>
+                <div class="control has-icons-left">
+                  <div class="select is-fullwidth">
+                    <select v-model="video_codec" @change="e => updateHwAccel(e.target.value)">
+                      <option value="" disabled>Select codec...</option>
+                      <option v-for="item in item.hardware?.codecs" :key="`codec-${item.codec}`"
+                              :value="item.codec" v-text="item.name"/>
+                    </select>
+                  </div>
+                  <div class="icon is-left">
+                    <i class="fas fa-closed-captioning"></i>
+                  </div>
+                </div>
+                <p class="help">
+                  <span class="icon"><i class="fas fa-info"></i></span>
+                  We don't do pre-checks on codecs, so some of those codecs may not work or you don't have the hardware
+                  for it. the standard <code>H264 (CPU)</code> is the default and should work on most systems.
+                </p>
+              </div>
+
+              <div class="field" v-if="'h264_vaapi' === config.video_codec">
+                <label class="label">Select VAAPI rendering device</label>
+                <div class="control has-icons-left">
+                  <div class="select is-fullwidth">
+                    <select v-model="vaapi_device">
+                      <option value="" disabled>Select device...</option>
+                      <option v-for="item in item.hardware?.devices" :key="`codec-${item}`" :value="item"
+                              v-text="basename(item)"/>
+                    </select>
+                  </div>
+                  <div class="icon is-left">
+                    <i class="fas fa-closed-captioning"></i>
+                  </div>
+                </div>
+                <p class="help">
+                  <span class="icon"><i class="fas fa-info"></i></span>
+                  We don't do pre-checks on codecs, so some of those codecs may not work or you don't have the hardware
+                  for it. the standard <code>H264 (CPU)</code> is the default and should work on most systems.
+                </p>
+              </div>
+
+              <div class="field">
+                <label class="label" for="debug">Include debug information in response headers</label>
+                <div class="control">
+                  <input id="debug" type="checkbox" class="switch is-success" v-model="session_debug">
+                  <label for="debug">Enable</label>
+                </div>
+                <p class="help">
+                  <span class="icon"><i class="fas fa-info"></i></span>
+                  Useful to know what options and ffmpeg command being run.
+                </p>
+              </div>
+            </template>
+
             <div class="is-justify-content-end field is-grouped" v-if="config?.path">
               <div class="control">
-                <button class="button is-warning" @click="showAdvanced=!showAdvanced" :disabled="true"
-                        v-tooltip="'Advanced settings not yet implemented.'">
+                <button class="button is-warning" @click="showAdvanced=!showAdvanced">
                   <span class="icon"><i class="fas fa-cog"></i></span>
                   <span>Advanced settings</span>
                 </button>
@@ -205,12 +261,20 @@ const isLoading = ref(false)
 const isPlaying = ref(false)
 const isGenerating = ref(false)
 const playUrl = ref('')
-const showAdvanced = ref(false)
+const showAdvanced = useStorage('play_showAdvanced', false)
 const show_page_tips = useStorage('show_page_tips', true)
+const video_codec = useStorage('play_vcodec', 'libx264')
+const vaapi_device = useStorage('play_vaapi_device', '')
+const session_debug = useStorage('play_debug', false)
+
 const config = ref({
   path: '',
   audio: '',
   subtitle: '',
+  video_codec: video_codec,
+  vaapi_device: vaapi_device,
+  hwaccel: false,
+  debug: session_debug,
 })
 
 const selectedItem = ref({})
@@ -242,8 +306,15 @@ const generateToken = async () => {
       path: config.value.path,
       config: {
         audio: config.value.audio,
+        video_codec: config.value.video_codec,
+        hwaccel: config.value.hwaccel,
+        debug: Boolean(config.value.debug),
       }
     };
+
+    if (config.value.vaapi_device && 'h264_vaapi' === config.value.video_codec) {
+      userConfig.config.vaapi_device = config.value.vaapi_device
+    }
 
     if (config.value.subtitle) {
       // -- check if the value is number it's internal subtitle
@@ -373,7 +444,18 @@ onMounted(async () => {
     playUrl.value = `${useStorage('api_url', '').value}${useStorage('api_path', '/v1/api').value}/player/playlist/${route.query.token}/master.m3u8`
     isPlaying.value = true
   }
+  updateHwAccel(video_codec.value)
 })
+
+const updateHwAccel = codec => {
+  const codecInfo = item.value.hardware.codecs.filter(c => c.codec === codec);
+  console.log(codecInfo)
+  if (codecInfo.length < 1) {
+    config.value.hwaccel = false
+    return;
+  }
+  config.value.hwaccel = Boolean(codecInfo[0].hwaccel)
+}
 
 onUnmounted(() => window.removeEventListener('popstate', onPopState))
 </script>
