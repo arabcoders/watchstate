@@ -351,9 +351,11 @@ $ mv /config/db/watchstate_v01-repaired.db /config/db/watchstate_v01.db
 * tvrage://(id)
 * anidb://(id)
 * ytinforeader://(
-  id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin). `(A yt-dlp info reader plugin)`.
+  id) [jellyfin](https://github.com/arabcoders/jf-ytdlp-info-reader-plugin) & [Emby](https://github.com/arabcoders/emby-ytdlp-info-reader-plugin).
+  `(A yt-dlp info reader plugin)`.
 * cmdb://(
-  id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db). `(User custom metadata database)`.
+  id) [jellyfin](https://github.com/arabcoders/jf-custom-metadata-db) & [Emby](https://github.com/arabcoders/emby-custom-metadata-db).
+  `(User custom metadata database)`.
 
 ---
 
@@ -739,7 +741,9 @@ If everything is working correctly you should see something like this previous j
 
 ----
 
-### I keep receiving this warning in log `INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
+### I keep receiving this warning in log
+
+`INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]`?
 
 We recently added guard clause to prevent backends from sending possibly invalid episode ranges, as such if you see
 this,
@@ -881,16 +885,53 @@ The feature first scan your entire history for reported media file paths. Depend
 
 Lets says you have a media file `/media/series/season 1/episode 1.mkv` The scanner does the following:
 
-* `/media` Does this path component exists? if not mark everything starting from `/media` as not found. if it exists simply move to the next component until we reach the end of the path.
+* `/media` Does this path component exists? if not mark everything starting from `/media` as not found. if it exists
+  simply move to the next component until we reach the end of the path.
 * `/media/series` Do same as above.
 * `/media/series/season 1` Do same as above.
 * `/media/series/season 1/episode 1.mkv` Do same as above.
 
-Using this approach allow us to cache calls and reduce unnecessary calls to the filesystem. If you have for example `/media/seriesX/` with thousands of files,
-and the path component `/media/seriesX` doesn't exists, we simply ignore everything that starts with `/media/seriesX/` and treat them as not found.
+Using this approach allow us to cache calls and reduce unnecessary calls to the filesystem. If you have for example
+`/media/seriesX/` with thousands of files,
+and the path component `/media/seriesX` doesn't exists, we simply ignore everything that starts with `/media/seriesX/`
+and treat them as not found.
 
 This helps with slow stat calls in network shares, or cloud storage.
 
-Everytime we do a stat call we cache it for 1 hour, so if we have multiple records reporting the same path, we only do the stat check once.
+Everytime we do a stat call we cache it for 1 hour, so if we have multiple records reporting the same path, we only do
+the stat check once.
 
 ---
+
+### How to use hardware acceleration for video transcoding in the WebUI?
+
+As the container is rootless, we cannot do the necessary changes to the container to enable hardware acceleration.
+However, We do have the drivers and ffmpeg already installed and the CPU transcoding should work regardless. To enable
+hardware acceleration You need to alter your `compose.yaml` file to mount the necessary devices to the container. Here
+is an example of how to do it for debian based systems.
+
+```yaml
+services:
+    watchstate:
+        image: ghcr.io/arabcoders/watchstate:latest
+        # To change the user/group id associated with the tool change the following line.
+        user: "${UID:-1000}:${GID:-1000}"
+        group_add:
+            - "44" # Add video group to the container.
+            - "110" # Add render group to the container.
+        container_name: watchstate
+        restart: unless-stopped
+        ports:
+            - "8080:8080" # The port which will serve WebUI + API + Webhooks
+        volumes:
+            - ./data:/config:rw # mount current directory to container /config directory.
+            - /dev/dri:/dev/dri # mount the dri devices to the container.
+            - /storage/media:/media:ro # mount your media directory to the container.
+```
+
+This setup should work for VAAPI encoding in `x86_64` containers, for other architectures you need to adjust the
+`/dev/dri` to match your hardware. There are currently an issue with nvidia h264_nvenc encoding, the alpine build for
+`ffmpeg`doesn't include the codec.
+
+Note: the tip about adding the group_add came from the user `binarypancakes` in discord.
+
