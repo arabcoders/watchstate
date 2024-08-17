@@ -316,7 +316,7 @@ return (function () {
             DispatchCommand::TASK_NAME => [
                 'command' => DispatchCommand::ROUTE,
                 'name' => DispatchCommand::TASK_NAME,
-                'info' => 'The new events dispatcher system. That will replace the old events systems eventually. (cannot be disabled).',
+                'info' => 'Dispatch queued events to their respective listeners.',
                 'enabled' => true,
                 'timer' => '* * * * *',
                 'args' => '-v',

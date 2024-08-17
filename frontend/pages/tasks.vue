@@ -50,7 +50,7 @@
             <div class="is-capitalized card-header-title">
               {{ task.name }}
             </div>
-            <span class="card-header-icon" v-tooltip="'Enable/Disable Task.'">
+            <span class="card-header-icon" v-tooltip="'Enable/Disable Task.'" v-if="task.allow_disable">
               <input :id="task.name" type="checkbox" class="switch is-success" :checked="task.enabled"
                      @change="toggleTask(task)">
               <label :for="task.name"></label>
@@ -70,13 +70,21 @@
               </div>
               <div class="column is-6 has-text-left">
                 <strong class="is-hidden-mobile">Timer:&nbsp;</strong>
-                <NuxtLink class="has-tooltip" :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)'>
+                <span v-if="!task.allow_disabled" class="is-unselectable">
+                  {{ task.timer }}
+                </span>
+                <NuxtLink v-else class="has-tooltip"
+                          :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)'>
                   {{ task.timer }}
                 </NuxtLink>
               </div>
               <div class="column is-6 has-text-right" v-if="task.args">
                 <strong class="is-hidden-mobile">Args:&nbsp;</strong>
-                <NuxtLink class="has-tooltip" :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)'>
+                <span v-if="!task.allow_disabled" class="is-unselectable">
+                  {{ task.args }}
+                </span>
+                <NuxtLink v-else class="has-tooltip"
+                          :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)'>
                   {{ task.args }}
                 </NuxtLink>
               </div>
@@ -162,7 +170,7 @@
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request'
-import {awaitElement, makeConsoleCommand, notification, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import {awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message'
 import {useStorage} from '@vueuse/core'
@@ -199,10 +207,20 @@ onMounted(async () => await loadContent())
 const toggleTask = async task => {
   try {
     const keyName = `WS_CRON_${task.name.toUpperCase()}`
-    await request(`/system/env/${keyName}`, {
+
+    const oldState = task.enabled
+
+    const update = await request(`/system/env/${keyName}`, {
       method: 'POST',
       body: JSON.stringify({"value": !task.enabled})
     })
+
+    if (200 !== update.status) {
+      const json = await parse_api_response(update)
+      notification('error', 'Error', `Failed to toggle task '${task.name}' status. ${json.error.message}`)
+      tasks.value[tasks.value.findIndex(b => b.name === task.name)].enabled = oldState
+      return
+    }
 
     const response = await request(`/tasks/${task.name}`)
     tasks.value[tasks.value.findIndex(b => b.name === task.name)] = await response.json()
