@@ -740,7 +740,7 @@ final class DirectMapper implements iImport
      */
     public function commit(): array
     {
-        if (count($this->progressItems) >= 1) {
+        if (true === (bool)env('WS_CRON_PROGRESS', false) && count($this->progressItems) >= 1) {
             try {
                 $progress = $this->cache->get('progress', []);
                 foreach ($this->progressItems as $itemId => $entity) {

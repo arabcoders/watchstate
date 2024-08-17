@@ -543,7 +543,7 @@ final class MemoryMapper implements iImport
     public function commit(): mixed
     {
         if (true !== $this->inDryRunMode()) {
-            if (count($this->progressItems) >= 1) {
+            if (true === (bool)env('WS_CRON_PROGRESS', false) && count($this->progressItems) >= 1) {
                 try {
                     $progress = $this->cache->get('progress', []);
                     foreach ($this->progressItems as $itemId => $entity) {
