@@ -17,7 +17,10 @@ const props = defineProps({
 const content = ref('')
 const api_url = useStorage('api_url', '')
 
-onMounted(() => fetch(`${api_url.value}${props.file}`).then(response => response.text()).then(text => {
+onMounted(async () => {
+  const response = await fetch(`${api_url.value}${props.file}?_=${Date.now()}`)
+  const text = await response.text()
+
   marked.use({
     gfm: true,
     renderer: {
@@ -43,7 +46,8 @@ onMounted(() => fetch(`${api_url.value}${props.file}`).then(response => response
     },
     ...baseUrl(api_url.value),
   });
+
   content.value = marked.parse(text)
-}));
+});
 
 </script>

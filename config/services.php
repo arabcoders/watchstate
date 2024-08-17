@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
@@ -19,6 +20,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use Monolog\Logger;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
@@ -29,6 +31,7 @@ use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -217,6 +220,13 @@ return (function (): array {
             ],
         ],
 
+        DBLayer::class => [
+            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
+            'args' => [
+                PDO::class,
+            ],
+        ],
+
         MemoryMapper::class => [
             'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
                 return (new MemoryMapper(logger: $logger, db: $db, cache: $cache))
@@ -249,5 +259,10 @@ return (function (): array {
                 MemoryMapper::class
             ],
         ],
+
+        EventDispatcherInterface::class => [
+            'class' => fn(): EventDispatcher => new EventDispatcher(),
+        ],
+
     ];
 })();

@@ -465,6 +465,14 @@ const basename = (path, ext = '') => {
     return base
 }
 
+const parse_api_response = async r => {
+    try {
+        return await r.json()
+    } catch (e) {
+        return {error: {code: r.status, message: r.statusText}}
+    }
+}
+
 export {
     r,
     ag_set,
@@ -485,5 +493,6 @@ export {
     TOOLTIP_DATE_FORMAT,
     makeSecret,
     explode,
-    basename
+    basename,
+    parse_api_response,
 }

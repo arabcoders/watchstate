@@ -25,7 +25,7 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Console\CommandLoader\ContainerCommandLoader;
 use Symfony\Component\Yaml\Yaml;
@@ -42,7 +42,8 @@ final class Initializer
 {
     private Cli $cli;
     private ConsoleOutput $cliOutput;
-    private LoggerInterface|null $accessLog = null;
+    private iLogger|null $accessLog = null;
+    private bool $booted = false;
 
     /**
      * Initializes the object.
@@ -76,7 +77,6 @@ final class Initializer
             Container::add($name, $definition);
         }
 
-        // -- Add the Initializer class to the container.
         Container::add(self::class, ['shared' => true, 'class' => $this]);
 
         $this->cliOutput = new ConsoleOutput();
@@ -94,6 +94,12 @@ final class Initializer
      */
     public function boot(): self
     {
+        static $booted = false;
+
+        if (true === $booted) {
+            return $this;
+        }
+
         $this->createDirectories();
 
         (function () {
@@ -123,7 +129,7 @@ final class Initializer
 
         date_default_timezone_set(Config::get('tz', 'UTC'));
 
-        $logger = Container::get(LoggerInterface::class);
+        $logger = Container::get(iLogger::class);
 
         $this->setupLoggers($logger, Config::get('logger'));
 
@@ -159,6 +165,9 @@ final class Initializer
                 'URI' => before($_SERVER['REQUEST_URI'], '?'),
             ]);
         });
+
+        registerEvents();
+        $booted = true;
 
         return $this;
     }
@@ -230,7 +239,7 @@ final class Initializer
             );
 
             if (Status::SERVICE_UNAVAILABLE->value === $statusCode) {
-                Container::get(LoggerInterface::class)->error($e->getMessage(), [
+                Container::get(iLogger::class)->error($e->getMessage(), [
                     'kind' => $e::class,
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -258,7 +267,7 @@ final class Initializer
                 ]
             );
 
-            Container::get(LoggerInterface::class)->error($e->getMessage(), [
+            Container::get(iLogger::class)->error($e->getMessage(), [
                 'kind' => $e::class,
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

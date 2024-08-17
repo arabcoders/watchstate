@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Plex\PlexClient;
+use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
@@ -312,6 +313,31 @@ return (function () {
                 'timer' => $checkTaskTimer((string)env('WS_CRON_REQUESTS_AT', '*/2 * * * *'), '*/2 * * * *'),
                 'args' => env('WS_CRON_REQUESTS_ARGS', '-v --no-stats'),
             ],
+            DispatchCommand::TASK_NAME => [
+                'command' => DispatchCommand::ROUTE,
+                'name' => DispatchCommand::TASK_NAME,
+                'info' => 'Dispatch queued events to their respective listeners.',
+                'enabled' => true,
+                'timer' => '* * * * *',
+                'args' => '-v',
+            ],
+        ],
+    ];
+
+    $config['events'] = [
+        'logfile' => ag($config, 'tmpDir') . '/logs/events.' . $logDateFormat . '.log',
+        'listeners' => [
+            'cache' => new DateInterval(env('WS_EVENTS_LISTENERS_CACHE', 'PT1M')),
+            'file' => env('APP_EVENTS_FILE', function () use ($config): string|null {
+                $file = ag($config, 'path') . '/config/events.php';
+                return file_exists($file) ? $file : null;
+            }),
+            'locations' => [
+                __DIR__ . '/../src/API/',
+                __DIR__ . '/../src/Backends/',
+                __DIR__ . '/../src/Commands/',
+                __DIR__ . '/../src/Listeners/',
+            ]
         ],
     ];
 

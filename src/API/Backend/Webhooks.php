@@ -208,7 +208,8 @@ final class Webhooks
 
         $this->cache->set('requests', $items, new DateInterval('P3D'));
 
-        if (false === $metadataOnly && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
+        $pEnabled = (bool)env('WS_CRON_PROGRESS', false);
+        if ($pEnabled && false === $metadataOnly && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
             $progress = $this->cache->get('progress', []);
             $progress[str_replace($itemId, ':tainted@', ':untainted@')] = $entity;
             $this->cache->set('progress', $progress, new DateInterval('P3D'));
@@ -223,7 +224,7 @@ final class Webhooks
                     'type' => $entity->type,
                     'played' => $entity->isWatched() ? 'Yes' : 'No',
                     'queue_id' => $itemId,
-                    'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
+                    'progress' => $pEnabled && $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
                 ]
             ]
         );

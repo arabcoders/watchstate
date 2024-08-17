@@ -27,7 +27,7 @@ final class Index
      * @throws InvalidArgumentException
      */
     #[Get(self::URL . '[/]', name: 'tasks.index')]
-    public function tasksIndex(iRequest $request): iResponse
+    public function tasksIndex(): iResponse
     {
         $queuedTasks = $this->cache->get('queued_tasks', []);
         $response = [
@@ -39,6 +39,8 @@ final class Index
         foreach (TasksCommand::getTasks() as $task) {
             $task = self::formatTask($task);
             $task['queued'] = in_array(ag($task, 'name'), $queuedTasks);
+
+
             $response['tasks'][] = $task;
         }
 
@@ -49,12 +51,8 @@ final class Index
      * @throws InvalidArgumentException
      */
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:[a-zA-Z0-9_-]+}/queue[/]', name: 'tasks.task.queue')]
-    public function taskQueue(iRequest $request, array $args = []): iResponse
+    public function taskQueue(iRequest $request, string $id): iResponse
     {
-        if (null === ($id = ag($args, 'id'))) {
-            return api_error('No id was given.', Status::BAD_REQUEST);
-        }
-
         $task = TasksCommand::getTasks($id);
 
         if (empty($task)) {
@@ -85,12 +83,8 @@ final class Index
      * @throws InvalidArgumentException
      */
     #[Get(self::URL . '/{id:[a-zA-Z0-9_-]+}[/]', name: 'tasks.task.view')]
-    public function taskView(iRequest $request, array $args = []): iResponse
+    public function taskView(string $id): iResponse
     {
-        if (null === ($id = ag($args, 'id'))) {
-            return api_error('No id was given.', Status::BAD_REQUEST);
-        }
-
         $task = TasksCommand::getTasks($id);
 
         if (empty($task)) {
@@ -126,6 +120,9 @@ final class Index
         if (!is_string($item['command'])) {
             $item['command'] = get_debug_type($item['command']);
         }
+
+        $ff = getEnvSpec('WS_CRON_' . strtoupper(ag($task, 'name')));
+        $item['allow_disable'] = !empty($ff);
 
         if (true === $isEnabled) {
             try {

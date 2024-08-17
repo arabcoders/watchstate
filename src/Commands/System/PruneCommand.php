@@ -7,7 +7,9 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use Psr\Log\LoggerInterface;
+use App\Libs\Database\DBLayer;
+use App\Model\Events\EventsTable;
+use Psr\Log\LoggerInterface as iLogger;
 use SplFileInfo;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -29,9 +31,9 @@ final class PruneCommand extends Command
     /**
      * Class Constructor.
      *
-     * @param LoggerInterface $logger The logger implementation used for logging.
+     * @param iLogger $logger The logger implementation used for logging.
      */
-    public function __construct(private LoggerInterface $logger)
+    public function __construct(private readonly iLogger $logger, private readonly DBLayer $db)
     {
         parent::__construct();
     }
@@ -181,6 +183,19 @@ final class PruneCommand extends Command
             }
         }
 
+        $this->cleanUp();
         return self::SUCCESS;
+    }
+
+    private function cleanUp()
+    {
+        $stmt = $this->db->delete('events', [
+            EventsTable::COLUMN_CREATED_AT => [DBLayer::IS_LOWER_THAN_OR_EQUAL, strtotime('-7 DAYS')]
+        ]);
+
+        $count = $stmt->rowCount();
+        if ($count > 1) {
+            $this->logger->info("Pruned '{count}' events.", ['count' => $count]);
+        }
     }
 }
