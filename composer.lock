@@ -4,8 +4,68 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "e386d8f65a092fddeb914449ac6231a0",
+  "content-hash": "1c1f4ebab4be7bb510216bdcaec0175f",
   "packages": [
+    {
+      "name": "brick/math",
+      "version": "0.12.1",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/brick/math.git",
+        "reference": "f510c0a40911935b77b86859eb5223d58d660df1"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/brick/math/zipball/f510c0a40911935b77b86859eb5223d58d660df1",
+        "reference": "f510c0a40911935b77b86859eb5223d58d660df1",
+        "shasum": ""
+      },
+      "require": {
+        "php": "^8.1"
+      },
+      "require-dev": {
+        "php-coveralls/php-coveralls": "^2.2",
+        "phpunit/phpunit": "^10.1",
+        "vimeo/psalm": "5.16.0"
+      },
+      "type": "library",
+      "autoload": {
+        "psr-4": {
+          "Brick\\Math\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "description": "Arbitrary-precision arithmetic library",
+      "keywords": [
+        "Arbitrary-precision",
+        "BigInteger",
+        "BigRational",
+        "arithmetic",
+        "bigdecimal",
+        "bignum",
+        "bignumber",
+        "brick",
+        "decimal",
+        "integer",
+        "math",
+        "mathematics",
+        "rational"
+      ],
+      "support": {
+        "issues": "https://github.com/brick/math/issues",
+        "source": "https://github.com/brick/math/tree/0.12.1"
+      },
+      "funding": [
+        {
+          "url": "https://github.com/BenMorel",
+          "type": "github"
+        }
+      ],
+      "time": "2023-11-29T23:19:16+00:00"
+    },
     {
       "name": "dragonmantank/cron-expression",
       "version": "v3.3.3",
@@ -816,6 +876,56 @@
       "time": "2021-11-05T16:47:00+00:00"
     },
     {
+      "name": "psr/event-dispatcher",
+      "version": "1.0.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/php-fig/event-dispatcher.git",
+        "reference": "dbefd12671e8a14ec7f180cab83036ed26714bb0"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/php-fig/event-dispatcher/zipball/dbefd12671e8a14ec7f180cab83036ed26714bb0",
+        "reference": "dbefd12671e8a14ec7f180cab83036ed26714bb0",
+        "shasum": ""
+      },
+      "require": {
+        "php": ">=7.2.0"
+      },
+      "type": "library",
+      "extra": {
+        "branch-alias": {
+          "dev-master": "1.0.x-dev"
+        }
+      },
+      "autoload": {
+        "psr-4": {
+          "Psr\\EventDispatcher\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "PHP-FIG",
+          "homepage": "http://www.php-fig.org/"
+        }
+      ],
+      "description": "Standard interfaces for event handling.",
+      "keywords": [
+        "events",
+        "psr",
+        "psr-14"
+      ],
+      "support": {
+        "issues": "https://github.com/php-fig/event-dispatcher/issues",
+        "source": "https://github.com/php-fig/event-dispatcher/tree/1.0.0"
+      },
+      "time": "2019-01-08T18:20:26+00:00"
+    },
+    {
       "name": "psr/http-client",
       "version": "1.0.3",
       "source": {
@@ -1270,6 +1380,187 @@
       "time": "2023-10-14T21:56:36+00:00"
     },
     {
+      "name": "ramsey/collection",
+      "version": "2.0.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/ramsey/collection.git",
+        "reference": "a4b48764bfbb8f3a6a4d1aeb1a35bb5e9ecac4a5"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/ramsey/collection/zipball/a4b48764bfbb8f3a6a4d1aeb1a35bb5e9ecac4a5",
+        "reference": "a4b48764bfbb8f3a6a4d1aeb1a35bb5e9ecac4a5",
+        "shasum": ""
+      },
+      "require": {
+        "php": "^8.1"
+      },
+      "require-dev": {
+        "captainhook/plugin-composer": "^5.3",
+        "ergebnis/composer-normalize": "^2.28.3",
+        "fakerphp/faker": "^1.21",
+        "hamcrest/hamcrest-php": "^2.0",
+        "jangregor/phpstan-prophecy": "^1.0",
+        "mockery/mockery": "^1.5",
+        "php-parallel-lint/php-console-highlighter": "^1.0",
+        "php-parallel-lint/php-parallel-lint": "^1.3",
+        "phpcsstandards/phpcsutils": "^1.0.0-rc1",
+        "phpspec/prophecy-phpunit": "^2.0",
+        "phpstan/extension-installer": "^1.2",
+        "phpstan/phpstan": "^1.9",
+        "phpstan/phpstan-mockery": "^1.1",
+        "phpstan/phpstan-phpunit": "^1.3",
+        "phpunit/phpunit": "^9.5",
+        "psalm/plugin-mockery": "^1.1",
+        "psalm/plugin-phpunit": "^0.18.4",
+        "ramsey/coding-standard": "^2.0.3",
+        "ramsey/conventional-commits": "^1.3",
+        "vimeo/psalm": "^5.4"
+      },
+      "type": "library",
+      "extra": {
+        "captainhook": {
+          "force-install": true
+        },
+        "ramsey/conventional-commits": {
+          "configFile": "conventional-commits.json"
+        }
+      },
+      "autoload": {
+        "psr-4": {
+          "Ramsey\\Collection\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Ben Ramsey",
+          "email": "ben@benramsey.com",
+          "homepage": "https://benramsey.com"
+        }
+      ],
+      "description": "A PHP library for representing and manipulating collections.",
+      "keywords": [
+        "array",
+        "collection",
+        "hash",
+        "map",
+        "queue",
+        "set"
+      ],
+      "support": {
+        "issues": "https://github.com/ramsey/collection/issues",
+        "source": "https://github.com/ramsey/collection/tree/2.0.0"
+      },
+      "funding": [
+        {
+          "url": "https://github.com/ramsey",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/ramsey/collection",
+          "type": "tidelift"
+        }
+      ],
+      "time": "2022-12-31T21:50:55+00:00"
+    },
+    {
+      "name": "ramsey/uuid",
+      "version": "4.7.6",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/ramsey/uuid.git",
+        "reference": "91039bc1faa45ba123c4328958e620d382ec7088"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/ramsey/uuid/zipball/91039bc1faa45ba123c4328958e620d382ec7088",
+        "reference": "91039bc1faa45ba123c4328958e620d382ec7088",
+        "shasum": ""
+      },
+      "require": {
+        "brick/math": "^0.8.8 || ^0.9 || ^0.10 || ^0.11 || ^0.12",
+        "ext-json": "*",
+        "php": "^8.0",
+        "ramsey/collection": "^1.2 || ^2.0"
+      },
+      "replace": {
+        "rhumsaa/uuid": "self.version"
+      },
+      "require-dev": {
+        "captainhook/captainhook": "^5.10",
+        "captainhook/plugin-composer": "^5.3",
+        "dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
+        "doctrine/annotations": "^1.8",
+        "ergebnis/composer-normalize": "^2.15",
+        "mockery/mockery": "^1.3",
+        "paragonie/random-lib": "^2",
+        "php-mock/php-mock": "^2.2",
+        "php-mock/php-mock-mockery": "^1.3",
+        "php-parallel-lint/php-parallel-lint": "^1.1",
+        "phpbench/phpbench": "^1.0",
+        "phpstan/extension-installer": "^1.1",
+        "phpstan/phpstan": "^1.8",
+        "phpstan/phpstan-mockery": "^1.1",
+        "phpstan/phpstan-phpunit": "^1.1",
+        "phpunit/phpunit": "^8.5 || ^9",
+        "ramsey/composer-repl": "^1.4",
+        "slevomat/coding-standard": "^8.4",
+        "squizlabs/php_codesniffer": "^3.5",
+        "vimeo/psalm": "^4.9"
+      },
+      "suggest": {
+        "ext-bcmath": "Enables faster math with arbitrary-precision integers using BCMath.",
+        "ext-gmp": "Enables faster math with arbitrary-precision integers using GMP.",
+        "ext-uuid": "Enables the use of PeclUuidTimeGenerator and PeclUuidRandomGenerator.",
+        "paragonie/random-lib": "Provides RandomLib for use with the RandomLibAdapter",
+        "ramsey/uuid-doctrine": "Allows the use of Ramsey\\Uuid\\Uuid as Doctrine field type."
+      },
+      "type": "library",
+      "extra": {
+        "captainhook": {
+          "force-install": true
+        }
+      },
+      "autoload": {
+        "files": [
+          "src/functions.php"
+        ],
+        "psr-4": {
+          "Ramsey\\Uuid\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "description": "A PHP library for generating and working with universally unique identifiers (UUIDs).",
+      "keywords": [
+        "guid",
+        "identifier",
+        "uuid"
+      ],
+      "support": {
+        "issues": "https://github.com/ramsey/uuid/issues",
+        "source": "https://github.com/ramsey/uuid/tree/4.7.6"
+      },
+      "funding": [
+        {
+          "url": "https://github.com/ramsey",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/ramsey/uuid",
+          "type": "tidelift"
+        }
+      ],
+      "time": "2024-04-27T21:32:50+00:00"
+    },
+    {
       "name": "symfony/cache",
       "version": "v6.4.10",
       "source": {
@@ -1585,6 +1876,162 @@
       "homepage": "https://symfony.com",
       "support": {
         "source": "https://github.com/symfony/deprecation-contracts/tree/v3.5.0"
+      },
+      "funding": [
+        {
+          "url": "https://symfony.com/sponsor",
+          "type": "custom"
+        },
+        {
+          "url": "https://github.com/fabpot",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+          "type": "tidelift"
+        }
+      ],
+      "time": "2024-04-18T09:32:20+00:00"
+    },
+    {
+      "name": "symfony/event-dispatcher",
+      "version": "v6.4.8",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/event-dispatcher.git",
+        "reference": "8d7507f02b06e06815e56bb39aa0128e3806208b"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/8d7507f02b06e06815e56bb39aa0128e3806208b",
+        "reference": "8d7507f02b06e06815e56bb39aa0128e3806208b",
+        "shasum": ""
+      },
+      "require": {
+        "php": ">=8.1",
+        "symfony/event-dispatcher-contracts": "^2.5|^3"
+      },
+      "conflict": {
+        "symfony/dependency-injection": "<5.4",
+        "symfony/service-contracts": "<2.5"
+      },
+      "provide": {
+        "psr/event-dispatcher-implementation": "1.0",
+        "symfony/event-dispatcher-implementation": "2.0|3.0"
+      },
+      "require-dev": {
+        "psr/log": "^1|^2|^3",
+        "symfony/config": "^5.4|^6.0|^7.0",
+        "symfony/dependency-injection": "^5.4|^6.0|^7.0",
+        "symfony/error-handler": "^5.4|^6.0|^7.0",
+        "symfony/expression-language": "^5.4|^6.0|^7.0",
+        "symfony/http-foundation": "^5.4|^6.0|^7.0",
+        "symfony/service-contracts": "^2.5|^3",
+        "symfony/stopwatch": "^5.4|^6.0|^7.0"
+      },
+      "type": "library",
+      "autoload": {
+        "psr-4": {
+          "Symfony\\Component\\EventDispatcher\\": ""
+        },
+        "exclude-from-classmap": [
+          "/Tests/"
+        ]
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Fabien Potencier",
+          "email": "fabien@symfony.com"
+        },
+        {
+          "name": "Symfony Community",
+          "homepage": "https://symfony.com/contributors"
+        }
+      ],
+      "description": "Provides tools that allow your application components to communicate with each other by dispatching events and listening to them",
+      "homepage": "https://symfony.com",
+      "support": {
+        "source": "https://github.com/symfony/event-dispatcher/tree/v6.4.8"
+      },
+      "funding": [
+        {
+          "url": "https://symfony.com/sponsor",
+          "type": "custom"
+        },
+        {
+          "url": "https://github.com/fabpot",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+          "type": "tidelift"
+        }
+      ],
+      "time": "2024-05-31T14:49:08+00:00"
+    },
+    {
+      "name": "symfony/event-dispatcher-contracts",
+      "version": "v3.5.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/event-dispatcher-contracts.git",
+        "reference": "8f93aec25d41b72493c6ddff14e916177c9efc50"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/symfony/event-dispatcher-contracts/zipball/8f93aec25d41b72493c6ddff14e916177c9efc50",
+        "reference": "8f93aec25d41b72493c6ddff14e916177c9efc50",
+        "shasum": ""
+      },
+      "require": {
+        "php": ">=8.1",
+        "psr/event-dispatcher": "^1"
+      },
+      "type": "library",
+      "extra": {
+        "branch-alias": {
+          "dev-main": "3.5-dev"
+        },
+        "thanks": {
+          "name": "symfony/contracts",
+          "url": "https://github.com/symfony/contracts"
+        }
+      },
+      "autoload": {
+        "psr-4": {
+          "Symfony\\Contracts\\EventDispatcher\\": ""
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Nicolas Grekas",
+          "email": "p@tchwork.com"
+        },
+        {
+          "name": "Symfony Community",
+          "homepage": "https://symfony.com/contributors"
+        }
+      ],
+      "description": "Generic abstractions related to dispatching event",
+      "homepage": "https://symfony.com",
+      "keywords": [
+        "abstractions",
+        "contracts",
+        "decoupling",
+        "interfaces",
+        "interoperability",
+        "standards"
+      ],
+      "support": {
+        "source": "https://github.com/symfony/event-dispatcher-contracts/tree/v3.5.0"
       },
       "funding": [
         {

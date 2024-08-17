@@ -42,7 +42,9 @@
         "dragonmantank/cron-expression": "^3.3.2",
         "halaxa/json-machine": "^1.1.1",
         "league/route": "^5.1.2",
-        "psy/psysh": "^0.11.22"
+        "psy/psysh": "^0.11.22",
+        "symfony/event-dispatcher": "^6.1.4",
+        "ramsey/uuid": "^4.5.1"
     },
     "suggest": {
         "ext-sockets": "For UDP commincations."

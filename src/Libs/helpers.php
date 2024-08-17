@@ -7,14 +7,18 @@ use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\APIResponse;
+use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
+use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Events\DataEvent;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
+use App\Libs\Extends\ReflectionContainer;
 use App\Libs\Guid;
 use App\Libs\Initializer;
 use App\Libs\Options;
@@ -22,15 +26,22 @@ use App\Libs\Response;
 use App\Libs\Router;
 use App\Libs\Stream;
 use App\Libs\Uri;
+use App\Model\Events\Event as EventInfo;
+use App\Model\Events\EventListener;
+use App\Model\Events\EventsRepository;
+use App\Model\Events\EventStatus;
 use Monolog\Utils;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
@@ -713,14 +724,19 @@ if (!function_exists('getAppVersion')) {
         $version = Config::get('version', 'dev-master');
 
         if ('$(version_via_ci)' === $version) {
-            $gitDir = ROOT_PATH . '/.git/';
+            $gitDir = ROOT_PATH . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR;
 
             if (is_dir($gitDir)) {
-                $cmd = 'git --git-dir=%1$s describe --exact-match --tags 2> /dev/null || git --git-dir=%1$s rev-parse --short HEAD';
-                exec(sprintf($cmd, escapeshellarg($gitDir)), $output, $status);
-
-                if (0 === $status) {
-                    return $output[0] ?? 'dev-master';
+                $cmdVersion = [
+                    'git --git-dir=%1$s describe --exact-match --tags',
+                    'git --git-dir=%1$s rev-parse --short HEAD',
+                ];
+                foreach ($cmdVersion as $cmd) {
+                    $proc = Process::fromShellCommandline(sprintf($cmd, escapeshellarg($gitDir)));
+                    $proc->run();
+                    if ($proc->isSuccessful()) {
+                        return explode(PHP_EOL, $proc->getOutput())[0];
+                    }
                 }
             }
 
@@ -1687,7 +1703,7 @@ if (!function_exists('restartTaskWorker')) {
             }
 
             if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
-                @posix_kill((int)$pid, $force ? SIGKILL : SIGHUP);
+                @posix_kill((int)$pid, $force ? 9 : 1);
             }
 
             clearstatcache(true, $pidFile);
@@ -1835,5 +1851,126 @@ if (!function_exists('ffprobe_file')) {
         $cache?->set($cacheKey, $data, new DateInterval('PT24H'));
 
         return $data;
+    }
+}
+if (!function_exists('generateUUID')) {
+    function generateUUID(string|int|null $prefix = null): string
+    {
+        $prefixUUID = '';
+
+        if (null !== $prefix) {
+            $prefixUUID = $prefix ? $prefix . '-' : '';
+        }
+
+        return $prefixUUID . Ramsey\Uuid\Uuid::uuid6()->toString();
+    }
+}
+
+if (!function_exists('cacheableItem')) {
+    /**
+     * Get Item From Cache or call Callable and cache result.
+     *
+     * @param string $key
+     * @param Closure $function
+     * @param DateInterval|int|null $ttl
+     * @param bool $ignoreCache
+     *
+     * @return mixed
+     */
+    function cacheableItem(
+        string $key,
+        Closure $function,
+        DateInterval|int|null $ttl = null,
+        bool $ignoreCache = false
+    ): mixed {
+        $cache = Container::get(CacheInterface::class);
+
+        if (!$ignoreCache && $cache->has($key)) {
+            return $cache->get($key);
+        }
+
+        $reflectContainer = Container::get(ReflectionContainer::class);
+        $item = $reflectContainer->call($function);
+
+        if (null === $ttl) {
+            $ttl = new DateInterval('PT300S');
+        }
+
+        $cache->set($key, $item, $ttl);
+
+        return $item;
+    }
+}
+
+if (!function_exists('registerEvents')) {
+    /**
+     * Register events.
+     */
+    function registerEvents(bool $ignoreCache = false): void
+    {
+        static $alreadyRegistered = false;
+
+        if (false !== $alreadyRegistered) {
+            return;
+        }
+
+        $logger = Container::get(iLogger::class);
+        $dispatcher = Container::get(EventDispatcherInterface::class);
+        assert($dispatcher instanceof EventDispatcher);
+
+        /** @var array<ScannerItem> $list */
+        $list = cacheableItem(
+            'event_listeners',
+            fn() => AttributesScanner::scan(Config::get('events.listeners.locations', []))->for(EventListener::class),
+            Config::get('events.listeners.cache', fn() => new DateInterval('PT1H')),
+            $ignoreCache
+        );
+
+        foreach ($list as $item) {
+            $dispatcher->addListener(ag($item->getData(), 'event'), $item->call(...));
+        }
+
+        if (null !== ($eventsFile = Config::get('events.listeners.file'))) {
+            try {
+                foreach (require $eventsFile as $event) {
+                    $dispatcher->addListener(ag($event, 'on'), ag($event, 'callable'));
+                }
+            } catch (Throwable $e) {
+                $logger->error($e->getMessage(), []);
+            }
+        }
+
+        $alreadyRegistered = true;
+    }
+}
+
+if (!function_exists('queueEvent')) {
+    /**
+     * Queue Event.
+     *
+     * @param string $event Event name.
+     * @param array $data Event data.
+     * @param array $opts Options.
+     *
+     * @return EventInfo
+     */
+    function queueEvent(string $event, array $data = [], array $opts = []): EventInfo
+    {
+        $repo = ag($opts, EventsRepository::class, fn() => Container::get(EventsRepository::class));
+        assert($repo instanceof EventsRepository);
+
+        $item = $repo->getObject([]);
+        $item->event = $event;
+        $item->status = EventStatus::PENDING;
+        $item->event_data = $data;
+        $item->created_at = makeDate();
+        $item->options = [
+            'class' => ag($opts, 'class', DataEvent::class),
+        ];
+
+        $id = $repo->save($item);
+        $item->id = $id;
+
+        return $item;
     }
 }
