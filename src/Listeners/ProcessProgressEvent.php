@@ -60,12 +60,14 @@ final readonly class ProcessProgressEvent
             return $e;
         }
 
-        if ($item->hasPlayProgress() && $item->getPlayProgress() > $entity->getPlayProgress()) {
+        if ($item->hasPlayProgress() && ($item->getPlayProgress() + 10) >= $entity->getPlayProgress()) {
             $writer(
                 Level::Info, "Local item '{id}: {title}' has higher/equal progress to the event item. not processing.",
                 [
                     'id' => $item->id,
-                    'title' => $item->title
+                    'title' => $item->title,
+                    'local' => formatDuration($item->getPlayProgress()) . ' +10s',
+                    'event' => formatDuration($entity->getPlayProgress()),
                 ]
             );
             return $e;
