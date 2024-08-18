@@ -60,10 +60,15 @@ final readonly class ProcessProgressEvent
             return $e;
         }
 
+        // -- prevent endless loop.
+        if ($item->hasPlayProgress() && ($item->getPlayProgress() + 30) > $entity->getPlayProgress()) {
+            return $e;
+        }
+
         $item = $item->apply($entity);
 
         if (!$item->hasPlayProgress()) {
-            $writer(Level::Notice, "Item '{title}' has no watch progress to export.", ['title' => $item->title]);
+            $writer(Level::Info, "Item '{title}' has no watch progress to export.", ['title' => $item->title]);
             return $e;
         }
 
