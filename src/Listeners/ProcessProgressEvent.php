@@ -60,8 +60,14 @@ final readonly class ProcessProgressEvent
             return $e;
         }
 
-        // -- prevent endless loop.
-        if ($item->hasPlayProgress() && ($item->getPlayProgress() + 30) > $entity->getPlayProgress()) {
+        if ($item->hasPlayProgress() && $item->getPlayProgress() > $entity->getPlayProgress()) {
+            $writer(
+                Level::Info, "Local item '{id}: {title}' has higher/equal progress to the event item. not processing.",
+                [
+                    'id' => $item->id,
+                    'title' => $item->title
+                ]
+            );
             return $e;
         }
 
