@@ -186,7 +186,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'export', 'push', 'progress', 'backup', 'prune', 'indexes', 'requests'];
+    $tasks = ['import', 'export', 'push', 'progress', 'backup', 'prune', 'indexes'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',

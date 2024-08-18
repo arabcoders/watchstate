@@ -43,7 +43,6 @@ final class Initializer
     private Cli $cli;
     private ConsoleOutput $cliOutput;
     private iLogger|null $accessLog = null;
-    private bool $booted = false;
 
     /**
      * Initializes the object.

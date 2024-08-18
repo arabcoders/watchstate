@@ -79,8 +79,13 @@
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/events" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-list"></i></span>
+                <span class="icon"><i class="fas fa-calendar-alt"></i></span>
                 <span>Events</span>
+              </NuxtLink>
+
+              <NuxtLink class="navbar-item" to="/old_events" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-list"></i></span>
+                <span>Old Events</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/ignore" @click.native="(e) => changeRoute(e)">

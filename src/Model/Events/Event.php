@@ -26,6 +26,11 @@ final class Event extends EntityTable
     public EventStatus $status = EventStatus::PENDING;
 
     /**
+     * @uses EntityTable::COLUMN_REFERENCE
+     */
+    public string|null $reference = null;
+
+    /**
      * @uses EntityTable::COLUMN_EVENT
      */
     public string $event = '';

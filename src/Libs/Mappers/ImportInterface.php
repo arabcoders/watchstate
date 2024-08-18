@@ -109,6 +109,13 @@ interface ImportInterface extends Countable
     public function setLogger(LoggerInterface $logger): self;
 
     /**
+     * Get the logger instance.
+     *
+     * @return LoggerInterface The logger instance.
+     */
+    public function getLogger(): LoggerInterface;
+
+    /**
      * Set the database object for this class.
      *
      * @param iDB $db The database object to be set.

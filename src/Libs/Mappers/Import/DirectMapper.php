@@ -831,6 +831,14 @@ final class DirectMapper implements iImport
     /**
      * @inheritdoc
      */
+    public function getLogger(): iLogger
+    {
+        return $this->logger;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function setDatabase(iDB $db): self
     {
         $this->db = $db;
