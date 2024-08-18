@@ -279,7 +279,7 @@ final class MemoryMapper implements iImport
 
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-        $playChanged = $newPlayProgress != $oldPlayProgress;
+        $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
         if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
@@ -295,16 +295,23 @@ final class MemoryMapper implements iImport
                 $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
                 $changes = $this->objects[$pointer]->diff(fields: $keys);
-
                 $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
+
                 if (count($changes) >= 1) {
+                    $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
+                    if ($playChanged && $progress) {
+                        $_keys[] = iState::COLUMN_VIA;
+                    }
+
+                    $this->objects[$pointer] = $this->objects[$pointer]->apply(entity: $entity, fields: $_keys);
+
                     $this->logger->notice(
                         $progress ? "MAPPER: '{backend}' updated '{title}' due to play progress change." : "MAPPER: '{backend}' updated '{title}' metadata.",
                         [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
-                            'changes' => $changes,
+                            'changes' => $progress ? $this->objects[$pointer]->diff(fields: $_keys) : $changes,
                             'fields' => implode(',', $keys),
                         ]
                     );
@@ -317,7 +324,7 @@ final class MemoryMapper implements iImport
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
 
-                        $this->progressItems[$itemId] = $entity;
+                        $this->progressItems[$itemId] = $this->objects[$pointer];
                     }
                 }
 

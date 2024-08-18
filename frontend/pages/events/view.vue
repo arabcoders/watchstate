@@ -9,9 +9,13 @@
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
+
             <p class="control">
-              <button class="button is-warning" @click="resetEvent" :disabled="item.status < 2">
-                <span class="icon"><i class="fas fa-trash-arrow-up"></i></span>
+              <button class="button is-warning" @click="resetEvent(0 === item.status ? 4 : 0)"
+                      :disabled="1 === item.status">
+                <span class="icon">
+                  <i class="fas" :class="{'fa-trash-arrow-up': 0!== item.status, 'fa-power-off': 0=== item.status}"></i>
+                </span>
               </button>
             </p>
             <p class="control">
@@ -175,7 +179,7 @@ const deleteItem = async () => {
   }
 }
 
-const resetEvent = async () => {
+const resetEvent = async (status = 0) => {
   if (!confirm(`Reset '${makeName(item.value.id)}'?`)) {
     return
   }
@@ -184,7 +188,7 @@ const resetEvent = async () => {
     const response = await request(`/system/events/${item.value.id}`, {
       method: 'PATCH',
       body: JSON.stringify({
-        status: 0,
+        status: status,
         reset_logs: true,
       })
     })

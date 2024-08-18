@@ -45,14 +45,13 @@ final readonly class ProcessProgressEvent
         $e->stopPropagation();
 
         $options = $e->getOptions();
-        $entity = Container::get(iState::class)::fromArray($e->getData());
 
-        if (null === ($item = $this->db->get($entity))) {
-            $writer(Level::Error, "Item '{title}' Is not referenced locally yet.", ['title' => $entity->getName()]);
+        if (null === ($item = $this->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
+            $writer(Level::Error, "Item '{id}' Is not referenced locally yet.", ['id' => ag($e->getData(), 'id', '?')]);
             return $e;
         }
 
-        if ($item->isWatched() || $entity->isWatched()) {
+        if ($item->isWatched()) {
             $writer(Level::Info, "Item '{id}: {title}' is marked as watched. Not updating watch process.", [
                 'id' => $item->id,
                 'title' => $item->getName()
@@ -60,22 +59,7 @@ final readonly class ProcessProgressEvent
             return $e;
         }
 
-        if ($item->hasPlayProgress() && ($item->getPlayProgress() + 10) >= $entity->getPlayProgress()) {
-            $writer(
-                Level::Info, "Local item '{id}: {title}' has higher/equal progress to the event item. not processing.",
-                [
-                    'id' => $item->id,
-                    'title' => $item->title,
-                    'local' => formatDuration($item->getPlayProgress()) . ' +10s',
-                    'event' => formatDuration($entity->getPlayProgress()),
-                ]
-            );
-            return $e;
-        }
-
-        $item = $item->apply($entity);
-
-        if (!$item->hasPlayProgress()) {
+        if (false === $item->hasPlayProgress()) {
             $writer(Level::Info, "Item '{title}' has no watch progress to export.", ['title' => $item->title]);
             return $e;
         }

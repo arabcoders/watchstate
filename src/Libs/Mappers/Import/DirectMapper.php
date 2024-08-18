@@ -405,7 +405,7 @@ final class DirectMapper implements iImport
 
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-        $playChanged = $newPlayProgress != $oldPlayProgress;
+        $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
         if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
@@ -422,13 +422,18 @@ final class DirectMapper implements iImport
                     $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
 
                     if (count($changes) >= 1) {
+                        $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
+                        if ($playChanged && $progress) {
+                            $_keys[] = iState::COLUMN_VIA;
+                        }
+                        $local = $local->apply($entity, fields: $_keys);
                         $this->logger->notice(
                             $progress ? "MAPPER: '{backend}' updated '{title}' due to play progress change." : "MAPPER: '{backend}' updated '{title}' metadata.",
                             [
                                 'id' => $cloned->id,
                                 'backend' => $entity->via,
                                 'title' => $cloned->getName(),
-                                'changes' => $changes,
+                                'changes' => $progress ? $local->diff(fields: $_keys) : $changes,
                             ]
                         );
                     }
@@ -444,7 +449,7 @@ final class DirectMapper implements iImport
                                 'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                             ]);
 
-                            $this->progressItems[$itemId] = $entity;
+                            $this->progressItems[$itemId] = $local;
                         }
                     }
 

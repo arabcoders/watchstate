@@ -12,7 +12,6 @@ use App\Libs\Extends\ProxyHandler;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Model\Events\EventListener;
-use App\Model\Events\EventsTable;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 
@@ -71,23 +70,6 @@ final readonly class ProcessRequestEvent
 
         $this->mapper->commit();
         $this->mapper->setLogger($oldLogger);
-
-        $pEnabled = (bool)Config::get('sync.progress', false);
-        if (true === $pEnabled && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
-            $logger->notice(r("Scheduling '{title}' for watch progress update via '{backend}' event.", [
-                'backend' => $entity->via,
-                'title' => $entity->getName(),
-            ]));
-
-            queueEvent(ProcessProgressEvent::NAME, $entity->getAll(), [
-                'unique' => true,
-                EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
-                    'type' => $entity->type,
-                    'backend' => $entity->via,
-                    'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-                ]),
-            ]);
-        }
 
         $handler->close();
 
