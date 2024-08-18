@@ -76,7 +76,7 @@ final class DispatchCommand extends Command
         assert($this->dispatcher instanceof EventDispatcher);
 
         foreach ($events as $event) {
-            if (null === ($newState = $this->repo->findOne($event->id))) {
+            if (null === ($newState = $this->repo->findById($event->id))) {
                 $this->logger->notice("The event '{id}' was deleted while the dispatcher was running", [
                     'id' => $event->id
                 ]);
