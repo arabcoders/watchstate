@@ -46,6 +46,7 @@ final class DBLayer
     public const string IS_LEFT_OUTER_JOIN = 'LEFT OUTER JOIN';
     public const string IS_MATCH_AGAINST = 'MATCH() AGAINST()';
     public const string IS_JSON_CONTAINS = 'JSON_CONTAINS';
+    public const string IS_JSON_EXTRACT = 'JSON_EXTRACT';
     public const string IS_JSON_SEARCH = 'JSON_SEARCH';
 
     public function __construct(private PDO $pdo)
@@ -595,6 +596,23 @@ final class DBLayer
                     );
 
                     $bind[$eBindName] = $opt[2];
+                    break;
+                case self::IS_JSON_EXTRACT:
+                    if (!isset($opt[1], $opt[2], $opt[3])) {
+                        throw new RuntimeException('IS_JSON_CONTAINS: expects 3 parameters.');
+                    }
+
+                    $eBindName = '__db_je_' . random_int(1, 1000);
+
+                    $keys[] = sprintf(
+                        "JSON_EXTRACT(%s, %s) %s %s",
+                        $this->escapeIdentifier($column, true),
+                        $opt[1],
+                        $opt[2],
+                        ':' . $eBindName,
+                    );
+
+                    $bind[$eBindName] = $opt[3];
                     break;
                 case self::IS_INNER_JOIN:
                 case self::IS_LEFT_JOIN:

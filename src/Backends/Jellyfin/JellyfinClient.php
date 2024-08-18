@@ -163,6 +163,10 @@ class JellyfinClient implements iClient
             ])
         );
 
+        if ($context->hasLogger()) {
+            $cloned->context = $cloned->context->withLogger($context->getLogger());
+        }
+
         $cloned->guid = $cloned->guid->withContext($cloned->context);
 
         return $cloned;

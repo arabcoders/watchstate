@@ -63,6 +63,7 @@ try {
             ]
     );
     fwrite(STDERR, $message . PHP_EOL);
+    fwrite(STDERR, $e->getTraceAsString() . PHP_EOL);
     exit(503);
 }
 

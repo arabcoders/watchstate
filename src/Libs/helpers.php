@@ -10,6 +10,7 @@ use App\Libs\APIResponse;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
 use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
@@ -29,6 +30,7 @@ use App\Libs\Uri;
 use App\Model\Events\Event as EventInfo;
 use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
+use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus;
 use Monolog\Utils;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -467,7 +469,7 @@ if (!function_exists('api_error')) {
         $response = api_response(
             status: $httpCode,
             body: array_replace_recursive($body, [
-                'error' => [
+                ag($opts, 'top_key', 'error') => [
                     'code' => $httpCode->value,
                     'message' => $message
                 ]
@@ -485,6 +487,32 @@ if (!function_exists('api_error')) {
         }
 
         return $response;
+    }
+}
+
+if (!function_exists('api_message')) {
+    /**
+     * Create API message response.
+     *
+     * @param string $message The error message.
+     * @param Status|int $httpCode Optional. The HTTP status code. Default is {@see Status::OK}.
+     * @param array $body Optional. Additional fields to include in the response body.
+     * @param array $headers Optional. Additional headers to include in the response.
+     * @param string|null $reason Optional. The reason phrase to include in the response. Default is null.
+     * @param array $opts Optional. Additional options.
+     *
+     * @return iResponse A PSR-7 compatible response object.
+     */
+    function api_message(
+        string $message,
+        Status|int $httpCode = Status::OK,
+        array $body = [],
+        array $headers = [],
+        string|null $reason = null,
+        array $opts = []
+    ): iResponse {
+        $opts['top_key'] = 'info';
+        return api_error($message, $httpCode, $body, $headers, $reason, $opts);
     }
 }
 
@@ -735,7 +763,7 @@ if (!function_exists('getAppVersion')) {
                     $proc = Process::fromShellCommandline(sprintf($cmd, escapeshellarg($gitDir)));
                     $proc->run();
                     if ($proc->isSuccessful()) {
-                        return explode(PHP_EOL, $proc->getOutput())[0];
+                        return trim(explode(PHP_EOL, $proc->getOutput())[0]);
                     }
                 }
             }
@@ -1959,7 +1987,24 @@ if (!function_exists('queueEvent')) {
         $repo = ag($opts, EventsRepository::class, fn() => Container::get(EventsRepository::class));
         assert($repo instanceof EventsRepository);
 
-        $item = $repo->getObject([]);
+        $item = null;
+        if (null !== ($reference = ag($opts, EventsTable::COLUMN_REFERENCE))) {
+            $criteria = [];
+            $isUnique = (bool)ag($opts, 'unique', false);
+
+            if (false === $isUnique) {
+                $criteria[EventsTable::COLUMN_STATUS] = EventStatus::PENDING->value;
+            }
+
+            if (null !== ($refItem = $repo->findByReference($reference, $criteria)) && true === $isUnique) {
+                $repo->remove($refItem);
+            } else {
+                $item = $refItem;
+            }
+            unset($refItem);
+        }
+
+        $item = $item ?? $repo->getObject([]);
         $item->event = $event;
         $item->status = EventStatus::PENDING;
         $item->event_data = $data;
@@ -1968,9 +2013,62 @@ if (!function_exists('queueEvent')) {
             'class' => ag($opts, 'class', DataEvent::class),
         ];
 
+        if (ag_exists($opts, EventsTable::COLUMN_OPTIONS) && is_array($opts[EventsTable::COLUMN_OPTIONS])) {
+            $item->options = array_replace_recursive($opts[EventsTable::COLUMN_OPTIONS], $item->options);
+        }
+
+        if ($reference) {
+            $item->reference = $reference;
+        }
+
         $id = $repo->save($item);
         $item->id = $id;
 
         return $item;
+    }
+}
+
+if (!function_exists('getPagination')) {
+    function getPagination(iRequest $request, int $page = 1, int $perpage = 0, array $options = []): array
+    {
+        $page = (int)($request->getQueryParams()['page'] ?? $page);
+
+        if (0 === $perpage) {
+            $perpage = 25;
+        }
+
+        if (false === array_key_exists('force_perpage', $options)) {
+            $perpage = (int)($request->getQueryParams()['perpage'] ?? $perpage);
+        }
+
+        $start = (($page <= 2) ? ((1 === $page) ? 0 : $perpage) : $perpage * ($page - 1));
+        $start = (!$page) ? 0 : $start;
+
+        return [$page, $perpage, $start];
+    }
+}
+
+if (!function_exists('getBackend')) {
+    /**
+     * Retrieves the backend client for the specified name.
+     *
+     * @param string $name The name of the backend.
+     * @param array $config (Optional) Override the default configuration for the backend.
+     *
+     * @return iClient The backend client instance.
+     * @throws RuntimeException If no backend with the specified name is found.
+     */
+    function getBackend(string $name, array $config = []): iClient
+    {
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+
+        if (null === $configFile->get("{$name}.type", null)) {
+            throw new RuntimeException(r("No backend named '{backend}' was found.", ['backend' => $name]));
+        }
+
+        $default = $configFile->get($name);
+        $default['name'] = $name;
+
+        return makeBackend(array_replace_recursive($default, $config), $name);
     }
 }

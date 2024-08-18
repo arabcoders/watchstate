@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Import;
 
+use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
-use DateInterval;
+use App\Listeners\ProcessProgressEvent;
+use App\Model\Events\EventsTable;
 use DateTimeInterface as iDate;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -277,7 +279,7 @@ final class MemoryMapper implements iImport
 
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
-        $playChanged = $newPlayProgress != $oldPlayProgress;
+        $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
         if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
@@ -293,16 +295,23 @@ final class MemoryMapper implements iImport
                 $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
                 $changes = $this->objects[$pointer]->diff(fields: $keys);
-
                 $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
+
                 if (count($changes) >= 1) {
+                    $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
+                    if ($playChanged && $progress) {
+                        $_keys[] = iState::COLUMN_VIA;
+                    }
+
+                    $this->objects[$pointer] = $this->objects[$pointer]->apply(entity: $entity, fields: $_keys);
+
                     $this->logger->notice(
                         $progress ? "MAPPER: '{backend}' updated '{title}' due to play progress change." : "MAPPER: '{backend}' updated '{title}' metadata.",
                         [
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
-                            'changes' => $changes,
+                            'changes' => $progress ? $this->objects[$pointer]->diff(fields: $_keys) : $changes,
                             'fields' => implode(',', $keys),
                         ]
                     );
@@ -315,7 +324,7 @@ final class MemoryMapper implements iImport
                             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                         ]);
 
-                        $this->progressItems[$itemId] = $entity;
+                        $this->progressItems[$itemId] = $this->objects[$pointer];
                     }
                 }
 
@@ -543,13 +552,18 @@ final class MemoryMapper implements iImport
     public function commit(): mixed
     {
         if (true !== $this->inDryRunMode()) {
-            if (true === (bool)env('WS_CRON_PROGRESS', false) && count($this->progressItems) >= 1) {
+            if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
                 try {
-                    $progress = $this->cache->get('progress', []);
-                    foreach ($this->progressItems as $itemId => $entity) {
-                        $progress[$itemId] = $entity;
+                    foreach ($this->progressItems as $entity) {
+                        queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], [
+                            'unique' => true,
+                            EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
+                                'type' => $entity->type,
+                                'backend' => $entity->via,
+                                'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                            ]),
+                        ]);
                     }
-                    $this->cache->set('progress', $progress, new DateInterval('P3D'));
                 } catch (\Psr\SimpleCache\InvalidArgumentException) {
                 }
             }
@@ -653,6 +667,14 @@ final class MemoryMapper implements iImport
         $this->logger = $logger;
         $this->db->setLogger($logger);
         return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getLogger(): iLogger
+    {
+        return $this->logger;
     }
 
     /**

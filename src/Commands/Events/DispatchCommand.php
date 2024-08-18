@@ -76,6 +76,24 @@ final class DispatchCommand extends Command
         assert($this->dispatcher instanceof EventDispatcher);
 
         foreach ($events as $event) {
+            if (null === ($newState = $this->repo->findById($event->id))) {
+                $this->logger->notice("The event '{id}' was deleted while the dispatcher was running", [
+                    'id' => $event->id
+                ]);
+                continue;
+            }
+
+            if ($newState->status !== Status::PENDING) {
+                $this->logger->notice(
+                    "The event '{id}' was changed to '{status}' while the dispatcher was running. Ignoring event.",
+                    [
+                        'id' => $event->id,
+                        'status' => $newState->status->name,
+                    ]
+                );
+                continue;
+            }
+
             $this->runEvent($event);
         }
 

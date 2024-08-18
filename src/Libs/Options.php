@@ -37,6 +37,7 @@ final class Options
     public const string NO_FALLBACK = 'NO_FALLBACK';
     public const string LIMIT_RESULTS = 'LIMIT_RESULTS';
     public const string NO_CHECK = 'NO_CHECK';
+    public const string LOG_WRITER = 'LOG_WRITER';
 
     private function __construct()
     {

@@ -31,6 +31,25 @@ final class EventsRepository
     }
 
     /**
+     * Will return the last event by reference.
+     *
+     * @param string|int $reference Reference to search by.
+     * @param array $criteria Criteria to search by.
+     *
+     * @return EntityItem|null The event or null if not found.
+     */
+    public function findByReference(string|int $reference, array $criteria = []): EntityItem|null
+    {
+        $criteria[EntityTable::COLUMN_REFERENCE] = $reference;
+
+        $items = (clone $this)->setPerpage(1)->setStart(0)->setDescendingOrder()
+            ->setSort(EntityTable::COLUMN_CREATED_AT)
+            ->findAll($criteria);
+
+        return $items[0] ?? null;
+    }
+
+    /**
      * @param array $criteria Criteria to search by.
      * @param array $cols Columns to select.
      * @return array<EntityItem> empty array if no match found.

@@ -6,6 +6,8 @@ namespace App\Backends\Common;
 
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidContextException;
+use App\Libs\Exceptions\Backends\NotImplementedException;
+use App\Libs\Exceptions\Backends\UnexpectedVersionException;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use DateTimeInterface as iDate;
@@ -128,6 +130,8 @@ interface ClientInterface
      * @param iDate|null $after only push items after this date.
      *
      * @return array empty array. The data is pushed to the queue.
+     * @throws NotImplementedException is thrown if the backend does not support this feature.
+     * @throws UnexpectedVersionException is thrown if the backend version does not support this feature.
      */
     public function progress(array $entities, QueueRequests $queue, iDate|null $after = null): array;
 

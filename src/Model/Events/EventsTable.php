@@ -13,6 +13,7 @@ abstract class EventsTable extends BasicModel
 
     public const string COLUMN_ID = 'id';
     public const string COLUMN_STATUS = 'status';
+    public const string COLUMN_REFERENCE = 'reference';
     public const string COLUMN_EVENT = 'event';
     public const string COLUMN_EVENT_DATA = 'event_data';
     public const string COLUMN_OPTIONS = 'options';
