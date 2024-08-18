@@ -9,6 +9,14 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-08-18
+
+We have started migrating the old events system to a new one, so far we have migrated the `progress` and `requests` to it. As such,
+The old tasks `state:progress` and `state:requests` are now gone. To control if you want to enable the watch progress, there is new
+environment variable `WS_SYNC_PROGRESS` which you can set to `true` to enable the watch progress. It's disabled by default.
+
+We will continue to migrate the rest of the events to the new system, and we will keep you updated.
+
 ### 2024-08-10
 
 I have recently added new experimental feature, to play your content directly from the WebUI. This feature is still in

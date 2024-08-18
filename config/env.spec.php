@@ -161,6 +161,11 @@ return (function () {
             'description' => 'All executing all commands in the console. They must be prefixed with $',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_SYNC_PROGRESS',
+            'description' => 'Enable watch progress sync.',
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {
@@ -186,7 +191,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'export', 'push', 'progress', 'backup', 'prune', 'indexes'];
+    $tasks = ['import', 'export', 'push', 'backup', 'prune', 'indexes'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',

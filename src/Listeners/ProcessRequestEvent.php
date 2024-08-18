@@ -12,6 +12,7 @@ use App\Libs\Extends\ProxyHandler;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Model\Events\EventListener;
+use App\Model\Events\EventsTable;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 
@@ -35,10 +36,7 @@ final readonly class ProcessRequestEvent
     {
         $e->stopPropagation();
 
-        $data = ag($e->getData(), 'entity');
-        $entity = Container::get(iState::class)::fromArray($data);
-
-        $options = ag($data, 'options', []);
+        $entity = Container::get(iState::class)::fromArray($e->getData());
 
         if (null !== ($lastSync = ag(Config::get("servers.{$entity->via}", []), 'import.lastSync'))) {
             $lastSync = makeDate($lastSync);
@@ -64,14 +62,34 @@ final readonly class ProcessRequestEvent
         $oldLogger = $this->mapper->getLogger();
         $this->mapper->setLogger($logger);
 
+        $metadataOnly = (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY);
         $this->mapper->add($entity, [
-            Options::IMPORT_METADATA_ONLY => (bool)ag($options, Options::IMPORT_METADATA_ONLY),
+            Options::IMPORT_METADATA_ONLY => $metadataOnly,
             Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush($state),
             'after' => $lastSync,
         ]);
 
         $this->mapper->commit();
         $this->mapper->setLogger($oldLogger);
+
+        $pEnabled = (bool)Config::get('sync.progress', false);
+        if (true === $pEnabled && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
+            if (null !== ($newEntity = $this->mapper->get($entity))) {
+                $logger->notice(r("Scheduling '{title}' for watch progress update via '{backend}' event.", [
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                ]));
+
+                queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $newEntity->id], [
+                    'unique' => true,
+                    EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
+                        'type' => $newEntity->type,
+                        'backend' => $newEntity->via,
+                        'id' => ag($newEntity->getMetadata($newEntity->via), iState::COLUMN_ID, '??'),
+                    ]),
+                ]);
+            }
+        }
 
         $handler->close();
 

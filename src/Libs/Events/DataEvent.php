@@ -16,6 +16,11 @@ class DataEvent extends Event
         return $this->eventInfo;
     }
 
+    public function getReference(): string|null
+    {
+        return $this->eventInfo->reference;
+    }
+
     public function addLog(string $log): void
     {
         $this->eventInfo->logs[] = $log;
@@ -29,5 +34,10 @@ class DataEvent extends Event
     public function getData(): array
     {
         return $this->eventInfo->event_data;
+    }
+
+    public function getOptions(): array
+    {
+        return $this->eventInfo->options;
     }
 }

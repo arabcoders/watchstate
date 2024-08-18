@@ -16,7 +16,6 @@ use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use App\Listeners\ProcessRequestEvent;
 use App\Model\Events\EventsTable;
-use DateInterval;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -199,22 +198,13 @@ final class Webhooks
             'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
         ]);
 
-        queueEvent(ProcessRequestEvent::NAME, [
-            'options' => [
-                Options::IMPORT_METADATA_ONLY => $metadataOnly,
-            ],
-            'entity' => $entity->getAll(),
-        ], [
-            EventsTable::COLUMN_REFERENCE => $itemId,
+        queueEvent(ProcessRequestEvent::NAME, $entity->getAll(), [
             'unique' => true,
+            EventsTable::COLUMN_REFERENCE => $itemId,
+            EventsTable::COLUMN_OPTIONS => [
+                Options::IMPORT_METADATA_ONLY => $metadataOnly,
+            ]
         ]);
-
-        $pEnabled = (bool)env('WS_CRON_PROGRESS', false);
-        if ($pEnabled && false === $metadataOnly && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
-            $progress = $this->cache->get('progress', []);
-            $progress[str_replace($itemId, ':tainted@', ':untainted@')] = $entity;
-            $this->cache->set('progress', $progress, new DateInterval('P3D'));
-        }
 
         $this->write($request, Level::Info, 'Queued [{backend}: {event}] {item.type} [{item.title}].', [
                 'backend' => $entity->via,
@@ -225,7 +215,7 @@ final class Webhooks
                     'type' => $entity->type,
                     'played' => $entity->isWatched() ? 'Yes' : 'No',
                     'queue_id' => $itemId,
-                    'progress' => $pEnabled && $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
+                    'progress' => $entity->hasPlayProgress() ? $entity->getPlayProgress() : null,
                 ]
             ]
         );

@@ -85,6 +85,18 @@
             JSON.stringify(item.logs, null, 2)
           }}</code></pre>
       </div>
+      <div class="column is-12" v-if="item.options">
+        <h2 class="title is-4 is-clickable is-unselectable" @click="toggleOptions = !toggleOptions">
+          <span class="icon">
+            <i class="fas" :class="{ 'fa-arrow-down': !toggleOptions, 'fa-arrow-up': toggleOptions }"></i>
+          </span>&nbsp;
+          <span>Show attached options</span>
+        </h2>
+        <pre class="p-0 is-pre-wrap" v-if="toggleOptions"><code
+            style="word-break: break-word" class="language-json">{{
+            JSON.stringify(item.options, null, 2)
+          }}</code></pre>
+      </div>
     </div>
   </div>
 </template>
@@ -105,6 +117,7 @@ const item = ref({})
 
 const toggleLogs = useStorage('events_toggle_logs', true)
 const toggleData = useStorage('events_toggle_data', true)
+const toggleOptions = useStorage('events_toggle_options', true)
 
 onMounted(async () => {
   if (!id.value) {

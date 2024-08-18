@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Libs\Mappers\Import;
 
+use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
-use DateInterval;
+use App\Listeners\ProcessProgressEvent;
+use App\Model\Events\EventsTable;
 use DateTimeInterface as iDate;
 use PDOException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -740,13 +742,18 @@ final class DirectMapper implements iImport
      */
     public function commit(): array
     {
-        if (true === (bool)env('WS_CRON_PROGRESS', false) && count($this->progressItems) >= 1) {
+        if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
             try {
-                $progress = $this->cache->get('progress', []);
-                foreach ($this->progressItems as $itemId => $entity) {
-                    $progress[$itemId] = $entity;
+                foreach ($this->progressItems as $entity) {
+                    queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], [
+                        'unique' => true,
+                        EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
+                            'type' => $entity->type,
+                            'backend' => $entity->via,
+                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                        ]),
+                    ]);
                 }
-                $this->cache->set('progress', $progress, new DateInterval('P3D'));
             } catch (\Psr\SimpleCache\InvalidArgumentException) {
             }
         }

@@ -10,6 +10,7 @@ use App\Libs\APIResponse;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
 use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
@@ -2012,6 +2013,10 @@ if (!function_exists('queueEvent')) {
             'class' => ag($opts, 'class', DataEvent::class),
         ];
 
+        if (ag_exists($opts, EventsTable::COLUMN_OPTIONS) && is_array($opts[EventsTable::COLUMN_OPTIONS])) {
+            $item->options = array_replace_recursive($opts[EventsTable::COLUMN_OPTIONS], $item->options);
+        }
+
         if ($reference) {
             $item->reference = $reference;
         }
@@ -2040,5 +2045,30 @@ if (!function_exists('getPagination')) {
         $start = (!$page) ? 0 : $start;
 
         return [$page, $perpage, $start];
+    }
+}
+
+if (!function_exists('getBackend')) {
+    /**
+     * Retrieves the backend client for the specified name.
+     *
+     * @param string $name The name of the backend.
+     * @param array $config (Optional) Override the default configuration for the backend.
+     *
+     * @return iClient The backend client instance.
+     * @throws RuntimeException If no backend with the specified name is found.
+     */
+    function getBackend(string $name, array $config = []): iClient
+    {
+        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+
+        if (null === $configFile->get("{$name}.type", null)) {
+            throw new RuntimeException(r("No backend named '{backend}' was found.", ['backend' => $name]));
+        }
+
+        $default = $configFile->get($name);
+        $default['name'] = $name;
+
+        return makeBackend(array_replace_recursive($default, $config), $name);
     }
 }

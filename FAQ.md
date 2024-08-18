@@ -402,7 +402,7 @@ command via CLI.
 
 > [!IMPORTANT]
 > for environment variables that has `{TASK}` tag, you **MUST** replace it with one
-> of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`, `REQUESTS`. To see tasks active settings run
+> of `IMPORT`, `EXPORT`, `PUSH`, `BACKUP`, `PRUNE`, `INDEXES`. To see tasks active settings run
 
 ```bash
 $ docker exec -ti watchstate console system:tasks

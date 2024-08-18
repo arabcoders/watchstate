@@ -9,7 +9,6 @@ use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
-use App\Commands\State\ProgressCommand;
 use App\Commands\State\PushCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
@@ -74,6 +73,9 @@ return (function () {
         'trust' => [
             'proxy' => (bool)env('WS_TRUST_PROXY', false),
             'header' => (string)env('WS_TRUST_HEADER', 'X-Forwarded-For'),
+        ],
+        'sync' => [
+            'progress' => (bool)env('WS_SYNC_PROGRESS', false),
         ],
     ];
 
@@ -271,14 +273,6 @@ return (function () {
                 'enabled' => (bool)env('WS_CRON_PUSH', true),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_PUSH_AT', '*/10 * * * *'), '*/10 * * * *'),
                 'args' => env('WS_CRON_PUSH_ARGS', '-v'),
-            ],
-            ProgressCommand::TASK_NAME => [
-                'command' => ProgressCommand::ROUTE,
-                'name' => ProgressCommand::TASK_NAME,
-                'info' => 'Send play progress to backends.',
-                'enabled' => (bool)env('WS_CRON_PROGRESS', false),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_PROGRESS_AT', '*/45 * * * *'), '*/45 * * * *'),
-                'args' => env('WS_CRON_PROGRESS_ARGS', '-v'),
             ],
             BackupCommand::TASK_NAME => [
                 'command' => BackupCommand::ROUTE,
