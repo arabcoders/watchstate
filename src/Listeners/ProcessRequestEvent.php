@@ -74,21 +74,19 @@ final readonly class ProcessRequestEvent
 
         $pEnabled = (bool)Config::get('sync.progress', false);
         if (true === $pEnabled && true === $entity->hasPlayProgress() && !$entity->isWatched()) {
-            if (null !== ($newEntity = $this->mapper->get($entity))) {
-                $logger->notice(r("Scheduling '{title}' for watch progress update via '{backend}' event.", [
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                ]));
+            $logger->notice(r("Scheduling '{title}' for watch progress update via '{backend}' event.", [
+                'backend' => $entity->via,
+                'title' => $entity->getName(),
+            ]));
 
-                queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $newEntity->id], [
-                    'unique' => true,
-                    EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
-                        'type' => $newEntity->type,
-                        'backend' => $newEntity->via,
-                        'id' => ag($newEntity->getMetadata($newEntity->via), iState::COLUMN_ID, '??'),
-                    ]),
-                ]);
-            }
+            queueEvent(ProcessProgressEvent::NAME, $entity->getAll(), [
+                'unique' => true,
+                EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
+                    'type' => $entity->type,
+                    'backend' => $entity->via,
+                    'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                ]),
+            ]);
         }
 
         $handler->close();

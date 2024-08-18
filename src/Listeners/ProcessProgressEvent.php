@@ -45,11 +45,25 @@ final readonly class ProcessProgressEvent
         $e->stopPropagation();
 
         $options = $e->getOptions();
+        $entity = Container::get(iState::class)::fromArray($e->getData());
 
-        if (null === ($item = $this->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item with id '{id}' not found.", [
-                'id' => ag($e->getData(), 'id', $e->getReference() ?? 'Unknown ID.')
+        if (null === ($item = $this->db->get($entity))) {
+            $writer(Level::Error, "Item '{title}' Is not referenced locally yet.", ['title' => $entity->getName()]);
+            return $e;
+        }
+
+        if ($item->isWatched() || $entity->isWatched()) {
+            $writer(Level::Info, "Item '{id}: {title}' is marked as watched. Not updating watch process.", [
+                'id' => $item->id,
+                'title' => $item->getName()
             ]);
+            return $e;
+        }
+
+        $item = $item->apply($entity);
+
+        if (!$item->hasPlayProgress()) {
+            $writer(Level::Notice, "Item '{title}' has no watch progress to export.", ['title' => $item->title]);
             return $e;
         }
 
