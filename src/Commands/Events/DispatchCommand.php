@@ -22,7 +22,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class DispatchCommand extends Command
 {
-    public const string TASK_NAME = 'Dispatch';
+    public const string TASK_NAME = 'dispatch';
 
     public const string ROUTE = 'events:dispatch';
 

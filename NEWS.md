@@ -1,5 +1,45 @@
 # Old Updates
 
+### 2024-08-10
+
+I have recently added new experimental feature, to play your content directly from the WebUI. This feature is still in
+alpha, and missing a lot of features. But it's a start. Right now it does auto transcode on the fly to play any content in the browser.
+
+The feature requires that you mount your media directories to the `WatchState` container similar to the `File integrity` feature. I have plans to expand
+the feature to support more controls, however, right now it's only support basic subtitles streams and default audio stream or first audio stream.
+
+The transcoder works by converting the media on the fly to `HLS` segments, and the subtitles are selectable via the player ui which are also converted to `vtt` format.
+
+Expects bugs and issues, as the feature is still in alpha. But I would love to hear your feedback. You can play the media by visiting
+the history page of the item you will see red play button on top right corner of the page. If the items has a play button, then you correctly mounted
+the media directories. otherwise, the button be disabled with tooltip of `Media is inaccessible`.
+
+The feature is not meant to replace your backend media player, the purpose of this feature is to quickly check the media without leaving the WebUI.
+
+### 2024-08-01
+
+We recently enabled listening on tls connections via `8443` which can be controlled by `HTTPS_PORT` environment variable.
+Before today, we simply only exposed the port via the `Dockerfile`, but we weren't listening for connections on it.
+
+However, please keep in mind that the certificate is self-signed, and you might get a warning from your browser. You can
+either accept the warning or add the certificate to your trusted certificates. We strongly recommend using a reverse proxy.
+instead of relying on self-signed certificates.
+
+### 2024-07-22
+
+We have recently added a new WebUI feature, `File integrity`, this feature will help you to check if your media backends
+are reporting files that are not available on the disk. This feature is still in alpha, and we are working on improving
+it.
+
+This feature `REQUIRES` that you mount your media directories to the `WatchState` container preferably as readonly. There is plans to add
+a path replacement feature to allow you change the pathing, but it's not implemented yet.
+
+This feature will work on both local and remote cloud storages provided they are mounted into the container. We also may recommend not to
+use this feature depending on how your cloud storage provider treats file stat calls. As it might lead to unnecessary money spending. and of course
+it will be slower.
+
+For more information about how we cache the stat calls, please refer to the [FAQ](FAQ.md#How-does-the-file-integrity-feature-works).
+
 ### 2024-07-06
 
 Recently we have introduced a new feature that allows you to use Jellyfin and Emby OAuth access tokens for syncing

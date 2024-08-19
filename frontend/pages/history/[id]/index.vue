@@ -429,7 +429,14 @@
           </span>
         </span>
         <div v-if="showRawData" class="mt-2">
-          <code class="is-block is-pre-wrap">{{ JSON.stringify(data, null, 2) }}</code>
+          <code class="is-block is-pre-wrap">{{
+              JSON.stringify(Object.keys(data)
+                  .filter(key => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
+                  .reduce((obj, key) => {
+                    obj[key] = data[key];
+                    return obj;
+                  }, {}), null, 2)
+            }}</code>
         </div>
       </div>
 

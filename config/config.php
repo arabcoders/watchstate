@@ -9,7 +9,6 @@ use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
-use App\Commands\State\PushCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
@@ -75,7 +74,10 @@ return (function () {
             'header' => (string)env('WS_TRUST_HEADER', 'X-Forwarded-For'),
         ],
         'sync' => [
-            'progress' => (bool)env('WS_SYNC_PROGRESS', false),
+            'progress' => (bool)env('WS_SYNC_PROGRESS', (bool)env('WS_CRON_PROGRESS', false)),
+        ],
+        'push' => [
+            'enabled' => (bool)env('WS_PUSH_ENABLED', (bool)env('WS_CRON_PUSH', false)),
         ],
     ];
 
@@ -265,14 +267,6 @@ return (function () {
                 'enabled' => (bool)env('WS_CRON_EXPORT', false),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'), '30 */1 * * *'),
                 'args' => env('WS_CRON_EXPORT_ARGS', '-v'),
-            ],
-            PushCommand::TASK_NAME => [
-                'command' => PushCommand::ROUTE,
-                'name' => PushCommand::TASK_NAME,
-                'info' => 'Send queued events to backends.',
-                'enabled' => (bool)env('WS_CRON_PUSH', true),
-                'timer' => $checkTaskTimer((string)env('WS_CRON_PUSH_AT', '*/10 * * * *'), '*/10 * * * *'),
-                'args' => env('WS_CRON_PUSH_ARGS', '-v'),
             ],
             BackupCommand::TASK_NAME => [
                 'command' => BackupCommand::ROUTE,

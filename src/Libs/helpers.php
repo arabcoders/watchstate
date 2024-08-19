@@ -27,6 +27,7 @@ use App\Libs\Response;
 use App\Libs\Router;
 use App\Libs\Stream;
 use App\Libs\Uri;
+use App\Listeners\ProcessPushEvent;
 use App\Model\Events\Event as EventInfo;
 use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
@@ -536,47 +537,48 @@ if (!function_exists('httpClientChunks')) {
 
 if (!function_exists('queuePush')) {
     /**
-     * Pushes the entity to the queue.
-     *
-     * This method adds the entity to the queue for further processing.
+     * Add push event to the events queue.
      *
      * @param iState $entity The entity to push to the queue.
-     * @param bool $remove (optional) Whether to remove the entity from the queue if it already exists (default is false).
+     * @param bool $remove Whether to remove the event from the queue if it's in pending state. Default is false.
      */
     function queuePush(iState $entity, bool $remove = false): void
     {
-        if (!$remove && !$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+        $logger = Container::get(iLogger::class);
+
+        if (false === (bool)Config::get('push.enabled', false)) {
+            $logger->error("Push is disabled. Unable to push '{via}: {entity}'.", [
+                'via' => $entity->via,
+                'entity' => $entity->getName()
+            ]);
             return;
         }
 
-        try {
-            $cache = Container::get(iCache::class);
-
-            $list = $cache->get('queue', []);
-
-            if (true === $remove && array_key_exists($entity->id, $list)) {
-                unset($list[$entity->id]);
-            } else {
-                $list[$entity->id] = ['id' => $entity->id];
-            }
-
-            $cache->set('queue', $list, new DateInterval('P7D'));
-        } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-            Container::get(iLogger::class)->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during saving [{backend} - {title}} into queue. Error [{error.message} @ {error.file}:{error.line}].',
-                context: [
-                    'backend' => $entity->via,
-                    'title' => $entity->getName(),
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
-                    'trace' => $e->getTrace(),
-                ],
-            );
+        if (!$entity->id) {
+            $logger->error("Unable to push event '{via}: {entity}'. It has no local id yet.", [
+                'via' => $entity->via,
+                'entity' => $entity->getName()
+            ]);
+            return;
         }
+
+        if (true === $remove) {
+            Container::get(EventsRepository::class)->removeByReference(r('push://{id}', ['id' => $entity->id]));
+            return;
+        }
+
+        if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
+            $logger->error("Unable to push '{id}' event '{via}: {entity}'. It has no GUIDs.", [
+                'id' => $entity->id,
+                'via' => $entity->via,
+                'entity' => $entity->getName()
+            ]);
+            return;
+        }
+
+        queueEvent(ProcessPushEvent::NAME, [iState::COLUMN_ID => $entity->id], [
+            EventsTable::COLUMN_REFERENCE => r('push://{id}', ['id' => $entity->id]),
+        ]);
     }
 }
 
