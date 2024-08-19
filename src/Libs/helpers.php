@@ -547,7 +547,7 @@ if (!function_exists('queuePush')) {
         $logger = Container::get(iLogger::class);
 
         if (false === (bool)Config::get('push.enabled', false)) {
-            $logger->error("Push is disabled. Unable to push '{via}: {entity}'.", [
+            $logger->debug("Push is disabled. Unable to push '{via}: {entity}'.", [
                 'via' => $entity->via,
                 'entity' => $entity->getName()
             ]);

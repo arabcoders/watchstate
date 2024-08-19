@@ -145,7 +145,7 @@ final readonly class ProcessPushEvent
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
-            'state' => $item->isWatched() ? 'watched' : 'unwatched',
+            'state' => $item->isWatched() ? 'played' : 'unplayed',
         ]);
 
         foreach ($this->queue->getQueue() as $response) {
