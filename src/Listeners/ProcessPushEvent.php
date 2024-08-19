@@ -141,6 +141,13 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
+        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' '{state}' push event.", [
+            'id' => $item->id,
+            'via' => $item->via,
+            'title' => $item->getName(),
+            'state' => $item->isWatched() ? 'watched' : 'unwatched',
+        ]);
+
         foreach ($this->queue->getQueue() as $response) {
             $context = ag($response->getInfo('user_data'), 'context', []);
 
@@ -154,7 +161,7 @@ final readonly class ProcessPushEvent
                     continue;
                 }
 
-                $writer(Level::Notice, "Marked '{backend}: {item.title}' as '{play_state}'.", $context);
+                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch state to '{play_state}'.", $context);
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,

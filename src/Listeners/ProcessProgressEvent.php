@@ -178,6 +178,15 @@ final readonly class ProcessProgressEvent
             return $e;
         }
 
+        $progress = formatDuration($item->getPlayProgress());
+
+        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' watch progress '{progress}' event.", [
+            'id' => $item->id,
+            'via' => $item->via,
+            'title' => $item->getName(),
+            'progress' => $progress,
+        ]);
+
         foreach ($this->queue->getQueue() as $response) {
             $context = ag($response->getInfo('user_data'), 'context', []);
 
@@ -204,8 +213,9 @@ final readonly class ProcessProgressEvent
                     continue;
                 }
 
-                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch progress.", [
+                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch progress to '{progress}'.", [
                     ...$context,
+                    'progress' => $progress,
                     'status_code' => $response->getStatusCode(),
                 ]);
             } catch (Throwable $e) {
