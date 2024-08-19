@@ -50,6 +50,23 @@ final class EventsRepository
     }
 
     /**
+     * Will return the last event by reference.
+     *
+     * @param string|int $reference reference id to remove.
+     * @param array $criteria Filter criteria. By default, it will only remove pending events.
+     */
+    public function removeByReference(string|int $reference, array $criteria = []): bool
+    {
+        if (empty($criteria)) {
+            $criteria[EntityTable::COLUMN_STATUS] = EventStatus::PENDING->value;
+        }
+
+        $criteria[EntityTable::COLUMN_REFERENCE] = $reference;
+
+        return $this->_remove($criteria);
+    }
+
+    /**
      * @param array $criteria Criteria to search by.
      * @param array $cols Columns to select.
      * @return array<EntityItem> empty array if no match found.

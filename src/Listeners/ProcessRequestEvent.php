@@ -41,7 +41,7 @@ final readonly class ProcessRequestEvent
             $lastSync = makeDate($lastSync);
         }
 
-        $message = r('SYSTEM: Processing [{backend}] [{title}] {tainted} request.', [
+        $message = r("Processing '{backend}: {title}' {tainted} request.", [
             'backend' => $entity->via,
             'title' => $entity->getName(),
             'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),

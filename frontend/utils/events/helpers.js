@@ -3,7 +3,7 @@ const makeName = id => id.split('-').slice(0)[0]
 const getStatusClass = status => {
     switch (status) {
         case 0:
-            return 'is-light'
+            return 'is-light has-text-dark'
         case 1:
             return 'is-warning'
         case 2:
@@ -13,7 +13,7 @@ const getStatusClass = status => {
         case 4:
             return 'is-danger is-light'
         default:
-            return 'is-light'
+            return 'is-light has-text-dark'
     }
 }
 

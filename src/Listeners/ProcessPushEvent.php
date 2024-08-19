@@ -10,8 +10,6 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
-use App\Libs\Exceptions\Backends\NotImplementedException;
-use App\Libs\Exceptions\Backends\UnexpectedVersionException;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Model\Events\EventListener;
@@ -20,9 +18,9 @@ use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 #[EventListener(self::NAME)]
-final readonly class ProcessProgressEvent
+final readonly class ProcessPushEvent
 {
-    public const string NAME = 'on_progress';
+    public const string NAME = 'on_push';
 
     /**
      * Class constructor.
@@ -44,28 +42,15 @@ final readonly class ProcessProgressEvent
 
         $e->stopPropagation();
 
-        $options = $e->getOptions();
-
         if (null === ($item = $this->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{id}' Is not referenced locally yet.", ['id' => ag($e->getData(), 'id', '?')]);
-            return $e;
-        }
-
-        if ($item->isWatched()) {
-            $writer(Level::Info, "Item '{id}: {title}' is marked as watched. Not updating watch process.", [
-                'id' => $item->id,
-                'title' => $item->getName()
+            $writer(Level::Error, "Item '{id}' is not found or has been deleted.", [
+                'id' => ag($e->getData(), 'id', '?')
             ]);
             return $e;
         }
 
-        if (false === $item->hasPlayProgress()) {
-            $writer(Level::Info, "Item '{title}' has no watch progress to export.", ['title' => $item->title]);
-            return $e;
-        }
-
+        $options = $e->getOptions();
         $list = [];
-
         $supported = Config::get('supported', []);
 
         foreach ((array)Config::get('servers', []) as $backendName => $backend) {
@@ -125,32 +110,11 @@ final readonly class ProcessProgressEvent
 
                 $backend['options'] = $opts;
                 $backend['class'] = getBackend(name: $name, config: $backend);
-                $backend['class']->progress(entities: [$item->id => $item], queue: $this->queue);
-            } catch (UnexpectedVersionException|NotImplementedException $e) {
-                $writer(
-                    Level::Notice,
-                    "This feature is not available for '{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
-                    [
-                        'backend' => $name,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
-                        ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ]
-                );
+                $backend['class']->push(entities: [$item->id => $item], queue: $this->queue);
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{backend}' request to sync progress. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{backend}' push events. '{error.message}' at '{error.file}:{error.line}'.",
                     [
                         'backend' => $name,
                         'error' => [
@@ -170,58 +134,38 @@ final readonly class ProcessProgressEvent
                 );
             }
         }
-
         unset($backend);
 
         if (count($this->queue) < 1) {
-            $writer(Level::Notice, "Backend handlers didn't queue items to be updated.");
+            $writer(Level::Notice, 'SYSTEM: No play state changes detected.');
             return $e;
         }
 
-        $progress = formatDuration($item->getPlayProgress());
-
-        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' watch progress '{progress}' event.", [
+        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' '{state}' push event.", [
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
-            'progress' => $progress,
+            'state' => $item->isWatched() ? 'played' : 'unplayed',
         ]);
 
         foreach ($this->queue->getQueue() as $response) {
             $context = ag($response->getInfo('user_data'), 'context', []);
 
             try {
-                if (ag($options, 'trace')) {
-                    $writer(Level::Debug, "Processing '{backend}: {item.title}' response.", [
-                        'url' => ag($context, 'remote.url', '??'),
-                        'status_code' => $response->getStatusCode(),
-                        'headers' => $response->getHeaders(false),
-                        'response' => $response->getContent(false),
-                        ...$context
-                    ]);
-                }
-
-                if (!in_array($response->getStatusCode(), [Status::OK->value, Status::NO_CONTENT->value])) {
+                if (Status::OK !== Status::from($response->getStatusCode())) {
                     $writer(
                         Level::Error,
-                        "Request to change '{backend}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
-                        [
-                            'status_code' => $response->getStatusCode(),
-                            ...$context
-                        ]
+                        "Request to change '{backend}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                        $context
                     );
                     continue;
                 }
 
-                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch progress to '{progress}'.", [
-                    ...$context,
-                    'progress' => $progress,
-                    'status_code' => $response->getStatusCode(),
-                ]);
+                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch state to '{play_state}'.", $context);
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{backend}' request to change watch progress of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                     [
                         'error' => [
                             'kind' => $e::class,
@@ -229,6 +173,7 @@ final readonly class ProcessProgressEvent
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
+                        ...$context,
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
@@ -236,12 +181,10 @@ final readonly class ProcessProgressEvent
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
-                        ...$context,
                     ]
                 );
             }
         }
-
         return $e;
     }
 }

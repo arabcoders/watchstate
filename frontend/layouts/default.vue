@@ -83,11 +83,6 @@
                 <span>Events</span>
               </NuxtLink>
 
-              <NuxtLink class="navbar-item" to="/old_events" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-list"></i></span>
-                <span>Old Events</span>
-              </NuxtLink>
-
               <NuxtLink class="navbar-item" to="/ignore" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-ban"></i></span>
                 <span>Ignore List</span>

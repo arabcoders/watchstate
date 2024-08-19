@@ -39,13 +39,14 @@
       </div>
     </div>
 
-    <div class="columns is-multiline" v-if="items.length < 1">
+    <div class="columns is-multiline" v-if="filteredRows.length < 1">
       <div class="column is-12">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
                  icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
                  icon="fas fa-exclamation-triangle">
           <p>No items found.</p>
+          <p v-if="query">Search for <strong>{{ query }}</strong> returned no results.</p>
         </Message>
       </div>
     </div>
@@ -79,7 +80,7 @@
             </div>
             <span class="card-footer-item">
               <span class="icon"><i class="fas fa-calendar"></i></span>
-              <time class="has-tooltip" v-tooltip="`Created at: ${moment(item.created_at).format(tooltip_dateformat)}`">
+              <time class="has-tooltip" v-tooltip="`Created at: ${moment(item.created_at)}`">
                 {{ moment(item.created_at).fromNow() }}
               </time>
             </span>
@@ -87,8 +88,7 @@
               <span v-if="!item.updated_at" class="icon"><i class="fas fa-spinner fa-spin"></i></span>
               <template v-else>
                 <span class="icon"><i class="fas fa-calendar-alt"></i></span>
-                <time class="has-tooltip"
-                      v-tooltip="`Updated at: ${moment(item.updated_at).format(tooltip_dateformat)}`">
+                <time class="has-tooltip" v-tooltip="`Updated at: ${moment(item.updated_at)}`">
                   {{ moment(item.updated_at).fromNow() }}
                 </time>
               </template>
@@ -173,7 +173,7 @@ const filteredRows = computed(() => {
 
   return items.value.filter(i => {
     return Object.keys(i).some(k => {
-      if (typeof i[k] === 'object') {
+      if (typeof i[k] === 'object' && null !== i[k]) {
         return Object.values(i[k]).some(v => typeof v === 'string' ? v.toLowerCase().includes(toTower) : false)
       }
       return typeof i[k] === 'string' ? i[k].toLowerCase().includes(toTower) : false

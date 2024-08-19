@@ -166,6 +166,11 @@ return (function () {
             'description' => 'Enable watch progress sync.',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_PUSH_ENABLED',
+            'description' => 'Enable Push play state to backends. This feature depends on webhooks being enabled.',
+            'type' => 'bool',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {
@@ -191,7 +196,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'export', 'push', 'backup', 'prune', 'indexes'];
+    $tasks = ['import', 'export', 'backup', 'prune', 'indexes'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',

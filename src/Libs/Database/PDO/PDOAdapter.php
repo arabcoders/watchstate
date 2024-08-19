@@ -609,14 +609,23 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
+     * @noinspection SqlWithoutWhere
      */
     public function reset(): bool
     {
-        $this->pdo->exec('DELETE FROM `state` WHERE `id` > 0');
+        $this->pdo->beginTransaction();
 
-        if ('sqlite' === $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME)) {
-            $this->pdo->exec('DELETE FROM sqlite_sequence WHERE name = "state"');
+        $tables = $this->pdo->query(
+            'SELECT name FROM sqlite_master WHERE "type" = "table" AND "name" NOT LIKE "sqlite_%"'
+        );
+
+        foreach ($tables->fetchAll(PDO::FETCH_COLUMN) as $table) {
+            $this->pdo->exec('DELETE FROM "' . $table . '"');
+            $this->pdo->exec('DELETE FROM sqlite_sequence WHERE "name" = "' . $table . '"');
         }
+
+        $this->pdo->commit();
+        $this->pdo->exec('VACUUM');
 
         return true;
     }

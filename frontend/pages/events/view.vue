@@ -46,18 +46,22 @@
       <div class="column is-12">
         <div class="notification">
           <p class="title is-5">
-            Event <span class="tag is-info">{{ item.event }}</span> was created at
+            Event <span class="tag is-info">{{ item.event }}</span>
+            <template v-if="item.reference">
+              with reference <span class="tag is-info is-light">{{ item.reference }}</span>
+            </template>
+            was created
             <span class="tag is-warning">
               <time class="has-tooltip" v-tooltip="moment(item.created_at).format(tooltip_dateformat)">
                 {{ moment(item.created_at).fromNow() }}
               </time>
-            </span>, and last updated at
+            </span>, and last updated
             <span class="tag is-danger">
               <span v-if="!item.updated_at">not started</span>
               <time v-else class="has-tooltip" v-tooltip="moment(item.updated_at).format(tooltip_dateformat)">
                 {{ moment(item.updated_at).fromNow() }}
               </time>
-            </span>.
+            </span>,
             with status of <span class="tag" :class="getStatusClass(item.status)">{{ item.status }}:
             {{ item.status_name }}</span>.
           </p>
