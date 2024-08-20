@@ -20,9 +20,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class IndexCommand extends Command
 {
-    public const ROUTE = 'system:index';
+    public const string ROUTE = 'system:index';
 
-    public const TASK_NAME = 'indexes';
+    public const string TASK_NAME = 'indexes';
 
     /**
      * Class constructor.

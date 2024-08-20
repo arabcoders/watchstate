@@ -2,24 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\API\Tasks;
+namespace App\API;
 
 use App\Commands\System\TasksCommand;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Enums\Http\Status;
+use App\Model\Events\Event;
+use App\Model\Events\EventsRepository;
+use App\Model\Events\EventsTable;
+use App\Model\Events\EventStatus;
 use Cron\CronExpression;
-use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 
-final class Index
+final class Tasks
 {
     public const string URL = '%{api.prefix}/tasks';
 
-    public function __construct(private readonly iCache $cache)
+    public function __construct(private EventsRepository $eventsRepo)
     {
     }
 
@@ -29,22 +31,28 @@ final class Index
     #[Get(self::URL . '[/]', name: 'tasks.index')]
     public function tasksIndex(): iResponse
     {
-        $queuedTasks = $this->cache->get('queued_tasks', []);
-        $response = [
-            'tasks' => [],
-            'queued' => $queuedTasks,
-            'status' => isTaskWorkerRunning(),
-        ];
+        $tasks = [];
 
         foreach (TasksCommand::getTasks() as $task) {
             $task = self::formatTask($task);
-            $task['queued'] = in_array(ag($task, 'name'), $queuedTasks);
+            if (true === (bool)ag($task, 'hide', false)) {
+                continue;
+            }
 
-
-            $response['tasks'][] = $task;
+            $task['queued'] = null !== $this->isQueued(ag($task, 'name'));
+            $tasks[] = $task;
         }
 
-        return api_response(Status::OK, $response);
+        $queued = [];
+        foreach (array_filter($tasks, fn($item) => $item['queued'] === true) as $item) {
+            $queued[] = $item['name'];
+        }
+
+        return api_response(Status::OK, [
+            'tasks' => $tasks,
+            'queued' => $queued,
+            'status' => isTaskWorkerRunning(),
+        ]);
     }
 
     /**
@@ -59,29 +67,41 @@ final class Index
             return api_error('Task not found.', Status::NOT_FOUND);
         }
 
-        $queuedTasks = $this->cache->get('queued_tasks', []);
+        $queuedTask = $this->isQueued(ag($task, 'name'));
 
         if ('POST' === $request->getMethod()) {
-            $queuedTasks[] = $id;
-            $this->cache->set('queued_tasks', $queuedTasks, new DateInterval('P3D'));
-            return api_response(Status::ACCEPTED, ['queue' => $queuedTasks]);
+            if (null !== $queuedTask) {
+                return api_error('Task already queued.', Status::CONFLICT);
+            }
+
+            $event = queueEvent(TasksCommand::NAME, ['name' => $id], [
+                EventsTable::COLUMN_REFERENCE => r('task://{name}', ['name' => $id]),
+            ]);
+
+            return api_response(Status::ACCEPTED, $event->getAll());
         }
 
         if ('DELETE' === $request->getMethod()) {
-            $queuedTasks = array_filter($queuedTasks, fn($v) => $v !== $id);
-            $this->cache->set('queued_tasks', $queuedTasks, new DateInterval('P3D'));
-            return api_response(Status::OK, ['queue' => $queuedTasks]);
+            if (null === $queuedTask) {
+                return api_error('Task not queued.', Status::NOT_FOUND);
+            }
+
+            if ($queuedTask->status === EventStatus::RUNNING) {
+                return api_error('Cannot remove task in running state.', Status::BAD_REQUEST);
+            }
+
+            $queuedTask->status = EventStatus::CANCELLED;
+            $this->eventsRepo->save($queuedTask);
+
+            return api_response(Status::OK);
         }
 
         return api_response(Status::OK, [
             'task' => $id,
-            'is_queued' => in_array($id, $queuedTasks),
+            'is_queued' => null !== $queuedTask,
         ]);
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     #[Get(self::URL . '/{id:[a-zA-Z0-9_-]+}[/]', name: 'tasks.task.view')]
     public function taskView(string $id): iResponse
     {
@@ -91,10 +111,8 @@ final class Index
             return api_error('Task not found.', Status::NOT_FOUND);
         }
 
-        $queuedTasks = $this->cache->get('queued_tasks', []);
-
-        $data = Index::formatTask($task);
-        $data['queued'] = in_array(ag($task, 'name'), $queuedTasks);
+        $data = Tasks::formatTask($task);
+        $data['queued'] = null !== $this->isQueued(ag($task, 'name'));
 
         return api_response(Status::OK, $data);
     }
@@ -115,6 +133,7 @@ final class Index
             'prev_run' => null,
             'command' => ag($task, 'command'),
             'args' => ag($task, 'args'),
+            'hide' => (bool)ag($task, 'hide', false),
         ];
 
         if (!is_string($item['command'])) {
@@ -135,5 +154,12 @@ final class Index
         }
 
         return $item;
+    }
+
+    private function isQueued(string $id): Event|null
+    {
+        return $this->eventsRepo->findByReference(r('task://{name}', ['name' => $id]), [
+            EventsTable::COLUMN_STATUS => EventStatus::PENDING->value
+        ]);
     }
 }

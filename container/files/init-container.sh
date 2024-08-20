@@ -88,6 +88,9 @@ fi
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching tool routes."
 /opt/bin/console system:routes
 
+echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Caching events listeners."
+/opt/bin/console events:cache
+
 echo "[$(date +"%Y-%m-%dT%H:%M:%S%z")] Running database migrations."
 /opt/bin/console system:db:migrations
 

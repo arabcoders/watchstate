@@ -85,7 +85,12 @@
               </time>
             </span>
             <span class="card-footer-item">
-              <span v-if="!item.updated_at" class="icon"><i class="fas fa-spinner fa-spin"></i></span>
+              <template v-if="!item.updated_at">
+                <span v-if="0 === item.status" class="icon">
+                  <i class="fas fa-spinner fa-spin"></i>
+                </span>
+                <span v-else>None</span>
+              </template>
               <template v-else>
                 <span class="icon"><i class="fas fa-calendar-alt"></i></span>
                 <time class="has-tooltip" v-tooltip="`Updated at: ${moment(item.updated_at)}`">

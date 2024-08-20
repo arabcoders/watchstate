@@ -23,6 +23,9 @@ class DataEvent extends Event
 
     public function addLog(string $log): void
     {
+        if (count($this->eventInfo->logs) > 200) {
+            array_shift($this->eventInfo->logs);
+        }
         $this->eventInfo->logs[] = $log;
     }
 

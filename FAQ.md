@@ -913,25 +913,37 @@ is an example of how to do it for debian based systems.
 ```yaml
 services:
     watchstate:
-        image: ghcr.io/arabcoders/watchstate:latest
-        # To change the user/group id associated with the tool change the following line.
-        user: "${UID:-1000}:${GID:-1000}"
-        group_add:
-            - "44" # Add video group to the container.
-            - "110" # Add render group to the container.
         container_name: watchstate
+        image: ghcr.io/arabcoders/watchstate:latest   # The image to use. you can use the latest or dev tag.
+        user: "${UID:-1000}:${GID:-1000}"             # user and group id to run the container under. 
+        group_add:
+            - "44"                                    # Add video group to the container.
+            - "105"                                   # Add render group to the container.
         restart: unless-stopped
         ports:
-            - "8080:8080" # The port which will serve WebUI + API + Webhooks
+            - "8080:8080"                             # The port which will serve WebUI + API + Webhooks
+        devices:
+            - /dev/dri:/dev/dri                       # mount the dri devices to the container.
         volumes:
-            - ./data:/config:rw # mount current directory to container /config directory.
-            - /dev/dri:/dev/dri # mount the dri devices to the container.
-            - /storage/media:/media:ro # mount your media directory to the container.
+            - ./data:/config:rw                       # mount current directory to container /config directory.
+            - /storage/media:/media:ro                # mount your media directory to the container.
 ```
 
-This setup should work for VAAPI encoding in `x86_64` containers, for other architectures you need to adjust the
-`/dev/dri` to match your hardware. There are currently an issue with nvidia h264_nvenc encoding, the alpine build for
-`ffmpeg`doesn't include the codec.
+This setup should work for VAAPI encoding in `x86_64` containers, There are currently an issue with nvidia h264_nvenc
+encoding, the alpine build for`ffmpeg` doesn't include the codec. i am looking for a way include the codec without
+ballooning the image size by 600MB+. If you have a solution please let me know.
+
+Please know that your `video`, `render` group id might be different then mine, you can run the follow command in docker
+host server to get the group ids for both groups.
+
+```bash
+$ cat /etc/group | grep -E 'render|video'
+
+video:x:44:your_docker_username
+render:x:105:your_docker_username
+```
+
+In my docker host the group id for `video` is `44` and for `render` is `105`. change what needed in the `compose.yaml`
+file to match your setup.
 
 Note: the tip about adding the group_add came from the user `binarypancakes` in discord.
-
