@@ -87,7 +87,6 @@
             <span class="card-footer-item">
               <template v-if="!item.updated_at">
                 <span v-if="0 === item.status" class="icon">
-                  {{ item.status }}
                   <i class="fas fa-spinner fa-spin"></i>
                 </span>
                 <span v-else>None</span>

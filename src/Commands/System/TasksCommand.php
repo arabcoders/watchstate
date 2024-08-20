@@ -12,6 +12,7 @@ use App\Libs\Events\DataEvent;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Stream;
 use App\Model\Events\EventListener;
+use App\Model\Events\EventsRepository;
 use Closure;
 use Cron\CronExpression;
 use Exception;
@@ -45,7 +46,7 @@ final class TasksCommand extends Command
     /**
      * Class Constructor.
      */
-    public function __construct()
+    public function __construct(private EventsRepository $eventsRepo)
     {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -188,7 +189,23 @@ final class TasksCommand extends Command
             $input->setOption('save-log', true);
             $input->setOption('live', false);
 
-            $this->writer = fn($msg) => $event->addLog($msg);
+            $this->writer = function ($msg) use (&$event) {
+                static $lastSave = null;
+
+                $timeNow = hrtime(as_number: true);
+
+                if (null === $lastSave) {
+                    $lastSave = $timeNow;
+                }
+
+                $event->addLog($msg);
+
+                if ($timeNow > $lastSave) {
+                    $this->eventsRepo->save($event->getEvent());
+                    $lastSave = $timeNow + (10 * 1_000_000_000);
+                }
+            };
+
             $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
             $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
             $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [
