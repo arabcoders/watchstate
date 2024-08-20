@@ -142,7 +142,7 @@ final class DispatchCommand extends Command
             $event->updated_at = (string)makeDate();
             $this->repo->save($event);
 
-            $this->logger->error($errorLog);
+            $this->logger->error($errorLog, ['trace' => $e->getTrace()]);
         }
     }
 }

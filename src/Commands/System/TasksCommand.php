@@ -7,14 +7,18 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Container;
+use App\Libs\Events\DataEvent;
 use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Stream;
+use App\Model\Events\EventListener;
+use Closure;
 use Cron\CronExpression;
 use Exception;
-use Psr\SimpleCache\CacheInterface as iCache;
 use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
@@ -30,15 +34,18 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 final class TasksCommand extends Command
 {
+    public const string NAME = 'run_task';
     public const string ROUTE = 'system:tasks';
 
     private array $logs = [];
     private array $taskOutput = [];
 
+    private Closure|null $writer = null;
+
     /**
      * Class Constructor.
      */
-    public function __construct(private readonly iCache $cache)
+    public function __construct()
     {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
@@ -134,7 +141,7 @@ final class TasksCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        if ($input->getOption('run')) {
+        if ($input->hasOption('run') && $input->getOption('run')) {
             return $this->runTasks($input, $output);
         }
 
@@ -158,6 +165,43 @@ final class TasksCommand extends Command
         return self::SUCCESS;
     }
 
+    #[EventListener(self::NAME)]
+    public function runEventTask(DataEvent $event): DataEvent
+    {
+        $event->stopPropagation();
+
+        if (null === ($name = ag($event->getData(), 'name'))) {
+            $event->addLog(r('No task name was specified.'));
+            return $event;
+        }
+
+        $task = self::getTasks($name);
+        if (empty($task)) {
+            $event->addLog(r("Invalid task '{name}'. There are no task with that name registered.", ['name' => $name]));
+            return $event;
+        }
+
+        try {
+            $input = new ArrayInput([], $this->getDefinition());
+            $input->setOption('run', null);
+            $input->setOption('task', null);
+            $input->setOption('save-log', true);
+            $input->setOption('live', false);
+
+            $this->writer = fn($msg) => $event->addLog($msg);
+            $event->addLog(r("Task: Run '{command}'.", ['command' => ag($task, 'command')]));
+            $exitCode = $this->runTask($task, $input, Container::get(iOutput::class));
+            $event->addLog(r("Task: End '{command}' (Exit Code: {code})", [
+                'command' => ag($task, 'command'),
+                'code' => $exitCode,
+            ]));
+        } finally {
+            $this->writer = null;
+        }
+
+        return $event;
+    }
+
     /**
      * Runs the tasks.
      *
@@ -176,31 +220,13 @@ final class TasksCommand extends Command
             $task = strtolower($task);
 
             if (false === ag_exists($tasks, $task)) {
-                $output->writeln(
-                    r('<error>There are no task named [{task}].</error>', [
-                        'task' => $task
-                    ])
-                );
-
+                $output->writeln(r('<error>There are no task named [{task}].</error>', [
+                    'task' => $task
+                ]));
                 return self::FAILURE;
             }
 
             $run[] = ag($tasks, $task);
-        } elseif (null !== ($queued = $this->cache->get('queued_tasks', null))) {
-            foreach ($queued as $taskName) {
-                $task = strtolower($taskName);
-                if (false === ag_exists($tasks, $task)) {
-                    $output->writeln(
-                        r('<error>There are no task named [{task}].</error>', [
-                            'task' => $task
-                        ])
-                    );
-                    continue;
-                }
-
-                $run[] = ag($tasks, $task);
-            }
-            $this->cache->delete('queued_tasks');
         } else {
             foreach ($tasks as $task) {
                 if (false === (bool)ag($task, 'enabled')) {
@@ -208,7 +234,6 @@ final class TasksCommand extends Command
                 }
 
                 assert($task['timer'] instanceof CronExpression);
-
                 if ($task['timer']->isDue('now')) {
                     $run[] = $task;
                 }
@@ -216,80 +241,13 @@ final class TasksCommand extends Command
         }
 
         if (count($run) < 1) {
-            $output->writeln(
-                r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
-                    'datetime' => makeDate(),
-                ]),
-                iOutput::VERBOSITY_VERBOSE
-            );
+            $output->writeln(r('<info>[{datetime}] No task scheduled to run at this time.</info>', [
+                'datetime' => makeDate(),
+            ]), iOutput::VERBOSITY_VERBOSE);
         }
 
         foreach ($run as $task) {
-            $cmd = [];
-
-            $cmd[] = ROOT_PATH . '/bin/console';
-            $cmd[] = ag($task, 'command');
-
-            if (null !== ($args = ag($task, 'args'))) {
-                $cmd[] = $args;
-            }
-
-            $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
-
-            $started = makeDate()->format('D, H:i:s T');
-
-            $process->start(function ($std, $out) use ($input, $output) {
-                assert($output instanceof ConsoleOutputInterface);
-
-                if (empty($out)) {
-                    return;
-                }
-
-                $this->taskOutput[] = trim($out);
-
-                if (!$input->getOption('live')) {
-                    return;
-                }
-
-                ('err' === $std ? $output->getErrorOutput() : $output)->writeln(trim($out));
-            });
-
-            if ($process->isRunning()) {
-                $process->wait();
-            }
-
-            if (count($this->taskOutput) < 1) {
-                continue;
-            }
-
-            $ended = makeDate()->format('D, H:i:s T');
-
-            $this->write('--------------------------', $input, $output);
-            $this->write(
-                r('Task: {name} (Started: {startDate})', [
-                    'name' => $task['name'],
-                    'startDate' => $started,
-                ]),
-                $input,
-                $output
-            );
-            $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-            $this->write(
-                r('Exit Code: {code} (Ended: {endDate})', [
-                    'code' => $process->getExitCode(),
-                    'endDate' => $ended,
-                ]),
-                $input,
-                $output
-            );
-            $this->write('--------------------------', $input, $output);
-            $this->write(' ' . PHP_EOL, $input, $output);
-
-            foreach ($this->taskOutput as $line) {
-                $this->write($line, $input, $output);
-            }
-
-            $this->taskOutput = [];
+            $this->runTask($task, $input, $output);
         }
 
         if ($input->getOption('save-log') && count($this->logs) >= 1) {
@@ -298,7 +256,7 @@ final class TasksCommand extends Command
                 $stream->write(preg_replace('#\R+#', PHP_EOL, implode(PHP_EOL, $this->logs)) . PHP_EOL . PHP_EOL);
                 $stream->close();
             } catch (Throwable $e) {
-                $this->write(r('<error>Failed to open log file [{file}]. Error [{message}].</error>', [
+                $this->write(r("<error>Failed to open/write to logfile '{file}'. Error '{message}'.</error>", [
                     'file' => Config::get('tasks.logfile'),
                     'message' => $e->getMessage(),
                 ]), $input, $output);
@@ -308,6 +266,77 @@ final class TasksCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function runTask(array $task, iInput $input, iOutput $output): int
+    {
+        $cmd = [];
+
+        $cmd[] = ROOT_PATH . '/bin/console';
+        $cmd[] = ag($task, 'command');
+
+        if (null !== ($args = ag($task, 'args'))) {
+            $cmd[] = $args;
+        }
+
+        $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
+
+        $started = makeDate()->format('D, H:i:s T');
+
+        $process->start(function ($std, $out) use ($input, $output) {
+            assert($output instanceof ConsoleOutputInterface);
+
+            if (empty($out)) {
+                return;
+            }
+
+            $this->taskOutput[] = trim($out);
+
+            if (!$input->hasOption('live') && $input->getOption('live')) {
+                return;
+            }
+
+            ('err' === $std ? $output->getErrorOutput() : $output)->writeln(trim($out));
+        });
+
+        if ($process->isRunning()) {
+            $process->wait();
+        }
+
+        if (count($this->taskOutput) < 1) {
+            return $process->getExitCode();
+        }
+
+        $ended = makeDate()->format('D, H:i:s T');
+
+        $this->write('--------------------------', $input, $output);
+        $this->write(
+            r('Task: {name} (Started: {startDate})', [
+                'name' => $task['name'],
+                'startDate' => $started,
+            ]),
+            $input,
+            $output
+        );
+        $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
+        $this->write(
+            r('Exit Code: {code} (Ended: {endDate})', [
+                'code' => $process->getExitCode(),
+                'endDate' => $ended,
+            ]),
+            $input,
+            $output
+        );
+        $this->write('--------------------------', $input, $output);
+        $this->write(' ' . PHP_EOL, $input, $output);
+
+        foreach ($this->taskOutput as $line) {
+            $this->write($line, $input, $output);
+        }
+
+        $this->taskOutput = [];
+
+        return $process->getExitCode();
     }
 
     /**
@@ -327,7 +356,11 @@ final class TasksCommand extends Command
         assert($output instanceof ConsoleOutput);
         $output->writeln($text, $level);
 
-        if ($input->getOption('save-log')) {
+        if (null !== $this->writer) {
+            ($this->writer)($output->getLastMessage());
+        }
+
+        if ($input->hasOption('save-log') && $input->getOption('save-log')) {
             $this->logs[] = $output->getLastMessage();
         }
     }
@@ -353,6 +386,7 @@ final class TasksCommand extends Command
                 'description' => $task['info'] ?? '',
                 'enabled' => (bool)$task['enabled'],
                 'timer' => $timer,
+                'hide' => (bool)($task['hide'] ?? false),
             ];
 
             try {

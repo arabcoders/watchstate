@@ -63,7 +63,12 @@ final class EventsRepository
 
         $criteria[EntityTable::COLUMN_REFERENCE] = $reference;
 
-        return $this->_remove($criteria);
+        $stmt = $this->db->delete($this->table, $criteria, [
+            'limit' => 1,
+            'orderby' => [EntityTable::COLUMN_CREATED_AT => 'DESC'],
+        ]);
+
+        return $stmt->rowCount() > 0;
     }
 
     /**
@@ -95,10 +100,4 @@ final class EventsRepository
     {
         return $this->_remove($criteria);
     }
-
-    public function removeById(string $id): bool
-    {
-        return $this->_removeById($id, $this->primaryKey);
-    }
-
 }

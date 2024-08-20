@@ -122,7 +122,7 @@
                   <span class="icon"><i class="fas fa-clock" :class="{ 'fa-spin': task.queued }"></i></span>
                   <span>
                     <template v-if="!task.queued">Queue Task</template>
-                    <template v-else>Remove from queue</template>
+                    <template v-else>Cancel Task</template>
                   </span>
                 </span>
               </button>
@@ -239,7 +239,7 @@ const queueTask = async task => {
   try {
     const response = await request(`/tasks/${task.name}/queue`, {method: is_queued ? 'DELETE' : 'POST'})
     if (response.ok) {
-      notification('success', 'Success', `Task '${task.name}' has been ${is_queued ? 'removed from the queue' : 'queued'}.`)
+      notification('success', 'Success', `Task '${task.name}' has been ${is_queued ? 'cancelled' : 'queued'}.`)
       task.queued = !is_queued
       if (task.queued) {
         queued.value.push(task.name)

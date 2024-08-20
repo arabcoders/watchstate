@@ -299,6 +299,7 @@ return (function () {
                 'enabled' => true,
                 'timer' => '* * * * *',
                 'args' => '-v',
+                'hide' => true,
             ],
         ],
     ];
