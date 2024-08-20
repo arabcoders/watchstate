@@ -12,19 +12,19 @@
     "dependencies": {
         "@vueuse/core": "^10.9.0",
         "@vueuse/nuxt": "^10.9.0",
+        "@xterm/addon-fit": "^0.10.0",
+        "@xterm/xterm": "^5.5.0",
         "cronstrue": "^2.49.0",
         "floating-vue": "^5.2.2",
+        "hls.js": "^1.4.14",
         "marked": "^12.0.2",
         "marked-base-url": "^1.1.3",
         "moment": "^2.30.1",
         "nuxt": "^3.11.2",
         "nuxt3-notifications": "^1.2.0",
-        "vue": "^3.4.21",
-        "vue-router": "^4.3.0",
-        "@xterm/addon-fit": "^0.10.0",
-        "@xterm/xterm": "^5.5.0",
         "plyr": "^3.7.8",
-        "hls.js": "^1.4.14"
+        "vue": "^3.4.21",
+        "vue-router": "^4.3.0"
     },
     "devDependencies": {}
 }
