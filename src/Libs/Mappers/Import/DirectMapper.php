@@ -679,6 +679,7 @@ final class DirectMapper implements iImport
                             'database' => $cloned->getAll(),
                             'backend' => $entity->getAll()
                         ],
+                        'trace' => $e->getTrace(),
                     ]
                 );
             }

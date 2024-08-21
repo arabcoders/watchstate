@@ -8,6 +8,7 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Response;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use DateInterval;
 use Psr\Log\LoggerInterface;
@@ -50,7 +51,7 @@ final class GetMetaData
                 $url = $context->backendUrl->withPath('/library/metadata/' . $id)
                     ->withQuery(http_build_query(array_merge_recursive(['includeGuids' => 1], $opts['query'] ?? [])));
 
-                $this->logger->debug('Requesting [{client}: {backend}] item [{id}] metadata.', [
+                $this->logger->debug("{client}: Requesting '{backend}: {id}' item metadata.", [
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'id' => $id,
@@ -67,11 +68,11 @@ final class GetMetaData
                         array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                     );
 
-                    if (200 !== $response->getStatusCode()) {
-                        return new Response(
+                    if (Status::OK !== Status::from($response->getStatusCode())) {
+                        $response = new Response(
                             status: false,
                             error: new Error(
-                                message: 'Request for [{backend}] item [{id}] returned with unexpected [{status_code}] status code.',
+                                message: "{client} Request for '{backend}: {id}' item returned with unexpected '{status_code}' status code.",
                                 context: [
                                     'id' => $id,
                                     'client' => $context->clientName,
@@ -80,6 +81,8 @@ final class GetMetaData
                                 ]
                             )
                         );
+                        $context->logger?->error($response->getError()->message, $response->getError()->context);
+                        return $response;
                     }
 
                     $content = $response->getContent();
@@ -102,7 +105,7 @@ final class GetMetaData
                 }
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [{client}: {backend}] item [{id}] payload.', [
+                    $this->logger->debug("{client}: Processing '{backend}: {id}' item payload.", [
                         'id' => $id,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,

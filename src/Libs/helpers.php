@@ -42,7 +42,6 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Process\Process;
@@ -1200,44 +1199,6 @@ if (!function_exists('parseConfigValue')) {
     }
 }
 
-
-if (!function_exists('tryCache')) {
-    /**
-     * Try to get a value from the cache, if it does not exist, call the callback and cache the result.
-     *
-     * @param iCache $cache The cache instance.
-     * @param string $key The cache key.
-     * @param Closure $callback The callback to call if the key does not exist.
-     * @param DateInterval $ttl The time to live for the cache.
-     * @param iLogger|null $logger The logger instance (optional).
-     *
-     * @return mixed The value from the cache or the callback.
-     */
-    function tryCache(
-        iCache $cache,
-        string $key,
-        Closure $callback,
-        DateInterval $ttl,
-        iLogger|null $logger = null
-    ): mixed {
-        if (true === $cache->has($key)) {
-            $logger?->debug("Cache hit for key '{key}'.", ['key' => $key]);
-            return $cache->get($key);
-        }
-
-        $data = $callback();
-
-        try {
-            $cache->set($key, $data, $ttl);
-        } catch (\Psr\SimpleCache\InvalidArgumentException) {
-            $logger?->error("Failed to cache data for key '{key}'.", ['key' => $key]);
-        }
-
-        return $data;
-    }
-}
-
-
 if (!function_exists('checkIgnoreRule')) {
     /**
      * Check if the given ignore rule is valid.
@@ -1913,7 +1874,7 @@ if (!function_exists('cacheableItem')) {
         DateInterval|int|null $ttl = null,
         bool $ignoreCache = false
     ): mixed {
-        $cache = Container::get(CacheInterface::class);
+        $cache = Container::get(iCache::class);
 
         if (!$ignoreCache && $cache->has($key)) {
             return $cache->get($key);
@@ -2010,7 +1971,11 @@ if (!function_exists('queueEvent')) {
         $item->event = $event;
         $item->status = EventStatus::PENDING;
         $item->event_data = $data;
-        $item->created_at = makeDate();
+        if (ag_exists($opts, EventsTable::COLUMN_CREATED_AT)) {
+            $item->created_at = $opts[EventsTable::COLUMN_CREATED_AT];
+        } else {
+            $item->created_at = makeDate();
+        }
         $item->options = [
             'class' => ag($opts, 'class', DataEvent::class),
         ];
@@ -2023,8 +1988,23 @@ if (!function_exists('queueEvent')) {
             $item->reference = $reference;
         }
 
-        $id = $repo->save($item);
-        $item->id = $id;
+        try {
+            $id = $repo->save($item);
+            $item->id = $id;
+        } catch (PDOException $e) {
+            // sometimes our sqlite db get locked due to multiple writes.
+            // and the db retry logic will time out, to save the event we fall back to cache store.
+            if (false === ag_exists($opts, 'cached') && false !== stripos($e->getMessage(), 'database is locked')) {
+                $cache = Container::get(iCache::class);
+                $events = $cache->get('events', []);
+                $opts[EventsTable::COLUMN_CREATED_AT] = makeDate();
+                $opts['cached'] = true;
+                $events[] = ['event' => $event, 'data' => $data, 'opts' => $opts];
+                $cache->set('events', $events, new DateInterval('PT1H'));
+            } else {
+                throw $e;
+            }
+        }
 
         return $item;
     }
