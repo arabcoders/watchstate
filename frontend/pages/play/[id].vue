@@ -449,7 +449,6 @@ onMounted(async () => {
 
 const updateHwAccel = codec => {
   const codecInfo = item.value.hardware.codecs.filter(c => c.codec === codec);
-  console.log(codecInfo)
   if (codecInfo.length < 1) {
     config.value.hwaccel = false
     return;
