@@ -94,6 +94,7 @@ readonly class Segments
         $isVAAPI = $hwaccel && 'h264_vaapi' === $vCodec;
         $isQSV = $hwaccel && 'h264_qsv' === $vCodec;
         $segmentSize = number_format((int)$params->get('segment_size', Playlist::SEGMENT_DUR), 6);
+        $directPlay = null === $subtitle && null === $external && $params->has('direct_play');
 
         if ($isVAAPI && false === file_exists($vaapi_device)) {
             return api_error(r("VAAPI device '{device}' not found.", ['device' => $vaapi_device]), Status::BAD_REQUEST);
@@ -119,17 +120,19 @@ readonly class Segments
             usleep(20000);
         }
 
-        $cmd = [
-            'ffmpeg',
-            '-ss',
-            (string)($segment === 0 ? 0 : ($segmentSize * $segment)),
-            '-t',
-            (string)(ag($request->getQueryParams(), 'sd', $segmentSize)),
-            '-xerror',
-            '-hide_banner',
-            '-loglevel',
-            'error',
-        ];
+        $directPlay = $directPlay && str_ends_with($this->getStream(ag($json, 'streams', []), 0)['codec_name'], '264');
+
+        $cmd = ['ffmpeg'];
+        if (false === $directPlay) {
+            $cmd[] = '-ss';
+            $cmd[] = (string)($segment === 0 ? 0 : ($segmentSize * $segment));
+            $cmd[] = '-t';
+            $cmd[] = (string)(ag($request->getQueryParams(), 'sd', $segmentSize));
+        }
+        $cmd[] = '-xerror';
+        $cmd[] = '-hide_banner';
+        $cmd[] = '-loglevel';
+        $cmd[] = 'error';
 
         $tmpSubFile = null;
         $tmpVidFile = r("{path}/t-{name}-vlink.{type}", [
@@ -146,9 +149,11 @@ readonly class Segments
             symlink($path, $tmpVidFile);
         }
 
-        $cmd[] = '-copyts';
+        if (false === $directPlay) {
+            $cmd[] = '-copyts';
+        }
 
-        if ($isQSV) {
+        if ($isQSV && false === $directPlay) {
             $cmd[] = '-hwaccel';
             $cmd[] = 'qsv';
             if ($overlay) {
@@ -157,7 +162,7 @@ readonly class Segments
             }
         }
 
-        if ($isVAAPI) {
+        if ($isVAAPI && false === $directPlay) {
             $cmd[] = '-hwaccel';
             $cmd[] = 'vaapi';
             $cmd[] = '-vaapi_device';
@@ -171,6 +176,13 @@ readonly class Segments
         $cmd[] = '-i';
         $cmd[] = 'file:' . $tmpVidFile;
 
+        if (true === $directPlay) {
+            $cmd[] = '-ss';
+            $cmd[] = (string)($segment === 0 ? 0 : ($segmentSize * $segment));
+            $cmd[] = '-t';
+            $cmd[] = (string)(ag($request->getQueryParams(), 'sd', $segmentSize));
+        }
+
         # remove garbage metadata.
         $cmd[] = '-map_metadata';
         $cmd[] = '-1';
@@ -180,8 +192,13 @@ readonly class Segments
         $cmd[] = '-pix_fmt';
         $cmd[] = $params->get('pix_fmt', 'yuv420p');
 
-        $cmd[] = '-g';
-        $cmd[] = '52';
+        if (true === $directPlay) {
+            $cmd[] = '-force_key_frames';
+            $cmd[] = 'expr:gte(t,n_forced*' . (int)$sConfig['segment_size'] . ')';
+        } else {
+            $cmd[] = '-g';
+            $cmd[] = '52';
+        }
 
         if ($overlay && empty($external) && null !== $subtitle) {
             $cmd[] = '-filter_complex';
@@ -201,27 +218,29 @@ readonly class Segments
 
         $cmd[] = '-strict';
         $cmd[] = '-2';
-        if (empty($external) && $isVAAPI) {
+        if (empty($external) && $isVAAPI && false === $directPlay) {
             $cmd[] = '-vf';
             $cmd[] = 'format=nv12,hwupload';
         }
         $cmd[] = '-codec:v';
-        $cmd[] = $vCodec;
+        $cmd[] = $directPlay ? 'copy' : $vCodec;
 
-        $cmd[] = '-crf';
-        $cmd[] = $params->get('video_crf', '23');
-        $cmd[] = '-preset:v';
-        $cmd[] = $params->get('video_preset', 'fast');
+        if (false === $directPlay) {
+            $cmd[] = '-crf';
+            $cmd[] = $params->get('video_crf', '23');
+            $cmd[] = '-preset:v';
+            $cmd[] = $params->get('video_preset', 'fast');
 
-        if (0 !== (int)$params->get('video_bitrate', 0)) {
-            $cmd[] = '-b:v';
-            $cmd[] = $params->get('video_bitrate', '192k');
+            if (0 !== (int)$params->get('video_bitrate', 0)) {
+                $cmd[] = '-b:v';
+                $cmd[] = $params->get('video_bitrate', '192k');
+            }
+
+            $cmd[] = '-level';
+            $cmd[] = $params->get('video_level', '4.1');
+            $cmd[] = '-profile:v';
+            $cmd[] = $params->get('video_profile', 'main');
         }
-
-        $cmd[] = '-level';
-        $cmd[] = $params->get('video_level', '4.1');
-        $cmd[] = '-profile:v';
-        $cmd[] = $params->get('video_profile', 'main');
 
         // -- audio section.
         $cmd[] = '-map';
@@ -270,12 +289,16 @@ readonly class Segments
             $cmd[] = '-sn';
         }
 
+        if (true === $directPlay) {
+            $cmd[] = '-output_ts_offset';
+            $cmd[] = (string)($segment * $segmentSize);
+        }
+
         $cmd[] = '-muxdelay';
         $cmd[] = '0';
         $cmd[] = '-f';
         $cmd[] = 'mpegts';
         $cmd[] = 'pipe:1';
-
         $debug = (bool)ag($sConfig, 'debug', false);
 
         try {
@@ -298,7 +321,7 @@ readonly class Segments
                         'stderr' => $process->getErrorOutput(),
                         'Ffmpeg' => $process->getCommandLine(),
                         'config' => $sConfig,
-                        'command' => implode(' ', $cmd),
+                        'command' => $this->cmdLog($cmd),
                     ]
                 );
 
@@ -314,7 +337,7 @@ readonly class Segments
 
                 if (true === $debug) {
                     $response = $response
-                        ->withHeader('X-Ffmpeg', $process->getCommandLine())
+                        ->withHeader('X-Ffmpeg', $this->cmdLog($cmd))
                         ->withHeader(
                             'X-Transcode-Config',
                             json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
@@ -325,23 +348,24 @@ readonly class Segments
             }
 
             $response = api_response(Status::OK, body: Stream::create($process->getOutput()), headers: [
+//                'Access-Control-Allow-Origin' => '*',
                 'Content-Type' => 'video/mpegts',
                 'X-Transcode-Time' => round($end - $start, 6),
                 'X-Emitter-Flush' => 1,
-                'Pragma' => 'public',
-                'Access-Control-Allow-Origin' => '*',
-                'Cache-Control' => sprintf('public, max-age=%s', time() + 31536000),
-                'Last-Modified' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())),
-                'Expires' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)),
             ]);
 
             if (true === $debug) {
                 $response = $response
-                    ->withHeader('X-Ffmpeg', $process->getCommandLine())
+                    ->withHeader('X-Ffmpeg', $this->cmdLog($cmd))
                     ->withHeader(
                         'X-Transcode-Config',
                         json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                     );
+            } else {
+                $response = $response->withHeader('Pragma', 'public')
+                    ->withHeader('Cache-Control', sprintf('public, max-age=%s', time() + 31536000))
+                    ->withHeader('Last-Modified', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())))
+                    ->withHeader('Expires', sprintf('%s GMT', gmdate('D, d M Y H:i:s', time() + 31536000)));
             }
 
             return $response;
@@ -349,7 +373,7 @@ readonly class Segments
             $this->logger->error("Failed to generate segment. '{error}' at {file}:{line}", [
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
-                'Ffmpeg' => isset($process) ? $process->getCommandLine() : null,
+                'Ffmpeg' => $this->cmdLog($cmd),
                 'config' => $sConfig,
                 'command' => implode(' ', $cmd),
                 'error' => $e->getMessage(),
@@ -360,14 +384,12 @@ readonly class Segments
 
             $response = api_error('Failed to generate segment. check logs.', Status::INTERNAL_SERVER_ERROR);
             if (true === $debug) {
-                if (isset($process)) {
-                    $response = $response->withHeader('X-Ffmpeg', $process->getCommandLine());
-                }
-
-                $response = $response->withHeader(
-                    'X-Transcode-Config',
-                    json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-                );
+                $response = $response
+                    ->withHeader('X-Ffmpeg', $this->cmdLog($cmd))
+                    ->withHeader(
+                        'X-Transcode-Config',
+                        json_encode($sConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                    );
             }
             return $response;
         } finally {
@@ -423,8 +445,7 @@ readonly class Segments
                 $this->logger->error('Failed to extract subtitle.', [
                     'stdout' => $process->getOutput(),
                     'stderr' => $process->getErrorOutput(),
-                    'Ffmpeg' => $process->getCommandLine(),
-                    'command' => implode(' ', $cmd),
+                    'Ffmpeg' => $this->cmdLog($cmd),
                 ]);
                 return "{$path}:stream_index={$stream}";
             }
@@ -440,8 +461,7 @@ readonly class Segments
             $this->logger->error("Failed to extract subtitles. '{error}' at {file}:{line}", [
                 'stdout' => isset($process) ? $process->getOutput() : null,
                 'stderr' => isset($process) ? $process->getErrorOutput() : null,
-                'Ffmpeg' => isset($process) ? $process->getCommandLine() : null,
-                'command' => implode(' ', $cmd),
+                'Ffmpeg' => $this->cmdLog($cmd),
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
@@ -459,5 +479,10 @@ readonly class Segments
             }
         }
         return [];
+    }
+
+    private function cmdLog(array $cmd): string
+    {
+        return implode(' ', array_map(fn($v) => str_contains($v, ' ') ? escapeshellarg($v) : $v, $cmd));
     }
 }

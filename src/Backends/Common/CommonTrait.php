@@ -36,9 +36,9 @@ trait CommonTrait
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{error.kind}' was thrown unhandled in '{client}: {backend}' {action}. '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "{client}: '{backend}' {action} thrown unhandled exception '{error.kind}'. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
-                        'action' => $action ?? 'not_set',
+                        'action' => $action ?? '',
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'message' => $e->getMessage(),
@@ -81,7 +81,40 @@ trait CommonTrait
         DateInterval $ttl,
         iLogger|null $logger = null
     ): mixed {
-        return tryCache($context->cache->getInterface(), $context->backendName . '_' . $key, $fn, $ttl, $logger);
+        try {
+            $cache = $context->cache->getInterface();
+            $cacheKey = $context->backendName . '_' . $key;
+
+            if (true === $cache->has($cacheKey)) {
+                $logger?->debug("{client} Cache hit for key '{backend}: {key}'.", [
+                    'key' => $key,
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                ]);
+                return $cache->get($cacheKey);
+            }
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+            /** @noinspection PhpConditionAlreadyCheckedInspection */
+            $logger?->error("{client} Failed to retrieve cached data for '{backend}: {key}'.", [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'key' => $key,
+            ]);
+        }
+
+        $data = $fn();
+
+        try {
+            $cache->set($cacheKey, $data, $ttl);
+        } catch (\Psr\SimpleCache\InvalidArgumentException) {
+            $logger?->error("{client} Failed to cache data for key '{backend}: {key}'.", [
+                'client' => $context->clientName,
+                'backend' => $context->backendName,
+                'key' => $key,
+            ]);
+        }
+
+        return $data;
     }
 
     /**

@@ -142,6 +142,7 @@ class PlexClient implements iClient
             backendName: $context->backendName,
             backendUrl: $context->backendUrl,
             cache: $this->cache->withData(static::CLIENT_NAME . '_' . $context->backendName, $context->options),
+            logger: $context->logger,
             backendId: $context->backendId,
             backendToken: $context->backendToken,
             backendUser: $context->backendUser,
@@ -161,10 +162,6 @@ class PlexClient implements iClient
                 ),
             ])
         );
-
-        if ($context->hasLogger()) {
-            $cloned->context = $cloned->context->withLogger($context->getLogger());
-        }
 
         $cloned->guid = $cloned->guid->withContext($cloned->context);
 

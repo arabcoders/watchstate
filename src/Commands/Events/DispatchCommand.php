@@ -13,6 +13,7 @@ use App\Model\Events\EventsTable;
 use App\Model\Events\EventStatus as Status;
 use Psr\EventDispatcher\EventDispatcherInterface as iDispatcher;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -29,6 +30,7 @@ final class DispatchCommand extends Command
     public function __construct(
         private readonly iDispatcher $dispatcher,
         private readonly EventsRepository $repo,
+        private readonly iCache $cache,
         private iLogger $logger,
     ) {
         parent::__construct(null);
@@ -44,6 +46,8 @@ final class DispatchCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->unloadEvents();
+
         registerEvents();
 
         $id = $input->getOption('id');
@@ -143,6 +147,37 @@ final class DispatchCommand extends Command
             $this->repo->save($event);
 
             $this->logger->error($errorLog, ['trace' => $e->getTrace()]);
+        }
+    }
+
+    /**
+     * This method will re-queue events that we failed to save, due to database lock issues
+     * which is quite common issue as we mainly use sqlite as our database.
+     *
+     * This method will only attempt to re-queue once, if that fails, it will be lost. and we will log it.
+     * @return void
+     */
+    private function unloadEvents(): void
+    {
+        try {
+            $events = $this->cache->get('events', []);
+            if (count($events) < 1) {
+                return;
+            }
+            foreach ($events as $eventData) {
+                try {
+                    queueEvent(...$eventData);
+                    $this->logger->info(
+                        "Queued '{event}' event. it was saved to cache due to failure to persist it.",
+                        $eventData
+                    );
+                } catch (Throwable) {
+                    $this->logger->error("Failed to re-queue '{event}' event.", $eventData);
+                }
+            }
+
+            $this->cache->delete('events');
+        } catch (Throwable) {
         }
     }
 }

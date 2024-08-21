@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use DateInterval;
 use Psr\Log\LoggerInterface;
@@ -82,7 +83,7 @@ class GetMetaData
                         )
                     );
 
-                $this->logger->debug('Requesting [{client}: {backend}] item [{id}] metadata.', [
+                $this->logger->debug("{client}: Requesting '{backend}: {id}' item metadata.", [
                     'id' => $id,
                     'url' => $url,
                     'client' => $context->clientName,
@@ -99,11 +100,11 @@ class GetMetaData
                         array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                     );
 
-                    if (200 !== $response->getStatusCode()) {
-                        return new Response(
+                    if (Status::OK !== Status::from($response->getStatusCode())) {
+                        $response = new Response(
                             status: false,
                             error: new Error(
-                                message: 'Request for [{backend}] item [{id}] returned with unexpected [{status_code}] status code.',
+                                message: "{client} Request for '{backend}: {id}' item returned with unexpected '{status_code}' status code.",
                                 context: [
                                     'id' => $id,
                                     'client' => $context->clientName,
@@ -112,6 +113,8 @@ class GetMetaData
                                 ]
                             )
                         );
+                        $context->logger?->error($response->getError()->message, $response->getError()->context);
+                        return $response;
                     }
 
                     $item = json_decode(
@@ -132,7 +135,7 @@ class GetMetaData
                 }
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [{client}: {backend}] item [{id}] payload.', [
+                    $this->logger->debug("{client} Processing '{backend}: {id}' item payload.", [
                         'id' => $id,
                         'client' => $context->clientName,
                         'backend' => $context->backendName,

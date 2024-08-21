@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
-use App\Libs\Container;
 use App\Libs\Options;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 
-final class Context
+final readonly class Context
 {
-    protected iLogger|null $logger = null;
-
     /**
      * Make backend context for classes to work with.
      *
@@ -28,16 +25,17 @@ final class Context
      * @param array $options optional options.
      */
     public function __construct(
-        public readonly string $clientName,
-        public readonly string $backendName,
-        public readonly UriInterface $backendUrl,
-        public readonly Cache $cache,
-        public readonly string|int|null $backendId = null,
-        public readonly string|int|null $backendToken = null,
-        public readonly string|int|null $backendUser = null,
-        public readonly array $backendHeaders = [],
-        public readonly bool $trace = false,
-        public readonly array $options = []
+        public string $clientName,
+        public string $backendName,
+        public UriInterface $backendUrl,
+        public Cache $cache,
+        public iLogger|null $logger = null,
+        public string|int|null $backendId = null,
+        public string|int|null $backendToken = null,
+        public string|int|null $backendUser = null,
+        public array $backendHeaders = [],
+        public bool $trace = false,
+        public array $options = []
     ) {
     }
 
@@ -54,21 +52,27 @@ final class Context
         return true === $withUser ? $status && null !== $this->backendUser : $status;
     }
 
-    public function hasLogger(): bool
-    {
-        return null !== $this->logger;
-    }
-
+    /**
+     * Add a logger to the context, and return a new instance.
+     *
+     * @param iLogger $logger
+     *
+     * @return static A new instance with the logger.
+     */
     public function withLogger(iLogger $logger): self
     {
-        $clone = clone $this;
-        $clone->logger = $logger;
-
-        return $clone;
-    }
-
-    public function getLogger(): iLogger
-    {
-        return $this->logger ?? Container::get(iLogger::class);
+        return new Context(
+            clientName: $this->clientName,
+            backendName: $this->backendName,
+            backendUrl: $this->backendUrl,
+            cache: $this->cache,
+            logger: $logger,
+            backendId: $this->backendId,
+            backendToken: $this->backendToken,
+            backendUser: $this->backendUser,
+            backendHeaders: $this->backendHeaders,
+            trace: $this->trace,
+            options: $this->options
+        );
     }
 }
