@@ -54,9 +54,12 @@
     <div class="columns is-multiline">
       <div class="column is-6 is-12-mobile" v-for="item in filteredRows" :key="item.id">
         <div class="card">
-          <header class="card-header">
-            <div class="card-header-title">
+          <header class="card-header is-align-self-flex-end">
+            <div class="card-header-title is-block">
               <NuxtLink :to="`/events/view/?id=${item.id}`" v-text="makeName(item.id)"/>
+              <div class="is-pulled-right is-hidden-tablet">
+                <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
+              </div>
             </div>
             <div class="card-header-icon" @click="item._display = !item._display"
                  v-if="Object.keys(item.event_data).length > 0">
@@ -75,7 +78,7 @@
                 <span class="icon"><i class="fas fa-copy"></i></span></button></pre>
           </div>
           <div class="card-footer">
-            <div class="card-footer-item">
+            <div class="card-footer-item is-hidden-mobile">
               <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
             </div>
             <span class="card-footer-item">
@@ -102,21 +105,15 @@
           <footer class="card-footer">
             <div class="card-footer-item" v-text="item.event"/>
             <div class="card-footer-item">
-              <button class="button is-warning is-fullwidth"
-                      @click="resetEvent(item, 0 === item.status ? 4 : 0)"
-              >
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-trash-arrow-up"></i></span>
-                  <span>{{ 0 === item.status ? 'Stop' : 'Reset' }}</span>
-                </span>
+              <button class="button is-warning is-fullwidth" @click="resetEvent(item, 0 === item.status ? 4 : 0)">
+                <span class="icon"><i class="fas fa-trash-arrow-up"></i></span>
+                <span>{{ 0 === item.status ? 'Stop' : 'Reset' }}</span>
               </button>
             </div>
             <div class="card-footer-item">
               <button class="button is-danger is-fullwidth" @click="deleteItem(item)">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-trash"></i></span>
-                  <span>Delete</span>
-                </span>
+                <span class="icon"><i class="fas fa-trash"></i></span>
+                <span>Delete</span>
               </button>
             </div>
           </footer>
