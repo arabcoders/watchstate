@@ -70,4 +70,5 @@ enum Status: int
     case LOOP_DETECTED = 508;                            // RFC5842
     case NOT_EXTENDED = 510;                             // RFC2774
     case NETWORK_AUTHENTICATION_REQUIRED = 511;          // RFC6585
+    case ORIGIN_SERVER_CONNECTION_ISSUE = 522;           // -- cloudflare cdn.
 }
