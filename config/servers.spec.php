@@ -173,5 +173,11 @@ return [
         'visible' => false,
         'description' => 'Whether the token has limited access.',
     ],
+    [
+        'key' => 'options.PLEX_USER_PIN',
+        'type' => 'int',
+        'visible' => false,
+        'description' => 'Plex user PIN.',
+    ],
 ];
 

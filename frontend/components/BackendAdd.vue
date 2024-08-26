@@ -175,6 +175,16 @@
               <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4"/>
             </p>
           </div>
+          <template v-if="'plex' === backend.type">
+            <label class="label">User PIN</label>
+            <div class="control has-icons-left">
+              <input class="input" type="text" v-model="backend.options.PLEX_USER_PIN" :disabled="stage > 3">
+              <div class="icon is-left"><i class="fas fa-key"></i></div>
+              <p class="help">
+                If the selected user is using <code>PIN</code> to login, enter the PIN here.
+              </p>
+            </div>
+          </template>
         </div>
 
         <template v-if="stage >= 4">
@@ -272,11 +282,17 @@
       </div>
 
       <div class="card-footer">
+
+        <div class="card-footer-item" v-if="stage >= 1">
+          <button class="button is-fullwidth is-warning" type="button" @click="stage = stage-1">
+            <span class="icon"><i class="fas fa-arrow-left"></i></span>
+            <span>Previous Step</span>
+          </button>
+        </div>
+
         <div class="card-footer-item" v-if="stage < maxStages">
-          <button class="button is-fullwidth is-primary" type="submit" @click="changeStep()">
-            <span class="icon">
-              <i class="fas fa-arrow-right"></i>
-            </span>
+          <button class="button is-fullwidth is-info" type="submit" @click="changeStep()">
+            <span class="icon"><i class="fas fa-arrow-right"></i></span>
             <span>Next Step</span>
           </button>
         </div>
@@ -499,10 +515,6 @@ onMounted(async () => {
   supported.value = await response.json()
   backend.value.type = supported.value[0]
 })
-
-watch(stage, v => {
-  console.log(v);
-}, {immediate: true})
 
 const changeStep = async () => {
   let _

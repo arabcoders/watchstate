@@ -590,6 +590,12 @@ const getServers = async () => {
     url: window.location.origin,
   };
 
+  if (backend.value?.options && backend.value.options?.ADMIN_TOKEN) {
+    data.options = {
+      ADMIN_TOKEN: backend.value.options.ADMIN_TOKEN
+    }
+  }
+
   const response = await request(`/backends/discover/${backend.value.type}`, {
     method: 'POST',
     body: JSON.stringify(data)
