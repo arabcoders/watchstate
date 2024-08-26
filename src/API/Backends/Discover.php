@@ -9,6 +9,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -42,7 +43,13 @@ final class Discover
         }
 
         try {
-            $list = $client::discover($this->http, $client->getContext()->backendToken);
+            $opts = [];
+
+            if (null !== ($adminToken = ag($request->getParsedBody(), 'options.' . Options::ADMIN_TOKEN))) {
+                $opts[Options::ADMIN_TOKEN] = $adminToken;
+            }
+
+            $list = $client::discover($this->http, $client->getContext()->backendToken, $opts);
             return api_response(Status::OK, ag($list, 'list', []));
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);

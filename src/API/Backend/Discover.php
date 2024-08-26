@@ -8,6 +8,7 @@ use App\Backends\Plex\PlexClient;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -42,7 +43,14 @@ final class Discover
 
             assert($client instanceof PlexClient);
 
-            $list = $client::discover($this->http, $client->getContext()->backendToken);
+            $context = $client->getContext();
+            $opts = [];
+
+            if (null !== ($adminToken = ag($context->options, Options::ADMIN_TOKEN))) {
+                $opts[Options::ADMIN_TOKEN] = $adminToken;
+            }
+
+            $list = $client::discover($this->http, $context->backendToken, $opts);
             return api_response(Status::OK, ag($list, 'list', []));
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);

@@ -33,6 +33,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -671,28 +672,38 @@ class PlexClient implements iClient
 
             $payload = $response->getContent(false);
 
-            if (200 !== $response->getStatusCode()) {
+            if (Status::OK !== Status::from($response->getStatusCode())) {
+                if (Status::UNAUTHORIZED === Status::from($response->getStatusCode())) {
+                    if (null !== ($adminToken = ag($opts, Options::ADMIN_TOKEN))) {
+                        $opts['with_admin'] = true;
+                        return self::discover($http, $adminToken, ag_delete($opts, Options::ADMIN_TOKEN));
+                    }
+                }
+
                 throw new RuntimeException(
                     r(
-                        text: 'PlexClient: Request for servers list returned with unexpected [{status_code}] status code. {context}',
+                        text: "PlexClient: Request for servers list returned with unexpected '{status_code}' status code. {context}",
                         context: [
                             'status_code' => $response->getStatusCode(),
-                            'context' => arrayToString(['payload' => $payload]),
+                            'context' => arrayToString([
+                                'with_admin' => true === ag($opts, 'with_admin'),
+                                'payload' => $payload
+                            ]),
                         ]
-                    )
+                    ), $response->getStatusCode()
                 );
             }
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: 'PlexClient: Exception [{kind}] was thrown unhandled during request for plex servers list, likely network related error. [{error} @ {file}:{line}]',
+                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. '{error}' at '{file}:{line}'.",
                     context: [
                         'kind' => $e::class,
                         'error' => $e->getMessage(),
                         'line' => $e->getLine(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ]
-                )
+                ), code: 500, previous: $e
             );
         }
 

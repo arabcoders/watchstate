@@ -409,9 +409,31 @@ class PlexManage implements ManageInterface
                 $backend = ag_set($backend, 'user', $map[$user]);
                 $backend = ag_set($backend, 'options.plex_user_uuid', $uuid[$user]);
 
+                $question = new Question(
+                    r(
+                        <<<HELP
+                        <question>[<value>{name}</value>] User PIN</question>. {default}
+                        ------------------
+                        <notice>Leave empty if the user doesn't have a PIN.</notice>
+                        ------------------
+                        HELP. PHP_EOL . '> ',
+                        [
+                            'name' => ag($backend, 'name'),
+                            'default' => null !== $choice ? "<value>[Default: {$choice}]</value>" : ''
+                        ]
+                    ),
+                    ag($backend, 'options.' . Options::PLEX_USER_PIN)
+                );
+
+                $pin = $this->questionHelper->ask($this->input, $this->output, $question);
+                if (!empty($pin)) {
+                    $backend = ag_set($backend, 'options.' . Options::PLEX_USER_PIN, $pin);
+                }
+
                 $this->output->writeln(
-                    r('<info>Requesting plex token for [{user}] from plex.tv API.</info>', [
+                    r("<info>Requesting plex token for '{user}'{pin} from plex.tv API.</info>", [
                         'user' => ag($userInfo[$map[$user]], 'name') ?? 'None',
+                        'pin' => empty($pin) ? '' : ' with PIN'
                     ])
                 );
 

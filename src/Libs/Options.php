@@ -38,6 +38,7 @@ final class Options
     public const string LIMIT_RESULTS = 'LIMIT_RESULTS';
     public const string NO_CHECK = 'NO_CHECK';
     public const string LOG_WRITER = 'LOG_WRITER';
+    public const string PLEX_USER_PIN = 'PLEX_USER_PIN';
 
     private function __construct()
     {
