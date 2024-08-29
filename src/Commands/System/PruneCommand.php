@@ -189,8 +189,15 @@ final class PruneCommand extends Command
 
     private function cleanUp()
     {
-        $stmt = $this->db->delete('events', [
-            EventsTable::COLUMN_CREATED_AT => [DBLayer::IS_LOWER_THAN_OR_EQUAL, strtotime('-7 DAYS')]
+        $before = makeDate(strtotime('-7 DAYS'));
+
+        $sql = "DELETE FROM
+                " . EventsTable::TABLE_NAME . "
+                WHERE
+                " . EventsTable::COLUMN_CREATED_AT . " < datetime(:before)
+        ";
+        $stmt = $this->db->query($sql, [
+            'before' => $before->format('Y-m-d'),
         ]);
 
         $count = $stmt->rowCount();
