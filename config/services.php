@@ -199,8 +199,15 @@ return (function (): array {
             },
         ],
 
+        DBLayer::class => [
+            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
+            'args' => [
+                PDO::class,
+            ],
+        ],
+
         iDB::class => [
-            'class' => function (iLogger $logger, PDO $pdo): iDB {
+            'class' => function (iLogger $logger, DBLayer $pdo): iDB {
                 $adapter = new PDOAdapter($logger, $pdo);
 
                 if (true !== $adapter->isMigrated()) {
@@ -216,14 +223,7 @@ return (function (): array {
             },
             'args' => [
                 iLogger::class,
-                PDO::class,
-            ],
-        ],
-
-        DBLayer::class => [
-            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
-            'args' => [
-                PDO::class,
+                DBLayer::class,
             ],
         ],
 
