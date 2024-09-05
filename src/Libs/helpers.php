@@ -17,6 +17,7 @@ use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Events\DataEvent;
+use App\Libs\Exceptions\AppExceptionInterface;
 use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
@@ -2067,18 +2068,29 @@ if (!function_exists('lw')) {
      *
      * @param string $message The log message.
      * @param array $context The log context.
-     * @param Throwable $e The exception.
+     * @param Throwable|null $e The exception.
      *
      * @return array{ message: string, context: array} The wrapped log message and context.
      */
-    function lw(string $message, array $context, Throwable $e): array
+    function lw(string $message, array $context, Throwable|null $e = null): array
     {
+        if (null === $e) {
+            return [
+                'message' => $message,
+                'context' => $context,
+            ];
+        }
+
         if (true === ($e instanceof DBLayerException)) {
             $context[DBLayer::class] = [
                 'query' => $e->getQueryString(),
                 'bind' => $e->getQueryBind(),
                 'error' => $e->errorInfo ?? [],
             ];
+        }
+
+        if (true === ($e instanceof AppExceptionInterface) && $e->hasContext()) {
+            $context[AppExceptionInterface::class] = $e->getContext();
         }
 
         return [

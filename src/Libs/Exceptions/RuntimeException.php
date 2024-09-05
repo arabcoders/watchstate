@@ -7,6 +7,7 @@ namespace App\Libs\Exceptions;
 /**
  * General runtime exception.
  */
-class RuntimeException extends \RuntimeException
+class RuntimeException extends \RuntimeException implements AppExceptionInterface
 {
+    use UseAppException;
 }

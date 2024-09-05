@@ -6,8 +6,10 @@ namespace App\Libs\Exceptions;
 
 use RuntimeException;
 
-class EmitterException extends RuntimeException
+class EmitterException extends RuntimeException implements AppExceptionInterface
 {
+    use UseAppException;
+
     public static function forHeadersSent(string $filename, int $line): self
     {
         return new self(r('Unable to emit response. Headers already sent in %s:%d', [

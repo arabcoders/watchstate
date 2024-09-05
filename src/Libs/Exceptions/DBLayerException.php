@@ -12,8 +12,10 @@ use PDOException;
  * The DatabaseException class extends the RuntimeException class and represents an exception
  * that is thrown when there is an error related to the database operation.
  */
-class DBLayerException extends PDOException
+class DBLayerException extends PDOException implements AppExceptionInterface
 {
+    use UseAppException;
+
     public string $queryString = '';
     public array $bind = [];
 

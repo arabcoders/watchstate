@@ -7,6 +7,7 @@ namespace App\Libs\Exceptions;
 /**
  * Class InvalidArgumentException
  */
-class InvalidArgumentException extends \InvalidArgumentException
+class InvalidArgumentException extends \InvalidArgumentException implements AppExceptionInterface
 {
+    use UseAppException;
 }
