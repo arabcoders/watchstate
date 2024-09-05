@@ -6,11 +6,10 @@ namespace App\API\System;
 
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Traits\APITraits;
-use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -21,11 +20,8 @@ final class Parity
 
     public const string URL = '%{api.prefix}/system/parity';
 
-    private PDO $pdo;
-
-    public function __construct(private iDB $db)
+    public function __construct(private readonly DBLayer $db)
     {
-        $this->pdo = $this->db->getPDO();
     }
 
     /**
@@ -60,7 +56,7 @@ final class Parity
         $counter = 0 === $counter ? $backendsCount : $counter;
 
         $sql = "SELECT COUNT(*) FROM state WHERE ( SELECT COUNT(*) FROM JSON_EACH(state.metadata) ) < {$counter}";
-        $stmt = $this->pdo->query($sql);
+        $stmt = $this->db->query($sql);
         $total = (int)$stmt->fetchColumn();
 
         $lastPage = @ceil($total / $perpage);
@@ -84,7 +80,7 @@ final class Parity
                     :_start, :_perpage
         ";
 
-        $stmt = $this->db->getPDO()->prepare($sql);
+        $stmt = $this->db->prepare($sql);
         $stmt->execute([
             '_start' => $start,
             '_perpage' => $perpage,
@@ -135,7 +131,7 @@ final class Parity
                 WHERE
                     ( SELECT COUNT(*) FROM JSON_EACH(state.metadata) ) < {$counter}
         ";
-        $stmt = $this->db->getPDO()->query($sql);
+        $stmt = $this->db->query($sql);
 
         return api_response(Status::OK, [
             'deleted_records' => $stmt->rowCount(),

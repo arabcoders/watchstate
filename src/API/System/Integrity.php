@@ -7,14 +7,13 @@ namespace App\API\System;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Middlewares\ExceptionHandlerMiddleware;
 use App\Libs\Traits\APITraits;
 use DateInterval;
-use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface as iCache;
@@ -31,22 +30,20 @@ final class Integrity
     private array $checkedFile = [];
 
     private bool $fromCache = false;
-    private PDO $pdo;
 
     /**
      * @throws InvalidArgumentException
      */
-    public function __construct(private iDB $db, private readonly iCache $cache)
+    public function __construct(private readonly iCache $cache)
     {
         set_time_limit(0);
-        $this->pdo = $this->db->getPDO();
     }
 
     /**
      * @throws InvalidArgumentException
      */
     #[Get(self::URL . '[/]', middleware: [ExceptionHandlerMiddleware::class], name: 'system.integrity')]
-    public function __invoke(iRequest $request): iResponse
+    public function __invoke(DBLayer $db, iRequest $request): iResponse
     {
         $params = DataUtil::fromArray($request->getQueryParams());
 
@@ -66,7 +63,7 @@ final class Integrity
         ];
 
         $sql = "SELECT * FROM state";
-        $stmt = $this->db->getPDO()->prepare($sql);
+        $stmt = $db->prepare($sql);
         $stmt->execute();
 
         $base = Container::get(iState::class);
@@ -157,7 +154,7 @@ final class Integrity
      * @throws InvalidArgumentException
      */
     #[Delete(self::URL . '[/]', name: 'system.integrity.reset')]
-    public function resetCache(iRequest $request): iResponse
+    public function resetCache(): iResponse
     {
         if ($this->cache->has('system.integrity')) {
             $this->cache->delete('system.integrity');

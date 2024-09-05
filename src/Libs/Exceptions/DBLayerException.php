@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Exceptions;
 
-use RuntimeException;
+use PDOException;
 
 /**
  * Class DatabaseException
@@ -12,13 +12,13 @@ use RuntimeException;
  * The DatabaseException class extends the RuntimeException class and represents an exception
  * that is thrown when there is an error related to the database operation.
  */
-class DatabaseException extends RuntimeException
+class DBLayerException extends PDOException
 {
     public string $queryString = '';
     public array $bind = [];
 
     public array $options = [];
-    public array $errorInfo = [];
+    public array|null $errorInfo = [];
 
     /**
      * @param string $queryString
@@ -52,21 +52,21 @@ class DatabaseException extends RuntimeException
         return $this->bind;
     }
 
-    public function setFile(string $file): DatabaseException
+    public function setFile(string $file): DBLayerException
     {
         $this->file = $file;
 
         return $this;
     }
 
-    public function setLine(int $line): DatabaseException
+    public function setLine(int $line): DBLayerException
     {
         $this->line = $line;
 
         return $this;
     }
 
-    public function setOptions(array $options): DatabaseException
+    public function setOptions(array $options): DBLayerException
     {
         $this->options = $options;
 

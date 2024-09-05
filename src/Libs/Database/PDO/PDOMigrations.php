@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Libs\Database\PDO;
 
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\Stream;
-use PDO;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SplFileObject;
@@ -36,12 +36,12 @@ final class PDOMigrations
     /**
      * Constructs a new instance of the class.
      *
-     * @param PDO $pdo The database connection object.
+     * @param DBLayer $db The database connection object.
      * @param LoggerInterface $logger The logger instance.
      *
      * @return void
      */
-    public function __construct(private PDO $pdo, private LoggerInterface $logger)
+    public function __construct(private DBLayer $db, private LoggerInterface $logger)
     {
         $this->path = __DIR__ . '/../../../../migrations';
         $this->driver = $this->getDriver();
@@ -119,7 +119,7 @@ final class PDOMigrations
                 'name' => ag($migrate, 'name')
             ]));
 
-            $this->pdo->exec((string)ag($migrate, iDB::MIGRATE_UP));
+            $this->db->exec((string)ag($migrate, iDB::MIGRATE_UP));
             $this->setVersion(ag($migrate, 'id'));
         }
 
@@ -200,7 +200,7 @@ final class PDOMigrations
     public function runMaintenance(): int|bool
     {
         if ('sqlite' === $this->driver) {
-            return $this->pdo->exec('VACUUM;');
+            return $this->db->exec('VACUUM;');
         }
 
         return false;
@@ -213,7 +213,7 @@ final class PDOMigrations
      */
     private function getVersion(): int
     {
-        return (int)$this->pdo->query('PRAGMA user_version')->fetchColumn();
+        return (int)$this->db->query('PRAGMA user_version')->fetchColumn();
     }
 
     /**
@@ -225,7 +225,7 @@ final class PDOMigrations
      */
     private function setVersion(int $version): void
     {
-        $this->pdo->exec('PRAGMA user_version = ' . $version);
+        $this->db->exec('PRAGMA user_version = ' . $version);
     }
 
     /**
@@ -235,9 +235,9 @@ final class PDOMigrations
      */
     private function getDriver(): string
     {
-        $driver = $this->pdo->getAttribute($this->pdo::ATTR_DRIVER_NAME);
+        $driver = $this->db->getDriver();
 
-        if (empty($driver) || !is_string($driver)) {
+        if (empty($driver)) {
             $driver = 'unknown';
         }
 

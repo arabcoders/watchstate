@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Tests\Mappers\Import;
 
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Exceptions\DatabaseException;
+use App\Libs\Exceptions\DBAdapterException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface;
@@ -51,7 +52,7 @@ abstract class AbstractTestsMapper extends TestCase
         $this->logger->pushHandler($this->handler);
         Guid::setLogger($this->logger);
 
-        $this->db = new PDOAdapter($this->logger, new PDO('sqlite::memory:'));
+        $this->db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
         $this->db->migrations('up');
 
         $this->mapper = $this->setupMapper();
@@ -529,7 +530,7 @@ abstract class AbstractTestsMapper extends TestCase
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
-        $this->expectException(DatabaseException::class);
+        $this->expectException(DBAdapterException::class);
         $this->db->commit([$testEpisode]);
     }
 
@@ -540,7 +541,7 @@ abstract class AbstractTestsMapper extends TestCase
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
-        $this->expectException(DatabaseException::class);
+        $this->expectException(DBAdapterException::class);
         $this->db->insert($testEpisode);
     }
 
@@ -551,7 +552,7 @@ abstract class AbstractTestsMapper extends TestCase
     {
         $testEpisode = new StateEntity($this->testEpisode);
         $testEpisode->episode = 0;
-        $this->expectException(DatabaseException::class);
+        $this->expectException(DBAdapterException::class);
         $this->db->update($testEpisode);
     }
 

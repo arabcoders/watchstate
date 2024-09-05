@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Database\PDO;
 
 use App\Libs\Config;
+use App\Libs\Database\DBLayer;
 use App\Libs\Entity\StateInterface as iFace;
 use App\Libs\Guid;
 use PDO;
@@ -41,10 +42,10 @@ final class PDODataMigration
     /**
      * Class constructor.
      *
-     * @param PDO $pdo The PDO instance to use for database connection.
+     * @param DBLayer $db The PDO instance to use for database connection.
      * @param LoggerInterface $logger The logger instance to use for logging.
      */
-    public function __construct(private PDO $pdo, private LoggerInterface $logger)
+    public function __construct(private DBLayer $db, private LoggerInterface $logger)
     {
         $this->version = Config::get('database.version');
         $this->dbPath = dirname(after(Config::get('database.dsn'), 'sqlite:'));
@@ -125,15 +126,15 @@ final class PDODataMigration
             ]
         );
 
-        if (!$this->pdo->inTransaction()) {
-            $this->pdo->beginTransaction();
+        if (!$this->db->inTransaction()) {
+            $this->db->start();
         }
 
         $columns = implode(', ', iFace::ENTITY_KEYS);
         $binds = ':' . implode(', :', iFace::ENTITY_KEYS);
 
         /** @noinspection SqlInsertValues */
-        $insert = $this->pdo->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
+        $insert = $this->db->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
 
         $stmt = $oldDB->query("SELECT * FROM state");
 
@@ -230,8 +231,8 @@ final class PDODataMigration
             ]);
         }
 
-        if ($this->pdo->inTransaction()) {
-            $this->pdo->commit();
+        if ($this->db->inTransaction()) {
+            $this->db->commit();
         }
 
         $stmt = null;
@@ -290,15 +291,15 @@ final class PDODataMigration
             PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY,
         ]);
 
-        if (!$this->pdo->inTransaction()) {
-            $this->pdo->beginTransaction();
+        if (!$this->db->inTransaction()) {
+            $this->db->start();
         }
 
         $columns = implode(', ', iFace::ENTITY_KEYS);
         $binds = ':' . implode(', :', iFace::ENTITY_KEYS);
 
         /** @noinspection SqlInsertValues */
-        $insert = $this->pdo->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
+        $insert = $this->db->prepare("INSERT INTO state ({$columns}) VALUES({$binds})");
 
         foreach ($oldDB->query("SELECT * FROM state") as $row) {
             $row[iFace::COLUMN_EXTRA] = json_decode(
@@ -419,8 +420,8 @@ final class PDODataMigration
             $insert->execute($arr);
         }
 
-        if ($this->pdo->inTransaction()) {
-            $this->pdo->commit();
+        if ($this->db->inTransaction()) {
+            $this->db->commit();
         }
 
         $oldDB = null;

@@ -5,15 +5,19 @@ declare(strict_types=1);
 
 namespace App\Libs\Database;
 
-use App\Libs\Exceptions\DatabaseException as DBException;
+use App\Libs\Exceptions\DBLayerException;
 use Closure;
 use PDO;
 use PDOException;
 use PDOStatement;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use RuntimeException;
 
-final class DBLayer
+final class DBLayer implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     private const int LOCK_RETRY = 4;
 
     private int $count = 0;
@@ -61,55 +65,71 @@ final class DBLayer
     public function exec(string $sql, array $options = []): int|false
     {
         try {
-            $queryString = $sql;
+            return $this->wrap(function (DBLayer $db) use ($sql, $options) {
+                $queryString = $sql;
 
-            $this->last = [
-                'sql' => $queryString,
-                'bind' => [],
-            ];
+                $this->last = [
+                    'sql' => $queryString,
+                    'bind' => [],
+                ];
 
-            $stmt = $this->pdo->exec($queryString);
+                return $db->pdo->exec($queryString);
+            });
         } catch (PDOException $e) {
-            throw (new DBException($e->getMessage()))
-                ->setInfo($queryString, [], $e->errorInfo ?? [], $e->getCode())
-                ->setFile($e->getTrace()[$options['tracer'] ?? 1]['file'] ?? $e->getFile())
-                ->setLine($e->getTrace()[$options['tracer'] ?? 1]['line'] ?? $e->getLine())
-                ->setOptions([]);
-        }
-
-        return $stmt;
-    }
-
-    public function query(string $queryString, array $bind = [], array $options = []): PDOStatement
-    {
-        try {
-            $this->last = [
-                'sql' => $queryString,
-                'bind' => $bind,
-            ];
-
-            $stmt = $this->pdo->prepare($queryString);
-
-            if (!($stmt instanceof PDOStatement)) {
-                throw new PDOException('Unable to prepare statement.');
+            if ($e instanceof DBLayerException) {
+                throw $e;
             }
 
-            $stmt->execute($bind);
-
-            if (false !== stripos($queryString, 'SQL_CALC_FOUND_ROWS')) {
-                if (false !== ($countStatement = $this->pdo->query('SELECT FOUND_ROWS();'))) {
-                    $this->count = (int)$countStatement->fetch(PDO::FETCH_COLUMN);
-                }
-            }
-        } catch (PDOException $e) {
-            throw (new DBException($e->getMessage()))
-                ->setInfo($queryString, $bind, $e->errorInfo ?? [], $e->getCode())
+            throw (new DBLayerException($e->getMessage()))
+                ->setInfo($sql, [], $e->errorInfo ?? [], $e->getCode())
                 ->setFile($e->getTrace()[$options['tracer'] ?? 1]['file'] ?? $e->getFile())
                 ->setLine($e->getTrace()[$options['tracer'] ?? 1]['line'] ?? $e->getLine())
                 ->setOptions($options);
         }
+    }
 
-        return $stmt;
+    public function query(string|PDOStatement $sql, array $bind = [], array $options = []): PDOStatement
+    {
+        try {
+            return $this->wrap(function (DBLayer $db) use ($sql, $bind, $options) {
+                $isStatement = $sql instanceof PDOStatement;
+                $queryString = $isStatement ? $sql->queryString : $sql;
+
+                $this->last = [
+                    'sql' => $queryString,
+                    'bind' => $bind,
+                ];
+
+                $stmt = $isStatement ? $sql : $db->prepare($sql);
+                if (false === ($stmt instanceof PDOStatement)) {
+                    throw new PDOException('Unable to prepare statement.');
+                }
+
+                $stmt->execute($bind);
+
+                if (false !== stripos($queryString, 'SQL_CALC_FOUND_ROWS')) {
+                    if (false !== ($countStatement = $this->pdo->query('SELECT FOUND_ROWS();'))) {
+                        $this->count = (int)$countStatement->fetch(PDO::FETCH_COLUMN);
+                    }
+                }
+
+                return $stmt;
+            });
+        } catch (PDOException $e) {
+            if ($e instanceof DBLayerException) {
+                throw $e;
+            }
+            throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                ->setInfo(
+                    (true === ($sql instanceof PDOStatement)) ? $sql->queryString : $sql,
+                    $bind,
+                    $e->errorInfo ?? [],
+                    $e->getCode()
+                )
+                ->setFile($e->getTrace()[$options['tracer'] ?? 1]['file'] ?? $e->getFile())
+                ->setLine($e->getTrace()[$options['tracer'] ?? 1]['line'] ?? $e->getLine())
+                ->setOptions($options);
+        }
     }
 
     public function start(): bool
@@ -134,6 +154,25 @@ final class DBLayer
     public function inTransaction(): bool
     {
         return $this->pdo->inTransaction();
+    }
+
+    /**
+     * @return bool
+     * @deprecated Use {@link self::start()} instead.
+     */
+    public function beginTransaction(): bool
+    {
+        return $this->start();
+    }
+
+    public function prepare(string $sql, array $options = []): PDOStatement|false
+    {
+        return $this->pdo->prepare($sql, $options);
+    }
+
+    public function lastInsertId(): string|false
+    {
+        return $this->pdo->lastInsertId();
     }
 
     public function delete(string $table, array $conditions, array $options = []): PDOStatement
@@ -422,6 +461,11 @@ final class DBLayer
         return $this->driver;
     }
 
+    public function getBackend(): PDO
+    {
+        return $this->pdo;
+    }
+
     private function conditionParser(array $conditions): array
     {
         $keys = $bind = [];
@@ -699,21 +743,22 @@ final class DBLayer
 
         for ($i = 1; $i <= self::LOCK_RETRY; $i++) {
             try {
-                if (!$autoStartTransaction) {
+                if (true === $autoStartTransaction) {
                     $this->start();
                 }
 
                 $result = $callback($this);
 
-                if (!$autoStartTransaction) {
+                if (true === $autoStartTransaction) {
                     $this->commit();
                 }
 
                 $this->last = $this->getLastStatement();
 
                 return $result;
-            } catch (DBException $e) {
-                if (!$autoStartTransaction && $this->inTransaction()) {
+            } catch (DBLayerException $e) {
+                /** @noinspection PhpConditionAlreadyCheckedInspection */
+                if ($autoStartTransaction && $this->inTransaction()) {
                     $this->rollBack();
                 }
 
@@ -736,5 +781,38 @@ final class DBLayer
          * As such this return should never be reached.
          */
         return null;
+    }
+
+    private function wrap(Closure $callback): mixed
+    {
+        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
+            try {
+                return $callback($this);
+            } catch (PDOException $e) {
+                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
+                    if ($i >= self::LOCK_RETRY) {
+                        throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                            ->setInfo($stnt->queryString, $bind, $e->errorInfo ?? [], $e->getCode())
+                            ->setFile($e->getFile())
+                            ->setLine($e->getLine());
+                    }
+
+                    $sleep = self::LOCK_RETRY + random_int(1, 3);
+
+                    $this->logger?->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
+                        'sleep' => $sleep
+                    ]);
+
+                    sleep($sleep);
+                } else {
+                    throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                        ->setInfo($stnt->queryString, $bind, $e->errorInfo ?? [], $e->getCode())
+                        ->setFile($e->getFile())
+                        ->setLine($e->getLine());
+                }
+            }
+        }
+
+        return false;
     }
 }

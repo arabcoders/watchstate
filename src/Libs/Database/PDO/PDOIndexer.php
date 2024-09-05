@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Libs\Database\PDO;
 
 use App\Libs\Config;
+use App\Libs\Database\DBLayer;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Options;
-use PDO;
 use Psr\Log\LoggerInterface as iLogger;
 
 /**
@@ -40,10 +40,10 @@ final class PDOIndexer
     /**
      * Class constructor.
      *
-     * @param PDO $db The PDO object used for database connections and queries.
+     * @param DBLayer $db The PDO object used for database connections and queries.
      * @param iLogger $logger The logger object used for logging information.
      */
-    public function __construct(private PDO $db, private iLogger $logger)
+    public function __construct(private DBLayer $db, private iLogger $logger)
     {
     }
 
@@ -169,7 +169,7 @@ final class PDOIndexer
 
         if (!$this->db->inTransaction()) {
             $startedTransaction = true;
-            $this->db->beginTransaction();
+            $this->db->start();
         }
 
         foreach ($queries as $query) {

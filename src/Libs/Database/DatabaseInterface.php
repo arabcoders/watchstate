@@ -7,10 +7,8 @@ namespace App\Libs\Database;
 use App\Libs\Entity\StateInterface;
 use Closure;
 use DateTimeInterface;
-use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 interface DatabaseInterface
 {
@@ -54,15 +52,6 @@ interface DatabaseInterface
      * @return array<StateInterface>
      */
     public function getAll(DateTimeInterface|null $date = null, array $opts = []): array;
-
-    /**
-     * Return number of items.
-     *
-     * @param DateTimeInterface|null $date if provided, it will return items changes since this date.
-     *
-     * @return int Number of items.
-     */
-    public function getCount(DateTimeInterface|null $date = null): int;
 
     /**
      * Return database records for given items.
@@ -184,13 +173,11 @@ interface DatabaseInterface
     public function setLogger(LoggerInterface $logger): self;
 
     /**
-     * Get PDO instance.
+     * Get DBLayer instance.
      *
-     * @return PDO
-     *
-     * @throws RuntimeException if PDO is not initialized yet.
+     * @return DBLayer
      */
-    public function getPDO(): PDO;
+    public function getDBLayer(): DBLayer;
 
     /**
      * Enable single transaction mode.
