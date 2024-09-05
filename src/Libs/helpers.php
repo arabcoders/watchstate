@@ -12,10 +12,12 @@ use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Events\DataEvent;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
@@ -2052,5 +2054,36 @@ if (!function_exists('getBackend')) {
         $default['name'] = $name;
 
         return makeBackend(array_replace_recursive($default, $config), $name);
+    }
+}
+
+if (!function_exists('lw')) {
+    /**
+     * log wrapper.
+     *
+     * The use case for this wrapper is to enhance the log context with db exception information.
+     * All logs should be wrapped with this function. it will probably be enhanced to include further context.
+     * in the future.
+     *
+     * @param string $message The log message.
+     * @param array $context The log context.
+     * @param Throwable $e The exception.
+     *
+     * @return array{ message: string, context: array} The wrapped log message and context.
+     */
+    function lw(string $message, array $context, Throwable $e): array
+    {
+        if (true === ($e instanceof DBLayerException)) {
+            $context[DBLayer::class] = [
+                'query' => $e->getQueryString(),
+                'bind' => $e->getQueryBind(),
+                'error' => $e->errorInfo ?? [],
+            ];
+        }
+
+        return [
+            'message' => $message,
+            'context' => $context,
+        ];
     }
 }

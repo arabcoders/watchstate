@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
+use App\Libs\Database\DBLayer;
+use App\Libs\Exceptions\DBLayerException;
 use Stringable;
 use Throwable;
 
@@ -67,7 +69,17 @@ final readonly class Error implements Stringable
             return $this->message;
         }
 
-        return r($this->message, $this->context, ['log_behavior' => true]);
+        $context = $this->context;
+
+        if (true === ($this->previous instanceof DBLayerException)) {
+            $context[DBLayer::class] = [
+                'query' => $this->previous->getQueryString(),
+                'bind' => $this->previous->getQueryBind(),
+                'error' => $this->previous->errorInfo ?? [],
+            ];
+        }
+
+        return r($this->message, $context, ['log_behavior' => true]);
     }
 
     public function __toString(): string
