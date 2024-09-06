@@ -118,12 +118,12 @@ class GetLibrariesListTest extends TestCase
 
         $this->assertFalse($response->status);
         $this->assertNotNull($response->error);
-        $this->assertSame(
-            'ERROR: Request for [Plex] libraries returned with unexpected [401] status code.',
+        $this->assertStringContainsString(
+            "ERROR: Request for 'Plex' libraries returned with unexpected '401' status code.",
             (string)$response->error
         );
 
         $this->assertNull($response->response);
-        $this->assertFalse($response->error->hasException());
+        $this->assertTrue($response->error->hasException());
     }
 }

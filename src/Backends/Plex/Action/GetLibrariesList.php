@@ -85,7 +85,7 @@ final class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [{backend}] libraries returned empty list.',
+                    message: "Request for '{backend}' libraries returned empty list.",
                     context: [
                         'backend' => $context->backendName,
                         'response' => [
@@ -156,7 +156,7 @@ final class GetLibrariesList
     {
         $url = $context->backendUrl->withPath('/library/sections');
 
-        $this->logger->debug('Requesting [{backend}] libraries list.', [
+        $this->logger->debug("Requesting '{backend}' libraries list.", [
             'backend' => $context->backendName,
             'url' => (string)$url
         ]);
@@ -166,7 +166,7 @@ final class GetLibrariesList
         $payload = $response->getContent(false);
 
         if ($context->trace) {
-            $this->logger->debug('Processing [{backend}] response.', [
+            $this->logger->debug("Processing '{backend}' response.", [
                 'backend' => $context->backendName,
                 'url' => (string)$url,
                 'response' => $payload,
@@ -175,13 +175,10 @@ final class GetLibrariesList
 
         if (200 !== $response->getStatusCode()) {
             throw new RuntimeException(
-                r(
-                    'Request for [{backend}] libraries returned with unexpected [{status_code}] status code.',
-                    [
-                        'backend' => $context->backendName,
-                        'status_code' => $response->getStatusCode(),
-                    ]
-                )
+                r("Request for '{backend}' libraries returned with unexpected '{status_code}' status code.", [
+                    'backend' => $context->backendName,
+                    'status_code' => $response->getStatusCode(),
+                ])
             );
         }
 
