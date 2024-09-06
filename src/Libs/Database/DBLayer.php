@@ -119,7 +119,7 @@ final class DBLayer implements LoggerAwareInterface
             if ($e instanceof DBLayerException) {
                 throw $e;
             }
-            throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+            throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                 ->setInfo(
                     (true === ($sql instanceof PDOStatement)) ? $sql->queryString : $sql,
                     $bind,
@@ -791,7 +791,7 @@ final class DBLayer implements LoggerAwareInterface
             } catch (PDOException $e) {
                 if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                     if ($i >= self::LOCK_RETRY) {
-                        throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                        throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                             ->setInfo($stnt->queryString, $bind, $e->errorInfo ?? [], $e->getCode())
                             ->setFile($e->getFile())
                             ->setLine($e->getLine());
@@ -805,7 +805,7 @@ final class DBLayer implements LoggerAwareInterface
 
                     sleep($sleep);
                 } else {
-                    throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                    throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                         ->setInfo($stnt->queryString, $bind, $e->errorInfo ?? [], $e->getCode())
                         ->setFile($e->getFile())
                         ->setLine($e->getLine());

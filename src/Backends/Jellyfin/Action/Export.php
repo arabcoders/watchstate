@@ -91,11 +91,17 @@ class Export extends Import
                     'type' => $type,
                 ];
             } catch (InvalidArgumentException $e) {
-                $this->logger->info($e->getMessage(), [
-                    'backend' => $context->backendName,
-                    ...$logContext,
-                    'body' => $item,
-                ]);
+                $this->logger->info(
+                    ...lw(
+                        message: $e->getMessage(),
+                        context: [
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'body' => $item,
+                        ],
+                        e: $e
+                    )
+                );
                 return;
             }
 
@@ -257,25 +263,28 @@ class Export extends Import
             );
         } catch (Throwable $e) {
             $this->logger->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] export. Error [{error.message} @ {error.file}:{error.line}].',
-                context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] export. Error [{error.message} @ {error.file}:{error.line}].',
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
                     ],
-                    ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                ]
+                    e: $e
+                )
             );
         }
     }

@@ -192,69 +192,78 @@ class Import
             }
         } catch (ExceptionInterface $e) {
             $this->logger->error(
-                message: "Request for '{client}: {backend}' libraries has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
-                context: [
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'error' => [
-                        'line' => $e->getLine(),
-                        'kind' => $e::class,
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Request for '{client}: {backend}' libraries has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'error' => [
+                            'line' => $e->getLine(),
+                            'kind' => $e::class,
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => $e::class,
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
                     ],
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => $e::class,
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                ]
+                    e: $e
+                )
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         } catch (JsonException $e) {
             $this->logger->error(
-                message: "Request for '{client}: {backend}' libraries returned with invalid body. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
-                context: [
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
-                    'error' => [
-                        'line' => $e->getLine(),
-                        'kind' => $e::class,
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Request for '{client}: {backend}' libraries returned with invalid body. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'error' => [
+                            'line' => $e->getLine(),
+                            'kind' => $e::class,
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
                     ],
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                ]
+                    e: $e
+                )
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' request for libraries. '{error.message}' at '{error.file}:{error.line}'.",
-                context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' request for libraries. '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
                     ],
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                ]
+                    e: $e
+                )
             );
             Message::add("{$context->backendName}.has_errors", true);
             return [];
@@ -319,48 +328,54 @@ class Import
                 );
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
-                    message: "Request for '{client}: {backend}' '{library.title}' items count failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'line' => $e->getLine(),
-                            'kind' => $e::class,
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Request for '{client}: {backend}' '{library.title}' items count failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'line' => $e->getLine(),
+                                'kind' => $e::class,
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
+                            ...$logContext,
                         ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                        ...$logContext,
-                    ]
+                        e: $e
+                    )
                 );
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' items count request. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' items count request. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
+                            ...$logContext,
                         ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                        ...$logContext,
-                    ]
+                        e: $e
+                    )
                 );
                 continue;
             }
@@ -404,6 +419,7 @@ class Import
                 $total[ag($logContext, 'library.id')] = $totalCount;
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
+                    ...lw(
                     message: "Request for '{client}: {backend}' '{library.title}' total items has failed. '{error.kind}' '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'client' => $context->backendName,
@@ -422,31 +438,35 @@ class Import
                             'trace' => $e->getTrace(),
                         ],
                         ...$logContext,
-
-                    ]
+                    ],
+                    e: $e
+                ),
                 );
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' requests for items count. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' requests for items count. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
+                            ...$logContext,
                         ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                        ...$logContext,
-                    ]
+                        e: $e
+                    )
                 );
                 continue;
             }
@@ -515,29 +535,33 @@ class Import
                 );
             } catch (ExceptionInterface $e) {
                 $this->logger->error(
-                    message: "Request for '{client}: {backend}' '{library.title}' series external ids has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'line' => $e->getLine(),
-                            'kind' => $e::class,
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Request for '{client}: {backend}' '{library.title}' series external ids has failed. '{error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'line' => $e->getLine(),
+                                'kind' => $e::class,
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
+                            ...$logContext,
                         ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                        ...$logContext,
-                    ]
+                        e: $e
+                    )
                 );
                 continue;
             } catch (Throwable $e) {
                 $this->logger->error(
+                    ...lw(
                     message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' series external ids request. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'backend' => $context->backendName,
@@ -556,7 +580,9 @@ class Import
                             'trace' => $e->getTrace(),
                         ],
                         ...$logContext,
-                    ]
+                    ],
+                    e: $e
+                ),
                 );
                 continue;
             }
@@ -663,48 +689,54 @@ class Import
                     );
                 } catch (ExceptionInterface $e) {
                     $this->logger->error(
-                        "Request for '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list has failed. {error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
-                        [
-                            'client' => $context->clientName,
-                            'backend' => $context->backendName,
-                            'error' => [
-                                'line' => $e->getLine(),
-                                'kind' => $e::class,
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
+                        ...lw(
+                            message: "Request for '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list has failed. {error.kind}' with message '{error.message}' at '{error.file}:{error.line}'.",
+                            context: [
+                                'client' => $context->clientName,
+                                'backend' => $context->backendName,
+                                'error' => [
+                                    'line' => $e->getLine(),
+                                    'kind' => $e::class,
+                                    'message' => $e->getMessage(),
+                                    'file' => after($e->getFile(), ROOT_PATH),
+                                ],
+                                ...$logContext,
+                                'exception' => [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'message' => $e->getMessage(),
+                                    'trace' => $e->getTrace(),
+                                ],
                             ],
-                            ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
-                        ]
+                            e: $e
+                        )
                     );
                     continue;
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list request. '{error.message}' at '{error.file}:{error.line}'.",
-                        context: [
-                            'backend' => $context->backendName,
-                            'client' => $context->clientName,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
+                        ...lw(
+                            message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title} {segment.number}/{segment.of}' content list request. '{error.message}' at '{error.file}:{error.line}'.",
+                            context: [
+                                'backend' => $context->backendName,
+                                'client' => $context->clientName,
+                                'error' => [
+                                    'kind' => $e::class,
+                                    'line' => $e->getLine(),
+                                    'message' => $e->getMessage(),
+                                    'file' => after($e->getFile(), ROOT_PATH),
+                                ],
+                                ...$logContext,
+                                'exception' => [
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'kind' => get_class($e),
+                                    'message' => $e->getMessage(),
+                                    'trace' => $e->getTrace(),
+                                ],
                             ],
-                            ...$logContext,
-                            'exception' => [
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'kind' => get_class($e),
-                                'message' => $e->getMessage(),
-                                'trace' => $e->getTrace(),
-                            ],
-                        ]
+                            e: $e
+                        )
                     );
                     continue;
                 }
@@ -850,50 +882,56 @@ class Import
                     }
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. '{error.message}' at '{error.file}:{error.line}'.",
-                        context: [
-                            'backend' => $context->backendName,
-                            'client' => $context->clientName,
-                            'error' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
+                        ...lw(
+                            message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{library.title} {segment.number}/{segment.of}' item response. '{error.message}' at '{error.file}:{error.line}'.",
+                            context: [
+                                'backend' => $context->backendName,
+                                'client' => $context->clientName,
+                                'error' => [
+                                    'kind' => $e::class,
+                                    'line' => $e->getLine(),
+                                    'message' => $e->getMessage(),
+                                    'file' => after($e->getFile(), ROOT_PATH),
+                                ],
+                                'entity' => $entity,
+                                'exception' => [
+                                    'kind' => $e::class,
+                                    'line' => $e->getLine(),
+                                    'trace' => $e->getTrace(),
+                                    'message' => $e->getMessage(),
+                                    'file' => after($e->getFile(), ROOT_PATH),
+                                ],
+                                ...$logContext,
                             ],
-                            'entity' => $entity,
-                            'exception' => [
-                                'kind' => $e::class,
-                                'line' => $e->getLine(),
-                                'trace' => $e->getTrace(),
-                                'message' => $e->getMessage(),
-                                'file' => after($e->getFile(), ROOT_PATH),
-                            ],
-                            ...$logContext,
-                        ]
+                            e: $e
+                        )
                     );
                 }
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. '{error.message}' at '{error.file}:{error.line}'.",
-                context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing of '{library.title} {segment.number}/{segment.of}' response. '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
                     ],
-                    'exception' => [
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                        'file' => after($e->getFile(), ROOT_PATH),
-                    ],
-                    ...$logContext,
-                ]
+                    e: $e
+                )
             );
         }
 
@@ -1035,19 +1073,22 @@ class Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->error(
-                    "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
-                    [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                        context: [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'body' => $item,
+                            ...$logContext,
                         ],
-                        'body' => $item,
-                        ...$logContext,
-                    ]
+                        e: $e
+                    )
                 );
                 return;
             }
@@ -1110,18 +1151,21 @@ class Import
                 );
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "Exception '{error.kind}' occurred during '{client}: {backend}' '{library.title}' '{item.id}: {item.title}' entity creation. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'backend' => $context->backendName,
-                        'client' => $context->clientName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Exception '{error.kind}' occurred during '{client}: {backend}' '{library.title}' '{item.id}: {item.title}' entity creation. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'backend' => $context->backendName,
+                            'client' => $context->clientName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            ...$logContext,
                         ],
-                        ...$logContext,
-                    ]
+                        e: $e
+                    )
                 );
 
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_no_date_is_set");
@@ -1155,26 +1199,29 @@ class Import
             $mapper->add(entity: $entity, opts: $opts);
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' '{item.title}' {action}. '{error.message}' at '{error.file}:{error.line}'.",
-                context: [
-                    'action' => property_exists($this, 'action') ? $this->action : 'import',
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' '{library.title}' '{item.title}' {action}. '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'action' => property_exists($this, 'action') ? $this->action : 'import',
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
+                        ...$logContext,
                     ],
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                    ...$logContext,
-                ]
+                    e: $e
+                )
             );
         }
     }

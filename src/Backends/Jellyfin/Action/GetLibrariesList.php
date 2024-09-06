@@ -77,7 +77,10 @@ class GetLibrariesList
                 $this->logger
             );
         } catch (RuntimeException $e) {
-            return new Response(status: false, error: new Error(message: $e->getMessage(), level: Levels::ERROR));
+            return new Response(
+                status: false,
+                error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e)
+            );
         }
 
         if ($context->trace) {

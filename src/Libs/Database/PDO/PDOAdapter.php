@@ -939,7 +939,7 @@ final class PDOAdapter implements iDB
             } catch (PDOException $e) {
                 if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                     if ($i >= self::LOCK_RETRY) {
-                        throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                        throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                             ->setInfo(
                                 ag($this->db->getLastStatement(), 'sql', ''),
                                 ag($this->db->getLastStatement(), 'bind', []),
@@ -958,7 +958,7 @@ final class PDOAdapter implements iDB
 
                     sleep($sleep);
                 } else {
-                    throw (new DBLayerException($e->getMessage(), $e->getCode(), $e))
+                    throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                         ->setInfo(
                             ag($this->db->getLastStatement(), 'sql', ''),
                             ag($this->db->getLastStatement(), 'bind', []),

@@ -36,6 +36,7 @@ trait CommonTrait
             return new Response(
                 status: false,
                 error: new Error(
+                    ...lw(
                     message: "{client}: '{backend}' {action} thrown unhandled exception '{error.kind}'. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'action' => $action ?? '',
@@ -56,6 +57,8 @@ trait CommonTrait
                             'trace' => $e->getTrace(),
                         ]
                     ],
+                    e: $e
+                ),
                     level: Levels::WARNING,
                     previous: $e
                 )

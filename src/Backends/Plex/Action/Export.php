@@ -76,19 +76,22 @@ final class Export extends Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->error(
-                    "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
-                    [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                        context: [
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            ...$logContext,
+                            'body' => $item,
                         ],
-                        ...$logContext,
-                        'body' => $item,
-                    ]
+                        e: $e
+                    )
                 );
                 return;
             }
@@ -242,25 +245,28 @@ final class Export extends Import
             ])));
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' export. '{error.message}' at '{error.file}:{error.line}'.",
-                context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
-                    'error' => [
-                        'kind' => $e::class,
-                        'line' => $e->getLine(),
-                        'message' => $e->getMessage(),
-                        'file' => after($e->getFile(), ROOT_PATH),
+                ...lw(
+                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' export. '{error.message}' at '{error.file}:{error.line}'.",
+                    context: [
+                        'backend' => $context->backendName,
+                        'client' => $context->clientName,
+                        'error' => [
+                            'kind' => $e::class,
+                            'line' => $e->getLine(),
+                            'message' => $e->getMessage(),
+                            'file' => after($e->getFile(), ROOT_PATH),
+                        ],
+                        ...$logContext,
+                        'exception' => [
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'kind' => get_class($e),
+                            'message' => $e->getMessage(),
+                            'trace' => $e->getTrace(),
+                        ],
                     ],
-                    ...$logContext,
-                    'exception' => [
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'kind' => get_class($e),
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTrace(),
-                    ],
-                ]
+                    e: $e
+                )
             );
         }
     }

@@ -226,26 +226,29 @@ class Progress
                 }
             } catch (\App\Libs\Exceptions\RuntimeException|RuntimeException|InvalidArgumentException $e) {
                 $this->logger->error(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' get {item.type} '{item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
-                    contexT: [
-                        'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        ...$logContext,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' get {item.type} '{item.title}' status. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'action' => $this->action,
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            ...$logContext,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
                         ],
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ]
+                        e: $e
+                    )
                 );
                 continue;
             }
@@ -293,26 +296,29 @@ class Progress
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' change {item.type} '{item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
-                    context: [
-                        'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'error' => [
-                            'kind' => $e::class,
-                            'line' => $e->getLine(),
-                            'message' => $e->getMessage(),
-                            'file' => after($e->getFile(), ROOT_PATH),
+                    ...lw(
+                        message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' change {item.type} '{item.title}' watch progress. '{error.message}' at '{error.file}:{error.line}'.",
+                        context: [
+                            'action' => $this->action,
+                            'client' => $context->clientName,
+                            'backend' => $context->backendName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            ...$logContext,
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTrace(),
+                            ],
                         ],
-                        ...$logContext,
-                        'exception' => [
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'kind' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTrace(),
-                        ],
-                    ]
+                        e: $e
+                    )
                 );
             }
         }
