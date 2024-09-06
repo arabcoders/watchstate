@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Backends\Plex\PlexClient;
 use App\Libs\Config;
 use App\Libs\Entity\StateEntity;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
@@ -13,11 +15,15 @@ use App\Libs\TestCase;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
+use JsonSerializable;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Stream;
 use Nyholm\Psr7Server\ServerRequestCreator;
+use Psr\SimpleCache\CacheInterface;
+use Stringable;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use TypeError;
 
 class HelpersTest extends TestCase
 {
@@ -171,6 +177,32 @@ class HelpersTest extends TestCase
             ag_set([], 'foo.kaz', 'taz'),
             'When a nested key is passed, it will be saved in format of [key => [nested_key => value]]'
         );
+
+        $exception = null;
+        try {
+            ag_set(['foo' => 'bar'], 'foo.bar.taz', 'baz');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(
+                TypeError::class,
+                $exception ? $exception::class : null,
+                'When trying to set value to non-array, exception is thrown.'
+            );
+        }
+
+        $exception = null;
+        try {
+            ag_set(['foo' => ['bar' => ['taz' => 'tt']]], 'foo.bar.taz.tt', 'baz');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(
+                RuntimeException::class,
+                $exception ? $exception::class : null,
+                'When trying to set value to existing key, exception is thrown.'
+            );
+        }
     }
 
     public function test_ag_exits(): void
@@ -220,6 +252,23 @@ class HelpersTest extends TestCase
             ['sub' => ['foo' => 'bar']],
             ag_delete($arr, 'foo'),
             'When simple key is passed, and it exists, it is deleted, and copy of the modified array is returned'
+        );
+        $this->assertSame(
+            [0 => 'foo', 1 => 'bar'],
+            ag_delete([0 => 'foo', 1 => 'bar', 2 => 'taz'], 2),
+            'When an int key is passed, and it exists, it is deleted, and copy of the modified array is returned'
+        );
+
+        $this->assertSame(
+            $arr,
+            ag_delete($arr, 121),
+            'When an int key is passed, and it does not exist, original array is returned'
+        );
+
+        $this->assertSame(
+            $arr,
+            ag_delete($arr, 'test.bar'),
+            'When a non-existing key is passed, original array is returned.'
         );
     }
 
@@ -332,6 +381,7 @@ class HelpersTest extends TestCase
             ]
         ]);
         $data = ['foo' => 'bar'];
+        api_response(200, $data);
         $response = api_response(Status::OK, $data);
         $this->assertSame(Status::OK->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
@@ -354,11 +404,50 @@ class HelpersTest extends TestCase
         ]);
 
         $data = ['error' => ['code' => Status::BAD_REQUEST->value, 'message' => 'error message']];
-        $response = api_error('error message', Status::BAD_REQUEST);
+        $response = api_error('error message', Status::BAD_REQUEST, headers: [
+            'X-Test-Header' => 'test',
+        ]);
         $this->assertSame(Status::BAD_REQUEST->value, $response->getStatusCode());
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
         $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
+        $this->assertSame('test', $response->getHeaderLine('X-Test-Header'));
         $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
+
+        $response = api_error('error message', Status::BAD_REQUEST, opts: [
+            'callback' => fn($response) => $response->withStatus(Status::INTERNAL_SERVER_ERROR->value)
+        ]);
+        $this->assertSame(Status::INTERNAL_SERVER_ERROR->value, $response->getStatusCode());
+    }
+
+    public function test_api_message(): void
+    {
+        Config::append([
+            'api' => [
+                'response' => [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                        'X-Application-Version' => fn() => getAppVersion(),
+                        'Access-Control-Allow-Origin' => '*',
+                    ],
+                ],
+            ]
+        ]);
+
+        $data = ['info' => ['code' => Status::OK->value, 'message' => 'info message']];
+        $response = api_message('info message', Status::OK, headers: [
+            'X-Test-Header' => 'test',
+        ]);
+        $this->assertSame(Status::OK->value, $response->getStatusCode());
+        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame(getAppVersion(), $response->getHeaderLine('X-Application-Version'));
+        $this->assertSame('test', $response->getHeaderLine('X-Test-Header'));
+        $this->assertSame($data, json_decode($response->getBody()->getContents(), true));
+
+        $response = api_message('info message', Status::OK, opts: [
+            'callback' => fn($response) => $response->withStatus(Status::INTERNAL_SERVER_ERROR->value)
+        ]);
+
+        $this->assertSame(Status::INTERNAL_SERVER_ERROR->value, $response->getStatusCode());
     }
 
     public function test_httpClientChunks(): void
@@ -460,6 +549,51 @@ class HelpersTest extends TestCase
             '(foo: [ (bar: baz) ])@ (kaz: [ (taz: raz) ])',
             arrayToString($data, '@ '),
             'When array is passed, it is converted into array text separated by delimiter.'
+        );
+
+        $cl = new class implements JsonSerializable {
+            public function jsonSerialize(): array
+            {
+                return ['foo' => 'bar'];
+            }
+
+            public function __toString(): string
+            {
+                return json_encode($this->jsonSerialize());
+            }
+        };
+
+        $cl2 = new class implements Stringable {
+            public function __toString(): string
+            {
+                return json_encode(['foo' => 'bar']);
+            }
+        };
+
+        $cl3 = new class() {
+            public string $foo = 'bar';
+        };
+
+        $this->assertSame(
+            '(baz: {"foo":"bar"})',
+            arrayToString(['baz' => $cl]),
+            'When array contains a class that implements JsonSerializable it is converted into array string.'
+        );
+
+        $this->assertSame(
+            '(baz: {"foo":"bar"}), (foo: true), (bar: false)',
+            arrayToString([
+                'baz' => $cl2,
+                'foo' => true,
+                'bar' => false,
+            ]),
+            "When an object that implements Stringable is passed, it's casted to string"
+        );
+
+        $this->assertSame(
+            '(baz: [ (foo: bar) ])',
+            arrayToString(['baz' => $cl3]),
+            "When a class doesn't implement JsonSerializable or Stringable, it's converted to array. using object vars."
         );
     }
 
@@ -563,6 +697,9 @@ class HelpersTest extends TestCase
             isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1201', '121'),
             'When ignore url is passed with and ignore list does not contain the url, false is returned.'
         );
+
+        $this->expectException(InvalidArgumentException::class);
+        isIgnoredId('home_plex', 'not_real_type', 'guid_tvdb', '1200', '121');
     }
 
     public function test_r(): void
@@ -595,6 +732,32 @@ class HelpersTest extends TestCase
             'foo bar,taz',
             r('foo {obj}', ['obj' => ['foo' => 'bar', 'baz' => 'taz']]),
             'When array is passed, it is converted into array and placeholders are replaced with values.'
+        );
+
+        $message = 'foo bar,taz';
+        $context = ['obj' => ['foo' => 'bar', 'baz' => 'taz']];
+        $this->assertSame(
+            ['message' => $message, 'context' => $context],
+            r_array($message, $context),
+            'When non-existing placeholder is passed, string is returned as it is.'
+        );
+
+        $this->assertSame(
+            'Time is: 2020-01-01T00:00:00+00:00',
+            r('Time is: {date}', ['date' => makeDate('2020-01-01', 'UTC')]),
+            'When date is passed, it is converted into string and placeholders are replaced with values.'
+        );
+
+        $this->assertSame(
+            'HTTP Status: 200',
+            r('HTTP Status: {status}', ['status' => Status::OK]),
+            'When Int backed Enum is passed, it is converted into its value and the placeholder is replaced with it.'
+        );
+
+        $this->assertSame(
+            'HTTP Method: POST',
+            r('HTTP Method: {method}', ['method' => Method::POST]),
+            'When String backed Enum is passed, it is converted into its value and the placeholder is replaced with it.'
         );
 
         $res = fopen('php://memory', 'r');
@@ -758,5 +921,363 @@ class HelpersTest extends TestCase
         } catch (\Throwable) {
             $this->fail('This function shouldn\'t throw exception when invalid file is given.');
         }
+    }
+
+    public function test_generateRoutes()
+    {
+        $class = new class implements CacheInterface {
+            public array $cache = [];
+            public bool $throw = false;
+
+            public function get(string $key, mixed $default = null): mixed
+            {
+                return $this->cache[$key] ?? $default;
+            }
+
+            public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
+            {
+                if ($this->throw) {
+                    throw new class() extends \InvalidArgumentException implements
+                        \Psr\SimpleCache\InvalidArgumentException {
+                    };
+                }
+
+                $this->cache[$key] = $value;
+                return true;
+            }
+
+            public function delete(string $key): bool
+            {
+                unset($this->cache[$key]);
+                return true;
+            }
+
+            public function clear(): bool
+            {
+                $this->cache = [];
+                return true;
+            }
+
+            public function getMultiple(iterable $keys, mixed $default = null): iterable
+            {
+                foreach ($keys as $key) {
+                    yield $key => $this->get($key, $default);
+                }
+            }
+
+            public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
+            {
+                foreach ($values as $key => $value) {
+                    $this->set($key, $value, $ttl);
+                }
+                return true;
+            }
+
+            public function deleteMultiple(iterable $keys): bool
+            {
+                foreach ($keys as $key) {
+                    $this->delete($key);
+                }
+                return true;
+            }
+
+            public function has(string $key): bool
+            {
+                return isset($this->cache[$key]);
+            }
+
+            public function reset(): void
+            {
+                $this->cache = [];
+            }
+        };
+
+        $routes = generateRoutes('cli', [CacheInterface::class => $class]);
+
+        $this->assertCount(2, $class->cache, 'It should have generated two cache buckets for http and cli routes.');
+        $this->assertGreaterThanOrEqual(
+            1,
+            count($class->cache['routes_cli']),
+            'It should have more than 1 route for cli routes.'
+        );
+        $this->assertGreaterThanOrEqual(
+            1,
+            count($class->cache['routes_http']),
+            'It should have more than 1 route for cli routes.'
+        );
+
+        $this->assertSame(
+            $routes,
+            $class->cache['routes_cli'],
+            'It should return cli routes when called with cli type.'
+        );
+
+        $class->reset();
+
+        $this->assertSame(
+            generateRoutes('http', [CacheInterface::class => $class]),
+            $class->cache['routes_http'],
+            'It should return http routes. when called with http type.'
+        );
+
+        $class->reset();
+        $class->throw = true;
+        $routes = generateRoutes('http', [CacheInterface::class => $class]);
+        $this->assertCount(0, $class->cache, 'When cache throws exception, it should not save anything.');
+        $this->assertNotSame([], $routes, 'Routes should be generated even if cache throws exception.');
+
+        // --
+        $save = Config::get('supported', []);
+        Config::save('supported', ['not_set' => 'not_set_client', 'plex' => PlexClient::class,]);
+        $routes = generateRoutes('http', [CacheInterface::class => $class]);
+        Config::save('supported', $save);
+    }
+
+    public function test_getSystemMemoryInfo()
+    {
+        /** @noinspection PhpUnhandledExceptionInspection */
+        $none = getSystemMemoryInfo(bin2hex(random_bytes(32)));
+        $this->assertIsArray($none, 'It should return array.');
+        $this->assertSame([], $none, 'When mem-file is not readable, it should return empty array.');
+
+        $info = getSystemMemoryInfo(__DIR__ . '/../Fixtures/meminfo_data.txt');
+        $this->assertIsArray($info, 'It should return array of memory info.');
+        $this->assertArrayHasKey('mem_total', $info, 'It should have total memory key.');
+        $this->assertArrayHasKey('mem_free', $info, 'It should have free memory key.');
+        $this->assertArrayHasKey('mem_available', $info, 'It should have available memory key.');
+        $this->assertArrayHasKey('swap_total', $info, 'It should have swap total key.');
+        $this->assertArrayHasKey('swap_free', $info, 'It should have swap free key.');
+
+        $keysValues = [
+            "mem_total" => 131598708000.0,
+            "mem_free" => 10636272000.0,
+            "mem_available" => 113059644000.0,
+            "swap_total" => 144758584000.0,
+            "swap_free" => 140512824000.0,
+        ];
+
+        foreach ($keysValues as $key => $value) {
+            $this->assertSame($value, $info[$key], "It should have correct value for {$key} key.");
+        }
+
+        if (is_writeable(sys_get_temp_dir())) {
+            try {
+                $fileName = tempnam(sys_get_temp_dir(), 'meminfo');
+                $none = getSystemMemoryInfo($fileName);
+                $this->assertIsArray($none, 'It should return array.');
+                $this->assertSame([], $none, 'When mem-file is empty it should return empty array.');
+            } finally {
+                if (file_exists($fileName)) {
+                    unlink($fileName);
+                }
+            }
+        } else {
+            $this->markTestSkipped('Temp directory is not writable.');
+        }
+    }
+
+    public function test_checkIgnoreRule()
+    {
+        Config::save('servers', ['test_backend' => []]);
+        $rule = 'movie://tvdb:276923@test_backend?id=133367';
+        $this->assertTrue(checkIgnoreRule($rule));
+
+        // -- if no db source is given, it should throw exception.
+        $exception = null;
+        try {
+            checkIgnoreRule('movie://test_backend?id=133367&garbage=1');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(RuntimeException::class, $exception ? $exception::class : null);
+            $this->assertSame(
+                'No db source was given.',
+                $exception?->getMessage(),
+                'When no db source is given, it should throw exception.'
+            );
+        }
+
+        $exception = null;
+        try {
+            checkIgnoreRule('movie://foo@test_backend?id=133367&garbage=1');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(RuntimeException::class, $exception ? $exception::class : null);
+            $this->assertStringContainsString(
+                "Invalid db source name 'foo' was given.",
+                $exception?->getMessage(),
+                'When invalid db source is given, it should throw exception.'
+            );
+        }
+
+        $exception = null;
+        try {
+            checkIgnoreRule('movie://tvdb@test_backend?id=133367&garbage=1');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(RuntimeException::class, $exception ? $exception::class : null);
+            $this->assertSame(
+                'No external id was given.',
+                $exception?->getMessage(),
+                'When no external id is given in the password part of url, it should throw exception.'
+            );
+        }
+
+        $exception = null;
+        try {
+            checkIgnoreRule('http://tvdb:123@test_backend?id=133367&garbage=1');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(
+                RuntimeException::class,
+                $exception ? $exception::class : null,
+                $exception?->getMessage() ?? ''
+            );
+            $this->assertStringContainsString(
+                "Invalid type 'http' was given.",
+                $exception?->getMessage(),
+                'When invalid type is given, it should throw exception.'
+            );
+        }
+
+        $exception = null;
+        try {
+            checkIgnoreRule('movie://tvdb:123@not_set?id=133367&garbage=1');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(
+                RuntimeException::class,
+                $exception ? $exception::class : null,
+                $exception?->getMessage() ?? ''
+            );
+            $this->assertStringContainsString(
+                "Invalid backend name 'not_set' was given.",
+                $exception?->getMessage(),
+                'When invalid backend name is given, it should throw exception.'
+            );
+        }
+
+        $exception = null;
+        try {
+            checkIgnoreRule('//tvdb:123@not_set?id=133367&garbage=1');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(
+                RuntimeException::class,
+                $exception ? $exception::class : null,
+                $exception?->getMessage() ?? ''
+            );
+            $this->assertStringContainsString(
+                'No type was given.',
+                $exception?->getMessage(),
+                'When no type is given, it should throw exception.'
+            );
+        }
+        $exception = null;
+        try {
+            checkIgnoreRule('//');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertSame(
+                RuntimeException::class,
+                $exception ? $exception::class : null,
+                $exception?->getMessage() ?? ''
+            );
+            $this->assertStringContainsString(
+                'Invalid ignore rule was given.',
+                $exception?->getMessage(),
+                'When parse_url fails to parse url, it should throw exception.'
+            );
+        }
+    }
+
+    public function test_addCors()
+    {
+        $response = api_response(Status::OK, headers: ['X-Request-Id' => '1']);
+        $response = addCors($response, headers: [
+            'X-Test-Add' => 'test',
+            'X-Request-Id' => '2',
+        ], methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']);
+
+        $this->assertSame('*', $response->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertSame(
+            'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+            $response->getHeaderLine('Access-Control-Allow-Methods')
+        );
+        $this->assertSame(
+            'X-Application-Version, X-Request-Id, *',
+            $response->getHeaderLine('Access-Control-Allow-Headers')
+        );
+        $this->assertGreaterThanOrEqual(600, (int)$response->getHeaderLine('Access-Control-Max-Age'));
+        $this->assertSame('test', $response->getHeaderLine('X-Test-Add'));
+        $this->assertSame('1', $response->getHeaderLine('X-Request-Id'), 'The original header should not be altered.');
+        $this->assertNotSame(
+            '2',
+            $response->getHeaderLine('X-Request-Id'),
+            'AddCors: headers should not alter already set headers.'
+        );
+    }
+
+    public function test_deepArrayMerge()
+    {
+        $array1 = [
+            'foo' => 'bar',
+            'baz' => 'taz',
+            'kaz' => [
+                'raz' => 'maz',
+                'naz' => 'laz',
+            ],
+        ];
+
+        $array2 = [
+            'foo' => 'baz',
+            'kaz' => [
+                'raz' => 'baz',
+                'naz' => 'baz',
+            ],
+        ];
+
+        $expected = [
+            'foo' => 'baz',
+            'baz' => 'taz',
+            'kaz' => [
+                'raz' => 'baz',
+                'naz' => 'baz',
+            ],
+        ];
+
+        $this->assertSame($expected, deepArrayMerge([$array1, $array2]), 'It should merge arrays correctly.');
+        $this->assertSame(
+            [['foo' => 'baz'], ['baz' => 'taz'],],
+            deepArrayMerge([[['foo' => 'bar']], [['foo' => 'baz'], ['baz' => 'taz'],]], true),
+            'if preserve keys is true'
+        );
+
+        $this->assertSame(
+            [['foo' => 'bar'], ['foo' => 'baz'], ['baz' => 'taz'],],
+            deepArrayMerge([[['foo' => 'bar']], [['foo' => 'baz'], ['baz' => 'taz'],]], false),
+            'if preserve keys is false'
+        );
+    }
+
+    public function test_tryCatch()
+    {
+        $f = null;
+        $x = tryCatch(fn() => throw new RuntimeException(), fn($e) => $e, function () use (&$f) {
+            $f = 'finally_was_called';
+        });
+
+        $this->assertInstanceOf(
+            RuntimeException::class,
+            $x,
+            'When try block is successful, it should return the value.'
+        );
+        $this->assertSame('finally_was_called', $f, 'finally block should be executed.');
     }
 }

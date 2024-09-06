@@ -259,9 +259,8 @@ if (!function_exists('ag_delete')) {
         }
 
         if (is_int($path)) {
-            if (isset($array[$path])) {
-                unset($array[$path]);
-            }
+            // -- if the path is int, and it's exists, it should have been caught by
+            // -- the first if condition. So, we can safely return the array as is.
             return $array;
         }
 
@@ -969,20 +968,12 @@ if (false === function_exists('r_array')) {
 
         $pattern = '#' . preg_quote($tagLeft, '#') . '([\w_.]+)' . preg_quote($tagRight, '#') . '#is';
 
-        $status = preg_match_all($pattern, $text, $matches);
-
-        if (false === $status || $status < 1) {
-            return ['message' => $text, 'context' => $context];
-        }
+        preg_match_all($pattern, $text, $matches);
 
         $replacements = [];
 
         foreach ($matches[1] as $key) {
             $placeholder = $tagLeft . $key . $tagRight;
-
-            if (false === str_contains($text, $placeholder)) {
-                continue;
-            }
 
             if (false === ag_exists($context, $key)) {
                 continue;
@@ -1028,7 +1019,7 @@ if (false === function_exists('generateRoutes')) {
      *
      * @return array The generated routes.
      */
-    function generateRoutes(string $type = 'cli'): array
+    function generateRoutes(string $type = 'cli', array $opts = []): array
     {
         $dirs = [__DIR__ . '/../Commands'];
         foreach (array_keys(Config::get('supported', [])) as $backend) {
@@ -1043,7 +1034,7 @@ if (false === function_exists('generateRoutes')) {
 
         $routes_cli = (new Router($dirs))->generate();
 
-        $cache = Container::get(iCache::class);
+        $cache = $opts[iCache::class] ?? Container::get(iCache::class);
 
         try {
             $cache->set('routes_cli', $routes_cli, new DateInterval('PT1H'));
@@ -1147,7 +1138,7 @@ if (false === function_exists('getSystemMemoryInfo')) {
      *
      * @return array{ MemTotal: float, MemFree: float, MemAvailable: float, SwapTotal: float, SwapFree: float }
      */
-    function getSystemMemoryInfo(): array
+    function getSystemMemoryInfo(string $memFile = '/proc/meminfo'): array
     {
         $keys = [
             'MemTotal' => 'mem_total',
@@ -1159,11 +1150,11 @@ if (false === function_exists('getSystemMemoryInfo')) {
 
         $result = [];
 
-        if (!is_readable('/proc/meminfo')) {
+        if (!is_readable($memFile)) {
             return $result;
         }
 
-        if (false === ($lines = @file('/proc/meminfo', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))) {
+        if (false === ($lines = @file($memFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))) {
             return $result;
         }
 
@@ -1214,6 +1205,10 @@ if (!function_exists('checkIgnoreRule')) {
     function checkIgnoreRule(string $guid): bool
     {
         $urlParts = parse_url($guid);
+
+        if (false === is_array($urlParts)) {
+            throw new RuntimeException('Invalid ignore rule was given.');
+        }
 
         if (null === ($db = ag($urlParts, 'user'))) {
             throw new RuntimeException('No db source was given.');

@@ -114,7 +114,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (false === is_string($key)) {
                 $this->getLogger()->info(
-                    'Ignoring [{backend}] {item.type} [{item.title}] external id. Unexpected key type [{given}] was given.',
+                    "Ignoring '{backend}' {item.type} '{item.title}' external id. Unexpected key type '{given}' was given.",
                     [
                         'key' => (string)$key,
                         'given' => get_debug_type($key),
@@ -126,7 +126,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (null === (self::SUPPORTED[$key] ?? null)) {
                 $this->getLogger()->info(
-                    'Ignoring [{backend}] {item.type} [{item.title}] [{key}] external id. Not supported.',
+                    "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Not supported.",
                     [
                         'key' => $key,
                         ...$context,
@@ -137,7 +137,7 @@ final class Guid implements JsonSerializable, Stringable
 
             if (self::SUPPORTED[$key] !== ($valueType = get_debug_type($value))) {
                 $this->getLogger()->info(
-                    'Ignoring [{backend}] {item.type} [{item.title}] [{key}] external id. Unexpected value type.',
+                    "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value type.",
                     [
                         'key' => $key,
                         'condition' => [
@@ -153,7 +153,7 @@ final class Guid implements JsonSerializable, Stringable
             if (null !== (self::VALIDATE_GUID[$key] ?? null)) {
                 if (1 !== preg_match(self::VALIDATE_GUID[$key]['pattern'], $value)) {
                     $this->getLogger()->info(
-                        'Ignoring [{backend}] {item.type} [{item.title}] [{key}] external id. Unexpected [{given}] value, expecting [{expected}].',
+                        "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value '{given}'. Expecting '{expected}'.",
                         [
                             'key' => $key,
                             'expected' => self::VALIDATE_GUID[$key]['example'],
@@ -229,12 +229,10 @@ final class Guid implements JsonSerializable, Stringable
         $lookup = 'guid_' . $db;
 
         if (false === array_key_exists($lookup, self::SUPPORTED)) {
-            throw new InvalidArgumentException(
-                r('Invalid db [{db}] source was given. Expecting [{db_list}].', [
-                    'db' => $db,
-                    'db_list' => implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::SUPPORTED))),
-                ])
-            );
+            throw new InvalidArgumentException(r("Invalid db '{db}' source was given. Expecting '{db_list}'.", [
+                'db' => $db,
+                'db_list' => implode(', ', array_map(fn($f) => after($f, 'guid_'), array_keys(self::SUPPORTED))),
+            ]));
         }
 
         if (null === (self::VALIDATE_GUID[$lookup] ?? null)) {
@@ -242,13 +240,11 @@ final class Guid implements JsonSerializable, Stringable
         }
 
         if (1 !== @preg_match(self::VALIDATE_GUID[$lookup]['pattern'], $id)) {
-            throw new InvalidArgumentException(
-                r('Invalid [{value}] value for [{db}]. Expecting [{example}].', [
-                    'db' => $db,
-                    'value' => $id,
-                    'example' => self::VALIDATE_GUID[$lookup]['example'],
-                ])
-            );
+            throw new InvalidArgumentException(r("Invalid value '{value}' for '{db}' GUID. Expecting '{example}'.", [
+                'db' => $db,
+                'value' => $id,
+                'example' => self::VALIDATE_GUID[$lookup]['example'],
+            ]));
         }
 
         return true;
