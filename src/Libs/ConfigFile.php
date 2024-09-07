@@ -161,7 +161,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface
         if (false === $override) {
             clearstatcache(true, $this->file);
             $newHash = $this->getFileHash();
-            if ($newHash !== $this->file_hash) {
+            if (false === hash_equals($this->file_hash, $newHash)) {
                 $this->logger?->warning(
                     "File '{file}' has been modified since last load. re-applying changes on top of the new data.",
                     [

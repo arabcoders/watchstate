@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use Closure;
 use Monolog\Handler\TestHandler;
+use Throwable;
 
 class TestCase extends \PHPUnit\Framework\TestCase
 {
@@ -25,4 +27,46 @@ class TestCase extends \PHPUnit\Framework\TestCase
             fwrite(STDOUT, $logs['formatted'] . PHP_EOL);
         }
     }
+
+    /**
+     * Checks if the given closure throws an exception.
+     *
+     * @param Closure $closure
+     * @param string $reason
+     * @param Throwable|string $exception Expected exception class
+     * @param string $exceptionMessage (optional) Exception message
+     * @param int|null $exceptionCode (optional) Exception code
+     * @return void
+     */
+    protected function checkException(
+        Closure $closure,
+        string $reason,
+        Throwable|string $exception,
+        string $exceptionMessage = '',
+        int|null $exceptionCode = null,
+    ): void {
+        $caught = null;
+        try {
+            $closure();
+        } catch (Throwable $e) {
+            $caught = $e;
+        } finally {
+            if (null === $caught) {
+                $this->fail($reason);
+            } else {
+                $this->assertInstanceOf(
+                    is_object($exception) ? $exception::class : $exception,
+                    $caught,
+                    $reason
+                );
+                if (!empty($exceptionMessage)) {
+                    $this->assertStringContainsString($exceptionMessage, $caught->getMessage(), $reason);
+                }
+                if (!empty($exceptionCode)) {
+                    $this->assertEquals($exceptionCode, $caught->getCode(), $reason);
+                }
+            }
+        }
+    }
+
 }

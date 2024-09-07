@@ -6,7 +6,7 @@ namespace App\Libs;
 
 use App\Libs\Exceptions\InvalidArgumentException;
 use JsonSerializable;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Stringable;
 
 /**
@@ -91,9 +91,9 @@ final class Guid implements JsonSerializable, Stringable
      */
     private array $data = [];
     /**
-     * @var null|LoggerInterface $logger The logger instance used for logging.
+     * @var null|iLogger $logger The logger instance used for logging.
      */
-    private static LoggerInterface|null $logger = null;
+    private static iLogger|null $logger = null;
 
     /**
      * Create list of db => external id list.
@@ -172,9 +172,9 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * Set the logger instance for the class.
      *
-     * @param LoggerInterface $logger The logger instance to be set.
+     * @param iLogger $logger The logger instance to be set.
      */
-    public static function setLogger(LoggerInterface $logger): void
+    public static function setLogger(iLogger $logger): void
     {
         self::$logger = $logger;
     }
@@ -279,12 +279,12 @@ final class Guid implements JsonSerializable, Stringable
     /**
      * Get instance of logger.
      *
-     * @return LoggerInterface
+     * @return iLogger
      */
-    private function getLogger(): LoggerInterface
+    private function getLogger(): iLogger
     {
         if (null === self::$logger) {
-            self::$logger = Container::get(LoggerInterface::class);
+            self::$logger = Container::get(iLogger::class);
         }
 
         return self::$logger;
