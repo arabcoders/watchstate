@@ -6,8 +6,10 @@ namespace App\Libs\Database\PDO;
 
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Exceptions\DatabaseException as DBException;
+use App\Libs\Exceptions\DBAdapterException as DBException;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface;
@@ -34,14 +36,17 @@ final class PDOAdapter implements iDB
      * @var bool Whether the current operation is in a transaction.
      */
     private bool $viaTransaction = false;
+
     /**
      * @var bool Whether the current operation is using a single transaction.
      */
     private bool $singleTransaction = false;
+
     /**
      * @var array Adapter options.
      */
     private array $options = [];
+
     /**
      * @var array<array-key, PDOStatement> Prepared statements.
      */
@@ -49,6 +54,7 @@ final class PDOAdapter implements iDB
         'insert' => null,
         'update' => null,
     ];
+
     /**
      * @var string The database driver to be used.
      */
@@ -58,15 +64,11 @@ final class PDOAdapter implements iDB
      * Creates a new instance of the class.
      *
      * @param LoggerInterface $logger The logger object used for logging.
-     * @param PDO $pdo The PDO object used for database connections.
+     * @param DBLayer $db The PDO object used for database connections.
      */
-    public function __construct(private LoggerInterface $logger, private PDO $pdo)
+    public function __construct(private LoggerInterface $logger, private readonly DBLayer $db)
     {
-        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-
-        if (is_string($driver)) {
-            $this->driver = $driver;
-        }
+        $this->driver = $this->db->getDriver();
     }
 
     /**
@@ -151,14 +153,14 @@ final class PDOAdapter implements iDB
             }
 
             if (null === ($this->stmt['insert'] ?? null)) {
-                $this->stmt['insert'] = $this->pdo->prepare(
+                $this->stmt['insert'] = $this->db->prepare(
                     $this->pdoInsert('state', iState::ENTITY_KEYS)
                 );
             }
 
             $this->execute($this->stmt['insert'], $data);
 
-            $entity->id = (int)$this->pdo->lastInsertId();
+            $entity->id = (int)$this->db->lastInsertId();
         } catch (PDOException $e) {
             $this->stmt['insert'] = null;
             if (false === $this->viaTransaction && false === $this->singleTransaction) {
@@ -286,21 +288,6 @@ final class PDOAdapter implements iDB
      * @inheritdoc
      * @throws RandomException if an error occurs while generating a random number.
      */
-    public function getCount(DateTimeInterface|null $date = null): int
-    {
-        $sql = 'SELECT COUNT(id) AS total FROM state';
-
-        if (null !== $date) {
-            $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
-        }
-
-        return (int)$this->query($sql)->fetchColumn();
-    }
-
-    /**
-     * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
-     */
     public function find(iState ...$items): array
     {
         $list = [];
@@ -334,7 +321,7 @@ final class PDOAdapter implements iDB
         }
 
         $sql = "SELECT * FROM state WHERE {$type_sql} JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = :id LIMIT 1";
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->db->prepare($sql);
 
         if (false === $this->execute($stmt, $cond)) {
             throw new DBException(
@@ -404,7 +391,7 @@ final class PDOAdapter implements iDB
             }
 
             if (null === ($this->stmt['update'] ?? null)) {
-                $this->stmt['update'] = $this->pdo->prepare(
+                $this->stmt['update'] = $this->db->prepare(
                     $this->pdoUpdate('state', iState::ENTITY_KEYS)
                 );
             }
@@ -554,16 +541,14 @@ final class PDOAdapter implements iDB
      */
     public function migrations(string $dir, array $opts = []): mixed
     {
-        $class = new PDOMigrations($this->pdo, $this->logger);
+        $class = new PDOMigrations($this->db, $this->logger);
 
         return match (strtolower($dir)) {
             iDB::MIGRATE_UP => $class->up(),
             iDB::MIGRATE_DOWN => $class->down(),
-            default => throw new DBException(
-                r("PDOAdapter: Unknown migration direction '{dir}' was given.", [
-                    'name' => $dir
-                ]), 91
-            ),
+            default => throw new DBException(r("PDOAdapter: Unknown migration direction '{dir}' was given.", [
+                'name' => $dir
+            ]), 91),
         };
     }
 
@@ -572,7 +557,7 @@ final class PDOAdapter implements iDB
      */
     public function ensureIndex(array $opts = []): mixed
     {
-        return (new PDOIndexer($this->pdo, $this->logger))->ensureIndex($opts);
+        return (new PDOIndexer($this->db, $this->logger))->ensureIndex($opts);
     }
 
     /**
@@ -580,7 +565,7 @@ final class PDOAdapter implements iDB
      */
     public function migrateData(string $version, LoggerInterface|null $logger = null): mixed
     {
-        return (new PDODataMigration($this->pdo, $logger ?? $this->logger))->automatic();
+        return (new PDODataMigration($this->db, $logger ?? $this->logger))->automatic();
     }
 
     /**
@@ -588,7 +573,7 @@ final class PDOAdapter implements iDB
      */
     public function isMigrated(): bool
     {
-        return (new PDOMigrations($this->pdo, $this->logger))->isMigrated();
+        return (new PDOMigrations($this->db, $this->logger))->isMigrated();
     }
 
     /**
@@ -596,7 +581,7 @@ final class PDOAdapter implements iDB
      */
     public function makeMigration(string $name, array $opts = []): mixed
     {
-        return (new PDOMigrations($this->pdo, $this->logger))->make($name);
+        return (new PDOMigrations($this->db, $this->logger))->make($name);
     }
 
     /**
@@ -604,7 +589,7 @@ final class PDOAdapter implements iDB
      */
     public function maintenance(array $opts = []): mixed
     {
-        return (new PDOMigrations($this->pdo, $this->logger))->runMaintenance();
+        return (new PDOMigrations($this->db, $this->logger))->runMaintenance();
     }
 
     /**
@@ -613,19 +598,19 @@ final class PDOAdapter implements iDB
      */
     public function reset(): bool
     {
-        $this->pdo->beginTransaction();
+        $this->db->transactional(function (DBLayer $db) {
+            /** @noinspection SqlResolve */
+            $tables = $db->query(
+                'SELECT name FROM sqlite_master WHERE "type" = "table" AND "name" NOT LIKE "sqlite_%"'
+            );
 
-        $tables = $this->pdo->query(
-            'SELECT name FROM sqlite_master WHERE "type" = "table" AND "name" NOT LIKE "sqlite_%"'
-        );
+            foreach ($tables->fetchAll(PDO::FETCH_COLUMN) as $table) {
+                $db->exec('DELETE FROM "' . $table . '"');
+                $db->exec('DELETE FROM sqlite_sequence WHERE "name" = "' . $table . '"');
+            }
+        });
 
-        foreach ($tables->fetchAll(PDO::FETCH_COLUMN) as $table) {
-            $this->pdo->exec('DELETE FROM "' . $table . '"');
-            $this->pdo->exec('DELETE FROM sqlite_sequence WHERE "name" = "' . $table . '"');
-        }
-
-        $this->pdo->commit();
-        $this->pdo->exec('VACUUM');
+        $this->db->exec('VACUUM');
 
         return true;
     }
@@ -640,12 +625,9 @@ final class PDOAdapter implements iDB
         return $this;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function getPDO(): PDO
+    public function getDBLayer(): DBLayer
     {
-        return $this->pdo;
+        return $this->db;
     }
 
     /**
@@ -655,11 +637,11 @@ final class PDOAdapter implements iDB
     {
         $this->singleTransaction = true;
 
-        if (false === $this->pdo->inTransaction()) {
-            $this->pdo->beginTransaction();
+        if (false === $this->db->inTransaction()) {
+            $this->db->start();
         }
 
-        return $this->pdo->inTransaction();
+        return $this->db->inTransaction();
     }
 
     /**
@@ -667,7 +649,7 @@ final class PDOAdapter implements iDB
      */
     public function transactional(Closure $callback): mixed
     {
-        if (true === $this->pdo->inTransaction()) {
+        if (true === $this->db->inTransaction()) {
             $this->viaTransaction = true;
             $result = $callback($this);
             $this->viaTransaction = false;
@@ -675,19 +657,20 @@ final class PDOAdapter implements iDB
         }
 
         try {
-            $this->pdo->beginTransaction();
+            $this->db->start();
 
             $this->viaTransaction = true;
             $result = $callback($this);
             $this->viaTransaction = false;
 
-            $this->pdo->commit();
+            $this->db->commit();
 
             return $result;
         } catch (PDOException $e) {
-            $this->pdo->rollBack();
-            $this->viaTransaction = false;
+            $this->db->rollBack();
             throw $e;
+        } finally {
+            $this->viaTransaction = false;
         }
     }
 
@@ -701,8 +684,8 @@ final class PDOAdapter implements iDB
      */
     public function __destruct()
     {
-        if (true === $this->singleTransaction && true === $this->pdo->inTransaction()) {
-            $this->pdo->commit();
+        if (true === $this->singleTransaction && true === $this->db->inTransaction()) {
+            $this->db->commit();
         }
 
         $this->stmt = [];
@@ -827,7 +810,7 @@ final class PDOAdapter implements iDB
 
         $sql = "SELECT * FROM state WHERE " . iState::COLUMN_TYPE . " = :type {$sqlEpisode} {$sqlGuids} LIMIT 1";
 
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->db->prepare($sql);
 
         if (false === $this->execute($stmt, $cond)) {
             throw new DBException(
@@ -857,29 +840,7 @@ final class PDOAdapter implements iDB
      */
     private function execute(PDOStatement $stmt, array $cond = []): bool
     {
-        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
-            try {
-                return $stmt->execute($cond);
-            } catch (PDOException $e) {
-                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
-                    if ($i >= self::LOCK_RETRY) {
-                        throw $e;
-                    }
-
-                    $sleep = self::LOCK_RETRY + random_int(1, 3);
-
-                    $this->logger->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
-                        'sleep' => $sleep
-                    ]);
-
-                    sleep($sleep);
-                } else {
-                    throw $e;
-                }
-            }
-        }
-
-        return false;
+        return $this->wrap(fn(PDOAdapter $adapter) => $stmt->execute($cond));
     }
 
     /**
@@ -895,29 +856,7 @@ final class PDOAdapter implements iDB
      */
     private function query(string $sql): PDOStatement|false
     {
-        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
-            try {
-                return $this->pdo->query($sql);
-            } catch (PDOException $e) {
-                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
-                    if ($i >= self::LOCK_RETRY) {
-                        throw $e;
-                    }
-
-                    $sleep = self::LOCK_RETRY + random_int(1, 3);
-
-                    $this->logger->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
-                        'sleep' => $sleep,
-                    ]);
-
-                    sleep($sleep);
-                } else {
-                    throw $e;
-                }
-            }
-        }
-
-        return false;
+        return $this->wrap(fn(PDOAdapter $adapter) => $adapter->db->query($sql));
     }
 
     /**
@@ -980,5 +919,58 @@ final class PDOAdapter implements iDB
             'mysql' => '`' . $text . '`',
             default => '"' . $text . '"',
         };
+    }
+
+    /**
+     * Wraps the given callback function with a retry mechanism to handle database locks.
+     *
+     * @param Closure $callback The callback function to be executed.
+     *
+     * @return mixed The result of the callback function.
+     *
+     * @throws DBLayerException If an error occurs while executing the callback function.
+     * @throws RandomException If an error occurs while generating a random number.
+     */
+    private function wrap(Closure $callback): mixed
+    {
+        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
+            try {
+                return $callback($this);
+            } catch (PDOException $e) {
+                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
+                    if ($i >= self::LOCK_RETRY) {
+                        throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
+                            ->setInfo(
+                                ag($this->db->getLastStatement(), 'sql', ''),
+                                ag($this->db->getLastStatement(), 'bind', []),
+                                $e->errorInfo ?? [],
+                                $e->getCode()
+                            )
+                            ->setFile($e->getFile())
+                            ->setLine($e->getLine());
+                    }
+
+                    $sleep = self::LOCK_RETRY + random_int(1, 3);
+
+                    $this->logger->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
+                        'sleep' => $sleep
+                    ]);
+
+                    sleep($sleep);
+                } else {
+                    throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
+                        ->setInfo(
+                            ag($this->db->getLastStatement(), 'sql', ''),
+                            ag($this->db->getLastStatement(), 'bind', []),
+                            $e->errorInfo ?? [],
+                            $e->getCode()
+                        )
+                        ->setFile($e->getFile())
+                        ->setLine($e->getLine());
+                }
+            }
+        }
+
+        return false;
     }
 }

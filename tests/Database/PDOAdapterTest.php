@@ -6,10 +6,11 @@ declare(strict_types=1);
 namespace Tests\Database;
 
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface;
-use App\Libs\Exceptions\DatabaseException as DBException;
+use App\Libs\Exceptions\DBAdapterException as DBException;
 use App\Libs\Guid;
 use App\Libs\TestCase;
 use DateTimeImmutable;
@@ -46,7 +47,7 @@ class PDOAdapterTest extends TestCase
         $logger->pushHandler($this->handler);
         Guid::setLogger($logger);
 
-        $this->db = new PDOAdapter($logger, new PDO('sqlite::memory:'));
+        $this->db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
         $this->db->migrations('up');
     }
 

@@ -7,6 +7,7 @@ namespace App\Libs\Exceptions;
 /**
  * Class ValidationException
  */
-class ValidationException extends RuntimeException
+class ValidationException extends RuntimeException implements AppExceptionInterface
 {
+    use UseAppException;
 }

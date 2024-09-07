@@ -265,7 +265,8 @@ final class ParseWebhook
                             'payload' => $request->getParsedBody(),
                         ],
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
+                    previous: $e
                 ),
                 extra: [
                     'http_code' => 200,

@@ -12,10 +12,13 @@ use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Events\DataEvent;
+use App\Libs\Exceptions\AppExceptionInterface;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\Date;
@@ -256,9 +259,8 @@ if (!function_exists('ag_delete')) {
         }
 
         if (is_int($path)) {
-            if (isset($array[$path])) {
-                unset($array[$path]);
-            }
+            // -- if the path is int, and it's exists, it should have been caught by
+            // -- the first if condition. So, we can safely return the array as is.
             return $array;
         }
 
@@ -966,20 +968,12 @@ if (false === function_exists('r_array')) {
 
         $pattern = '#' . preg_quote($tagLeft, '#') . '([\w_.]+)' . preg_quote($tagRight, '#') . '#is';
 
-        $status = preg_match_all($pattern, $text, $matches);
-
-        if (false === $status || $status < 1) {
-            return ['message' => $text, 'context' => $context];
-        }
+        preg_match_all($pattern, $text, $matches);
 
         $replacements = [];
 
         foreach ($matches[1] as $key) {
             $placeholder = $tagLeft . $key . $tagRight;
-
-            if (false === str_contains($text, $placeholder)) {
-                continue;
-            }
 
             if (false === ag_exists($context, $key)) {
                 continue;
@@ -1025,7 +1019,7 @@ if (false === function_exists('generateRoutes')) {
      *
      * @return array The generated routes.
      */
-    function generateRoutes(string $type = 'cli'): array
+    function generateRoutes(string $type = 'cli', array $opts = []): array
     {
         $dirs = [__DIR__ . '/../Commands'];
         foreach (array_keys(Config::get('supported', [])) as $backend) {
@@ -1040,7 +1034,7 @@ if (false === function_exists('generateRoutes')) {
 
         $routes_cli = (new Router($dirs))->generate();
 
-        $cache = Container::get(iCache::class);
+        $cache = $opts[iCache::class] ?? Container::get(iCache::class);
 
         try {
             $cache->set('routes_cli', $routes_cli, new DateInterval('PT1H'));
@@ -1144,7 +1138,7 @@ if (false === function_exists('getSystemMemoryInfo')) {
      *
      * @return array{ MemTotal: float, MemFree: float, MemAvailable: float, SwapTotal: float, SwapFree: float }
      */
-    function getSystemMemoryInfo(): array
+    function getSystemMemoryInfo(string $memFile = '/proc/meminfo'): array
     {
         $keys = [
             'MemTotal' => 'mem_total',
@@ -1156,11 +1150,11 @@ if (false === function_exists('getSystemMemoryInfo')) {
 
         $result = [];
 
-        if (!is_readable('/proc/meminfo')) {
+        if (!is_readable($memFile)) {
             return $result;
         }
 
-        if (false === ($lines = @file('/proc/meminfo', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))) {
+        if (false === ($lines = @file($memFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))) {
             return $result;
         }
 
@@ -1211,6 +1205,10 @@ if (!function_exists('checkIgnoreRule')) {
     function checkIgnoreRule(string $guid): bool
     {
         $urlParts = parse_url($guid);
+
+        if (false === is_array($urlParts)) {
+            throw new RuntimeException('Invalid ignore rule was given.');
+        }
 
         if (null === ($db = ag($urlParts, 'user'))) {
             throw new RuntimeException('No db source was given.');
@@ -1541,10 +1539,6 @@ if (!function_exists('parseEnvFile')) {
         }
 
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            if (empty($line)) {
-                continue;
-            }
-
             if (true === str_starts_with($line, '#') || false === str_contains($line, '=')) {
                 continue;
             }
@@ -1613,11 +1607,12 @@ if (!function_exists('isTaskWorkerRunning')) {
     /**
      * Check if the task worker is running. This function is only available when running in a container.
      *
+     * @param string $pidFile (Optional) The PID file to check.
      * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
      *
      * @return array{ status: bool, message: string }
      */
-    function isTaskWorkerRunning(bool $ignoreContainer = false): array
+    function isTaskWorkerRunning(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
     {
         if (false === $ignoreContainer && !inContainer()) {
             return [
@@ -1635,8 +1630,6 @@ if (!function_exists('isTaskWorkerRunning')) {
             ];
         }
 
-        $pidFile = '/tmp/ws-job-runner.pid';
-
         if (!file_exists($pidFile)) {
             return [
                 'status' => false,
@@ -1651,7 +1644,33 @@ if (!function_exists('isTaskWorkerRunning')) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
 
-        if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
+        switch (PHP_OS) {
+            case 'Linux':
+                {
+                    $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
+                }
+                break;
+            case 'WINNT':
+                {
+                    // -- Windows does not have a /proc directory so we need different way to get the status.
+                    @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
+                    // -- windows doesn't return 0 if the process is not found. we need to parse the output.
+                    $status = false;
+                    foreach ($output as $line) {
+                        if (false === str_contains($line, $pid)) {
+                            continue;
+                        }
+                        $status = true;
+                        break;
+                    }
+                }
+                break;
+            default:
+                $status = false;
+                break;
+        }
+
+        if (true === $status) {
             return ['status' => true, 'restartable' => true, 'message' => 'Task worker is running.'];
         }
 
@@ -1865,6 +1884,7 @@ if (!function_exists('cacheableItem')) {
      * @param Closure $function
      * @param DateInterval|int|null $ttl
      * @param bool $ignoreCache
+     * @param array $opts
      *
      * @return mixed
      */
@@ -1872,15 +1892,16 @@ if (!function_exists('cacheableItem')) {
         string $key,
         Closure $function,
         DateInterval|int|null $ttl = null,
-        bool $ignoreCache = false
+        bool $ignoreCache = false,
+        array $opts = [],
     ): mixed {
-        $cache = Container::get(iCache::class);
+        $cache = $opts[iCache::class] ?? Container::get(iCache::class);
 
         if (!$ignoreCache && $cache->has($key)) {
             return $cache->get($key);
         }
 
-        $reflectContainer = Container::get(ReflectionContainer::class);
+        $reflectContainer = $opts[ReflectionContainer::class] ?? Container::get(ReflectionContainer::class);
         $item = $reflectContainer->call($function);
 
         if (null === $ttl) {
@@ -2050,7 +2071,73 @@ if (!function_exists('getBackend')) {
 
         $default = $configFile->get($name);
         $default['name'] = $name;
+        $data = array_replace_recursive($default, $config);
 
-        return makeBackend(array_replace_recursive($default, $config), $name);
+        return makeBackend($data, $name);
+    }
+}
+
+if (!function_exists('lw')) {
+    /**
+     * log wrapper.
+     *
+     * The use case for this wrapper is to enhance the log context with db exception information.
+     * All logs should be wrapped with this function. it will probably be enhanced to include further context.
+     * in the future.
+     *
+     * @param string $message The log message.
+     * @param array $context The log context.
+     * @param Throwable|null $e The exception.
+     *
+     * @return array{ message: string, context: array} The wrapped log message and context.
+     */
+    function lw(string $message, array $context, Throwable|null $e = null): array
+    {
+        if (null === $e) {
+            return [
+                'message' => $message,
+                'context' => $context,
+            ];
+        }
+
+        if (true === ($e instanceof DBLayerException)) {
+            $context[DBLayer::class] = [
+                'query' => $e->getQueryString(),
+                'bind' => $e->getQueryBind(),
+                'error' => $e->errorInfo ?? [],
+            ];
+        }
+
+        if (true === ($e instanceof AppExceptionInterface) && $e->hasContext()) {
+            $context[AppExceptionInterface::class] = $e->getContext();
+        }
+
+        return [
+            'message' => $message,
+            'context' => $context,
+        ];
+    }
+}
+
+if (!function_exists('timeIt')) {
+    /**
+     * Time the execution of a function.
+     *
+     * @param Closure $function The function to time.
+     * @param string $name The name of the function.
+     * @param int $round (Optional) The number of decimal places to round to.
+     *
+     * @return string
+     */
+    function timeIt(Closure $function, string $name, int $round = 6): string
+    {
+        $start = microtime(true);
+        $function();
+        $end = microtime(true);
+
+        return r("Execution time is '{time}' for '{name}'", [
+            'name' => $name,
+            'time' => round($end - $start, $round),
+        ]);
     }
 }

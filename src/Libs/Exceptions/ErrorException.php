@@ -7,6 +7,7 @@ namespace App\Libs\Exceptions;
 /**
  * Class ErrorException
  */
-class ErrorException extends \ErrorException
+class ErrorException extends \ErrorException implements AppExceptionInterface
 {
+    use UseAppException;
 }

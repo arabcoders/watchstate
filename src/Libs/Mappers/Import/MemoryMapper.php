@@ -604,7 +604,24 @@ final class MemoryMapper implements iImport
                     }
                 } catch (PDOException $e) {
                     $list[$entity->type]['failed']++;
-                    $this->logger->error($e->getMessage(), $entity->getAll());
+                    $this->logger->error(
+                        ...lw(
+                            message: "MemoryMapper: Exception '{error.kind}' was thrown unhandled in {mode} '{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                            context: [
+                                'error' => [
+                                    'kind' => $e::class,
+                                    'line' => $e->getLine(),
+                                    'message' => $e->getMessage(),
+                                    'file' => after($e->getFile(), ROOT_PATH),
+                                ],
+                                'state' => $entity->getAll(),
+                                'backend' => $entity->via,
+                                'title' => $entity->getName(),
+                                'mode' => $entity->id === null ? 'add' : 'update',
+                            ],
+                            e: $e
+                        )
+                    );
                 }
             }
 

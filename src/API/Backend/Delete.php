@@ -6,7 +6,7 @@ namespace App\API\Backend;
 
 use App\Libs\Config;
 use App\Libs\ConfigFile;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -16,12 +16,8 @@ final class Delete
 {
     use APITraits;
 
-    public function __construct(private iDB $db)
-    {
-    }
-
     #[\App\Libs\Attributes\Route\Delete(Index::URL . '/{name:backend}[/]', name: 'backend.delete')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __invoke(DBLayer $db, iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
             return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
@@ -47,13 +43,13 @@ final class Delete
                 )
         ";
 
-        $stmt = $this->db->getPDO()->prepare($sql);
+        $stmt = $db->prepare($sql);
         $stmt->execute(['name_metadata' => $name, 'name_extra' => $name]);
 
         $removedReference = $stmt->rowCount();
 
         $sql = "DELETE FROM state WHERE id IN ( SELECT id FROM state WHERE length(metadata) < 10 )";
-        $stmt = $this->db->getPDO()->query($sql);
+        $stmt = $db->query($sql);
 
         $deletedRecords = $stmt->rowCount();
 

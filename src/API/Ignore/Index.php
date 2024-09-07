@@ -10,7 +10,7 @@ use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
@@ -26,14 +26,10 @@ final class Index
 
     private array $cache = [];
 
-    private PDO $db;
-
     private ConfigFile $config;
 
-    public function __construct(iDB $db)
+    public function __construct(private readonly DBLayer $db)
     {
-        $this->db = $db->getPDO();
-
         $this->config = ConfigFile::open(
             file: Config::get('path') . '/config/ignore.yaml',
             type: 'yaml',

@@ -24,6 +24,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
@@ -121,6 +122,10 @@ return (function (): array {
                     return new Psr16Cache(new NullAdapter());
                 }
 
+                if (true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE)) {
+                    return new Psr16Cache(new ArrayAdapter());
+                }
+
                 $ns = getAppVersion();
 
                 if (null !== ($prefix = Config::get('cache.prefix')) && true === isValidName($prefix)) {
@@ -199,8 +204,15 @@ return (function (): array {
             },
         ],
 
+        DBLayer::class => [
+            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
+            'args' => [
+                PDO::class,
+            ],
+        ],
+
         iDB::class => [
-            'class' => function (iLogger $logger, PDO $pdo): iDB {
+            'class' => function (iLogger $logger, DBLayer $pdo): iDB {
                 $adapter = new PDOAdapter($logger, $pdo);
 
                 if (true !== $adapter->isMigrated()) {
@@ -216,14 +228,7 @@ return (function (): array {
             },
             'args' => [
                 iLogger::class,
-                PDO::class,
-            ],
-        ],
-
-        DBLayer::class => [
-            'class' => fn(PDO $pdo): DBLayer => new DBLayer($pdo),
-            'args' => [
-                PDO::class,
+                DBLayer::class,
             ],
         ],
 

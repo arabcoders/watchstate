@@ -307,7 +307,8 @@ final class ParseWebhook
                         ],
                         'trace' => $e->getTrace(),
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
+                    previous: $e
                 ),
                 extra: [
                     'http_code' => 200,

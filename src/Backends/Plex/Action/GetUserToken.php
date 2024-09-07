@@ -246,7 +246,8 @@ final class GetUserToken
                             'trace' => $e->getTrace(),
                         ],
                     ],
-                    level: Levels::ERROR
+                    level: Levels::ERROR,
+                    previous: $e
                 ),
             );
         }

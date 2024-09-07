@@ -10,6 +10,7 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
@@ -17,7 +18,6 @@ use App\Libs\Guid;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Traits\APITraits;
 use JsonException;
-use PDO;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\SimpleCache\CacheInterface as iCache;
@@ -47,17 +47,15 @@ final class Index
     use APITraits;
 
     public const string URL = '%{api.prefix}/history';
-    private PDO $pdo;
 
     public function __construct(private readonly iDB $db, private DirectMapper $mapper, private iCache $cache)
     {
-        $this->pdo = $this->db->getPDO();
     }
 
     #[Get(self::URL . '[/]', name: 'history.list')]
-    public function list(iRequest $request): iResponse
+    public function list(DBLayer $db, iRequest $request): iResponse
     {
-        $es = fn(string $val) => $this->db->identifier($val);
+        $es = fn(string $val) => $db->escapeIdentifier($val, true);
         $data = DataUtil::fromArray($request->getQueryParams());
         $filters = [];
 
@@ -278,7 +276,7 @@ final class Index
             $sql[] = 'WHERE ' . implode(' AND ', $where);
         }
 
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
+        $stmt = $db->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
         $stmt->execute($params);
         $total = $stmt->fetchColumn();
 
@@ -324,7 +322,7 @@ final class Index
         $params['_limit'] = $perpage <= 0 ? 20 : $perpage;
         $sql[] = 'ORDER BY ' . implode(', ', $sorts) . ' LIMIT :_start,:_limit';
 
-        $stmt = $this->pdo->prepare('SELECT * ' . implode(' ', array_map('trim', $sql)));
+        $stmt = $db->prepare('SELECT * ' . implode(' ', array_map('trim', $sql)));
         $stmt->execute($params);
 
         $getUri = $request->getUri()->withHost('')->withPort(0)->withScheme('');

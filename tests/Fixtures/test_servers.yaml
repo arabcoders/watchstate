@@ -1,0 +1,62 @@
+test_plex:
+  type: plex
+  url: 'https://plex.example.invalid'
+  token: t000000000000000000p
+  user: 11111111
+  uuid: s00000000000000000000000000000000000000p
+  export:
+    enabled: true
+    lastSync: null
+  import:
+    enabled: true
+    lastSync: 1724173445
+  webhook:
+    match:
+      user: true
+      uuid: true
+  options:
+    ignore: '22,1,2,3'
+    LIBRARY_SEGMENT: 1000
+    ADMIN_TOKEN: plex_admin_token
+    use_old_progress_endpoint: true
+    plex_user_uuid: r00000000000000p
+
+test_jellyfin:
+  type: jellyfin
+  url: 'https://jellyfin.example.invalid'
+  token: t000000000000000000000000000000j
+  user: u000000000000000000000000000000j
+  uuid: s000000000000000000000000000000j
+  export:
+    enabled: true
+    lastSync: null
+  import:
+    enabled: true
+    lastSync: 1724173445
+  webhook:
+    match:
+      user: false
+      uuid: true
+  options:
+    ignore: 'i000000000000000000000000000000j,i100000000000000000000000000000j'
+    MAX_EPISODE_RANGE: 6
+
+test_emby:
+  type: emby
+  url: 'https://emby.example.invalid'
+  token: t000000000000000000000000000000e
+  user: u000000000000000000000000000000e
+  uuid: s000000000000000000000000000000e
+  import:
+    enabled: true
+    lastSync: 1724173445
+  export:
+    enabled: true
+    lastSync: null
+  webhook:
+    match:
+      user: false
+      uuid: true
+  options:
+    MAX_EPISODE_RANGE: 6
+    IMPORT_METADATA_ONLY: true
