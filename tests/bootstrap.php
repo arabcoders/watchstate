@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+if (false === defined('IN_TEST_MODE')) {
+    define('IN_TEST_MODE', true);
+}
+
 require __DIR__ . '/../pre_init.php';
 
 if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {

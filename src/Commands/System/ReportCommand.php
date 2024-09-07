@@ -103,7 +103,7 @@ final class ReportCommand extends Command
         $output->writeln(
             r('Is the tasks runner working? <flag>{answer}</flag>', [
                 'answer' => (function () {
-                    $info = isTaskWorkerRunning(true);
+                    $info = isTaskWorkerRunning(ignoreContainer: true);
                     return r("{status} '{container}' - {message}", [
                         'status' => $info['status'] ? 'Yes' : 'No',
                         'message' => $info['message'],

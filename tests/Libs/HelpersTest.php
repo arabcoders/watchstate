@@ -6,11 +6,16 @@ namespace Tests\Libs;
 
 use App\Backends\Plex\PlexClient;
 use App\Libs\Config;
+use App\Libs\Container;
+use App\Libs\Database\DBLayer;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\AppExceptionInterface;
+use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\ReflectionContainer;
 use App\Libs\TestCase;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
@@ -23,10 +28,84 @@ use Psr\SimpleCache\CacheInterface;
 use Stringable;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Yaml\Yaml;
 use TypeError;
 
 class HelpersTest extends TestCase
 {
+    protected CacheInterface|null $cache = null;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->cache = new class implements CacheInterface {
+            public array $cache = [];
+            public bool $throw = false;
+
+            public function get(string $key, mixed $default = null): mixed
+            {
+                return $this->cache[$key] ?? $default;
+            }
+
+            public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
+            {
+                if ($this->throw) {
+                    throw new class() extends \InvalidArgumentException implements
+                        \Psr\SimpleCache\InvalidArgumentException {
+                    };
+                }
+
+                $this->cache[$key] = $value;
+                return true;
+            }
+
+            public function delete(string $key): bool
+            {
+                unset($this->cache[$key]);
+                return true;
+            }
+
+            public function clear(): bool
+            {
+                $this->cache = [];
+                return true;
+            }
+
+            public function getMultiple(iterable $keys, mixed $default = null): iterable
+            {
+                foreach ($keys as $key) {
+                    yield $key => $this->get($key, $default);
+                }
+            }
+
+            public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
+            {
+                foreach ($values as $key => $value) {
+                    $this->set($key, $value, $ttl);
+                }
+                return true;
+            }
+
+            public function deleteMultiple(iterable $keys): bool
+            {
+                foreach ($keys as $key) {
+                    $this->delete($key);
+                }
+                return true;
+            }
+
+            public function has(string $key): bool
+            {
+                return isset($this->cache[$key]);
+            }
+
+            public function reset(): void
+            {
+                $this->cache = [];
+            }
+        };
+    }
+
     public function test_env_conditions(): void
     {
         $values = [
@@ -925,111 +1004,48 @@ class HelpersTest extends TestCase
 
     public function test_generateRoutes()
     {
-        $class = new class implements CacheInterface {
-            public array $cache = [];
-            public bool $throw = false;
+        $routes = generateRoutes('cli', [CacheInterface::class => $this->cache]);
 
-            public function get(string $key, mixed $default = null): mixed
-            {
-                return $this->cache[$key] ?? $default;
-            }
-
-            public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
-            {
-                if ($this->throw) {
-                    throw new class() extends \InvalidArgumentException implements
-                        \Psr\SimpleCache\InvalidArgumentException {
-                    };
-                }
-
-                $this->cache[$key] = $value;
-                return true;
-            }
-
-            public function delete(string $key): bool
-            {
-                unset($this->cache[$key]);
-                return true;
-            }
-
-            public function clear(): bool
-            {
-                $this->cache = [];
-                return true;
-            }
-
-            public function getMultiple(iterable $keys, mixed $default = null): iterable
-            {
-                foreach ($keys as $key) {
-                    yield $key => $this->get($key, $default);
-                }
-            }
-
-            public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
-            {
-                foreach ($values as $key => $value) {
-                    $this->set($key, $value, $ttl);
-                }
-                return true;
-            }
-
-            public function deleteMultiple(iterable $keys): bool
-            {
-                foreach ($keys as $key) {
-                    $this->delete($key);
-                }
-                return true;
-            }
-
-            public function has(string $key): bool
-            {
-                return isset($this->cache[$key]);
-            }
-
-            public function reset(): void
-            {
-                $this->cache = [];
-            }
-        };
-
-        $routes = generateRoutes('cli', [CacheInterface::class => $class]);
-
-        $this->assertCount(2, $class->cache, 'It should have generated two cache buckets for http and cli routes.');
+        $this->assertCount(
+            2,
+            $this->cache->cache,
+            'It should have generated two cache buckets for http and cli routes.'
+        );
         $this->assertGreaterThanOrEqual(
             1,
-            count($class->cache['routes_cli']),
+            count($this->cache->cache['routes_cli']),
             'It should have more than 1 route for cli routes.'
         );
         $this->assertGreaterThanOrEqual(
             1,
-            count($class->cache['routes_http']),
+            count($this->cache->cache['routes_http']),
             'It should have more than 1 route for cli routes.'
         );
 
         $this->assertSame(
             $routes,
-            $class->cache['routes_cli'],
+            $this->cache->cache['routes_cli'],
             'It should return cli routes when called with cli type.'
         );
 
-        $class->reset();
+        $this->cache->reset();
 
         $this->assertSame(
-            generateRoutes('http', [CacheInterface::class => $class]),
-            $class->cache['routes_http'],
+            generateRoutes('http', [CacheInterface::class => $this->cache]),
+            $this->cache->cache['routes_http'],
             'It should return http routes. when called with http type.'
         );
 
-        $class->reset();
-        $class->throw = true;
-        $routes = generateRoutes('http', [CacheInterface::class => $class]);
-        $this->assertCount(0, $class->cache, 'When cache throws exception, it should not save anything.');
+        $this->cache->reset();
+        $this->cache->throw = true;
+        $routes = generateRoutes('http', [CacheInterface::class => $this->cache]);
+        $this->assertCount(0, $this->cache->cache, 'When cache throws exception, it should not save anything.');
         $this->assertNotSame([], $routes, 'Routes should be generated even if cache throws exception.');
 
         // --
         $save = Config::get('supported', []);
         Config::save('supported', ['not_set' => 'not_set_client', 'plex' => PlexClient::class,]);
-        $routes = generateRoutes('http', [CacheInterface::class => $class]);
+        $routes = generateRoutes('http', [CacheInterface::class => $this->cache]);
         Config::save('supported', $save);
     }
 
@@ -1279,5 +1295,336 @@ class HelpersTest extends TestCase
             'When try block is successful, it should return the value.'
         );
         $this->assertSame('finally_was_called', $f, 'finally block should be executed.');
+    }
+
+    public function test_getServerColumnSpec()
+    {
+        $this->assertSame(
+            [
+                'key' => 'user',
+                'type' => 'string',
+                'visible' => true,
+                'description' => 'The user ID of the backend.',
+            ],
+            getServerColumnSpec('user'),
+            'It should return correct column spec.'
+        );
+
+        $this->assertSame([], getServerColumnSpec('not_set'), 'It should return empty array when column is not set.');
+    }
+
+    public function test_getEnvSpec()
+    {
+        $this->assertSame(
+            [
+                'key' => 'WS_DATA_PATH',
+                'description' => 'Where to store main data. (config, db).',
+                'type' => 'string',
+            ],
+            getEnvSpec('WS_DATA_PATH'),
+            'It should return correct env spec.'
+        );
+
+        $this->assertSame([], getEnvSpec('not_set'), 'It should return empty array when env is not set.');
+    }
+
+    public function test_isTaskWorkerRunning()
+    {
+        $_ENV['IN_CONTAINER'] = false;
+        $d = isTaskWorkerRunning();
+        $this->assertTrue($d['status'], 'When not in container, and $ignoreContainer is false, it should return true.');
+        unset($_ENV['IN_CONTAINER']);
+
+        $_ENV['DISABLE_CRON'] = true;
+        $d = isTaskWorkerRunning(ignoreContainer: true);
+        $this->assertFalse($d['status'], 'When DISABLE_CRON is set, it should return false.');
+        unset($_ENV['DISABLE_CRON']);
+
+        $d = isTaskWorkerRunning(pidFile: __DIR__ . '/../Fixtures/worker.pid', ignoreContainer: true);
+        $this->assertFalse($d['status'], 'When pid file is not found, it should return false.');
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'worker');
+        try {
+            file_put_contents($tmpFile, getmypid());
+            $d = isTaskWorkerRunning(pidFile: $tmpFile, ignoreContainer: true);
+            $this->assertTrue($d['status'], 'When pid file is found, and process exists it should return true.');
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+        }
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'worker');
+        try {
+            /** @noinspection PhpUnhandledExceptionInspection */
+            file_put_contents($tmpFile, random_int(1, 9999) . getmypid());
+            $d = isTaskWorkerRunning(pidFile: $tmpFile, ignoreContainer: true);
+            $this->assertFalse(
+                $d['status'],
+                'When pid file is found, and process does not exists it should return false.'
+            );
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+        }
+    }
+
+    public function test_findSideCarFiles()
+    {
+        $n = new \SplFileInfo(__DIR__ . '/../Fixtures/local_data/test.mkv');
+        $this->assertCount(
+            4,
+            findSideCarFiles($n),
+            'It should return side car files for given file.'
+        );
+    }
+
+    public function test_array_change_key_case_recursive()
+    {
+        $array = [
+            'foo' => 'bar',
+            'baz' => 'taz',
+            'kaz' => [
+                'raz' => 'maz',
+                'naz' => 'laz',
+            ],
+        ];
+
+        $expected = [
+            'FOO' => 'bar',
+            'BAZ' => 'taz',
+            'KAZ' => [
+                'RAZ' => 'maz',
+                'NAZ' => 'laz',
+            ],
+        ];
+
+        $this->assertSame(
+            $expected,
+            array_change_key_case_recursive($array, CASE_UPPER),
+            'It should change keys case.'
+        );
+
+        $this->assertSame(
+            $array,
+            array_change_key_case_recursive($expected, CASE_LOWER),
+            'It should change keys case.'
+        );
+
+        $this->expectException(RuntimeException::class);
+        array_change_key_case_recursive($array, 999);
+    }
+
+    public function test_getMimeType()
+    {
+        $this->assertSame(
+            'application/json',
+            getMimeType(__DIR__ . '/../Fixtures/plex_data.json'),
+            'It should return correct mime type.'
+        );
+    }
+
+    public function test_getExtension()
+    {
+        $this->assertSame(
+            'json',
+            getExtension(__DIR__ . '/../Fixtures/plex_data.json'),
+            'It should return correct extension.'
+        );
+    }
+
+    public function test_generateUUID()
+    {
+        #1ef6d04c-23c3-6442-9fd5-c87f54c3d8d1
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-6[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            generateUUID(),
+            'It should match valid UUID6 pattern.'
+        );
+
+        $this->assertMatchesRegularExpression(
+            '/^test\-[0-9a-f]{8}-[0-9a-f]{4}-6[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            generateUUID('test'),
+            'It should match valid UUID6 pattern.'
+        );
+    }
+
+    public function test_cacheableItem()
+    {
+        $reflectContainer = new class() {
+            public function call(callable $callable, array $args = []): mixed
+            {
+                return $callable(...$args);
+            }
+        };
+
+        $item = fn() => cacheableItem(
+            key: 'test',
+            function: fn() => 'foo',
+            ignoreCache: false,
+            opts: [
+                CacheInterface::class => $this->cache,
+                ReflectionContainer::class => $reflectContainer,
+            ]
+        );
+
+        $this->assertSame('foo', $item(), 'It should return correct value.');
+        $this->assertSame('foo', $item(), 'It should return correct value.');
+    }
+
+    public function test_getPagination()
+    {
+        $factory = new Psr17Factory();
+        $creator = new ServerRequestCreator($factory, $factory, $factory, $factory);
+
+        $request = $creator->fromArrays([
+            'REQUEST_METHOD' => 'GET',
+            'QUERY_STRING' => 'page=2&perpage=10'
+        ], get: ['page' => 2, 'perpage' => 10]);
+
+        [$page, $perpage, $start] = getPagination($request, 1);
+
+        $this->assertSame(2, $page, 'It should return correct page number.');
+        $this->assertSame(10, $perpage, 'It should return correct perpage number.');
+        $this->assertSame(10, $start, 'It should return correct start number.');
+    }
+
+    public function test_getBackend()
+    {
+        Container::init();
+        Config::init(require __DIR__ . '/../../config/config.php');
+        foreach ((array)require __DIR__ . '/../../config/services.php' as $name => $definition) {
+            Container::add($name, $definition);
+        }
+        Config::save('backends_file', __DIR__ . '/../Fixtures/test_servers.yaml');
+
+        $this->assertInstanceOf(
+            PlexClient::class,
+            getBackend('test_plex'),
+            'It should return correct backend client.'
+        );
+
+        $this->expectException(RuntimeException::class);
+        getBackend('not_set');
+    }
+
+    public function test_makeBackend()
+    {
+        Container::init();
+        Config::init(require __DIR__ . '/../../config/config.php');
+        foreach ((array)require __DIR__ . '/../../config/services.php' as $name => $definition) {
+            Container::add($name, $definition);
+        }
+        Config::save('backends_file', __DIR__ . '/../Fixtures/test_servers.yaml');
+
+        $exception = null;
+        try {
+            makeBackend([], 'foo');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertInstanceOf(
+                InvalidArgumentException::class,
+                $exception,
+                'Should throw exception when no type is given.'
+            );
+            $this->assertStringContainsString('No backend type was set.', $exception?->getMessage());
+        }
+
+        $exception = null;
+        try {
+            makeBackend(['type' => 'plex'], 'foo');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertInstanceOf(
+                InvalidArgumentException::class,
+                $exception,
+                'Should throw exception when no url is given.'
+            );
+            $this->assertStringContainsString('No backend url was set.', $exception?->getMessage());
+        }
+
+        $exception = null;
+        try {
+            makeBackend(['type' => 'far', 'url' => 'http://test.example.invalid'], 'foo');
+        } catch (\Throwable $e) {
+            $exception = $e;
+        } finally {
+            $this->assertInstanceOf(
+                InvalidArgumentException::class,
+                $exception,
+                'Should throw exception when no type is not supported.'
+            );
+            $this->assertStringContainsString('Unexpected client type', $exception?->getMessage());
+        }
+
+        $data = Yaml::parseFile(__DIR__ . '/../Fixtures/test_servers.yaml');
+
+        $this->assertInstanceOf(
+            PlexClient::class,
+            makeBackend($data['test_plex'], 'test_plex'),
+            'It should return correct backend client.'
+        );
+    }
+
+    public function test_lw()
+    {
+        $exception = new RuntimeException();
+        $exception->addContext('foo', 'bar');
+
+        $this->assertSame(
+            [AppExceptionInterface::class => ['foo' => 'bar']],
+            lw('test', [], $exception)['context'],
+            'it should return the added AppContext'
+        );
+        $this->assertSame(
+            ['bar' => 'foo'],
+            lw('test', ['bar' => 'foo'], new \RuntimeException())['context'],
+            'If exception is not AppExceptionInterface, it should return same data.'
+        );
+
+        $exception = new DBLayerException();
+        /** @noinspection SqlResolve */
+        $exception->setInfo('SELECT * FROM foo WHERE id = :id', ['id' => 1], [], 122);
+        /** @noinspection SqlResolve */
+        $this->assertSame(
+            [
+                'bar' => 'foo',
+                DBLayer::class => [
+                    'query' => 'SELECT * FROM foo WHERE id = :id',
+                    'bind' => ['id' => 1],
+                    'error' => [],
+                ],
+            ],
+            lw('test', ['bar' => 'foo'], $exception)['context'],
+            'If exception is not AppExceptionInterface, it should return same data.'
+        );
+
+        $this->assertSame(
+            ['bar' => 'foo'],
+            lw('test', ['bar' => 'foo'])['context'],
+            'If no exception is given, it should return same data.'
+        );
+    }
+
+    public function test_commandContext()
+    {
+        $_ENV['IN_CONTAINER'] = true;
+        $this->assertSame(
+            'docker exec -ti watchstate console',
+            trim(commandContext()),
+            'It should return correct command context. When in container.'
+        );
+        unset($_ENV['IN_CONTAINER']);
+
+        $_ENV['IN_CONTAINER'] = false;
+        $this->assertSame(
+            $_SERVER['argv'][0] ?? 'php bin/console',
+            trim(commandContext()),
+            'If not in container, it should return argv[0] or defaults to php bin/console.'
+        );
+        unset($_ENV['IN_CONTAINER']);
     }
 }

@@ -24,6 +24,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
@@ -119,6 +120,10 @@ return (function (): array {
             'class' => function () {
                 if (true === (bool)env('WS_CACHE_NULL', false)) {
                     return new Psr16Cache(new NullAdapter());
+                }
+
+                if (true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE)) {
+                    return new Psr16Cache(new ArrayAdapter());
                 }
 
                 $ns = getAppVersion();

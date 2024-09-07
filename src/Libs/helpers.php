@@ -1539,10 +1539,6 @@ if (!function_exists('parseEnvFile')) {
         }
 
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            if (empty($line)) {
-                continue;
-            }
-
             if (true === str_starts_with($line, '#') || false === str_contains($line, '=')) {
                 continue;
             }
@@ -1611,11 +1607,12 @@ if (!function_exists('isTaskWorkerRunning')) {
     /**
      * Check if the task worker is running. This function is only available when running in a container.
      *
+     * @param string $pidFile (Optional) The PID file to check.
      * @param bool $ignoreContainer (Optional) Whether to ignore the container check.
      *
      * @return array{ status: bool, message: string }
      */
-    function isTaskWorkerRunning(bool $ignoreContainer = false): array
+    function isTaskWorkerRunning(string $pidFile = '/tmp/ws-job-runner.pid', bool $ignoreContainer = false): array
     {
         if (false === $ignoreContainer && !inContainer()) {
             return [
@@ -1633,8 +1630,6 @@ if (!function_exists('isTaskWorkerRunning')) {
             ];
         }
 
-        $pidFile = '/tmp/ws-job-runner.pid';
-
         if (!file_exists($pidFile)) {
             return [
                 'status' => false,
@@ -1649,7 +1644,33 @@ if (!function_exists('isTaskWorkerRunning')) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
 
-        if (file_exists(r('/proc/{pid}/status', ['pid' => $pid]))) {
+        switch (PHP_OS) {
+            case 'Linux':
+                {
+                    $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
+                }
+                break;
+            case 'WINNT':
+                {
+                    // -- Windows does not have a /proc directory so we need different way to get the status.
+                    @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
+                    // -- windows doesn't return 0 if the process is not found. we need to parse the output.
+                    $status = false;
+                    foreach ($output as $line) {
+                        if (false === str_contains($line, $pid)) {
+                            continue;
+                        }
+                        $status = true;
+                        break;
+                    }
+                }
+                break;
+            default:
+                $status = false;
+                break;
+        }
+
+        if (true === $status) {
             return ['status' => true, 'restartable' => true, 'message' => 'Task worker is running.'];
         }
 
@@ -1863,6 +1884,7 @@ if (!function_exists('cacheableItem')) {
      * @param Closure $function
      * @param DateInterval|int|null $ttl
      * @param bool $ignoreCache
+     * @param array $opts
      *
      * @return mixed
      */
@@ -1870,15 +1892,16 @@ if (!function_exists('cacheableItem')) {
         string $key,
         Closure $function,
         DateInterval|int|null $ttl = null,
-        bool $ignoreCache = false
+        bool $ignoreCache = false,
+        array $opts = [],
     ): mixed {
-        $cache = Container::get(iCache::class);
+        $cache = $opts[iCache::class] ?? Container::get(iCache::class);
 
         if (!$ignoreCache && $cache->has($key)) {
             return $cache->get($key);
         }
 
-        $reflectContainer = Container::get(ReflectionContainer::class);
+        $reflectContainer = $opts[ReflectionContainer::class] ?? Container::get(ReflectionContainer::class);
         $item = $reflectContainer->call($function);
 
         if (null === $ttl) {
@@ -2048,8 +2071,9 @@ if (!function_exists('getBackend')) {
 
         $default = $configFile->get($name);
         $default['name'] = $name;
+        $data = array_replace_recursive($default, $config);
 
-        return makeBackend(array_replace_recursive($default, $config), $name);
+        return makeBackend($data, $name);
     }
 }
 
@@ -2092,5 +2116,28 @@ if (!function_exists('lw')) {
             'message' => $message,
             'context' => $context,
         ];
+    }
+}
+
+if (!function_exists('timeIt')) {
+    /**
+     * Time the execution of a function.
+     *
+     * @param Closure $function The function to time.
+     * @param string $name The name of the function.
+     * @param int $round (Optional) The number of decimal places to round to.
+     *
+     * @return string
+     */
+    function timeIt(Closure $function, string $name, int $round = 6): string
+    {
+        $start = microtime(true);
+        $function();
+        $end = microtime(true);
+
+        return r("Execution time is '{time}' for '{name}'", [
+            'name' => $name,
+            'time' => round($end - $start, $round),
+        ]);
     }
 }
