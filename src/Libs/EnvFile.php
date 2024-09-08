@@ -29,6 +29,19 @@ final class EnvFile
     }
 
     /**
+     * Return a new instance of the class with the same file.
+     * This method will not flush the current data into new instance.
+     * You must call persist() method to save the data. before calling this method.
+     *
+     * @param bool $create
+     * @return self
+     */
+    public function newInstance(bool $create = false): self
+    {
+        return new self($this->file, create: $create);
+    }
+
+    /**
      * Get the value of a configuration setting.
      *
      * @param string $key The configuration setting key.
