@@ -17,41 +17,28 @@ class StateEntityTest extends TestCase
     private array $testMovie = [];
     private array $testEpisode = [];
 
-    private TestHandler|null $lHandler = null;
-    private Logger|null $logger = null;
-
     protected function setUp(): void
     {
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
-        $this->lHandler = new TestHandler();
-        $this->logger = new Logger('logger', processors: [new LogMessageProcessor()]);
-        $this->logger->pushHandler($this->lHandler);
+        $logger = new Logger('logger', processors: [new LogMessageProcessor()]);
+        $logger->pushHandler(new TestHandler());
     }
 
     public function test_init_bad_type(): void
     {
         $this->testMovie[iState::COLUMN_TYPE] = 'oi';
 
-        try {
-            new StateEntity($this->testMovie);
-        } catch (RuntimeException $e) {
-            $this->assertInstanceOf(
-                RuntimeException::class,
-                $e,
-                'When new instance of StateEntity is called with invalid type, exception is thrown'
-            );
-        }
-
-        try {
-            StateEntity::fromArray($this->testMovie);
-        } catch (RuntimeException $e) {
-            $this->assertInstanceOf(
-                RuntimeException::class,
-                $e,
-                'When ::fromArray is called with invalid type, exception is thrown'
-            );
-        }
+        $this->checkException(
+            closure: fn() => new StateEntity($this->testMovie),
+            reason: 'When new instance of StateEntity is called with invalid type, exception is thrown',
+            exception: RuntimeException::class,
+        );
+        $this->checkException(
+            closure: fn() => StateEntity::fromArray($this->testMovie),
+            reason: 'When ::fromArray is called with invalid type, exception is thrown',
+            exception: RuntimeException::class,
+        );
     }
 
     public function test_init_bad_data(): void
@@ -84,11 +71,16 @@ class StateEntityTest extends TestCase
     public function test_diff_array_param(): void
     {
         $entity = new StateEntity($this->testEpisode);
-        $entity->setMetadata([iState::COLUMN_META_DATA_PLAYED_AT => 4]);
+        $entity->setMetadata([
+            iState::COLUMN_META_DATA_PLAYED_AT => 4,
+            'test' => ['foo' => 'bar'],
+        ]);
 
         $arr = [];
         $arr = ag_set($arr, 'metadata.home_plex.played_at.old', 2);
         $arr = ag_set($arr, 'metadata.home_plex.played_at.new', 4);
+        $arr = ag_set($arr, 'metadata.home_plex.test.old', 'None');
+        $arr = ag_set($arr, 'metadata.home_plex.test.new', ['foo' => 'bar']);
 
         $this->assertSame(
             $arr,
@@ -538,6 +530,16 @@ class StateEntityTest extends TestCase
             $entity->diff(),
             'When apply() is called with fields that contain changed keys, only those fields are applied to current entity.'
         );
+
+        $data1 = $this->testMovie;
+        $data1[iState::COLUMN_ID] = 1;
+        $data2 = $this->testMovie;
+        $data2[iState::COLUMN_ID] = 2;
+
+        $id1 = new StateEntity($data1);
+        $id2 = new StateEntity($data2);
+
+        $this->assertSame(1, $id1->apply($id2)->id, 'When apply() should not alter the object ID.');
     }
 
     public function test_updateOriginal(): void
@@ -588,9 +590,14 @@ class StateEntityTest extends TestCase
             'When setIsTainted() is called with true, isTainted() returns true'
         );
 
-        $this->expectException(\TypeError::class);
-        /** @noinspection PhpStrictTypeCheckingInspection */
-        $entity->setIsTainted('foo');
+        $this->checkException(
+            closure: function () use ($entity) {
+                /** @noinspection PhpStrictTypeCheckingInspection */
+                return $entity->setIsTainted('foo');
+            },
+            reason: 'When setIsTainted() is called with invalid type, exception is thrown',
+            exception: \TypeError::class,
+        );
     }
 
     public function test_isTainted(): void
@@ -641,8 +648,12 @@ class StateEntityTest extends TestCase
 
         unset($this->testMovie[iState::COLUMN_VIA]);
         $entity = new StateEntity($this->testMovie);
-        $this->expectException(RuntimeException::class);
-        $entity->setMetadata([]);
+
+        $this->checkException(
+            closure: fn() => $entity->setMetadata([]),
+            reason: 'When setMetadata() called with empty array, an exception is thrown',
+            exception: RuntimeException::class,
+        );
     }
 
     public function test_getExtra(): void
@@ -686,8 +697,11 @@ class StateEntityTest extends TestCase
 
         unset($this->testMovie[iState::COLUMN_VIA]);
         $entity = new StateEntity($this->testMovie);
-        $this->expectException(RuntimeException::class);
-        $entity->setExtra([]);
+        $this->checkException(
+            closure: fn() => $entity->setExtra([]),
+            reason: 'When setExtra() called with empty array, an exception is thrown',
+            exception: RuntimeException::class,
+        );
     }
 
     public function test_shouldMarkAsUnplayed(): void
@@ -754,6 +768,16 @@ class StateEntityTest extends TestCase
         $this->assertFalse(
             StateEntity::fromArray($d[3])->shouldMarkAsUnplayed($updater),
             'When metadata played date is missing, shouldMarkAsUnplayed() returns false'
+        );
+
+        // -- Condition 3: no metadata for via.
+        $data1 = $this->testMovie;
+        $data = $this->testMovie;
+        $data[iState::COLUMN_VIA] = 'not_set';
+        $data[iState::COLUMN_WATCHED] = 0;
+        $this->assertFalse(
+            StateEntity::fromArray($data1)->shouldMarkAsUnplayed(StateEntity::fromArray($data)),
+            'When no metadata set for a backend, shouldMarkAsUnplayed() returns false'
         );
 
         // -- Condition 5: metadata played is false.
@@ -845,7 +869,7 @@ class StateEntityTest extends TestCase
 
     public function test_getPlayProgress(): void
     {
-        $testData = ag_set($this->testMovie, 'watched', 0);
+        $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
         $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
         $entity = new StateEntity($testData);
         $this->assertSame(
@@ -854,7 +878,7 @@ class StateEntityTest extends TestCase
             'When hasPlayProgress() when valid play progress is set, returns true'
         );
 
-        $testData = ag_set($this->testMovie, 'watched', 0);
+        $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
         $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
         $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.home_plex', []));
         $testData = ag_set($testData, 'metadata.test.progress', 999);
@@ -865,6 +889,17 @@ class StateEntityTest extends TestCase
             $entity->getPlayProgress(),
             'When hasPlayProgress() when valid play progress is set, returns true'
         );
+
+        $testData[iState::COLUMN_WATCHED] = 1;
+        $entity = new StateEntity($testData);
+        $this->assertSame(0, $entity->getPlayProgress(), 'When entity is watched, getPlayProgress() returns 0');
+
+        $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
+        $testData = ag_set($testData, 'metadata.home_plex.watched', 1);
+        $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.home_plex', []));
+        $testData = ag_set($testData, 'metadata.test.progress', 999);
+        $entity = new StateEntity($testData);
+        $this->assertSame(0, $entity->getPlayProgress(), 'When entity is watched, getPlayProgress() returns 0');
     }
 
     public function test_context(): void
@@ -958,6 +993,65 @@ class StateEntityTest extends TestCase
             ag($real, 'metadata.home_plex.extra.title'),
             $entity->getMeta('extra.title'),
             'Quorum will not be met if one of the values is null.'
+        );
+    }
+
+    public function test_updated_added_at_columns()
+    {
+        $data = $this->testMovie;
+
+        $data[iState::COLUMN_CREATED_AT] = 0;
+        $data[iState::COLUMN_UPDATED_AT] = 0;
+
+        $entity = new StateEntity($data);
+
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_UPDATED],
+            $entity->updated_at,
+            'When entity is created with updated_at set to 0, updated_at is set to updated date from metadata'
+        );
+
+        $this->assertSame(
+            $this->testMovie[iState::COLUMN_UPDATED],
+            $entity->created_at,
+            'When entity is created with created_at set to 0, created_at is set to updated date from metadata'
+        );
+    }
+
+    public function test_decoding_array_fields()
+    {
+        $data = $this->testMovie;
+
+        $data[iState::COLUMN_PARENT] = 'garbage data';
+        $data[iState::COLUMN_GUIDS] = 'garbage data';
+        $data[iState::COLUMN_META_DATA] = 'garbage data';
+        $data[iState::COLUMN_EXTRA] = 'garbage data';
+
+        $entity = new StateEntity($data);
+
+        $this->assertSame([],
+            $entity->getMetadata(),
+            'When array keys are json decode fails, getMetadata() should returns empty array'
+        );
+
+        $this->assertSame([],
+            $entity->getGuids(),
+            'When array keys are json decode fails, getGuids() should returns empty array'
+        );
+
+        $this->assertSame([],
+            $entity->getParentGuids(),
+            'When array keys are json decode fails, getParentGuids() should returns empty array'
+        );
+
+        $this->assertSame([],
+            $entity->getExtra(),
+            'When array keys are json decode fails, getExtra() should returns empty array'
+        );
+
+        $this->assertSame([],
+            $entity->getPointers(),
+            'When array keys are json decode fails, getPointers() should returns empty array'
         );
     }
 }
