@@ -10,11 +10,15 @@ use League\Route\Http\Exception\BadRequestException;
 use League\Route\Http\Exception\NotFoundException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use SplFileInfo;
 use Throwable;
 
-final class ServeStatic
+final class ServeStatic implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     private finfo|null $mimeType = null;
 
     private const array CONTENT_TYPE = [
@@ -39,7 +43,6 @@ final class ServeStatic
     private const array MD_IMAGES = [
         '/screenshots' => __DIR__ . '/../../',
     ];
-    private array $looked = [];
 
     public function __construct(private string|null $staticPath = null)
     {
@@ -59,14 +62,17 @@ final class ServeStatic
      */
     public function serve(iRequest $request): iResponse
     {
-        $requestPath = $request->getUri()->getPath();
-
         if (false === in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'])) {
             throw new BadRequestException(
                 message: r("Method '{method}' is not allowed.", ['method' => $request->getMethod()]),
                 code: Status::METHOD_NOT_ALLOWED->value
             );
         }
+
+        // -- as we alter the static path for .md files, we need to keep the original path
+        // -- do not mutate the original path. as it may be used in other requests.
+        $staticPath = $this->staticPath;
+        $requestPath = $request->getUri()->getPath();
 
         if (array_key_exists($requestPath, self::MD_FILES)) {
             return $this->serveFile($request, new SplFileInfo(self::MD_FILES[$requestPath]));
@@ -75,44 +81,36 @@ final class ServeStatic
         // -- check if the request path is in the MD_IMAGES array
         foreach (self::MD_IMAGES as $key => $value) {
             if (str_starts_with($requestPath, $key)) {
-                $this->staticPath = realpath($value);
+                $staticPath = realpath($value);
                 break;
             }
         }
 
-        $filePath = fixPath($this->staticPath . $requestPath);
+        if (false === ($realBasePath = realpath($staticPath))) {
+            throw new BadRequestException(
+                message: r("The static path '{path}' doesn't exists.", ['path' => $staticPath]),
+                code: Status::SERVICE_UNAVAILABLE->value
+            );
+        }
 
+        $filePath = fixPath($staticPath . $requestPath);
         if (is_dir($filePath)) {
             $filePath = $filePath . '/index.html';
         }
 
         if (!file_exists($filePath)) {
-            $checkIndex = $this->deepIndexLookup($this->staticPath, $requestPath);
-            if (!file_exists($checkIndex)) {
-                throw new NotFoundException(
-                    message: r(
-                        "File '{file}' is not found. {checkIndex} {looked}",
-                        [
-                            'file' => $requestPath,
-                            'checkIndex' => $checkIndex,
-                            'looked' => $this->looked,
-                        ]
-                    ),
-                    code: Status::NOT_FOUND->value
-                );
+            $this->logger?->debug("File '{file}' is not found.", ['file' => $filePath]);
+            $checkIndex = fixPath($staticPath . $this->deepIndexLookup($staticPath, $requestPath));
+            if (false === file_exists($checkIndex) || false === is_file($checkIndex)) {
+                throw new NotFoundException(r("Path '{file}' is not found.", [
+                    'file' => $requestPath,
+                ]), code: Status::NOT_FOUND->value);
             }
             $filePath = $checkIndex;
         }
 
-        if (false === ($realBasePath = realpath($this->staticPath))) {
-            throw new BadRequestException(
-                message: r("The static path '{path}' doesn't exists.", ['path' => $this->staticPath]),
-                code: Status::SERVICE_UNAVAILABLE->value
-            );
-        }
 
         $filePath = realpath($filePath);
-
         if (false === $filePath || false === str_starts_with($filePath, $realBasePath)) {
             throw new BadRequestException(
                 message: r("Request '{file}' is invalid.", ['file' => $requestPath]),
@@ -183,23 +181,21 @@ final class ServeStatic
         // -- paths may look like /parent/id/child, do a deep lookup for index.html at each level
         // return the first index.html found
         $path = fixPath($path);
-
-        if ('/' === $path) {
+        if ('/' === $path || empty($path)) {
             return $path;
         }
 
         $paths = explode('/', $path);
         $count = count($paths);
-        if ($count < 2) {
+        $index = $count - 1;
+
+        if ($index < 2) {
             return $path;
         }
 
-        $index = $count - 1;
-
         for ($i = $index; $i > 0; $i--) {
-            $check = $base . implode('/', array_slice($paths, 0, $i)) . '/index.html';
-            $this->looked[] = $check;
-            if (file_exists($check)) {
+            $check = implode('/', array_slice($paths, 0, $i)) . '/index.html';
+            if (file_exists($base . $check)) {
                 return $check;
             }
         }
