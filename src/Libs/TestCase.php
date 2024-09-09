@@ -58,7 +58,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
                 return;
             }
             if (null === $caught) {
-                $this->fail($reason);
+                $this->fail('No exception was thrown. ' . $reason);
             } else {
                 $this->assertInstanceOf(
                     is_object($exception) ? $exception::class : $exception,

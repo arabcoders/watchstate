@@ -65,7 +65,13 @@ final class DBLayer implements LoggerAwareInterface
     public function exec(string $sql, array $options = []): int|false
     {
         try {
-            return $this->wrap(function (DBLayer $db) use ($sql, $options) {
+            $opts = [];
+
+            if (true === ag_exists($options, 'on_failure')) {
+                $opts['on_failure'] = $options['on_failure'];
+            }
+
+            return $this->wrap(function (DBLayer $db) use ($sql) {
                 $queryString = $sql;
 
                 $this->last = [
@@ -74,13 +80,13 @@ final class DBLayer implements LoggerAwareInterface
                 ];
 
                 return $db->pdo->exec($queryString);
-            });
+            }, $opts);
         } catch (PDOException $e) {
             if ($e instanceof DBLayerException) {
                 throw $e;
             }
 
-            throw (new DBLayerException($e->getMessage()))
+            throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                 ->setInfo($sql, [], $e->errorInfo ?? [], $e->getCode())
                 ->setFile($e->getTrace()[$options['tracer'] ?? 1]['file'] ?? $e->getFile())
                 ->setLine($e->getTrace()[$options['tracer'] ?? 1]['line'] ?? $e->getLine())
@@ -88,10 +94,15 @@ final class DBLayer implements LoggerAwareInterface
         }
     }
 
-    public function query(string|PDOStatement $sql, array $bind = [], array $options = []): PDOStatement
+    public function query(PDOStatement|string $sql, array $bind = [], array $options = []): PDOStatement
     {
         try {
-            return $this->wrap(function (DBLayer $db) use ($sql, $bind, $options) {
+            $opts = [];
+            if (true === ag_exists($options, 'on_failure')) {
+                $opts['on_failure'] = $options['on_failure'];
+            }
+
+            return $this->wrap(function (DBLayer $db) use ($sql, $bind) {
                 $isStatement = $sql instanceof PDOStatement;
                 $queryString = $isStatement ? $sql->queryString : $sql;
 
@@ -114,7 +125,7 @@ final class DBLayer implements LoggerAwareInterface
                 }
 
                 return $stmt;
-            });
+            }, $opts);
         } catch (PDOException $e) {
             if ($e instanceof DBLayerException) {
                 throw $e;
@@ -134,7 +145,7 @@ final class DBLayer implements LoggerAwareInterface
 
     public function start(): bool
     {
-        if ($this->pdo->inTransaction()) {
+        if (true === $this->pdo->inTransaction()) {
             return false;
         }
 
@@ -737,82 +748,103 @@ final class DBLayer implements LoggerAwareInterface
         return $this->last;
     }
 
-    public function transactional(Closure $callback): mixed
+    /**
+     * Wrap a callback in single transaction.
+     *
+     * @param Closure<DBLayer> $callback The callback function to be executed.
+     * @param bool $auto (Optional) Whether to automatically start and commit the transaction.
+     * @return mixed The result of the callback function.
+     */
+    public function transactional(Closure $callback, bool $auto = true): mixed
     {
-        $autoStartTransaction = false === $this->inTransaction();
+        $autoStartTransaction = true === $auto && false === $this->inTransaction();
 
-        for ($i = 1; $i <= self::LOCK_RETRY; $i++) {
-            try {
-                if (true === $autoStartTransaction) {
-                    $this->start();
-                }
+        return $this->wrap(function (DBLayer $db) use ($callback, $autoStartTransaction) {
+            if (true === $autoStartTransaction) {
+                $db->start();
+            }
 
-                $result = $callback($this);
+            $result = $callback($this);
 
-                if (true === $autoStartTransaction) {
-                    $this->commit();
-                }
+            if (true === $autoStartTransaction) {
+                $db->commit();
+            }
 
-                $this->last = $this->getLastStatement();
-
-                return $result;
-            } catch (DBLayerException $e) {
-                /** @noinspection PhpConditionAlreadyCheckedInspection */
+            $this->last = $db->getLastStatement();
+            return $result;
+        }, [
+            'on_failure' => function ($e) use ($autoStartTransaction) {
                 if ($autoStartTransaction && $this->inTransaction()) {
                     $this->rollBack();
                 }
-
-                //-- sometimes sqlite is locked, therefore attempt to sleep until it's unlocked.
-                if (false !== stripos($e->getMessage(), 'database is locked')) {
-                    // throw exception if happens self::LOCK_RETRY times in a row.
-                    if ($i >= self::LOCK_RETRY) {
-                        throw $e;
-                    }
-                    /** @noinspection PhpUnhandledExceptionInspection */
-                    sleep(self::LOCK_RETRY + random_int(1, 3));
-                } else {
-                    throw $e;
-                }
+                throw $e;
             }
-        }
-
-        /**
-         * We return in try or throw exception.
-         * As such this return should never be reached.
-         */
-        return null;
+        ]);
     }
 
-    private function wrap(Closure $callback): mixed
+    /**
+     * Wraps the given callback function with a retry mechanism to handle database locks.
+     *
+     * @param Closure $callback The callback function to be executed.
+     * @param array $opts An optional array of options to be passed to the callback function.
+     *
+     * @return mixed The result of the callback function.
+     *
+     * @throws DBLayerException If an error occurs while executing the callback function.
+     */
+    private function wrap(Closure $callback, array $opts = []): mixed
     {
-        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
-            try {
-                return $callback($this);
-            } catch (PDOException $e) {
-                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
-                    if ($i >= self::LOCK_RETRY) {
-                        throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
-                            ->setInfo($stnt->queryString, $bind, $e->errorInfo ?? [], $e->getCode())
-                            ->setFile($e->getFile())
-                            ->setLine($e->getLine());
-                    }
+        static $lastFailure = [];
+        $errorHandler = ag($opts, 'on_failure', null);
+        $exception = null;
 
-                    $sleep = self::LOCK_RETRY + random_int(1, 3);
-
-                    $this->logger?->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
-                        'sleep' => $sleep
-                    ]);
-
-                    sleep($sleep);
-                } else {
+        try {
+            return $callback($this, $opts);
+        } catch (PDOException $e) {
+            $attempts = (int)ag($opts, 'attempts', 0);
+            if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
+                if ($attempts >= self::LOCK_RETRY) {
                     throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
                         ->setInfo($stnt->queryString, $bind, $e->errorInfo ?? [], $e->getCode())
                         ->setFile($e->getFile())
                         ->setLine($e->getLine());
                 }
+
+                $sleep = self::LOCK_RETRY + rand(1, 3);
+
+                $this->logger?->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
+                    'sleep' => $sleep
+                ]);
+
+                sleep($sleep);
+
+                $opts['attempts'] = $attempts + 1;
+
+                return $this->wrap($callback, $opts);
+            } else {
+                $exception = $e;
+                if (null !== $errorHandler && ag($lastFailure, 'message') !== $e->getMessage()) {
+                    $lastFailure = [
+                        'code' => $e->getCode(),
+                        'message' => $e->getMessage(),
+                        'time' => time(),
+                    ];
+                    return $errorHandler($e, $callback, $opts);
+                }
+
+                if ($e instanceof DBLayerException) {
+                    throw $e;
+                }
+
+                throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
+                    ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
+                    ->setFile($e->getFile())
+                    ->setLine($e->getLine());
+            }
+        } finally {
+            if (null === $exception) {
+                $lastFailure = [];
             }
         }
-
-        return false;
     }
 }

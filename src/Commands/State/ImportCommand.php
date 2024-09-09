@@ -381,8 +381,6 @@ class ImportCommand extends Command
             ],
         ]);
 
-        $this->db->singleTransaction();
-
         foreach ($list as $name => &$backend) {
             $metadata = false;
             $opts = ag($backend, 'options', []);
@@ -472,21 +470,24 @@ class ImportCommand extends Command
 
         $end = makeDate();
 
-        $this->logger->notice("SYSTEM: Completed waiting on '{total}' requests in '{time.duration}s'.", [
-            'total' => number_format(count($queue)),
-            'time' => [
-                'start' => $start,
-                'end' => $end,
-                'duration' => $end->getTimestamp() - $start->getTimestamp(),
-            ],
-            'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
-            ],
-            'responses' => [
-                'size' => fsize((int)Message::get('response.size', 0)),
-            ],
-        ]);
+        $this->logger->notice(
+            "SYSTEM: Completed waiting on '{total}' requests in '{time.duration}'s. Parsed '{responses.size}' of data.",
+            [
+                'total' => number_format(count($queue)),
+                'time' => [
+                    'start' => $start,
+                    'end' => $end,
+                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                ],
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+                'responses' => [
+                    'size' => fsize((int)Message::get('response.size', 0)),
+                ],
+            ]
+        );
 
         $queue = $requestData = null;
 

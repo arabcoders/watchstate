@@ -180,13 +180,6 @@ interface DatabaseInterface
     public function getDBLayer(): DBLayer;
 
     /**
-     * Enable single transaction mode.
-     *
-     * @return bool
-     */
-    public function singleTransaction(): bool;
-
-    /**
      * Wrap queries into single transaction.
      *
      * @param Closure(DatabaseInterface): mixed $callback

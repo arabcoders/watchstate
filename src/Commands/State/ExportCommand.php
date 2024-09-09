@@ -563,8 +563,6 @@ class ExportCommand extends Command
             ],
         ]);
 
-        $this->db->singleTransaction();
-
         $requests = [];
 
         foreach ($backends as $backend) {
@@ -601,6 +599,7 @@ class ExportCommand extends Command
             }
         }
 
+        $start = makeDate();
         $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests.", [
             'total' => count($requests),
         ]);
@@ -614,9 +613,25 @@ class ExportCommand extends Command
             }
         }
 
-        $this->logger->notice("SYSTEM: Sent '{total}' play state comparison requests.", [
-            'total' => count($requests),
-        ]);
+        $end = makeDate();
+        $this->logger->notice(
+            "SYSTEM: Completed '{total}' play state comparison requests in '{time.duration}'s. Parsed '{responses.size}' of data.",
+            [
+                'total' => count($requests),
+                'time' => [
+                    'start' => $start,
+                    'end' => $end,
+                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                ],
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
+                'responses' => [
+                    'size' => fsize((int)Message::get('response.size', 0)),
+                ],
+            ]
+        );
 
         $this->logger->notice("Export mode ended for '{backends}'.", [
             'backends' => implode(', ', array_keys($backends)),
