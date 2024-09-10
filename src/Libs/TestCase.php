@@ -63,7 +63,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
                 $this->assertInstanceOf(
                     is_object($exception) ? $exception::class : $exception,
                     $caught,
-                    $reason
+                    $reason . ' ' . $caught->getMessage(),
                 );
                 if (!empty($exceptionMessage)) {
                     $this->assertStringContainsString($exceptionMessage, $caught->getMessage(), $reason);

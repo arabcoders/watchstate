@@ -294,7 +294,7 @@ final class PDOAdapter implements iDB
         }
 
         $sql = "SELECT * FROM state WHERE {$type_sql} JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = {id} LIMIT 1";
-        $stmt = $this->db->query(r($sql, ['id' => is_int($id) ? $id : $this->db->escape($id)]), $cond);
+        $stmt = $this->db->query(r($sql, ['id' => is_int($id) ? $id : $this->db->quote($id)]), $cond);
 
         if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
             return null;
