@@ -187,12 +187,17 @@ return (function (): array {
 
         PDO::class => [
             'class' => function (): PDO {
-                $dbFile = Config::get('database.file');
-                $changePerm = !file_exists($dbFile);
+                $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
+                $dsn = $inTestMode ? 'sqlite::memory:' : Config::get('database.dsn');
 
-                $pdo = new PDO(dsn: Config::get('database.dsn'), options: Config::get('database.options', []));
+                if (false === $inTestMode) {
+                    $dbFile = Config::get('database.file');
+                    $changePerm = !file_exists($dbFile);
+                }
 
-                if ($changePerm && inContainer() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
+                $pdo = new PDO(dsn: $dsn, options: Config::get('database.options', []));
+
+                if (!$inTestMode && $changePerm && inContainer() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
                     @chmod($dbFile, 0777);
                 }
 

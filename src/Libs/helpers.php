@@ -7,6 +7,8 @@ use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\APIResponse;
+use App\Libs\Attributes\Route\Cli;
+use App\Libs\Attributes\Route\Route;
 use App\Libs\Attributes\Scanner\Attributes as AttributesScanner;
 use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
@@ -27,7 +29,6 @@ use App\Libs\Guid;
 use App\Libs\Initializer;
 use App\Libs\Options;
 use App\Libs\Response;
-use App\Libs\Router;
 use App\Libs\Stream;
 use App\Libs\Uri;
 use App\Listeners\ProcessPushEvent;
@@ -1021,29 +1022,53 @@ if (false === function_exists('generateRoutes')) {
      */
     function generateRoutes(string $type = 'cli', array $opts = []): array
     {
-        $dirs = [__DIR__ . '/../Commands'];
-        foreach (array_keys(Config::get('supported', [])) as $backend) {
-            $dir = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
-
-            if (!file_exists($dir)) {
-                continue;
-            }
-
-            $dirs[] = $dir;
-        }
-
-        $routes_cli = (new Router($dirs))->generate();
-
         $cache = $opts[iCache::class] ?? Container::get(iCache::class);
 
+        $routes_cli = $routes_http = [];
+
         try {
+            $dirs = [__DIR__ . '/../Commands'];
+            foreach (array_keys(Config::get('supported', [])) as $backend) {
+                $dir = r(__DIR__ . '/../Backends/{backend}/Commands', ['backend' => ucfirst($backend)]);
+
+                if (!file_exists($dir)) {
+                    continue;
+                }
+
+                $dirs[] = $dir;
+            }
+            foreach (AttributesScanner::scan($dirs, allowNonInvokable: true)->for(Cli::class) as $item) {
+                $routes_cli[] = [
+                    'callable' => $item->getCallable(),
+                    'path' => ag($item->data, 'pattern'),
+                    'method' => ag($item->data, 'methods'),
+                    'middleware' => ag($item->data, 'middleware'),
+                    'host' => ag($item->data, 'host'),
+                    'name' => ag($item->data, 'name'),
+                    'port' => ag($item->data, 'port'),
+                    'scheme' => ag($item->data, 'scheme'),
+                ];
+            }
+
             $cache->set('routes_cli', $routes_cli, new DateInterval('PT1H'));
         } catch (\Psr\SimpleCache\InvalidArgumentException) {
         }
 
-        $routes_http = (new Router([__DIR__ . '/../API']))->generate();
-
         try {
+            $dirs = [__DIR__ . '/../API'];
+            foreach (AttributesScanner::scan($dirs, allowNonInvokable: false)->for(Route::class) as $item) {
+                $routes_http[] = [
+                    'callable' => $item->getCallable(),
+                    'path' => ag($item->data, 'pattern'),
+                    'method' => ag($item->data, 'methods'),
+                    'middleware' => ag($item->data, 'middleware'),
+                    'host' => ag($item->data, 'host'),
+                    'name' => ag($item->data, 'name'),
+                    'port' => ag($item->data, 'port'),
+                    'scheme' => ag($item->data, 'scheme'),
+                ];
+            }
+
             $cache->set('routes_http', $routes_http, new DateInterval('P1D'));
         } catch (\Psr\SimpleCache\InvalidArgumentException) {
         }

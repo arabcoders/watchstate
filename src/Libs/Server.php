@@ -16,13 +16,13 @@ use Symfony\Component\Process\Process;
  */
 final class Server
 {
-    public const CONFIG_HOST = 'host';
-    public const CONFIG_PORT = 'port';
-    public const CONFIG_ROOT = 'root';
-    public const CONFIG_PHP = 'php';
-    public const CONFIG_ENV = 'env';
-    public const CONFIG_ROUTER = 'router';
-    public const CONFIG_THREADS = 'threads';
+    public const string CONFIG_HOST = 'host';
+    public const string CONFIG_PORT = 'port';
+    public const string CONFIG_ROOT = 'root';
+    public const string CONFIG_PHP = 'php';
+    public const string CONFIG_ENV = 'env';
+    public const string CONFIG_ROUTER = 'router';
+    public const string CONFIG_THREADS = 'threads';
 
     /**
      * @var array $config The configuration settings for the server

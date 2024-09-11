@@ -54,6 +54,11 @@ final readonly class DataUtil implements JsonSerializable, Stringable
         return new self(array_map($callback, $this->data));
     }
 
+    public function filter(callable $callback): self
+    {
+        return new self(array_filter($this->data, $callback, ARRAY_FILTER_USE_BOTH));
+    }
+
     public function with(string $key, mixed $value): self
     {
         return new self(ag_set($this->data, $key, $value));
@@ -71,6 +76,6 @@ final readonly class DataUtil implements JsonSerializable, Stringable
 
     public function __toString(): string
     {
-        return json_encode($this->data);
+        return json_encode($this->jsonSerialize());
     }
 }

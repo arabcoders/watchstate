@@ -9,16 +9,14 @@ use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\DBAdapterException as DBException;
-use App\Libs\Exceptions\DBLayerException;
 use App\Libs\Options;
 use Closure;
 use DateTimeInterface;
 use PDO;
 use PDOException;
 use PDOStatement;
-use Psr\Log\LoggerInterface;
-use Random\RandomException;
-use RuntimeException;
+use Psr\Log\LoggerInterface as iLogger;
+use Throwable;
 
 /**
  * Class PDOAdapter
@@ -28,19 +26,9 @@ use RuntimeException;
 final class PDOAdapter implements iDB
 {
     /**
-     * @var int The number of times to retry acquiring a lock.
-     */
-    private const int LOCK_RETRY = 4;
-
-    /**
      * @var bool Whether the current operation is in a transaction.
      */
     private bool $viaTransaction = false;
-
-    /**
-     * @var bool Whether the current operation is using a single transaction.
-     */
-    private bool $singleTransaction = false;
 
     /**
      * @var array Adapter options.
@@ -56,19 +44,13 @@ final class PDOAdapter implements iDB
     ];
 
     /**
-     * @var string The database driver to be used.
-     */
-    private string $driver = 'sqlite';
-
-    /**
      * Creates a new instance of the class.
      *
-     * @param LoggerInterface $logger The logger object used for logging.
+     * @param iLogger $logger The logger object used for logging.
      * @param DBLayer $db The PDO object used for database connections.
      */
-    public function __construct(private LoggerInterface $logger, private readonly DBLayer $db)
+    public function __construct(private iLogger $logger, private readonly DBLayer $db)
     {
-        $this->driver = $this->db->getDriver();
     }
 
     /**
@@ -83,7 +65,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function insert(iState $entity): iState
     {
@@ -158,12 +139,20 @@ final class PDOAdapter implements iDB
                 );
             }
 
-            $this->execute($this->stmt['insert'], $data);
+            $this->db->query($this->stmt['insert'], $data, options: [
+                'on_failure' => function (Throwable $e) use ($entity) {
+                    if (false === str_contains($e->getMessage(), '21 bad parameter or other API misuse')) {
+                        throw $e;
+                    }
+                    $this->stmt['insert'] = null;
+                    return $this->insert($entity);
+                }
+            ]);
 
             $entity->id = (int)$this->db->lastInsertId();
         } catch (PDOException $e) {
             $this->stmt['insert'] = null;
-            if (false === $this->viaTransaction && false === $this->singleTransaction) {
+            if (false === $this->viaTransaction) {
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
@@ -193,7 +182,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function get(iState $entity): iState|null
     {
@@ -204,19 +192,7 @@ final class PDOAdapter implements iDB
         }
 
         if (null !== $entity->id) {
-            $stmt = $this->query(
-                r(
-                    'SELECT * FROM state WHERE ${column} = ${id}',
-                    context: [
-                        'column' => iState::COLUMN_ID,
-                        'id' => (int)$entity->id
-                    ],
-                    opts: [
-                        'tag_left' => '${',
-                        'tag_right' => '}'
-                    ],
-                )
-            );
+            $stmt = $this->db->query('SELECT * FROM state WHERE id = :id', ['id' => (int)$entity->id]);
 
             if (false !== ($item = $stmt->fetch(PDO::FETCH_ASSOC))) {
                 $item = $entity::fromArray($item);
@@ -247,7 +223,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function getAll(DateTimeInterface|null $date = null, array $opts = []): array
     {
@@ -271,13 +246,14 @@ final class PDOAdapter implements iDB
             $sql .= ' WHERE ' . iState::COLUMN_UPDATED . ' > ' . $date->getTimestamp();
         }
 
-        if (null === ($opts['class'] ?? null) || false === ($opts['class'] instanceof iState)) {
+        $fromClass = $opts['class'] ?? $this->options['class'] ?? null;
+        if (null === ($fromClass ?? null) || false === ($fromClass instanceof iState)) {
             $class = Container::get(iState::class);
         } else {
-            $class = $opts['class'];
+            $class = $fromClass;
         }
 
-        foreach ($this->query($sql) as $row) {
+        foreach ($this->db->query($sql) as $row) {
             $arr[] = $class::fromArray($row);
         }
 
@@ -286,7 +262,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function find(iState ...$items): array
     {
@@ -305,13 +280,11 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException
      */
     public function findByBackendId(string $backend, int|string $id, string|null $type = null): iState|null
     {
         $key = $backend . '.' . iState::COLUMN_ID;
         $cond = [
-            'id' => $id
         ];
 
         $type_sql = '';
@@ -320,39 +293,33 @@ final class PDOAdapter implements iDB
             $cond['type'] = $type;
         }
 
-        $sql = "SELECT * FROM state WHERE {$type_sql} JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = :id LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-
-        if (false === $this->execute($stmt, $cond)) {
-            throw new DBException(
-                r("PDOAdapter: Failed to execute sql query. Statement '{sql}', Conditions '{cond}'.", [
-                    'sql' => $sql,
-                    'cond' => arrayToString($cond),
-                ]), 61
-            );
-        }
+        $sql = "SELECT * FROM state WHERE {$type_sql} JSON_EXTRACT(" . iState::COLUMN_META_DATA . ",'$.{$key}') = {id} LIMIT 1";
+        $stmt = $this->db->query(r($sql, ['id' => is_int($id) ? $id : $this->db->quote($id)]), $cond);
 
         if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
             return null;
         }
 
-        return Container::get(iState::class)::fromArray($row);
-    }
+        $fromClass = $this->options['class'] ?? null;
+        if (null === ($fromClass ?? null) || false === ($fromClass instanceof iState)) {
+            $class = Container::get(iState::class);
+        } else {
+            $class = $fromClass;
+        }
 
+        return $class::fromArray($row);
+    }
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function update(iState $entity): iState
     {
         try {
             if (null === ($entity->id ?? null)) {
-                throw new DBException(
-                    r("PDOAdapter: Unable to update '{title}' without primary key defined.", [
-                        'title' => $entity->getName() ?? 'Unknown'
-                    ]), 51
-                );
+                throw new DBException(r("PDOAdapter: Unable to update '{title}' without primary key defined.", [
+                    'title' => $entity->getName() ?? 'Unknown'
+                ]), 51);
             }
 
             if (true === $entity->isEpisode() && $entity->episode < 1) {
@@ -391,15 +358,21 @@ final class PDOAdapter implements iDB
             }
 
             if (null === ($this->stmt['update'] ?? null)) {
-                $this->stmt['update'] = $this->db->prepare(
-                    $this->pdoUpdate('state', iState::ENTITY_KEYS)
-                );
+                $this->stmt['update'] = $this->db->prepare($this->pdoUpdate('state', iState::ENTITY_KEYS));
             }
 
-            $this->execute($this->stmt['update'], $data);
+            $this->db->query($this->stmt['update'], $data, options: [
+                'on_failure' => function (Throwable $e) use ($entity) {
+                    if (false === str_contains($e->getMessage(), '21 bad parameter or other API misuse')) {
+                        throw $e;
+                    }
+                    $this->stmt['update'] = null;
+                    return $this->update($entity);
+                }
+            ]);
         } catch (PDOException $e) {
             $this->stmt['update'] = null;
-            if (false === $this->viaTransaction && false === $this->singleTransaction) {
+            if (false === $this->viaTransaction) {
                 $this->logger->error(
                     message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
@@ -429,7 +402,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function remove(iState $entity): bool
     {
@@ -447,19 +419,7 @@ final class PDOAdapter implements iDB
                 $id = $entity->id;
             }
 
-            $this->query(
-                r(
-                    'DELETE FROM state WHERE ${column} = ${id}',
-                    [
-                        'column' => iState::COLUMN_ID,
-                        'id' => (int)$id
-                    ],
-                    opts: [
-                        'tag_left' => '${',
-                        'tag_right' => '}'
-                    ]
-                )
-            );
+            $this->db->query('DELETE FROM state WHERE id = :id', ['id' => (int)$id]);
         } catch (PDOException $e) {
             $this->logger->error(
                 message: "PDOAdapter: Exception '{error.kind}' was thrown unhandled. '{error.message}' at '{error.file}:{error.line}'.",
@@ -488,7 +448,6 @@ final class PDOAdapter implements iDB
 
     /**
      * @inheritdoc
-     * @throws RandomException if an error occurs while generating a random number.
      */
     public function commit(array $entities, array $opts = []): array
     {
@@ -563,7 +522,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function migrateData(string $version, LoggerInterface|null $logger = null): mixed
+    public function migrateData(string $version, iLogger|null $logger = null): mixed
     {
         return (new PDODataMigration($this->db, $logger ?? $this->logger))->automatic();
     }
@@ -618,7 +577,7 @@ final class PDOAdapter implements iDB
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger): iDB
+    public function setLogger(iLogger $logger): iDB
     {
         $this->logger = $logger;
 
@@ -628,20 +587,6 @@ final class PDOAdapter implements iDB
     public function getDBLayer(): DBLayer
     {
         return $this->db;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function singleTransaction(): bool
-    {
-        $this->singleTransaction = true;
-
-        if (false === $this->db->inTransaction()) {
-            $this->db->start();
-        }
-
-        return $this->db->inTransaction();
     }
 
     /**
@@ -684,7 +629,7 @@ final class PDOAdapter implements iDB
      */
     public function __destruct()
     {
-        if (true === $this->singleTransaction && true === $this->db->inTransaction()) {
+        if (true === $this->db->inTransaction()) {
             $this->db->commit();
         }
 
@@ -755,7 +700,6 @@ final class PDOAdapter implements iDB
      * @param iState $entity Entity get external ids from.
      *
      * @return iState|null Entity if found, null otherwise.
-     * @throws RandomException if an error occurs while generating a random number.
      */
     private function findByExternalId(iState $entity): iState|null
     {
@@ -809,168 +753,12 @@ final class PDOAdapter implements iDB
         $sqlGuids = ' AND ( ' . implode(' OR ', $guids) . ' ) ';
 
         $sql = "SELECT * FROM state WHERE " . iState::COLUMN_TYPE . " = :type {$sqlEpisode} {$sqlGuids} LIMIT 1";
-
-        $stmt = $this->db->prepare($sql);
-
-        if (false === $this->execute($stmt, $cond)) {
-            throw new DBException(
-                r("PDOAdapter: Failed to execute sql query. Statement '{sql}', Conditions '{cond}'.", [
-                    'sql' => $sql,
-                    'cond' => arrayToString($cond),
-                ]), 61
-            );
-        }
+        $stmt = $this->db->query($sql, $cond);
 
         if (false === ($row = $stmt->fetch(PDO::FETCH_ASSOC))) {
             return null;
         }
 
         return $entity::fromArray($row);
-    }
-
-    /**
-     * Executes a prepared SQL statement with optional parameters.
-     *
-     * @param PDOStatement $stmt The prepared statement to execute.
-     * @param array $cond An optional array of parameters to bind to the statement.
-     * @return bool True if the statement was successfully executed, false otherwise.
-     *
-     * @throws PDOException if an error occurs during the execution of the statement.
-     * @throws RandomException if an error occurs while generating a random number.
-     */
-    private function execute(PDOStatement $stmt, array $cond = []): bool
-    {
-        return $this->wrap(fn(PDOAdapter $adapter) => $stmt->execute($cond));
-    }
-
-    /**
-     * Executes a SQL query on the database.
-     *
-     * @param string $sql The SQL query to be executed.
-     *
-     * @return PDOStatement|false The result of the query as a PDOStatement object.
-     *                            It will return false if the query fails.
-     *
-     * @throws PDOException If an error occurs while executing the query.
-     * @throws RandomException If an error occurs while generating a random number.
-     */
-    private function query(string $sql): PDOStatement|false
-    {
-        return $this->wrap(fn(PDOAdapter $adapter) => $adapter->db->query($sql));
-    }
-
-    /**
-     * FOR DEBUGGING AND DISPLAY PURPOSES ONLY.
-     *
-     * @note Do not use it for anything.
-     * @param string $sql
-     * @param array $parameters
-     * @return string
-     *
-     * @internal This is for debugging purposes only.
-     */
-    public function getRawSQLString(string $sql, array $parameters): string
-    {
-        $replacer = [];
-
-        foreach ($parameters as $key => $val) {
-            $replacer['/(\:' . preg_quote($key, '/') . ')(?:\b|\,)/'] = ctype_digit(
-                (string)$val
-            ) ? (int)$val : '"' . $val . '"';
-        }
-
-        return preg_replace(array_keys($replacer), array_values($replacer), $sql);
-    }
-
-    /**
-     * Generates a valid identifier for a table or column.
-     *
-     * @param string $text The input text to be transformed into a valid identifier.
-     * @param bool $quote Indicates whether the generated identifier should be quoted.
-     *                    By default, it is set to true.
-     *
-     * @return string The generated identifier.
-     * @throws RuntimeException If the input text is not a valid ASCII name or does not meet the naming convention requirements.
-     */
-    public function identifier(string $text, bool $quote = true): string
-    {
-        // table or column has to be valid ASCII name.
-        // this is opinionated, but we only allow [a-zA-Z0-9_] in column/table name.
-        if (!\preg_match('#\w#', $text)) {
-            throw new RuntimeException(
-                r("PDOAdapter: Invalid column/table '{ident}'. Column/table must be valid ASCII code.", [
-                    'ident' => $text
-                ])
-            );
-        }
-
-        // The first character cannot be [0-9]:
-        if (\preg_match('/^\d/', $text)) {
-            throw new RuntimeException(
-                r("PDOAdapter: Invalid column/table '{ident}'. Must begin with a letter or underscore.", [
-                        'ident' => $text
-                    ]
-                )
-            );
-        }
-
-        return !$quote ? $text : match ($this->driver) {
-            'mssql' => '[' . $text . ']',
-            'mysql' => '`' . $text . '`',
-            default => '"' . $text . '"',
-        };
-    }
-
-    /**
-     * Wraps the given callback function with a retry mechanism to handle database locks.
-     *
-     * @param Closure $callback The callback function to be executed.
-     *
-     * @return mixed The result of the callback function.
-     *
-     * @throws DBLayerException If an error occurs while executing the callback function.
-     * @throws RandomException If an error occurs while generating a random number.
-     */
-    private function wrap(Closure $callback): mixed
-    {
-        for ($i = 0; $i <= self::LOCK_RETRY; $i++) {
-            try {
-                return $callback($this);
-            } catch (PDOException $e) {
-                if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
-                    if ($i >= self::LOCK_RETRY) {
-                        throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
-                            ->setInfo(
-                                ag($this->db->getLastStatement(), 'sql', ''),
-                                ag($this->db->getLastStatement(), 'bind', []),
-                                $e->errorInfo ?? [],
-                                $e->getCode()
-                            )
-                            ->setFile($e->getFile())
-                            ->setLine($e->getLine());
-                    }
-
-                    $sleep = self::LOCK_RETRY + random_int(1, 3);
-
-                    $this->logger->warning("PDOAdapter: Database is locked. sleeping for '{sleep}s'.", [
-                        'sleep' => $sleep
-                    ]);
-
-                    sleep($sleep);
-                } else {
-                    throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
-                        ->setInfo(
-                            ag($this->db->getLastStatement(), 'sql', ''),
-                            ag($this->db->getLastStatement(), 'bind', []),
-                            $e->errorInfo ?? [],
-                            $e->getCode()
-                        )
-                        ->setFile($e->getFile())
-                        ->setLine($e->getLine());
-                }
-            }
-        }
-
-        return false;
     }
 }

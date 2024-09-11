@@ -15,13 +15,9 @@ trait UsesBasicRepository
 {
     use UsesPaging;
 
-    protected DBLayer $db;
-
-    public function __construct(DBLayer $db)
+    public function __construct(private readonly DBLayer $db)
     {
-        $this->init($db);
-
-        $this->db = $db;
+        $this->init($this->db);
 
         if (empty($this->table)) {
             throw new RuntimeException('You must set table name in $this->table');

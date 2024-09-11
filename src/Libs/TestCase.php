@@ -36,6 +36,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
      * @param Throwable|string $exception Expected exception class
      * @param string $exceptionMessage (optional) Exception message
      * @param int|null $exceptionCode (optional) Exception code
+     * @param callable{ TestCase, Throwable}|null $callback (optional) Custom callback to handle the exception
      * @return void
      */
     protected function checkException(
@@ -44,6 +45,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
         Throwable|string $exception,
         string $exceptionMessage = '',
         int|null $exceptionCode = null,
+        callable $callback = null,
     ): void {
         $caught = null;
         try {
@@ -51,13 +53,17 @@ class TestCase extends \PHPUnit\Framework\TestCase
         } catch (Throwable $e) {
             $caught = $e;
         } finally {
+            if (null !== $callback) {
+                $callback($this, $caught);
+                return;
+            }
             if (null === $caught) {
-                $this->fail($reason);
+                $this->fail('No exception was thrown. ' . $reason);
             } else {
                 $this->assertInstanceOf(
                     is_object($exception) ? $exception::class : $exception,
                     $caught,
-                    $reason
+                    $reason . ' ' . $caught->getMessage(),
                 );
                 if (!empty($exceptionMessage)) {
                     $this->assertStringContainsString($exceptionMessage, $caught->getMessage(), $reason);
