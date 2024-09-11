@@ -27,7 +27,7 @@ class ServeStaticTest extends TestCase
         return new ServerRequest($method, $uri, $headers);
     }
 
-    public function test_responses()
+    public function test_error_responses()
     {
         $this->checkException(
             closure: fn() => $this->server->serve($this->createRequest('GET', '/nonexistent')),
@@ -48,6 +48,50 @@ class ServeStaticTest extends TestCase
             exceptionCode: Status::SERVICE_UNAVAILABLE->value,
         );
 
+        $this->checkException(
+            closure: fn() => $this->server->serve($this->createRequest('PUT', '/nonexistent.md')),
+            reason: 'Non-idempotent methods should not be allowed on static files.',
+            exception: \League\Route\Http\Exception\BadRequestException::class,
+            exceptionMessage: 'is not allowed',
+        );
+
+        // -- Check for LFI vulnerability.
+        $this->checkException(
+            closure: fn() => $this->server->serve($this->createRequest('GET', '/../../../composer.json')),
+            reason: 'Should not allow serving files outside the static directory.',
+            exception: \League\Route\Http\Exception\BadRequestException::class,
+            exceptionMessage: 'is invalid.',
+            exceptionCode: Status::BAD_REQUEST->value,
+        );
+
+        // -- Check for invalid root static path.
+        $this->checkException(
+            closure: fn() => (new ServeStatic('/nonexistent'))->serve($this->createRequest('GET', '/test.html')),
+            reason: 'Should throw exception if the static path does not exist.',
+            exception: \League\Route\Http\Exception\BadRequestException::class,
+            exceptionMessage: 'The static path',
+            exceptionCode: Status::SERVICE_UNAVAILABLE->value,
+        );
+
+        $this->checkException(
+            closure: fn() => $this->server->serve($this->createRequest('GET', '/test2/foo/bar')),
+            reason: 'If file does not exist, A NotFoundException should be thrown.',
+            exception: \League\Route\Http\Exception\NotFoundException::class,
+            exceptionMessage: 'not found',
+            exceptionCode: Status::NOT_FOUND->value,
+        );
+
+        $this->checkException(
+            closure: fn() => $this->server->serve($this->createRequest('GET', '/')),
+            reason: 'If file does not exist, A NotFoundException should be thrown.',
+            exception: \League\Route\Http\Exception\NotFoundException::class,
+            exceptionMessage: 'not found',
+            exceptionCode: Status::NOT_FOUND->value,
+        );
+    }
+
+    public function test_responses()
+    {
         $response = $this->server->serve($this->createRequest('GET', '/test.html'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals('text/html; charset=utf-8', $response->getHeaderLine('Content-Type'));
@@ -70,13 +114,6 @@ class ServeStaticTest extends TestCase
         $this->assertEquals('text/markdown; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(file_get_contents(__DIR__ . '/../../README.md'), (string)$response->getBody());
 
-        $this->checkException(
-            closure: fn() => $this->server->serve($this->createRequest('PUT', '/nonexistent.md')),
-            reason: 'Non-idempotent methods should not be allowed on static files.',
-            exception: \League\Route\Http\Exception\BadRequestException::class,
-            exceptionMessage: 'is not allowed',
-        );
-
         // -- Check directory serving.
         $response = $this->server->serve($this->createRequest('GET', '/test'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
@@ -92,24 +129,6 @@ class ServeStaticTest extends TestCase
 
         $this->assertEquals(Status::NOT_MODIFIED->value, $response->getStatusCode());
 
-        // -- Check for LFI vulnerability.
-        $this->checkException(
-            closure: fn() => $this->server->serve($this->createRequest('GET', '/../../../composer.json')),
-            reason: 'Should not allow serving files outside the static directory.',
-            exception: \League\Route\Http\Exception\BadRequestException::class,
-            exceptionMessage: 'is invalid.',
-            exceptionCode: Status::BAD_REQUEST->value,
-        );
-
-        // -- Check for invalid root static path.
-        $this->checkException(
-            closure: fn() => (new ServeStatic('/nonexistent'))->serve($this->createRequest('GET', '/test.html')),
-            reason: 'Should throw exception if the static path does not exist.',
-            exception: \League\Route\Http\Exception\BadRequestException::class,
-            exceptionMessage: 'The static path',
-            exceptionCode: Status::SERVICE_UNAVAILABLE->value,
-        );
-
         // -- check for deep index lookup.
         $response = $this->server->serve($this->createRequest('GET', '/test/view/action/1'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
@@ -122,21 +141,6 @@ class ServeStaticTest extends TestCase
         $response = $this->server->serve($this->createRequest('GET', '/test/view/1'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
 
-        $this->checkException(
-            closure: fn() => $this->server->serve($this->createRequest('GET', '/test2/foo/bar')),
-            reason: 'If file does not exist, A NotFoundException should be thrown.',
-            exception: \League\Route\Http\Exception\NotFoundException::class,
-            exceptionMessage: 'not found',
-            exceptionCode: Status::NOT_FOUND->value,
-        );
-
-        $this->checkException(
-            closure: fn() => $this->server->serve($this->createRequest('GET', '/')),
-            reason: 'If file does not exist, A NotFoundException should be thrown.',
-            exception: \League\Route\Http\Exception\NotFoundException::class,
-            exceptionMessage: 'not found',
-            exceptionCode: Status::NOT_FOUND->value,
-        );
 
         $response = $this->server->serve($this->createRequest('GET', '/test.html', [
             'if-modified-since' => '$$ INVALID DATA',

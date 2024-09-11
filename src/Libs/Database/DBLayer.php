@@ -122,7 +122,15 @@ final class DBLayer implements LoggerAwareInterface
 
             $stmt = $isStatement ? $sql : $db->prepare($sql);
 
-            $stmt->execute($bind);
+            if (!empty($bind)) {
+                array_map(
+                    fn($k, $v) => $stmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR),
+                    array_keys($bind),
+                    $bind
+                );
+            }
+
+            $stmt->execute();
 
             return $stmt;
         }, $opts);
@@ -748,10 +756,22 @@ final class DBLayer implements LoggerAwareInterface
                     }
 
                     $eBindName = '__db_ftS_' . random_int(1, 1000);
-                    $keys[] = sprintf(
-                        "MATCH(%s) AGAINST(%s)",
-                        implode(', ', array_map(fn($columns) => $this->escapeIdentifier($columns, true), $opt[1])),
-                        ':' . $eBindName
+
+                    $keys[] = str_replace(
+                        ['(column)', '(bind)', '(expr)'],
+                        [
+                            $eColumnName,
+                            $eBindName,
+                            implode(', ', array_map(fn($columns) => $this->escapeIdentifier($columns, true), $opt[1]))
+                        ],
+                        (function ($driver) {
+                            if ('sqlite' === $driver) {
+                                return "(column) MATCH :(bind)";
+                            }
+                            return "MATCH((expr)) AGAINST(:(bind))";
+                        })(
+                            $this->driver
+                        )
                     );
 
                     $bind[$eBindName] = $opt[2];
@@ -774,7 +794,7 @@ final class DBLayer implements LoggerAwareInterface
                     break;
                 case self::IS_JSON_EXTRACT:
                     if (!isset($opt[1], $opt[2], $opt[3])) {
-                        throw new RuntimeException('IS_JSON_CONTAINS: expects 3 parameters.');
+                        throw new RuntimeException('IS_JSON_EXTRACT: expects 3 parameters.');
                     }
 
                     $eBindName = '__db_je_' . random_int(1, 1000);
@@ -782,7 +802,7 @@ final class DBLayer implements LoggerAwareInterface
                     $keys[] = sprintf(
                         "JSON_EXTRACT(%s, %s) %s %s",
                         $this->escapeIdentifier($column, true),
-                        $opt[1],
+                        $this->escapeIdentifier($opt[1], true),
                         $opt[2],
                         ':' . $eBindName,
                     );
