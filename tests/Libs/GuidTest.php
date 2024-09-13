@@ -360,10 +360,10 @@ class GuidTest extends TestCase
     public function test_reparse()
     {
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        $oldGuidFile = Config::get('guid_file');
+        $oldGuidFile = Config::get('guid.file');
         try {
             file_put_contents($tmpFile, "{'foo' => 'too' }");
-            Config::save('guid_file', $tmpFile);
+            Config::save('guid.file', $tmpFile);
             Guid::setLogger($this->logger);
             Guid::reparse();
             Guid::getSupported();
@@ -375,7 +375,7 @@ class GuidTest extends TestCase
             if (file_exists($tmpFile)) {
                 unlink($tmpFile);
             }
-            Config::save('guid_file', $oldGuidFile);
+            Config::save('guid.file', $oldGuidFile);
         }
     }
 
@@ -392,7 +392,7 @@ class GuidTest extends TestCase
     public function test_getValidators()
     {
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
-        $oldGuidFile = Config::get('guid_file');
+        $oldGuidFile = Config::get('guid.file');
 
         $yaml = [
             'guids' => [
@@ -413,7 +413,7 @@ class GuidTest extends TestCase
 
         try {
             file_put_contents($tmpFile, Yaml::dump($yaml));
-            Config::save('guid_file', $tmpFile);
+            Config::save('guid.file', $tmpFile);
             Guid::reparse();
             $this->assertArrayHasKey(
                 'guid_foobar',
@@ -424,7 +424,7 @@ class GuidTest extends TestCase
             if (file_exists($tmpFile)) {
                 unlink($tmpFile);
             }
-            Config::save('guid_file', $oldGuidFile);
+            Config::save('guid.file', $oldGuidFile);
         }
     }
 

@@ -233,11 +233,13 @@ final class Guid implements JsonSerializable, Stringable
             ]), (int)$e->getCode(), $e);
         }
 
-        $guidVersion = (string)ag($yaml, 'version', '0.0');
+        $supportedVersion = ag(require __DIR__ . '/../../config/config.php', 'guid.version', '0.0');
+        $guidVersion = (string)ag($yaml, 'version', Config::get('guid.version', '0.0'));
 
-        if (true === version_compare('0.0', $guidVersion, '<')) {
-            throw new InvalidArgumentException(r("Unsupported file version '{version}'. Expecting '1.0'.", [
-                'version' => $guidVersion
+        if (true === version_compare($supportedVersion, $guidVersion, '<')) {
+            throw new InvalidArgumentException(r("Unsupported file version '{version}'. Expecting '{supported}'.", [
+                'version' => $guidVersion,
+                'supported' => $supportedVersion,
             ]));
         }
 
@@ -537,7 +539,7 @@ final class Guid implements JsonSerializable, Stringable
 
     private static function loadExternalGUID(): void
     {
-        $file = Config::get('guid_file', null);
+        $file = Config::get('guid.file', null);
 
         try {
             if (null !== $file && true === file_exists($file)) {

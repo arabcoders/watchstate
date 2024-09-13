@@ -81,7 +81,11 @@ return (function () {
         ],
     ];
 
-    $config['guid_file'] = fixPath(env('WS_GUID_FILE', ag($config, 'path') . '/config/guid.yaml'));
+    $config['guid'] = [
+        'version' => '0.0',
+        'file' => fixPath(env('WS_GUID_FILE', ag($config, 'path') . '/config/guid.yaml')),
+    ];
+
     $config['backends_file'] = fixPath(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
 
     date_default_timezone_set(ag($config, 'tz', 'UTC'));
