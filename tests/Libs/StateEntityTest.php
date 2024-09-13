@@ -7,6 +7,7 @@ namespace Tests\Libs;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Guid;
 use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
@@ -22,7 +23,9 @@ class StateEntityTest extends TestCase
         $this->testMovie = require __DIR__ . '/../Fixtures/MovieEntity.php';
         $this->testEpisode = require __DIR__ . '/../Fixtures/EpisodeEntity.php';
         $logger = new Logger('logger', processors: [new LogMessageProcessor()]);
-        $logger->pushHandler(new TestHandler());
+        $this->handler = new TestHandler();
+        $logger->pushHandler($this->handler);
+        Guid::setLogger($logger);
     }
 
     public function test_init_bad_type(): void
@@ -443,11 +446,13 @@ class StateEntityTest extends TestCase
             'rguid_tvdb://520/1/2',
         ];
 
+        $po = $entity->getRelativePointers();
         $this->assertSame(
             $pointers,
-            $entity->getRelativePointers(),
+            $po,
             'When entity is episode, and has supported GUIDs, getRelativePointers() returns list of all supported GUIDs in format of rguid_<provider>://<id>/<season>/<episode>'
         );
+
         $this->assertSame([],
             (new StateEntity($this->testMovie))->getRelativePointers(),
             'When entity is movie, getRelativePointers() returns empty array regardless.'

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Get;
+use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface;
 
 final class Guids
 {
@@ -19,6 +21,7 @@ final class Guids
     {
         $list = [];
 
+        Guid::setLogger(Container::get(LoggerInterface::class));
         $validator = Guid::getValidators();
 
         foreach (Guid::getSupported() as $guid => $type) {
