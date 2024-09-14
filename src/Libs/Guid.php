@@ -61,7 +61,7 @@ final class Guid implements JsonSerializable, Stringable
     private static array $validateGuid = [
         Guid::GUID_IMDB => [
             'description' => 'IMDB ID Parser.',
-            'pattern' => '/^tt[0-9\/]+$/i',
+            'pattern' => '/^(?<guid>tt[0-9\/]+)$/i',
             'example' => 'tt(number)',
             'tests' => [
                 'valid' => ['tt1234567'],
@@ -70,7 +70,7 @@ final class Guid implements JsonSerializable, Stringable
         ],
         Guid::GUID_TMDB => [
             'description' => 'The tmdb ID Parser.',
-            'pattern' => '/^[0-9\/]+$/i',
+            'pattern' => '/^(?<guid>[0-9\/]+)$/i',
             'example' => '(number)',
             'tests' => [
                 'valid' => ['123456'],
@@ -79,7 +79,7 @@ final class Guid implements JsonSerializable, Stringable
         ],
         Guid::GUID_TVDB => [
             'description' => 'The tvdb ID Parser.',
-            'pattern' => '/^[0-9\/]+$/i',
+            'pattern' => '/^(?<guid>[0-9\/]+)$/i',
             'example' => '(number)',
             'tests' => [
                 'valid' => ['123456'],
@@ -88,7 +88,7 @@ final class Guid implements JsonSerializable, Stringable
         ],
         Guid::GUID_TVMAZE => [
             'description' => 'The tvMaze ID Parser.',
-            'pattern' => '/^[0-9\/]+$/i',
+            'pattern' => '/^(?<guid>[0-9\/]+)$/i',
             'example' => '(number)',
             'tests' => [
                 'valid' => ['123456'],
@@ -97,7 +97,7 @@ final class Guid implements JsonSerializable, Stringable
         ],
         Guid::GUID_TVRAGE => [
             'description' => 'The tvRage ID Parser.',
-            'pattern' => '/^[0-9\/]+$/i',
+            'pattern' => '/^(?<guid>[0-9\/]+)$/i',
             'example' => '(number)',
             'tests' => [
                 'valid' => ['123456'],
@@ -106,7 +106,7 @@ final class Guid implements JsonSerializable, Stringable
         ],
         Guid::GUID_ANIDB => [
             'description' => 'The anidb ID Parser.',
-            'pattern' => '/^[0-9\/]+$/i',
+            'pattern' => '/^(?<guid>[0-9\/]+)$/i',
             'example' => '(number)',
             'tests' => [
                 'valid' => ['123456'],
@@ -170,7 +170,7 @@ final class Guid implements JsonSerializable, Stringable
             }
 
             if (null !== (self::$validateGuid[$key] ?? null)) {
-                if (1 !== @preg_match(self::$validateGuid[$key]['pattern'], $value)) {
+                if (1 !== @preg_match(self::$validateGuid[$key]['pattern'], $value, $matches)) {
                     $this->getLogger()->info(
                         "Ignoring '{backend}' {item.type} '{item.title}' '{key}' external id. Unexpected value '{given}'. Expecting '{expected}'.",
                         [
@@ -181,6 +181,10 @@ final class Guid implements JsonSerializable, Stringable
                         ]
                     );
                     continue;
+                }
+
+                if (isset($matches['guid'])) {
+                    $value = $matches['guid'];
                 }
             }
 
