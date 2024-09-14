@@ -947,3 +947,68 @@ In my docker host the group id for `video` is `44` and for `render` is `105`. ch
 file to match your setup.
 
 Note: the tip about adding the group_add came from the user `binarypancakes` in discord.
+
+---
+
+### Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
+
+You can extend the parser by creating new file at `/config/config/guid.yaml` with the following content.
+
+```yaml
+# The version of the guid file. right now in beta so it's 0.0. not required to be present.
+version: 0.0
+
+# The key must be in lower case. and it's an array.
+guids:
+    -   type: string                            # must be exactly string do not change it.
+        name: guid_mydb                         # the name must start with guid_ with no spaces and lower case.
+        description: "My custom database guid"  # description of the guid.
+        # Validator object. to validate the guid.
+        validator:
+            pattern: /^[0-9\/]+$/i  # regex pattern to match the guid. The pattern must also support / being in the guid. as we use the same object to generate relative guid.
+            example: "(number)"     # example of the guid.
+            tests:
+                valid:
+                    - "1234567"     # valid guid examples.
+                invalid:
+                    - "1234567a"    # invalid guid examples.
+                    - "a111234567"  # invalid guid examples.
+
+# Extend Plex client to support the new guid.
+plex:
+    -   legacy: true  # Tag the mapper as legacy GUID for mapping.
+        # Required map object. to map the new guid to WatchState guid.
+        map:
+            from: com.plexapp.agents.foo # map.from this string.
+            to: guid_mydb                # map.to this guid.
+        # (Optional) Replace helper. Sometimes you need to replace the guid identifier to another.
+        # The replacement happens before the mapping, so if you replace the guid identifier, you should also
+        # update the map.from to match the new identifier.
+        replace:
+            from: com.plexapp.agents.foobar://  # Replace from this string
+            to: com.plexapp.agents.foo://       # Into this string.
+
+# Extend Jellyfin client to support the new guid.
+jellyfin:
+    # Required map object. to map the new guid to WatchState guid.
+    -   map:
+            from: foo     # map.from this string.
+            to: guid_mydb # map.to this guid.
+
+# Extend Emby client to support the new guid.
+emby:
+    # Required map object. to map the new guid to WatchState guid.
+    -   map:
+            from: foo     # map.from this string.
+            to: guid_mydb # map.to this guid.
+```
+
+As you can see from the config, it's roughly how we expected it to be. The `guids` array is where you define your new
+guids. The `plex`, `jellyfin` and `emby` objects are where you map the new guid to the WatchState guid.
+
+Everything in this file should be in lower case. If error occurs, the tool will log a warning and ignore the guid,
+By default, we only show `ERROR` levels in log file, You can lower it by setting `WS_LOGGER_FILE_LEVEL` environment variable
+to `WARNING`.
+
+If you added or removed a guid from the `guid.yaml` file, you should run `system:reindex --force-reindex` command to update the
+database indexes with the new guids.

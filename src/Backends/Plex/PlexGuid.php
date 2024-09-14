@@ -6,8 +6,12 @@ namespace App\Backends\Plex;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Libs\Config;
+use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Guid;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Component\Yaml\Exception\ParseException;
+use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 final class PlexGuid implements iGuid
@@ -15,7 +19,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<string,string> Map plex guids to our guids.
      */
-    private const array GUID_MAPPER = [
+    private array $guidMapper = [
         'imdb' => Guid::GUID_IMDB,
         'tmdb' => Guid::GUID_TMDB,
         'tvdb' => Guid::GUID_TVDB,
@@ -29,7 +33,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<array-key,string> List of legacy plex agents.
      */
-    private const array GUID_LEGACY = [
+    private array $guidLegacy = [
         'com.plexapp.agents.imdb',
         'com.plexapp.agents.tmdb',
         'com.plexapp.agents.themoviedb',
@@ -44,7 +48,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<array-key,string> List of local plex agents.
      */
-    private const array GUID_LOCAL = [
+    private array $guidLocal = [
         'plex',
         'local',
         'com.plexapp.agents.none',
@@ -54,7 +58,7 @@ final class PlexGuid implements iGuid
     /**
      * @var array<string,string> Map guids to their replacement.
      */
-    private const array GUID_LEGACY_REPLACER = [
+    private array $guidReplacer = [
         'com.plexapp.agents.themoviedb://' => 'com.plexapp.agents.tmdb://',
         'com.plexapp.agents.xbmcnfotv://' => 'com.plexapp.agents.tvdb://',
         'com.plexapp.agents.thetvdb://' => 'com.plexapp.agents.tvdb://',
@@ -72,10 +76,189 @@ final class PlexGuid implements iGuid
     /**
      * Class constructor.
      *
-     * @param LoggerInterface $logger Logger instance.
+     * @param iLogger $logger Logger instance.
      */
-    public function __construct(protected LoggerInterface $logger)
+    public function __construct(private readonly iLogger $logger)
     {
+        $file = Config::get('guid.file', null);
+
+        try {
+            if (null !== $file && true === file_exists($file)) {
+                $this->parseGUIDFile($file);
+            }
+        } catch (Throwable $e) {
+            $this->logger->error("Failed to read or parse '{guid}' file. Error '{error}'.", [
+                'guid' => $file,
+                'error' => $e->getMessage(),
+                'exception' => [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTrace(),
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * Extends WatchState GUID parsing to include external GUIDs.
+     *
+     * @param string $file The path to the external GUID mapping file.
+     *
+     * @throws InvalidArgumentException if the file does not exist or is not readable.
+     * @throws InvalidArgumentException if the GUIDs file cannot be parsed.
+     * @throws InvalidArgumentException if the file version is not supported.
+     */
+    public function parseGUIDFile(string $file): void
+    {
+        if (false === file_exists($file) || false === is_readable($file)) {
+            throw new InvalidArgumentException(r("The file '{file}' does not exist or is not readable.", [
+                'file' => $file,
+            ]));
+        }
+
+        if (filesize($file) < 1) {
+            $this->logger->info("The external GUID mapping file '{file}' is empty.", ['file' => $file]);
+            return;
+        }
+
+        try {
+            $yaml = Yaml::parseFile($file);
+            if (false === is_array($yaml)) {
+                throw new InvalidArgumentException(r("The GUIDs file '{file}' is not an array.", [
+                    'file' => $file,
+                ]));
+            }
+        } catch (ParseException $e) {
+            throw new InvalidArgumentException(r("Failed to parse GUIDs file. Error '{error}'.", [
+                'error' => $e->getMessage(),
+            ]), code: (int)$e->getCode(), previous: $e);
+        }
+
+        $supported = array_keys(Guid::getSupported());
+        $supportedVersion = Config::get('guid.version', '0.0');
+        $guidVersion = (string)ag($yaml, 'version', $supportedVersion);
+
+        if (true === version_compare($supportedVersion, $guidVersion, '<')) {
+            throw new InvalidArgumentException(r("Unsupported file version '{version}'. Expecting '{supported}'.", [
+                'version' => $guidVersion,
+                'supported' => $supportedVersion,
+            ]));
+        }
+
+        $mapping = ag($yaml, 'plex', []);
+
+        if (false === is_array($mapping)) {
+            throw new InvalidArgumentException(r("The GUIDs file '{file}' plex sub key is not an array.", [
+                'file' => $file,
+            ]));
+        }
+
+        if (count($mapping) < 1) {
+            return;
+        }
+
+        foreach ($mapping as $key => $map) {
+            if (false === is_array($map)) {
+                $this->logger->warning("Ignoring 'plex.{key}'. Value must be an object. '{given}' is given.", [
+                    'key' => $key,
+                    'given' => get_debug_type($map),
+                ]);
+                continue;
+            }
+
+            if (null !== ($replace = ag($map, 'replace', null))) {
+                if (false === is_array($replace)) {
+                    $this->logger->warning(
+                        "Ignoring 'plex.{key}'. replace value must be an object. '{given}' is given.",
+                        [
+                            'key' => $key,
+                            'given' => get_debug_type($replace),
+                        ]
+                    );
+                    continue;
+                }
+
+                $from = ag($replace, 'from', null);
+                $to = ag($replace, 'to', null);
+
+                if (empty($from) || false === is_string($from)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. replace.from field is empty or not a string.", [
+                        'key' => $key,
+                    ]);
+                    continue;
+                }
+
+                if (false === is_string($to)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. replacer.to field is not a string.", [
+                        'key' => $key,
+                    ]);
+                    continue;
+                }
+
+                $this->guidReplacer[$from] = $to;
+            }
+
+            if (null !== ($mapper = ag($map, 'map', null))) {
+                if (false === is_array($mapper)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. map value must be an object. '{given}' is given.", [
+                        'key' => $key,
+                        'given' => get_debug_type($mapper),
+                    ]);
+                    continue;
+                }
+
+                $from = ag($mapper, 'from', null);
+                $to = ag($mapper, 'to', null);
+
+                if (empty($from) || false === is_string($from)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. map.from field is empty or not a string.", [
+                        'key' => $key,
+                    ]);
+                    continue;
+                }
+
+                if (empty($to) || false === is_string($to)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. map.to field is empty or not a string.", [
+                        'key' => $key,
+                    ]);
+                    continue;
+                }
+
+                if (false === str_starts_with($to, 'guid_')) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. map.to '{to}' field does not starts with 'guid_'.", [
+                        'key' => $key,
+                        'to' => $to,
+                    ]);
+                    continue;
+                }
+
+                if (false === in_array($to, $supported)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. map.to field is not a supported GUID type.", [
+                        'key' => $key,
+                        'to' => $to,
+                    ]);
+                    continue;
+                }
+
+                if (false === (bool)ag($map, 'legacy', true)) {
+                    $this->guidMapper[$from] = $to;
+                    continue;
+                }
+
+                if (true === in_array($from, $this->guidLegacy)) {
+                    $this->logger->warning("Ignoring 'plex.{key}'. map.from already exists.", [
+                        'key' => $key,
+                        'from' => $from,
+                    ]);
+                    continue;
+                }
+                $this->guidLegacy[] = $from;
+                $agentGuid = explode('://', after($from, 'agents.'));
+                $this->guidMapper[$agentGuid[0]] = $to;
+            }
+        }
     }
 
     /**
@@ -122,7 +305,7 @@ final class PlexGuid implements iGuid
      */
     public function isLocal(string $guid): bool
     {
-        return true === in_array(before(strtolower($guid), '://'), self::GUID_LOCAL);
+        return true === in_array(before(strtolower($guid), '://'), $this->guidLocal);
     }
 
     /**
@@ -159,14 +342,11 @@ final class PlexGuid implements iGuid
 
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
-                        $this->logger->info(
-                            'PlexGuid: Unable to parse [{backend}] [{agent}] identifier.',
-                            [
-                                'backend' => $this->context->backendName,
-                                'agent' => $val,
-                                ...$context
-                            ]
-                        );
+                        $this->logger->info("PlexGuid: Unable to parse '{backend}: {agent}' identifier.", [
+                            'backend' => $this->context->backendName,
+                            'agent' => $val,
+                            ...$context
+                        ]);
                     }
                     continue;
                 }
@@ -174,15 +354,16 @@ final class PlexGuid implements iGuid
                 [$key, $value] = explode('://', $val);
                 $key = strtolower($key);
 
-                if (null === (self::GUID_MAPPER[$key] ?? null) || empty($value)) {
+                if (null === ($this->guidMapper[$key] ?? null) || empty($value)) {
                     continue;
                 }
 
                 if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            'PlexGuid: Ignoring [{backend}] external id [{source}] for {item.type} [{item.title}] as requested.',
+                            "PlexGuid: Ignoring '{client}: {backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
+                                'client' => $this->context->clientName,
                                 'backend' => $this->context->backendName,
                                 'source' => $val,
                                 'guid' => [
@@ -197,14 +378,15 @@ final class PlexGuid implements iGuid
                 }
 
                 // -- Plex in their infinite wisdom, sometimes report two keys for same data source.
-                if (null !== ($guid[self::GUID_MAPPER[$key]] ?? null)) {
+                if (null !== ($guid[$this->guidMapper[$key]] ?? null)) {
                     if (true === $log) {
-                        $this->logger->debug(
-                            'PlexGuid: [{backend}] reported multiple ids for same data source [{key}: {ids}] for {item.type} [{item.title}].',
+                        $this->logger->warning(
+                            "PlexGuid: '{client}: {backend}' reported multiple ids for same data source '{key}: {ids}' for {item.type} '{item.id}: {item.title}'.",
                             [
+                                'client' => $this->context->clientName,
                                 'backend' => $this->context->backendName,
                                 'key' => $key,
-                                'ids' => sprintf('%s, %s', $guid[self::GUID_MAPPER[$key]], $value),
+                                'ids' => sprintf('%s, %s', $guid[$this->guidMapper[$key]], $value),
                                 ...$context
                             ]
                         );
@@ -214,16 +396,16 @@ final class PlexGuid implements iGuid
                         continue;
                     }
 
-                    if ((int)$guid[self::GUID_MAPPER[$key]] < (int)$value) {
+                    if ((int)$guid[$this->guidMapper[$key]] < (int)$value) {
                         continue;
                     }
                 }
 
-                $guid[self::GUID_MAPPER[$key]] = $value;
+                $guid[$this->guidMapper[$key]] = $value;
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        message: 'PlexGuid: Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
+                        message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,
@@ -261,12 +443,12 @@ final class PlexGuid implements iGuid
      * @param array $context Context data.
      * @param bool $log Log errors. default true.
      *
-     * @return string Parsed guid.
+     * @return string The parsed GUID.
      * @see https://github.com/ZeroQI/Hama.bundle/issues/510
      */
     private function parseLegacyAgent(string $guid, array $context = [], bool $log = true): string
     {
-        if (false === in_array(before($guid, '://'), self::GUID_LEGACY)) {
+        if (false === in_array(before($guid, '://'), $this->guidLegacy)) {
             return $guid;
         }
 
@@ -286,15 +468,19 @@ final class PlexGuid implements iGuid
                 return str_replace('tsdb', 'tmdb', $source) . '://' . before($sourceId, '?');
             }
 
-            $guid = strtr($guid, self::GUID_LEGACY_REPLACER);
+            $guid = strtr($guid, $this->guidReplacer);
 
             $agentGuid = explode('://', after($guid, 'agents.'));
+
+            if (false === isset($agentGuid[1])) {
+                return $guid;
+            }
 
             return $agentGuid[0] . '://' . before($agentGuid[1], '?');
         } catch (Throwable $e) {
             if (true === $log) {
                 $this->logger->error(
-                    message: 'PlexGuid: Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] parsing legacy agent [{agent}] identifier. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "PlexGuid: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing legacy agent '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}.",
                     context: [
                         'backend' => $this->context->backendName,
                         'client' => $this->context->clientName,
@@ -318,5 +504,20 @@ final class PlexGuid implements iGuid
             }
             return $guid;
         }
+    }
+
+    /**
+     * Get the Plex Guid configuration.
+     *
+     * @return array
+     */
+    public function getConfig(): array
+    {
+        return [
+            'guidMapper' => $this->guidMapper,
+            'guidLegacy' => $this->guidLegacy,
+            'guidLocal' => $this->guidLocal,
+            'guidReplacer' => $this->guidReplacer,
+        ];
     }
 }
