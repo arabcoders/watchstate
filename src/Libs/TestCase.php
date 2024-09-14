@@ -23,9 +23,14 @@ class TestCase extends \PHPUnit\Framework\TestCase
             return;
         }
 
-        foreach ($this->handler->getRecords() as $logs) {
-            fwrite(STDOUT, $logs['formatted'] . PHP_EOL);
-        }
+        $d = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[0];
+        $getScript = ag($d, 'file');
+        $line = ag($d, 'line');
+
+        dump(
+            $getScript . ':' . $line,
+            array_map(fn($v) => $v['formatted'] ?? $v['message'], $this->handler->getRecords())
+        );
     }
 
     /**

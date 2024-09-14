@@ -268,7 +268,7 @@ final class Guid implements JsonSerializable, Stringable
             }
 
             $name = ag($def, 'name');
-            if (null === $name || false === str_starts_with($name, 'guid_')) {
+            if (null === $name || false === self::validateGUIDName($name)) {
                 self::$logger?->warning(
                     "Ignoring 'guids.{key}'. name must start with 'guid_'. '{given}' is given.",
                     [
@@ -573,5 +573,17 @@ final class Guid implements JsonSerializable, Stringable
     public static function reparse(): void
     {
         self::$checkedExternalFile = false;
+    }
+
+    /**
+     * Validate Externally Added GUID Names.
+     *
+     * @param string $name The name to validate.
+     *
+     * @return bool True if the name is valid, false otherwise.
+     */
+    public static function validateGUIDName(string $name): bool
+    {
+        return str_starts_with($name, 'guid_') && isValidName($name);
     }
 }

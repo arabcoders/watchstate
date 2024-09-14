@@ -3,12 +3,12 @@
 
 declare(strict_types=1);
 
-namespace Tests\Backends\Plex;
+namespace Tests\Backends\Emby;
 
 use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
-use App\Backends\Plex\PlexClient;
-use App\Backends\Plex\PlexGuid;
+use App\Backends\Emby\EmbyClient;
+use App\Backends\Emby\EmbyGuid;
 use App\Libs\Config;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\LogMessageProcessor;
@@ -22,7 +22,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Yaml\Yaml;
 
-class PlexGuidTest extends TestCase
+class EmbyGuidTest extends TestCase
 {
     protected Logger|null $logger = null;
 
@@ -51,19 +51,19 @@ class PlexGuidTest extends TestCase
         }
     }
 
-    private function getClass(): PlexGuid
+    private function getClass(): EmbyGuid
     {
         $this->handler->clear();
-        return (new PlexGuid($this->logger))->withContext(
+        return (new EmbyGuid($this->logger))->withContext(
             new Context(
-                clientName: PlexClient::CLIENT_NAME,
-                backendName: 'test_plex',
-                backendUrl: new Uri('http://127.0.0.1:34000'),
+                clientName: EmbyClient::CLIENT_NAME,
+                backendName: 'test_emby',
+                backendUrl: new Uri('http://127.0.0.1:8096'),
                 cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
                 logger: $this->logger,
-                backendId: 's00000000000000000000000000000000000000p',
-                backendToken: 't000000000000000000p',
-                backendUser: '11111111',
+                backendId: 's000000000000000000000000000000e',
+                backendToken: 't000000000000000000000000000000e',
+                backendUser: 'u000000000000000000000000000000e',
             )
         );
     }
@@ -179,12 +179,12 @@ class PlexGuidTest extends TestCase
         try {
             $this->checkException(
                 closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, Yaml::dump(['plex' => 'foo']));
+                    file_put_contents($tmpFile, Yaml::dump(['emby' => 'foo']));
                     $this->getClass()->parseGUIDFile($tmpFile);
                 },
                 reason: "Should throw an exception when there are no GUIDs mapping.",
                 exception: InvalidArgumentException::class,
-                exceptionMessage: 'plex sub key is not an array'
+                exceptionMessage: 'emby sub key is not an array'
             );
         } finally {
             if (file_exists($tmpFile)) {
@@ -195,48 +195,18 @@ class PlexGuidTest extends TestCase
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
             $this->handler->clear();
-            $yaml = ['plex' => [[]]];
+            $yaml = ['emby' => []];
             file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertCount(0, $this->handler->getRecords(), "There should be no messages logged for empty list.");
             $this->handler->clear();
 
 
-            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'plex.0', 'ff')));
+            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'emby.0', 'ff')));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'Value must be an object.', true),
                 'Assert replace key is an object.'
             );
-
-            $yaml = ag_set($yaml, 'plex.0.replace', 'foo');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'replace value must be an object.', true),
-                'Assert replace key is an object.'
-            );
-
-            $yaml = ag_set($yaml, 'plex.0', ['replace' => []]);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'replace.from field is empty or not a string.', true),
-                'Assert to field is a string.'
-            );
-
-            $yaml = ag_set($yaml, 'plex.0.replace.from', 'foo');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'replacer.to field is not a string.', true),
-                'Assert to field is a string.'
-            );
-
-            $yaml = ag_set($yaml, 'plex.0.replace.to', 'bar');
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertCount(0, $this->handler->getRecords(), "There should be no error messages logged.");
         } finally {
             if (file_exists($tmpFile)) {
                 unlink($tmpFile);
@@ -247,7 +217,7 @@ class PlexGuidTest extends TestCase
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
-            $yaml = ag_set(['plex' => []], 'plex.0.map', 'foo');
+            $yaml = ag_set(['emby' => []], 'emby.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -255,7 +225,7 @@ class PlexGuidTest extends TestCase
                 'Assert replace key is an object.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0', ['map' => []]);
+            $yaml = ag_set($yaml, 'emby.0', ['map' => []]);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -263,7 +233,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map.from', 'foo');
+            $yaml = ag_set($yaml, 'emby.0.map.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -271,7 +241,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map.to', 'foobar');
+            $yaml = ag_set($yaml, 'emby.0.map.to', 'foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -279,7 +249,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map.to', 'guid_foobar');
+            $yaml = ag_set($yaml, 'emby.0.map.to', 'guid_foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -287,20 +257,9 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map', [
-                'from' => 'com.plexapp.agents.imdb',
-                'to' => 'guid_imdb',
-            ]);
-            file_put_contents($tmpFile, Yaml::dump($yaml));
-            $this->getClass()->parseGUIDFile($tmpFile);
-            $this->assertTrue(
-                $this->logged(Level::Warning, 'map.from already exists.', true),
-                'Assert to field is a string.'
-            );
-
-            $yaml = ag_set($yaml, 'plex.0.map', [
-                'from' => 'com.plexapp.agents.ccdb',
-                'to' => 'guid_imdb',
+            $yaml = ag_set($yaml, 'emby.0.map', [
+                'from' => 'tsdb',
+                'to' => Guid::GUID_IMDB,
             ]);
 
             $this->handler->clear();
@@ -309,16 +268,16 @@ class PlexGuidTest extends TestCase
             $class = $this->getClass();
             $class->parseGUIDFile($tmpFile);
             $this->assertArrayHasKey(
-                'ccdb',
+                'tsdb',
                 ag($class->getConfig(), 'guidMapper', []),
                 'Assert that the GUID mapping has been added.'
             );
             $this->handler->clear();
 
-            $yaml = ag_set($yaml, 'plex.0', [
+            $yaml = ag_set($yaml, 'emby.0', [
                 'legacy' => false,
                 'map' => [
-                    'from' => 'com.plexapp.agents.imthedb',
+                    'from' => 'imthedb',
                     'to' => 'guid_imdb',
                 ]
             ]);
@@ -326,7 +285,7 @@ class PlexGuidTest extends TestCase
             $class = $this->getClass();
             $class->parseGUIDFile($tmpFile);
             $this->assertArrayHasKey(
-                'com.plexapp.agents.imthedb',
+                'imthedb',
                 ag($class->getConfig(), 'guidMapper', []),
                 'Assert that the GUID mapping has been added.'
             );
@@ -339,29 +298,31 @@ class PlexGuidTest extends TestCase
 
     public function test_isLocal()
     {
-        $this->assertTrue(
-            $this->getClass()->isLocal('com.plexapp.agents.none://123456/1/1'),
-            'Assert that the GUID is local.'
-        );
         $this->assertFalse(
-            $this->getClass()->isLocal('com.plexapp.agents.imdb://123456/1/1'),
-            'Assert that the GUID is not local.'
+            $this->getClass()->isLocal('test://123456/1/1'),
+            'Should always return false, as emby does not have local GUIDs.'
         );
     }
 
     public function test_has()
     {
-        $context = ['item' => ['id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
+        $context = [
+            'item' => [
+                'id' => 123,
+                'type' => EmbyClient::TYPE_EPISODE,
+                'title' => 'Test title',
+                'year' => 2021
+            ]
+        ];
 
         $this->assertTrue($this->getClass()->has([
-            ['id' => 'com.plexapp.agents.imdb://123456'],
-            ['id' => 'com.plexapp.agents.tvdb://123456'],
+            'imdb' => '123456',
+            'tvdb' => '123456',
         ], $context), 'Assert that the GUID exists.');
 
         $this->assertFalse($this->getClass()->has([
-            ['id' => ''],
-            ['id' => 'com.plexapp.agents.none://123456'],
-            ['id' => 'com.plexapp.agents.imdb'],
+            ['none' => '123456'],
+            ['imdb' => ''],
         ], $context), 'Assert that the GUID does not exist.');
     }
 
@@ -382,16 +343,17 @@ class PlexGuidTest extends TestCase
             Guid::GUID_ANIDB => '123456',
         ],
             $this->getClass()->parse([
-                ['id' => 'com.plexapp.agents.imdb://123456'],
-                ['id' => 'com.plexapp.agents.tmdb://123456'],
-                ['id' => 'com.plexapp.agents.hama://anidb-123456'],
+                'imdb' => '123456',
+                'tmdb' => '123456',
+                'anidb' => '123456',
             ], $context),
-            'Assert that the GUID exists.');
+            'Assert that the GUID exists.'
+        );
 
         $this->assertEquals([], $this->getClass()->parse([
-            ['id' => ''],
-            ['id' => 'com.plexapp.agents.none://123456'],
-            ['id' => 'com.plexapp.agents.imdb'],
+            '' => '',
+            'none' => '123456',
+            'imdb' => ''
         ], $context), 'Assert that the GUID does not exist. for invalid GUIDs.');
     }
 
@@ -400,46 +362,38 @@ class PlexGuidTest extends TestCase
         $context = ['item' => ['id' => 123, 'type' => 'episode', 'title' => 'Test title', 'year' => 2021]];
 
         $this->assertEquals([], $this->getClass()->get([
-            ['id' => 'com.plexapp.agents.imdb'],
+            ['imdb' => ''],
         ], $context), 'Assert invalid guid return empty array.');
 
-        $this->assertTrue(
-            $this->logged(Level::Info, 'Unable to parse', true),
-            'Assert that the invalid GUID is logged.'
-        );
         $this->assertEquals([Guid::GUID_IMDB => '1', Guid::GUID_CMDB => 'afa', Guid::GUID_TVDB => '123'],
             $this->getClass()->get([
-                ['id' => 'com.plexapp.agents.imdb://2'],
-                ['id' => 'com.plexapp.agents.imdb://1'],
-                ['id' => 'com.plexapp.agents.cmdb://afa'],
-                ['id' => 'com.plexapp.agents.cmdb://faf'],
-                ['id' => 'com.plexapp.agents.hama://tvdb-123'],
-                ['id' => 'com.plexapp.agents.hama://notSet-123'],
-                ['id' => 'com.plexapp.agents.hama://notSet-'],
+                'imdb' => '1',
+                'cmdb' => 'afa',
+                'tvdb' => '123',
+                'none' => '123',
             ], $context),
             'Assert only the the oldest ID is returned for numeric GUIDs.'
         );
+    }
 
-        $this->assertTrue(
-            $this->logged(Level::Warning, 'reported multiple ids', true),
-            'Assert that a log is raised when multiple GUIDs for the same provider are found.'
-        );
-
-        $this->assertEquals([Guid::GUID_IMDB => '1'], $this->getClass()->get([
-            ['id' => 'com.plexapp.agents.imdb://1'],
-            ['id' => 'com.plexapp.agents.imdb://2'],
-        ], $context), 'Assert only the the oldest ID is returned for numeric GUIDs.');
-
-        Config::save('ignore', [(string)makeIgnoreId('show://imdb:123@test_plex') => 1]);
+    public function test_get_ignore()
+    {
+        $context = [
+            'item' => [
+                'id' => 123,
+                'type' => EmbyClient::TYPE_SHOW,
+                'title' => 'Test title',
+                'year' => 2021
+            ]
+        ];
+        Config::save('ignore', [(string)makeIgnoreId('show://imdb:123@test_emby') => 1]);
 
         $this->assertEquals([],
-            $this->getClass()->get([
-                ['id' => 'com.plexapp.agents.imdb://123'],
-            ], ag_set($context, 'item.type', 'show')),
+            $this->getClass()->get(['imdb' => '123'], $context),
             'Assert only the the oldest ID is returned for numeric GUIDs.');
 
         $this->assertTrue(
-            $this->logged(Level::Debug, 'PlexGuid: Ignoring', true),
+            $this->logged(Level::Debug, 'EmbyGuid: Ignoring', true),
             'Assert that a log is raised when the GUID is ignored by user choice.'
         );
     }

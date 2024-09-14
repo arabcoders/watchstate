@@ -342,7 +342,7 @@ final class PlexGuid implements iGuid
 
                 if (false === str_contains($val, '://')) {
                     if (true === $log) {
-                        $this->logger->info('PlexGuid: Unable to parse [{backend}] [{agent}] identifier.', [
+                        $this->logger->info("PlexGuid: Unable to parse '{backend}: {agent}' identifier.", [
                             'backend' => $this->context->backendName,
                             'agent' => $val,
                             ...$context
@@ -471,6 +471,10 @@ final class PlexGuid implements iGuid
             $guid = strtr($guid, $this->guidReplacer);
 
             $agentGuid = explode('://', after($guid, 'agents.'));
+
+            if (false === isset($agentGuid[1])) {
+                return $guid;
+            }
 
             return $agentGuid[0] . '://' . before($agentGuid[1], '?');
         } catch (Throwable $e) {
