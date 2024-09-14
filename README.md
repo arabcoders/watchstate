@@ -9,6 +9,15 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-09-14
+
+We have recently added support for extending WatchState with more GUIDs, as of now, the support for it is done via
+editing a`/config/guid.yaml` file in the config directory. We plan to hopefully add management via WebUI in near the future. For more information please check out the associated
+FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones).
+
+The mapping should work for all officially supported clients. If you have a client that is not supported, you have to manually add support for that client,
+or request the maintainer to add support for it.
+
 ### 2024-08-19
 
 We have migrated the `state:push` task into the new events system, as such the old task `state:push` is now gone.
@@ -21,14 +30,7 @@ than the old task. This event handler will push data within a minute of the chan
 PS: Please enable the task by setting its new environment variable `WS_PUSH_ENABLED` to `true`. The old `WS_CRON_PUSH` is now gone.
 and will be removed in the future releases.
 
-### 2024-08-18
-
-We have started migrating the old events system to a new one, so far we have migrated the `progress` and `requests` to it. As such,
-The old tasks `state:progress` and `state:requests` are now gone. To control if you want to enable the watch progress, there is new
-environment variable `WS_SYNC_PROGRESS` which you can set to `true` to enable the watch progress. It's disabled by default.
-
-We will continue to migrate the rest of the events to the new system, and we will keep you updated.
-
+--- 
 Refer to [NEWS](NEWS.md) for old updates.
 
 # Features
