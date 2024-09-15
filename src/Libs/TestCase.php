@@ -65,10 +65,10 @@ class TestCase extends \PHPUnit\Framework\TestCase
             if (null === $caught) {
                 $this->fail('No exception was thrown. ' . $reason);
             } else {
-                $this->assertInstanceOf(
+                $this->assertSame(
                     is_object($exception) ? $exception::class : $exception,
-                    $caught,
-                    $reason . ' ' . $caught->getMessage(),
+                    is_object($caught) ? $caught::class : $caught,
+                    $reason . '.; ' . $caught->getMessage(),
                 );
                 if (!empty($exceptionMessage)) {
                     $this->assertStringContainsString($exceptionMessage, $caught->getMessage(), $reason);
@@ -79,5 +79,4 @@ class TestCase extends \PHPUnit\Framework\TestCase
             }
         }
     }
-
 }

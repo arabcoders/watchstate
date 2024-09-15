@@ -21,11 +21,13 @@ use Stringable;
  */
 final class Uri implements UriInterface, Stringable
 {
-    private const SCHEMES = ['http' => 80, 'https' => 443];
+    private const array SCHEMES = ['http' => 80, 'https' => 443];
 
-    private const CHAR_UNRESERVED = 'a-zA-Z\d_\-.~';
+    private const string CHAR_UNRESERVED = 'a-zA-Z\d_\-.~';
 
-    private const CHAR_SUB_DELIMS = '!\$&\'()*+,;=';
+    private const string CHAR_SUB_DELIMS = '!\$&\'()*+,;=';
+
+    private const string CHAR_GEN_DELIMS = ':\/\?#\[\]@';
 
     /** @var string Uri scheme. */
     private string $scheme = '';
@@ -53,18 +55,18 @@ final class Uri implements UriInterface, Stringable
     public function __construct(string $uri = '')
     {
         if ('' !== $uri) {
-            if (false === $parts = \parse_url($uri)) {
-                throw new \InvalidArgumentException(\sprintf('Unable to parse URI: "%s"', $uri));
+            if (false === $parts = parse_url($uri)) {
+                throw new InvalidArgumentException(sprintf('Unable to parse URI: "%s"', $uri));
             }
 
             // Apply parse_url parts to a URI.
-            $this->scheme = isset($parts['scheme']) ? \strtr(
+            $this->scheme = isset($parts['scheme']) ? strtr(
                 $parts['scheme'],
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
                 'abcdefghijklmnopqrstuvwxyz'
             ) : '';
             $this->userInfo = $parts['user'] ?? '';
-            $this->host = isset($parts['host']) ? \strtr(
+            $this->host = isset($parts['host']) ? strtr(
                 $parts['host'],
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
                 'abcdefghijklmnopqrstuvwxyz'
@@ -86,13 +88,7 @@ final class Uri implements UriInterface, Stringable
 
     public function __toString(): string
     {
-        return self::createUriString(
-            $this->getScheme(),
-            $this->getAuthority(),
-            $this->getPath(),
-            $this->getQuery(),
-            $this->getFragment()
-        );
+        return self::createUriString($this->scheme, $this->getAuthority(), $this->path, $this->query, $this->fragment);
     }
 
     public function getScheme(): string
@@ -139,7 +135,20 @@ final class Uri implements UriInterface, Stringable
             return $this->path;
         }
 
-        return $this->basePath . $this->path;
+        $path = $this->path;
+
+        if ('' !== $path && '/' !== $path[0]) {
+            if ('' !== $this->host) {
+                // If the path is rootless and an authority is present, the path MUST be prefixed by "/"
+                $path = '/' . $path;
+            }
+        } elseif (isset($path[1]) && '/' === $path[1]) {
+            // If the path is starting with more than one "/", the
+            // starting slashes MUST be reduced to one.
+            $path = '/' . ltrim($path, '/');
+        }
+
+        return $this->basePath . $path;
     }
 
     public function getQuery(): string
@@ -154,11 +163,11 @@ final class Uri implements UriInterface, Stringable
 
     public function withScheme($scheme): self
     {
-        if (!\is_string($scheme)) {
+        if (!is_string($scheme)) {
             throw new InvalidArgumentException('Scheme must be a string');
         }
 
-        if ($this->scheme === $scheme = \strtr($scheme, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
+        if ($this->scheme === $scheme = strtr($scheme, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
             return $this;
         }
 
@@ -169,11 +178,28 @@ final class Uri implements UriInterface, Stringable
         return $new;
     }
 
-    public function withUserInfo($user, $password = null): self
+    public function withUserInfo($user, $password = null): UriInterface
     {
-        $info = $user;
+        if (!is_string($user)) {
+            throw new InvalidArgumentException('User must be a string');
+        }
+
+        $info = preg_replace_callback(
+            '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
+            fn(array $match): string => rawurlencode($match[0]),
+            $user
+        );
+
         if (null !== $password && '' !== $password) {
-            $info .= ':' . $password;
+            if (!is_string($password)) {
+                throw new InvalidArgumentException('Password must be a string');
+            }
+
+            $info .= ':' . preg_replace_callback(
+                    '/[' . self::CHAR_GEN_DELIMS . self::CHAR_SUB_DELIMS . ']++/',
+                    fn(array $match): string => rawurlencode($match[0]),
+                    $password
+                );
         }
 
         if ($this->userInfo === $info) {
@@ -188,11 +214,11 @@ final class Uri implements UriInterface, Stringable
 
     public function withHost($host): self
     {
-        if (!\is_string($host)) {
+        if (!is_string($host)) {
             throw new InvalidArgumentException('Host must be a string');
         }
 
-        if ($this->host === $host = \strtr($host, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
+        if ($this->host === $host = strtr($host, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')) {
             return $this;
         }
 
@@ -279,7 +305,7 @@ final class Uri implements UriInterface, Stringable
                 if ('' === $authority) {
                     // If the path is starting with more than one "/" and no authority is present, the
                     // starting slashes MUST be reduced to one.
-                    $path = '/' . \ltrim($path, '/');
+                    $path = '/' . ltrim($path, '/');
                 }
             }
 
@@ -313,7 +339,7 @@ final class Uri implements UriInterface, Stringable
 
         $port = (int)$port;
         if (0 > $port || 0xFFFF < $port) {
-            throw new InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
+            throw new InvalidArgumentException(sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
         }
 
         return self::isNonStandardPort($this->scheme, $port) ? $port : null;
@@ -326,8 +352,8 @@ final class Uri implements UriInterface, Stringable
         }
 
         return preg_replace_callback(
-            '/(?:[^' . self::CHAR_UNRESERVED . self::CHAR_SUB_DELIMS . '%:@\/]++|%(?![A-Fa-f\d]{2}))/',
-            self::rawurlencodeMatchZero(...),
+            '/(?:[^' . self::CHAR_UNRESERVED . self::CHAR_SUB_DELIMS . '%:@\/]++|%(?![A-Fa-f0-9]{2}))/',
+            fn(array $match): string => rawurlencode($match[0]),
             $path
         );
     }
@@ -339,14 +365,9 @@ final class Uri implements UriInterface, Stringable
         }
 
         return preg_replace_callback(
-            '/(?:[^' . self::CHAR_UNRESERVED . self::CHAR_SUB_DELIMS . '%:@\/?]++|%(?![A-Fa-f\d]{2}))/',
-            self::rawurlencodeMatchZero(...),
+            '/(?:[^' . self::CHAR_UNRESERVED . self::CHAR_SUB_DELIMS . '%:@\/\?]++|%(?![A-Fa-f0-9]{2}))/',
+            fn(array $match): string => rawurlencode($match[0]),
             $str
         );
-    }
-
-    private static function rawurlencodeMatchZero(array $match): string
-    {
-        return \rawurlencode($match[0]);
     }
 }

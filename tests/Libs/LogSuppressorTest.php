@@ -1,4 +1,6 @@
 <?php
+/** @noinspection PhpVoidFunctionResultUsedInspection */
+
 /** @noinspection PhpMultipleClassDeclarationsInspection */
 
 declare(strict_types=1);
@@ -8,6 +10,7 @@ namespace Tests\Libs;
 use App\Libs\LogSuppressor;
 use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
 
 class LogSuppressorTest extends TestCase
@@ -36,11 +39,11 @@ class LogSuppressorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->handler = new TestHandler();
-        $this->suppressor = new LogSuppressor($this->testData);
-        $this->logger = new Logger('logger');
-        $this->logger->pushHandler($this->suppressor->withHandler($this->handler));
         parent::setUp();
+
+        $this->handler = new TestHandler(level: Level::Info);
+        $this->suppressor = (new LogSuppressor($this->testData))->withHandler($this->handler);
+        $this->logger = new Logger('test', handlers: [$this->suppressor]);
     }
 
     public function test_isSuppressed_type_contains(): void
@@ -104,5 +107,39 @@ class LogSuppressorTest extends TestCase
 
         $this->logger->info('random string');
         $this->assertCount(1, $this->handler->getRecords());
+    }
+
+    public function test_isHandling()
+    {
+        $this->logger->info('test');
+        $this->assertFalse(
+            $this->suppressor->isHandling($this->handler->getRecords()[0]->with(level: Level::Debug)),
+            'Level is below the handler level.'
+        );
+        $this->handler->clear();
+
+        $this->logger->notice('test');
+        $this->assertTrue(
+            $this->suppressor->isHandling($this->handler->getRecords()[0]),
+            'Level is at or above the handler level.'
+        );
+    }
+
+    public function test_handleBatch()
+    {
+        $this->handler->clear();
+        $this->logger->info('test');
+        $records = $this->handler->getRecords();
+        $records[] = $records[0]->with(message: 'Random string');
+        $records[] = $records[0]->with(
+            message: r('the locator string is a some random \'{number}\'', ['number' => rand(1, 100)])
+        );
+        $this->handler->clear();
+        $this->assertCount(0, $this->handler->getRecords());
+
+        $this->suppressor->handleBatch($records);
+        $this->assertCount(1, $this->handler->getRecords());
+
+        $this->assertNull($this->suppressor->close(), 'Close should not throw an error.');
     }
 }
