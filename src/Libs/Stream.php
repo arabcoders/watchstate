@@ -7,6 +7,8 @@ namespace App\Libs;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
 use Psr\Http\Message\StreamInterface;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use Stringable;
 use Throwable;
 
@@ -17,12 +19,14 @@ use Throwable;
  *
  * @implements StreamInterface
  */
-final class Stream implements StreamInterface, Stringable
+final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @var array<string> A list of allowed stream resource types that are allowed to instantiate a stream
      */
-    private const array ALLOWED_STREAM_RESOURCE_TYPES = ['gd', 'stream'];
+    private const array ALLOWED_RESOURCE_TYPES = ['gd', 'stream'];
 
     /**
      * @var resource|null The underlying stream resource.
@@ -61,7 +65,7 @@ final class Stream implements StreamInterface, Stringable
             throw new RuntimeException($error);
         }
 
-        if (!self::isValidStreamResourceType($resource)) {
+        if (!self::isValidResourceType($resource)) {
             throw new InvalidArgumentException(
                 r(
                     text: 'Stream: Unexpected [{type}] type was given. Stream must be a file path or stream resource.',
@@ -111,7 +115,7 @@ final class Stream implements StreamInterface, Stringable
             return new self($resource);
         }
 
-        if (!self::isValidStreamResourceType($body)) {
+        if (!self::isValidResourceType($body)) {
             throw new InvalidArgumentException(
                 'First argument to Stream::create() must be a string, resource or StreamInterface'
             );
@@ -172,7 +176,7 @@ final class Stream implements StreamInterface, Stringable
             return null;
         }
 
-        $stats = fstat($this->resource);
+        $stats = @fstat($this->resource);
         if (false !== $stats) {
             return $stats['size'];
         }
@@ -185,14 +189,14 @@ final class Stream implements StreamInterface, Stringable
      */
     public function tell(): int
     {
-        if (!$this->resource) {
-            throw new RuntimeException('Stream: No resource available; cannot tell position');
+        if (!is_resource($this->resource)) {
+            throw new RuntimeException('Stream: No resource available, cannot tell position.');
         }
 
         $result = ftell($this->resource);
 
-        if (!is_int($result)) {
-            throw new RuntimeException('Stream: Error occurred during tell operation.');
+        if (false === $result) {
+            throw new RuntimeException('Stream: Error occurred during tell operation.', 202);
         }
 
         return $result;
@@ -219,14 +223,21 @@ final class Stream implements StreamInterface, Stringable
             return false;
         }
 
-        $meta = stream_get_meta_data($this->resource);
-        return $meta['seekable'];
+        try {
+            return $this->getMetadata('seekable');
+        } catch (Throwable $e) {
+            $this->logger?->error('Stream: {class}: {message}', [
+                'class' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function seek($offset, $whence = SEEK_SET): void
+    public function seek($offset, $whence = \SEEK_SET): void
     {
         if (!$this->resource) {
             throw new RuntimeException('Stream: No resource available; cannot seek position');
@@ -260,11 +271,17 @@ final class Stream implements StreamInterface, Stringable
             return false;
         }
 
-        $meta = stream_get_meta_data($this->resource);
-        $mode = $meta['mode'];
-
-        return (str_contains($mode, 'x') || str_contains($mode, 'w') ||
-            str_contains($mode, 'c') || str_contains($mode, 'a') || str_contains($mode, '+'));
+        try {
+            $mode = $this->getMetadata('mode');
+            return (str_contains($mode, 'x') || str_contains($mode, 'w') ||
+                str_contains($mode, 'c') || str_contains($mode, 'a') || str_contains($mode, '+'));
+        } catch (Throwable $e) {
+            $this->logger?->error('Stream: {class}: {message}', [
+                'class' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -298,10 +315,16 @@ final class Stream implements StreamInterface, Stringable
             return false;
         }
 
-        $meta = stream_get_meta_data($this->resource);
-        $mode = $meta['mode'];
-
-        return str_contains($mode, 'r') || str_contains($mode, '+');
+        try {
+            $mode = $this->getMetadata('mode');
+            return str_contains($mode, 'r') || str_contains($mode, '+');
+        } catch (Throwable $e) {
+            $this->logger?->error('Stream: {class}: {message}', [
+                'class' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -361,13 +384,13 @@ final class Stream implements StreamInterface, Stringable
      *
      * @return bool True if the resource is one of the allowed types, false otherwise.
      */
-    private static function isValidStreamResourceType($resource): bool
+    private static function isValidResourceType($resource): bool
     {
         if (is_resource($resource)) {
-            return in_array(get_resource_type($resource), self::ALLOWED_STREAM_RESOURCE_TYPES, true);
+            return in_array(get_resource_type($resource), self::ALLOWED_RESOURCE_TYPES, true);
         }
 
-        if (extension_loaded('gd') && PHP_VERSION_ID >= 80000 && $resource instanceof \GdImage) {
+        if (extension_loaded('gd') && true === ($resource instanceof \GdImage)) {
             return true;
         }
 
