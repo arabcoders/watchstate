@@ -10,7 +10,7 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Stream;
-use App\Libs\StreamClosure;
+use App\Libs\StreamedBody;
 use finfo;
 use LimitIterator;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -256,7 +256,7 @@ final class Index
             return '';
         };
 
-        return api_response(Status::OK, StreamClosure::create($callable), headers: [
+        return api_response(Status::OK, StreamedBody::create($callable), headers: [
             'Content-Type' => 'text/event-stream; charset=UTF-8',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',

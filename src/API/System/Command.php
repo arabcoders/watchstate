@@ -10,7 +10,7 @@ use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Extends\Date;
-use App\Libs\StreamClosure;
+use App\Libs\StreamedBody;
 use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -163,7 +163,7 @@ final class Command
 
         set_time_limit(0);
 
-        return api_response(Status::OK, body: StreamClosure::create($callable), headers: [
+        return api_response(Status::OK, body: StreamedBody::create($callable), headers: [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',

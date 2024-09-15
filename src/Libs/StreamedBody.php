@@ -4,24 +4,21 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
-use Closure;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 
-use const SEEK_SET;
-
-class StreamClosure implements StreamInterface
+final readonly class StreamedBody implements StreamInterface
 {
-    private Closure $callback;
+    private mixed $func;
 
-    public function __construct(Closure $callback)
+    public function __construct(callable $func)
     {
-        $this->callback = $callback;
+        $this->func = $func;
     }
 
-    public static function create(Closure $callback): StreamInterface
+    public static function create(callable $func): StreamInterface
     {
-        return new self($callback);
+        return new self($func);
     }
 
     public function __destruct()
@@ -62,7 +59,7 @@ class StreamClosure implements StreamInterface
         return false;
     }
 
-    public function seek($offset, $whence = SEEK_SET): void
+    public function seek($offset, $whence = \SEEK_SET): void
     {
     }
 
@@ -92,9 +89,7 @@ class StreamClosure implements StreamInterface
 
     public function getContents(): string
     {
-        $func = $this->callback;
-
-        return (string)$func();
+        return ($this->func)();
     }
 
     public function getMetadata($key = null): null
