@@ -137,7 +137,15 @@ class Response implements iResponse
 
         $this->setHeaders($headers);
 
-        $this->statusCode = !is_int($status) ? $status->value : $status;
+        $code = !is_int($status) ? $status->value : $status;
+        if ($code < 100 || $code > 599) {
+            throw new InvalidArgumentException(
+                sprintf("Status code has to be an integer between 100 and 599. A status code of '%d' was given.", $code)
+            );
+        }
+
+        $this->statusCode = $code;
+
         if (null === $reason && isset(self::PHRASES[$this->statusCode])) {
             $this->reasonPhrase = self::PHRASES[$this->statusCode];
         } else {
@@ -161,6 +169,10 @@ class Response implements iResponse
     {
         if (!is_int($code)) {
             $code = $code->value;
+        }
+
+        if ($code === $this->statusCode && ('' === $reasonPhrase || $reasonPhrase === $this->reasonPhrase)) {
+            return $this;
         }
 
         if ($code < 100 || $code > 599) {
