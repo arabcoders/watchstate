@@ -93,7 +93,7 @@ final class LogSuppressor implements iHandler
     public function handleBatch(array $records): void
     {
         $records = array_filter($records, fn($record) => false === $this->isSuppressed($record));
-        if (!empty($record)) {
+        if (count($records) > 0) {
             $this->handler?->handleBatch($records);
         }
     }
