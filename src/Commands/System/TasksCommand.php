@@ -16,7 +16,6 @@ use App\Model\Events\EventsRepository;
 use Closure;
 use Cron\CronExpression;
 use Exception;
-use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -70,6 +69,12 @@ final class TasksCommand extends Command
             ->addOption('task', 't', InputOption::VALUE_REQUIRED, 'Run the specified task only.')
             ->addOption('save-log', null, InputOption::VALUE_NONE, 'Save tasks output to file.')
             ->addOption('live', null, InputOption::VALUE_NONE, 'See output in real time.')
+            ->addOption(
+                'args',
+                'a',
+                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+                'Extra arguments for the task.'
+            )
             ->setDescription('List & Run scheduled tasks.')
             ->setHelp(
                 r(
@@ -121,6 +126,12 @@ final class TasksCommand extends Command
                     Replace <value>{TASK}</value> tag in environment variables which one of the following [ {tasksList} ]
                     environment variables are in <value>ALL CAPITAL LETTERS</value>.
 
+                    <question># How to pass extra arguments to a run task?</question>
+
+                    You can pass extra arguments to a task by using the <flag>--args</flag> option, For example:
+
+                    {cmd} <cmd>{route}</cmd> <flag>--task</flag> <value>import</value> <flag>--run</flag> <flag>--args</flag>=<value>arg1=arg_value</value> <flag>--args</flag>=<value>arg2=arg_value</value>
+
                     HELP,
                     [
                         'cmd' => trim(commandContext()),
@@ -138,7 +149,6 @@ final class TasksCommand extends Command
      * @param iOutput $output The output instance.
      *
      * @return int Returns the exit code of the command.
-     * @throws InvalidArgumentException if cache key name is invalid.
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
@@ -226,7 +236,6 @@ final class TasksCommand extends Command
      * @param iOutput $output The output object.
      *
      * @return int The exit code of the command.
-     * @throws InvalidArgumentException if cache key name is invalid.
      */
     private function runTasks(iInput $input, iOutput $output): int
     {
@@ -294,6 +303,10 @@ final class TasksCommand extends Command
 
         if (null !== ($args = ag($task, 'args'))) {
             $cmd[] = $args;
+        }
+
+        if (count($input->getOption('args')) >= 1) {
+            $cmd[] = $this->parseExtraArgs($input->getOption('args'));
         }
 
         $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
@@ -445,5 +458,28 @@ final class TasksCommand extends Command
 
             $suggestions->suggestValues($suggest);
         }
+    }
+
+    private function parseExtraArgs(array $args): string
+    {
+        $cmd = [];
+
+        # args passed as the following arg_name=arg_value parse and return key value pairs
+        foreach ($args as $arg) {
+            if (false === str_contains($arg, '=')) {
+                $cmd[] = $arg;
+                continue;
+            }
+
+            [$flag, $value] = explode('=', $arg, 2);
+
+            $cmd[] = $flag;
+
+            if (!empty($value)) {
+                $cmd[] = escapeshellarg($value);
+            }
+        }
+
+        return implode(' ', $cmd);
     }
 }
