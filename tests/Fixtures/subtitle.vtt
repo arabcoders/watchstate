@@ -1,0 +1,59 @@
+WEBVTT
+Kind: captions
+Language: en-US
+Channel: CC1
+Station: Online ABC
+ProgramID: SH010855880000
+ProgramType: TV series
+ProgramName: Castle
+Title: Law & Murder
+Season: 3
+Episode: 19
+PublishDate: 2011-03-28
+ContentAdvisory: TV-14
+
+STYLE
+/* Default cue styling */
+::cue {
+ background-image: linear-gradient(to bottom, dimgray, lightgray);
+ color: blue;
+ }
+/* Classes that can be applied to individual cues or phrases */
+::cue(.bg-yellow) {
+  background-color: yellow;
+  }
+::cue(.green) {
+  color: green;
+  }
+
+
+NOTE
+Copyright (c) 2016 by XYZ Company
+All rights reserved
+
+NOTE - Revisions
+05/10/2016 09:20 AM - Revision 1.0 - First draft. TBD: Positioning
+05/13/2016 06:13 PM - Revision 1.1 - Positioning completed.
+05/14/2016 12:25 PM - Revision 1.2 - Review completed. Final draft.
+
+NOTE ==== Beginning of Cues ====
+
+00:00:00.498 --> 00:00:02.827
+<v Speaker01>- Johnny, where are you?
+
+00:00:02.827 --> 00:00:06.383
+<v Speaker02>- <i>Over here</i></v>
+<v Speaker01>- Where?</v>
+
+00:00:06.383 --> 00:00:09.427
+Oh, <b>there</b> you are!
+
+00:00:09.427 --> 00:00:12.600
+Come over here.
+I want to read to you.
+
+00:00:12.600 --> 00:00:16.900
+I have your favorite book:
+<u>Green Eggs and Ham</u>
+
+NOTE ==== End of file ====
