@@ -31,8 +31,8 @@ class VttConverterTest extends TestCase
 
         $this->assertEquals($this->getJSON(), $data, 'Failed to parse VTT file');
         $this->assertEquals(
-            trim($this->getExportedData()),
-            trim(VttConverter::export($data)),
+            trim(preg_replace('/\r\n|\r|\n/', "\r\n", $this->getExportedData())),
+            trim(preg_replace('/\r\n|\r|\n/', "\r\n", VttConverter::export($data))),
             'Failed to export VTT file'
         );
     }
