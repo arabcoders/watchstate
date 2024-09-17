@@ -8,6 +8,9 @@ use RuntimeException;
 
 class EmitterException extends RuntimeException implements AppExceptionInterface
 {
+    public const int HEADERS_SENT = 500;
+    public const int OUTPUT_SENT = 501;
+
     use UseAppException;
 
     public static function forHeadersSent(string $filename, int $line): self
@@ -15,11 +18,11 @@ class EmitterException extends RuntimeException implements AppExceptionInterface
         return new self(r('Unable to emit response. Headers already sent in %s:%d', [
             'filename' => $filename,
             'line' => $line,
-        ]));
+        ]), code: self::HEADERS_SENT);
     }
 
     public static function forOutputSent(): self
     {
-        return new self('Output has been emitted previously. Cannot emit response.');
+        return new self('Output has been emitted previously. Cannot emit response.', code: self::OUTPUT_SENT);
     }
 }

@@ -6,6 +6,7 @@ use InvalidArgumentException;
 
 /**
  * Class VttConverter
+ *
  * Based on {@link https://github.com/mantas-done/subtitles/blob/master/src/Code/Converters/VttConverter.php}
  */
 final readonly class VttConverter
@@ -64,7 +65,7 @@ final readonly class VttConverter
                 $textLine = $line;
                 // speaker
                 $speaker = null;
-                if (preg_match('/<v(?: (.*?))?>((?:.*?)<\/v>)/', $textLine, $matches)) {
+                if (preg_match('~^<v(?: (.*?))?>(.+)(</v>)?~', $textLine, $matches)) {
                     $speaker = $matches[1] ?? null;
                     $textLine = $matches[2];
                 }
@@ -141,13 +142,15 @@ final readonly class VttConverter
         $parts[0] = 2 === substr_count($parts[0], ':') ? $parts[0] : '00:' . $parts[0];
 
         if (!isset($parts[1])) {
-            throw new InvalidArgumentException("Invalid timestamp - time doesn't have milliseconds: " . $vtt_time);
+            throw new InvalidArgumentException(r("Invalid timestamp - time doesn't have milliseconds: '{time}'.", [
+                'time' => $vtt_time
+            ]));
         }
 
-        $only_seconds = strtotime("1970-01-01 {$parts[0]} UTC");
+        $onlySeconds = strtotime("1970-01-01 {$parts[0]} UTC");
         $milliseconds = (float)('0.' . $parts[1]);
 
-        return $only_seconds + $milliseconds;
+        return $onlySeconds + $milliseconds;
     }
 
     private static function internalTimeToVtt($internal_time): string
@@ -163,61 +166,64 @@ final readonly class VttConverter
     {
         $lines = mb_split("\n", $content);
         $lines = array_map('trim', $lines);
-        $new_lines = [];
-        $is_comment = false;
+        $newLines = [];
+        $isComment = false;
+
         foreach ($lines as $line) {
-            if ($is_comment && strlen($line)) {
+            if ($isComment && strlen($line)) {
                 continue;
             }
-            if (str_starts_with($line, 'NOTE ')) {
-                $is_comment = true;
+            if (true === str_starts_with($line, 'NOTE ')) {
+                $isComment = true;
                 continue;
             }
-            $is_comment = false;
-            $new_lines[] = $line;
+            $isComment = false;
+            $newLines[] = $line;
         }
 
-        return implode("\n", $new_lines);
+        return implode("\n", $newLines);
     }
 
-    private static function getLineParts($line, $colon_count, $timestamp_count)
+    private static function getLineParts(string $line, int $colonCount, int $timestampCount): array
     {
         $matches = [
             'start' => null,
             'end' => null,
             'text' => null,
         ];
+
         $timestamps = self::timestampsFromLine($line);
 
         // there shouldn't be any text before the timestamp
         // if there is text before it, then it is not a timestamp
-        $right_timestamp = '';
-        if (isset($timestamps['start']) && (substr_count($timestamps['start'], ':') >= $colon_count || substr_count(
+        $rightTimestamp = '';
+
+        if (isset($timestamps['start']) && (substr_count($timestamps['start'], ':') >= $colonCount || substr_count(
                     $timestamps['start'],
                     ';'
-                ) >= $colon_count)) {
-            $text_before_timestamp = substr($line, 0, strpos($line, $timestamps['start']));
-            if (!self::hasText($text_before_timestamp)) {
+                ) >= $colonCount)) {
+            $textBeforeTimestamp = substr($line, 0, strpos($line, $timestamps['start']));
+            if (!self::hasText($textBeforeTimestamp)) {
                 // start
                 $matches['start'] = $timestamps['start'];
-                $right_timestamp = $matches['start'];
-                if ($timestamp_count === 2 && isset($timestamps['end']) && (substr_count(
+                $rightTimestamp = $matches['start'];
+                if ($timestampCount === 2 && isset($timestamps['end']) && (substr_count(
                             $timestamps['end'],
                             ':'
-                        ) >= $colon_count || substr_count($timestamps['end'], ';') >= $colon_count)) {
+                        ) >= $colonCount || substr_count($timestamps['end'], ';') >= $colonCount)) {
                     // end
                     $matches['end'] = $timestamps['end'];
-                    $right_timestamp = $matches['end'];
+                    $rightTimestamp = $matches['end'];
                 }
             }
         }
 
         // check if there is any text after the timestamp
-        if ($right_timestamp) {
-            $tmp_parts = explode($right_timestamp, $line); // if start and end timestamp are equals
-            $right_text = end($tmp_parts); // take text after the end timestamp
-            if (self::hasText($right_text) || self::hasDigit($right_text)) {
-                $matches['text'] = trim($right_text);
+        if ($rightTimestamp) {
+            $tmpParts = explode($rightTimestamp, $line); // if start and end timestamp are equals
+            $rightText = end($tmpParts); // take text after the end timestamp
+            if (self::hasText($rightText) || self::hasDigit($rightText)) {
+                $matches['text'] = trim($rightText);
             }
         } else {
             $matches['text'] = $line;
@@ -226,7 +232,7 @@ final readonly class VttConverter
         return $matches;
     }
 
-    private static function timestampsFromLine(string $line)
+    private static function timestampsFromLine(string $line): array
     {
         preg_match_all(self::TIME_FORMAT . 'm', $line, $timestamps);
 
@@ -244,8 +250,8 @@ final readonly class VttConverter
         }
 
         if ($result['start']) {
-            $text_before_timestamp = substr($line, 0, strpos($line, $result['start']));
-            if (self::hasText($text_before_timestamp)) {
+            $textBeforeTimestamp = substr($line, 0, strpos($line, $result['start']));
+            if (self::hasText($textBeforeTimestamp)) {
                 $result = [
                     'start' => null,
                     'end' => null,

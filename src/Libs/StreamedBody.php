@@ -11,14 +11,14 @@ final readonly class StreamedBody implements StreamInterface
 {
     private mixed $func;
 
-    public function __construct(callable $func)
+    public function __construct(callable $func, private bool $isReadable = true)
     {
         $this->func = $func;
     }
 
-    public static function create(callable $func): StreamInterface
+    public static function create(callable $func, bool $isReadable = true): StreamInterface
     {
-        return new self($func);
+        return new self($func, isReadable: $isReadable);
     }
 
     public function __destruct()
@@ -79,7 +79,7 @@ final readonly class StreamedBody implements StreamInterface
 
     public function isReadable(): bool
     {
-        return true;
+        return $this->isReadable;
     }
 
     public function read($length): string

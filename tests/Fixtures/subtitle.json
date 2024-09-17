@@ -1,0 +1,51 @@
+[
+    {
+        "start": 0.498,
+        "end": 2.827,
+        "lines": [
+            "- Johnny, where are you?"
+        ],
+        "vtt": {
+            "speakers": [
+                "Speaker01"
+            ]
+        }
+    },
+    {
+        "start": 2.827,
+        "end": 6.383,
+        "lines": [
+            "- Over here",
+            "- Where?"
+        ],
+        "vtt": {
+            "speakers": [
+                "Speaker02",
+                "Speaker01"
+            ]
+        }
+    },
+    {
+        "start": 6.383,
+        "end": 9.427,
+        "lines": [
+            "Oh, there you are!"
+        ]
+    },
+    {
+        "start": 9.427,
+        "end": 12.6,
+        "lines": [
+            "Come over here.",
+            "I want to read to you."
+        ]
+    },
+    {
+        "start": 12.6,
+        "end": 16.9,
+        "lines": [
+            "I have your favorite book:",
+            "Green Eggs and Ham"
+        ]
+    }
+]

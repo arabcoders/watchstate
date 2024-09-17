@@ -300,7 +300,7 @@
         <TaskRunnerStatus v-if="showTaskRunner || false === taskRunner?.status"
                           :status="taskRunner" @taskrunner_update="e => taskRunner = e"/>
         <NuxtPage v-if="!showConnection && hasAPISettings"/>
-        <no-api v-else/>
+        <no-api v-if="!hasAPISettings"/>
       </div>
 
       <div class="columns is-multiline is-mobile mt-3">
@@ -471,6 +471,8 @@ const testApi = async () => {
 
     api_status.value = 200 === response.status;
     api_response.value = 200 === response.status ? `Status: OK` : `Status: ${response.status} - ${response.statusText}`;
+    notification('success', 'API Connection', `${response.status}: ${api_response.value}`)
+    showConnection.value = false
   } catch (e) {
     api_status.value = false;
     api_response.value = `Request error. ${e.message}`;

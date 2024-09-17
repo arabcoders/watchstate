@@ -12,9 +12,9 @@ use RuntimeException;
 
 class StreamedBodyTest extends TestCase
 {
-    private function getStream(Closure $fn = null): StreamedBody
+    private function getStream(Closure $fn = null, bool $isReadable = true): StreamedBody
     {
-        return new StreamedBody($fn ?? fn() => 'test');
+        return new StreamedBody($fn ?? fn() => 'test', isReadable: $isReadable);
     }
 
     public function test_expectations()
@@ -64,6 +64,11 @@ class StreamedBodyTest extends TestCase
             closure: fn() => $this->getStream()->write('test'),
             reason: 'write(): Must throw an exception as closure is not writable',
             exception: RuntimeException::class,
+        );
+
+        $this->assertFalse(
+            $this->getStream(isReadable: false)->isReadable(),
+            'isReadable(): Must return false as closure is not readable'
         );
     }
 }
