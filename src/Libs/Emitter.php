@@ -6,16 +6,21 @@ namespace App\Libs;
 
 use App\Libs\Exceptions\EmitterException;
 use Psr\Http\Message\ResponseInterface as iResponse;
+use Psr\Http\Message\StreamInterface as iStream;
 
 /**
  * @psalm-type ParsedRangeType = array{0:string,1:int,2:int,3:int|'*'}
  */
 final readonly class Emitter
 {
+    public const string HEADER_FUNC = 'header';
+    public const string HEADERS_SENT_FUNC = 'headers_sent';
+    public const string BODY_FUNC = 'body';
+
     /**
      * @param int $maxBufferLength int Maximum output buffering size for each iteration.
      */
-    public function __construct(protected int $maxBufferLength = 8192)
+    public function __construct(protected int $maxBufferLength = 8192, private array $callers = [])
     {
     }
 
@@ -72,6 +77,56 @@ final readonly class Emitter
     }
 
     /**
+     * Create a new instance with the specified function.
+     *
+     * @param callable $fn The function to use for emitting headers.
+     * @return self A new instance with the specified function.
+     */
+    public function withHeaderFunc(callable $fn): self
+    {
+        $callers = $this->callers;
+        $callers[self::HEADER_FUNC] = $fn;
+        return new Emitter($this->maxBufferLength, $callers);
+    }
+
+    /**
+     * Create a new instance with the specified function.
+     *
+     * @param callable $fn the function to call to emit the body.
+     * @return self A new instance with the specified function.
+     */
+    public function withBodyFunc(callable $fn): self
+    {
+        $callers = $this->callers;
+        $callers[self::BODY_FUNC] = $fn;
+        return new Emitter($this->maxBufferLength, $callers);
+    }
+
+    /**
+     * Create a new instance with the specified function.
+     *
+     * @param callable $fn the function to call to check if headers have been sent.
+     * @return self A new instance with the specified function.
+     */
+    public function withHeadersSentFunc(callable $fn): self
+    {
+        $callers = $this->callers;
+        $callers[self::HEADERS_SENT_FUNC] = $fn;
+        return new Emitter($this->maxBufferLength, $callers);
+    }
+
+    /**
+     * Create a new instance with the specified maximum buffer length.
+     *
+     * @param int $maxBufferLength The maximum buffer length for each iteration.
+     * @return self A new instance with the specified maximum buffer length.
+     */
+    public function withMaxBufferLength(int $maxBufferLength): self
+    {
+        return new Emitter($maxBufferLength, $this->callers);
+    }
+
+    /**
      * Emit the message body.
      *
      * @param iResponse $response The response to emit.
@@ -82,20 +137,22 @@ final readonly class Emitter
     {
         $body = $response->getBody();
 
-        if ($body->isSeekable()) {
+        if (true === $body->isSeekable()) {
             $body->rewind();
         }
 
-        if (!$body->isReadable() || true === $flushAll) {
-            echo $body;
-            flush();
+        if (false === $body->isReadable() || true === $flushAll) {
+            $this->write($body->getContents());
             return;
         }
 
-        while (!$body->eof()) {
-            echo $body->read($maxBuffer);
-            flush();
-            if (CONNECTION_NORMAL !== connection_status()) {
+        $iterations = 0;
+        while (false === $body->eof()) {
+            $iterations++;
+
+            $this->write($body->read($maxBuffer));
+
+            if ($iterations % 5 === 0 && CONNECTION_NORMAL !== connection_status()) {
                 break;
             }
         }
@@ -114,6 +171,7 @@ final readonly class Emitter
         [, $first, $last] = $range;
 
         $body = $response->getBody();
+        assert($body instanceof iStream, 'Body must be an instance of StreamInterface');
 
         $length = $last - $first + 1;
 
@@ -122,9 +180,8 @@ final readonly class Emitter
             $first = 0;
         }
 
-        if (!$body->isReadable() || true === $flushAll) {
-            echo substr($body->getContents(), $first, $length);
-            flush();
+        if (false === $body->isReadable() || true === $flushAll) {
+            $this->write(substr($body->getContents(), $first, $length));
             return;
         }
 
@@ -134,8 +191,7 @@ final readonly class Emitter
             $contents = $body->read($maxBuffer);
             $remaining -= strlen($contents);
 
-            echo $contents;
-            flush();
+            $this->write($contents);
 
             if (CONNECTION_NORMAL !== connection_status()) {
                 break;
@@ -143,8 +199,7 @@ final readonly class Emitter
         }
 
         if ($remaining > 0 && !$body->eof()) {
-            echo $body->read($remaining);
-            flush();
+            $this->write($body->read($remaining));
         }
     }
 
@@ -183,6 +238,7 @@ final readonly class Emitter
     {
         $filename = null;
         $line = null;
+
         if ($this->headersSent($filename, $line)) {
             assert(is_string($filename) && is_int($line));
             throw EmitterException::forHeadersSent($filename, $line);
@@ -233,7 +289,7 @@ final readonly class Emitter
         $statusCode = $response->getStatusCode();
 
         foreach ($response->getHeaders() as $header => $values) {
-            assert(is_string($header));
+            assert(is_string($header), 'Header name must be a string');
             $name = $this->filterHeader($header);
             if (true === str_starts_with($name, 'X-Emitter')) {
                 continue;
@@ -251,16 +307,37 @@ final readonly class Emitter
      */
     private function filterHeader(string $header): string
     {
-        return ucwords($header, '-');
+        return ucwords(strtolower($header), '-');
     }
 
     private function headersSent(?string &$filename = null, ?int &$line = null): bool
     {
+        if (null !== ($caller = $this->callers[self::HEADERS_SENT_FUNC] ?? null)) {
+            return $caller($filename, $line);
+        }
+
         return headers_sent($filename, $line);
     }
 
     private function header(string $headerName, bool $replace, int $statusCode): void
     {
+        if (null !== ($caller = $this->callers[self::HEADER_FUNC] ?? null)) {
+            $caller($headerName, $replace, $statusCode);
+            return;
+        }
+
         header($headerName, $replace, $statusCode);
     }
+
+    private function write(string $data): void
+    {
+        if (null !== ($caller = $this->callers[self::BODY_FUNC] ?? null)) {
+            $caller($data);
+            return;
+        }
+
+        echo $data;
+        flush();
+    }
+
 }
