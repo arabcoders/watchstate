@@ -10,7 +10,7 @@ return [
     iState::COLUMN_TYPE => iState::TYPE_EPISODE,
     iState::COLUMN_UPDATED => 1,
     iState::COLUMN_WATCHED => 1,
-    iState::COLUMN_VIA => 'home_plex',
+    iState::COLUMN_VIA => 'test_plex',
     iState::COLUMN_TITLE => 'Series Title',
     iState::COLUMN_YEAR => 2020,
     iState::COLUMN_SEASON => 1,
@@ -28,7 +28,7 @@ return [
         Guid::GUID_ANIDB => '6600',
     ],
     iState::COLUMN_META_DATA => [
-        'home_plex' => [
+        'test_plex' => [
             iState::COLUMN_ID => 122,
             iState::COLUMN_TYPE => iState::TYPE_EPISODE,
             iState::COLUMN_WATCHED => 1,
@@ -43,7 +43,7 @@ return [
             iState::COLUMN_META_DATA_ADDED_AT => 1,
             iState::COLUMN_META_DATA_PLAYED_AT => 2,
         ],
-        'home_jellyfin' => [
+        'test_jellyfin' => [
             iState::COLUMN_ID => 122,
             iState::COLUMN_TYPE => iState::TYPE_EPISODE,
             iState::COLUMN_WATCHED => 1,
@@ -58,7 +58,7 @@ return [
             iState::COLUMN_META_DATA_ADDED_AT => 1,
             iState::COLUMN_META_DATA_PLAYED_AT => 2,
         ],
-        'home_emby' => [
+        'test_emby' => [
             iState::COLUMN_ID => 122,
             iState::COLUMN_TYPE => iState::TYPE_EPISODE,
             iState::COLUMN_WATCHED => 1,
@@ -75,15 +75,15 @@ return [
         ],
     ],
     iState::COLUMN_EXTRA => [
-        'home_plex' => [
+        'test_plex' => [
             iState::COLUMN_EXTRA_DATE => 1,
             iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
         ],
-        'home_jellyfin' => [
+        'test_jellyfin' => [
             iState::COLUMN_EXTRA_DATE => 1,
             iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
         ],
-        'home_emby' => [
+        'test_emby' => [
             iState::COLUMN_EXTRA_DATE => 1,
             iState::COLUMN_EXTRA_EVENT => 'media.scrobble'
         ],

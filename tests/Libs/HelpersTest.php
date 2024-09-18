@@ -736,7 +736,7 @@ class HelpersTest extends TestCase
 
     public function test_makeIgnoreId(): void
     {
-        $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'home_plex', '121');
+        $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'test_plex', '121');
         $keyPassed = $key . '&garbage=1';
 
         $this->assertSame(
@@ -748,7 +748,7 @@ class HelpersTest extends TestCase
 
     public function test_isIgnoredId(): void
     {
-        $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'home_plex', '121');
+        $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'test_plex', '121');
 
         Config::init([
             'ignore' => [
@@ -757,7 +757,7 @@ class HelpersTest extends TestCase
         ]);
 
         $this->assertTrue(
-            isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1200', '121'),
+            isIgnoredId('test_plex', 'movie', 'guid_tvdb', '1200', '121'),
             'When exact ignore url is passed, and it is found in ignore list, true is returned.'
         );
 
@@ -768,17 +768,17 @@ class HelpersTest extends TestCase
         ]);
 
         $this->assertTrue(
-            isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1200', '121'),
+            isIgnoredId('test_plex', 'movie', 'guid_tvdb', '1200', '121'),
             'When ignore url is passed with and ignore list has url without query string, true is returned.'
         );
 
         $this->assertFalse(
-            isIgnoredId('home_plex', 'movie', 'guid_tvdb', '1201', '121'),
+            isIgnoredId('test_plex', 'movie', 'guid_tvdb', '1201', '121'),
             'When ignore url is passed with and ignore list does not contain the url, false is returned.'
         );
 
         $this->expectException(InvalidArgumentException::class);
-        isIgnoredId('home_plex', 'not_real_type', 'guid_tvdb', '1200', '121');
+        isIgnoredId('test_plex', 'not_real_type', 'guid_tvdb', '1200', '121');
     }
 
     public function test_r(): void

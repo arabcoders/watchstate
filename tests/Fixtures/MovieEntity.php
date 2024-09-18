@@ -10,7 +10,7 @@ return [
     iState::COLUMN_TYPE => iState::TYPE_MOVIE,
     iState::COLUMN_UPDATED => 1,
     iState::COLUMN_WATCHED => 1,
-    iState::COLUMN_VIA => 'home_plex',
+    iState::COLUMN_VIA => 'test_plex',
     iState::COLUMN_TITLE => 'Movie Title',
     iState::COLUMN_YEAR => 2020,
     iState::COLUMN_SEASON => null,
@@ -25,7 +25,7 @@ return [
         Guid::GUID_ANIDB => '1600',
     ],
     iState::COLUMN_META_DATA => [
-        'home_plex' => [
+        'test_plex' => [
             iState::COLUMN_ID => 121,
             iState::COLUMN_TYPE => iState::TYPE_MOVIE,
             iState::COLUMN_WATCHED => 1,
@@ -39,7 +39,7 @@ return [
         ],
     ],
     iState::COLUMN_EXTRA => [
-        'home_plex' => [
+        'test_plex' => [
             iState::COLUMN_EXTRA_EVENT => 'media.scrobble',
             iState::COLUMN_EXTRA_DATE => 2,
         ],

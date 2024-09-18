@@ -80,10 +80,10 @@ class StateEntityTest extends TestCase
         ]);
 
         $arr = [];
-        $arr = ag_set($arr, 'metadata.home_plex.played_at.old', 2);
-        $arr = ag_set($arr, 'metadata.home_plex.played_at.new', 4);
-        $arr = ag_set($arr, 'metadata.home_plex.test.old', 'None');
-        $arr = ag_set($arr, 'metadata.home_plex.test.new', ['foo' => 'bar']);
+        $arr = ag_set($arr, 'metadata.test_plex.played_at.old', 2);
+        $arr = ag_set($arr, 'metadata.test_plex.played_at.new', 4);
+        $arr = ag_set($arr, 'metadata.test_plex.test.old', 'None');
+        $arr = ag_set($arr, 'metadata.test_plex.test.new', ['foo' => 'bar']);
 
         $this->assertSame(
             $arr,
@@ -827,7 +827,7 @@ class StateEntityTest extends TestCase
                     'new' => 0,
                 ],
                 'via' => [
-                    'old' => 'home_plex',
+                    'old' => 'test_plex',
                     'new' => 'tester',
                 ],
             ],
@@ -845,7 +845,7 @@ class StateEntityTest extends TestCase
         );
 
         $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
-        $testData = ag_set($testData, 'metadata.home_plex.watched', 1);
+        $testData = ag_set($testData, 'metadata.test_plex.watched', 1);
         $entity = new StateEntity($testData);
 
         $this->assertFalse(
@@ -853,8 +853,8 @@ class StateEntityTest extends TestCase
             'When hasPlayProgress() when valid play progress is set, but the entity server metadata is marked as watched returns false'
         );
 
-        $testData = ag_set($this->testMovie, 'metadata.home_plex.watched', 0);
-        $testData = ag_set($testData, 'metadata.home_plex.progress', 999);
+        $testData = ag_set($this->testMovie, 'metadata.test_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.test_plex.progress', 999);
         $entity = new StateEntity($testData);
         $this->assertFalse(
             $entity->hasPlayProgress(),
@@ -862,8 +862,8 @@ class StateEntityTest extends TestCase
         );
 
         $testData = ag_set($this->testMovie, 'watched', 0);
-        $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
-        $testData = ag_set($testData, 'metadata.home_plex.progress', 5000);
+        $testData = ag_set($testData, 'metadata.test_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.test_plex.progress', 5000);
         $entity = new StateEntity($testData);
 
         $this->assertTrue(
@@ -875,7 +875,7 @@ class StateEntityTest extends TestCase
     public function test_getPlayProgress(): void
     {
         $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
-        $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.test_plex.watched', 0);
         $entity = new StateEntity($testData);
         $this->assertSame(
             5000,
@@ -884,8 +884,8 @@ class StateEntityTest extends TestCase
         );
 
         $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
-        $testData = ag_set($testData, 'metadata.home_plex.watched', 0);
-        $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.home_plex', []));
+        $testData = ag_set($testData, 'metadata.test_plex.watched', 0);
+        $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.test_plex', []));
         $testData = ag_set($testData, 'metadata.test.progress', 999);
 
         $entity = new StateEntity($testData);
@@ -900,8 +900,8 @@ class StateEntityTest extends TestCase
         $this->assertSame(0, $entity->getPlayProgress(), 'When entity is watched, getPlayProgress() returns 0');
 
         $testData = ag_set($this->testMovie, iState::COLUMN_WATCHED, 0);
-        $testData = ag_set($testData, 'metadata.home_plex.watched', 1);
-        $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.home_plex', []));
+        $testData = ag_set($testData, 'metadata.test_plex.watched', 1);
+        $testData = ag_set($testData, 'metadata.test_plex', ag($testData, 'metadata.test_plex', []));
         $testData = ag_set($testData, 'metadata.test.progress', 999);
         $entity = new StateEntity($testData);
         $this->assertSame(0, $entity->getPlayProgress(), 'When entity is watched, getPlayProgress() returns 0');
@@ -956,18 +956,18 @@ class StateEntityTest extends TestCase
 
         $real = $this->testEpisode;
 
-        unset($real['metadata']['home_jellyfin']);
+        unset($real['metadata']['test_jellyfin']);
         $entity = new StateEntity($real);
 
         $this->assertSame(
-            ag($real, 'metadata.home_plex.extra.title'),
+            ag($real, 'metadata.test_plex.extra.title'),
             $entity->getMeta('extra.title'),
             'When quorum is not met returns the entity via backend metadata.'
         );
 
-        $entity->via = 'home_emby';
+        $entity->via = 'test_emby';
         $this->assertNotSame(
-            ag($real, 'metadata.home_plex.extra.title'),
+            ag($real, 'metadata.test_plex.extra.title'),
             $entity->getMeta('extra.title'),
             'When quorum is not met returns the entity via backend metadata.'
         );
@@ -975,27 +975,27 @@ class StateEntityTest extends TestCase
         $entity = new StateEntity($this->testEpisode);
 
         $this->assertSame(
-            ag($this->testEpisode, 'metadata.home_jellyfin.extra.title'),
+            ag($this->testEpisode, 'metadata.test_jellyfin.extra.title'),
             $entity->getMeta('extra.title'),
             'When quorum is met for key return that value instead of the default via metadata.'
         );
 
         $entity = new StateEntity(
-            ag_set($this->testEpisode, 'metadata.home_jellyfin.extra.title', 'random')
+            ag_set($this->testEpisode, 'metadata.test_jellyfin.extra.title', 'random')
         );
 
         $this->assertSame(
-            ag($real, 'metadata.home_plex.extra.title'),
+            ag($real, 'metadata.test_plex.extra.title'),
             $entity->getMeta('extra.title'),
             'When no quorum for value reached, return default via metadata.'
         );
 
         $entity = new StateEntity(
-            ag_set($this->testEpisode, 'metadata.home_jellyfin.extra.title', null)
+            ag_set($this->testEpisode, 'metadata.test_jellyfin.extra.title', null)
         );
 
         $this->assertSame(
-            ag($real, 'metadata.home_plex.extra.title'),
+            ag($real, 'metadata.test_plex.extra.title'),
             $entity->getMeta('extra.title'),
             'Quorum will not be met if one of the values is null.'
         );
