@@ -38,7 +38,7 @@ trait APITraits
         $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         if (null === $configFile->get("{$name}.type", null)) {
-            throw new RuntimeException(r("Backend '{backend}' doesn't exists.", ['backend' => $name]));
+            throw new RuntimeException(r("Backend '{backend}' doesn't exists.", ['backend' => $name]), 1000);
         }
 
         $default = $configFile->get($name);
@@ -112,17 +112,18 @@ trait APITraits
     protected function getBasicClient(string $type, DataUtil $data): iClient
     {
         if (null === ($class = Config::get("supported.{$type}", null))) {
-            throw new InvalidArgumentException(r("Unexpected client type '{type}' was given.", ['type' => $type]));
+            throw new InvalidArgumentException(r("Unexpected client type '{type}' was given.", ['type' => $type]), 2000
+            );
         }
 
         $options = [];
 
         if (null === $data->get('url')) {
-            throw new InvalidArgumentException('No URL was given.');
+            throw new InvalidArgumentException('No URL was given.', 2001);
         }
 
         if (null === $data->get('token')) {
-            throw new InvalidArgumentException('No token was given.');
+            throw new InvalidArgumentException('No token was given.', 2002);
         }
 
         if (null !== $data->get('options.' . Options::ADMIN_TOKEN)) {
