@@ -46,6 +46,30 @@ final class Container
     }
 
     /**
+     * Reinitialize the container.
+     * This method is used to reinitialize the container with a new instance of the base container.
+     * This is useful when the container needs to be reset and reinitialized with a new base container.
+     * This method is typically used in unit tests to ensure that the container is in a known state.
+     *
+     * @return self The reinitialized container.
+     */
+    public static function reinitialize(): self
+    {
+        self::$container = null;
+        return self::init();
+    }
+
+    /**
+     * Reset the container.
+     *
+     * @return void
+     */
+    public static function reset(): void
+    {
+        self::$container = null;
+    }
+
+    /**
      * Add a new service to the container.
      *
      * @param string $id The unique identifier for the service.

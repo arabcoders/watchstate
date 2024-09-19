@@ -77,6 +77,21 @@ class ConfigTest extends TestCase
         );
     }
 
+    public function test_config_reset(): void
+    {
+        $this->assertCount(
+            count($this->data),
+            Config::getAll(),
+            'When config is initialized, getAll() returns all data'
+        );
+
+        Config::reset();
+        $this->assertEmpty(
+            Config::getAll(),
+            'When config is reset, getAll() returns empty array'
+        );
+    }
+
     public function test_config_has(): void
     {
         $this->assertTrue(Config::has('foo'), 'When key is set, has() returns true');

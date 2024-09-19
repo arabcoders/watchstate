@@ -152,7 +152,7 @@ abstract class AbstractTestsMapper extends TestCase
             'Mapper should be empty as we have committed the changes to the db, and the state should have been reset.'
         );
 
-        $testEpisode->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
+        $testEpisode->metadata['test_plex'][iState::COLUMN_GUIDS][Guid::GUID_TVRAGE] = '2';
 
         $this->mapper->add($testEpisode);
 
@@ -174,7 +174,7 @@ abstract class AbstractTestsMapper extends TestCase
     {
         // --prep.
         $this->testMovie[iState::COLUMN_WATCHED] = 0;
-        $this->testMovie = ag_set($this->testMovie, 'metadata.home_plex.watched', 0);
+        $this->testMovie = ag_set($this->testMovie, 'metadata.test_plex.watched', 0);
 
         $testMovie = new StateEntity($this->testMovie);
 
@@ -187,15 +187,15 @@ abstract class AbstractTestsMapper extends TestCase
         $this->assertSame(
             0,
             (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
-            'metadata.home_plex.watched should be 0'
+            'metadata.test_plex.watched should be 0'
         );
 
         // -- update
 
         $this->testMovie[iState::COLUMN_WATCHED] = 1;
         $this->testMovie[iState::COLUMN_UPDATED] = 5;
-        $this->testMovie = ag_set($this->testMovie, 'metadata.home_plex.watched', 1);
-        $this->testMovie = ag_set($this->testMovie, 'metadata.home_plex.played_at', 5);
+        $this->testMovie = ag_set($this->testMovie, 'metadata.test_plex.watched', 1);
+        $this->testMovie = ag_set($this->testMovie, 'metadata.test_plex.played_at', 5);
 
         $testMovie = new StateEntity($this->testMovie);
         $this->mapper->add($testMovie);
@@ -209,12 +209,12 @@ abstract class AbstractTestsMapper extends TestCase
         $this->assertSame(
             1,
             (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
-            'metadata.home_plex.watched should be 1'
+            'metadata.test_plex.watched should be 1'
         );
         $this->assertSame(
             5,
             (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_META_DATA_PLAYED_AT),
-            'metadata.home_plex.played_at should be 5'
+            'metadata.test_plex.played_at should be 5'
         );
     }
 
@@ -237,7 +237,7 @@ abstract class AbstractTestsMapper extends TestCase
         $this->assertSame(
             0,
             (int)ag($obj->getMetadata($testMovie->via), iState::COLUMN_WATCHED),
-            'metadata.home_plex.watched should be 0'
+            'metadata.test_plex.watched should be 0'
         );
     }
 
@@ -290,7 +290,7 @@ abstract class AbstractTestsMapper extends TestCase
         $timeNow = time();
 
         $testData[iState::COLUMN_UPDATED] = $timeNow;
-        $testData[iState::COLUMN_META_DATA]['home_plex'][iState::COLUMN_META_DATA_PLAYED_AT] = $timeNow;
+        $testData[iState::COLUMN_META_DATA]['test_plex'][iState::COLUMN_META_DATA_PLAYED_AT] = $timeNow;
 
         $movie = new StateEntity($testData);
         $this->mapper->add($movie);
@@ -409,8 +409,8 @@ abstract class AbstractTestsMapper extends TestCase
             'commit() should return an array with the correct counts in format of [ movie => [ added => int, updated => int, failed => int ], episode => [ added => int, updated => int, failed => int ] ].'
         );
 
-        $testMovie->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
-        $testEpisode->metadata['home_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
+        $testMovie->metadata['test_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1920';
+        $testEpisode->metadata['test_plex'][iState::COLUMN_GUIDS][Guid::GUID_ANIDB] = '1900';
 
         $this->mapper
             ->add($testMovie, ['diff_keys' => iState::ENTITY_KEYS])

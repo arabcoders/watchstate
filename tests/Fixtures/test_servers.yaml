@@ -6,7 +6,7 @@ test_plex:
   uuid: s00000000000000000000000000000000000000p
   export:
     enabled: true
-    lastSync: null
+    lastSync: 1724273445
   import:
     enabled: true
     lastSync: 1724173445
@@ -57,6 +57,4 @@ test_emby:
     match:
       user: false
       uuid: true
-  options:
-    MAX_EPISODE_RANGE: 6
-    IMPORT_METADATA_ONLY: true
+  options: { }

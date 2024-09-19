@@ -155,6 +155,7 @@ class PDOAdapterTest extends TestCase
     public function test_getAll_call_without_initialized_container(): void
     {
         $this->db->setOptions(['class' => null]);
+        Container::reset();
         $this->checkException(
             closure: fn() => $this->db->getAll(),
             reason: 'When calling getAll without initialized container, an exception should be thrown.',
