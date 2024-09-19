@@ -101,4 +101,12 @@ final class Config
     {
         self::$config = ag_delete(self::$config, $key);
     }
+
+    /**
+     * Clear all configuration values.
+     */
+    public static function reset(): void
+    {
+        self::$config = [];
+    }
 }

@@ -18,10 +18,8 @@ use App\Libs\Traits\APITraits;
 
 class APITraitsTest extends TestCase
 {
-    public function __construct(?string $name = null, array $data = [], $dataName = '')
+    protected function setUp(): void
     {
-        parent::__construct($name, $data, $dataName);
-
         Container::init();
         Config::init(require __DIR__ . '/../../../config/config.php');
         foreach ((array)require __DIR__ . '/../../../config/services.php' as $name => $definition) {
@@ -29,6 +27,14 @@ class APITraitsTest extends TestCase
         }
         Config::save('backends_file', __DIR__ . '/../../Fixtures/test_servers.yaml');
         Config::save('api.secure', true);
+
+        parent::setUp();
+    }
+
+    public function __destruct()
+    {
+        Config::reset();
+        Container::reset();
     }
 
     public function test_getClient()

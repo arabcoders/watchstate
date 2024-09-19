@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Middlewares;
 
+use App\Libs\Enums\Http\Status;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Server\MiddlewareInterface as iMiddleware;
@@ -16,7 +17,7 @@ final class ExceptionHandlerMiddleware implements iMiddleware
         try {
             return $handler->handle($request);
         } catch (\Throwable $e) {
-            return api_error($e->getMessage(), $e->getCode());
+            return api_error($e->getMessage(), Status::tryFrom($e->getCode()) ?? Status::INTERNAL_SERVER_ERROR);
         }
     }
 }
