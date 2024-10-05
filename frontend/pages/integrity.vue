@@ -185,29 +185,44 @@
                       <div class="field is-grouped">
                         <div class="control is-expanded is-unselectable">
                           <span class="icon"><i class="fas fa-info"></i>&nbsp;</span>
-                          <span>Has metadata from</span>
+                          <span>Has metadata</span>
                         </div>
                         <div class="control">
                           <template v-for="backend in item.reported_by" :key="`${item.id}-rb-${backend}`">
-                            <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag is-primary ml-1"/>
+                            <NuxtLink :to="'/backend/'+backend" class="tag is-primary ml-1">
+                              <span class="icon"><i class="fas fa-check"/></span>
+                              <span v-text="backend"/>
+                            </NuxtLink>
                           </template>
                           <template v-for="backend in item.not_reported_by" :key="`${item.id}-rb-${backend}`">
-                            <NuxtLink :to="'/backend/'+backend" v-text="backend" class="tag is-danger ml-1"/>
+                            <NuxtLink :to="'/backend/'+backend" class="tag is-danger ml-1">
+                              <span class="icon"><i class="fas fa-xmark"/></span>
+                              <span v-text="backend"/>
+                            </NuxtLink>
                           </template>
                         </div>
                       </div>
                     </div>
+
                     <div class="column is-12" v-if="item?.integrity">
-                      <template v-for="record in item.integrity" :key="`integrity-${record.backend}`">
-                        <p>
-                          <span class="icon">
-                            <i class="fas"
-                               :class="{'fa-xmark':!record.status,'fa-check':record.status}"></i>&nbsp;
-                          </span>
-                          <span :class="{'has-text-danger':!record.status,'has-text-success':record.status}">
-                            {{ record.backend }}: {{ record.message }}</span>
-                        </p>
-                      </template>
+                      <div class="field is-grouped">
+                        <div class="control is-expanded is-unselectable">
+                          <span class="icon"><i class="fas fa-file"></i>&nbsp;</span>
+                          <span>File reference exists</span>
+                        </div>
+                        <div class="control">
+                          <NuxtLink
+                              v-for="record in item.integrity" :key="`${item.id}-int-${record.backend}`"
+                              :to="'/backend/'+record.backend" class="tag ml-1"
+                              :class="{ 'is-danger': !record.status, 'is-primary': record.status}"
+                              v-tooltip.bottom="!record.status ? record.backend + ': ' + record.message : ''">
+                            <span class="icon">
+                              <i class="fas" :class="{ 'fa-xmark': !record.status, 'fa-check': record.status}"/>
+                            </span>
+                            <span v-text="record.backend"/>
+                          </NuxtLink>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
