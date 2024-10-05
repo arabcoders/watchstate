@@ -10,6 +10,7 @@ use App\Libs\Attributes\Route\Put;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
+use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -50,6 +51,8 @@ final class Guids
     #[Put(self::URL . '/custom[/]', name: 'system.guids.custom.guid.add')]
     public function custom_guid_add(iRequest $request): iResponse
     {
+        $params = DataUtil::fromRequest($request);
+
         return api_response(Status::OK, $request->getParsedBody());
     }
 
