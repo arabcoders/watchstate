@@ -74,6 +74,9 @@ final class Guids
         }
 
         try {
+            if (false === str_starts_with($params->get('name'), 'guid_')) {
+                $params = $params->with('name', 'guid_' . $params->get('name'));
+            }
             $this->validateName($params->get('name'));
         } catch (InvalidArgumentException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
@@ -129,11 +132,12 @@ final class Guids
         }
 
         $data = [
-            'name' => $params->get('name'),
+            'id' => generateUUID(),
             'type' => $params->get('type'),
+            'name' => $params->get('name'),
             'description' => $params->get('description'),
             'validator' => [
-                'pattern' => $params->get('validator.pattern'),
+                'pattern' => $pattern,
                 'example' => $params->get('validator.example'),
                 'tests' => [
                     'valid' => $params->get('validator.tests.valid'),
@@ -144,7 +148,7 @@ final class Guids
 
         $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true, autoBackup: true);
 
-        if (!$file->has('guids') || !is_array($file->get('guids'))) {
+        if (false === $file->has('guids') || false === is_array($file->get('guids'))) {
             $file->set('guids', []);
         }
 
@@ -153,10 +157,31 @@ final class Guids
         return api_response(Status::OK, $data);
     }
 
-    #[Delete(self::URL . '/custom/{index:number}[/]', name: 'system.guids.custom.guid.remove')]
-    public function custom_guid_remove(iRequest $request): iResponse
+    #[Delete(self::URL . '/custom/{id:uuid}[/]', name: 'system.guids.custom.guid.remove')]
+    public function custom_guid_remove(string $id): iResponse
     {
-        return api_response(Status::OK, $request->getParsedBody());
+        $guids = ag($this->getData(), 'guids', []);
+
+        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true, autoBackup: true);
+
+        $data = [];
+        $found = false;
+        foreach ($guids as $index => $guid) {
+            if ($guid['id'] === $id) {
+                $data = $guid;
+                $file->delete('guids.' . $index)->persist();
+                $found = true;
+                break;
+            }
+        }
+
+        if (false === $found) {
+            return api_error(r("The GUID '{id}' is not found.", ['id' => $id]), Status::NOT_FOUND);
+        }
+
+        $file->persist();
+
+        return api_response(Status::OK, $data);
     }
 
     #[Get(self::URL . '/custom/{client:word}[/]', name: 'system.guids.custom.client')]
@@ -166,13 +191,92 @@ final class Guids
             return api_error('Client name is unsupported or incorrect.', Status::NOT_FOUND);
         }
 
-        return api_response(Status::OK, ag($this->getData(), $client, []));
+        return api_response(
+            Status::OK,
+            array_filter(ag($this->getData(), 'links', []), fn($link) => $link['type'] === $client)
+        );
     }
 
     #[Put(self::URL . '/custom/{client:word}[/]', name: 'system.guids.custom.client.add')]
-    public function custom_client_guid_add(iRequest $request): iResponse
+    public function custom_client_guid_add(iRequest $request, string $client): iResponse
     {
-        return api_response(Status::OK, $request->getParsedBody());
+        $params = DataUtil::fromRequest($request);
+
+        $requiredFields = [
+            'type',
+            'map.from',
+            'map.to',
+        ];
+
+        if ('plex' === $client) {
+            $requiredFields[] = 'options.legacy';
+        }
+
+        foreach ($requiredFields as $field) {
+            if (!$params->get($field)) {
+                return api_error(r("Field '{field}' is required. And is missing from request.", [
+                    'field' => $field
+                ]), Status::BAD_REQUEST);
+            }
+        }
+
+        if (false === array_key_exists($client, Config::get('supported', []))) {
+            return api_error(r("Client name '{client}' is unsupported or incorrect.", [
+                'client' => $client
+            ]), Status::BAD_REQUEST);
+        }
+
+        $mapTo = $params->get('map.to');
+        if (false === str_starts_with($mapTo, 'guid_')) {
+            $mapTo = 'guid_' . $mapTo;
+        }
+
+        if (false === array_key_exists($mapTo, Guid::getSupported())) {
+            return api_error(r("The map.to GUID '{guid}' is not supported.", [
+                'guid' => $params->get('map.to')
+            ]), Status::BAD_REQUEST);
+        }
+
+        foreach (ag($this->getData(), 'links', []) as $link) {
+            if ($link['type'] === $client && $link['map']['from'] === $params->get('map.from')) {
+                return api_error(r("The client '{client}' map.from '{from}' is already exists.", [
+                    'client' => $client,
+                    'from' => $params->get('map.from')
+                ]), Status::BAD_REQUEST);
+            }
+        }
+
+        $link = [
+            'id' => generateUUID(),
+            'type' => $client,
+            'map' => [
+                'from' => $params->get('map.from'),
+                'to' => $params->get('map.to'),
+            ],
+        ];
+
+        if ('plex' === $client) {
+            $link['options'] = [
+                'legacy' => (bool)$params->get('options.legacy'),
+            ];
+
+            if ($params->get('replace.from') && $params->get('replace.to')) {
+                $link['replace'] = [
+                    'from' => $params->get('replace.from'),
+                    'to' => $params->get('replace.to'),
+                ];
+            }
+        }
+
+        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true, autoBackup: true);
+
+        if (false === $file->has('links') || false === is_array($file->get('links'))) {
+            $file->set('links', []);
+        }
+
+        $file->set('links.' . count($file->get('links', [])), $link)->persist();
+
+        return api_response(Status::OK, $link);
     }
 
     #[Delete(self::URL . '/custom/{client:word}/{index:number}[/]', name: 'system.guids.custom.client.remove')]
@@ -202,28 +306,27 @@ final class Guids
     {
         $file = Config::get('guid.file');
 
-        $guids = [
-            'version' => Config::get('guid.version'),
-            'guids' => [],
-        ];
-
-        foreach (array_keys(Config::get('supported', [])) as $name) {
-            $guids[$name] = [];
-        }
-
         if (false === file_exists($file)) {
-            return $guids;
+            return [
+                'version' => Config::get('guid.version'),
+                'guids' => [],
+                'links' => [],
+            ];
         }
 
-        foreach (ConfigFile::open($file, 'yaml')->getAll() as $name => $guid) {
-            $guids[strtolower($name)] = $guid;
-        }
+        $data = ConfigFile::open($file, 'yaml');
 
-        return $guids;
+        return [
+            'version' => $data->get('version', Config::get('guid.version')),
+            'guids' => $data->get('guids', []),
+            'links' => $data->get('links', []),
+        ];
     }
 
     private function validateName(string $name): void
     {
+        $name = after($name, 'guid_');
+
         if (false === preg_match('/^[a-z0-9_]+$/i', $name)) {
             throw new InvalidArgumentException('Name must be alphanumeric and underscores only.');
         }

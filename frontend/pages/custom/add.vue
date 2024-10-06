@@ -22,14 +22,15 @@
               <div class="field">
                 <label class="label is-unselectable" for="form_guid_name">Name</label>
                 <div class="control has-icons-left">
-                  <input class="input" id="form_guid_name" type="text" v-model="form.name" placeholder="guid_foobar">
+                  <input class="input" id="form_guid_name" type="text" v-model="form.name" placeholder="foobar">
                   <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
                 </div>
                 <p class="help">
                   <span class="icon"><i class="fas fa-info"></i></span>
-                  <span>The internal GUID reference name. The name must starts with <code>guid</code>, followed by
-                    <code>_</code>, <code>lower case [a-z]</code>, <code>0-9</code>, <code>no space</code>.
-                    For example, <code>guid_imdb</code>.
+                  <span>The internal GUID reference name. The rules are <code>lower case [a-z]</code>, <code>0-9</code>,
+                    <code>no space</code>.
+                    For example, <code>guid_imdb</code>. The guid name will be automatically prefixed with
+                    <code>guid_</code>.
                   </span>
                 </p>
               </div>
@@ -185,13 +186,13 @@
         </form>
       </div>
 
-      <div class="column is-12">
-        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
-          <ul>
-          </ul>
-        </Message>
-      </div>
+      <!--      <div class="column is-12">-->
+      <!--        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"-->
+      <!--                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">-->
+      <!--          <ul>-->
+      <!--          </ul>-->
+      <!--        </Message>-->
+      <!--      </div>-->
     </div>
   </div>
 </template>
@@ -201,7 +202,6 @@ import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import {notification, stringToRegex} from '~/utils/index'
 import {useStorage} from '@vueuse/core'
-import Message from '~/components/Message'
 
 useHead({title: 'Add Custom GUID'})
 
@@ -256,13 +256,7 @@ const addNewGuid = async () => {
     notification('error', 'Error', `GUID name must not contain spaces.`, 5000)
     return
   }
-
-  if (!data.name.startsWith('guid_')) {
-    notification('error', 'Error', `GUID name must start with 'guid_'.`, 5000)
-    return
-  }
-
-
+  
   data.type = data.type.trim().toLowerCase();
   if (!['string'].includes(data.type)) {
     notification('error', 'Error', `Invalid GUID type.`, 5000)

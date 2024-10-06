@@ -960,14 +960,14 @@ version: 0.0
 
 # The key must be in lower case. and it's an array.
 guids:
-    -   id: universally-unique-identifier       # the guid id
+    -   id: universally-unique-identifier       # the guid id. Example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
         type: string                            # must be exactly string do not change it.
         name: guid_mydb                         # the name must start with guid_ with no spaces and lower case.
-        description: "My custom database guid"  # description of the guid.
+        description: "My custom database guid"  # description of the guid. For informational purposes only.
         # Validator object. to validate the guid.
         validator:
-            pattern: /^[0-9\/]+$/i  # regex pattern to match the guid. The pattern must also support / being in the guid. as we use the same object to generate relative guid.
-            example: "(number)"     # example of the guid.
+            pattern: "/^[0-9\/]+$/i"  # regex pattern to match the guid. The pattern must also support / being in the guid. as we use the same object to generate relative guid.
+            example: "(number)"     # example of the guid. For informational purposes only.
             tests:
                 valid:
                     - "1234567"     # valid guid examples.
@@ -978,7 +978,7 @@ guids:
 links:
     # mapping the com.plexapp.agents.foo guid from plex backends into the guid_mydb in WatchState.
     # plex legacy guids starts with com.plexapp.agents., you must set options.legacy to true.
-    -   id: universally-unique-identifier       # the link id
+    -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
         type: plex    # the client to link the guid to. plex, jellyfin, emby.
         options: # options used by the client.
             legacy: true  # Tag the mapper as legacy GUID for mapping.
@@ -989,19 +989,20 @@ links:
             # (Optional) Replace helper. Sometimes you need to replace the guid identifier to another.
             # The replacement happens before the mapping, so if you replace the guid identifier, you should also
             # update the map.from to match the new identifier.
+            # This "replace" object only works with plex legacy guids.
             replace:
                 from: com.plexapp.agents.foobar://  # Replace from this string
                 to: com.plexapp.agents.foo://       # Into this string.
 
     # mapping the foo guid from jellyfin backends into the guid_mydb in WatchState.
-    -   id: universally-unique-identifier # the link id
+    -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
         type: jellyfin # the client to link the guid to. plex, jellyfin, emby.
         map:
             from: foo     # map.from this string.
             to: guid_mydb # map.to this guid.
 
     # mapping the foo guid from emby backends into the guid_mydb in WatchState.
-    -   id: universally-unique-identifier       # the link id
+    -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
         type: emby    # the client to link the guid to. plex, jellyfin, emby.
         map:
             from: foo     # map.from this string.

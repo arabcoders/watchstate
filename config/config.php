@@ -192,9 +192,9 @@ return (function () {
     ];
 
     $config['supported'] = [
-        'plex' => PlexClient::class,
-        'emby' => EmbyClient::class,
-        'jellyfin' => JellyfinClient::class,
+        strtolower(PlexClient::CLIENT_NAME) => PlexClient::class,
+        strtolower(EmbyClient::CLIENT_NAME) => EmbyClient::class,
+        strtolower(JellyfinClient::CLIENT_NAME) => JellyfinClient::class,
     ];
 
     $config['servers'] = [];
