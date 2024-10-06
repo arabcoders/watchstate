@@ -6,6 +6,7 @@ namespace App\Backends\Jellyfin;
 
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
+use App\Backends\Emby\EmbyClient;
 use App\Libs\Config;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Guid;
@@ -38,7 +39,9 @@ class JellyfinGuid implements iGuid
      */
     public function __construct(protected LoggerInterface $logger)
     {
-        $this->type = str_contains(static::class, 'EmbyGuid') ? 'emby' : 'jellyfin';
+        $this->type = strtolower(
+            str_contains(static::class, 'EmbyGuid') ? EmbyClient::CLIENT_NAME : JellyfinClient::CLIENT_NAME
+        );
 
         $file = Config::get('guid.file', null);
 
@@ -108,10 +111,10 @@ class JellyfinGuid implements iGuid
             ]));
         }
 
-        $mapping = ag($yaml, $this->type, []);
+        $mapping = ag($yaml, 'links', []);
 
         if (false === is_array($mapping)) {
-            throw new InvalidArgumentException(r("The GUIDs file '{file}' {type} sub key is not an array.", [
+            throw new InvalidArgumentException(r("The GUIDs file '{file}' links sub key is not an array.", [
                 'type' => $this->type,
                 'file' => $file,
             ]));
@@ -121,9 +124,10 @@ class JellyfinGuid implements iGuid
             return;
         }
 
+
         foreach ($mapping as $key => $map) {
             if (false === is_array($map)) {
-                $this->logger->warning("Ignoring '{type}.{key}'. Value must be an object. '{given}' is given.", [
+                $this->logger->warning("Ignoring 'links.{key}'. Value must be an object. '{given}' is given.", [
                     'key' => $key,
                     'type' => $this->type,
                     'given' => get_debug_type($map),
@@ -131,10 +135,14 @@ class JellyfinGuid implements iGuid
                 continue;
             }
 
+            if ($this->type !== ag($map, 'type', 'not_set')) {
+                continue;
+            }
+
             $mapper = ag($map, 'map', null);
 
             if (false === is_array($mapper)) {
-                $this->logger->warning("Ignoring '{type}.{key}'. map value must be an object. '{given}' is given.", [
+                $this->logger->warning("Ignoring 'links.{key}'. map value must be an object. '{given}' is given.", [
                     'key' => $key,
                     'type' => $this->type,
                     'given' => get_debug_type($mapper),
@@ -146,7 +154,7 @@ class JellyfinGuid implements iGuid
             $to = ag($mapper, 'to', null);
 
             if (empty($from) || false === is_string($from)) {
-                $this->logger->warning("Ignoring '{type}.{key}'. map.from field is empty or not a string.", [
+                $this->logger->warning("Ignoring 'links.{key}'. map.from field is empty or not a string.", [
                     'type' => $this->type,
                     'key' => $key,
                 ]);
@@ -154,7 +162,7 @@ class JellyfinGuid implements iGuid
             }
 
             if (empty($to) || false === is_string($to)) {
-                $this->logger->warning("Ignoring '{type}.{key}'. map.to field is empty or not a string.", [
+                $this->logger->warning("Ignoring 'links.{key}'. map.to field is empty or not a string.", [
                     'type' => $this->type,
                     'key' => $key,
                 ]);
@@ -162,7 +170,7 @@ class JellyfinGuid implements iGuid
             }
 
             if (false === Guid::validateGUIDName($to)) {
-                $this->logger->warning("Ignoring '{type}.{key}'. map.to '{to}' field does not starts with 'guid_'.", [
+                $this->logger->warning("Ignoring 'links.{key}'. map.to '{to}' field does not starts with 'guid_'.", [
                     'type' => $this->type,
                     'key' => $key,
                     'to' => $to,
@@ -171,7 +179,7 @@ class JellyfinGuid implements iGuid
             }
 
             if (false === in_array($to, $supported)) {
-                $this->logger->warning("Ignoring '{type}.{key}'. map.to field is not a supported GUID type.", [
+                $this->logger->warning("Ignoring 'links.{key}'. map.to field is not a supported GUID type.", [
                     'type' => $this->type,
                     'key' => $key,
                     'to' => $to,

@@ -179,12 +179,12 @@ class JellyfinGuidTest extends TestCase
         try {
             $this->checkException(
                 closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, Yaml::dump(['jellyfin' => 'foo']));
+                    file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
                     $this->getClass()->parseGUIDFile($tmpFile);
                 },
                 reason: "Should throw an exception when there are no GUIDs mapping.",
                 exception: InvalidArgumentException::class,
-                exceptionMessage: 'jellyfin sub key is not an array'
+                exceptionMessage: 'links sub key is not an array'
             );
         } finally {
             if (file_exists($tmpFile)) {
@@ -195,13 +195,13 @@ class JellyfinGuidTest extends TestCase
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
             $this->handler->clear();
-            $yaml = ['jellyfin' => []];
+            $yaml = ['links' => []];
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->assertCount(0, $this->handler->getRecords(), "There should be no messages logged for empty list.");
             $this->handler->clear();
 
 
-            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'jellyfin.0', 'ff')));
+            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'Value must be an object.', true),
@@ -217,15 +217,15 @@ class JellyfinGuidTest extends TestCase
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
-            $yaml = ag_set(['jellyfin' => []], 'jellyfin.0.map', 'foo');
+            $yaml = ag_set(['links' => [0 => ['type' => 'jellyfin']]], 'links.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'map value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert map key is an object.'
             );
 
-            $yaml = ag_set($yaml, 'jellyfin.0', ['map' => []]);
+            $yaml = ag_set($yaml, 'links.0.map', []);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -233,7 +233,7 @@ class JellyfinGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'jellyfin.0.map.from', 'foo');
+            $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -241,7 +241,7 @@ class JellyfinGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'jellyfin.0.map.to', 'foobar');
+            $yaml = ag_set($yaml, 'links.0.map.to', 'foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -249,7 +249,7 @@ class JellyfinGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'jellyfin.0.map.to', 'guid_foobar');
+            $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -257,7 +257,7 @@ class JellyfinGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'jellyfin.0.map', [
+            $yaml = ag_set($yaml, 'links.0.map', [
                 'from' => 'tsdb',
                 'to' => Guid::GUID_IMDB,
             ]);
@@ -274,12 +274,9 @@ class JellyfinGuidTest extends TestCase
             );
             $this->handler->clear();
 
-            $yaml = ag_set($yaml, 'jellyfin.0', [
-                'legacy' => false,
-                'map' => [
-                    'from' => 'imthedb',
-                    'to' => 'guid_imdb',
-                ]
+            $yaml = ag_set($yaml, 'links.0.map', [
+                'from' => 'imthedb',
+                'to' => 'guid_imdb',
             ]);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $class = $this->getClass();

@@ -960,7 +960,8 @@ version: 0.0
 
 # The key must be in lower case. and it's an array.
 guids:
-    -   type: string                            # must be exactly string do not change it.
+    -   id: universally-unique-identifier       # the guid id
+        type: string                            # must be exactly string do not change it.
         name: guid_mydb                         # the name must start with guid_ with no spaces and lower case.
         description: "My custom database guid"  # description of the guid.
         # Validator object. to validate the guid.
@@ -974,37 +975,41 @@ guids:
                     - "1234567a"    # invalid guid examples.
                     - "a111234567"  # invalid guid examples.
 
-# Extend Plex client to support the new guid.
-plex:
-    -   legacy: true  # Tag the mapper as legacy GUID for mapping.
+links:
+    # mapping the com.plexapp.agents.foo guid from plex backends into the guid_mydb in WatchState.
+    # plex legacy guids starts with com.plexapp.agents., you must set options.legacy to true.
+    -   id: universally-unique-identifier       # the link id
+        type: plex    # the client to link the guid to. plex, jellyfin, emby.
+        options: # options used by the client.
+            legacy: true  # Tag the mapper as legacy GUID for mapping.
         # Required map object. to map the new guid to WatchState guid.
         map:
             from: com.plexapp.agents.foo # map.from this string.
             to: guid_mydb                # map.to this guid.
-        # (Optional) Replace helper. Sometimes you need to replace the guid identifier to another.
-        # The replacement happens before the mapping, so if you replace the guid identifier, you should also
-        # update the map.from to match the new identifier.
-        replace:
-            from: com.plexapp.agents.foobar://  # Replace from this string
-            to: com.plexapp.agents.foo://       # Into this string.
+            # (Optional) Replace helper. Sometimes you need to replace the guid identifier to another.
+            # The replacement happens before the mapping, so if you replace the guid identifier, you should also
+            # update the map.from to match the new identifier.
+            replace:
+                from: com.plexapp.agents.foobar://  # Replace from this string
+                to: com.plexapp.agents.foo://       # Into this string.
 
-# Extend Jellyfin client to support the new guid.
-jellyfin:
-    # Required map object. to map the new guid to WatchState guid.
-    -   map:
+    # mapping the foo guid from jellyfin backends into the guid_mydb in WatchState.
+    -   id: universally-unique-identifier # the link id
+        type: jellyfin # the client to link the guid to. plex, jellyfin, emby.
+        map:
             from: foo     # map.from this string.
             to: guid_mydb # map.to this guid.
 
-# Extend Emby client to support the new guid.
-emby:
-    # Required map object. to map the new guid to WatchState guid.
-    -   map:
+    # mapping the foo guid from emby backends into the guid_mydb in WatchState.
+    -   id: universally-unique-identifier       # the link id
+        type: emby    # the client to link the guid to. plex, jellyfin, emby.
+        map:
             from: foo     # map.from this string.
             to: guid_mydb # map.to this guid.
 ```
 
 As you can see from the config, it's roughly how we expected it to be. The `guids` array is where you define your new
-guids. The `plex`, `jellyfin` and `emby` objects are where you map the new guid to the WatchState guid.
+guids. the `links` array is where you map from backends guids to the new guid into the WatchState guid.
 
 Everything in this file should be in lower case. If error occurs, the tool will log a warning and ignore the guid,
 By default, we only show `ERROR` levels in log file, You can lower it by setting `WS_LOGGER_FILE_LEVEL` environment variable
