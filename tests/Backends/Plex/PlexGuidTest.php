@@ -206,10 +206,10 @@ class PlexGuidTest extends TestCase
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'Value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert link value is an object.'
             );
 
-            $yaml = ag_set($yaml, 'links.0.replace', 'foo');
+            $yaml = ag_set($yaml, 'links.0.options.replace', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -217,23 +217,23 @@ class PlexGuidTest extends TestCase
                 'Assert replace key is an object.'
             );
 
-            $yaml = ag_set($yaml, 'links.0.replace', []);
+            $yaml = ag_set($yaml, 'links.0.options.replace', []);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
-                $this->logged(Level::Warning, 'replace.from field is empty or not a string.', true),
+                $this->logged(Level::Warning, 'options.replace.from field is empty or not a string.', true),
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'links.0.replace.from', 'foo');
+            $yaml = ag_set($yaml, 'links.0.options.replace.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
-                $this->logged(Level::Warning, 'replacer.to field is not a string.', true),
+                $this->logged(Level::Warning, 'options.replace.to field is not a string.', true),
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'links.0.replace.to', 'bar');
+            $yaml = ag_set($yaml, 'links.0.options.replace.to', 'bar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertCount(0, $this->handler->getRecords(), "There should be no error messages logged.");
@@ -252,7 +252,7 @@ class PlexGuidTest extends TestCase
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'map value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert map key is an object.'
             );
 
             $yaml = ag_set($yaml, 'links.0.map', []);

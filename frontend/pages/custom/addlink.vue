@@ -7,159 +7,147 @@
           Add new client GUID link
         </span>
         <div class="is-hidden-mobile">
-          <span class="subtitle"></span>
+          <span class="subtitle">
+            This page allows you to add a new client GUID link. The client GUID link is used to link the client/backend
+            GUID to the <code>WatchState</code> GUID or your custom GUID.
+          </span>
         </div>
       </div>
 
       <div class="column is-12">
         <form id="page_form" @submit.prevent="addNewLink">
-          <div class="card">
-            <header class="card-header">
-              <p class="card-header-title is-unselectable is-justify-center">Add new client GUID link</p>
-            </header>
 
-            <div class="card-content">
+          <div class="field">
+            <label class="label is-unselectable" for="form_select_type">Client</label>
+            <div class="control has-icons-left">
+              <div class="select is-fullwidth">
+                <select id="form_select_type" v-model="form.type">
+                  <option value="" disabled>Select client type</option>
+                  <option v-for="client in supported" :value="client" :key="`client-${client}`">
+                    {{ ucFirst(client) }}
+                  </option>
+                </select>
+              </div>
+              <div class="icon is-left">
+                <i class="fas fa-server"></i>
+              </div>
+            </div>
+            <p class="help">
+              <span class="icon"><i class="fas fa-info"></i></span>
+              <span>Select which client this link association for.</span>
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label is-unselectable" for="form_map_from">Link client GUID</label>
+            <div class="control has-icons-left">
+              <input class="input" id="form_map_from" type="text" v-model="form.map.from">
+              <div class="icon is-small is-left"><i class="fas fa-a"></i></div>
+            </div>
+            <p class="help">
+              <span class="icon"><i class="fas fa-info"></i></span>
+              <span>Write the <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID
+                identifier.</span>
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label is-unselectable" for="form_map_to">To This GUID</label>
+            <div class="control has-icons-left">
+              <div class="select is-fullwidth">
+                <select id="form_map_to" v-model="form.map.to">
+                  <option value="" disabled>Select the associated GUID</option>
+                  <option v-for="(g) in guids" :value="g.guid" :key="`guid-${g.guid}`">
+                    {{ g.guid }}
+                  </option>
+                </select>
+              </div>
+              <div class="icon is-left">
+                <i class="fas fa-b"></i>
+              </div>
+            </div>
+            <p class="help">
+              <span class="icon"><i class="fas fa-info"></i></span>
+              <span>
+                Select which <code>WatchState</code> GUID should link with this
+                <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID identifier.
+              </span>
+            </p>
+          </div>
+
+          <div class="field" v-if="'plex' === form.type">
+            <label class="label" for="backend_import">Is this a Plex legacy agent GUID?</label>
+            <div class="control">
+              <input id="backend_import" type="checkbox" class="switch is-success" v-model="form.options.legacy">
+              <label for="backend_import">Enable</label>
+              <p class="help">Plex legacy agents starts with <code>com.plexapp.agents.</code></p>
+            </div>
+          </div>
+
+          <template v-if="'plex' === form.type && true === form.options.legacy">
+            <div class="field">
+              <label class="label is-clickable is-unselectable" @click="toggleReplace = !toggleReplace">
+                <span class="icon">
+                  <i class="fas" :class="{ 'fa-arrow-up': toggleReplace, 'fa-arrow-down': !toggleReplace }"></i>
+                </span>
+                Toggle Text replacement.
+              </label>
+              <p class="help">
+                <span class="icon"><i class="fas fa-info"></i></span>
+                <span>Text replacement only works for plex legacy agents.</span>
+              </p>
+            </div>
+
+            <template v-if="toggleReplace">
               <div class="field">
-                <label class="label is-unselectable" for="form_select_type">Client</label>
+                <label class="label is-unselectable" for="form_replace_from">Search for</label>
                 <div class="control has-icons-left">
-                  <div class="select is-fullwidth">
-                    <select id="form_select_type" v-model="form.type">
-                      <option value="" disabled>Select client type</option>
-                      <option v-for="client in supported" :value="client" :key="`client-${client}`">
-                        {{ ucFirst(client) }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="icon is-left">
-                    <i class="fas fa-server"></i>
-                  </div>
+                  <input class="input" id="form_replace_from" type="text" v-model="form.replace.from">
+                  <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
                 </div>
                 <p class="help">
                   <span class="icon"><i class="fas fa-info"></i></span>
-                  <span>Select which client this link association for.</span>
+                  <span>The text string to replace. Sometimes it's necessary to replace legacy agent GUID into
+                    something else. Leave it empty to ignore it.</span>
                 </p>
               </div>
-
               <div class="field">
-                <label class="label is-unselectable" for="form_map_from">Link client GUID</label>
+                <label class="label is-unselectable" for="form_replace_to">Replace with</label>
                 <div class="control has-icons-left">
-                  <input class="input" id="form_map_from" type="text" v-model="form.map.from">
-                  <div class="icon is-small is-left"><i class="fas fa-a"></i></div>
+                  <input class="input" id="form_replace_to" type="text" v-model="form.replace.to">
+                  <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
                 </div>
                 <p class="help">
                   <span class="icon"><i class="fas fa-info"></i></span>
-                  <span>Write the <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID
-                    identifier.</span>
+                  <span>The string replacement. If <code>replace.from</code> is empty this field will be
+                    ignored.</span>
                 </p>
               </div>
+            </template>
+          </template>
 
-              <div class="field">
-                <label class="label is-unselectable" for="form_map_to">To This GUID</label>
-                <div class="control has-icons-left">
-                  <div class="select is-fullwidth">
-                    <select id="form_map_to" v-model="form.map.to">
-                      <option value="" disabled>Select the associated GUID</option>
-                      <option v-for="(g) in guids" :value="g.guid" :key="`guid-${g.guid}`">
-                        {{ g.guid }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="icon is-left">
-                    <i class="fas fa-b"></i>
-                  </div>
-                </div>
-                <p class="help">
-                  <span class="icon"><i class="fas fa-info"></i></span>
-                  <span>
-                    Select which <code>WatchState</code> GUID should link with this
-                    <code>{{ form.type.length > 0 ? ucFirst(form.type) : 'client' }}</code> GUID identifier.
-                  </span>
-                </p>
-              </div>
-
-              <div class="field" v-if="'plex' === form.type">
-                <label class="label" for="backend_import">Is this a Plex legacy agent GUID?</label>
-                <div class="control">
-                  <input id="backend_import" type="checkbox" class="switch is-success" v-model="form.options.legacy">
-                  <label for="backend_import">Enable</label>
-                  <p class="help">Plex legacy agents starts with <code>com.plexapp.agents.</code></p>
-                </div>
-              </div>
-
-              <template v-if="'plex' === form.type && true === form.options.legacy">
-                <div class="field">
-                  <label class="label is-clickable is-unselectable" @click="toggleReplace = !toggleReplace">
-                    <span class="icon">
-                      <i class="fas" :class="{ 'fa-arrow-up': toggleReplace, 'fa-arrow-down': !toggleReplace }"></i>
-                    </span>
-                    Toggle Text replacement.
-                  </label>
-                  <p class="help">
-                    <span class="icon"><i class="fas fa-info"></i></span>
-                    <span>Text replacement only works for plex legacy agents.</span>
-                  </p>
-                </div>
-
-                <template v-if="toggleReplace">
-                  <div class="field">
-                    <label class="label is-unselectable" for="form_replace_from">Search for</label>
-                    <div class="control has-icons-left">
-                      <input class="input" id="form_replace_from" type="text" v-model="form.replace.from">
-                      <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
-                    </div>
-                    <p class="help">
-                      <span class="icon"><i class="fas fa-info"></i></span>
-                      <span>The text string to replace. Sometimes it's necessary to replace legacy agent GUID into
-                        something else. Leave it empty to ignore it.</span>
-                    </p>
-                  </div>
-                  <div class="field">
-                    <label class="label is-unselectable" for="form_replace_to">Replace with</label>
-                    <div class="control has-icons-left">
-                      <input class="input" id="form_replace_to" type="text" v-model="form.replace.to">
-                      <div class="icon is-small is-left"><i class="fas fa-passport"></i></div>
-                    </div>
-                    <p class="help">
-                      <span class="icon"><i class="fas fa-info"></i></span>
-                      <span>The string replacement. If <code>replace.from</code> is empty this field will be
-                        ignored.</span>
-                    </p>
-                  </div>
-                </template>
-              </template>
-
-              <div class="card-footer">
-                <div class="card-footer-item">
-                  <button class="button is-fullwidth is-primary" type="submit"
-                          :disabled="false === validForm || isSaving"
-                          :class="{'is-loading':isSaving}">
-                    <span class="icon-text">
-                      <span class="icon"><i class="fas fa-save"></i></span>
-                      <span>Save</span>
-                    </span>
-                  </button>
-                </div>
-                <div class="card-footer-item">
-                  <button class="button is-fullwidth is-danger" type="button" @click="navigateTo('/custom')">
-                    <span class="icon-text">
-                      <span class="icon"><i class="fas fa-cancel"></i></span>
-                      <span>Cancel</span>
-                    </span>
-                  </button>
-                </div>
-              </div>
+          <div class="field is-grouped">
+            <div class="control is-expanded">
+              <button class="button is-fullwidth is-primary" type="submit"
+                      :disabled="false === validForm || isSaving"
+                      :class="{'is-loading':isSaving}">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-save"></i></span>
+                  <span>Save</span>
+                </span>
+              </button>
+            </div>
+            <div class="control is-expanded">
+              <button class="button is-fullwidth is-danger" type="button" @click="navigateTo('/custom')">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-cancel"></i></span>
+                  <span>Cancel</span>
+                </span>
+              </button>
             </div>
           </div>
         </form>
       </div>
-
-      <!--      <div class="column is-12">-->
-      <!--        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"-->
-      <!--                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">-->
-      <!--          <ul>-->
-      <!--          </ul>-->
-      <!--        </Message>-->
-      <!--      </div>-->
     </div>
   </div>
 </template>
@@ -197,15 +185,15 @@ const toggleReplace = ref(false)
 onMounted(async () => {
   try {
 
-    /** @type {Array<Promise>} */
+    /** @type {Array<Promise<Response>>} */
     const responses = await Promise.all([
       request('/system/guids'),
       request('/system/supported'),
       request('/system/guids/custom'),
     ])
 
-    guids.value = await parse_api_response(responses[0])
-    supported.value = await parse_api_response(responses[1])
+    guids.value = await parse_api_response(responses[0]) ?? []
+    supported.value = await parse_api_response(responses[1]) ?? []
     links.value = (await parse_api_response(responses[2])).links ?? []
 
   } catch (e) {
@@ -288,13 +276,5 @@ const addNewLink = async () => {
   }
 }
 
-const validForm = computed(() => {
-  const data = form.value
-
-  if (!data.map.to || !data.map.from || !data.type) {
-    return false
-  }
-
-  return true
-})
+const validForm = computed(() => !(!form.value.map.to || !form.value.map.from || !form.value.type))
 </script>

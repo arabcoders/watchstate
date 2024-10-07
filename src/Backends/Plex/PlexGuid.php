@@ -174,10 +174,10 @@ final class PlexGuid implements iGuid
                 continue;
             }
 
-            if (null !== ($replace = ag($map, 'replace', null))) {
+            if (null !== ($replace = ag($map, 'options.replace', null))) {
                 if (false === is_array($replace)) {
                     $this->logger->warning(
-                        "Ignoring 'links.{key}'. replace value must be an object. '{given}' is given.",
+                        "Ignoring 'links.{key}'. options.replace value must be an object. '{given}' is given.",
                         [
                             'key' => $key,
                             'given' => get_debug_type($replace),
@@ -190,14 +190,17 @@ final class PlexGuid implements iGuid
                 $to = ag($replace, 'to', null);
 
                 if (empty($from) || false === is_string($from)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. replace.from field is empty or not a string.", [
-                        'key' => $key,
-                    ]);
+                    $this->logger->warning(
+                        "Ignoring 'links.{key}'. options.replace.from field is empty or not a string.",
+                        [
+                            'key' => $key,
+                        ]
+                    );
                     continue;
                 }
 
                 if (false === is_string($to)) {
-                    $this->logger->warning("Ignoring 'links.{key}'. replacer.to field is not a string.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. options.replace.to field is not a string.", [
                         'key' => $key,
                     ]);
                     continue;

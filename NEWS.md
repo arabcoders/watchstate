@@ -1,5 +1,17 @@
 # Old Updates
 
+### 2024-08-19
+
+We have migrated the `state:push` task into the new events system, as such the old task `state:push` is now gone.
+To enable the new event handler for push events, use the new environment variable `WS_PUSH_ENABLED` and set it to `true`.
+Right now, it's disabled by default. However, for people who had the old task enabled, it will reuse that setting.
+
+Keep in mind, the new event handler is more efficient and will only push data when there is a change in the play state. And it's much faster
+than the old task. This event handler will push data within a minute of the change.
+
+PS: Please enable the task by setting its new environment variable `WS_PUSH_ENABLED` to `true`. The old `WS_CRON_PUSH` is now gone.
+and will be removed in the future releases.
+
 ### 2024-08-18
 
 We have started migrating the old events system to a new one, so far we have migrated the `progress` and `requests` to it. As such,

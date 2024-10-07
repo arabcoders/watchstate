@@ -99,10 +99,18 @@
                 <span>Log Suppression</span>
               </NuxtLink>
 
+              <NuxtLink class="navbar-item" to="/custom" @click.native="(e) => changeRoute(e)">
+                <span class="icon"><i class="fas fa-map"></i></span>
+                <span>Custom GUIDs</span>
+              </NuxtLink>
+
+              <hr class="navbar-divider">
+
               <NuxtLink class="navbar-item" to="/backup" @click.native="(e) => changeRoute(e)">
                 <span class="icon"><i class="fas fa-sd-card"></i></span>
                 <span>Backups</span>
               </NuxtLink>
+
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/reset" @click.native="(e) => changeRoute(e)">
@@ -341,7 +349,6 @@ import 'assets/css/all.css'
 import {useStorage} from '@vueuse/core'
 import request from '~/utils/request.js'
 import Markdown from '~/components/Markdown.vue'
-import {dEvent} from '~/utils/index.js'
 import TaskRunnerStatus from "~/components/TaskRunnerStatus.vue";
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())

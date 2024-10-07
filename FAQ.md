@@ -952,11 +952,12 @@ Note: the tip about adding the group_add came from the user `binarypancakes` in 
 
 ### Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
 
-You can extend the parser by creating new file at `/config/config/guid.yaml` with the following content.
+By going to `More > Custom GUIDs` in the WebUI, you can add custom GUIDs to the parser. We know not all people,
+like using GUI, as such You can extend the parser by creating new file at `/config/config/guid.yaml` with the following content.
 
 ```yaml
-# The version of the guid file. right now in beta so it's 0.0. not required to be present.
-version: 0.0
+# (Optional) The version of the guid file. If omitted, it will default to the latest version.
+version: 1.0
 
 # The key must be in lower case. and it's an array.
 guids:
@@ -982,10 +983,6 @@ links:
         type: plex    # the client to link the guid to. plex, jellyfin, emby.
         options: # options used by the client.
             legacy: true  # Tag the mapper as legacy GUID for mapping.
-        # Required map object. to map the new guid to WatchState guid.
-        map:
-            from: com.plexapp.agents.foo # map.from this string.
-            to: guid_mydb                # map.to this guid.
             # (Optional) Replace helper. Sometimes you need to replace the guid identifier to another.
             # The replacement happens before the mapping, so if you replace the guid identifier, you should also
             # update the map.from to match the new identifier.
@@ -993,6 +990,10 @@ links:
             replace:
                 from: com.plexapp.agents.foobar://  # Replace from this string
                 to: com.plexapp.agents.foo://       # Into this string.
+        # Required map object. to map the new guid to WatchState guid.
+        map:
+            from: com.plexapp.agents.foo # map.from this string.
+            to: guid_mydb                # map.to this guid.
 
     # mapping the foo guid from jellyfin backends into the guid_mydb in WatchState.
     -   id: universally-unique-identifier # the link id. example, 1ef83f5d-1686-60f0-96d6-3eb5c18f2aed
@@ -1010,11 +1011,11 @@ links:
 ```
 
 As you can see from the config, it's roughly how we expected it to be. The `guids` array is where you define your new
-guids. the `links` array is where you map from backends guids to the new guid into the WatchState guid.
+custom GUIDs. the `links` array is where you map from client/backends GUIDs to the custom GUID in `WatchState`.
 
 Everything in this file should be in lower case. If error occurs, the tool will log a warning and ignore the guid,
 By default, we only show `ERROR` levels in log file, You can lower it by setting `WS_LOGGER_FILE_LEVEL` environment variable
 to `WARNING`.
 
-If you added or removed a guid from the `guid.yaml` file, you should run `system:reindex --force-reindex` command to update the
+If you added or removed a guid from the `guid.yaml` file, you should run `system:index --force-reindex` command to update the
 database indexes with the new guids.

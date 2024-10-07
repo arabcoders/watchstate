@@ -9,6 +9,13 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-10-07
+
+We have added a WebUI page for Custom GUIDs and stabilized on `v1.0` for the `guid.yaml` file spec. We strongly recommend
+to use the `WebUI` to manage the GUIDs, as it's much easier to use than editing the `guid.yaml` file directly. and both the
+`WebUI` and `API` have safeguards to prevent you from breaking the parser. For more information please check out the associated
+FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones).
+
 ### 2024-09-14
 
 We have recently added support for extending WatchState with more GUIDs, as of now, the support for it is done via
@@ -17,18 +24,6 @@ FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-
 
 The mapping should work for all officially supported clients. If you have a client that is not supported, you have to manually add support for that client,
 or request the maintainer to add support for it.
-
-### 2024-08-19
-
-We have migrated the `state:push` task into the new events system, as such the old task `state:push` is now gone.
-To enable the new event handler for push events, use the new environment variable `WS_PUSH_ENABLED` and set it to `true`.
-Right now, it's disabled by default. However, for people who had the old task enabled, it will reuse that setting.
-
-Keep in mind, the new event handler is more efficient and will only push data when there is a change in the play state. And it's much faster
-than the old task. This event handler will push data within a minute of the change.
-
-PS: Please enable the task by setting its new environment variable `WS_PUSH_ENABLED` to `true`. The old `WS_CRON_PUSH` is now gone.
-and will be removed in the future releases.
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.
