@@ -307,7 +307,9 @@ onMounted(async () => {
     allEnabled.value = false
   }
 
-  if (Boolean(route.query?.run ?? '0') || '' === command.value) {
+  const run = route.query?.run ? Boolean(route.query.run) : false
+
+  if (run || '' === command.value) {
     await RunCommand()
   }
 })

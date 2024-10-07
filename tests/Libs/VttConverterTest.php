@@ -49,9 +49,7 @@ class VttConverterTest extends TestCase
 
                 VTT;
 
-                $data = VttConverter::parse($text);
-                dump($data);
-                return $data;
+                return VttConverter::parse($text);
             },
             reason: 'Invalid VTT file',
             exception: \InvalidArgumentException::class,

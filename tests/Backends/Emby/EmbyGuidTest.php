@@ -179,12 +179,12 @@ class EmbyGuidTest extends TestCase
         try {
             $this->checkException(
                 closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, Yaml::dump(['emby' => 'foo']));
+                    file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
                     $this->getClass()->parseGUIDFile($tmpFile);
                 },
                 reason: "Should throw an exception when there are no GUIDs mapping.",
                 exception: InvalidArgumentException::class,
-                exceptionMessage: 'emby sub key is not an array'
+                exceptionMessage: 'links sub key is not an array'
             );
         } finally {
             if (file_exists($tmpFile)) {
@@ -201,11 +201,11 @@ class EmbyGuidTest extends TestCase
             $this->handler->clear();
 
 
-            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'emby.0', 'ff')));
+            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'Value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert links.0 key is an object.'
             );
         } finally {
             if (file_exists($tmpFile)) {
@@ -217,15 +217,15 @@ class EmbyGuidTest extends TestCase
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
-            $yaml = ag_set(['emby' => []], 'emby.0.map', 'foo');
+            $yaml = ag_set(['links' => [['type' => 'emby']]], 'links.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'map value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert map key is an object.'
             );
 
-            $yaml = ag_set($yaml, 'emby.0', ['map' => []]);
+            $yaml = ag_set($yaml, 'links.0.map', []);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -233,7 +233,7 @@ class EmbyGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'emby.0.map.from', 'foo');
+            $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -241,7 +241,7 @@ class EmbyGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'emby.0.map.to', 'foobar');
+            $yaml = ag_set($yaml, 'links.0.map.to', 'foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -249,7 +249,7 @@ class EmbyGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'emby.0.map.to', 'guid_foobar');
+            $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -257,7 +257,7 @@ class EmbyGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'emby.0.map', [
+            $yaml = ag_set($yaml, 'links.0.map', [
                 'from' => 'tsdb',
                 'to' => Guid::GUID_IMDB,
             ]);
@@ -274,16 +274,15 @@ class EmbyGuidTest extends TestCase
             );
             $this->handler->clear();
 
-            $yaml = ag_set($yaml, 'emby.0', [
-                'legacy' => false,
-                'map' => [
-                    'from' => 'imthedb',
-                    'to' => 'guid_imdb',
-                ]
+            $yaml = ag_set($yaml, 'links.0.map', [
+                'from' => 'imthedb',
+                'to' => 'guid_imdb',
             ]);
+
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $class = $this->getClass();
             $class->parseGUIDFile($tmpFile);
+
             $this->assertArrayHasKey(
                 'imthedb',
                 ag($class->getConfig(), 'guidMapper', []),

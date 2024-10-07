@@ -108,7 +108,7 @@ class PlexGuidTest extends TestCase
         try {
             $this->checkException(
                 closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, 'version: 2.0');
+                    file_put_contents($tmpFile, 'version: 99.0');
                     $this->getClass()->parseGUIDFile($tmpFile);
                 },
                 reason: "Failed to throw exception when the GUID file version is not supported.",
@@ -179,12 +179,12 @@ class PlexGuidTest extends TestCase
         try {
             $this->checkException(
                 closure: function () use ($tmpFile) {
-                    file_put_contents($tmpFile, Yaml::dump(['plex' => 'foo']));
+                    file_put_contents($tmpFile, Yaml::dump(['links' => 'foo']));
                     $this->getClass()->parseGUIDFile($tmpFile);
                 },
                 reason: "Should throw an exception when there are no GUIDs mapping.",
                 exception: InvalidArgumentException::class,
-                exceptionMessage: 'plex sub key is not an array'
+                exceptionMessage: 'links sub key is not an array'
             );
         } finally {
             if (file_exists($tmpFile)) {
@@ -195,21 +195,21 @@ class PlexGuidTest extends TestCase
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
             $this->handler->clear();
-            $yaml = ['plex' => [[]]];
+            $yaml = ['links' => [['type' => 'plex']]];
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertCount(0, $this->handler->getRecords(), "There should be no messages logged for empty list.");
             $this->handler->clear();
 
 
-            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'plex.0', 'ff')));
+            file_put_contents($tmpFile, Yaml::dump(ag_set($yaml, 'links.0', 'ff')));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'Value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert link value is an object.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.replace', 'foo');
+            $yaml = ag_set($yaml, 'links.0.options.replace', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -217,23 +217,23 @@ class PlexGuidTest extends TestCase
                 'Assert replace key is an object.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0', ['replace' => []]);
+            $yaml = ag_set($yaml, 'links.0.options.replace', []);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
-                $this->logged(Level::Warning, 'replace.from field is empty or not a string.', true),
+                $this->logged(Level::Warning, 'options.replace.from field is empty or not a string.', true),
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.replace.from', 'foo');
+            $yaml = ag_set($yaml, 'links.0.options.replace.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
-                $this->logged(Level::Warning, 'replacer.to field is not a string.', true),
+                $this->logged(Level::Warning, 'options.replace.to field is not a string.', true),
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.replace.to', 'bar');
+            $yaml = ag_set($yaml, 'links.0.options.replace.to', 'bar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertCount(0, $this->handler->getRecords(), "There should be no error messages logged.");
@@ -247,15 +247,15 @@ class PlexGuidTest extends TestCase
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'guid');
         try {
-            $yaml = ag_set(['plex' => []], 'plex.0.map', 'foo');
+            $yaml = ag_set(['links' => [['type' => 'plex']]], 'links.0.map', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
                 $this->logged(Level::Warning, 'map value must be an object.', true),
-                'Assert replace key is an object.'
+                'Assert map key is an object.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0', ['map' => []]);
+            $yaml = ag_set($yaml, 'links.0.map', []);
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -263,7 +263,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map.from', 'foo');
+            $yaml = ag_set($yaml, 'links.0.map.from', 'foo');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -271,7 +271,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map.to', 'foobar');
+            $yaml = ag_set($yaml, 'links.0.map.to', 'foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -279,7 +279,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map.to', 'guid_foobar');
+            $yaml = ag_set($yaml, 'links.0.map.to', 'guid_foobar');
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
             $this->assertTrue(
@@ -287,7 +287,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map', [
+            $yaml = ag_set($yaml, 'links.0.map', [
                 'from' => 'com.plexapp.agents.imdb',
                 'to' => 'guid_imdb',
             ]);
@@ -298,7 +298,7 @@ class PlexGuidTest extends TestCase
                 'Assert to field is a string.'
             );
 
-            $yaml = ag_set($yaml, 'plex.0.map', [
+            $yaml = ag_set($yaml, 'links.0.map', [
                 'from' => 'com.plexapp.agents.ccdb',
                 'to' => 'guid_imdb',
             ]);
@@ -315,8 +315,11 @@ class PlexGuidTest extends TestCase
             );
             $this->handler->clear();
 
-            $yaml = ag_set($yaml, 'plex.0', [
-                'legacy' => false,
+            $yaml = ag_set($yaml, 'links.0', [
+                'type' => 'plex',
+                'options' => [
+                    'legacy' => false,
+                ],
                 'map' => [
                     'from' => 'com.plexapp.agents.imthedb',
                     'to' => 'guid_imdb',

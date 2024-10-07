@@ -86,6 +86,10 @@ final class IndexCommand extends Command
             'force-reindex' => (bool)$input->getOption('force-reindex'),
         ]);
 
+        if ($input->getOption('force-reindex')) {
+            $output->writeln('<info>Indexes have been recreated successfully.</info>');
+        }
+
         return self::SUCCESS;
     }
 }

@@ -147,10 +147,10 @@ final class PlexGuid implements iGuid
             ]));
         }
 
-        $mapping = ag($yaml, 'plex', []);
+        $mapping = ag($yaml, 'links', []);
 
         if (false === is_array($mapping)) {
-            throw new InvalidArgumentException(r("The GUIDs file '{file}' plex sub key is not an array.", [
+            throw new InvalidArgumentException(r("The GUIDs file '{file}' links sub key is not an array.", [
                 'file' => $file,
             ]));
         }
@@ -159,19 +159,25 @@ final class PlexGuid implements iGuid
             return;
         }
 
+        $type = strtolower(PlexClient::CLIENT_NAME);
+
         foreach ($mapping as $key => $map) {
             if (false === is_array($map)) {
-                $this->logger->warning("Ignoring 'plex.{key}'. Value must be an object. '{given}' is given.", [
+                $this->logger->warning("Ignoring 'links.{key}'. Value must be an object. '{given}' is given.", [
                     'key' => $key,
                     'given' => get_debug_type($map),
                 ]);
                 continue;
             }
 
-            if (null !== ($replace = ag($map, 'replace', null))) {
+            if ($type !== ag($map, 'type', 'not_set')) {
+                continue;
+            }
+
+            if (null !== ($replace = ag($map, 'options.replace', null))) {
                 if (false === is_array($replace)) {
                     $this->logger->warning(
-                        "Ignoring 'plex.{key}'. replace value must be an object. '{given}' is given.",
+                        "Ignoring 'links.{key}'. options.replace value must be an object. '{given}' is given.",
                         [
                             'key' => $key,
                             'given' => get_debug_type($replace),
@@ -184,14 +190,17 @@ final class PlexGuid implements iGuid
                 $to = ag($replace, 'to', null);
 
                 if (empty($from) || false === is_string($from)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. replace.from field is empty or not a string.", [
-                        'key' => $key,
-                    ]);
+                    $this->logger->warning(
+                        "Ignoring 'links.{key}'. options.replace.from field is empty or not a string.",
+                        [
+                            'key' => $key,
+                        ]
+                    );
                     continue;
                 }
 
                 if (false === is_string($to)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. replacer.to field is not a string.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. options.replace.to field is not a string.", [
                         'key' => $key,
                     ]);
                     continue;
@@ -202,7 +211,7 @@ final class PlexGuid implements iGuid
 
             if (null !== ($mapper = ag($map, 'map', null))) {
                 if (false === is_array($mapper)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. map value must be an object. '{given}' is given.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. map value must be an object. '{given}' is given.", [
                         'key' => $key,
                         'given' => get_debug_type($mapper),
                     ]);
@@ -213,47 +222,51 @@ final class PlexGuid implements iGuid
                 $to = ag($mapper, 'to', null);
 
                 if (empty($from) || false === is_string($from)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. map.from field is empty or not a string.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. map.from field is empty or not a string.", [
                         'key' => $key,
                     ]);
                     continue;
                 }
 
                 if (empty($to) || false === is_string($to)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. map.to field is empty or not a string.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. map.to field is empty or not a string.", [
                         'key' => $key,
                     ]);
                     continue;
                 }
 
                 if (false === str_starts_with($to, 'guid_')) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. map.to '{to}' field does not starts with 'guid_'.", [
-                        'key' => $key,
-                        'to' => $to,
-                    ]);
+                    $this->logger->warning(
+                        "Ignoring 'links.{key}'. map.to '{to}' field does not starts with 'guid_'.",
+                        [
+                            'key' => $key,
+                            'to' => $to,
+                        ]
+                    );
                     continue;
                 }
 
                 if (false === in_array($to, $supported)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. map.to field is not a supported GUID type.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. map.to field is not a supported GUID type.", [
                         'key' => $key,
                         'to' => $to,
                     ]);
                     continue;
                 }
 
-                if (false === (bool)ag($map, 'legacy', true)) {
+                if (false === (bool)ag($map, 'options.legacy', true)) {
                     $this->guidMapper[$from] = $to;
                     continue;
                 }
 
                 if (true === in_array($from, $this->guidLegacy)) {
-                    $this->logger->warning("Ignoring 'plex.{key}'. map.from already exists.", [
+                    $this->logger->warning("Ignoring 'links.{key}'. map.from already exists.", [
                         'key' => $key,
                         'from' => $from,
                     ]);
                     continue;
                 }
+
                 $this->guidLegacy[] = $from;
                 $agentGuid = explode('://', after($from, 'agents.'));
                 $this->guidMapper[$agentGuid[0]] = $to;

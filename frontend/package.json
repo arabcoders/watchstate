@@ -9,6 +9,7 @@
         "preview": "nuxt preview",
         "postinstall": "nuxt prepare"
     },
+    "web-types": "./web-types.json",
     "dependencies": {
         "@vueuse/core": "^10.9.0",
         "@vueuse/nuxt": "^10.9.0",
