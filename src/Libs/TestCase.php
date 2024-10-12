@@ -13,27 +13,6 @@ class TestCase extends \PHPUnit\Framework\TestCase
     protected TestHandler|null $handler = null;
 
     /**
-     * Prints logs to the standard output.
-     *
-     * @return void
-     */
-    protected function printLogs(): void
-    {
-        if (null === $this->handler) {
-            return;
-        }
-
-        $d = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[0];
-        $getScript = ag($d, 'file');
-        $line = ag($d, 'line');
-
-        dump(
-            $getScript . ':' . $line,
-            array_map(fn($v) => $v['formatted'] ?? $v['message'], $this->handler->getRecords())
-        );
-    }
-
-    /**
      * Checks if the given closure throws an exception.
      *
      * @param Closure $closure

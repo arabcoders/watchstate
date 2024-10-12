@@ -376,18 +376,4 @@ final class Uri implements UriInterface, Stringable
             $str
         );
     }
-
-    public function getInfo(): array
-    {
-        return [
-            'scheme' => $this->scheme,
-            'userInfo' => $this->userInfo,
-            'host' => $this->host,
-            'port' => $this->port,
-            'path' => $this->path,
-            'query' => $this->query,
-            'fragment' => $this->fragment,
-            'basePath' => $this->basePath
-        ];
-    }
 }
