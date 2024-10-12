@@ -122,7 +122,9 @@ final class Add
 
     private function fromRequest(string $type, iRequest $request, iClient $client): array
     {
-        $data = DataUtil::fromArray($request->getParsedBody());
+        $data = DataUtil::fromArray(
+            array_map(fn($v) => false === is_string($v) ? $v : trim($v), $request->getParsedBody())
+        );
 
         $config = [
             'type' => $type,

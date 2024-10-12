@@ -172,7 +172,9 @@ final class Update
 
     private function fromRequest(array $config, iRequest $request, iClient $client): array
     {
-        $data = DataUtil::fromArray($request->getParsedBody());
+        $data = DataUtil::fromArray(
+            array_map(fn($v) => false === is_string($v) ? $v : trim($v), $request->getParsedBody())
+        );
 
         $newData = [
             'url' => $data->get('url'),

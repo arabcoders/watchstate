@@ -88,7 +88,13 @@ final class Uri implements UriInterface, Stringable
 
     public function __toString(): string
     {
-        return self::createUriString($this->scheme, $this->getAuthority(), $this->path, $this->query, $this->fragment);
+        return self::createUriString(
+            $this->getScheme(),
+            $this->getAuthority(),
+            $this->getPath(),
+            $this->getQuery(),
+            $this->getFragment()
+        );
     }
 
     public function getScheme(): string
