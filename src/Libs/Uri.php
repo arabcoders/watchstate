@@ -88,7 +88,13 @@ final class Uri implements UriInterface, Stringable
 
     public function __toString(): string
     {
-        return self::createUriString($this->scheme, $this->getAuthority(), $this->path, $this->query, $this->fragment);
+        return self::createUriString(
+            $this->getScheme(),
+            $this->getAuthority(),
+            $this->getPath(),
+            $this->getQuery(),
+            $this->getFragment()
+        );
     }
 
     public function getScheme(): string
@@ -369,5 +375,19 @@ final class Uri implements UriInterface, Stringable
             fn(array $match): string => rawurlencode($match[0]),
             $str
         );
+    }
+
+    public function getInfo(): array
+    {
+        return [
+            'scheme' => $this->scheme,
+            'userInfo' => $this->userInfo,
+            'host' => $this->host,
+            'port' => $this->port,
+            'path' => $this->path,
+            'query' => $this->query,
+            'fragment' => $this->fragment,
+            'basePath' => $this->basePath
+        ];
     }
 }
