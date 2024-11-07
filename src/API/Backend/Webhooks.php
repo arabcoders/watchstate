@@ -207,7 +207,7 @@ final class Webhooks
         $this->write(
             $request,
             Level::Info,
-            "Queued {tainted} request '{backend}: {event}' {item.type} '{item.title}' - 'state: {state}'. request_id '{req}'.",
+            "Queued {tainted} request '{backend}: {event}' {item.type} '{item.title}' - 'state: {state}, progress: {has_progress}'. request_id '{req}'.",
             [
                 'backend' => $entity->via,
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),

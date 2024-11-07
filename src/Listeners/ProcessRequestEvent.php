@@ -42,7 +42,7 @@ final readonly class ProcessRequestEvent
         }
 
         $message = r(
-            "Processing {tainted} request '{backend}: {event}' {title} - 'state: {played}, progress: {has_progress}'. request_id: '{req}'.",
+            "Processing {tainted} request '{backend}: {event}' {title} - 'state: {played}, progress: {has_progress}'. request_id '{req}'.",
             [
                 'backend' => $entity->via,
                 'req' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
