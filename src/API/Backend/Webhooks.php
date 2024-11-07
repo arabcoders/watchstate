@@ -207,13 +207,14 @@ final class Webhooks
         $this->write(
             $request,
             Level::Info,
-            "Queued '{backend}: {event}' {item.type} '{item.title}' - 'state: {state}'. request_id '{req}'.",
+            "Queued {tainted} request '{backend}: {event}' {item.type} '{item.title}' - 'state: {state}'. request_id '{req}'.",
             [
                 'backend' => $entity->via,
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
                 'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
                 'req' => ag($request->getServerParams(), 'X_REQUEST_ID', '-'),
                 'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
                 'item' => [
                     'title' => $entity->getName(),
                     'type' => $entity->type,

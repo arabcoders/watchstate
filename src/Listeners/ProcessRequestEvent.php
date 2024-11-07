@@ -42,7 +42,7 @@ final readonly class ProcessRequestEvent
         }
 
         $message = r(
-            "Processing {tainted} request '{backend}: {event}' {title} - 'state: {played}'. request_id: '{req}'.",
+            "Processing {tainted} request '{backend}: {event}' {title} - 'state: {played}, progress: {has_progress}'. request_id: '{req}'.",
             [
                 'backend' => $entity->via,
                 'req' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
@@ -50,6 +50,7 @@ final readonly class ProcessRequestEvent
                 'title' => $entity->getName(),
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
                 'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
                 'lastSync' => $lastSync,
             ]
         );
