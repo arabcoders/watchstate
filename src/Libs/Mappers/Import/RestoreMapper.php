@@ -55,11 +55,29 @@ final class RestoreMapper implements iImport
     /**
      * @inheritdoc
      */
+    public function getOptions(array $options = []): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function setOptions(array $options = []): iImport
     {
         $this->options = $options;
 
         return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withOptions(array $options = []): iImport
+    {
+        $instance = clone $this;
+        $instance->options = $options;
+        return $instance;
     }
 
     /**

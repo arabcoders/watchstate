@@ -111,15 +111,15 @@ final readonly class ProcessProgressEvent
             try {
                 $opts = ag($backend, 'options', []);
 
-                if (ag($options, 'ignore-date')) {
+                if (ag($options, Options::IGNORE_DATE)) {
                     $opts[Options::IGNORE_DATE] = true;
                 }
 
-                if (ag($options, 'dry-run')) {
+                if (ag($options, Options::DRY_RUN)) {
                     $opts[Options::DRY_RUN] = true;
                 }
 
-                if (ag($options, 'trace')) {
+                if (ag($options, Options::DEBUG_TRACE)) {
                     $opts[Options::DEBUG_TRACE] = true;
                 }
 
@@ -180,7 +180,7 @@ final readonly class ProcessProgressEvent
 
         $progress = formatDuration($item->getPlayProgress());
 
-        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' watch progress '{progress}' event.", [
+        $writer(Level::Notice, "Processing '{id}' - '{via}: {title}' watch progress '{progress}' event.", [
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),

@@ -25,7 +25,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
-abstract class AbstractTestsMapper extends TestCase
+abstract class MapperAbstract extends TestCase
 {
     protected array $testMovie = [];
     protected array $testEpisode = [];
@@ -568,5 +568,50 @@ abstract class AbstractTestsMapper extends TestCase
             $this->mapper->getObjectsCount(),
             "getObjectsCount() should return 0 as as the episode number is 0 and shouldn't be processed."
         );
+    }
+
+    public function test_mapper_setOptions()
+    {
+        $mapper = clone $this->mapper;
+        $mapper->setOptions([]);
+        $this->assertEmpty(
+            $mapper->getOptions(),
+            'getOptions() should return an empty array as we have not set any options yet.'
+        );
+
+        $mapper->setOptions(['test' => 'test']);
+
+        $this->assertSame(['test' => 'test'],
+            $mapper->getOptions(),
+            'getOptions() should return the options we have set.');
+    }
+
+    public function test_mapper_withOptions()
+    {
+        $mapper = clone $this->mapper;
+        $mapper->setOptions([]);
+
+        $this->assertNotSame(
+            spl_object_hash($mapper),
+            spl_object_hash($mapper->withOptions(['test' => 'test'])),
+            'withOptions() Any mutation should return a new object. and the spl_object_hash() should not be the same.'
+        );
+
+        $this->assertNotSame(
+            spl_object_id($mapper),
+            spl_object_hash($mapper->withOptions(['test' => 'test'])),
+            'withOptions() Any mutation should return a new object. and the spl_object_id() should not be the same.'
+        );
+
+        $this->assertEmpty(
+            $mapper->getOptions(),
+            'getOptions() should return an empty array as we have not set any options yet.'
+        );
+
+        $mapper = $mapper->withOptions(['test' => 'test']);
+
+        $this->assertSame(['test' => 'test'],
+            $mapper->getOptions(),
+            'getOptions() should return the options we have set.');
     }
 }

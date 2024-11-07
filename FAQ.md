@@ -436,6 +436,10 @@ $ docker exec -ti watchstate console system:env --list
 | HTTP_PORT     | string  | Change the `HTTP` listen port.       | `"8080"` |
 | FPM_PORT      | string  | Change the `PHP-FPM` listen port.    | `"9000"` |
 
+> [!NOTE]
+> You need to restart the container after changing these environment variables. those variables are not managed by the
+> WatchState tool, they are managed by the container itself.
+
 ---
 
 ### How to add webhooks?

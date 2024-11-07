@@ -20,7 +20,8 @@ final class Index
     public const array BLACK_LIST = [
         'token',
         'webhook.token',
-        'options.' . Options::ADMIN_TOKEN
+        'options.' . Options::ADMIN_TOKEN,
+        'options.' . Options::PLEX_USER_PIN,
     ];
 
     #[Get(self::URL . '[/]', name: 'backends')]

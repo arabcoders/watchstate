@@ -35,44 +35,52 @@ final readonly class ProcessRequestEvent
     {
         $e->stopPropagation();
 
-        $entity = Container::get(iState::class)::fromArray($e->getData());
+        $entity = Container::get(iState::class)::fromArray($e->getData())
+            ->setIsTainted((bool)ag($e->getOptions(), 'tainted', false));
 
         if (null !== ($lastSync = ag(Config::get("servers.{$entity->via}", []), 'import.lastSync'))) {
             $lastSync = makeDate($lastSync);
         }
 
-        $message = r("Processing '{backend}: {title}' {tainted} request.", [
-            'backend' => $entity->via,
-            'title' => $entity->getName(),
-            'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
-            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-            'lastSync' => $lastSync,
-        ]);
+        $message = r(
+            "Processing {tainted} request '{backend}: {event}' {title} - 'state: {played}, progress: {has_progress}'. request_id '{req}'.",
+            [
+                'backend' => $entity->via,
+                'req' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
+                'played' => $entity->isWatched() ? 'played' : 'unplayed',
+                'title' => $entity->getName(),
+                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
+                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+                'lastSync' => $lastSync,
+            ]
+        );
 
         $e->addLog($message);
         $this->logger->notice($message);
+
+        if (ag($e->getOptions(), Options::DEBUG_TRACE)) {
+            $mapper = $this->mapper->withOptions(ag_set($this->mapper->getOptions(), Options::DEBUG_TRACE, true));
+        } else {
+            $mapper = $this->mapper;
+        }
 
         $logger = clone $this->logger;
         assert($logger instanceof Logger);
 
         $handler = ProxyHandler::create($e->addLog(...));
         $logger->pushHandler($handler);
-
-        $oldLogger = $this->mapper->getLogger();
-        $this->mapper->setLogger($logger);
+        $mapper->setLogger($logger);
 
         $metadataOnly = (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY);
-        $this->mapper->add($entity, [
+        $mapper->add($entity, [
             Options::IMPORT_METADATA_ONLY => $metadataOnly,
             Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush($state),
             'after' => $lastSync,
         ]);
 
-        $this->mapper->commit();
-        $this->mapper->setLogger($oldLogger);
-
+        $mapper->commit();
         $handler->close();
-
         return $e;
     }
 }
