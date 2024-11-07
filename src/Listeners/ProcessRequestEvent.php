@@ -41,15 +41,18 @@ final readonly class ProcessRequestEvent
             $lastSync = makeDate($lastSync);
         }
 
-        $message = r("Processing '{backend} ({event}): {title} - {played}' {tainted} request. request_id: {req}.", [
-            'backend' => $entity->via,
-            'req' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
-            'played' => $entity->isWatched() ? 'played' : 'unplayed',
-            'title' => $entity->getName(),
-            'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
-            'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
-            'lastSync' => $lastSync,
-        ]);
+        $message = r(
+            "Processing {tainted} request '{backend}: {event}' {title} - 'state: {played}'. request_id: '{req}'.",
+            [
+                'backend' => $entity->via,
+                'req' => ag($e->getOptions(), Options::REQUEST_ID, '-'),
+                'played' => $entity->isWatched() ? 'played' : 'unplayed',
+                'title' => $entity->getName(),
+                'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT, '??'),
+                'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
+                'lastSync' => $lastSync,
+            ]
+        );
 
         $e->addLog($message);
         $this->logger->notice($message);
