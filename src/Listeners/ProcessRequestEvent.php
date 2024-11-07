@@ -35,7 +35,8 @@ final readonly class ProcessRequestEvent
     {
         $e->stopPropagation();
 
-        $entity = Container::get(iState::class)::fromArray($e->getData());
+        $entity = Container::get(iState::class)::fromArray($e->getData())
+            ->setIsTainted((bool)ag($e->getOptions(), 'tainted', false));
 
         if (null !== ($lastSync = ag(Config::get("servers.{$entity->via}", []), 'import.lastSync'))) {
             $lastSync = makeDate($lastSync);

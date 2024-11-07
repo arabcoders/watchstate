@@ -199,6 +199,7 @@ final class Webhooks
             'unique' => true,
             EventsTable::COLUMN_REFERENCE => $itemId,
             EventsTable::COLUMN_OPTIONS => [
+                'tainted' => $entity->isTainted(),
                 Options::IMPORT_METADATA_ONLY => $metadataOnly,
                 Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
             ],
