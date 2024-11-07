@@ -52,27 +52,28 @@ final readonly class ProcessRequestEvent
         $e->addLog($message);
         $this->logger->notice($message);
 
+        if (ag($e->getOptions(), Options::DEBUG_TRACE)) {
+            $mapper = $this->mapper->withOptions(ag_set($this->mapper->getOptions(), Options::DEBUG_TRACE, true));
+        } else {
+            $mapper = $this->mapper;
+        }
+
         $logger = clone $this->logger;
         assert($logger instanceof Logger);
 
         $handler = ProxyHandler::create($e->addLog(...));
         $logger->pushHandler($handler);
-
-        $oldLogger = $this->mapper->getLogger();
-        $this->mapper->setLogger($logger);
+        $mapper->setLogger($logger);
 
         $metadataOnly = (bool)ag($e->getOptions(), Options::IMPORT_METADATA_ONLY);
-        $this->mapper->add($entity, [
+        $mapper->add($entity, [
             Options::IMPORT_METADATA_ONLY => $metadataOnly,
             Options::STATE_UPDATE_EVENT => fn(iState $state) => queuePush($state),
             'after' => $lastSync,
         ]);
 
-        $this->mapper->commit();
-        $this->mapper->setLogger($oldLogger);
-
+        $mapper->commit();
         $handler->close();
-
         return $e;
     }
 }

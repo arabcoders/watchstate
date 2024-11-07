@@ -10,7 +10,7 @@ use App\Libs\Mappers\ImportInterface;
 use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
-class DirectMapperTest extends AbstractTestsMapper
+class DirectMapperTest extends MapperAbstract
 {
     protected function setupMapper(): ImportInterface
     {

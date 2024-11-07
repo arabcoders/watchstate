@@ -6,7 +6,9 @@ namespace App\Commands\Events;
 
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
+use App\Libs\Config;
 use App\Libs\Events\DataEvent;
+use App\Libs\Options;
 use App\Model\Events\Event;
 use App\Model\Events\EventsRepository;
 use App\Model\Events\EventsTable;
@@ -50,8 +52,9 @@ final class DispatchCommand extends Command
 
         registerEvents();
 
-        $id = $input->getOption('id');
-        if (null !== $id) {
+        $debug = $input->getOption('debug') || Config::get('debug.enabled');
+
+        if (null !== ($id = $input->getOption('id'))) {
             if (null === ($event = $this->repo->findById($id))) {
                 $this->logger->error(r("Event with id '{id}' not found.", ['id' => $id]));
                 return self::FAILURE;
@@ -61,15 +64,15 @@ final class DispatchCommand extends Command
                 $event->logs = [];
             }
 
-            $this->runEvent($event);
+            $this->runEvent($event, debug: $debug);
 
             return self::SUCCESS;
         }
 
-        return $this->runEvents();
+        return $this->runEvents(debug: $debug);
     }
 
-    protected function runEvents(): int
+    protected function runEvents(bool $debug = false): int
     {
         $events = $this->repo->findAll([EventsTable::COLUMN_STATUS => Status::PENDING->value]);
         if (count($events) < 1) {
@@ -104,7 +107,7 @@ final class DispatchCommand extends Command
         return self::SUCCESS;
     }
 
-    private function runEvent(Event $event): void
+    private function runEvent(Event $event, bool $debug = false): void
     {
         try {
             $message = "Dispatching Event: '{event}' queued at '{date}'.";
@@ -124,6 +127,9 @@ final class DispatchCommand extends Command
             $event->status = Status::RUNNING;
             $event->updated_at = (string)makeDate();
             $event->attempts += 1;
+            if (true === $debug) {
+                $event->options[Options::DEBUG_TRACE] = true;
+            }
             $this->repo->save($event);
 
             $ref = new DataEvent($event);

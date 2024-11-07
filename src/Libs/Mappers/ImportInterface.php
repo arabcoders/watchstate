@@ -13,6 +13,12 @@ use Psr\Log\LoggerInterface;
 interface ImportInterface extends Countable
 {
     /**
+     * Get current options for the object.
+     * @return array
+     */
+    public function getOptions(): array;
+
+    /**
      * Set options for the current object.
      *
      * @param array $options An associative array of options to be set
@@ -20,6 +26,15 @@ interface ImportInterface extends Countable
      * @return self
      */
     public function setOptions(array $options = []): self;
+
+    /**
+     * Set options and return a new instance of the object.
+     *
+     * @param array $options An associative array of options to be set.
+     *
+     * @return self
+     */
+    public function withOptions(array $options = []): self;
 
     /**
      * Preload data from database into the mapper.
