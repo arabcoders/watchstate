@@ -23,7 +23,6 @@ use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
-use Psr\SimpleCache\InvalidArgumentException;
 
 final class Webhooks
 {
@@ -55,7 +54,6 @@ final class Webhooks
      * @param array $args The request path arguments.
      *
      * @return iResponse The response object.
-     * @throws InvalidArgumentException if cache key is invalid.
      */
     #[Route(['POST', 'PUT'], Index::URL . '/{name:backend}/webhook[/]', name: 'backend.webhook')]
     public function __invoke(iRequest $request, array $args = []): iResponse
@@ -74,7 +72,6 @@ final class Webhooks
      * @param iRequest $request The incoming request object.
      *
      * @return iResponse The response object.
-     * @throws InvalidArgumentException if cache key is invalid.
      */
     private function process(string $name, iRequest $request): iResponse
     {
@@ -203,13 +200,20 @@ final class Webhooks
             EventsTable::COLUMN_REFERENCE => $itemId,
             EventsTable::COLUMN_OPTIONS => [
                 Options::IMPORT_METADATA_ONLY => $metadataOnly,
-            ]
+                Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
+            ],
         ]);
 
-        $this->write($request, Level::Info, 'Queued [{backend}: {event}] {item.type} [{item.title}].', [
+        $this->write(
+            $request,
+            Level::Info,
+            "Queued '{backend}: {event} - {state}' {item.type} '{item.title}'. request_id: {req}.",
+            [
                 'backend' => $entity->via,
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
                 'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',
+                'req' => ag($request->getServerParams(), 'X_REQUEST_ID', '-'),
+                'state' => $entity->isWatched() ? 'played' : 'unplayed',
                 'item' => [
                     'title' => $entity->getName(),
                     'type' => $entity->type,

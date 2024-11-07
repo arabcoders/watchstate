@@ -180,7 +180,7 @@ final readonly class ProcessProgressEvent
 
         $progress = formatDuration($item->getPlayProgress());
 
-        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' watch progress '{progress}' event.", [
+        $writer(Level::Notice, "Processing '{id}' - '{via}: {title}' watch progress '{progress}' event.", [
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
