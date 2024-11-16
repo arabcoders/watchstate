@@ -130,6 +130,10 @@ trait APITraits
             $options[Options::ADMIN_TOKEN] = $data->get('options.' . Options::ADMIN_TOKEN);
         }
 
+        if (null !== $data->get('options.' . Options::PLEX_USER_PIN)) {
+            $options[Options::PLEX_USER_PIN] = $data->get('options.' . Options::PLEX_USER_PIN);
+        }
+
         if (null !== $data->get('options.' . Options::IS_LIMITED_TOKEN)) {
             $options[Options::IS_LIMITED_TOKEN] = (bool)$data->get('options.' . Options::IS_LIMITED_TOKEN, false);
         }

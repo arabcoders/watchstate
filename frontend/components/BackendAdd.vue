@@ -107,6 +107,17 @@
               </div>
             </div>
           </div>
+
+          <template v-if="'plex' === backend.type">
+            <label class="label">User PIN</label>
+            <div class="control has-icons-left">
+              <input class="input" type="text" v-model="backend.options.PLEX_USER_PIN" :disabled="stage > 1">
+              <div class="icon is-left"><i class="fas fa-key"></i></div>
+              <p class="help">
+                If the user you going to select is using <code>PIN</code> to login, enter the PIN here.
+              </p>
+            </div>
+          </template>
         </template>
 
         <template v-if="stage>=1">
@@ -175,16 +186,6 @@
               <NuxtLink @click="getUsers" v-text="'Retrieve User ids from backend.'" v-if="stage < 4"/>
             </p>
           </div>
-          <template v-if="'plex' === backend.type">
-            <label class="label">User PIN</label>
-            <div class="control has-icons-left">
-              <input class="input" type="text" v-model="backend.options.PLEX_USER_PIN" :disabled="stage > 3">
-              <div class="icon is-left"><i class="fas fa-key"></i></div>
-              <p class="help">
-                If the selected user is using <code>PIN</code> to login, enter the PIN here.
-              </p>
-            </div>
-          </template>
         </div>
 
         <template v-if="stage >= 4">
@@ -488,6 +489,12 @@ const getUsers = async (showAlert = true) => {
       }
     }
 
+    if (backend.value.options && backend.value.options.PLEX_USER_PIN) {
+      data.options = {
+        PLEX_USER_PIN: backend.value.options.PLEX_USER_PIN
+      }
+    }
+
     const response = await request(`/backends/users/${backend.value.type}?tokens=1`, {
       method: 'POST',
       body: JSON.stringify(data)
@@ -614,7 +621,7 @@ const addBackend = async () => {
 
   if ('plex' === backend.value.type) {
     let token = users.value.find(u => u.id === backend.value.user).token
-    if (token !== backend.value.token) {
+    if (token && token !== backend.value.token) {
       backend.value.options.ADMIN_TOKEN = backend.value.token;
       backend.value.token = token
     }

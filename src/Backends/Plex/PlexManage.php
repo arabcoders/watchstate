@@ -428,6 +428,7 @@ class PlexManage implements ManageInterface
                 $pin = $this->questionHelper->ask($this->input, $this->output, $question);
                 if (!empty($pin)) {
                     $backend = ag_set($backend, 'options.' . Options::PLEX_USER_PIN, $pin);
+                    $custom = ag_set($custom, 'options.' . Options::PLEX_USER_PIN, $pin);
                 }
 
                 $this->output->writeln(
