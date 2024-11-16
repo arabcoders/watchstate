@@ -65,14 +65,17 @@ final class GetUserToken
                 ->withPort(443)->withScheme('https')->withHost('plex.tv')
                 ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
 
-            $this->logger->debug('Requesting temporary access token for [{backend}] user [{username}].', [
+            $pin = ag($context->options, Options::PLEX_USER_PIN);
+
+            $this->logger->debug('Requesting temporary access token for [{backend}] user [{username}]{pin}', [
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
                 'url' => (string)$url,
+                'pin' => null !== $pin ? ' with PIN.' : '.',
             ]);
 
-            if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
+            if (null !== $pin) {
                 $url = $url->withQuery(http_build_query(['pin' => $pin]));
             }
 

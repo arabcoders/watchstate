@@ -82,6 +82,10 @@ final class GetUsersList
         $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
             ->withPath('/api/v2/home/users/');
 
+        if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
+            $url = $url->withQuery(http_build_query(['pin' => $pin]));
+        }
+
         $tokenType = 'user';
 
         $response = $this->http->request('GET', (string)$url, [
