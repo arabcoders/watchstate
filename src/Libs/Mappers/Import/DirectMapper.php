@@ -263,21 +263,53 @@ final class DirectMapper implements iImport
         $inDryRunMode = $this->inDryRunMode();
         $keys = [iState::COLUMN_META_DATA];
 
-        if (true === (clone $local)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
+        $cloned = clone $local;
+
+        $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+        $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
+        $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
+
+        if ($playChanged || true === (clone $local)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
             try {
-                $local = $local->apply(entity: $entity, fields: array_merge($keys, [iState::COLUMN_EXTRA]));
+                $local = $local->apply(
+                    entity: $entity,
+                    fields: array_merge($keys, [iState::COLUMN_EXTRA])
+                );
 
                 $this->removePointers($local)->addPointers($local, $local->id);
 
-                $this->logger->notice("DirectMapper: '{backend}' updated '{title}' metadata.", [
-                    'id' => $local->id,
-                    'backend' => $entity->via,
-                    'title' => $local->getName(),
-                    'changes' => $local->diff(fields: $keys)
-                ]);
+                $changes = $local->diff(fields: $keys);
+                $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
+
+                if (count($changes) >= 1) {
+                    $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
+                    if ($playChanged && $progress) {
+                        $_keys[] = iState::COLUMN_VIA;
+                    }
+                    $local = $local->apply($entity, fields: $_keys);
+                    $this->logger->notice(
+                        $progress ? "DirectMapper: '{backend}' updated '{title}' due to play progress change." : "DirectMapper: '{backend}' updated '{title}' metadata.",
+                        [
+                            'id' => $cloned->id,
+                            'backend' => $entity->via,
+                            'title' => $cloned->getName(),
+                            'changes' => $progress ? $local->diff(fields: $_keys) : $changes,
+                        ]
+                    );
+                }
 
                 if (false === $inDryRunMode) {
                     $this->db->update($local);
+                    if (true === $entity->hasPlayProgress() && !$entity->isWatched()) {
+                        $itemId = r('{type}://{id}:{tainted}@{backend}', [
+                            'type' => $entity->type,
+                            'backend' => $entity->via,
+                            'tainted' => 'untainted',
+                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                        ]);
+
+                        $this->progressItems[$itemId] = $local;
+                    }
                 }
 
                 if (null === ($this->changed[$local->id] ?? null)) {
