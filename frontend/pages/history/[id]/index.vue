@@ -425,10 +425,11 @@
               <i v-if="showRawData" class="fas fa-arrow-up"></i>
               <i v-else class="fas fa-arrow-down"></i>
             </span>
-            <span>Show raw data...</span>
+            <span>Show raw unfiltered data</span>
           </span>
         </span>
-        <div v-if="showRawData" class="mt-2">
+        <p class="subtitle">Useful for debugging.</p>
+        <div v-if="showRawData" class="mt-2" style="position: relative;">
           <code class="is-block is-pre-wrap">{{
               JSON.stringify(Object.keys(data)
                   .filter(key => !['files', 'hardware', 'content_exists', '_toggle'].includes(key))
@@ -437,6 +438,10 @@
                     return obj;
                   }, {}), null, 2)
             }}</code>
+          <button class="button m-4" v-tooltip="'Copy text'" @click="() => copyText(JSON.stringify(data, null, 2))"
+                  style="position: absolute; top:0; right:0;">
+            <span class="icon"><i class="fas fa-copy"></i></span>
+          </button>
         </div>
       </div>
 
@@ -480,6 +485,7 @@
 import request from '~/utils/request'
 import {
   ag,
+  copyText,
   formatDuration,
   makeGUIDLink,
   makeName,
