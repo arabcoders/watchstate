@@ -14,7 +14,7 @@
         "test": "vendor/bin/phpunit"
     },
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
         "ext-mbstring": "*",
