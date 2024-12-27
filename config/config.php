@@ -247,7 +247,7 @@ return (function () {
 
     $checkTaskTimer = function (string $timer, string $default): string {
         try {
-            $isValid = (new CronExpression($timer))->getNextRunDate()->getTimestamp() >= 0;
+            $isValid = new CronExpression($timer)->getNextRunDate()->getTimestamp() >= 0;
             return $isValid ? $timer : $default;
         } catch (Throwable) {
             return $default;

@@ -12,7 +12,6 @@ use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -58,7 +57,6 @@ final class SearchQuery
      *
      * @throws ExceptionInterface if the request failed
      * @throws JsonException if the response cannot be parsed
-     * @throws RuntimeException
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {

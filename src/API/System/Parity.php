@@ -12,7 +12,6 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\SimpleCache\InvalidArgumentException;
 
 final class Parity
 {
@@ -25,7 +24,6 @@ final class Parity
     }
 
     /**
-     * @throws InvalidArgumentException
      */
     #[Get(self::URL . '[/]', name: 'system.parity')]
     public function __invoke(iRequest $request): iResponse
@@ -107,7 +105,6 @@ final class Parity
     }
 
     /**
-     * @throws InvalidArgumentException
      */
     #[Delete(self::URL . '[/]', name: 'system.parity.delete')]
     public function deleteRecords(iRequest $request): iResponse

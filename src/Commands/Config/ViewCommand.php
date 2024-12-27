@@ -151,7 +151,7 @@ final class ViewCommand extends Command
         $mode = $input->getOption('output');
 
         if ('table' === $mode) {
-            (new Table($output))->setStyle('box')
+            new Table($output)->setStyle('box')
                 ->setHeaders(['Backend', 'Data (Filter: ' . (empty($filter) ? 'None' : $filter) . ')']
                 )->setRows($rows)
                 ->render();

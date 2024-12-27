@@ -22,7 +22,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 #[Cli(command: self::ROUTE)]
 final class DiscoverCommand extends Command
 {
-    public const ROUTE = 'plex:discover';
+    public const string ROUTE = 'plex:discover';
 
     public function __construct(private iHttp $http, protected iLogger $logger)
     {

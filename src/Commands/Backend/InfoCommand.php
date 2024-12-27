@@ -22,7 +22,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 class InfoCommand extends Command
 {
-    public const ROUTE = 'backend:info';
+    public const string ROUTE = 'backend:info';
 
     /**
      * Configures the command.

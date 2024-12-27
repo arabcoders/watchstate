@@ -137,7 +137,7 @@ final class AddCommand extends Command
                     return $answer;
                 });
 
-                return (new QuestionHelper())->ask($input, $output, $question);
+                return new QuestionHelper()->ask($input, $output, $question);
             })();
         }
 

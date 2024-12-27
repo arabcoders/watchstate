@@ -28,9 +28,9 @@ final class Ignore
     }
 
     #[Get(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds')]
-    public function ignoredIds(iRequest $request, array $args = []): iResponse
+    public function ignoredIds(string $name): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
+        if (empty($name)) {
             return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 

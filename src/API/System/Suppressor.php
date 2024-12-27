@@ -128,9 +128,9 @@ final class Suppressor
     }
 
     #[Delete(self::URL . '/{id:\w{11}}[/]', name: 'system.suppressor.delete')]
-    public function deleteSuppressor(iRequest $request, array $args = []): iResponse
+    public function deleteSuppressor(string $id): iResponse
     {
-        if (null === ($id = ag($args, 'id')) || empty($id)) {
+        if (empty($id)) {
             return api_error('Invalid suppressor id.', Status::BAD_REQUEST);
         }
 
@@ -144,9 +144,9 @@ final class Suppressor
     }
 
     #[Get(self::URL . '/{id:\w{11}}[/]', name: 'system.suppressor.view')]
-    public function viewSuppressor(iRequest $request, array $args = []): iResponse
+    public function viewSuppressor(string $id): iResponse
     {
-        if (null === ($id = ag($args, 'id')) || empty($id)) {
+        if (empty($id)) {
             return api_error('Invalid suppressor id.', Status::BAD_REQUEST);
         }
 

@@ -24,7 +24,7 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 #[Cli(command: self::ROUTE)]
 final class IgnoreCommand extends Command
 {
-    public const ROUTE = 'backend:library:ignore';
+    public const string ROUTE = 'backend:library:ignore';
 
     public function __construct(private LoggerInterface $logger)
     {

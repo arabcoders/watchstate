@@ -21,7 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class ServerCommand extends Command
 {
-    public const ROUTE = 'system:server';
+    public const string ROUTE = 'system:server';
 
     /**
      * Class Constructor.

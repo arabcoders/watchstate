@@ -54,7 +54,7 @@ class JellyfinGuidTest extends TestCase
     private function getClass(): JellyfinGuid
     {
         $this->handler->clear();
-        return (new JellyfinGuid($this->logger))->withContext(
+        return new JellyfinGuid($this->logger)->withContext(
             new Context(
                 clientName: JellyfinClient::CLIENT_NAME,
                 backendName: 'test_jellyfin',

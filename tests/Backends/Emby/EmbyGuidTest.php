@@ -54,7 +54,7 @@ class EmbyGuidTest extends TestCase
     private function getClass(): EmbyGuid
     {
         $this->handler->clear();
-        return (new EmbyGuid($this->logger))->withContext(
+        return new EmbyGuid($this->logger)->withContext(
             new Context(
                 clientName: EmbyClient::CLIENT_NAME,
                 backendName: 'test_emby',

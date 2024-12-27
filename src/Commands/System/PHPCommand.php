@@ -20,7 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class PHPCommand extends Command
 {
-    public const ROUTE = 'system:php';
+    public const string ROUTE = 'system:php';
 
     /**
      * Configures the command.

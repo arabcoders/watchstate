@@ -25,7 +25,7 @@ final readonly class StreamedBody implements StreamInterface
     {
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return $this->getContents();
     }

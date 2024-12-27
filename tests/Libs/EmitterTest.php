@@ -23,7 +23,7 @@ class EmitterTest extends TestCase
     {
         $this->headers = [];
         $this->body = '';
-        $this->emitter = (new Emitter())
+        $this->emitter = new Emitter()
             ->withHeaderFunc(function ($header, $replace, $status) {
                 $this->headers[] = [
                     'header' => $header,

@@ -58,7 +58,7 @@ class ServerTest extends TestCase
             'Should be equal config.'
         );
 
-        $c = (new Server())->getConfig();
+        $c = new Server()->getConfig();
 
         $this->assertSame($c[Server::CONFIG_HOST], '0.0.0.0', 'Default host has changed.');
         $this->assertSame($c[Server::CONFIG_PORT], 8080, 'Default port has changed.');

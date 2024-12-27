@@ -352,11 +352,7 @@ final class StateEntity implements iState
             return [];
         }
 
-        $list = [];
-
-        foreach ($this->parent as $key => $val) {
-            $list[$key] = $val . '/' . $this->season . '/' . $this->episode;
-        }
+        $list = array_map(fn($val) => $val . '/' . $this->season . '/' . $this->episode, $this->parent);
 
         return array_intersect_key($list, Guid::getSupported());
     }

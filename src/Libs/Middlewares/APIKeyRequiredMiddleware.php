@@ -66,10 +66,8 @@ final class APIKeyRequiredMiddleware implements MiddlewareInterface
             return api_error('API key is required to access the API.', Status::BAD_REQUEST);
         }
 
-        foreach ($tokens as $token) {
-            if (true === $this->validate($token)) {
-                return $handler->handle($request);
-            }
+        if (array_any($tokens, fn($token) => true === $this->validate($token))) {
+            return $handler->handle($request);
         }
 
         return api_error('incorrect API key.', Status::FORBIDDEN);

@@ -54,7 +54,7 @@ class PlexGuidTest extends TestCase
     private function getClass(): PlexGuid
     {
         $this->handler->clear();
-        return (new PlexGuid($this->logger))->withContext(
+        return new PlexGuid($this->logger)->withContext(
             new Context(
                 clientName: PlexClient::CLIENT_NAME,
                 backendName: 'test_plex',

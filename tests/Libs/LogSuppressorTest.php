@@ -1,7 +1,4 @@
 <?php
-/** @noinspection PhpVoidFunctionResultUsedInspection */
-
-/** @noinspection PhpMultipleClassDeclarationsInspection */
 
 declare(strict_types=1);
 
@@ -12,6 +9,7 @@ use App\Libs\TestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use Throwable;
 
 class LogSuppressorTest extends TestCase
 {
@@ -42,7 +40,7 @@ class LogSuppressorTest extends TestCase
         parent::setUp();
 
         $this->handler = new TestHandler(level: Level::Info);
-        $this->suppressor = (new LogSuppressor($this->testData))->withHandler($this->handler);
+        $this->suppressor = new LogSuppressor($this->testData)->withHandler($this->handler);
         $this->logger = new Logger('test', handlers: [$this->suppressor]);
     }
 
@@ -140,6 +138,10 @@ class LogSuppressorTest extends TestCase
         $this->suppressor->handleBatch($records);
         $this->assertCount(1, $this->handler->getRecords());
 
-        $this->assertNull($this->suppressor->close(), 'Close should not throw an error.');
+        try {
+            $this->suppressor->close();
+        } catch (Throwable) {
+            $this->fail('Close should not throw an error.');
+        }
     }
 }

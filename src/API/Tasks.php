@@ -15,7 +15,6 @@ use App\Model\Events\EventStatus;
 use Cron\CronExpression;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\SimpleCache\InvalidArgumentException;
 
 final class Tasks
 {
@@ -25,9 +24,6 @@ final class Tasks
     {
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     #[Get(self::URL . '[/]', name: 'tasks.index')]
     public function tasksIndex(): iResponse
     {
@@ -55,9 +51,6 @@ final class Tasks
         ]);
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:[a-zA-Z0-9_-]+}/queue[/]', name: 'tasks.task.queue')]
     public function taskQueue(iRequest $request, string $id): iResponse
     {

@@ -118,7 +118,7 @@ if (!function_exists('makeDate')) {
             $date = $date->format(DateTimeInterface::ATOM);
         }
 
-        return (new Date($date))->setTimezone($tz);
+        return new Date($date)->setTimezone($tz);
     }
 }
 
@@ -886,7 +886,7 @@ if (false === function_exists('makeIgnoreId')) {
             };
         }
 
-        $id = (new Uri($url))->withPath('')->withFragment('')->withPort(null);
+        $id = new Uri($url)->withPath('')->withFragment('')->withPort(null);
         return $id->withQuery($filterQuery($id->getQuery()));
     }
 }
@@ -1664,7 +1664,7 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         try {
-            $pid = trim((string)(new Stream($pidFile)));
+            $pid = trim((string)new Stream($pidFile));
         } catch (Throwable $e) {
             return ['status' => false, 'message' => $e->getMessage()];
         }
@@ -1732,7 +1732,7 @@ if (!function_exists('restartTaskWorker')) {
 
         if (true === file_exists($pidFile)) {
             try {
-                $pid = trim((string)(new Stream($pidFile)));
+                $pid = trim((string)new Stream($pidFile));
             } catch (Throwable $e) {
                 return ['status' => false, 'restartable' => true, 'message' => $e->getMessage()];
             }
@@ -1833,7 +1833,7 @@ if (!function_exists('getMimeType')) {
 if (!function_exists('getExtension')) {
     function getExtension(string $filename): string
     {
-        return (new SplFileInfo($filename))->getExtension();
+        return new SplFileInfo($filename)->getExtension();
     }
 }
 

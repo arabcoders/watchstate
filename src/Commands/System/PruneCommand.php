@@ -187,7 +187,7 @@ final class PruneCommand extends Command
         return self::SUCCESS;
     }
 
-    private function cleanUp()
+    private function cleanUp(): void
     {
         $before = makeDate(strtotime('-7 DAYS'));
 

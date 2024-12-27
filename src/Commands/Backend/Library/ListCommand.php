@@ -20,7 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'backend:library:list';
+    public const string ROUTE = 'backend:library:list';
 
     /**
      * Configures the command.

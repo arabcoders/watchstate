@@ -55,7 +55,7 @@ final class Server
             self::CONFIG_PORT => 8080,
             self::CONFIG_ROUTER => null,
             self::CONFIG_ROOT => realpath(__DIR__ . '/../../public'),
-            self::CONFIG_PHP => $classExists ? (new PhpExecutableFinder())->find(false) : PHP_BINARY,
+            self::CONFIG_PHP => $classExists ? new PhpExecutableFinder()->find(false) : PHP_BINARY,
             self::CONFIG_ENV => array_replace_recursive($_ENV, getenv()),
             self::CONFIG_THREADS => 1,
         ];

@@ -20,7 +20,7 @@ class ParseJsonBodyMiddlewareTest extends TestCase
     public function test_exceptions()
     {
         $this->checkException(
-            closure: fn() => (new ParseJsonBodyMiddleware())->process(
+            closure: fn() => new ParseJsonBodyMiddleware()->process(
                 request: $this->getRequest(method: 'NOT_OK')->withBody(
                     Stream::create(json_encode(['key' => 'test']))
                 )->withHeader('Content-Type', 'application/json'),
@@ -32,7 +32,7 @@ class ParseJsonBodyMiddlewareTest extends TestCase
         );
 
         $this->checkException(
-            closure: fn() => (new ParseJsonBodyMiddleware())->process(
+            closure: fn() => new ParseJsonBodyMiddleware()->process(
                 request: $this->getRequest(Method::POST)->withBody(
                     Stream::create(json_encode(['key' => 'test']) . 'invalid json')
                 )->withHeader('Content-Type', 'application/json'),
@@ -48,7 +48,7 @@ class ParseJsonBodyMiddlewareTest extends TestCase
     {
         $mutatedRequest = null;
 
-        (new ParseJsonBodyMiddleware())->process(
+        new ParseJsonBodyMiddleware()->process(
             request: $this->getRequest(Method::GET)->withBody(
                 Stream::create(json_encode(['key' => 'test']))
             )->withHeader('Content-Type', 'application/json'),
@@ -63,7 +63,7 @@ class ParseJsonBodyMiddlewareTest extends TestCase
 
         $mutatedRequest = null;
 
-        (new ParseJsonBodyMiddleware())->process(
+        new ParseJsonBodyMiddleware()->process(
             request: $this->getRequest(Method::POST)->withBody(
                 Stream::create('')
             )->withHeader('Content-Type', 'application/json'),
@@ -76,7 +76,7 @@ class ParseJsonBodyMiddlewareTest extends TestCase
         $this->assertCount(0, $mutatedRequest->getParsedBody(), 'Parsed body should be empty.');
         $this->assertSame([], $mutatedRequest->getParsedBody(), 'Parsed body should be null.');
 
-        (new ParseJsonBodyMiddleware())->process(
+        new ParseJsonBodyMiddleware()->process(
             request: $this->getRequest(Method::POST)->withBody(
                 Stream::create(json_encode(['key' => 'test']))
             ),
@@ -95,7 +95,7 @@ class ParseJsonBodyMiddlewareTest extends TestCase
 
     public function test_correct_mutation()
     {
-        (new ParseJsonBodyMiddleware())->process(
+        new ParseJsonBodyMiddleware()->process(
             request: $this->getRequest(Method::POST)->withBody(
                 Stream::create(json_encode(['key' => 'test']))
             )->withHeader('Content-Type', 'application/json'),

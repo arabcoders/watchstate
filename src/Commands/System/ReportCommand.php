@@ -120,7 +120,7 @@ final class ReportCommand extends Command
         $this->getBackends($input, $output);
 
         $output->writeln(PHP_EOL . '<info>[ Log suppression ]</info>' . PHP_EOL);
-        $this->getSuppressor($input, $output);
+        $this->getSuppressor($output);
 
         $output->writeln('<info>[ Tasks ]</info>' . PHP_EOL);
         $this->getTasks($output);
@@ -419,7 +419,7 @@ final class ReportCommand extends Command
         );
     }
 
-    private function getSuppressor(iInput $input, ConsoleOutput $output): void
+    private function getSuppressor(ConsoleOutput $output): void
     {
         $suppressFile = Config::get('path') . '/config/suppress.yaml';
 

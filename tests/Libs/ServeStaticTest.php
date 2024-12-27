@@ -40,7 +40,7 @@ class ServeStaticTest extends TestCase
         $this->checkException(
             closure: function () {
                 Config::save('webui.path', '/nonexistent');
-                return (new ServeStatic())->serve($this->createRequest('GET', '/nonexistent'));
+                return new ServeStatic()->serve($this->createRequest('GET', '/nonexistent'));
             },
             reason: 'If file does not exist, A NotFoundException should be thrown.',
             exception: \League\Route\Http\Exception\BadRequestException::class,
@@ -66,7 +66,7 @@ class ServeStaticTest extends TestCase
 
         // -- Check for invalid root static path.
         $this->checkException(
-            closure: fn() => (new ServeStatic('/nonexistent'))->serve($this->createRequest('GET', '/test.html')),
+            closure: fn() => new ServeStatic('/nonexistent')->serve($this->createRequest('GET', '/test.html')),
             reason: 'Should throw exception if the static path does not exist.',
             exception: \League\Route\Http\Exception\BadRequestException::class,
             exceptionMessage: 'The static path',

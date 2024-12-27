@@ -68,7 +68,7 @@ final class Backup
             return api_response(Status::OK);
         }
 
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($filePath);
+        $mime = new finfo(FILEINFO_MIME_TYPE)->file($filePath);
 
         return api_response(Status::OK, Stream::make($filePath, 'r'), headers: [
             'Content-Type' => false === $mime ? 'application/octet-stream' : $mime,

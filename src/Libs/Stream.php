@@ -390,7 +390,11 @@ final class Stream implements StreamInterface, Stringable, LoggerAwareInterface
             return in_array(get_resource_type($resource), self::ALLOWED_RESOURCE_TYPES, true);
         }
 
-        if (extension_loaded('gd') && true === ($resource instanceof \GdImage)) {
+        if (!extension_loaded('gd')) {
+            return false;
+        }
+
+        if (true === ($resource instanceof \GdImage)) {
             return true;
         }
 
