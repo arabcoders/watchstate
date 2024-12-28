@@ -47,7 +47,7 @@
         "ramsey/uuid": "^4.7.6"
     },
     "suggest": {
-        "ext-sockets": "For UDP commincations."
+        "ext-sockets": "For UDP communications."
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",

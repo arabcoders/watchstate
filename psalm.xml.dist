@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
-<psalm errorLevel="2" resolveFromConfigFile="true" hideExternalErrors="true" ignoreInternalFunctionFalseReturn="false"
-       autoloader="./pre_init.php">
+<psalm errorLevel="4" resolveFromConfigFile="true" hideExternalErrors="true" ignoreInternalFunctionFalseReturn="false" autoloader="./pre_init.php">
     <projectFiles>
         <directory name="."/>
         <ignoreFiles allowMissingFiles="true">
@@ -9,30 +8,13 @@
             <directory name="assets"/>
             <directory name="frontend"/>
             <directory name="docker"/>
-            <directory name="public"/>
             <directory name="data"/>
+            <directory name="bin"/>
         </ignoreFiles>
     </projectFiles>
-    <issueHandlers>
-        <TypeDoesNotContainType errorLevel="info"/>
-        <PossiblyNullArgument errorLevel="info"/>
-        <PossiblyNullReference errorLevel="info"/>
-        <PossiblyInvalidArgument errorLevel="info"/>
-        <PossiblyNullPropertyFetch errorLevel="info"/>
-        <MissingClosureParamType errorLevel="info"/>
-        <RedundantCondition errorLevel="info"/>
-        <MissingParamType errorLevel="info"/>
-        <PossiblyInvalidMethodCall errorLevel="info"/>
-        <DocblockTypeContradiction errorLevel="info"/>
-        <PropertyNotSetInConstructor errorLevel="info"/>
-        <RedundantConditionGivenDocblockType errorLevel="info"/>
-        <PossiblyNullArrayOffset errorLevel="info"/>
-        <MissingFile errorLevel="info"/>
-        <DuplicateFunction errorLevel="info"/>
-        <DuplicateClass errorLevel="info"/>
-        <UnresolvableInclude errorLevel="info"/>
-    </issueHandlers>
-    <stubs>
+    <extrasFiles>
         <file name="./.phpstorm.meta.php"/>
-    </stubs>
+    </extrasFiles>
+    <issueHandlers>
+    </issueHandlers>
 </psalm>

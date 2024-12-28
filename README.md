@@ -115,7 +115,7 @@ You can check the message in the notification itself to know what went wrong. Or
 error has been logged to a file named `app.YYYYMMDD.log`.
 
 If everything went ok, you should see the backend shows up in the same page. You can then go to the Tasks page and click
-on `Qeueu Task`, for first time import we recommand letting
+on `Queue Task`, for first time import we recommend letting
 the task run in the background, as it might take a while to import all the data.
 
 Once you have done all for your backends, You should go back again to `Tasks` page and enable the `Import` and `Export`
@@ -134,7 +134,7 @@ After starting the container you should start adding your backends and to do so 
 > [!NOTE]
 > to get your plex token, please
 > visit [this plex page](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to
-> know how to extract your plex token. For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new api
+> know how to extract your plex token. For jellyfin & emby. Go to Dashboard > Advanced > API keys > then create new API
 > keys.
 
 ```bash
