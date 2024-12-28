@@ -555,7 +555,7 @@ const openMenu = e => {
   e.target.closest('div.has-dropdown').classList.toggle('is-active')
 }
 
-const changeRoute = async (e, callback) => {
+const changeRoute = async (_, callback) => {
   showMenu.value = false
   document.querySelectorAll('div.has-dropdown').forEach(el => el.classList.remove('is-active'))
   if (callback) {
