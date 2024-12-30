@@ -9,21 +9,21 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2024-12-30
+
+We have removed the old environment variables `WS_CRON_PROGRESS` and `WS_CRON_PUSH` in favor of the new ones
+`WS_SYNC_PROGRESS` and `WS_PUSH_ENABLED`. please update your environment variables accordingly. We have also added
+new FAQ entry about watch progress syncing via [this link](FAQ.md#sync-watch-progress).
+
 ### 2024-10-07
 
-We have added a WebUI page for Custom GUIDs and stabilized on `v1.0` for the `guid.yaml` file spec. We strongly recommend
-to use the `WebUI` to manage the GUIDs, as it's much easier to use than editing the `guid.yaml` file directly. and both the
-`WebUI` and `API` have safeguards to prevent you from breaking the parser. For more information please check out the associated
+We have added a WebUI page for Custom GUIDs and stabilized on `v1.0` for the `guid.yaml` file spec. We strongly
+recommend
+to use the `WebUI` to manage the GUIDs, as it's much easier to use than editing the `guid.yaml` file directly. and both
+the
+`WebUI` and `API` have safeguards to prevent you from breaking the parser. For more information please check out the
+associated
 FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones).
-
-### 2024-09-14
-
-We have recently added support for extending WatchState with more GUIDs, as of now, the support for it is done via
-editing a`/config/guid.yaml` file in the config directory. We plan to hopefully add management via WebUI in near the future. For more information please check out the associated
-FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones).
-
-The mapping should work for all officially supported clients. If you have a client that is not supported, you have to manually add support for that client,
-or request the maintainer to add support for it.
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.
@@ -38,7 +38,8 @@ Refer to [NEWS](NEWS.md) for old updates.
 * Search your backend for `title` or `item id`.
 * Display and filter your play state. Can be exported as `yaml` or `json`.
 * Check if your media servers reporting same data via the parity command.
-* Track your watch progress via webhooks.
+* Sync your watch progress via webhooks or scheduled tasks.
+* Check if your media backends have stale references to old files.
 
 ----
 

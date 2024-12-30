@@ -148,7 +148,7 @@ final class EnvCommand extends Command
     {
         $key = strtoupper($input->getOption('key'));
 
-        if (!$input->getOption('set') && !$input->getOption('delete')) {
+        if (null === $input->getOption('set') && !$input->getOption('delete')) {
             $output->writeln((string)env($key, ''));
             return self::SUCCESS;
         }
