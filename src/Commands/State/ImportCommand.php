@@ -521,7 +521,7 @@ class ImportCommand extends Command
             ],
         ];
 
-        (new Table($output))->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
+        new Table($output)->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
 
         if (false === $input->getOption('dry-run')) {
             $configFile->persist();

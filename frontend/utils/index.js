@@ -1,6 +1,4 @@
-import {useNotification} from '@kyvg/vue3-notification'
-
-const {notify} = useNotification();
+const toast = useToast()
 
 const AG_SEPARATOR = '.'
 
@@ -165,28 +163,29 @@ const ucFirst = (str) => {
  * @returns {void}
  */
 const notification = (type, title, text, duration = 3000) => {
-    let classes = ''
+    let method = '', options = {
+        timeout: duration,
+    }
 
     switch (type.toLowerCase()) {
         case 'info':
         default:
-            classes = 'has-background-info has-text-white'
+            method = 'info'
             break
         case 'success':
-            classes = 'has-background-success has-text-white'
+            method = 'success'
             break
         case 'warning':
-            classes = 'has-background-warning has-text-white'
+            method = 'warning'
             break
         case 'error':
-            classes = 'has-background-danger has-text-white'
-            if (duration === 3000) {
-                duration = 10000
+            method = 'error'
+            if (3000 === duration) {
+                options.timeout = 10000
             }
             break
     }
-
-    return notify({title, text, type: classes, duration})
+    toast[method](text, options)
 }
 
 /**

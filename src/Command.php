@@ -270,7 +270,7 @@ class Command extends BaseCommand
 
                 if (!empty($list)) {
                     array_pop($list);
-                    (new Table($output))
+                    new Table($output)
                         ->setStyle(name: 'box')
                         ->setHeaders(
                             array_map(

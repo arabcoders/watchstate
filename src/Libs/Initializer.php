@@ -209,7 +209,7 @@ final class Initializer
     {
         if (null === $request) {
             $factory = new Psr17Factory();
-            $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))->fromGlobals();
+            $request = new ServerRequestCreator($factory, $factory, $factory, $factory)->fromGlobals();
         }
 
         try {
@@ -318,7 +318,7 @@ final class Initializer
                 return $response;
             }
 
-            return (new ServeStatic())->serve($request)->withHeader('Access-Control-Allow-Origin', '*')
+            return new ServeStatic()->serve($request)->withHeader('Access-Control-Allow-Origin', '*')
                 ->withHeader('Access-Control-Allow-Credentials', 'true');
         }
 
@@ -629,7 +629,7 @@ final class Initializer
         $refer = '-';
 
         if (true === ag_exists($request->getServerParams(), 'HTTP_REFERER')) {
-            $refer = (new Uri(ag($request->getServerParams(), 'HTTP_REFERER')))
+            $refer = new Uri(ag($request->getServerParams(), 'HTTP_REFERER'))
                 ->withQuery('')->withFragment('')->withUserInfo('');
         }
 

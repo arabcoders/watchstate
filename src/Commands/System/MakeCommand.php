@@ -19,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class MakeCommand extends Command
 {
-    public const ROUTE = 'system:db:make';
+    public const string ROUTE = 'system:db:make';
 
     /**
      * Class Constructor.

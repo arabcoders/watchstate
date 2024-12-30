@@ -119,7 +119,7 @@ class DBLayerTest extends TestCase
                     $this->db->exec($cmd);
                 }
 
-                (new PDOAdapter(new Logger('test'), $this->db))->migrations('up');
+                new PDOAdapter(new Logger('test'), $this->db)->migrations('up');
 
                 return $db->query(sql: 'SELECT * FROM test WHERE zid = :id');
             },

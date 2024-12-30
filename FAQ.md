@@ -516,7 +516,7 @@ Click `Save Changes`
 >
 > If you use multiple plex servers and use the same PlexPass account for all of them, You have to add each backend
 > using the same method above, while enabling `limit webhook events to` `selected user` and `backend unique id`.
-> Essentially, this method replaced the old unified webhook.token for backends.
+> Essentially, this method replaced the old unified webhook token for backends.
 
 -----
 
@@ -625,45 +625,37 @@ https://watchstate.example.org {
 
 ### WS_API_AUTO
 
-The purpose of this environment variable is to automate the configuration process. It's mainly used for people who uses
-many browsers
-to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to be configured
-before it
-can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in `${WS_DATA_PATH}/config/.env`.
+The purpose of this environment variable is to automate the configuration process. It's mainly used for people who use
+many browsers to access the `WebUI` and want to automate the configuration process. as it's requires the API settings to
+be configured before it can be used. This environment variable can be enabled by setting `WS_API_AUTO=true` in
+`${WS_DATA_PATH}/config/.env`.
 
 #### Why you should use it?
 
 You normally should not use it, as it's a **GREAT SECURITY RISK**. However, if you are using the tool in a secure
-environment
-and not worried about exposing your API key, you can use it to automate the configuration process.
+environment and not worried about exposing your API key, you can use it to automate the configuration process.
 
 #### Why you should not use it?
 
 Because, by exposing your API key, you are also exposing every data you have in the tool. This is a **GREAT SECURITY
-RISK**,
-any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get your API
-key. And with this key
-they can do anything they want with your data. including viewing your media servers api keys.
-
-So, please while we have this option available, we strongly recommend not to use it if `WatchState` is exposed to the
-internet.
+RISK**, any person or bot that are able to access the `WebUI` will also be able to visit `/v1/api/system/auto` and get
+your API key. And with this key they can do anything they want with your data. including viewing your media servers API
+keys. So, please while we have this option available, we strongly recommend not to use it if `WatchState` is exposed to
+the internet.
 
 > [!IMPORTANT]
 > This environment variable is **GREAT SECURITY RISK**, and we strongly recommend not to use it if `WatchState` is
-> exposed to the internet.
-> I cannot stress this enough, please do not use it unless you are in a secure environment.
+> exposed to the internet. I cannot stress this enough, please do not use it unless you are in a secure environment.
 
 ---
 
 ### How to disable the included cache server and use external cache server?
 
 Set this environment variable in your `compose.yaml` file `DISABLE_CACHE` with value of `1`. to use external redis
-server
-you need to alter the value of `WS_CACHE_URL` environment variable. the format for this variable
-is `redis://host:port?password=auth&db=db_num`,
-for example to use redis from another container you could use something
-like `redis://172.23.1.10:6379?password=my_secert_password&db=8`.
-We only support `redis` and API compatible alternative.
+server you need to alter the value of `WS_CACHE_URL` environment variable. the format for this variable is
+`redis://host:port?password=auth&db=db_num`, for example to use redis from another container you could use something
+like `redis://172.23.1.10:6379?password=my_secert_password&db=8`. We only support `redis` and API compatible
+alternative.
 
 Once that done, restart the container.
 
@@ -784,14 +776,14 @@ their server, You can follow these steps.
 
 #### Requirements
 
-* [PHP 8.3](http://https://www.php.net/downloads.php) with both the `CLI` and `fpm` mode.
+* [PHP 8.4](http://https://www.php.net/downloads.php) with both the `CLI` and `fpm` mode.
 * PHP Extensions `pdo`, `pdo-sqlite`, `mbstring`, `json`, `ctype`, `curl`, `redis`, `sodium` and `simplexml`.
 * [Composer](https://getcomposer.org/download/) for dependency management.
 * [Redis-server](https://redis.io/) for caching or a compatible implementation that works
   with [php-redis](https://github.com/phpredis/phpredis).
 * [Caddy](https://caddyserver.com/) for frontend handling. However, you can use whatever you like. As long as it has
   support for fastcgi.
-* [nodejs v20+](https://nodejs.org/en/download/) for `WebUI` compilation.
+* [Node.js v20+](https://nodejs.org/en/download/) for `WebUI` compilation.
 
 #### Installation
 
@@ -903,7 +895,7 @@ and treat them as not found.
 This helps with slow stat calls in network shares, or cloud storage.
 
 Everytime we do a stat call we cache it for 1 hour, so if we have multiple records reporting the same path, we only do
-the stat check once.
+the stat check once. Assuming all your media backends are using same path for the media files.
 
 ---
 
@@ -957,7 +949,8 @@ Note: the tip about adding the group_add came from the user `binarypancakes` in 
 ### Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
 
 By going to `More > Custom GUIDs` in the WebUI, you can add custom GUIDs to the parser. We know not all people,
-like using GUI, as such You can extend the parser by creating new file at `/config/config/guid.yaml` with the following content.
+like using GUI, as such You can extend the parser by creating new file at `/config/config/guid.yaml` with the following
+content.
 
 ```yaml
 # (Optional) The version of the guid file. If omitted, it will default to the latest version.
@@ -1018,8 +1011,32 @@ As you can see from the config, it's roughly how we expected it to be. The `guid
 custom GUIDs. the `links` array is where you map from client/backends GUIDs to the custom GUID in `WatchState`.
 
 Everything in this file should be in lower case. If error occurs, the tool will log a warning and ignore the guid,
-By default, we only show `ERROR` levels in log file, You can lower it by setting `WS_LOGGER_FILE_LEVEL` environment variable
+By default, we only show `ERROR` levels in log file, You can lower it by setting `WS_LOGGER_FILE_LEVEL` environment
+variable
 to `WARNING`.
 
-If you added or removed a guid from the `guid.yaml` file, you should run `system:index --force-reindex` command to update the
+If you added or removed a guid from the `guid.yaml` file, you should run `system:index --force-reindex` command to
+update the
 database indexes with the new guids.
+
+---
+
+### Sync watch progress.
+
+In order to sync the watch progress between media backends, you need to enable the following environment variable
+`WS_SYNC_PROGRESS` in `(WebUI) > Env` page or via the cli using the following command:
+
+```bash
+$ docker exec -ti watchstate console system:env -k WS_SYNC_PROGRESS -e true
+```
+
+For best experience, you should enable the `Webhooks` feature for the media backends you want to sync the watch
+progress,
+however, if you are unable to do so, the `Tasks > import` task will also generate progress watch events. However, it's
+not as reliable as the `Webhooks` or as fast. using `Webhooks` is the recommended way and offers the best experience.
+
+To check if there is any watch progress events being registered, You can go to `(WebUI) > More > Events` and check
+`on_progress` events, if you are seeing those, this means the progress is being synced. Check the `Tasks logs` to see
+the event log.
+
+

@@ -254,13 +254,19 @@ final class Guids
             ]), Status::BAD_REQUEST);
         }
 
-        foreach (ag($this->getData(), 'links', []) as $link) {
-            if ($link['type'] === $client && $link['map']['from'] === $params->get('map.from')) {
-                return api_error(r("The client '{client}' map.from '{from}' is already exists.", [
+        $exists = array_any(
+            ag($this->getData(), 'links', []),
+            fn($link) => $link['type'] === $client && $link['map']['from'] === $params->get('map.from')
+        );
+
+        if (true === $exists) {
+            return api_error(
+                r("The client '{client}' map.from '{from}' is already exists.", [
                     'client' => $client,
                     'from' => $params->get('map.from')
-                ]), Status::BAD_REQUEST);
-            }
+                ]),
+                Status::BAD_REQUEST
+            );
         }
 
         $link = [

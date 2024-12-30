@@ -19,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 class VersionCommand extends Command
 {
-    public const ROUTE = 'backend:version';
+    public const string ROUTE = 'backend:version';
 
     /**
      * Configures the command.

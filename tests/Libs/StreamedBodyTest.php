@@ -12,7 +12,7 @@ use RuntimeException;
 
 class StreamedBodyTest extends TestCase
 {
-    private function getStream(Closure $fn = null, bool $isReadable = true): StreamedBody
+    private function getStream(Closure|null $fn = null, bool $isReadable = true): StreamedBody
     {
         return new StreamedBody($fn ?? fn() => 'test', isReadable: $isReadable);
     }

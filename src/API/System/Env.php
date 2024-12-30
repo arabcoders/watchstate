@@ -64,9 +64,8 @@ final class Env
     }
 
     #[Get(self::URL . '/{key}[/]', name: 'system.env.view')]
-    public function envView(iRequest $request, array $args = []): iResponse
+    public function envView(string $key): iResponse
     {
-        $key = strtoupper((string)ag($args, 'key', ''));
         if (empty($key)) {
             return api_error('Invalid value for key path parameter.', Status::BAD_REQUEST);
         }
@@ -166,10 +165,20 @@ final class Env
         return [];
     }
 
-    private function setType($spec, mixed $value): mixed
+    private function setType($spec, mixed $value): string|int|bool|float
     {
+        if ('bool' === ag($spec, 'type', 'string')) {
+            if (is_bool($value)) {
+                return $value;
+            }
+            if (true === in_array(strtolower((string)$value), ['true', '1', 'yes', 'on'], true)) {
+                return true;
+            }
+
+            return false;
+        }
+
         return match (ag($spec, 'type', 'string')) {
-            'bool' => (bool)$value,
             'int' => (int)$value,
             'float' => (float)$value,
             default => (string)$value,

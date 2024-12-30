@@ -949,7 +949,7 @@ final class DBLayer implements LoggerAwareInterface
             $attempts = (int)ag($options, 'attempts', 0);
             if (true === str_contains(strtolower($e->getMessage()), 'database is locked')) {
                 if ($attempts >= $this->retry) {
-                    throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
+                    throw new DBLayerException($e->getMessage(), (int)$e->getCode(), $e)
                         ->setFile($e->getFile())
                         ->setLine($e->getLine());
                 }
@@ -983,7 +983,7 @@ final class DBLayer implements LoggerAwareInterface
                     throw $e;
                 }
 
-                throw (new DBLayerException($e->getMessage(), (int)$e->getCode(), $e))
+                throw new DBLayerException($e->getMessage(), (int)$e->getCode(), $e)
                     ->setInfo($this->last['sql'], $this->last['bind'], $e->errorInfo ?? [], $e->getCode())
                     ->setFile($e->getFile())
                     ->setLine($e->getLine());

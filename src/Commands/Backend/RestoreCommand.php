@@ -29,7 +29,7 @@ use Throwable;
 #[Cli(command: self::ROUTE)]
 class RestoreCommand extends Command
 {
-    public const ROUTE = 'backend:restore';
+    public const string ROUTE = 'backend:restore';
 
     /**
      * Class constructor.
@@ -213,7 +213,7 @@ class RestoreCommand extends Command
             ],
         ]);
 
-        $mapper = (new RestoreMapper($this->logger, $file))->loadData();
+        $mapper = new RestoreMapper($this->logger, $file)->loadData();
 
         $this->logger->notice('SYSTEM: Loading restore data is complete.', [
             'memory' => [

@@ -245,13 +245,13 @@ class UriTest extends TestCase
 
         $this->assertSame(
             'http://user:pass@host:81/path',
-            (string)(new Uri('http://user:pass@host:81'))->withPath('path'),
+            (string)new Uri('http://user:pass@host:81')->withPath('path'),
             'The string should be http://user:pass@host:81/path'
         );
 
         $this->assertSame(
             'http:/path',
-            (string)(new Uri('http://host:81'))->withHost('')->withPath('//path'),
+            (string)new Uri('http://host:81')->withHost('')->withPath('//path'),
             'The string should be http:/path'
         );
     }
@@ -259,7 +259,7 @@ class UriTest extends TestCase
     public function test_customUrls()
     {
         foreach ($this->customUrls as $url) {
-            $this->assertSame($url, (string)(new Uri($url)), "The URL should be $url");
+            $this->assertSame($url, (string)new Uri($url), "The URL should be $url");
         }
     }
 }

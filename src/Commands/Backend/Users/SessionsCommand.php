@@ -21,9 +21,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class SessionsCommand extends Command
 {
-    public const ROUTE = 'backend:users:sessions';
+    public const string ROUTE = 'backend:users:sessions';
 
-    private const REMAP_FIELDS = [
+    private const array REMAP_FIELDS = [
         'user_name' => 'User',
         'item_title' => 'Title',
         'item_type' => 'Type',

@@ -31,9 +31,6 @@ final class Integrity
 
     private bool $fromCache = false;
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function __construct(private readonly iCache $cache)
     {
         set_time_limit(0);

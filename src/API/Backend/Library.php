@@ -22,9 +22,9 @@ final class Library
     use APITraits;
 
     #[Get(BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backend.library')]
-    public function listLibraries(iRequest $request, array $args = []): iResponse
+    public function listLibraries(string $name): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
+        if (empty($name)) {
             return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
         }
 

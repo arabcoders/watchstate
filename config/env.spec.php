@@ -183,7 +183,7 @@ return (function () {
                 $value = substr($value, 1, -1);
             }
 
-            $status = (new CronExpression($value))->getNextRunDate()->getTimestamp() >= 0;
+            $status = new CronExpression($value)->getNextRunDate()->getTimestamp() >= 0;
 
             if (!$status) {
                 throw new ValidationException('Invalid cron expression. The next run date is in the past.');

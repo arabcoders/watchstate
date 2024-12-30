@@ -15,7 +15,7 @@ class ExceptionHandlerMiddlewareTest extends TestCase
     /** @noinspection PhpUnhandledExceptionInspection */
     public function test_response()
     {
-        $result = (new ExceptionHandlerMiddleware())->process(
+        $result = new ExceptionHandlerMiddleware()->process(
             request: $this->getRequest(),
             handler: $this->getHandler(
                 fn() => throw new \RuntimeException('Test Exception', 404)

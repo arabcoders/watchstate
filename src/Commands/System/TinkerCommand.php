@@ -22,7 +22,7 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
 #[Cli(command: self::ROUTE)]
 final class TinkerCommand extends Command
 {
-    public const ROUTE = 'system:tinker';
+    public const string ROUTE = 'system:tinker';
 
     /**
      * Class Constructor.

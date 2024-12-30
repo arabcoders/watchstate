@@ -19,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class MigrationsCommand extends Command
 {
-    public const ROUTE = 'system:db:migrations';
+    public const string ROUTE = 'system:db:migrations';
 
     /**
      * Class Constructor.

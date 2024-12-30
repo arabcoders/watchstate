@@ -129,7 +129,7 @@ class Response implements iResponse
         array $headers = [],
         mixed $body = null,
         string $version = '1.1',
-        string $reason = null
+        string|null $reason = null
     ) {
         if (null !== $body && '' !== $body) {
             $this->stream = Stream::create($body);

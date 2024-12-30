@@ -1,14 +1,16 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-import path from "path";
+import path from 'path'
 
 export default defineNuxtConfig({
     ssr: false,
     devtools: {enabled: true},
+
     devServer: {
         port: 8081,
         host: "0.0.0.0",
     },
+
     app: {
         head: {
             "meta": [
@@ -20,20 +22,32 @@ export default defineNuxtConfig({
         buildAssetsDir: "assets",
         pageTransition: {name: 'page', mode: 'out-in'}
     },
+
     router: {
         options: {
             linkActiveClass: "is-selected",
         }
     },
+
     modules: [
         '@vueuse/nuxt',
         'floating-vue/nuxt',
-        'nuxt3-notifications',
     ],
+
     nitro: {
         output: {
             publicDir: path.join(__dirname, 'exported')
         }
     },
+
+    build: {
+        transpile: ['vue-toastification'],
+    },
+
+    css: [
+        'vue-toastification/dist/index.css'
+    ],
+
     telemetry: false,
+    compatibilityDate: "2024-12-28",
 })

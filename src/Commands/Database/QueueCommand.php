@@ -10,6 +10,7 @@ use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -24,7 +25,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 class QueueCommand extends Command
 {
-    public const ROUTE = 'db:queue';
+    public const string ROUTE = 'db:queue';
 
     /**
      * Class constructor.
@@ -73,7 +74,7 @@ class QueueCommand extends Command
      * @param OutputInterface $output The output object.
      *
      * @return int The command's exit code.
-     * @throws \Psr\Cache\InvalidArgumentException If the cache key is invalid.
+     * @throws InvalidArgumentException
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -81,7 +82,7 @@ class QueueCommand extends Command
             $item = Container::get(iState::class)::fromArray(['id' => $id]);
 
             if (null === ($item = $this->db->get($item))) {
-                $output->writeln(sprintf('<error>Record id \'%d\' does not exists.</error>', $id));
+                $output->writeln(r("<error>Record id '{id}' does not exist.</error>", ['id' => $id]));
                 return self::FAILURE;
             }
 
@@ -99,7 +100,7 @@ class QueueCommand extends Command
 
         if (null !== ($id = $input->getOption('remove'))) {
             if (!array_key_exists($id, $queue)) {
-                $output->writeln(sprintf('<error>Record id \'%d\' does not exists in the queue.</error>', $id));
+                $output->writeln(r("<error>Record id '{id}' does not exist in the queue.</error>", ['id' => $id]));
                 return self::FAILURE;
             }
 

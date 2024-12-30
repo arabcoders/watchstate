@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Backends\Common;
 
-final class Response
+final readonly class Response
 {
     /**
      * Wrap clients responses into easy to consume object.
@@ -15,10 +15,10 @@ final class Response
      * @param mixed $extra An array that can contain anything. Should be rarely used.
      */
     public function __construct(
-        public readonly bool $status,
-        public readonly mixed $response = null,
-        public readonly Error|null $error = null,
-        public readonly array $extra = [],
+        public bool $status,
+        public mixed $response = null,
+        public Error|null $error = null,
+        public array $extra = [],
     ) {
     }
 

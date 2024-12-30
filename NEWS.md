@@ -1,5 +1,16 @@
 # Old Updates
 
+### 2024-09-14
+
+We have recently added support for extending WatchState with more GUIDs, as of now, the support for it is done via
+editing a`/config/guid.yaml` file in the config directory. We plan to hopefully add management via WebUI in near the
+future. For more information please check out the associated
+FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones).
+
+The mapping should work for all officially supported clients. If you have a client that is not supported, you have to
+manually add support for that client,
+or request the maintainer to add support for it.
+
 ### 2024-08-19
 
 We have migrated the `state:push` task into the new events system, as such the old task `state:push` is now gone.

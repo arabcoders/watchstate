@@ -19,7 +19,6 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PDO;
 use Psr\Log\LoggerInterface;
-use Random\RandomException;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
@@ -61,7 +60,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_loadData_null_date_conditions(): void
     {
@@ -87,7 +85,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_loadData_date_conditions(): void
     {
@@ -314,7 +311,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_get_conditions(): void
     {
@@ -359,7 +355,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_get_fully_loaded_conditions(): void
     {
@@ -445,7 +440,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_has_conditions(): void
     {
@@ -462,7 +456,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_has_fully_loaded_conditions(): void
     {
@@ -498,7 +491,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_getObjects_conditions(): void
     {
@@ -524,7 +516,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_commit_with_no_episode_number(): void
     {
@@ -535,7 +526,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_insert_with_no_episode_number(): void
     {
@@ -546,7 +536,6 @@ abstract class MapperAbstract extends TestCase
     }
 
     /**
-     * @throws RandomException
      */
     public function test_update_with_no_episode_number(): void
     {

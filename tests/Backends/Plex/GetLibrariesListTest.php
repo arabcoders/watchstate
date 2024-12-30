@@ -58,7 +58,7 @@ class GetLibrariesListTest extends TestCase
         ]);
 
         $client = new MockHttpClient($resp);
-        $response = (new GetLibrariesList($client, $this->logger))($this->context);
+        $response = new GetLibrariesList($client, $this->logger)($this->context);
 
         $this->assertTrue($response->status);
         $this->assertNull($response->error);

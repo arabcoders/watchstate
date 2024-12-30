@@ -88,7 +88,7 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
      * @return ResponseStreamInterface A ResponseStreamInterface object that allows you to iterate over
      *                                the streamed HTTP responses asynchronously.
      */
-    public function stream(iterable|ResponseInterface $responses, float $timeout = null): ResponseStreamInterface
+    public function stream(iterable|ResponseInterface $responses, ?float $timeout = null): ResponseStreamInterface
     {
         return $this->client->stream($responses, $timeout);
     }

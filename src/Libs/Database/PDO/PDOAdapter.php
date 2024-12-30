@@ -516,7 +516,7 @@ final class PDOAdapter implements iDB
      */
     public function ensureIndex(array $opts = []): mixed
     {
-        return (new PDOIndexer($this->db, $this->logger))->ensureIndex($opts);
+        return new PDOIndexer($this->db, $this->logger)->ensureIndex($opts);
     }
 
     /**
@@ -524,7 +524,7 @@ final class PDOAdapter implements iDB
      */
     public function migrateData(string $version, iLogger|null $logger = null): mixed
     {
-        return (new PDODataMigration($this->db, $logger ?? $this->logger))->automatic();
+        return new PDODataMigration($this->db, $logger ?? $this->logger)->automatic();
     }
 
     /**
@@ -532,7 +532,7 @@ final class PDOAdapter implements iDB
      */
     public function isMigrated(): bool
     {
-        return (new PDOMigrations($this->db, $this->logger))->isMigrated();
+        return new PDOMigrations($this->db, $this->logger)->isMigrated();
     }
 
     /**
@@ -540,7 +540,7 @@ final class PDOAdapter implements iDB
      */
     public function makeMigration(string $name, array $opts = []): mixed
     {
-        return (new PDOMigrations($this->db, $this->logger))->make($name);
+        return new PDOMigrations($this->db, $this->logger)->make($name);
     }
 
     /**
@@ -548,7 +548,7 @@ final class PDOAdapter implements iDB
      */
     public function maintenance(array $opts = []): mixed
     {
-        return (new PDOMigrations($this->db, $this->logger))->runMaintenance();
+        return new PDOMigrations($this->db, $this->logger)->runMaintenance();
     }
 
     /**

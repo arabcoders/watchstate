@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class ListCommand extends Command
 {
-    public const ROUTE = 'config:list';
+    public const string ROUTE = 'config:list';
 
     /**
      * Configures the command.

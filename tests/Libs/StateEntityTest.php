@@ -364,11 +364,11 @@ class StateEntityTest extends TestCase
     public function test_hasRelativeGuid(): void
     {
         $this->assertTrue(
-            (new StateEntity($this->testEpisode))->hasRelativeGuid(),
+            new StateEntity($this->testEpisode)->hasRelativeGuid(),
             'When entity is episode, and only if has supported GUIDs hasRelativeGuid() returns true'
         );
         $this->assertFalse(
-            (new StateEntity($this->testMovie))->hasRelativeGuid(),
+            new StateEntity($this->testMovie)->hasRelativeGuid(),
             'When entity is movie, hasRelativeGuid() returns false regardless'
         );
 
@@ -401,7 +401,7 @@ class StateEntityTest extends TestCase
     {
         $this->assertSame(
             [],
-            (new StateEntity($this->testMovie))->getRelativeGuids(),
+            new StateEntity($this->testMovie)->getRelativeGuids(),
             'When entity is movie, getRelativeGuids() returns empty array regardless'
         );
         $this->assertSame(
@@ -409,7 +409,7 @@ class StateEntityTest extends TestCase
                 'guid_imdb' => 'tt510/1/2',
                 'guid_tvdb' => '520/1/2'
             ],
-            (new StateEntity($this->testEpisode))->getRelativeGuids(),
+            new StateEntity($this->testEpisode)->getRelativeGuids(),
             'When entity is episode, and has supported GUIDs, getRelativeGuids() returns list of all supported GUIDs'
         );
 
@@ -454,7 +454,7 @@ class StateEntityTest extends TestCase
         );
 
         $this->assertSame([],
-            (new StateEntity($this->testMovie))->getRelativePointers(),
+            new StateEntity($this->testMovie)->getRelativePointers(),
             'When entity is movie, getRelativePointers() returns empty array regardless.'
         );
 

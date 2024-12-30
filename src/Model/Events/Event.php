@@ -88,7 +88,7 @@ final class Event extends EntityTable
             return false;
         }
 
-        return (new EntityValidation($this))->isValid();
+        return new EntityValidation($this)->isValid();
     }
 
 }

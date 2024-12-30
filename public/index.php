@@ -57,7 +57,7 @@ try {
         $_SERVER['X_REQUEST_ID'] = bin2hex(random_bytes(16));
     }
 
-    $app = (new App\Libs\Initializer())->boot();
+    $app = new App\Libs\Initializer()->boot();
 } catch (Throwable $e) {
     $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
 
@@ -81,7 +81,7 @@ try {
 }
 
 try {
-    (new Emitter())($app->http());
+    new Emitter()($app->http());
 } catch (Throwable $e) {
     $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
 

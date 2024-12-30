@@ -34,8 +34,8 @@ final class ConsoleOutput extends baseConsoleOutput
      */
     public function __construct(
         int $verbosity = parent::VERBOSITY_NORMAL,
-        bool $decorated = null,
-        iOutput $formatter = null
+        ?bool $decorated = null,
+        ?iOutput $formatter = null
     ) {
         $formatter = $formatter ?? new OutputFormatter();
 

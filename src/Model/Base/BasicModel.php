@@ -132,7 +132,7 @@ abstract class BasicModel implements jsonSerializable
     {
         $props = [];
 
-        $reflect = (new ReflectionObject($this))->getProperties(ReflectionProperty::IS_PUBLIC);
+        $reflect = new ReflectionObject($this)->getProperties(ReflectionProperty::IS_PUBLIC);
 
         foreach ($reflect as $src) {
             $value = $src->getValue($this);
@@ -204,7 +204,7 @@ abstract class BasicModel implements jsonSerializable
 
         self::$_props[$className] = [];
 
-        $reflect = (new ReflectionObject($this))->getProperties(ReflectionProperty::IS_PUBLIC);
+        $reflect = new ReflectionObject($this)->getProperties(ReflectionProperty::IS_PUBLIC);
 
         foreach ($reflect as $src) {
             $prop = $src->getType();
@@ -264,7 +264,7 @@ abstract class BasicModel implements jsonSerializable
 
         self::$_columns[$className] = [];
 
-        foreach ((new ReflectionObject($this))->getConstants() as $key => $val) {
+        foreach (new ReflectionObject($this)->getConstants() as $key => $val) {
             if (!str_starts_with($key, 'COLUMN_')) {
                 continue;
             }

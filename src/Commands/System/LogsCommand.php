@@ -317,7 +317,7 @@ final class LogsCommand extends Command
             return self::FAILURE;
         }
 
-        if (!$input->getOption('no-interaction')) {
+        if (false === $input->getOption('no-interaction')) {
             if (function_exists('stream_isatty') && defined('STDERR')) {
                 $tty = stream_isatty(STDERR);
             } else {
@@ -325,12 +325,9 @@ final class LogsCommand extends Command
             }
 
             if (false === $tty) {
-                $output->writeln('<error>ERROR: This command flag require interaction.</error>');
+                $output->writeln('<error>ERROR: no interactive session found.</error>');
                 $output->writeln(
-                    '<comment>If you are running this tool inside docker, you have to enable interaction using "-ti" flag</comment>'
-                );
-                $output->writeln(
-                    '<comment>For example: docker exec -ti watchstate console config:manage my_server</comment>'
+                    '<comment>to clear log without interactive session, pass</comment> [<flag>-n, --no-interaction</flag>] flag.'
                 );
                 return self::FAILURE;
             }
@@ -343,12 +340,12 @@ final class LogsCommand extends Command
                 ),
                 false
             );
-        }
 
-        $confirmClear = $this->getHelper('question')->ask($input, $output, $question);
+            $confirmClear = $this->getHelper('question')->ask($input, $output, $question);
 
-        if (true !== (bool)$confirmClear) {
-            return self::SUCCESS;
+            if (true !== (bool)$confirmClear) {
+                return self::SUCCESS;
+            }
         }
 
         $file->openFile('w');

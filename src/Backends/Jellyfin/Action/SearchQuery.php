@@ -13,7 +13,6 @@ use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -72,7 +71,6 @@ class SearchQuery
      *
      * @throws ExceptionInterface When the request fails.
      * @throws JsonException When the response is not valid JSON.
-     * @throws RuntimeException
      */
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {

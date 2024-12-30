@@ -239,7 +239,7 @@ return (function (): array {
 
         MemoryMapper::class => [
             'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
-                return (new MemoryMapper(logger: $logger, db: $db, cache: $cache))
+                return new MemoryMapper(logger: $logger, db: $db, cache: $cache)
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
@@ -251,7 +251,7 @@ return (function (): array {
 
         DirectMapper::class => [
             'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
-                return (new DirectMapper(logger: $logger, db: $db, cache: $cache))
+                return new DirectMapper(logger: $logger, db: $db, cache: $cache)
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [

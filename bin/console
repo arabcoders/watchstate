@@ -51,7 +51,7 @@ if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
 require __DIR__ . '/../vendor/autoload.php';
 
 try {
-    $app = (new App\Libs\Initializer())->boot();
+    $app = new App\Libs\Initializer()->boot();
 } catch (Throwable $e) {
     $message = strtr(
             'CLI: Exception [{kind}] was thrown unhandled during CLI boot context. Error [{message} @ {file}:{line}].',

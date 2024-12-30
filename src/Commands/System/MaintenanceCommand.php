@@ -18,7 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[Cli(command: self::ROUTE)]
 final class MaintenanceCommand extends Command
 {
-    public const ROUTE = 'system:db:maintenance';
+    public const string ROUTE = 'system:db:maintenance';
 
     /**
      * Class constructor.

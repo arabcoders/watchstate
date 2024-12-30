@@ -17,9 +17,9 @@ class NoAccessLogMiddlewareTest extends TestCase
 
     public function test_response_not_internal_request()
     {
-        $result = (new NoAccessLogMiddleware())->process(
+        $result = new NoAccessLogMiddleware()->process(
             request: $this->getRequest(),
-            handler: $this->getHandler((new Response(Status::OK)))
+            handler: $this->getHandler(new Response(Status::OK))
         );
 
         $this->assertFalse(
@@ -32,9 +32,9 @@ class NoAccessLogMiddlewareTest extends TestCase
     {
         Config::save('api.logInternal', true);
 
-        $result = (new NoAccessLogMiddleware())->process(
+        $result = new NoAccessLogMiddleware()->process(
             request: $this->getRequest()->withAttribute('INTERNAL_REQUEST', true),
-            handler: $this->getHandler((new Response(Status::OK)))
+            handler: $this->getHandler(new Response(Status::OK))
         );
 
         $this->assertFalse(
@@ -43,9 +43,9 @@ class NoAccessLogMiddlewareTest extends TestCase
         );
 
         Config::save('api.logInternal', false);
-        $result = (new NoAccessLogMiddleware())->process(
+        $result = new NoAccessLogMiddleware()->process(
             request: $this->getRequest()->withAttribute('INTERNAL_REQUEST', true),
-            handler: $this->getHandler((new Response(Status::OK)))
+            handler: $this->getHandler(new Response(Status::OK))
         );
 
         $this->assertTrue(

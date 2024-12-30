@@ -29,7 +29,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
         Throwable|string $exception,
         string $exceptionMessage = '',
         int|null $exceptionCode = null,
-        callable $callback = null,
+        callable|null $callback = null,
     ): void {
         $caught = null;
         try {

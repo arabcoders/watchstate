@@ -16,7 +16,7 @@ class AddCorsMiddlewareTest extends TestCase
 
     public function test_response()
     {
-        $result = (new AddCorsMiddleware())->process(
+        $result = new AddCorsMiddleware()->process(
             request: $this->getRequest(),
             handler: $this->getHandler(new Response(Status::OK))
         );

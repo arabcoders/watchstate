@@ -389,7 +389,7 @@ class HelpersTest extends TestCase
         $entity = new StateEntity($movieData);
         $stream = new Stream(fopen('php://memory', 'w+'));
         $factory = new Psr17Factory();
-        $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
+        $request = new ServerRequestCreator($factory, $factory, $factory, $factory)
             ->fromArrays(['REQUEST_METHOD' => 'GET']);
         saveWebhookPayload(entity: $entity, request: $request, file: $stream);
 
@@ -416,7 +416,7 @@ class HelpersTest extends TestCase
 
         $factory = new Psr17Factory();
 
-        $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
+        $request = new ServerRequestCreator($factory, $factory, $factory, $factory)
             ->fromArrays(server: ['REQUEST_METHOD' => 'GET']);
         $request = $request->withBody(Stream::create(json_encode($movieData)))
             ->withParsedBody($movieData)
@@ -430,7 +430,7 @@ class HelpersTest extends TestCase
         $content = json_decode($data, associative: true);
 
         $factory2 = new Psr17Factory();
-        $fromFile = (new ServerRequestCreator($factory2, $factory2, $factory2, $factory2))
+        $fromFile = new ServerRequestCreator($factory2, $factory2, $factory2, $factory2)
             ->fromArrays(server: ag($content, 'server'), body: ag($content, 'body'));
         $fromFile = $fromFile
             ->withAttribute('foo', 'bar')
@@ -851,7 +851,7 @@ class HelpersTest extends TestCase
     public function test_getClientIp(): void
     {
         $factory = new Psr17Factory();
-        $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
+        $request = new ServerRequestCreator($factory, $factory, $factory, $factory)
             ->fromArrays(['REQUEST_METHOD' => 'GET', 'REMOTE_ADDR' => '1.2.3.4']);
 
         $this->assertSame(
@@ -861,7 +861,7 @@ class HelpersTest extends TestCase
         );
 
         $factory = new Psr17Factory();
-        $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))
+        $request = new ServerRequestCreator($factory, $factory, $factory, $factory)
             ->fromArrays([
                 'REQUEST_METHOD' => 'GET',
                 'REMOTE_ADDR' => '1.2.3.4',

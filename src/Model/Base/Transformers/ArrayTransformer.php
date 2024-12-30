@@ -17,6 +17,6 @@ final class ArrayTransformer
 
     public function __invoke(TransformType $type, mixed $data): string|array
     {
-        return (new JSONTransformer(isAssoc: true, nullable: $this->nullable))(type: $type, data: $data);
+        return new JSONTransformer(isAssoc: true, nullable: $this->nullable)(type: $type, data: $data);
     }
 }

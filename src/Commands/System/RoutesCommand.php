@@ -7,6 +7,7 @@ namespace App\Commands\System;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
@@ -52,6 +53,7 @@ final class RoutesCommand extends Command
      * @param OutputInterface $output The output interface object.
      *
      * @return int The exit code of the command execution.
+     * @throws InvalidArgumentException
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
@@ -63,6 +65,9 @@ final class RoutesCommand extends Command
         return $this->showHttp($input, $output);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     protected function showHttp(InputInterface $input, OutputInterface $output): int
     {
         $list = [];
