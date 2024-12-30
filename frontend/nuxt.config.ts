@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-import path from "path";
+import path from 'path'
 
 export default defineNuxtConfig({
     ssr: false,
@@ -32,7 +32,6 @@ export default defineNuxtConfig({
     modules: [
         '@vueuse/nuxt',
         'floating-vue/nuxt',
-        'nuxt3-notifications',
     ],
 
     nitro: {
@@ -40,6 +39,14 @@ export default defineNuxtConfig({
             publicDir: path.join(__dirname, 'exported')
         }
     },
+
+    build: {
+        transpile: ['vue-toastification'],
+    },
+
+    css: [
+        'vue-toastification/dist/index.css'
+    ],
 
     telemetry: false,
     compatibilityDate: "2024-12-28",
