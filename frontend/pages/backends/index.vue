@@ -142,7 +142,7 @@
                       <option value="" disabled>Frequently used commands</option>
                       <option v-for="(command, index) in usefulCommands" :key="`qc-${index}`" :value="index"
                               :disabled="false === Boolean(ag(backend, command.state_key, false))">
-                        {{ command.title }}
+                        {{ command.id }}. {{ command.title }}
                       </option>
                     </select>
                   </div>
@@ -192,26 +192,31 @@ const selectedCommand = ref('')
 
 const usefulCommands = {
   export_now: {
+    id: 1,
     title: "Run normal export.",
     command: 'state:export -v -s {name}',
     state_key: 'export.enabled',
   },
   import_now: {
+    id: 2,
     title: "Run normal import.",
     command: 'state:import -v -s {name}',
     state_key: 'import.enabled'
   },
   force_export: {
+    id: 3,
     title: "Force export local play state to this backend.",
     command: 'state:export -fi -v -s {name}',
     state_key: 'export.enabled',
   },
   backup_now: {
+    id: 4,
     title: "Backup this backend play state.",
     command: "state:backup -v -s {name} --file '{date}.manual_{name}.json'",
     state_key: 'import.enabled',
   },
   metadata_only: {
+    id: 5,
     title: "Import this backend metadata.",
     command: "state:import -v --metadata-only -s {name}",
     state_key: 'import.enabled',
