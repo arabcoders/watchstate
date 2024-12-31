@@ -25,7 +25,7 @@ use Psr\SimpleCache\CacheInterface as iCache;
  *
  * @implements iImport
  */
-final class MemoryMapper implements iImport
+class MemoryMapper implements iImport
 {
     /**
      * @var string Local database GUID prefix.
@@ -566,6 +566,7 @@ final class MemoryMapper implements iImport
 
     /**
      * @inheritdoc
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     public function commit(): mixed
     {

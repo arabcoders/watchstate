@@ -174,6 +174,15 @@ interface ClientInterface
     public function getMetadata(string|int $id, array $opts = []): array;
 
     /**
+     * Get entire library content.
+     *
+     * @param string|int $libraryId library id.
+     * @param array $opts options.
+     * @return array|array<iState> empty array if no items found.
+     */
+    public function getLibraryContent(string|int $libraryId, array $opts = []): array;
+
+    /**
      * Get Library content.
      *
      * @param string|int $id library id.

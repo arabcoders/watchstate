@@ -16,6 +16,7 @@ use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\Import\ReadOnlyMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
@@ -23,7 +24,7 @@ use Monolog\Logger;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\NullAdapter;
@@ -116,7 +117,7 @@ return (function (): array {
             }
         ],
 
-        CacheInterface::class => [
+        iCache::class => [
             'class' => function () {
                 if (true === (bool)env('WS_CACHE_NULL', false)) {
                     return new Psr16Cache(new NullAdapter());
@@ -238,26 +239,38 @@ return (function (): array {
         ],
 
         MemoryMapper::class => [
-            'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
+            'class' => function (iLogger $logger, iDB $db, iCache $cache): iImport {
                 return new MemoryMapper(logger: $logger, db: $db, cache: $cache)
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
                 iLogger::class,
                 iDB::class,
-                CacheInterface::class
+                iCache::class
+            ],
+        ],
+
+        ReadOnlyMapper::class => [
+            'class' => function (iLogger $logger, iDB $db, iCache $cache): iImport {
+                return new ReadOnlyMapper(logger: $logger, db: $db, cache: $cache)
+                    ->setOptions(options: Config::get('mapper.import.opts', []));
+            },
+            'args' => [
+                iLogger::class,
+                iDB::class,
+                iCache::class
             ],
         ],
 
         DirectMapper::class => [
-            'class' => function (iLogger $logger, iDB $db, CacheInterface $cache): iImport {
+            'class' => function (iLogger $logger, iDB $db, iCache $cache): iImport {
                 return new DirectMapper(logger: $logger, db: $db, cache: $cache)
                     ->setOptions(options: Config::get('mapper.import.opts', []));
             },
             'args' => [
                 iLogger::class,
                 iDB::class,
-                CacheInterface::class
+                iCache::class
             ],
         ],
 

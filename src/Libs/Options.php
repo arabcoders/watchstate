@@ -40,6 +40,7 @@ final class Options
     public const string LOG_WRITER = 'LOG_WRITER';
     public const string PLEX_USER_PIN = 'PLEX_USER_PIN';
     public const string REQUEST_ID = 'REQUEST_ID';
+    public const string ONLY_LIBRARY_ID = 'ONLY_LIBRARY_ID';
 
     private function __construct()
     {
