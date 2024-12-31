@@ -74,6 +74,14 @@
               <label :for="`ignore-${item.id}`"></label>
               <span>Ignore content from this library.</span>
             </div>
+            <div class="card-footer-item">
+              <NuxtLink :to="`/backend/${backend}/stale/${item.id}?name=${item.title}`">
+                <span class="icon-text">
+                <span class="icon"><i class="fas fa-sync"></i></span>
+                <span>Check Content Staleness</span>
+                  </span>
+              </NuxtLink>
+            </div>
           </div>
         </div>
       </div>
@@ -125,7 +133,7 @@ const loadContent = async () => {
     if (useRoute().name !== 'backend-backend-libraries') {
       return
     }
-    
+
     if (200 !== response.status) {
       notification('error', 'Error', `${json.error.code}: ${json.error.message}`)
       return
