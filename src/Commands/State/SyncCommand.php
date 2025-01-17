@@ -312,7 +312,7 @@ class SyncCommand extends Command
             'results' => arrayToString($this->usersList($users)),
         ]);
 
-        foreach (array_reverse($users) as $user) {
+        foreach ($users as $user) {
             $this->queue->reset();
             $this->mapper->reset();
 
@@ -378,7 +378,6 @@ class SyncCommand extends Command
                     'peak' => getPeakMemoryUsage(),
                 ],
             ]);
-            exit(1);
         }
 
         return self::SUCCESS;
