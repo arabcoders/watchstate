@@ -29,6 +29,7 @@ use App\Backends\Plex\Action\Push;
 use App\Backends\Plex\Action\SearchId;
 use App\Backends\Plex\Action\SearchQuery;
 use App\Backends\Plex\Action\ToEntity;
+use App\Backends\Plex\Action\UpdateState;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
@@ -685,6 +686,20 @@ class PlexClient implements iClient
     public function validateContext(Context $context): bool
     {
         return Container::get(PlexValidateContext::class)($context);
+    }
+
+    public function updateState(array $entities, QueueRequests $queue, array $opts = []): void
+    {
+        $response = Container::get(UpdateState::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            opts: $opts
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
     }
 
     /**

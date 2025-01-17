@@ -19,6 +19,7 @@ use App\Backends\Emby\Action\GetLibrary;
 use App\Backends\Emby\Action\GetMetaData;
 use App\Backends\Emby\Action\GetSessions;
 use App\Backends\Emby\Action\GetUsersList;
+use App\Backends\Emby\Action\GetVersion;
 use App\Backends\Emby\Action\GetWebUrl;
 use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
@@ -28,7 +29,7 @@ use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
 use App\Backends\Emby\Action\ToEntity;
-use App\Backends\Jellyfin\Action\GetVersion;
+use App\Backends\Emby\Action\UpdateState;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -648,6 +649,23 @@ class EmbyClient implements iClient
     public function validateContext(Context $context): bool
     {
         return Container::get(EmbyValidateContext::class)($context);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function updateState(array $entities, QueueRequests $queue, array $opts = []): void
+    {
+        $response = Container::get(UpdateState::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            opts: $opts
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
     }
 
     /**

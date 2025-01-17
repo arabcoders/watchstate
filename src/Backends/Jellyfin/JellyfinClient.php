@@ -31,6 +31,7 @@ use App\Backends\Jellyfin\Action\Push;
 use App\Backends\Jellyfin\Action\SearchId;
 use App\Backends\Jellyfin\Action\SearchQuery;
 use App\Backends\Jellyfin\Action\ToEntity;
+use App\Backends\Jellyfin\Action\UpdateState;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
@@ -43,8 +44,8 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
 use DateTimeInterface as iDate;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
@@ -205,7 +206,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function processRequest(ServerRequestInterface $request, array $opts = []): ServerRequestInterface
+    public function processRequest(iRequest $request, array $opts = []): iRequest
     {
         $response = Container::get(InspectRequest::class)(context: $this->context, request: $request);
 
@@ -219,7 +220,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function parseWebhook(ServerRequestInterface $request): iState
+    public function parseWebhook(iRequest $request): iState
     {
         $response = Container::get(ParseWebhook::class)(
             context: $this->context,
@@ -270,7 +271,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function backup(iImport $mapper, StreamInterface|null $writer = null, array $opts = []): array
+    public function backup(iImport $mapper, iStream|null $writer = null, array $opts = []): array
     {
         $response = Container::get(Backup::class)(
             context: $this->context,
@@ -670,7 +671,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function fromRequest(array $config, ServerRequestInterface $request): array
+    public function fromRequest(array $config, iRequest $request): array
     {
         return $config;
     }
@@ -681,6 +682,23 @@ class JellyfinClient implements iClient
     public function validateContext(Context $context): bool
     {
         return Container::get(JellyfinValidateContext::class)($context);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function updateState(array $entities, QueueRequests $queue, array $opts = []): void
+    {
+        $response = Container::get(UpdateState::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            opts: $opts
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
     }
 
     /**

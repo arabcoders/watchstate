@@ -15,7 +15,7 @@ use RuntimeException;
  * Represents an metadata as entity.
  *
  * @implements iState
- * @uses LoggerAwareTrait
+ * @implements LoggerAwareTrait
  */
 final class StateEntity implements iState
 {
@@ -696,6 +696,22 @@ final class StateEntity implements iState
     public function hasContext(string $key): bool
     {
         return ag_exists($this->context, $key);
+    }
+
+    public function isSynced(array $backends): array
+    {
+        $match = [];
+
+
+        foreach ($backends as $backend) {
+            if (null === ag($this->metadata, $backend)) {
+                $match[$backend] = null;
+                continue;
+            }
+            $match[$backend] = $this->isWatched() === (bool)ag($this->metadata[$backend], iState::COLUMN_WATCHED, 0);
+        }
+
+        return $match;
     }
 
     /**
