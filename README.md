@@ -9,6 +9,19 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-01-18
+
+Due to popular demand, we finally have added the ability to sync all users data, however, it's limited to only
+play state, no progress syncing implemented at this stage. This feature still in alpha expect bugs and issues.
+
+However our local tests shows that it's working as expected, but we need more testing to be sure. Please report any
+issues you encounter. To enable this feature, you will see new task in the `Tasks` page called `Sync`.
+
+This task will sync all your users play state, However you need to have the backends added with admin token for plex and
+API key for jellyfin and emby. Enable the task and let it run, it will sync all users play state.
+
+Please read the FAQ entry about it at [this link](FAQ.md#is-there-support-for-multi-user-setup).
+
 ### 2024-12-30
 
 We have removed the old environment variables `WS_CRON_PROGRESS` and `WS_CRON_PUSH` in favor of the new ones

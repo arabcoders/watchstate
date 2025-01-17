@@ -19,6 +19,7 @@ use App\Backends\Emby\Action\GetLibrary;
 use App\Backends\Emby\Action\GetMetaData;
 use App\Backends\Emby\Action\GetSessions;
 use App\Backends\Emby\Action\GetUsersList;
+use App\Backends\Emby\Action\GetVersion;
 use App\Backends\Emby\Action\GetWebUrl;
 use App\Backends\Emby\Action\Import;
 use App\Backends\Emby\Action\InspectRequest;
@@ -28,13 +29,14 @@ use App\Backends\Emby\Action\Push;
 use App\Backends\Emby\Action\SearchId;
 use App\Backends\Emby\Action\SearchQuery;
 use App\Backends\Emby\Action\ToEntity;
-use App\Backends\Jellyfin\Action\GetVersion;
+use App\Backends\Emby\Action\UpdateState;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
+use App\Libs\Mappers\Import\ReadOnlyMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -44,6 +46,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as iLogger;
+use Throwable;
 
 /**
  * Class EmbyClient
@@ -407,6 +410,56 @@ class EmbyClient implements iClient
     /**
      * @inheritdoc
      */
+    public function getLibraryContent(string|int $libraryId, array $opts = []): array
+    {
+        $mapper = Container::get(ReadOnlyMapper::class)->withOptions([]);
+        assert($mapper instanceof ReadOnlyMapper);
+        $mapper->asContainer();
+
+        $response = Container::get(Import::class)(
+            context: $this->context,
+            guid: $this->guid,
+            mapper: $mapper,
+            after: null,
+            opts: [
+                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
+                Options::ONLY_LIBRARY_ID => $libraryId,
+                ...$opts,
+            ]
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
+
+        if (false === $response->isSuccessful()) {
+            $this->throwError($response);
+        }
+
+        if (null === ($queue = $response->response)) {
+            return [];
+        }
+
+        foreach ($queue as $_key => $response) {
+            $requestData = $response->getInfo('user_data');
+
+            try {
+                $requestData['ok']($response);
+            } catch (Throwable $e) {
+                $requestData['error']($e);
+            }
+
+            $queue[$_key] = null;
+
+            gc_collect_cycles();
+        }
+
+        return $mapper->getObjects();
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function getLibrary(string|int $id, array $opts = []): array
     {
         $response = Container::get(GetLibrary::class)(context: $this->context, guid: $this->guid, id: $id, opts: $opts);
@@ -596,6 +649,23 @@ class EmbyClient implements iClient
     public function validateContext(Context $context): bool
     {
         return Container::get(EmbyValidateContext::class)($context);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function updateState(array $entities, QueueRequests $queue, array $opts = []): void
+    {
+        $response = Container::get(UpdateState::class)(
+            context: $this->context,
+            entities: $entities,
+            queue: $queue,
+            opts: $opts
+        );
+
+        if ($response->hasError()) {
+            $this->logger->log($response->error->level(), $response->error->message, $response->error->context);
+        }
     }
 
     /**

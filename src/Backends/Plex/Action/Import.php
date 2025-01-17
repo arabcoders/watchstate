@@ -98,12 +98,13 @@ class Import
                         ],
                     ]
                 ),
+                opts: $opts,
             ),
             action: $this->action
         );
     }
 
-    protected function getLibraries(Context $context, Closure $handle, Closure $error): array
+    protected function getLibraries(Context $context, Closure $handle, Closure $error, array $opts = []): array
     {
         $segmentSize = (int)ag($context->options, Options::LIBRARY_SEGMENT, 1000);
 
@@ -254,12 +255,18 @@ class Import
             $ignoreIds = array_map(fn($v) => (int)trim($v), explode(',', (string)$ignoreIds));
         }
 
+        $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
+
         $requests = $total = [];
         $ignored = $unsupported = 0;
 
         // -- Get library items count.
         foreach ($listDirs as $section) {
             $key = (int)ag($section, 'key');
+
+            if (null !== $limitLibraryId && $key !== (int)$limitLibraryId) {
+                continue;
+            }
 
             $logContext = [
                 'library' => [

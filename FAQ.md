@@ -211,22 +211,53 @@ database state back to the selected backend.
 
 ### Is there support for Multi-user setup?
 
-No, The tool is designed to work for single user. However, It's possible to run container for each user. You can also
-use single container for all users, however it's not really easy refer
-to [issue #136](https://github.com/arabcoders/watchstate/issues/136).
+There is a minimal support for multi-user setup via `state:sync` command. However, it still requires that you add your
+backends as usual for single user setup and to use `state:sync` command, it's required that all backends have admin
+access to be able to retrieve access-tokens for users. That means for Plex you need an admin token, and for
+jellyfin/emby you need API key, not `user:password` limited access.
 
-For `Jellyfin` and `Emby`, you can just generate new API tokens and link it to a user.
+To get started using `state:sync` command, as mentioned before setup your backends as normal, then create a
+`/config/config/mapper.yaml` file if your backends doesn't have the same user. for example
 
-For Plex, You should use your admin token and by running the `config:add` command and selecting a user the tool will
-attempt to generate a token for that user.
+```yaml
+-   backend_name1:
+        name: "mike_jones"
+        options: { }
+    backend_name2:
+        name: "jones_mike"
+        options: { }
+    backend_name3:
+        name: "mikeJones"
+        options: { }
 
-> [!Note]
-> If the tool fails to generate an access token for the user, you can run the following command to generate the access
-> token manually.
-
-```bash
-$ docker exec -ti console backend:users:list -s backend_name --with-tokens
+-   backend_name1:
+        name: "jiji_jones"
+        options: { }
+    backend_name2:
+        name: "jones_jiji"
+        options: { }
+    backend_name3:
+        name: "jijiJones"
+        options: { }
 ```
+
+This yaml file helps map your users accounts in the different backends, so the tool can sync the correct user data.
+
+Then simply run `state:sync -v` it will generate the required tokens and match users data between the backends.
+then sync the difference, Keep in mind that it will be slow and that's expected as it needs to do the same thing without
+caching for all users servers and backends. it's recommended to not run this command frequently. as it's puts a lot of
+load on the backends. By default, it will sync once every 3 hours. you can ofc change it to suit your needs.
+
+> [!NOTE]
+> Known issues:
+
+* Currently, state:sync doesn't have a way of syncing plex users that has PIN enabled.
+* Majority of the command flags aren't working or not implemented yet.
+
+> [!IMPORTANT]
+> Please keep in mind the new command is still in alpha stage, so things will probably break. Please report any bugs
+> you encounter. Also, please make sure to have a backup of your data before running the command. just in-case,
+> while we did test it on our live data, it's always better to be safe than sorry.
 
 ----
 

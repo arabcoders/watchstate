@@ -113,6 +113,7 @@ class Import
                         ],
                     ]
                 ),
+                opts: $opts
             ),
             action: $this->action,
         );
@@ -124,10 +125,11 @@ class Import
      * @param Context $context Backend context.
      * @param Closure $handle The closure to handle a successful response.
      * @param Closure $error The closure to handle an error response.
+     * @param array $opts (Optional) Options.
      *
      * @return array The array of libraries retrieved from the backend.
      */
-    protected function getLibraries(Context $context, Closure $handle, Closure $error): array
+    protected function getLibraries(Context $context, Closure $handle, Closure $error, array $opts = []): array
     {
         try {
             $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
@@ -273,18 +275,26 @@ class Import
             $ignoreIds = array_map(fn($v) => trim($v), explode(',', (string)$ignoreIds));
         }
 
+        $limitLibraryId = ag($opts, Options::ONLY_LIBRARY_ID, null);
+
         $requests = $total = [];
         $ignored = $unsupported = 0;
 
         // -- Get library items count.
         foreach ($listDirs as $section) {
+            $libraryId = (string)ag($section, 'Id');
+
             $logContext = [
                 'library' => [
-                    'id' => (string)ag($section, 'Id'),
+                    'id' => $libraryId,
                     'title' => ag($section, 'Name', '??'),
                     'type' => ag($section, 'CollectionType', 'unknown'),
                 ],
             ];
+
+            if (null !== $limitLibraryId && $libraryId !== (string)$limitLibraryId) {
+                continue;
+            }
 
             if (true === in_array(ag($logContext, 'library.id'), $ignoreIds ?? [])) {
                 continue;

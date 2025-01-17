@@ -9,6 +9,7 @@ use App\Commands\Events\DispatchCommand;
 use App\Commands\State\BackupCommand;
 use App\Commands\State\ExportCommand;
 use App\Commands\State\ImportCommand;
+use App\Commands\State\SyncCommand;
 use App\Commands\System\IndexCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
@@ -87,6 +88,7 @@ return (function () {
     ];
 
     $config['backends_file'] = fixPath(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
+    $config['mapper_file'] = fixPath(env('WS_MAPPER_FILE', ag($config, 'path') . '/config/mapper.yaml'));
 
     date_default_timezone_set(ag($config, 'tz', 'UTC'));
     $logDateFormat = makeDate()->format('Ymd');
@@ -272,6 +274,14 @@ return (function () {
                 'enabled' => (bool)env('WS_CRON_EXPORT', false),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_EXPORT_AT', '30 */1 * * *'), '30 */1 * * *'),
                 'args' => env('WS_CRON_EXPORT_ARGS', '-v'),
+            ],
+            SyncCommand::TASK_NAME => [
+                'command' => SyncCommand::ROUTE,
+                'name' => SyncCommand::TASK_NAME,
+                'info' => '[Alpha stage] Sync All users play state. Read the FAQ.',
+                'enabled' => (bool)env('WS_CRON_SYNC', false),
+                'timer' => $checkTaskTimer((string)env('WS_CRON_SYNC_AT', '9 */3 * * *'), '9 */3 * * *'),
+                'args' => env('WS_CRON_SYNC_ARGS', '-v'),
             ],
             BackupCommand::TASK_NAME => [
                 'command' => BackupCommand::ROUTE,

@@ -422,4 +422,14 @@ interface StateInterface extends LoggerAwareInterface
      * @return bool Return true if the entity has contextual data related to the key.
      */
     public function hasContext(string $key): bool;
+
+    /**
+     *  Check whether the entity play state is synced with the backends.
+     *
+     * @param array $backends List of backends to check.
+     *
+     * @return array{string: bool|null} Return true if the entity is synced with the backend. or false if not, or null if the backend has no metadata.
+     */
+    public function isSynced(array $backends): array;
+
 }
