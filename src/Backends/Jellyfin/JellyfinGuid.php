@@ -10,6 +10,7 @@ use App\Backends\Emby\EmbyClient;
 use App\Libs\Config;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Guid;
+use App\Libs\Options;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -242,14 +243,18 @@ class JellyfinGuid implements iGuid
             }
 
             try {
-                if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
+                if (null === ($bName = ag($this->context->options, Options::ALT_NAME))) {
+                    $bName = $this->context->backendName;
+                }
+
+                if (true === isIgnoredId($bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
                             "{class}: Ignoring '{client}: {backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
                                 'class' => afterLast(static::class, '\\'),
                                 'client' => $this->context->clientName,
-                                'backend' => $this->context->backendName,
+                                'backend' => $bName,
                                 'source' => $key . '://' . $value,
                                 'guid' => [
                                     'source' => $key,
