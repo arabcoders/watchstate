@@ -1,6 +1,7 @@
 name: Building
 
 on:
+  # Manual trigger remains available for any branch
   workflow_dispatch:
     inputs:
       logLevel:
@@ -12,12 +13,16 @@ on:
           - info
           - warning
           - debug
+
+  # Only run automatically on pushes to 'master'
   push:
     branches:
-      - '*'
+      - 'master'
     paths-ignore:
       - '**.md'
       - '.github/**'
+
+  # Only run automatically for PRs targeting 'master'
   pull_request:
     branches:
       - 'master'
@@ -66,12 +71,14 @@ jobs:
           path: ${{ steps.composer-cache.outputs.COMPOSER_CACHE_DIR }}
           key: "${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}"
           restore-keys: ${{ matrix.php }}-composer-
+
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer run test
 
   publish_docker_images:
     needs: unit-tests
-    if: github.event_name != 'pull_request'
+    # This ensures it won't run on pull_request events
+    if: github.event_name == 'push'
     runs-on: "ubuntu-latest"
     permissions:
       packages: write
@@ -144,6 +151,7 @@ jobs:
   dockerhub-sync-readme:
     needs: publish_docker_images
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Sync README
         uses: docker://lsiodev/readme-sync:latest
@@ -156,3 +164,71 @@ jobs:
         with:
           entrypoint: node
           args: /opt/docker-readme-sync/sync
+
+  create_release:
+    needs: [ publish_docker_images ]
+    runs-on: ubuntu-latest
+    # Only run for push events on master
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # so we can git log the full history
+
+      - name: Get commits between old and new
+        id: commits
+        run: |
+          PREVIOUS_SHA="${{ github.event.before }}"
+          CURRENT_SHA="${{ github.event.after }}"
+
+          echo "Previous SHA: $PREVIOUS_SHA"
+          echo "Current  SHA: $CURRENT_SHA"
+
+          # If "before" is empty or all zeros, log all commits
+          if [ -z "$PREVIOUS_SHA" ] || [ "$PREVIOUS_SHA" = "0000000000000000000000000000000000000000" ]; then
+            LOG=$(git log --pretty=format:"- %h %s by %an")
+          else
+            LOG=$(git log "$PREVIOUS_SHA".."$CURRENT_SHA" --pretty=format:"- %h %s by %an")
+          fi
+
+          echo "LOG<<EOF" >> "$GITHUB_ENV"
+          echo "$LOG" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Create local tag matching Docker's raw pattern
+        id: createtag
+        run: |
+          # We'll replicate raw format: branch + base_ref + date + short sha
+          # If base_ref is empty (normal push to master, no PR?), it won't appear.
+          BRANCH_NAME="${{ github.ref_name }}"
+          BASE_REF="${{ github.base_ref }}"
+          CURRENT_SHA="${{ github.event.after }}"
+          DATE=$(date +%Y%m%d)
+          SHORT_SHA=$(echo "$CURRENT_SHA" | cut -c1-7)
+
+          TAG="${BRANCH_NAME}${BASE_REF}-${DATE}-${SHORT_SHA}"
+
+          echo "Using tag: $TAG"
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Create a lightweight local tag
+          git tag "$TAG" "$CURRENT_SHA"
+
+          # Push the tag back to GitHub
+          git push origin "$TAG"
+
+          # Expose as an output
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.createtag.outputs.TAG }}
+          name: "Release ${{ steps.createtag.outputs.TAG }}"
+          body: ${{ env.LOG }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
