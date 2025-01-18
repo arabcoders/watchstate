@@ -226,7 +226,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.createtag.outputs.TAG }}
-          name: "Release ${{ steps.createtag.outputs.TAG }}"
+          name: "${{ steps.createtag.outputs.TAG }}"
           body: ${{ env.LOG }}
           draft: false
           prerelease: false
