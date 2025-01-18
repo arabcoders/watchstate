@@ -10,6 +10,7 @@ use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\Date;
+use App\Libs\Options;
 use App\Libs\QueueRequests;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -66,6 +67,22 @@ class UpdateState
                                 'DatePlayed' => makeDate($entity->updated)->format(Date::ATOM)
                             ])
                         );
+                    }
+
+                    if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
+                        $this->logger->notice(
+                            "Would mark '{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
+                            [
+                                'backend' => $context->backendName,
+                                'item' => [
+                                    'id' => $itemId,
+                                    'title' => $entity->getName(),
+                                    'type' => $entity->type == iState::TYPE_EPISODE ? 'episode' : 'movie',
+                                    'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
+                                ],
+                            ]
+                        );
+                        return new Response(status: true);
                     }
 
                     $queue->add(

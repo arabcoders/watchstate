@@ -9,6 +9,7 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Libs\Config;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Guid;
+use App\Libs\Options;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -371,13 +372,17 @@ final class PlexGuid implements iGuid
                     continue;
                 }
 
-                if (true === isIgnoredId($this->context->backendName, $type, $key, $value, $id)) {
+                if (null === ($bName = ag($this->context->options, Options::ALT_NAME))) {
+                    $bName = $this->context->backendName;
+                }
+
+                if (true === isIgnoredId($bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
                             "PlexGuid: Ignoring '{client}: {backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
                                 'client' => $this->context->clientName,
-                                'backend' => $this->context->backendName,
+                                'backend' => $bName,
                                 'source' => $val,
                                 'guid' => [
                                     'source' => $key,

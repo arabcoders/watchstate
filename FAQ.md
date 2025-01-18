@@ -251,7 +251,7 @@ load on the backends. By default, it will sync once every 3 hours. you can ofc c
 > [!NOTE]
 > Known issues:
 
-* Currently, state:sync doesn't have a way of syncing plex users that has PIN enabled.
+* Currently, `state:sync` doesn't have a way of syncing plex users that has PIN enabled.
 * Majority of the command flags aren't working or not implemented yet.
 
 > [!IMPORTANT]

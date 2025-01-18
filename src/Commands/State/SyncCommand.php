@@ -272,6 +272,7 @@ class SyncCommand extends Command
                     $info['displayName'] = ag($user, 'name');
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
                     $info = ag_delete($info, 'options.' . Options::ADMIN_TOKEN);
+                    $info = ag_set($info, 'options.' . Options::ALT_NAME, ag($backend, 'name'));
 
                     unset($info['class']);
                     $user['backend'] = ag($backend, 'name');
@@ -312,7 +313,7 @@ class SyncCommand extends Command
             'results' => arrayToString($this->usersList($users)),
         ]);
 
-        foreach ($users as $user) {
+        foreach (array_reverse($users) as $user) {
             $this->queue->reset();
             $this->mapper->reset();
 
@@ -378,6 +379,7 @@ class SyncCommand extends Command
                     'peak' => getPeakMemoryUsage(),
                 ],
             ]);
+            exit(1);
         }
 
         return self::SUCCESS;
