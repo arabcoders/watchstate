@@ -203,7 +203,6 @@ jobs:
           fetch-depth: 0  # so we can do full 'git log' and see all tags
 
       - name: Fetch the most recent tag
-        needs: checkout_code
         id: last_tag
         run: |
           # Make sure we have all tags from the remote
@@ -217,7 +216,6 @@ jobs:
           echo "LAST_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Get commits since last tag
-        needs: last_tag
         id: commits
         run: |
           # We'll compare the newest tag to HEAD to get a list of commits
@@ -236,7 +234,6 @@ jobs:
           echo "EOF" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release using last tag
-        needs: [ last_tag, commits ]
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{ steps.last_tag.outputs.LAST_TAG }}
