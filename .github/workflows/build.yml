@@ -1,34 +1,32 @@
 name: Building
 
 on:
-  # Manual trigger remains available for any branch
   workflow_dispatch:
     inputs:
       logLevel:
-        description: 'Log level'
+        description: "Log level"
         required: true
-        default: 'warning'
+        default: "warning"
         type: choice
         options:
           - info
           - warning
           - debug
 
-  # Only run automatically on pushes to 'master'
   push:
     branches:
-      - 'master'
+      - master
+      - dev
     paths-ignore:
-      - '**.md'
-      - '.github/**'
+      - "**.md"
+      - ".github/**"
 
-  # Only run automatically for PRs targeting 'master'
   pull_request:
     branches:
-      - 'master'
+      - "master"
     paths-ignore:
-      - '**.md'
-      - '.github/ISSUE_TEMPLATE/**'
+      - "**.md"
+      - ".github/ISSUE_TEMPLATE/**"
 
 env:
   DOCKERHUB_SLUG: arabcoders/watchstate
@@ -42,7 +40,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: [ 8.4 ]
+        php: [8.4]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,8 +48,10 @@ jobs:
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master
         with:
-          filename: '/config/config.php'
-          placeholder: '$(version_via_ci)'
+          filename: "/config/config.php"
+          placeholder: "$(version_via_ci)"
+          with_date: "true"
+          with_branch: "true"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -77,7 +77,6 @@ jobs:
 
   publish_docker_images:
     needs: unit-tests
-    # This ensures it won't run on pull_request events
     if: github.event_name == 'push'
     runs-on: "ubuntu-latest"
     permissions:
@@ -100,8 +99,10 @@ jobs:
       - name: Update Version File
         uses: arabcoders/write-version-to-file@master
         with:
-          filename: '/config/config.php'
-          placeholder: '$(version_via_ci)'
+          filename: "/config/config.php"
+          placeholder: "$(version_via_ci)"
+          with_date: "true"
+          with_branch: "true"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -148,10 +149,18 @@ jobs:
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
+      - name: Version tag
+        uses: arabcoders/action-python-autotagger@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repo_name: arabcoders/watchstate
+          path: config/config.php
+          regex: "'version'\\s\\=\\>\\s\\'(.+?)\\'\\,"
+
   dockerhub-sync-readme:
     needs: publish_docker_images
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && endsWith(github.ref, github.event.repository.default_branch)
     steps:
       - name: Sync README
         uses: docker://lsiodev/readme-sync:latest
@@ -166,15 +175,14 @@ jobs:
           args: /opt/docker-readme-sync/sync
 
   create_release:
-    needs: [ publish_docker_images ]
+    needs: publish_docker_images
     runs-on: ubuntu-latest
-    # Only run for push events on master
-    if: github.event_name == 'push'
+    if: endsWith(github.ref, github.event.repository.default_branch) && success()
     steps:
-      - name: Checkout
+      - name: Check out code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # so we can git log the full history
+          fetch-depth: 0 # so we can do git log for the full history
 
       - name: Get commits between old and new
         id: commits
@@ -196,39 +204,28 @@ jobs:
           echo "$LOG" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
-      - name: Create local tag matching Docker's raw pattern
-        id: createtag
+      - name: Fetch the most recent tag
+        id: last_tag
         run: |
-          # We'll replicate raw format: branch + base_ref + date + short sha
-          # If base_ref is empty (normal push to master, no PR?), it won't appear.
-          BRANCH_NAME="${{ github.ref_name }}"
-          BASE_REF="${{ github.base_ref }}"
-          CURRENT_SHA="${{ github.event.after }}"
-          DATE=$(date +%Y%m%d)
-          SHORT_SHA=$(echo "$CURRENT_SHA" | cut -c1-7)
+          # Make sure we have all tags
+          git fetch --tags
 
-          TAG="${BRANCH_NAME}${BASE_REF}-${DATE}-${SHORT_SHA}"
+          # Get the latest tag by commit date (most recent)
+          # If there are no tags at all, set a fallback
+          LAST_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1) 2>/dev/null || echo "no-tags-found")
 
-          echo "Using tag: $TAG"
+          echo "Latest tag found: $LAST_TAG"
+          echo "LAST_TAG=$LAST_TAG" >> "$GITHUB_OUTPUT"
 
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          # Create a lightweight local tag
-          git tag "$TAG" "$CURRENT_SHA"
-
-          # Push the tag back to GitHub
-          git push origin "$TAG"
-
-          # Expose as an output
-          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Create GitHub Release using last tag
+        uses: softprops/action-gh-release@master
         with:
-          tag_name: ${{ steps.createtag.outputs.TAG }}
-          name: "${{ steps.createtag.outputs.TAG }}"
+          tag_name: ${{ steps.last_tag.outputs.LAST_TAG }}
+          name: "${{ steps.last_tag.outputs.LAST_TAG }}"
           body: ${{ env.LOG }}
           draft: false
           prerelease: false
           generate_release_notes: true
+          append_body: true
+          make_latest: true
           token: ${{ secrets.GITHUB_TOKEN }}

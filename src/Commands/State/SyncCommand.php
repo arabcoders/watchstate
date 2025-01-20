@@ -97,6 +97,13 @@ class SyncCommand extends Command
                     We need the admin token for plex to generate user tokens for each user, and we need the API keys
                     for jellyfin/emby to get the user list and update their play state.
 
+                    <question>Known limitions</question>
+
+                    We have some known limitations,
+                    * Cannot be used with plex users that have PIN enabled.
+                    * Can Only sync played status.
+                    * Cannot sync play progress.
+
                     <question># How does this sync operation mode work?</question>
 
                     It works by first, getting all users from all backends, and trying to match them by name,
