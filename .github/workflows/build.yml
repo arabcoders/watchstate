@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: [8.4]
+        php: [ 8.4 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -189,58 +189,62 @@ jobs:
           entrypoint: node
           args: /opt/docker-readme-sync/sync
 
-  create_release:
-    needs: publish_docker_images
-    runs-on: ubuntu-latest
-    if: (endsWith(github.ref, github.event.repository.default_branch) && success()) || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # so we can do git log for the full history
+    create_release:
+      needs: publish_docker_images
+      runs-on: ubuntu-latest
+      # Example condition: run on default branch or if triggered manually with create_release == 'true'
+      if: (endsWith(github.ref, github.event.repository.default_branch) && success()) || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
 
-      - name: Get commits between old and new
-        id: commits
-        run: |
-          PREVIOUS_SHA="${{ github.event.before }}"
-          CURRENT_SHA="${{ github.event.after }}"
+      steps:
+        - name: Check out code
+          id: checkout_code
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0  # so we can do full 'git log' and see all tags
 
-          echo "Previous SHA: $PREVIOUS_SHA"
-          echo "Current  SHA: $CURRENT_SHA"
+        - name: Fetch the most recent tag
+          needs: checkout_code
+          id: last_tag
+          run: |
+            # Make sure we have all tags from the remote
+            git fetch --tags
 
-          # If "before" is empty or all zeros, log all commits
-          if [ -z "$PREVIOUS_SHA" ] || [ "$PREVIOUS_SHA" = "0000000000000000000000000000000000000000" ]; then
-            LOG=$(git log --pretty=format:"- %h %s by %an")
-          else
-            LOG=$(git log "$PREVIOUS_SHA".."$CURRENT_SHA" --pretty=format:"- %h %s by %an")
-          fi
+            # Get the latest tag by commit date (the "newest" tag you pushed).
+            # If the repo has no tags, fall back to "no-tags-found"
+            LATEST_TAG=$(git describe --tags --abbrev=0 "$(git rev-list --tags --max-count=1)" 2>/dev/null || echo "no-tags-found")
 
-          echo "LOG<<EOF" >> "$GITHUB_ENV"
-          echo "$LOG" >> "$GITHUB_ENV"
-          echo "EOF" >> "$GITHUB_ENV"
+            echo "Latest tag found: $LATEST_TAG"
+            echo "LAST_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Fetch the most recent tag
-        id: last_tag
-        run: |
-          # Make sure we have all tags
-          git fetch --tags
+        - name: Get commits since last tag
+          needs: last_tag
+          id: commits
+          run: |
+            # We'll compare the newest tag to HEAD to get a list of commits
+            LAST_TAG="${{ steps.last_tag.outputs.LAST_TAG }}"
 
-          # Get the latest tag by commit date (most recent)
-          # If there are no tags at all, set a fallback
-          LAST_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1) 2>/dev/null || echo "no-tags-found")
+            if [ "$LAST_TAG" = "no-tags-found" ]; then
+              echo "No previous tag found. Listing all commits from the beginning."
+              LOG=$(git log --pretty=format:"- %h %s by %an")
+            else
+              echo "Comparing commits from $LAST_TAG to HEAD"
+              LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"- %h %s by %an")
+            fi
 
-          echo "Latest tag found: $LAST_TAG"
-          echo "LAST_TAG=$LAST_TAG" >> "$GITHUB_OUTPUT"
+            echo "LOG<<EOF" >> "$GITHUB_ENV"
+            echo "$LOG" >> "$GITHUB_ENV"
+            echo "EOF" >> "$GITHUB_ENV"
 
-      - name: Create GitHub Release using last tag
-        uses: softprops/action-gh-release@master
-        with:
-          tag_name: ${{ steps.last_tag.outputs.LAST_TAG }}
-          name: "${{ steps.last_tag.outputs.LAST_TAG }}"
-          body: ${{ env.LOG }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          append_body: true
-          make_latest: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+        - name: Create GitHub Release using last tag
+          needs: [ last_tag, commits ]
+          uses: softprops/action-gh-release@master
+          with:
+            tag_name: ${{ steps.last_tag.outputs.LAST_TAG }}
+            name: "${{ steps.last_tag.outputs.LAST_TAG }}"
+            body: ${{ env.LOG }}
+            append_body: true
+            generate_release_notes: true
+            draft: false
+            prerelease: false
+            make_latest: true
+            token: ${{ secrets.GITHUB_TOKEN }}
