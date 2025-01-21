@@ -46,7 +46,7 @@ on:
 env:
   DOCKERHUB_SLUG: arabcoders/watchstate
   GHCR_SLUG: ghcr.io/arabcoders/watchstate
-  PLATFORMS: linux/amd64,linux/arm64,linux/arm
+  PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
   unit-tests:
@@ -89,6 +89,49 @@ jobs:
 
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer run test
+
+  pr_build_test:
+    needs: unit-tests
+    if: github.event_name == 'pull_request'
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: frontend
+          install-command: yarn --production --prefer-offline --frozen-lockfile
+
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: frontend
+          install-command: yarn run generate
+
+      - name: Update Version File
+        uses: arabcoders/write-version-to-file@master
+        with:
+          filename: "/config/config.php"
+          placeholder: "$(version_via_ci)"
+          with_date: "true"
+          with_branch: "true"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          platforms: ${{ env.PLATFORMS }}
+          context: .
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha, scope=pr_${{ github.workflow }}
+          cache-to: type=gha, scope=pr_${{ github.workflow }}
 
   publish_docker_images:
     needs: unit-tests

@@ -74,6 +74,7 @@ class SyncCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
+            ->addOption('test', null, InputOption::VALUE_NONE, 'Run on one user only.')
             ->addOption(
                 'select-backend',
                 's',
@@ -102,10 +103,9 @@ class SyncCommand extends Command
 
                     <question>Known limitations</question>
 
-                    We have some known limitations:
-                     * Cannot be used with plex users that have PIN enabled.
-                     * Can Only sync played status.
-                     * Cannot sync play progress.
+                    Known limitations:
+                    * Cannot be used with plex users that have PIN enabled.
+                    * Cannot sync play progress.
 
                     Some or all of these limitations will be fixed in future releases.
 
@@ -193,6 +193,13 @@ class SyncCommand extends Command
                 continue;
             }
 
+            if (true !== (bool)ag($backend, 'import.enabled')) {
+                $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has import disabled.", [
+                    'backend' => $backendName
+                ]);
+                continue;
+            }
+
             if (true !== (bool)ag($backend, 'export.enabled')) {
                 $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has export disabled.", [
                     'backend' => $backendName
@@ -272,6 +279,7 @@ class SyncCommand extends Command
             $this->logger->info("SYSTEM: Getting users from '{backend}'.", [
                 'backend' => $client->getContext()->backendName
             ]);
+
             try {
                 foreach ($client->getUsersList(['tokens' => true]) as $user) {
                     $info = $backend;
@@ -325,27 +333,54 @@ class SyncCommand extends Command
             'results' => arrayToString($this->usersList($users)),
         ]);
 
-        foreach (array_reverse($users) as $user) {
+        foreach (($input->getOption('test') ? array_reverse($users) : $users) as $user) {
+            $this->queue->reset();
+
             $userName = ag($user, 'name', 'Unknown');
             $perUserCache = perUserCacheAdapter($userName);
+            $this->logger->info("SYSTEM: Loading user mapper data.");
             $perUserMapper = perUserMapper($this->mapper, $userName)
                 ->withCache($perUserCache)
                 ->withLogger($this->logger)->loadData();
+            $this->logger->info("SYSTEM: Load user mapper data complete.");
 
-            $this->queue->reset();
 
             $list = [];
             $displayName = null;
+
+            $configFile = ConfigFile::open(r(fixPath(Config::get('path') . '/users/{user}/servers.yaml'), [
+                'user' => $userName
+            ]), 'yaml', autoSave: true, autoCreate: true);
+            $configFile->setLogger($this->logger);
 
             foreach (ag($user, 'backends', []) as $backend) {
                 $name = ag($backend, 'client_data.backendName');
                 $clientData = ag($backend, 'client_data');
                 $clientData['name'] = $name;
+
+                if (false === $configFile->has($name)) {
+                    $data = $clientData;
+                    $data = ag_set($data, 'import.lastSync', null);
+                    $data = ag_set($data, 'export.lastSync', null);
+                    $data = ag_delete($data, ['webhook', 'name', 'backendName', 'displayName']);
+                    $configFile->set($name, $data);
+                } else {
+                    $clientData = ag_delete($clientData, 'import.lastSync');
+                    $clientData = ag_delete($clientData, 'export.lastSync');
+                    $clientData = array_replace_recursive($configFile->get($name), $clientData);
+                }
+
                 $clientData['class'] = makeBackend($clientData, $name, [
                     BackendCache::class => Container::get(BackendCache::class)->with(adapter: $perUserCache)
                 ])->setLogger($this->logger);
+
                 $list[$name] = $clientData;
                 $displayName = ag($backend, 'client_data.displayName', '??');
+
+                if (false === $input->getOption('dry-run')) {
+                    $configFile->set("{$name}.import.lastSync", time());
+                    $configFile->set("{$name}.export.lastSync", time());
+                }
             }
 
             $start = makeDate();
@@ -356,7 +391,7 @@ class SyncCommand extends Command
             ]);
 
             assert($perUserMapper instanceof iEImport);
-            $this->handleImport($perUserMapper, $displayName, $list);
+            $this->handleImport($perUserMapper, $displayName, $list, $input->getOption('force-full'), $configFile);
 
             assert($perUserMapper instanceof MemoryMapper);
             /** @var MemoryMapper $changes */
@@ -401,21 +436,37 @@ class SyncCommand extends Command
                     'peak' => getPeakMemoryUsage(),
                 ],
             ]);
-            exit(1);
+
+
+            if ($input->getOption('test')) {
+                break;
+            }
         }
 
         return self::SUCCESS;
     }
 
-    protected function handleImport(iEImport $mapper, string $name, array $backends): void
-    {
+    protected function handleImport(
+        iEImport $mapper,
+        string $name,
+        array $backends,
+        bool $isFull,
+        ConfigFile $config
+    ): void {
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
         foreach ($backends as $backend) {
             /** @var iClient $client */
             $client = ag($backend, 'class');
-            array_push($queue, ...$client->pull($mapper));
+            $context = $client->getContext();
+            $after = ag($context->options, Options::FORCE_FULL) || $isFull ? null : $config->get(
+                $context->backendName . '.import.lastSync'
+            );
+            if (null !== $after) {
+                $after = makeDate($after);
+            }
+            array_push($queue, ...$client->pull(mapper: $mapper, after: $after));
         }
 
         $start = makeDate();
@@ -580,7 +631,7 @@ class SyncCommand extends Command
          *   'backends' => [
          *     'backend1' => userObj,
          *     'backend2' => userObj,
-         *     ...
+         *     ...,
          *   ]
          * ]
          * </code>
