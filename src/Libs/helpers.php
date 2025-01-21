@@ -254,13 +254,20 @@ if (!function_exists('ag_delete')) {
      * Delete given key path.
      *
      * @param array $array The array to search in.
-     * @param int|string $path The key path to delete.
+     * @param int|string|array $path The key path to delete.
      * @param string $separator The separator used in the key path (default is '.').
      *
      * @return array The modified array.
      */
-    function ag_delete(array $array, string|int $path, string $separator = '.'): array
+    function ag_delete(array $array, string|int|array $path, string $separator = '.'): array
     {
+        if (is_array($path)) {
+            foreach ($path as $key) {
+                $array = ag_delete($array, $key, $separator);
+            }
+            return $array;
+        }
+
         if (array_key_exists($path, $array)) {
             unset($array[$path]);
 
