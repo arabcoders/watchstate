@@ -71,33 +71,6 @@ class NullMapper extends MemoryMapper implements iImport
         ];
     }
 
-    /**
-     * Compute the play state for each backend.
-     *
-     * @param array $backends List of backends to check.
-     *
-     * @return array List of changes for each backend.
-     */
-    public function computeChanges(array $backends): array
-    {
-        $changes = [];
-
-        foreach ($backends as $backend) {
-            $changes[$backend] = [];
-        }
-
-        foreach ($this->objects as $entity) {
-            $state = $entity->isSynced($backends);
-            foreach ($state as $b => $value) {
-                if (false === $value) {
-                    $changes[$b][] = $entity;
-                }
-            }
-        }
-
-        return $changes;
-    }
-
     public function __destruct()
     {
         // -- disabled autocommit.

@@ -7,7 +7,7 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Mappers\ExtendedImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Listeners\ProcessProgressEvent;
@@ -68,6 +68,36 @@ class MemoryMapper implements iImport
      */
     public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache)
     {
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withDB(iDB $db): self
+    {
+        $instance = clone $this;
+        $instance->db = $db;
+        return $instance;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withCache(iCache $cache): self
+    {
+        $instance = clone $this;
+        $instance->cache = $cache;
+        return $instance;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withLogger(iLogger $logger): self
+    {
+        $instance = clone $this;
+        $instance->logger = $logger;
+        return $instance;
     }
 
     /**
@@ -770,6 +800,29 @@ class MemoryMapper implements iImport
     public function getChangedList(): array
     {
         return $this->changed;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function computeChanges(array $backends): array
+    {
+        $changes = [];
+
+        foreach ($backends as $backend) {
+            $changes[$backend] = [];
+        }
+
+        foreach ($this->objects as $entity) {
+            $state = $entity->isSynced($backends);
+            foreach ($state as $b => $value) {
+                if (false === $value) {
+                    $changes[$b][] = $entity;
+                }
+            }
+        }
+
+        return $changes;
     }
 
     /**
