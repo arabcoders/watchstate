@@ -14,6 +14,7 @@ use App\Libs\Attributes\Scanner\Item as ScannerItem;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
+use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
@@ -27,6 +28,7 @@ use App\Libs\Extends\Date;
 use App\Libs\Extends\ReflectionContainer;
 use App\Libs\Guid;
 use App\Libs\Initializer;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Response;
 use App\Libs\Stream;
@@ -46,7 +48,13 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Cache\Adapter\NullAdapter;
+use Symfony\Component\Cache\Adapter\RedisAdapter;
+use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -648,11 +656,12 @@ if (!function_exists('makeBackend')) {
      *
      * @param array{name:string|null, type:string, url:string, token:string|int|null, user:string|int|null, options:array} $backend
      * @param string|null $name server name.
+     * @param array $options
      *
      * @return iClient backend client instance.
      * @throws InvalidArgumentException if configuration is wrong.
      */
-    function makeBackend(array $backend, string|null $name = null): iClient
+    function makeBackend(array $backend, string|null $name = null, array $options = []): iClient
     {
         if (null === ($backendType = ag($backend, 'type'))) {
             throw new InvalidArgumentException('No backend type was set.');
@@ -676,7 +685,7 @@ if (!function_exists('makeBackend')) {
                 clientName: $backendType,
                 backendName: $name ?? ag($backend, 'name', '??'),
                 backendUrl: new Uri(ag($backend, 'url')),
-                cache: Container::get(BackendCache::class),
+                cache: $options[BackendCache::class] ?? Container::get(BackendCache::class),
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
@@ -2169,5 +2178,113 @@ if (!function_exists('timeIt')) {
             'name' => $name,
             'time' => round($end - $start, $round),
         ]);
+    }
+}
+
+if (!function_exists('perUserMapper')) {
+    /**
+     * User Import Mapper.
+     *
+     * @param iEImport $mapper The mapper instance.
+     * @param string $user The username.
+     *
+     * @return iEImport new mapper instance.
+     */
+    function perUserMapper(iEImport $mapper, string $user): iEImport
+    {
+        $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+        if (false === file_exists($path)) {
+            if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+                throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
+            }
+        }
+
+        $dbFile = fixPath(r("{path}/{user}.db", ['path' => $path, 'user' => $user]));
+        $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
+        $dsn = r('sqlite:{src}', ['src' => $inTestMode ? ':memory:' : $dbFile]);
+        if (false === $inTestMode) {
+            $changePerm = !file_exists($dbFile);
+        }
+        $pdo = new PDO(dsn: $dsn, options: Config::get('database.options', []));
+        if (!$inTestMode && $changePerm && inContainer() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
+            @chmod($dbFile, 0777);
+        }
+        foreach (Config::get('database.exec', []) as $cmd) {
+            $pdo->exec($cmd);
+        }
+
+        $db = Container::get(iDB::class)->with(db: Container::get(DBLayer::class)->withPDO($pdo));
+        if (!$db->isMigrated()) {
+            $db->migrations(iDB::MIGRATE_UP);
+            $db->ensureIndex();
+            $db->migrateData(Config::get('database.version'), Container::get(iLogger::class));
+        }
+
+        return $mapper->withDB($db);
+    }
+}
+
+if (!function_exists('perUserCacheAdapter')) {
+    function perUserCacheAdapter(string $user): CacheInterface
+    {
+        if (true === (bool)env('WS_CACHE_NULL', false)) {
+            return new Psr16Cache(new NullAdapter());
+        }
+
+        if (true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE)) {
+            return new Psr16Cache(new ArrayAdapter());
+        }
+
+        $ns = getAppVersion();
+
+        if (true === isValidName($user)) {
+            $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
+        }
+
+        try {
+            $cacheUrl = Config::get('cache.url');
+
+            if (empty($cacheUrl)) {
+                throw new RuntimeException('No cache server was set.');
+            }
+
+            if (!extension_loaded('redis')) {
+                throw new RuntimeException('Redis extension is not loaded.');
+            }
+
+            $uri = new Uri($cacheUrl);
+            $params = [];
+
+            if (!empty($uri->getQuery())) {
+                parse_str($uri->getQuery(), $params);
+            }
+
+            $redis = new Redis();
+
+            $redis->connect($uri->getHost(), $uri->getPort() ?? 6379);
+
+            if (null !== ag($params, 'password')) {
+                $redis->auth(ag($params, 'password'));
+            }
+
+            if (null !== ag($params, 'db')) {
+                $redis->select((int)ag($params, 'db'));
+            }
+
+            $backend = new RedisAdapter(redis: $redis, namespace: $ns);
+        } catch (Throwable) {
+            // -- in case of error, fallback to file system cache.
+            $path = fixPath(r("{path}/users/{user}/cache", ['path' => Config::get('path'), 'user' => $user]));
+            if (false === file_exists($path)) {
+                if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+                    throw new RuntimeException(
+                        r("Unable to create per user cache '{path}' directory.", ['path' => $path])
+                    );
+                }
+            }
+            $backend = new FilesystemAdapter(namespace: $ns, directory: $path);
+        }
+
+        return new Psr16Cache($backend);
     }
 }

@@ -8,13 +8,32 @@ use App\Libs\Entity\StateInterface;
 use Closure;
 use DateTimeInterface;
 use PDOException;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 
 interface DatabaseInterface
 {
     public const string MIGRATE_UP = 'up';
 
     public const string MIGRATE_DOWN = 'down';
+
+    /**
+     * Create new instance.
+     * @param iLogger|null $logger Logger to use, if null use default.
+     * @param DBLayer|null $db Database layer to use, if null use default.
+     * @param array|null $options PDO options.
+     *
+     * @return self Return new instance.
+     */
+    public function with(iLogger|null $logger = null, DBLayer|null $db = null, array|null $options = null): self;
+
+    /**
+     * Set options
+     *
+     * @param array $options PDO options
+     *
+     * @return self return new instance with options.
+     */
+    public function withOptions(array $options): self;
 
     /**
      * Set options
@@ -124,11 +143,11 @@ interface DatabaseInterface
      * Migrate data from old database schema to new one.
      *
      * @param string $version Version to migrate to.
-     * @param LoggerInterface|null $logger Logger to use.
+     * @param iLogger|null $logger Logger to use.
      *
      * @return mixed Return value depends on the driver.
      */
-    public function migrateData(string $version, LoggerInterface|null $logger = null): mixed;
+    public function migrateData(string $version, iLogger|null $logger = null): mixed;
 
     /**
      * Is the database up to date with migrations?
@@ -166,11 +185,11 @@ interface DatabaseInterface
     /**
      * Inject Logger.
      *
-     * @param LoggerInterface $logger
+     * @param iLogger $logger
      *
      * @return $this
      */
-    public function setLogger(LoggerInterface $logger): self;
+    public function setLogger(iLogger $logger): self;
 
     /**
      * Get DBLayer instance.

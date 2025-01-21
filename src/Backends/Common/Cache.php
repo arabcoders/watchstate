@@ -44,6 +44,23 @@ final class Cache implements Countable
     }
 
     /**
+     * Clone the object with the given logger and cache adapter.
+     *
+     * @param iLogger|null $logger The logger to use. If not provided, the current logger is used.
+     * @param iCache|null $adapter The cache adapter to use. If not provided, the current cache adapter is used.
+     *
+     * @return Cache return new instance of Cache class.
+     */
+    public function with(iLogger|null $logger = null, iCache|null $adapter = null): self
+    {
+        $cloned = clone $this;
+        $cloned->logger = $logger ?? $this->logger;
+        $cloned->cache = $adapter ?? $this->cache;
+
+        return $cloned;
+    }
+
+    /**
      * Clone the object with the data retrieved from the cache based on the key.
      *
      * @param string $key The key to identify the data in the cache.

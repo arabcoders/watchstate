@@ -31,11 +31,6 @@ final class PDOAdapter implements iDB
     private bool $viaTransaction = false;
 
     /**
-     * @var array Adapter options.
-     */
-    private array $options = [];
-
-    /**
      * @var array<array-key, PDOStatement> Prepared statements.
      */
     private array $stmt = [
@@ -49,8 +44,21 @@ final class PDOAdapter implements iDB
      * @param iLogger $logger The logger object used for logging.
      * @param DBLayer $db The PDO object used for database connections.
      */
-    public function __construct(private iLogger $logger, private readonly DBLayer $db)
+    public function __construct(private iLogger $logger, private readonly DBLayer $db, private array $options = [])
     {
+    }
+
+    public function with(iLogger|null $logger = null, DBLayer|null $db = null, array|null $options = null): self
+    {
+        if (null === $logger && null === $db && null === $options) {
+            return $this;
+        }
+        return new self($logger ?? $this->logger, $db ?? $this->db, $options ?? $this->options);
+    }
+
+    public function withOptions(array $options): self
+    {
+        return $this->with(options: $options);
     }
 
     /**

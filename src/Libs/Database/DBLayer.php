@@ -24,7 +24,7 @@ final class DBLayer implements LoggerAwareInterface
 
     private int $count = 0;
 
-    private string $driver;
+    private string $driver = '';
 
     private array $last = [
         'sql' => '',
@@ -64,6 +64,19 @@ final class DBLayer implements LoggerAwareInterface
         }
 
         $this->retry = ag($this->options, 'retry', self::LOCK_RETRY);
+    }
+
+    /**
+     * Create a new instance with the given PDO object and options.
+     *
+     * @param PDO $pdo The PDO object.
+     * @param array|null $options The options to be passed to the new instance, or null to use the current options.
+     *
+     * @return self The new instance.
+     */
+    public function withPDO(PDO $pdo, array|null $options = null): self
+    {
+        return new self($pdo, $options ?? $this->options);
     }
 
     /**

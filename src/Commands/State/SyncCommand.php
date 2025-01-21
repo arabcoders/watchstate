@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
+use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
-use App\Libs\Mappers\Import\NullMapper;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -45,12 +48,12 @@ class SyncCommand extends Command
     /**
      * Class Constructor.
      *
-     * @param NullMapper $mapper The instance of the DirectMapper class.
+     * @param MemoryMapper $mapper The instance of the DirectMapper class.
      * @param QueueRequests $queue The instance of the QueueRequests class.
      * @param iLogger $logger The instance of the iLogger class.
      */
     public function __construct(
-        private readonly NullMapper $mapper,
+        private readonly MemoryMapper $mapper,
         private readonly QueueRequests $queue,
         private readonly iLogger $logger,
         private readonly LogSuppressor $suppressor,
@@ -97,12 +100,14 @@ class SyncCommand extends Command
                     We need the admin token for plex to generate user tokens for each user, and we need the API keys
                     for jellyfin/emby to get the user list and update their play state.
 
-                    <question>Known limitions</question>
+                    <question>Known limitations</question>
 
-                    We have some known limitations,
-                    * Cannot be used with plex users that have PIN enabled.
-                    * Can Only sync played status.
-                    * Cannot sync play progress.
+                    We have some known limitations:
+                     * Cannot be used with plex users that have PIN enabled.
+                     * Can Only sync played status.
+                     * Cannot sync play progress.
+
+                    Some or all of these limitations will be fixed in future releases.
 
                     <question># How does this sync operation mode work?</question>
 
@@ -321,8 +326,13 @@ class SyncCommand extends Command
         ]);
 
         foreach (array_reverse($users) as $user) {
+            $userName = ag($user, 'name', 'Unknown');
+            $perUserCache = perUserCacheAdapter($userName);
+            $perUserMapper = perUserMapper($this->mapper, $userName)
+                ->withCache($perUserCache)
+                ->withLogger($this->logger)->loadData();
+
             $this->queue->reset();
-            $this->mapper->reset();
 
             $list = [];
             $displayName = null;
@@ -331,7 +341,9 @@ class SyncCommand extends Command
                 $name = ag($backend, 'client_data.backendName');
                 $clientData = ag($backend, 'client_data');
                 $clientData['name'] = $name;
-                $clientData['class'] = makeBackend($clientData, $name)->setLogger($this->logger);
+                $clientData['class'] = makeBackend($clientData, $name, [
+                    BackendCache::class => Container::get(BackendCache::class)->with(adapter: $perUserCache)
+                ])->setLogger($this->logger);
                 $list[$name] = $clientData;
                 $displayName = ag($backend, 'client_data.displayName', '??');
             }
@@ -343,9 +355,12 @@ class SyncCommand extends Command
                 'started' => $start,
             ]);
 
-            $this->handleImport($displayName, $list);
+            assert($perUserMapper instanceof iEImport);
+            $this->handleImport($perUserMapper, $displayName, $list);
 
-            $changes = $this->mapper->computeChanges(array_keys($list));
+            assert($perUserMapper instanceof MemoryMapper);
+            /** @var MemoryMapper $changes */
+            $changes = $perUserMapper->computeChanges(array_keys($list));
 
             foreach ($changes as $b => $changed) {
                 $count = count($changed);
@@ -392,7 +407,7 @@ class SyncCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function handleImport(string $name, array $backends): void
+    protected function handleImport(iEImport $mapper, string $name, array $backends): void
     {
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
@@ -400,7 +415,7 @@ class SyncCommand extends Command
         foreach ($backends as $backend) {
             /** @var iClient $client */
             $client = ag($backend, 'class');
-            array_push($queue, ...$client->pull($this->mapper));
+            array_push($queue, ...$client->pull($mapper));
         }
 
         $start = makeDate();

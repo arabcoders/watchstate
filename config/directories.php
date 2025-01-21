@@ -6,6 +6,7 @@ return [
     '{path}/db/archive',
     '{path}/config',
     '{path}/backup',
+    '{path}/users',
     '{tmp_dir}/logs',
     '{tmp_dir}/cache',
     '{tmp_dir}/profiler',
