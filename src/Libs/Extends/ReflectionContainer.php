@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
+use App\Libs\Attributes\DI\Inject;
 use League\Container\Argument\{ArgumentInterface,
     ArgumentResolverInterface,
     DefaultValueArgument,
@@ -200,6 +201,24 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
                 continue;
             }
 
+            $attributes = $param->getAttributes(Inject::class);
+            if (count($attributes) > 0) {
+                $injector = $attributes[0]->newInstance();
+                assert($injector instanceof Inject);
+                if (array_key_exists($injector->name, $args)) {
+                    $arguments[] = new LiteralArgument($args[$injector->name]);
+                    continue;
+                }
+
+                if ($param->isDefaultValueAvailable()) {
+                    $arguments[] = new DefaultValueArgument($injector->name, $param->getDefaultValue());
+                    continue;
+                }
+
+                $arguments[] = new ResolvableArgument($injector->name);
+                continue;
+            }
+
             $type = $param->getType();
 
             if ($type instanceof ReflectionNamedType) {
@@ -225,12 +244,10 @@ class ReflectionContainer implements ArgumentResolverInterface, ContainerInterfa
                 continue;
             }
 
-            throw new NotFoundException(
-                r("Unable to resolve a value for parameter '{param}' in the function/method '{method}'.", [
-                    'param' => $name,
-                    'method' => $method->getName(),
-                ])
-            );
+            throw new NotFoundException(r("Unable to resolve a value for parameter '{param}' in '{method}'.", [
+                'param' => $name,
+                'method' => $method->getName(),
+            ]));
         }
 
         return $this->resolveArguments($arguments);
