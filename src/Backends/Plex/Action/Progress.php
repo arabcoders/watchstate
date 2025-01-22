@@ -258,26 +258,17 @@ class Progress
             }
 
             try {
-                if (true === (bool)ag($context->options, Options::PLEX_USE_OLD_PROGRESS_ENDPOINT, false)) {
-                    $url = $context->backendUrl->withPath('/:/progress/')->withQuery(http_build_query([
-                        'key' => $logContext['remote']['id'],
-                        'identifier' => 'com.plexapp.plugins.library',
-                        'state' => 'stopped',
-                        'time' => $entity->getPlayProgress(),
-                    ]));
-                } else {
-                    // -- it seems /:/timeline/ allow us to update external user progress, while /:/progress/ does not.
-                    $url = $context->backendUrl->withPath('/:/timeline/')->withQuery(http_build_query([
-                        'ratingKey' => $logContext['remote']['id'],
-                        'key' => '/library/metadata/' . $logContext['remote']['id'],
-                        'identifier' => 'com.plexapp.plugins.library',
-                        'state' => 'stopped',
-                        'time' => $entity->getPlayProgress(),
-                        // -- Without duration & client identifier plex ignore watch progress update.
-                        'duration' => ag($remoteData, 'duration', 0),
-                        'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
-                    ]));
-                }
+                // -- it seems /:/timeline/ allow us to update external user progress, while /:/progress/ does not.
+                $url = $context->backendUrl->withPath('/:/timeline/')->withQuery(http_build_query([
+                    'ratingKey' => $logContext['remote']['id'],
+                    'key' => '/library/metadata/' . $logContext['remote']['id'],
+                    'identifier' => 'com.plexapp.plugins.library',
+                    'state' => 'stopped',
+                    'time' => $entity->getPlayProgress(),
+                    // -- Without duration & client identifier plex ignore watch progress update.
+                    'duration' => ag($remoteData, 'duration', 0),
+                    'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
+                ]));
 
                 $logContext['remote']['url'] = (string)$url;
 

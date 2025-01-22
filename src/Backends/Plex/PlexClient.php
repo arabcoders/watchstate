@@ -669,10 +669,6 @@ class PlexClient implements iClient
             $config = ag_set($config, 'options.' . Options::PLEX_USER_PIN, $val);
         }
 
-        if (null !== ($val = $params->get('options.' . Options::PLEX_USE_OLD_PROGRESS_ENDPOINT))) {
-            $config = ag_set($config, 'options.' . Options::PLEX_USE_OLD_PROGRESS_ENDPOINT, (bool)$val);
-        }
-
         if (null !== ($userId = ag($config, 'user')) && !is_int($userId)) {
             $config = ag_set($config, 'user', (int)$userId);
         }
