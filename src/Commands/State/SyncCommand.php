@@ -7,6 +7,7 @@ namespace App\Commands\State;
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Command;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
@@ -53,7 +54,8 @@ class SyncCommand extends Command
      * @param iLogger $logger The instance of the iLogger class.
      */
     public function __construct(
-        private readonly MemoryMapper $mapper,
+        #[Inject(MemoryMapper::class)]
+        private iEImport $mapper,
         private readonly QueueRequests $queue,
         private readonly iLogger $logger,
         private readonly LogSuppressor $suppressor,
@@ -74,7 +76,6 @@ class SyncCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('test', null, InputOption::VALUE_NONE, 'Run on one user only.')
             ->addOption(
                 'select-backend',
                 's',
@@ -84,6 +85,13 @@ class SyncCommand extends Command
             ->addOption('exclude', null, InputOption::VALUE_NONE, 'Inverse --select-backend logic.')
             ->addOption('ignore-date', 'i', InputOption::VALUE_NONE, 'Ignore date comparison.')
             ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
+            ->addOption(
+                'always-update-metadata',
+                null,
+                InputOption::VALUE_NONE,
+                'Mapper option. Always update the locally stored metadata from backend.'
+            )
+            ->addOption('include-main-user', null, InputOption::VALUE_NONE, 'Include main user in sync.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -181,6 +189,25 @@ class SyncCommand extends Command
 
         if (true === $input->getOption('dry-run')) {
             $this->logger->notice('Dry run mode. No changes will be committed to backends.');
+        }
+
+        $mapperOpts = [];
+
+        if ($input->getOption('dry-run')) {
+            $this->logger->notice('Dry run mode. No changes will be committed.');
+            $mapperOpts[Options::DRY_RUN] = true;
+        }
+
+        if ($input->getOption('trace')) {
+            $mapperOpts[Options::DEBUG_TRACE] = true;
+        }
+
+        if ($input->getOption('always-update-metadata')) {
+            $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
+        }
+
+        if (!empty($mapperOpts)) {
+            $this->mapper = $this->mapper->withOptions($mapperOpts);
         }
 
         foreach ($configFile->getAll() as $backendName => $backend) {
@@ -293,6 +320,7 @@ class SyncCommand extends Command
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
                     $info = ag_delete($info, 'options.' . Options::ADMIN_TOKEN);
                     $info = ag_set($info, 'options.' . Options::ALT_NAME, ag($backend, 'name'));
+                    $info = ag_set($info, 'options.' . Options::ALT_ID, ag($backend, 'user'));
 
                     unset($info['class']);
                     $user['backend'] = ag($backend, 'name');
@@ -322,7 +350,7 @@ class SyncCommand extends Command
             }
         }
 
-        $users = $this->generate_users_list($users, $this->mapping);
+        $users = $this->generate_users_list($users, $input->getOption('include-main-user'), $this->mapping);
 
         if (count($users) < 1) {
             $this->logger->warning('No users were found.');
@@ -333,17 +361,22 @@ class SyncCommand extends Command
             'results' => arrayToString($this->usersList($users)),
         ]);
 
-        foreach (($input->getOption('test') ? array_reverse($users) : $users) as $user) {
+        foreach ($users as $user) {
             $this->queue->reset();
 
             $userName = ag($user, 'name', 'Unknown');
+            $this->logger->info("SYSTEM: Loading '{user}' mapper data. Current memory usage '{memory}'.", [
+                'user' => $userName,
+                'memory' => getMemoryUsage(),
+            ]);
             $perUserCache = perUserCacheAdapter($userName);
-            $this->logger->info("SYSTEM: Loading user mapper data.");
             $perUserMapper = perUserMapper($this->mapper, $userName)
                 ->withCache($perUserCache)
                 ->withLogger($this->logger)->loadData();
-            $this->logger->info("SYSTEM: Load user mapper data complete.");
-
+            $this->logger->info("SYSTEM: loading of '{user}' mapper data completed using '{memory}' of memory.", [
+                'user' => $userName,
+                'memory' => getMemoryUsage(),
+            ]);
 
             $list = [];
             $displayName = null;
@@ -437,10 +470,16 @@ class SyncCommand extends Command
                 ],
             ]);
 
-
-            if ($input->getOption('test')) {
-                break;
+            // -- commit changes
+            if (false === $input->getOption('dry-run')) {
+                $perUserMapper->commit();
             }
+
+            // -- Release memory.
+            $perUserMapper->reset();
+            $this->logger->info("SYSTEM: Memory usage after reset '{memory}'.", [
+                'memory' => getMemoryUsage(),
+            ]);
         }
 
         return self::SUCCESS;
@@ -590,7 +629,7 @@ class SyncCommand extends Command
      *
      * @return array{name: string, backends: array<string, array<string, mixed>>}[] The list of matched users.
      */
-    private function generate_users_list(array $users, array $map = []): array
+    private function generate_users_list(array $users, bool $includeMainUser, array $map = []): array
     {
         $allBackends = [];
         foreach ($users as $u) {
@@ -604,7 +643,10 @@ class SyncCommand extends Command
         foreach ($users as $user) {
             $backend = $user['backend'];
             $nameLower = strtolower($user['name']);
-
+            if (false === $includeMainUser && ag($user, 'id') === ag($user, 'client_data.options.' . Options::ALT_ID)) {
+                $this->logger->debug('Skipping main user "{name}" from sync.', ['name' => $user['name']]);
+                continue;
+            }
             if (!isset($usersBy[$backend])) {
                 $usersBy[$backend] = [];
             }

@@ -42,6 +42,7 @@ final class Options
     public const string REQUEST_ID = 'REQUEST_ID';
     public const string ONLY_LIBRARY_ID = 'ONLY_LIBRARY_ID';
     public const string ALT_NAME = 'ALT_NAME';
+    public const string ALT_ID = 'ALT_ID';
 
     private function __construct()
     {
