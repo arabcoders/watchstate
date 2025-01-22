@@ -66,7 +66,9 @@ class MemoryMapper implements ExtendedImportInterface
      * @param iDB $db The instance of the database interface.
      * @param iCache $cache The instance of the cache interface.
      */
-    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache) {}
+    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache)
+    {
+    }
 
     /**
      * @inheritdoc
@@ -167,7 +169,7 @@ class MemoryMapper implements ExtendedImportInterface
         if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY)) {
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->notice(
-                "{mapper}: Ignoring '{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
+                "{mapper}: [N] Ignoring '{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'metaOnly' => true,
@@ -208,7 +210,7 @@ class MemoryMapper implements ExtendedImportInterface
             ];
         }
 
-        $this->logger->notice("{mapper}: '{backend}' added '{title}' as new item.", [
+        $this->logger->notice("{mapper}: [N] '{backend}' added '{title}' as new item.", [
             'mapper' => afterLast(self::class, '\\'),
             'backend' => $entity->via,
             'title' => $entity->getName(),
@@ -246,7 +248,7 @@ class MemoryMapper implements ExtendedImportInterface
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
             if (count($changes) >= 1) {
-                $this->logger->notice("{mapper}: '{backend}' updated '{title}' metadata.", [
+                $this->logger->notice("{mapper}: [T] '{backend}' updated '{title}' metadata.", [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -272,7 +274,7 @@ class MemoryMapper implements ExtendedImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
+                "{mapper}: [T] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $this->objects[$pointer]->id,
@@ -288,7 +290,7 @@ class MemoryMapper implements ExtendedImportInterface
         }
 
         if (true === $this->inTraceMode()) {
-            $this->logger->info("{mapper}: '{backend}' '{title}' No metadata changes detected.", [
+            $this->logger->info("{mapper}: [T] '{backend}' '{title}' No metadata changes detected.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
@@ -318,7 +320,7 @@ class MemoryMapper implements ExtendedImportInterface
             );
 
             if (count($changes) >= 1) {
-                $this->logger->notice("{mapper}: '{backend}' marked '{title}' as 'unplayed'.", [
+                $this->logger->notice("{mapper}: [O] '{backend}' marked '{title}' as 'unplayed'.", [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -333,9 +335,10 @@ class MemoryMapper implements ExtendedImportInterface
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
+        $metaExists = count($cloned->getMetadata($entity->via)) >= 1;
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
-        if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+        if (!$metaExists || $playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                 $this->changed[$pointer] = $pointer;
                 Message::increment("{$entity->via}.{$entity->type}.updated");
@@ -359,7 +362,7 @@ class MemoryMapper implements ExtendedImportInterface
                     $this->objects[$pointer] = $this->objects[$pointer]->apply(entity: $entity, fields: $_keys);
 
                     $this->logger->notice(
-                        $progress ? "{mapper}: '{backend}' updated '{title}' due to play progress change." : "{mapper}: '{backend}' updated '{title}' metadata.",
+                        $progress ? "{mapper}: [O] '{backend}' updated '{title}' due to play progress change." : "{mapper}: [O] '{backend}' updated '{title}' metadata.",
                         [
                             'mapper' => afterLast(self::class, '\\'),
                             'id' => $cloned->id,
@@ -390,7 +393,7 @@ class MemoryMapper implements ExtendedImportInterface
 
         if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
             $this->logger->notice(
-                "{mapper}: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
+                "{mapper}: [O] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $this->objects[$pointer]->id,
@@ -406,7 +409,7 @@ class MemoryMapper implements ExtendedImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug("{mapper}: Ignoring '{backend}' '{title}'. No changes detected.", [
+            $this->logger->debug("{mapper}: [O] Ignoring '{backend}' '{title}'. No changes detected.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
@@ -423,7 +426,7 @@ class MemoryMapper implements ExtendedImportInterface
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->warning("{mapper}: Ignoring '{backend}' '{title}'. No valid/supported external ids.", [
+            $this->logger->warning("{mapper}: [O] Ignoring '{backend}' '{title}'. No valid/supported external ids.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $entity->id,
                 'backend' => $entity->via,
@@ -435,7 +438,7 @@ class MemoryMapper implements ExtendedImportInterface
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->warning(
-                "{mapper}: Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
+                "{mapper}: [N] Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, ''),
@@ -484,7 +487,7 @@ class MemoryMapper implements ExtendedImportInterface
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $hasAfter && true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = "{mapper}: Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
+            $message = "{mapper}: [N] Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -533,7 +536,7 @@ class MemoryMapper implements ExtendedImportInterface
 
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
-            $message = "{mapper}: '{backend}' Updated '{title}'.";
+            $message = "{mapper}: [N] '{backend}' Updated '{title}'.";
 
             if ($cloned->isWatched() !== $this->objects[$pointer]->isWatched()) {
                 $message = "{mapper}: '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
@@ -569,7 +572,7 @@ class MemoryMapper implements ExtendedImportInterface
         }
 
         $this->logger->debug(
-            "{mapper}: Ignoring '{backend}' '{title}'. Metadata & play state are identical.",
+            "{mapper}: [N] Ignoring '{backend}' '{title}'. Metadata & play state are identical.",
             $context
         );
 

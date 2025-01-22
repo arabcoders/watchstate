@@ -29,7 +29,7 @@ use Throwable;
  *
  * @implements ExtendedImportInterface
  */
-final class DirectMapper implements ExtendedImportInterface
+class DirectMapper implements ExtendedImportInterface
 {
     /**
      * @var array<int,int> List used objects.
@@ -76,7 +76,9 @@ final class DirectMapper implements ExtendedImportInterface
      * @param iDB $db The database instance.
      * @param iCache $cache The cache instance.
      */
-    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache) {}
+    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache)
+    {
+    }
 
     /**
      * @inheritdoc
@@ -193,7 +195,7 @@ final class DirectMapper implements ExtendedImportInterface
             Message::increment("{$entity->via}.{$entity->type}.failed");
 
             $this->logger->notice(
-                "{mapper}: Ignoring '{backend}: {title}'. Does not exist in database. And backend set as metadata source only.",
+                "{mapper}: [N] Ignoring '{backend}: {title}'. Does not exist in database. And backend set as metadata source only.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'metaOnly' => true,
@@ -238,7 +240,7 @@ final class DirectMapper implements ExtendedImportInterface
                 }
             }
 
-            $this->logger->notice("{mapper}: '{backend}' added '{title}' as new item.", [
+            $this->logger->notice("{mapper}: [N] '{backend}' added '{title}' as new item.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -253,12 +255,12 @@ final class DirectMapper implements ExtendedImportInterface
             }
 
             $this->changed[$entity->id] = $this->objects[$entity->id] = $entity->id;
-        } catch (PDOException | Throwable $e) {
+        } catch (PDOException|Throwable $e) {
             $this->actions[$entity->type]['failed']++;
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->error(
                 ...lw(
-                    message: "{mapper}: Exception '{error.kind}' was thrown unhandled in adding '{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "{mapper}: [N] Exception '{error.kind}' was thrown unhandled in adding '{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
                         'mapper' => afterLast(self::class, '\\'),
                         'error' => [
@@ -319,7 +321,7 @@ final class DirectMapper implements ExtendedImportInterface
                     }
                     $local = $local->apply($entity, fields: $_keys);
                     $this->logger->notice(
-                        $progress ? "{mapper}: '{backend}' updated '{title}' due to play progress change." : "{mapper}: '{backend}' updated '{title}' metadata.",
+                        $progress ? "{mapper}: [T] '{backend}' updated '{title}' due to play progress change." : "{mapper}: [T] '{backend}' updated '{title}' metadata.",
                         [
                             'mapper' => afterLast(self::class, '\\'),
                             'id' => $cloned->id,
@@ -355,7 +357,7 @@ final class DirectMapper implements ExtendedImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' handle tainted. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{mapper}: Exception [T] '{error.kind}' was thrown unhandled in '{backend}: {title}' handle tainted. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'mapper' => afterLast(self::class, '\\'),
                             'error' => [
@@ -395,7 +397,7 @@ final class DirectMapper implements ExtendedImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
+                "{mapper}: [T] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $local->id,
@@ -411,7 +413,7 @@ final class DirectMapper implements ExtendedImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->info("{mapper}: '{backend}: {title}' No metadata changes detected.", [
+            $this->logger->info("{mapper}: [T] '{backend}: {title}' No metadata changes detected.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $local->id,
                 'backend' => $entity->via,
@@ -455,7 +457,7 @@ final class DirectMapper implements ExtendedImportInterface
                     }
                 }
 
-                $this->logger->notice("{mapper}: '{backend}' marked '{title}' as 'unplayed'.", [
+                $this->logger->notice("{mapper}: [O] '{backend}' marked '{title}' as 'unplayed'.", [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -474,7 +476,7 @@ final class DirectMapper implements ExtendedImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' handle old entity unplayed. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{mapper}: [O] Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' handle old entity unplayed. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'mapper' => afterLast(self::class, '\\'),
                             'error' => [
@@ -502,9 +504,10 @@ final class DirectMapper implements ExtendedImportInterface
         $newPlayProgress = (int)ag($entity->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $oldPlayProgress = (int)ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PROGRESS);
         $playChanged = $newPlayProgress > ($oldPlayProgress + 10);
+        $metaExists = count($cloned->getMetadata($entity->via)) >= 1;
 
         // -- this sometimes leads to never ending updates as data from backends conflicts.
-        if ($playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
+        if (!$metaExists || $playChanged || true === (bool)ag($this->options, Options::MAPPER_ALWAYS_UPDATE_META)) {
             if (true === (clone $cloned)->apply(entity: $entity, fields: $keys)->isChanged(fields: $keys)) {
                 try {
                     $local = $local->apply(
@@ -524,7 +527,7 @@ final class DirectMapper implements ExtendedImportInterface
                         }
                         $local = $local->apply($entity, fields: $_keys);
                         $this->logger->notice(
-                            $progress ? "{mapper}: '{backend}' updated '{title}' due to play progress change." : "{mapper}: '{backend}' updated '{title}' metadata.",
+                            $progress ? "{mapper}: [O] '{backend}' updated '{title}' due to play progress change." : "{mapper}: '{backend}' updated '{title}' metadata.",
                             [
                                 'mapper' => afterLast(self::class, '\\'),
                                 'id' => $cloned->id,
@@ -561,7 +564,7 @@ final class DirectMapper implements ExtendedImportInterface
                     Message::increment("{$entity->via}.{$local->type}.failed");
                     $this->logger->error(
                         ...lw(
-                            message: "{mapper}: Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' handle old entity always update metadata. '{error.message}' at '{error.file}:{error.line}'.",
+                            message: "{mapper}: [O] Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' handle old entity always update metadata. '{error.message}' at '{error.file}:{error.line}'.",
                             context: [
                                 'mapper' => afterLast(self::class, '\\'),
                                 'error' => [
@@ -591,7 +594,7 @@ final class DirectMapper implements ExtendedImportInterface
 
         if ($entity->isWatched() !== $local->isWatched()) {
             $this->logger->notice(
-                "{mapper}: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
+                "{mapper}: [O] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
@@ -607,7 +610,7 @@ final class DirectMapper implements ExtendedImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug("{mapper}: Ignoring '{backend}: {title}'. No changes detected.", [
+            $this->logger->debug("{mapper}: [O] Ignoring '{backend}: {title}'. No changes detected.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
@@ -624,7 +627,7 @@ final class DirectMapper implements ExtendedImportInterface
     public function add(iState $entity, array $opts = []): self
     {
         if (!$entity->hasGuids() && !$entity->hasRelativeGuid()) {
-            $this->logger->warning("{mapper}: Ignoring '{backend}: {title}'. No valid/supported external ids.", [
+            $this->logger->warning("{mapper}: [A] Ignoring '{backend}: {title}'. No valid/supported external ids.", [
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $entity->id,
                 'backend' => $entity->via,
@@ -636,7 +639,7 @@ final class DirectMapper implements ExtendedImportInterface
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->warning(
-                "{mapper}: Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
+                "{mapper}: [A] Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, ''),
@@ -689,7 +692,7 @@ final class DirectMapper implements ExtendedImportInterface
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $hasAfter && true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = "{mapper}: Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
+            $message = "{mapper}: [A] Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -736,10 +739,10 @@ final class DirectMapper implements ExtendedImportInterface
 
                 $changes = $local->diff(fields: $keys);
 
-                $message = "{mapper}: '{backend}' Updated '{title}'.";
+                $message = "{mapper}: [A] '{backend}' Updated '{title}'.";
 
                 if ($cloned->isWatched() !== $local->isWatched()) {
-                    $message = "{mapper}: '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
+                    $message = "{mapper}: [A] '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
 
                     if (null !== $onStateUpdate) {
                         $onStateUpdate($local);
@@ -772,7 +775,7 @@ final class DirectMapper implements ExtendedImportInterface
                 Message::increment("{$entity->via}.{$local->type}.failed");
                 $this->logger->error(
                     ...lw(
-                        message: "{mapper}: Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' add. '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{mapper}: [A] Exception '{error.kind}' was thrown unhandled in '{backend}: {title}' add. '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'mapper' => afterLast(self::class, '\\'),
                             'error' => [
@@ -813,7 +816,7 @@ final class DirectMapper implements ExtendedImportInterface
         }
 
         $this->logger->debug(
-            "{mapper}: Ignoring '{backend}: {title}'. Metadata & play state are identical.",
+            "{mapper}: [A] Ignoring '{backend}: {title}'. Metadata & play state are identical.",
             $context
         );
 
@@ -860,20 +863,28 @@ final class DirectMapper implements ExtendedImportInterface
 
     /**
      * @inheritdoc
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     public function commit(): array
     {
         if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
             try {
+                $opts = [
+                    'unique' => true,
+                ];
+
+                // -- make it possible to sync other users watch progress.
+                if (null !== ($altName = ag($this->options, Options::ALT_NAME))) {
+                    $opts = ag_set($opts, EventsTable::COLUMN_OPTIONS . '.' . Options::ALT_NAME, $altName);
+                }
+
                 foreach ($this->progressItems as $entity) {
-                    queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], [
-                        'unique' => true,
-                        EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
-                            'type' => $entity->type,
-                            'backend' => $entity->via,
-                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-                        ]),
+                    $opts[EventsTable::COLUMN_REFERENCE] = r('{type}://{id}@{backend}', [
+                        'type' => $entity->type,
+                        'backend' => $entity->via,
+                        'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
                     ]);
+                    queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
                 }
             } catch (\Psr\SimpleCache\InvalidArgumentException) {
             }
