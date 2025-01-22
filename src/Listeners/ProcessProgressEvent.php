@@ -18,6 +18,8 @@ use App\Model\Events\EventListener;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
+use App\Libs\ConfigFile;
+use App\Backends\Common\Cache as BackendCache;
 
 #[EventListener(self::NAME)]
 final readonly class ProcessProgressEvent
@@ -46,7 +48,14 @@ final readonly class ProcessProgressEvent
 
         $options = $e->getOptions();
 
-        if (null === ($item = $this->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
+        if (null !== ($altName = ag($options, Options::ALT_NAME))) {
+            $db = perUserDb($altName);
+            $writer(Level::Info, "Using alternate user '{name}' config for this event.", ['name' => $altName]);
+        } else {
+            $db = $this->db;
+        }
+
+        if (null === ($item = $db->get(Container::get(iState::class)::fromArray($e->getData())))) {
             $writer(Level::Error, "Item '{id}' Is not referenced locally yet.", ['id' => ag($e->getData(), 'id', '?')]);
             return $e;
         }
@@ -66,9 +75,17 @@ final readonly class ProcessProgressEvent
 
         $list = [];
 
+        $configFile = $altName ? perUserConfig($altName) : ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile->setLogger($this->logger);
+        $cache = Container::get(BackendCache::class);
+        if (null !== $altName) {
+            $perUserCache = perUserCacheAdapter($altName);
+            $cache = $cache->with(adapter: $perUserCache);
+        }
+
         $supported = Config::get('supported', []);
 
-        foreach ((array)Config::get('servers', []) as $backendName => $backend) {
+        foreach ($configFile->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool)ag($backend, 'export.enabled')) {
@@ -124,9 +141,11 @@ final readonly class ProcessProgressEvent
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = getBackend(name: $name, config: $backend);
+                $backend['class'] = getBackend(name: $name, config: $backend, configFile: $configFile, options: [
+                    BackendCache::class => $cache
+                ]);
                 $backend['class']->progress(entities: [$item->id => $item], queue: $this->queue);
-            } catch (UnexpectedVersionException|NotImplementedException $e) {
+            } catch (UnexpectedVersionException | NotImplementedException $e) {
                 $writer(
                     Level::Notice,
                     "This feature is not available for '{backend}'. '{error.message}' at '{error.file}:{error.line}'.",

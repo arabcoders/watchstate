@@ -7,7 +7,7 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Mappers\ExtendedImportInterface as iImport;
+use App\Libs\Mappers\ExtendedImportInterface;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Listeners\ProcessProgressEvent;
@@ -23,9 +23,9 @@ use Psr\SimpleCache\CacheInterface as iCache;
  * This class is the default import mapper, it uses memory to store the entities. until they are committed.
  * This leads to faster processing and less database calls overall in exchange for higher memory usage.
  *
- * @implements iImport
+ * @implements ExtendedImportInterface
  */
-class MemoryMapper implements iImport
+class MemoryMapper implements ExtendedImportInterface
 {
     /**
      * @var string Local database GUID prefix.
@@ -66,9 +66,7 @@ class MemoryMapper implements iImport
      * @param iDB $db The instance of the database interface.
      * @param iCache $cache The instance of the cache interface.
      */
-    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache)
-    {
-    }
+    public function __construct(protected iLogger $logger, protected iDB $db, protected iCache $cache) {}
 
     /**
      * @inheritdoc
@@ -111,7 +109,7 @@ class MemoryMapper implements iImport
     /**
      * @inheritdoc
      */
-    public function setOptions(array $options = []): iImport
+    public function setOptions(array $options = []): static
     {
         $this->options = $options;
 
@@ -121,7 +119,7 @@ class MemoryMapper implements iImport
     /**
      * @inheritdoc
      */
-    public function withOptions(array $options = []): iImport
+    public function withOptions(array $options = []): static
     {
         $instance = clone $this;
         $instance->options = $options;
@@ -146,7 +144,8 @@ class MemoryMapper implements iImport
             $this->addPointers($this->objects[$pointer], $pointer);
         }
 
-        $this->logger->info("MemoryMapper: Preloaded '{pointers}' pointers, and '{objects}' objects into memory.", [
+        $this->logger->info("{mapper}: Preloaded '{pointers}' pointers, and '{objects}' objects into memory.", [
+            'mapper' => afterLast(self::class, '\\'),
             'pointers' => number_format(count($this->pointers)),
             'objects' => number_format(count($this->objects)),
         ]);
@@ -168,8 +167,9 @@ class MemoryMapper implements iImport
         if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY)) {
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->notice(
-                "MemoryMapper: Ignoring '{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
+                "{mapper}: Ignoring '{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
                 [
+                    'mapper' => afterLast(self::class, '\\'),
                     'metaOnly' => true,
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -208,7 +208,8 @@ class MemoryMapper implements iImport
             ];
         }
 
-        $this->logger->notice("MemoryMapper: '{backend}' added '{title}' as new item.", [
+        $this->logger->notice("{mapper}: '{backend}' added '{title}' as new item.", [
+            'mapper' => afterLast(self::class, '\\'),
             'backend' => $entity->via,
             'title' => $entity->getName(),
             true === $this->inTraceMode() ? 'trace' : 'metadata' => $data,
@@ -245,7 +246,8 @@ class MemoryMapper implements iImport
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
             if (count($changes) >= 1) {
-                $this->logger->notice("MemoryMapper: '{backend}' updated '{title}' metadata.", [
+                $this->logger->notice("{mapper}: '{backend}' updated '{title}' metadata.", [
+                    'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
@@ -270,8 +272,9 @@ class MemoryMapper implements iImport
             }
 
             $this->logger->notice(
-                "MemoryMapper: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
+                "{mapper}: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
                 [
+                    'mapper' => afterLast(self::class, '\\'),
                     'id' => $this->objects[$pointer]->id,
                     'backend' => $entity->via,
                     'state' => $entity->isWatched() ? 'played' : 'unplayed',
@@ -285,7 +288,8 @@ class MemoryMapper implements iImport
         }
 
         if (true === $this->inTraceMode()) {
-            $this->logger->info("MemoryMapper: '{backend}' '{title}' No metadata changes detected.", [
+            $this->logger->info("{mapper}: '{backend}' '{title}' No metadata changes detected.", [
+                'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
@@ -314,7 +318,8 @@ class MemoryMapper implements iImport
             );
 
             if (count($changes) >= 1) {
-                $this->logger->notice("MemoryMapper: '{backend}' marked '{title}' as 'unplayed'.", [
+                $this->logger->notice("{mapper}: '{backend}' marked '{title}' as 'unplayed'.", [
+                    'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
@@ -354,8 +359,9 @@ class MemoryMapper implements iImport
                     $this->objects[$pointer] = $this->objects[$pointer]->apply(entity: $entity, fields: $_keys);
 
                     $this->logger->notice(
-                        $progress ? "MemoryMapper: '{backend}' updated '{title}' due to play progress change." : "MemoryMapper: '{backend}' updated '{title}' metadata.",
+                        $progress ? "{mapper}: '{backend}' updated '{title}' due to play progress change." : "{mapper}: '{backend}' updated '{title}' metadata.",
                         [
+                            'mapper' => afterLast(self::class, '\\'),
                             'id' => $cloned->id,
                             'backend' => $entity->via,
                             'title' => $cloned->getName(),
@@ -384,8 +390,9 @@ class MemoryMapper implements iImport
 
         if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
             $this->logger->notice(
-                "MemoryMapper: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
+                "{mapper}: '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
                 [
+                    'mapper' => afterLast(self::class, '\\'),
                     'id' => $this->objects[$pointer]->id,
                     'backend' => $entity->via,
                     'remote_date' => makeDate($entity->updated),
@@ -399,7 +406,8 @@ class MemoryMapper implements iImport
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug("MemoryMapper: Ignoring '{backend}' '{title}'. No changes detected.", [
+            $this->logger->debug("{mapper}: Ignoring '{backend}' '{title}'. No changes detected.", [
+                'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
                 'title' => $cloned->getName(),
@@ -415,7 +423,8 @@ class MemoryMapper implements iImport
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->warning("MemoryMapper: Ignoring '{backend}' '{title}'. No valid/supported external ids.", [
+            $this->logger->warning("{mapper}: Ignoring '{backend}' '{title}'. No valid/supported external ids.", [
+                'mapper' => afterLast(self::class, '\\'),
                 'id' => $entity->id,
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -426,8 +435,9 @@ class MemoryMapper implements iImport
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->warning(
-                "MemoryMapper: Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
+                "{mapper}: Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
+                    'mapper' => afterLast(self::class, '\\'),
                     'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, ''),
                     'backend' => $entity->via,
                     'title' => $entity->getName(),
@@ -474,7 +484,7 @@ class MemoryMapper implements iImport
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $hasAfter && true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = "MemoryMapper: Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
+            $message = "{mapper}: Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -485,6 +495,7 @@ class MemoryMapper implements iImport
             }
 
             $this->logger->warning($message, [
+                'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
                 'title' => $entity->getName(),
@@ -522,14 +533,15 @@ class MemoryMapper implements iImport
 
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
-            $message = "MemoryMapper: '{backend}' Updated '{title}'.";
+            $message = "{mapper}: '{backend}' Updated '{title}'.";
 
             if ($cloned->isWatched() !== $this->objects[$pointer]->isWatched()) {
-                $message = "MemoryMapper: '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
+                $message = "{mapper}: '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
             }
 
             if (count($changes) >= 1) {
                 $this->logger->notice($message, [
+                    'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
                     'title' => $cloned->getName(),
@@ -543,6 +555,7 @@ class MemoryMapper implements iImport
         }
 
         $context = [
+            'mapper' => afterLast(self::class, '\\'),
             'id' => $cloned->id,
             'backend' => $entity->via,
             'title' => $cloned->getName(),
@@ -556,7 +569,7 @@ class MemoryMapper implements iImport
         }
 
         $this->logger->debug(
-            "MemoryMapper: Ignoring '{backend}' '{title}'. Metadata & play state are identical.",
+            "{mapper}: Ignoring '{backend}' '{title}'. Metadata & play state are identical.",
             $context
         );
 
@@ -603,24 +616,6 @@ class MemoryMapper implements iImport
      */
     public function commit(): mixed
     {
-        if (true !== $this->inDryRunMode()) {
-            if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
-                try {
-                    foreach ($this->progressItems as $entity) {
-                        queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], [
-                            'unique' => true,
-                            EventsTable::COLUMN_REFERENCE => r('{type}://{id}@{backend}', [
-                                'type' => $entity->type,
-                                'backend' => $entity->via,
-                                'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
-                            ]),
-                        ]);
-                    }
-                } catch (\Psr\SimpleCache\InvalidArgumentException) {
-                }
-            }
-        }
-
         $state = $this->db->transactional(function (iDB $db) {
             $list = [
                 iState::TYPE_MOVIE => ['added' => 0, 'updated' => 0, 'failed' => 0],
@@ -630,13 +625,16 @@ class MemoryMapper implements iImport
             $count = count($this->changed);
 
             if (0 === $count) {
-                $this->logger->notice('MemoryMapper: No changes detected.');
+                $this->logger->notice(afterLast(__class__, '\\') . ': No changes detected.');
                 return $list;
             }
             $inDryRunMode = $this->inDryRunMode();
 
             if (true === $inDryRunMode) {
-                $this->logger->notice("MemoryMapper: Recorded '{total}' object changes.", ['total' => $count]);
+                $this->logger->notice("{mapper}: Recorded '{total}' object changes.", [
+                    'mapper' => afterLast(self::class, '\\'),
+                    'total' => $count
+                ]);
             }
 
             foreach ($this->changed as $pointer) {
@@ -658,8 +656,9 @@ class MemoryMapper implements iImport
                     $list[$entity->type]['failed']++;
                     $this->logger->error(
                         ...lw(
-                            message: "MemoryMapper: Exception '{error.kind}' was thrown unhandled in {mode} '{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                            message: "{mapper}: Exception '{error.kind}' was thrown unhandled in {mode} '{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
                             context: [
+                                'mapper' => afterLast(self::class, '\\'),
                                 'error' => [
                                     'kind' => $e::class,
                                     'line' => $e->getLine(),
@@ -679,6 +678,31 @@ class MemoryMapper implements iImport
 
             return $list;
         });
+
+        if (true !== $this->inDryRunMode()) {
+            if (true === (bool)Config::get('sync.progress', false) && count($this->progressItems) >= 1) {
+                try {
+                    $opts = [
+                        'unique' => true,
+                    ];
+
+                    // -- make it possible to sync other users watch progress.
+                    if (null !== ($altName = ag($this->options, Options::ALT_NAME))) {
+                        $opts = ag_set($opts, EventsTable::COLUMN_OPTIONS . '.' . Options::ALT_NAME, $altName);
+                    }
+
+                    foreach ($this->progressItems as $entity) {
+                        $opts[EventsTable::COLUMN_REFERENCE] = r('{type}://{id}@{backend}', [
+                            'type' => $entity->type,
+                            'backend' => $entity->via,
+                            'id' => ag($entity->getMetadata($entity->via), iState::COLUMN_ID, '??'),
+                        ]);
+                        queueEvent(ProcessProgressEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
+                    }
+                } catch (\Psr\SimpleCache\InvalidArgumentException) {
+                }
+            }
+        }
 
         $this->reset();
 
@@ -831,9 +855,9 @@ class MemoryMapper implements iImport
      * @param iState $entity The entity containing the pointers.
      * @param string|int $pointer The pointer to database object id.
      *
-     * @return iImport The current instance of iImport.
+     * @return static The current instance of mapper.
      */
-    protected function addPointers(iState $entity, string|int $pointer): iImport
+    protected function addPointers(iState $entity, string|int $pointer): static
     {
         foreach ($entity->getRelativePointers() as $key) {
             $this->pointers[$key] = $pointer;
@@ -888,9 +912,9 @@ class MemoryMapper implements iImport
      *
      * @param iState $entity The entity object from which the pointers should be removed.
      *
-     * @return iImport The current instance of iImport.
+     * @return static The current instance of mapper.
      */
-    protected function removePointers(iState $entity): iImport
+    protected function removePointers(iState $entity): static
     {
         foreach ($entity->getPointers() as $key) {
             $lookup = $key . '/' . $entity->type;

@@ -18,7 +18,6 @@ test_plex:
     ignore: '22,1,2,3'
     LIBRARY_SEGMENT: 1000
     ADMIN_TOKEN: plex_admin_token
-    use_old_progress_endpoint: true
     plex_user_uuid: r00000000000000p
 
 test_jellyfin:

@@ -292,7 +292,9 @@ class SyncCommand extends Command
 
         unset($backend);
 
-        $this->logger->notice("SYSTEM: Getting users list from '{backends}'.", [
+        $this->logger->notice(
+            "SYSTEM: Getting users list from '{backends}'.",
+            [
                 'backends' => join(', ', array_map(fn($backend) => $backend['name'], $backends))
             ]
         );
@@ -309,6 +311,7 @@ class SyncCommand extends Command
 
             try {
                 foreach ($client->getUsersList(['tokens' => true]) as $user) {
+                    /** @var array $info */
                     $info = $backend;
                     $info['token'] = ag($user, 'token', ag($backend, 'token'));
                     $info['user'] = ag($user, 'id', ag($info, 'user'));
@@ -370,9 +373,12 @@ class SyncCommand extends Command
                 'memory' => getMemoryUsage(),
             ]);
             $perUserCache = perUserCacheAdapter($userName);
-            $perUserMapper = perUserMapper($this->mapper, $userName)
+            $perUserMapper = $this->mapper->withDB(perUserDb($userName))
                 ->withCache($perUserCache)
-                ->withLogger($this->logger)->loadData();
+                ->withLogger($this->logger)
+                ->withOptions(array_replace_recursive($this->mapper->getOptions(), [Options::ALT_NAME => $userName]))
+                ->loadData();
+
             $this->logger->info("SYSTEM: loading of '{user}' mapper data completed using '{memory}' of memory.", [
                 'user' => $userName,
                 'memory' => getMemoryUsage(),
@@ -432,21 +438,20 @@ class SyncCommand extends Command
 
             foreach ($changes as $b => $changed) {
                 $count = count($changed);
-                $this->logger->notice("SYSTEM: Changes detected for '{name}: {backend}' are '{changes}'.", [
-                    'name' => $displayName,
-                    'backend' => $b,
-                    'changes' => $count,
-                    'items' => array_map(
-                        fn(iState $i) => [
-                            'title' => $i->getName(),
-                            'state' => $i->isWatched() ? 'played' : 'unplayed',
-                            'meta' => $i->isSynced(array_keys($list)),
-                        ],
-                        $changed
-                    )
-                ]);
-
                 if ($count >= 1) {
+                    $this->logger->notice("SYSTEM: Changes detected for '{name}: {backend}' are '{changes}'.", [
+                        'name' => $displayName,
+                        'backend' => $b,
+                        'changes' => $count,
+                        'items' => array_map(
+                            fn(iState $i) => [
+                                'title' => $i->getName(),
+                                'state' => $i->isWatched() ? 'played' : 'unplayed',
+                                'meta' => $i->isSynced(array_keys($list)),
+                            ],
+                            $changed
+                        )
+                    ]);
                     /** @var iClient $client */
                     $client = $list[$b]['class'];
                     $client->updateState($changed, $this->queue);
@@ -470,13 +475,13 @@ class SyncCommand extends Command
                 ],
             ]);
 
-            // -- commit changes
+            // -- Release memory.
             if (false === $input->getOption('dry-run')) {
                 $perUserMapper->commit();
+            } else {
+                $perUserMapper->reset();
             }
 
-            // -- Release memory.
-            $perUserMapper->reset();
             $this->logger->info("SYSTEM: Memory usage after reset '{memory}'.", [
                 'memory' => getMemoryUsage(),
             ]);
@@ -791,9 +796,7 @@ class SyncCommand extends Command
                                 }
 
                                 // Ensure $matchedUser['client_data']['options'] is an array
-                                if (!isset($matchedUser['client_data']['options']) || !is_array(
-                                        $matchedUser['client_data']['options']
-                                    )) {
+                                if (!isset($matchedUser['client_data']['options']) || !is_array($matchedUser['client_data']['options'])) {
                                     $matchedUser['client_data']['options'] = [];
                                 }
 

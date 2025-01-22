@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection, PhpDocMissingThrowsInspection */
 
 declare(strict_types=1);
@@ -367,7 +368,8 @@ if (!function_exists('saveWebhookPayload')) {
                 'id' => ag($request->getServerParams(), 'X_REQUEST_ID', time()),
                 'date' => makeDate('now')->format('Ymd'),
                 'context' => $content,
-            ]), 'w'
+            ]),
+            'w'
         );
 
         $stream->write(
@@ -1593,7 +1595,8 @@ if (!function_exists('parseEnvFile')) {
 
             // -- check if value is quoted.
             if ((true === str_starts_with($value, '"') && true === str_ends_with($value, '"')) ||
-                (true === str_starts_with($value, "'") && true === str_ends_with($value, "'"))) {
+                (true === str_starts_with($value, "'") && true === str_ends_with($value, "'"))
+            ) {
                 $value = substr($value, 1, -1);
             }
 
@@ -1691,13 +1694,11 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         switch (PHP_OS) {
-            case 'Linux':
-                {
+            case 'Linux': {
                     $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
                 }
                 break;
-            case 'WINNT':
-                {
+            case 'WINNT': {
                     // -- Windows does not have a /proc directory so we need different way to get the status.
                     @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
                     // -- windows doesn't return 0 if the process is not found. we need to parse the output.
@@ -2103,13 +2104,15 @@ if (!function_exists('getBackend')) {
      *
      * @param string $name The name of the backend.
      * @param array $config (Optional) Override the default configuration for the backend.
+     * @param ConfigFile $configFile (Optional) The configuration file to use.
+     * @param array $options (Optional) Additional options.
      *
      * @return iClient The backend client instance.
      * @throws RuntimeException If no backend with the specified name is found.
      */
-    function getBackend(string $name, array $config = []): iClient
+    function getBackend(string $name, array $config = [], ConfigFile|null $configFile = null, array $options = []): iClient
     {
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
+        $configFile = $configFile ?? ConfigFile::open(Config::get('backends_file'), 'yaml');
 
         if (null === $configFile->get("{$name}.type", null)) {
             throw new RuntimeException(r("No backend named '{backend}' was found.", ['backend' => $name]));
@@ -2119,7 +2122,7 @@ if (!function_exists('getBackend')) {
         $default['name'] = $name;
         $data = array_replace_recursive($default, $config);
 
-        return makeBackend($data, $name);
+        return makeBackend(backend: $data, name: $name, options: $options);
     }
 }
 
@@ -2188,18 +2191,18 @@ if (!function_exists('timeIt')) {
     }
 }
 
-if (!function_exists('perUserMapper')) {
+if (!function_exists('perUserDb')) {
     /**
-     * User Import Mapper.
+     * Per User Database.
      *
-     * @param iEImport $mapper The mapper instance.
      * @param string $user The username.
      *
-     * @return iEImport new mapper instance.
+     * @return iDB new mapper instance.
      */
-    function perUserMapper(iEImport $mapper, string $user): iEImport
+    function perUserDb(string $user): iDB
     {
         $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+
         if (false === file_exists($path)) {
             if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
                 throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
@@ -2209,25 +2212,51 @@ if (!function_exists('perUserMapper')) {
         $dbFile = fixPath(r("{path}/{user}.db", ['path' => $path, 'user' => $user]));
         $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
         $dsn = r('sqlite:{src}', ['src' => $inTestMode ? ':memory:' : $dbFile]);
+
         if (false === $inTestMode) {
             $changePerm = !file_exists($dbFile);
         }
+
         $pdo = new PDO(dsn: $dsn, options: Config::get('database.options', []));
+
         if (!$inTestMode && $changePerm && inContainer() && 777 !== (int)(decoct(fileperms($dbFile) & 0777))) {
             @chmod($dbFile, 0777);
         }
+
         foreach (Config::get('database.exec', []) as $cmd) {
             $pdo->exec($cmd);
         }
 
         $db = Container::get(iDB::class)->with(db: Container::get(DBLayer::class)->withPDO($pdo));
+
         if (!$db->isMigrated()) {
             $db->migrations(iDB::MIGRATE_UP);
             $db->ensureIndex();
             $db->migrateData(Config::get('database.version'), Container::get(iLogger::class));
         }
 
-        return $mapper->withDB($db);
+        return $db;
+    }
+}
+
+if (!function_exists('perUserConfig')) {
+    /**
+     * Return user backends config.
+     *
+     * @param string $user The username.
+     *
+     * @return ConfigFile new mapper instance.
+     */
+    function perUserConfig(string $user): ConfigFile
+    {
+        $path = fixPath(r("{path}/users/{user}", ['path' => Config::get('path'), 'user' => $user]));
+        if (false === file_exists($path)) {
+            if (false === @mkdir($path, 0755, true) && false === is_dir($path)) {
+                throw new RuntimeException(r("Unable to create '{path}' directory.", ['path' => $path]));
+            }
+        }
+
+        return ConfigFile::open(fixPath(r("{path}/servers.yaml", ['path' => $path])), 'yaml');
     }
 }
 
