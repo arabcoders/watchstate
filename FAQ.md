@@ -211,32 +211,46 @@ database state back to the selected backend.
 
 ### Is there support for Multi-user setup?
 
-There is a minimal support for multi-user setup via `state:sync` command. However, it still requires that you add your
-backends as usual for single user setup and to use `state:sync` command, it's required that all backends have admin
-access to be able to retrieve access-tokens for users. That means for Plex you need an admin token, and for
-jellyfin/emby you need API key, not `user:password` limited access.
+There are minimal support for multi-user setup via `state:sync` command. There are some requirements to get it working
+correctly. The tools will try to match the users based on the name, and fallback on the `mapper.yaml` file if it's
+provided. The tool will try to sync the users data between the backends.
 
-To get started using `state:sync` command, as mentioned before setup your backends as normal, then create a
-`/config/config/mapper.yaml` file if your backends doesn't have the same user. for example
+#### Things that will get synced
+
+* Play status, i.e. watched/unwatched.
+* Watch progress.
+
+#### Requirements to get the command working
+
+* All backends need to have admin level access, this is needed to inquiry about the users and generate the required
+  access tokens.
+* That means for plex, it needs the admin token, to find it
+  check [plex article about it](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
+* For jellyfin/emby you need to use the API key, not the user password. You can generate api keys via Dashboard >
+  Advanced > API Keys.
+
+#### Whats the schema for the `mapper.yaml` file?
+
+The schema is simple, it's a list of users in the following format:
 
 ```yaml
--   backend_name1:
+-   my_plex_server:
         name: "mike_jones"
         options: { }
-    backend_name2:
+    my_jellyfin_server:
         name: "jones_mike"
         options: { }
-    backend_name3:
+    my_emby_server:
         name: "mikeJones"
         options: { }
 
--   backend_name1:
+-   my_emby_server:
         name: "jiji_jones"
         options: { }
-    backend_name2:
+    my_plex_server:
         name: "jones_jiji"
         options: { }
-    backend_name3:
+    my_jellyfin_server:
         name: "jijiJones"
         options: { }
 ```
@@ -244,20 +258,10 @@ To get started using `state:sync` command, as mentioned before setup your backen
 This yaml file helps map your users accounts in the different backends, so the tool can sync the correct user data.
 
 Then simply run `state:sync -v` it will generate the required tokens and match users data between the backends.
-then sync the difference, Keep in mind that it will be slow and that's expected as it needs to do the same thing without
-caching for all users servers and backends. it's recommended to not run this command frequently. as it's puts a lot of
-load on the backends. By default, it will sync once every 3 hours. you can ofc change it to suit your needs.
+then sync the difference. By default, the task is scheduled to run every 3 hour, you can change the schedule by
+altering the `WS_CRON_SYNC_AT` environment variable via `ENV` page or `system:env` command.
 
-> [!NOTE]
-> Known issues:
-
-* Currently, `state:sync` doesn't have a way of syncing plex users that has PIN enabled.
-* Majority of the command flags aren't working or not implemented yet.
-
-> [!IMPORTANT]
-> Please keep in mind the new command is still in alpha stage, so things will probably break. Please report any bugs
-> you encounter. Also, please make sure to have a backup of your data before running the command. just in-case,
-> while we did test it on our live data, it's always better to be safe than sorry.
+To have the task run automatically, you need to enable the task via the `WebUI > Tasks` page or `system:env` command.
 
 ----
 

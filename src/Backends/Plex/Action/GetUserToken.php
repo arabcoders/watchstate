@@ -67,7 +67,7 @@ final class GetUserToken
 
             $pin = ag($context->options, Options::PLEX_USER_PIN);
 
-            $this->logger->debug('Requesting temporary access token for [{backend}] user [{username}]{pin}', [
+            $this->logger->debug("Requesting temporary access token for '{backend}' user '{username}'{pin}", [
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,

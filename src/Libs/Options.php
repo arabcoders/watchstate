@@ -27,6 +27,7 @@ final class Options
     public const string DUMP_PAYLOAD = 'DUMP_PAYLOAD';
     public const string ADMIN_TOKEN = 'ADMIN_TOKEN';
     public const string PLEX_USER_UUID = 'plex_user_uuid';
+    public const string PLEX_USER_NAME = 'plex_user_name';
     public const string NO_THROW = 'NO_THROW';
     public const string NO_LOGGING = 'NO_LOGGING';
     public const string MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';

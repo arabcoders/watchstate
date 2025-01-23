@@ -6,6 +6,7 @@ namespace App\Commands\State;
 
 use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface as iClient;
+use App\Backends\Plex\PlexClient;
 use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
@@ -91,6 +92,7 @@ class SyncCommand extends Command
                 InputOption::VALUE_NONE,
                 'Mapper option. Always update the locally stored metadata from backend.'
             )
+            ->addOption('regenerate-tokens', 'g', InputOption::VALUE_NONE, 'Generate new tokens for all users.')
             ->addOption('include-main-user', null, InputOption::VALUE_NONE, 'Include main user in sync.')
             ->setHelp(
                 r(
@@ -292,12 +294,9 @@ class SyncCommand extends Command
 
         unset($backend);
 
-        $this->logger->notice(
-            "SYSTEM: Getting users list from '{backends}'.",
-            [
-                'backends' => join(', ', array_map(fn($backend) => $backend['name'], $backends))
-            ]
-        );
+        $this->logger->notice("SYSTEM: Getting users list from '{backends}'.", [
+            'backends' => join(', ', array_map(fn($backend) => $backend['name'], $backends))
+        ]);
 
         $users = [];
 
@@ -310,10 +309,9 @@ class SyncCommand extends Command
             ]);
 
             try {
-                foreach ($client->getUsersList(['tokens' => true]) as $user) {
+                foreach ($client->getUsersList() as $user) {
                     /** @var array $info */
                     $info = $backend;
-                    $info['token'] = ag($user, 'token', ag($backend, 'token'));
                     $info['user'] = ag($user, 'id', ag($info, 'user'));
                     $info['backendName'] = r("{backend}_{user}", [
                         'backend' => ag($backend, 'name'),
@@ -324,8 +322,12 @@ class SyncCommand extends Command
                     $info = ag_delete($info, 'options.' . Options::ADMIN_TOKEN);
                     $info = ag_set($info, 'options.' . Options::ALT_NAME, ag($backend, 'name'));
                     $info = ag_set($info, 'options.' . Options::ALT_ID, ag($backend, 'user'));
+                    if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'type'))) {
+                        $info = ag_set($info, 'token', 'reuse_or_generate_token');
+                        $info = ag_set($info, 'options.' . Options::PLEX_USER_NAME, ag($user, 'name'));
+                        $info = ag_set($info, 'options.' . Options::PLEX_USER_UUID, ag($user, 'uuid'));
+                    }
 
-                    unset($info['class']);
                     $user['backend'] = ag($backend, 'name');
                     $user['client_data'] = $info;
                     $users[] = $user;
@@ -387,26 +389,63 @@ class SyncCommand extends Command
             $list = [];
             $displayName = null;
 
-            $configFile = ConfigFile::open(r(fixPath(Config::get('path') . '/users/{user}/servers.yaml'), [
+            $perUser = ConfigFile::open(r(fixPath(Config::get('path') . '/users/{user}/servers.yaml'), [
                 'user' => $userName
             ]), 'yaml', autoSave: true, autoCreate: true);
-            $configFile->setLogger($this->logger);
+            $perUser->setLogger($this->logger);
+
+            $regenerateTokens = $input->getOption('regenerate-tokens');
 
             foreach (ag($user, 'backends', []) as $backend) {
                 $name = ag($backend, 'client_data.backendName');
                 $clientData = ag($backend, 'client_data');
                 $clientData['name'] = $name;
 
-                if (false === $configFile->has($name)) {
+                if (false === $perUser->has($name)) {
                     $data = $clientData;
                     $data = ag_set($data, 'import.lastSync', null);
                     $data = ag_set($data, 'export.lastSync', null);
                     $data = ag_delete($data, ['webhook', 'name', 'backendName', 'displayName']);
-                    $configFile->set($name, $data);
+                    $perUser->set($name, $data);
                 } else {
-                    $clientData = ag_delete($clientData, 'import.lastSync');
-                    $clientData = ag_delete($clientData, 'export.lastSync');
-                    $clientData = array_replace_recursive($configFile->get($name), $clientData);
+                    $clientData = ag_delete($clientData, ['token', 'import.lastSync', 'export.lastSync']);
+                    $clientData = array_replace_recursive($perUser->get($name), $clientData);
+                }
+
+                try {
+                    if (true === $regenerateTokens || 'reuse_or_generate_token' === ag($clientData, 'token')) {
+                        /** @var iClient $client */
+                        $client = ag($backend, 'client_data.class');
+                        assert($client instanceof iClient);
+                        if (PlexClient::CLIENT_NAME === $client->getType()) {
+                            $clientData['token'] = $client->getUserToken(
+                                ag($clientData, 'options.' . Options::PLEX_USER_UUID),
+                                ag($clientData, 'options.' . Options::PLEX_USER_NAME)
+                            );
+                            $perUser->set("{$name}.token", $clientData['token']);
+                        }
+                    }
+                } catch (Throwable $e) {
+                    $this->logger->error(
+                        "Failed to generate access token for '{user}: {name}' backend. '{error}' at '{file}:{line}'.",
+                        [
+                            'name' => $name,
+                            'user' => $userName,
+                            'error' => [
+                                'kind' => $e::class,
+                                'line' => $e->getLine(),
+                                'message' => $e->getMessage(),
+                                'file' => after($e->getFile(), ROOT_PATH),
+                            ],
+                            'exception' => [
+                                'file' => $e->getFile(),
+                                'line' => $e->getLine(),
+                                'kind' => get_class($e),
+                                'message' => $e->getMessage(),
+                            ],
+                        ]
+                    );
+                    continue;
                 }
 
                 $clientData['class'] = makeBackend($clientData, $name, [
@@ -417,8 +456,8 @@ class SyncCommand extends Command
                 $displayName = ag($backend, 'client_data.displayName', '??');
 
                 if (false === $input->getOption('dry-run')) {
-                    $configFile->set("{$name}.import.lastSync", time());
-                    $configFile->set("{$name}.export.lastSync", time());
+                    $perUser->set("{$name}.import.lastSync", time());
+                    $perUser->set("{$name}.export.lastSync", time());
                 }
             }
 
@@ -430,7 +469,7 @@ class SyncCommand extends Command
             ]);
 
             assert($perUserMapper instanceof iEImport);
-            $this->handleImport($perUserMapper, $displayName, $list, $input->getOption('force-full'), $configFile);
+            $this->handleImport($perUserMapper, $displayName, $list, $input->getOption('force-full'), $perUser);
 
             assert($perUserMapper instanceof MemoryMapper);
             /** @var MemoryMapper $changes */
@@ -458,7 +497,7 @@ class SyncCommand extends Command
                 }
             }
 
-            $this->handleExport($displayName);
+            $this->handleExport($displayName, ag($user, 'backends', []));
 
             $end = makeDate();
             $this->logger->notice("SYSTEM: Completed syncing user '{name}' -> '{list}' in '{time.duration}'s", [
@@ -485,6 +524,7 @@ class SyncCommand extends Command
             $this->logger->info("SYSTEM: Memory usage after reset '{memory}'.", [
                 'memory' => getMemoryUsage(),
             ]);
+            $perUser->persist();
         }
 
         return self::SUCCESS;
@@ -564,11 +604,14 @@ class SyncCommand extends Command
         Message::add('response.size', 0);
     }
 
-    protected function handleExport(string $name): void
+    protected function handleExport(string $name, array $backends): void
     {
         $total = count($this->queue->getQueue());
         if ($total < 1) {
-            $this->logger->notice("SYSTEM: No play state changes detected for '{name}' backends.", ['name' => $name]);
+            $this->logger->notice("SYSTEM: No play state changes detected for '{name}: {backends}'.", [
+                'name' => $name,
+                'backends' => join(', ', array_keys($backends))
+            ]);
             return;
         }
 
@@ -796,7 +839,9 @@ class SyncCommand extends Command
                                 }
 
                                 // Ensure $matchedUser['client_data']['options'] is an array
-                                if (!isset($matchedUser['client_data']['options']) || !is_array($matchedUser['client_data']['options'])) {
+                                if (!isset($matchedUser['client_data']['options']) || !is_array(
+                                        $matchedUser['client_data']['options']
+                                    )) {
                                     $matchedUser['client_data']['options'] = [];
                                 }
 
