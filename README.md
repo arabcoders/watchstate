@@ -9,6 +9,13 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-01-24
+
+We are excited to share that multi-user sync is now fully supported! Our first goal was to make sure the feature worked,
+and since releasing it, we’ve worked hard to improve it based on feedback and testing. We’re now confident that it works
+as expected and are happy to invite you to start using it. To learn more and get started, please check out the FAQ entry
+here: [this link](FAQ.md#is-there-support-for-multi-user-setup).
+
 ### 2025-01-18
 
 Due to popular demand, we finally have added the ability to sync all users data, however, it's limited to only
@@ -21,22 +28,6 @@ This task will sync all your users play state, However you need to have the back
 API key for jellyfin and emby. Enable the task and let it run, it will sync all users play state.
 
 Please read the FAQ entry about it at [this link](FAQ.md#is-there-support-for-multi-user-setup).
-
-### 2024-12-30
-
-We have removed the old environment variables `WS_CRON_PROGRESS` and `WS_CRON_PUSH` in favor of the new ones
-`WS_SYNC_PROGRESS` and `WS_PUSH_ENABLED`. please update your environment variables accordingly. We have also added
-new FAQ entry about watch progress syncing via [this link](FAQ.md#sync-watch-progress).
-
-### 2024-10-07
-
-We have added a WebUI page for Custom GUIDs and stabilized on `v1.0` for the `guid.yaml` file spec. We strongly
-recommend
-to use the `WebUI` to manage the GUIDs, as it's much easier to use than editing the `guid.yaml` file directly. and both
-the
-`WebUI` and `API` have safeguards to prevent you from breaking the parser. For more information please check out the
-associated
-FAQ entry about it at [this link](FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones).
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.
