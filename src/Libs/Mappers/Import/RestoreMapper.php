@@ -7,8 +7,10 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Extends\StreamableChunks;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Stream;
 use DateTimeInterface as iDate;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
@@ -44,11 +46,11 @@ final class RestoreMapper implements iImport
      * Class constructor.
      *
      * @param iLogger $logger An instance of the iLogger interface.
-     * @param string $file The file to be used by the constructor.
+     * @param string|Stream $file The file or stream to be used by the constructor.
      *
      * @return void
      */
-    public function __construct(private iLogger $logger, private string $file)
+    public function __construct(private iLogger $logger, private Stream|string $file)
     {
     }
 
@@ -86,9 +88,32 @@ final class RestoreMapper implements iImport
      */
     public function loadData(iDate|null $date = null): self
     {
-        $it = Items::fromFile($this->file, [
-            'decoder' => new ErrorWrappingDecoder(new ExtJsonDecoder(true, JSON_INVALID_UTF8_IGNORE))
-        ]);
+        if (false === ($this->file instanceof Stream)) {
+            if (true === str_ends_with($this->file, '.zip')) {
+                $fileName = ag($this->options, 'file_name', fn() => before(basename($this->file), '.zip'));
+                /** @noinspection PhpUnusedLocalVariableInspection */
+                [$stream, $_] = readFileFromArchive($this->file, $fileName);
+            } else {
+                $stream = Stream::make($this->file, 'r');
+            }
+        } else {
+            $stream = $this->file;
+        }
+
+
+        if ($stream->isSeekable()) {
+            $stream->rewind();
+        }
+
+        $it = new Items(
+            bytesIterator: new StreamableChunks(
+                stream: $stream,
+                chunkSize: (int)ag($this->options, 'chunkSize', 1024 * 8)
+            ),
+            options: [
+                'decoder' => new ErrorWrappingDecoder(new ExtJsonDecoder(true, JSON_INVALID_UTF8_IGNORE))
+            ]
+        );
 
         $state = new StateEntity([]);
 

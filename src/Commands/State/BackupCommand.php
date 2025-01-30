@@ -78,6 +78,7 @@ class BackupCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Full path backup file. Will only be used if backup list is 1'
             )
+            ->addOption('no-compress', 'N', InputOption::VALUE_NONE, 'Do not compress the backup file.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -160,6 +161,7 @@ class BackupCommand extends Command
         $selected = $input->getOption('select-backend');
         $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
+        $noCompression = $input->getOption('no-compress');
 
         $mapperOpts = [];
 
@@ -352,6 +354,14 @@ class BackupCommand extends Command
             if (false === $input->getOption('dry-run')) {
                 $backend['fp']->seek(-1, SEEK_END);
                 $backend['fp']->write(PHP_EOL . ']');
+
+                if (false === $noCompression) {
+                    $file = $backend['fp']->getMetadata('uri');
+                    $this->logger->notice("SYSTEM: Compressing '{file}'.", ['file' => $file]);
+                    compress_files($file, [$file], ['affix' => 'zip']);
+                }
+
+                $backend['fp']->close();
             }
         }
 

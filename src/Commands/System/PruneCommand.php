@@ -9,6 +9,7 @@ use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Database\DBLayer;
 use App\Model\Events\EventsTable;
+use DirectoryIterator;
 use Psr\Log\LoggerInterface as iLogger;
 use SplFileInfo;
 use Symfony\Component\Console\Input\InputInterface;
@@ -82,37 +83,40 @@ final class PruneCommand extends Command
                 'name' => 'logs_remover',
                 'path' => Config::get('tmpDir') . '/logs',
                 'base' => Config::get('tmpDir'),
-                'filter' => '*.log',
+                'filter' => '/\.log$/',
                 'time' => strtotime('-7 DAYS', $time)
             ],
             [
                 'name' => 'webhooks_remover',
                 'path' => Config::get('tmpDir') . '/webhooks',
                 'base' => Config::get('tmpDir'),
-                'filter' => '*.json',
+                'filter' => '/\.json$/',
                 'time' => strtotime('-3 DAYS', $time)
             ],
             [
                 'name' => 'profiler_remover',
                 'path' => Config::get('tmpDir') . '/profiler',
                 'base' => Config::get('tmpDir'),
-                'filter' => '*.json',
+                'filter' => '/\.json$/',
                 'time' => strtotime('-3 DAYS', $time)
             ],
             [
                 'name' => 'debug_remover',
                 'path' => Config::get('tmpDir') . '/debug',
                 'base' => Config::get('tmpDir'),
-                'filter' => '*.json',
+                'filter' => '/\.json$/',
                 'time' => strtotime('-3 DAYS', $time)
             ],
             [
                 'name' => 'backup_remover',
                 'path' => Config::get('path') . '/backup',
                 'base' => Config::get('path'),
-                'filter' => '*.*.json',
-                'validate' => fn(SplFileInfo $f): bool => 1 === @preg_match('/\w+\.\d{8}\.json/i', $f->getBasename()),
-                'time' => strtotime('-9 DAYS', $time)
+                'filter' => '/\.json$|\.json.zip$/',
+                'validate' => fn(SplFileInfo $f): bool => 1 === @preg_match(
+                        '/\w+\.\d{8}\.json(\.zip)?$/i',
+                        $f->getBasename()
+                    ),
+                'time' => strtotime('-90 DAYS', $time)
             ],
         ];
 
@@ -121,6 +125,7 @@ final class PruneCommand extends Command
         foreach ($directories as $item) {
             $name = ag($item, 'name');
             $path = ag($item, 'path');
+            $filter = ag($item, 'filter');
 
             if (null === ($expiresAt = ag($item, 'time'))) {
                 $this->logger->warning("No expected time to live was found for '{name}' - '{path}'.", [
@@ -142,15 +147,21 @@ final class PruneCommand extends Command
 
             $validate = ag($item, 'validate', null);
 
-            foreach (glob(ag($item, 'path') . '/' . ag($item, 'filter')) as $file) {
-                $file = new SplFileInfo($file);
+
+            foreach (new DirectoryIterator($path) as $file) {
+                if ($file->isDot() || $file->isDir() || false === $file->isFile() || $file->isLink()) {
+                    continue;
+                }
+
+                $file = new SplFileInfo($file->getRealPath());
 
                 $fileName = $file->getBasename();
 
-                if ('.' === $fileName || '..' === $fileName || true === $file->isDir() || false === $file->isFile()) {
-                    $this->logger->debug("{name}: Path '{path}' is not considered valid file.", [
+
+                if (null !== $filter && false === @preg_match($filter, $fileName)) {
+                    $this->logger->debug("{name}: File '{file}' did not pass filter checks.", [
                         'name' => $name,
-                        'path' => $file->getRealPath(),
+                        'file' => after($file->getRealPath(), ag($item, 'base') . '/'),
                     ]);
                     continue;
                 }
@@ -178,7 +189,7 @@ final class PruneCommand extends Command
                 ]);
 
                 if (false === $inDryRunMode) {
-                    unlink($file->getRealPath());
+                    #unlink($file->getRealPath());
                 }
             }
         }
