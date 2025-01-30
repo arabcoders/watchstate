@@ -10,6 +10,7 @@ use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Stream;
+use DirectoryIterator;
 use finfo;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -21,18 +22,20 @@ final class Backup
     #[Get(self::URL . '[/]', name: 'system.backup')]
     public function list(): iResponse
     {
-        $path = fixPath(Config::get('path') . '/backup');
-
         $list = [];
 
-        foreach (glob($path . '/*.json') as $file) {
-            $isAuto = 1 === preg_match('/\w+\.\d{8}\.json/i', basename($file));
+        foreach (new DirectoryIterator(fixPath(Config::get('path') . '/backup')) as $file) {
+            if ($file->isDot() || $file->isDir() || $file->isLink() || false === $file->isFile()) {
+                continue;
+            }
+
+            $isAuto = 1 === preg_match('/\w+\.\d{8}\.json(\.zip)?$/i', $file->getBasename());
 
             $builder = [
-                'filename' => basename($file),
+                'filename' => $file->getBasename(),
                 'type' => $isAuto ? 'automatic' : 'manual',
-                'size' => filesize($file),
-                'date' => filemtime($file),
+                'size' => $file->getSize(),
+                'date' => $file->getMTime(),
             ];
 
             $list[] = $builder;
