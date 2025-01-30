@@ -129,13 +129,17 @@
           </NuxtLink>
 
           <div class="navbar-item">
-            <button class="button is-dark" @click="selectedTheme = 'light'" v-if="'dark' === selectedTheme"
-                    v-tooltip="'Switch to light theme'">
-              <span class="icon has-text-warning"><i class="fas fa-sun"></i></span>
+            <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Light theme'"
+                    v-if="'auto' === selectedTheme" @click="selectTheme('light')">
+              <span class="icon has-text-warning"><i class="fas fa-sun"/></span>
             </button>
-            <button class="button is-dark" @click="selectedTheme = 'dark'" v-if="'light' === selectedTheme"
-                    v-tooltip="'Switch to dark theme'">
-              <span class="icon"><i class="fas fa-moon"></i></span>
+            <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Dark theme'"
+                    v-if="'light' === selectedTheme" @click="selectTheme('dark')">
+              <span class="icon"><i class="fas fa-moon"/></span>
+            </button>
+            <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to auto theme'"
+                    v-if="'dark' === selectedTheme" @click="selectTheme('auto')">
+              <span class="icon"><i class="fas fa-microchip"/></span>
             </button>
           </div>
 
@@ -374,6 +378,10 @@ const exposeToken = ref(false)
 const loadFile = ref()
 
 const applyPreferredColorScheme = scheme => {
+  if (!scheme || 'auto' === scheme) {
+    return
+  }
+
   for (let s = 0; s < document.styleSheets.length; s++) {
     for (let i = 0; i < document.styleSheets[s].cssRules.length; i++) {
       try {
@@ -559,6 +567,13 @@ const changeRoute = async (_, callback) => {
   document.querySelectorAll('div.has-dropdown').forEach(el => el.classList.remove('is-active'))
   if (callback) {
     callback()
+  }
+}
+
+const selectTheme = theme => {
+  selectedTheme.value = theme
+  if ('auto' === theme) {
+    return window.location.reload()
   }
 }
 </script>
