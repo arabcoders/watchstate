@@ -29,7 +29,6 @@ use App\Libs\Extends\Date;
 use App\Libs\Extends\ReflectionContainer;
 use App\Libs\Guid;
 use App\Libs\Initializer;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Response;
 use App\Libs\Stream;
@@ -1694,11 +1693,13 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         switch (PHP_OS) {
-            case 'Linux': {
+            case 'Linux':
+                {
                     $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
                 }
                 break;
-            case 'WINNT': {
+            case 'WINNT':
+                {
                     // -- Windows does not have a /proc directory so we need different way to get the status.
                     @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
                     // -- windows doesn't return 0 if the process is not found. we need to parse the output.
@@ -2110,8 +2111,12 @@ if (!function_exists('getBackend')) {
      * @return iClient The backend client instance.
      * @throws RuntimeException If no backend with the specified name is found.
      */
-    function getBackend(string $name, array $config = [], ConfigFile|null $configFile = null, array $options = []): iClient
-    {
+    function getBackend(
+        string $name,
+        array $config = [],
+        ConfigFile|null $configFile = null,
+        array $options = []
+    ): iClient {
         $configFile = $configFile ?? ConfigFile::open(Config::get('backends_file'), 'yaml');
 
         if (null === $configFile->get("{$name}.type", null)) {
@@ -2322,5 +2327,94 @@ if (!function_exists('perUserCacheAdapter')) {
         }
 
         return new Psr16Cache($backend);
+    }
+}
+
+if (!function_exists('compress_files')) {
+    /**
+     * Compress files.
+     *
+     * @param string $to The destination to save the compressed file.
+     * @param array $files The files to compress.
+     * @param array $opts (Optional) Additional options.
+     *
+     * @return bool Whether the files were compressed.
+     */
+    function compress_files(string $to, array $files, array $opts = []): bool
+    {
+        $zip = new ZipArchive();
+
+        if (null !== ($affix = ag($opts, 'affix'))) {
+            $to = r("{to}.{affix}", ['to' => $to, 'affix' => $affix]);
+        }
+
+        if (true !== $zip->open($to, ZipArchive::CREATE)) {
+            return false;
+        }
+
+        foreach ($files as $file) {
+            $zip->addFile($file, basename($file));
+        }
+
+        $zip->close();
+
+        return true;
+    }
+}
+
+if (!function_exists('uncompressed_file')) {
+    /**
+     * Uncompress a file.
+     *
+     * @param string $file The file to uncompress.
+     * @param string|null $destination The destination to uncompress the file to. If not provided, it will be uncompress
+     * to the same directory as the file.
+     *
+     * @return bool Whether the file was uncompressed.
+     */
+    function uncompress_file(string $file, string|null $destination = null): bool
+    {
+        $zip = new ZipArchive();
+
+        if (true !== $zip->open($file)) {
+            return false;
+        }
+
+        $destination = $destination ?? dirname($file);
+
+        $zip->extractTo($destination);
+        $zip->close();
+
+        return true;
+    }
+}
+
+
+if (!function_exists('readFileFromArchive')) {
+    /**
+     * Read file from archive.
+     * @param string $archive The archive file.
+     * @param string $file The file to read.
+     *
+     * @return array The stream and the ZipArchive instance.
+     */
+    function readFileFromArchive(string $archive, string $file): array
+    {
+        $zip = new ZipArchive();
+
+        if (true !== $zip->open($archive)) {
+            throw new InvalidArgumentException(r("Unable to open archive '{archive}'.", ['archive' => $archive]));
+        }
+
+        if (false === ($stream = $zip->getStream($file))) {
+            $zip->close();
+            throw new InvalidArgumentException(r("Unable to read file '{file}' from archive '{archive}'.", [
+                'file' => $file,
+                'archive' => $archive,
+            ]));
+        }
+
+        // -- we return the zip file to not lose the reference to it, thus we risk losing the stream.
+        return [Stream::make($stream, 'r'), $zip];
     }
 }

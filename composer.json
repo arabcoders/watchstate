@@ -26,6 +26,7 @@
         "ext-redis": "*",
         "ext-posix": "*",
         "ext-openssl": "*",
+        "ext-zip": "*",
         "psr/http-client": "^1.0.3",
         "psr/simple-cache": "^3.0",
         "psr/http-server-middleware": "^1.0.2",

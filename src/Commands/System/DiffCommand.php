@@ -28,7 +28,7 @@ use Symfony\Component\Console\Output\OutputInterface as iOutput;
 final class DiffCommand extends Command
 {
     public const string ROUTE = 'system:diff';
-    private array $contentType = ['all', 'played', 'unplayed'];
+    private array $filterType = ['all', 'played', 'unplayed'];
     private array $sourceType = ['a', 'b'];
 
     /**
@@ -38,7 +38,6 @@ final class DiffCommand extends Command
     {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
-
         parent::__construct();
     }
 
@@ -51,13 +50,10 @@ final class DiffCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->addOption('save', 's', InputOption::VALUE_REQUIRED, 'Save difference in a file.')
-            ->addOption('content', 'c', InputOption::VALUE_REQUIRED, 'Save mode, can be all, played, unplayed.', 'all')
+            ->addOption('filter', 'f', InputOption::VALUE_REQUIRED, 'Filter by all, played or unplayed.', 'all')
             ->addOption('source', 'S', InputOption::VALUE_REQUIRED, 'Source of truth, can be a or b.', 'a')
-            ->addArgument(
-                'files',
-                InputArgument::IS_ARRAY,
-                'The files to compare, the first is the original and the second is the new file to compare.'
-            )
+            ->addArgument('a', InputArgument::REQUIRED, 'Source A')
+            ->addArgument('b', InputArgument::REQUIRED, 'Source B')
             ->setDescription('Compare 2 backup files for difference');
     }
 
@@ -72,61 +68,64 @@ final class DiffCommand extends Command
      */
     protected function execute(iInput $input, iOutput $output): int
     {
-        $files = $input->getArgument('files');
-        $fp = null;
+        $filter = $input->getOption('filter');
+        $saveFile = $input->getOption('save');
+        $source = $input->getOption('source');
 
-        if (null !== ($save = $input->getOption('save'))) {
-            $fp = new Stream($save, 'wb+');
-            $fp->write('[');
-        }
-
-        if (false === in_array($input->getOption('content'), $this->contentType, true)) {
-            $output->writeln('<error>Invalid content type provided. Please provide a valid content type.</error>');
+        if (false === in_array($filter, $this->filterType, true)) {
+            $output->writeln('<error>Invalid filter type provided. Please provide a valid filter type.</error>');
             return self::FAILURE;
         }
 
         if (false === in_array($input->getOption('source'), $this->sourceType, true)) {
-            $output->writeln('<error>Invalid source type provided. Please provide a valid source type.</error>');
+            $output->writeln('<error>Invalid source of truth. Please provide a valid source type.</error>');
             return self::FAILURE;
         }
 
-        if (2 !== count($files)) {
-            $output->writeln('<error>Invalid number of files provided. Please provide 2 files to compare.</error>');
+        $a = $input->getArgument('a');
+        $b = $input->getArgument('b');
+
+        if (false === is_string($a) || false === is_string($b)) {
+            $output->writeln('<error>Invalid file path provided. Please provide a valid file path.</error>');
             return self::FAILURE;
         }
 
-        $exists = true;
-        foreach ($files as $file) {
-            if (!file_exists($file)) {
-                $output->writeln("<error>File not found: {$file}</error>");
-                $exists = false;
-            }
-        }
-
-        if (false === $exists) {
+        if (false === file_exists($a) || false === is_readable($a)) {
+            $output->writeln(r("<error>ERROR: source A '{file}' not found or is unreadable.</error>", ['file' => $a]));
             return self::FAILURE;
         }
 
-        $mapper1 = $mapper2 = null;
-
-        foreach ($files as $file) {
-            $mapper = new RestoreMapper($this->logger, $file);
-
-            if (null === $mapper1) {
-                $mapper1 = $mapper;
-            } else {
-                $mapper2 = $mapper;
-            }
-
-            $time = microtime(true);
-            $this->logger->info("Loading '{file}' into memory.", ['file' => $file]);
-            $mapper->loadData();
-            $end = microtime(true);
-            $this->logger->info("Finished parsing data from '{file}' in '{time}s'.", [
-                'file' => $file,
-                'time' => round($end - $time, 2),
-            ]);
+        if (false === file_exists($b) || false === is_readable($b)) {
+            $output->writeln(r("<error>ERROR: source B '{file}' not found or is unreadable.</error>", ['file' => $b]));
+            return self::FAILURE;
         }
+
+        if ($a === $b) {
+            $output->writeln(r("<error>ERROR: source A and source B are the same file.</error>"));
+            return self::FAILURE;
+        }
+
+        // -- source A.
+        $mapper1 = new RestoreMapper($this->logger, $a);
+        $this->logger->info("Loading source A '{file}' into memory.", ['file' => $a]);
+        $time = microtime(true);
+        $mapper1->loadData();
+        $end = microtime(true);
+        $this->logger->info("Finished parsing data from source A '{file}' in '{time}s'.", [
+            'file' => $a,
+            'time' => round($end - $time, 2),
+        ]);
+
+        // -- source B.
+        $mapper2 = new RestoreMapper($this->logger, $b);
+        $this->logger->info("Loading source B '{file}' into memory.", ['file' => $b]);
+        $time = microtime(true);
+        $mapper2->loadData();
+        $end = microtime(true);
+        $this->logger->info("Finished parsing data from source B '{file}' in '{time}s'.", [
+            'file' => $b,
+            'time' => round($end - $time, 2),
+        ]);
 
         $this->logger->notice("Comparing '{memory}' of data. Please wait.", ['memory' => getMemoryUsage()]);
 
@@ -145,15 +144,27 @@ final class DiffCommand extends Command
                 continue;
             }
 
-            if ($entity2->isWatched() !== $entity->isWatched()) {
-                $data['changed'][] = [
-                    'title' => $entity->getName(),
-                    'a' => $entity->isWatched(),
-                    'b' => $entity2->isWatched(),
-                    'entity_a' => $entity,
-                    'entity_b' => $entity2,
-                ];
+            $src = 'a' === $source ? $entity : $entity2;
+
+            if ($entity2->isWatched() === $entity->isWatched()) {
+                continue;
             }
+
+            if ('played' === $filter && false === $src->isWatched()) {
+                continue;
+            }
+
+            if ('unplayed' === $filter && true === $src->isWatched()) {
+                continue;
+            }
+
+            $data['changed'][] = [
+                'title' => $src->getName(),
+                'a' => $entity->isWatched(),
+                'b' => $entity2->isWatched(),
+                'entity_a' => $entity,
+                'entity_b' => $entity2,
+            ];
         }
 
         foreach ($mapper2->getObjects() as $entity) {
@@ -165,9 +176,8 @@ final class DiffCommand extends Command
             }
         }
 
-        if (null !== $fp && count($data['changed']) > 0) {
-            $this->saveContent($input, $data['changed'], $fp);
-            $fp->close();
+        if (null !== $saveFile && count($data['changed']) > 0) {
+            $this->saveContent($data['changed'], $saveFile, $filter, $source);
         }
 
         if ('table' === $input->getOption('output')) {
@@ -187,26 +197,26 @@ final class DiffCommand extends Command
         return self::SUCCESS;
     }
 
-    private function saveContent(iInput $input, array $data, Stream $fp): void
+    private function saveContent(array $data, string $file, string $filter, string $source): void
     {
-        $source = $input->getOption('source');
-        $contentType = $input->getOption('content');
-
-        $this->logger->notice("Saving the difference 'Source: {source}, Content: {content}' to '{file}'.", [
-            'file' => $fp->getMetadata('uri'),
+        $this->logger->notice("Saving the difference 'Source: {source}, filter: {filter}' to '{file}'.", [
+            'file' => $file,
             'source' => $source,
-            'content' => $contentType,
+            'filter' => $filter,
         ]);
+
+        $fp = Stream::make($file, 'wb');
+        $fp->write('[');
 
         foreach ($data as $row) {
             $entity = $row['a' === $source ? 'entity_a' : 'entity_b'];
             assert($entity instanceof iState);
 
-            if ('played' === $contentType && false === $entity->isWatched()) {
+            if ('played' === $filter && false === $entity->isWatched()) {
                 continue;
             }
 
-            if ('unplayed' === $contentType && true === $entity->isWatched()) {
+            if ('unplayed' === $filter && true === $entity->isWatched()) {
                 continue;
             }
 
@@ -215,6 +225,7 @@ final class DiffCommand extends Command
 
         $fp->seek(-1, SEEK_END);
         $fp->write(PHP_EOL . ']');
+        $fp->close();
     }
 
     private function processEntity(iState $entity): string
@@ -269,7 +280,9 @@ final class DiffCommand extends Command
 
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
-        if ($input->mustSuggestArgumentValuesFor('files')) {
+        if ($input->mustSuggestArgumentValuesFor('a') || $input->mustSuggestArgumentValuesFor(
+                'b'
+            ) || $input->mustSuggestOptionValuesFor('save')) {
             $realValue = afterLast($input->getCompletionValue(), '/');
             $filePath = $input->getCompletionValue();
 
@@ -297,11 +310,23 @@ final class DiffCommand extends Command
                 }
 
                 if (empty($realValue) || true === str_starts_with($name->getFilename(), $realValue)) {
+                    if ($name->isDir()) {
+                        $suggest[] = $dirPath . DIRECTORY_SEPARATOR . $name->getFilename() . DIRECTORY_SEPARATOR;
+                        continue;
+                    }
                     $suggest[] = $dirPath . DIRECTORY_SEPARATOR . $name->getFilename();
                 }
             }
 
             $suggestions->suggestValues($suggest);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('filter')) {
+            $suggestions->suggestValues($this->filterType);
+        }
+
+        if ($input->mustSuggestOptionValuesFor('source')) {
+            $suggestions->suggestValues($this->sourceType);
         }
 
         parent::complete($input, $suggestions);
