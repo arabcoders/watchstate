@@ -267,7 +267,7 @@ class Progress
                     'time' => $entity->getPlayProgress(),
                     // -- Without duration & client identifier plex ignore watch progress update.
                     'duration' => ag($remoteData, 'duration', 0),
-                    'X-Plex-Client-Identifier' => md5('WatchState/' . getAppVersion())
+                    'X-Plex-Client-Identifier' => md5('WatchState/' . $context->backendName)
                 ]));
 
                 $logContext['remote']['url'] = (string)$url;
