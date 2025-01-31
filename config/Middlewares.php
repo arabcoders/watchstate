@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use App\Libs\Middlewares\{AddCorsMiddleware,
+    AddTimingMiddleware,
     APIKeyRequiredMiddleware,
     NoAccessLogMiddleware,
     ParseJsonBodyMiddleware,
     ProfilerMiddleware};
 
 return static fn(): array => [
+    fn() => new AddTimingMiddleware(),
     fn() => new ProfilerMiddleware(),
     fn() => new APIKeyRequiredMiddleware(),
     fn() => new ParseJsonBodyMiddleware(),

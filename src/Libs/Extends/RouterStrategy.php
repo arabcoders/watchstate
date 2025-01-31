@@ -22,13 +22,11 @@ class RouterStrategy extends ApplicationStrategy implements OptionsHandlerInterf
             'Allow' => implode(', ', $methods),
         ];
 
-        $response = api_response(Status::NO_CONTENT, headers: $headers);
-
         if ('cors' === ag($_SERVER, 'HTTP_SEC_FETCH_MODE')) {
-            return fn(): iResponse => addCors($response, $headers, $methods);
+            return fn(): iResponse => addCors(api_response(Status::NO_CONTENT, headers: $headers), $headers, $methods);
         }
 
-        return fn(): iResponse => $response;
+        return fn(): iResponse => api_response(Status::NO_CONTENT, headers: $headers);
     }
 
     /**

@@ -20,6 +20,7 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 
 class Command extends BaseCommand
 {
@@ -82,7 +83,12 @@ class Command extends BaseCommand
         $profiler = new \Xhgui\Profiler\Profiler(Config::get('profiler.config', []));
         $profiler->enable(Config::get('profiler.flags', null));
         $status = $this->runCommand($input, $output);
-        $data = $profiler->disable();
+        
+        try {
+            $data = $profiler->disable();
+        } catch (Throwable) {
+            $data = [];
+        }
 
         if (empty($data)) {
             throw new RuntimeException('The profiler run was unsuccessful. No data was returned.');

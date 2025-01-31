@@ -155,7 +155,7 @@ return (function () {
         'save' => (bool)env('WS_PROFILER_SAVE', true),
         'path' => env('WS_PROFILER_PATH', fn() => ag($config, 'tmpDir') . '/profiler'),
         'collector' => env('WS_PROFILER_COLLECTOR', null),
-        'flags' => ['PROFILER_CPU_PROFILING', 'PROFILER_MEMORY_PROFILING', 'NO_BUILTINS'],
+        'flags' => ['PROFILER_CPU_PROFILING', 'PROFILER_MEMORY_PROFILING'],
         'config' => []
     ];
 

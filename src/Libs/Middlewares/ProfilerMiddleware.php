@@ -12,6 +12,7 @@ use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Server\MiddlewareInterface as iMiddleware;
 use Psr\Http\Server\RequestHandlerInterface as iHandler;
 use Random\RandomException;
+use Throwable;
 
 readonly final class ProfilerMiddleware implements iMiddleware
 {
@@ -34,12 +35,27 @@ readonly final class ProfilerMiddleware implements iMiddleware
             return $handler->handle($request->withHeader('X-Profiled', 'No'));
         }
 
-        $profiler = new \Xhgui\Profiler\Profiler(ag($config, 'config', []));
-        $profiler->enable(ag($config, 'flags', null));
+        try {
+            $profiler = new \Xhgui\Profiler\Profiler(ag($config, 'config', []));
+            $profiler->enable(ag($config, 'flags', []));
+        } catch (Throwable) {
+            return $handler->handle($request);
+        }
+
         $response = $handler->handle($request);
 
+        try {
+            $data = $profiler->disable();
+        } catch (Throwable) {
+            $data = [];
+        }
+
+        if (empty($data)) {
+            return $response;
+        }
+
         $data = ag_set(
-            $profiler->disable(),
+            $data,
             'meta.id',
             ag($request->getServerParams(), 'X_REQUEST_ID', fn() => generateUUID())
         );
