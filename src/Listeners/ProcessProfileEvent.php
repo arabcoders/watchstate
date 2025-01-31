@@ -8,7 +8,7 @@ use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
-use App\Libs\Middlewares\ProfilerMiddleware;
+use App\Libs\Profiler;
 use App\Libs\Stream;
 use App\Libs\Uri;
 use App\Model\Events\EventListener;
@@ -113,7 +113,7 @@ final readonly class ProcessProfileEvent
             'meta.SERVER.REMOTE_USER' => true,
             'meta.SERVER.UNIQUE_ID' => true,
             'meta.get.apikey' => true,
-            'meta.get.' . ProfilerMiddleware::QUERY_NAME => false,
+            'meta.get.' . Profiler::QUERY_NAME => false,
         ];
 
         foreach ($maskKeys as $key => $mask) {

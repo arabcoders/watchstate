@@ -6,12 +6,10 @@ use App\Libs\Middlewares\{AddCorsMiddleware,
     AddTimingMiddleware,
     APIKeyRequiredMiddleware,
     NoAccessLogMiddleware,
-    ParseJsonBodyMiddleware,
-    ProfilerMiddleware};
+    ParseJsonBodyMiddleware};
 
 return static fn(): array => [
     fn() => new AddTimingMiddleware(),
-    fn() => new ProfilerMiddleware(),
     fn() => new APIKeyRequiredMiddleware(),
     fn() => new ParseJsonBodyMiddleware(),
     fn() => new NoAccessLogMiddleware(),

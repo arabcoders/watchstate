@@ -177,11 +177,6 @@ return (function () {
             'type' => 'string',
         ],
         [
-            'key' => 'WS_PROFILER_SAMPLER',
-            'description' => 'The XHProf sampler value.',
-            'type' => 'int',
-        ],
-        [
             'key' => 'WS_PROFILER_SAVE',
             'description' => 'Save the profiler data to disk.',
             'type' => 'bool',
