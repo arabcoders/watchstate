@@ -78,8 +78,8 @@
                  @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>
-              Backups that are tagged <code>Automatic</code> are subject to auto deletion after <code>9</code> days from
-              the date of creation.
+              Backups that are tagged <code>Automatic</code> are subject to auto deletion after <code>90</code> days
+              from the date of creation.
             </li>
             <li>
               You can trigger a backup task to run in the background by clicking the
@@ -87,8 +87,11 @@
               Those backups will be tagged as <code>Automatic</code>.
             </li>
             <li>
-              To generate a manual backup, you need to use the <code>state:backup</code> command from the console.
-              or by <span class="icon"><i class="fas fa-terminal"></i></span>
+              To generate a manual backup, go to the
+              <NuxtLink to="/backends"><span class="icon"><i class="fas fa-server"></i></span> Backends</NuxtLink>
+              page and from the drop down menu select the 4th option `Backup this backend play state`, or via cli using
+              <code>state:backup</code> command from the console. or by <span class="icon"><i
+                class="fas fa-terminal"></i></span>
               <NuxtLink :to="makeConsoleCommand('state:backup -s [backend] --file /config/backup/[file]')"
                         v-text="'Web Console'"/>
               page.

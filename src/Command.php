@@ -8,6 +8,7 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Exceptions\RuntimeException;
+use App\Listeners\ProcessProfileEvent;
 use Closure;
 use DirectoryIterator;
 use Symfony\Component\Console\Command\Command as BaseCommand;
@@ -19,7 +20,7 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
-use Xhgui\Profiler\Profiler;
+use Throwable;
 
 class Command extends BaseCommand
 {
@@ -75,32 +76,40 @@ class Command extends BaseCommand
             return $this->runCommand($input, $output);
         }
 
-        $profiler = new Profiler(Config::get('debug.profiler.options', []));
+        if (false === class_exists('Xhgui\Profiler\Profiler') || false === extension_loaded('xhprof')) {
+            throw new RuntimeException('The profiler is not available. Please install the xhprof extension.');
+        }
 
-        $profiler->enable();
-
+        $profiler = new \Xhgui\Profiler\Profiler(Config::get('profiler.config', []));
+        $profiler->enable(Config::get('profiler.flags', null));
         $status = $this->runCommand($input, $output);
-
-        $data = $profiler->disable();
+        
+        try {
+            $data = $profiler->disable();
+        } catch (Throwable) {
+            $data = [];
+        }
 
         if (empty($data)) {
             throw new RuntimeException('The profiler run was unsuccessful. No data was returned.');
         }
 
         $removeKeys = [
-            'HTTP_USER_AGENT',
-            'PHP_AUTH_USER',
-            'REMOTE_USER',
-            'UNIQUE_ID'
+            'meta.SERVER.HTTP_USER_AGENT',
+            'meta.SERVER.PHP_AUTH_USER',
+            'meta.SERVER.REMOTE_USER',
+            'meta.SERVER.UNIQUE_ID'
         ];
 
         $appVersion = getAppVersion();
         $inContainer = inContainer();
 
-        $url = '/cli/' . $this->getName();
+        $url = str_replace(':', '/', '/cli/' . $this->getName());
+        $data['meta']['id'] = generateUUID();
         $data['meta']['url'] = $data['meta']['simple_url'] = $url;
         $data['meta']['get'] = $data['meta']['env'] = [];
         $data['meta']['SERVER'] = array_replace_recursive($data['meta']['SERVER'], [
+            'REQUEST_METHOD' => 'CLI',
             'APP_VERSION' => $appVersion,
             'PHP_VERSION' => PHP_VERSION,
             'PHP_VERSION_ID' => PHP_VERSION_ID,
@@ -113,13 +122,9 @@ class Command extends BaseCommand
             'SERVER_NAME' => ($inContainer ? 'container' : 'cli') . '.watchstate.' . $appVersion
         ]);
 
-        foreach ($removeKeys as $key) {
-            if (isset($data['meta'][$key])) {
-                unset($data['meta'][$key]);
-            }
-        }
+        $data = ag_delete($data, $removeKeys);
 
-        $profiler->save($data);
+        queueEvent(ProcessProfileEvent::NAME, $data);
 
         return $status;
     }
@@ -162,43 +167,6 @@ class Command extends BaseCommand
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
         return self::SUCCESS;
-    }
-
-    /**
-     * Check given backends file.
-     *
-     * @param string $config custom servers.yaml file.
-     *
-     * @return string the config file path.
-     * @throws RuntimeException if there is problem with given config.
-     */
-    protected function checkCustomBackendsFile(string $config): string
-    {
-        if (!file_exists($config) || !is_file($config)) {
-            throw new RuntimeException(
-                r('Config file [{config}] does not exists.', [
-                    'config' => $config
-                ])
-            );
-        }
-
-        if (!is_readable($config)) {
-            throw new RuntimeException(
-                r('Unable to read config file [{config}]. (Check Permissions)', [
-                    'config' => $config
-                ])
-            );
-        }
-
-        if (!is_writable($config)) {
-            throw new RuntimeException(
-                r('Unable to edit config file [{config}]. (Check Permissions)', [
-                    'config' => $config
-                ])
-            );
-        }
-
-        return $config;
     }
 
     /**

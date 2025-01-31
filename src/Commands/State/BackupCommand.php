@@ -358,7 +358,10 @@ class BackupCommand extends Command
                 if (false === $noCompression) {
                     $file = $backend['fp']->getMetadata('uri');
                     $this->logger->notice("SYSTEM: Compressing '{file}'.", ['file' => $file]);
-                    compress_files($file, [$file], ['affix' => 'zip']);
+                    $status = compress_files($file, [$file], ['affix' => 'zip']);
+                    if (true === $status) {
+                        unlink($file);
+                    }
                 }
 
                 $backend['fp']->close();

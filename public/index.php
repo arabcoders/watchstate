@@ -5,6 +5,10 @@ declare(strict_types=1);
 use App\Command;
 use App\Libs\Emitter;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Profiler;
+use App\Listeners\ProcessProfileEvent;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7Server\ServerRequestCreator;
 
 error_reporting(E_ALL);
 ini_set('error_reporting', 'On');
@@ -51,56 +55,66 @@ set_exception_handler(function (Throwable $e) {
     exit(Command::FAILURE);
 });
 
-try {
-    // -- In case the frontend proxy does not generate request unique id.
-    if (!isset($_SERVER['X_REQUEST_ID'])) {
-        $_SERVER['X_REQUEST_ID'] = bin2hex(random_bytes(16));
+$factory = new Psr17Factory();
+$request = new ServerRequestCreator($factory, $factory, $factory, $factory)->fromGlobals();
+$profiler = new Profiler(callback: fn(array $data) => queueEvent(ProcessProfileEvent::NAME, $data));
+
+$exitCode = $profiler->process(function () use ($request) {
+    try {
+        // -- In case the frontend proxy does not generate request unique id.
+        if (!isset($_SERVER['X_REQUEST_ID'])) {
+            $_SERVER['X_REQUEST_ID'] = bin2hex(random_bytes(16));
+        }
+
+        $app = new App\Libs\Initializer()->boot();
+    } catch (Throwable $e) {
+        $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+
+        $out(
+            r(
+                text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. Error '{message} @ {file}:{line}'.",
+                context: [
+                    'kind' => $e::class,
+                    'line' => $e->getLine(),
+                    'message' => $e->getMessage(),
+                    'file' => after($e->getFile(), ROOT_PATH),
+                ]
+            )
+        );
+
+        if (!headers_sent()) {
+            http_response_code(Status::SERVICE_UNAVAILABLE->value);
+        }
+
+        return Command::FAILURE;
     }
 
-    $app = new App\Libs\Initializer()->boot();
-} catch (Throwable $e) {
-    $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
+    try {
+        new Emitter()($app->http($request));
+    } catch (Throwable $e) {
+        $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
 
-    $out(
-        r(
-            text: "HTTP: Exception '{kind}' was thrown unhandled during HTTP boot context. Error '{message} @ {file}:{line}'.",
-            context: [
-                'kind' => $e::class,
-                'line' => $e->getLine(),
-                'message' => $e->getMessage(),
-                'file' => after($e->getFile(), ROOT_PATH),
-            ]
-        )
-    );
+        $out(
+            r(
+                text: "HTTP: Exception '{kind}' was thrown unhandled during response context. Error '{message} @ {file}:{line}'.",
+                context: [
+                    'kind' => $e::class,
+                    'line' => $e->getLine(),
+                    'message' => $e->getMessage(),
+                    'file' => after($e->getFile(), ROOT_PATH),
+                ]
+            )
+        );
 
-    if (!headers_sent()) {
-        http_response_code(Status::SERVICE_UNAVAILABLE->value);
+        if (!headers_sent()) {
+            http_response_code(Status::SERVICE_UNAVAILABLE->value);
+        }
+        return Command::FAILURE;
     }
 
-    exit(Command::FAILURE);
+    return Command::SUCCESS;
+}, $request);
+
+if (Command::SUCCESS !== $exitCode) {
+    exit($exitCode);
 }
-
-try {
-    new Emitter()($app->http());
-} catch (Throwable $e) {
-    $out = fn($message) => inContainer() ? fwrite(STDERR, $message) : syslog(LOG_ERR, $message);
-
-    $out(
-        r(
-            text: "HTTP: Exception '{kind}' was thrown unhandled during response context. Error '{message} @ {file}:{line}'.",
-            context: [
-                'kind' => $e::class,
-                'line' => $e->getLine(),
-                'message' => $e->getMessage(),
-                'file' => after($e->getFile(), ROOT_PATH),
-            ]
-        )
-    );
-
-    if (!headers_sent()) {
-        http_response_code(Status::SERVICE_UNAVAILABLE->value);
-    }
-
-    exit(Command::FAILURE);
-}
-

@@ -4,7 +4,7 @@
     "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
     "This file is @generated automatically"
   ],
-  "content-hash": "c3c683ccb90d966fdaf666583c26e4d0",
+  "content-hash": "14930a7efc2590d3cd7c4efb35af54d5",
   "packages": [
     {
       "name": "brick/math",
@@ -780,6 +780,68 @@
         }
       ],
       "time": "2023-11-08T09:30:43+00:00"
+    },
+    {
+      "name": "perftools/php-profiler",
+      "version": "1.1.2",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/perftools/php-profiler.git",
+        "reference": "b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/perftools/php-profiler/zipball/b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea",
+        "reference": "b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea",
+        "shasum": ""
+      },
+      "require": {
+        "ext-json": "*",
+        "php": "^5.3.0 || ^7.0 || ^8.0"
+      },
+      "conflict": {
+        "perftools/xhgui-collector": "<1.8"
+      },
+      "require-dev": {
+        "alcaeus/mongo-php-adapter": "^1.1",
+        "perftools/xhgui-collector": "^1.8"
+      },
+      "suggest": {
+        "alcaeus/mongo-php-adapter": "Adapter to provide ext-mongo interface on top of mongo-php-library (PHP>=5.6)",
+        "ext-curl": "cURL extension for upload saver",
+        "ext-mongo": "mongo extension (PHP>=5.3,<7.0)",
+        "ext-mongodb": "mongodb extension (PHP>=5.4)",
+        "ext-tideways": "Use tideways to profile",
+        "ext-uprofiler": "Use uprofiler to profile",
+        "ext-xhprof": "Use xhprof to profile",
+        "perftools/xhgui-collector": "For mongodb or pdo savers"
+      },
+      "type": "library",
+      "autoload": {
+        "psr-4": {
+          "Xhgui\\Profiler\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Lauri Piisang",
+          "email": "lauri.piisang@eesti.ee"
+        },
+        {
+          "name": "Elan Ruusamäe",
+          "email": "glen@pld-linux.org"
+        }
+      ],
+      "description": "PHP Profiling based on XHGui",
+      "support": {
+        "issues": "https://github.com/perftools/php-profiler/issues",
+        "source": "https://github.com/perftools/php-profiler/tree/1.1.2"
+      },
+      "time": "2024-04-16T05:42:45+00:00"
     },
     {
       "name": "psr/cache",
@@ -2891,68 +2953,6 @@
       "time": "2024-11-08T17:47:46+00:00"
     },
     {
-      "name": "perftools/php-profiler",
-      "version": "1.1.2",
-      "source": {
-        "type": "git",
-        "url": "https://github.com/perftools/php-profiler.git",
-        "reference": "b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea"
-      },
-      "dist": {
-        "type": "zip",
-        "url": "https://api.github.com/repos/perftools/php-profiler/zipball/b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea",
-        "reference": "b5051e96679aa0d6cb3afe9a13a4e6a1fd890fea",
-        "shasum": ""
-      },
-      "require": {
-        "ext-json": "*",
-        "php": "^5.3.0 || ^7.0 || ^8.0"
-      },
-      "conflict": {
-        "perftools/xhgui-collector": "<1.8"
-      },
-      "require-dev": {
-        "alcaeus/mongo-php-adapter": "^1.1",
-        "perftools/xhgui-collector": "^1.8"
-      },
-      "suggest": {
-        "alcaeus/mongo-php-adapter": "Adapter to provide ext-mongo interface on top of mongo-php-library (PHP>=5.6)",
-        "ext-curl": "cURL extension for upload saver",
-        "ext-mongo": "mongo extension (PHP>=5.3,<7.0)",
-        "ext-mongodb": "mongodb extension (PHP>=5.4)",
-        "ext-tideways": "Use tideways to profile",
-        "ext-uprofiler": "Use uprofiler to profile",
-        "ext-xhprof": "Use xhprof to profile",
-        "perftools/xhgui-collector": "For mongodb or pdo savers"
-      },
-      "type": "library",
-      "autoload": {
-        "psr-4": {
-          "Xhgui\\Profiler\\": "src/"
-        }
-      },
-      "notification-url": "https://packagist.org/downloads/",
-      "license": [
-        "MIT"
-      ],
-      "authors": [
-        {
-          "name": "Lauri Piisang",
-          "email": "lauri.piisang@eesti.ee"
-        },
-        {
-          "name": "Elan Ruusamäe",
-          "email": "glen@pld-linux.org"
-        }
-      ],
-      "description": "PHP Profiling based on XHGui",
-      "support": {
-        "issues": "https://github.com/perftools/php-profiler/issues",
-        "source": "https://github.com/perftools/php-profiler/tree/1.1.2"
-      },
-      "time": "2024-04-16T05:42:45+00:00"
-    },
-    {
       "name": "phar-io/manifest",
       "version": "2.0.4",
       "source": {
@@ -3453,16 +3453,16 @@
     },
     {
       "name": "phpunit/phpunit",
-      "version": "11.5.5",
+      "version": "11.5.6",
       "source": {
         "type": "git",
         "url": "https://github.com/sebastianbergmann/phpunit.git",
-        "reference": "b9a975972f580c0491f834eb0818ad2b32fd8bba"
+        "reference": "3c3ae14c90f244cdda95028c3e469028e8d1c02c"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/b9a975972f580c0491f834eb0818ad2b32fd8bba",
-        "reference": "b9a975972f580c0491f834eb0818ad2b32fd8bba",
+        "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/3c3ae14c90f244cdda95028c3e469028e8d1c02c",
+        "reference": "3c3ae14c90f244cdda95028c3e469028e8d1c02c",
         "shasum": ""
       },
       "require": {
@@ -3534,7 +3534,7 @@
       "support": {
         "issues": "https://github.com/sebastianbergmann/phpunit/issues",
         "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.5"
+        "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.6"
       },
       "funding": [
         {
@@ -3550,7 +3550,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-01-29T14:01:11+00:00"
+      "time": "2025-01-31T07:03:30+00:00"
     },
     {
       "name": "psalm/phar",
@@ -3593,12 +3593,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "a39f409dd81c4cde087ab72b9026c013f09fc492"
+        "reference": "b6841f6613aeea6dbf722ac1663e6409653873d5"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/a39f409dd81c4cde087ab72b9026c013f09fc492",
-        "reference": "a39f409dd81c4cde087ab72b9026c013f09fc492",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/b6841f6613aeea6dbf722ac1663e6409653873d5",
+        "reference": "b6841f6613aeea6dbf722ac1663e6409653873d5",
         "shasum": ""
       },
       "conflict": {
@@ -3635,6 +3635,7 @@
         "asymmetricrypt/asymmetricrypt": "<9.9.99",
         "athlon1600/php-proxy": "<=5.1",
         "athlon1600/php-proxy-app": "<=3",
+        "athlon1600/youtube-downloader": "<=4",
         "austintoddj/canvas": "<=3.4.2",
         "auth0/wordpress": "<=4.6",
         "automad/automad": "<2.0.0.0-alpha5",
@@ -4266,7 +4267,7 @@
         "t3g/svg-sanitizer": "<1.0.3",
         "t3s/content-consent": "<1.0.3|>=2,<2.0.2",
         "tastyigniter/tastyigniter": "<3.3",
-        "tcg/voyager": "<=1.4",
+        "tcg/voyager": "<=1.8",
         "tecnickcom/tc-lib-pdf-font": "<2.6.4",
         "tecnickcom/tcpdf": "<6.8",
         "terminal42/contao-tablelookupwizard": "<3.3.5",
@@ -4455,7 +4456,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-01-29T19:04:15+00:00"
+      "time": "2025-01-30T23:05:03+00:00"
     },
     {
       "name": "sebastian/cli-parser",
@@ -5505,7 +5506,8 @@
     "ext-fileinfo": "*",
     "ext-redis": "*",
     "ext-posix": "*",
-    "ext-openssl": "*"
+    "ext-openssl": "*",
+    "ext-zip": "*"
   },
   "platform-dev": {},
   "plugin-api-version": "2.6.0"

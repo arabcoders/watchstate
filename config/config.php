@@ -148,14 +148,12 @@ return (function () {
 
     $config['debug'] = [
         'enabled' => (bool)env('WS_DEBUG', false),
-        'profiler' => [
-            'options' => [
-                'save.handler' => 'file',
-                'save.handler.file' => [
-                    'filename' => ag($config, 'tmpDir') . '/profiler/run.' . makeDate()->format('Ymd_His') . '.json'
-                ],
-            ],
-        ],
+    ];
+
+    $config['profiler'] = [
+        'save' => (bool)env('WS_PROFILER_SAVE', true),
+        'path' => env('WS_PROFILER_PATH', fn() => ag($config, 'tmpDir') . '/profiler'),
+        'collector' => env('WS_PROFILER_COLLECTOR', null),
     ];
 
     $config['cache'] = [

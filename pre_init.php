@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+if (!defined('APP_START')) {
+    define('APP_START', microtime(true));
+}
+
 if (!defined('BASE_MEMORY')) {
     define('BASE_MEMORY', memory_get_usage());
 }

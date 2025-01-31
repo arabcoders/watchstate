@@ -2105,7 +2105,7 @@ if (!function_exists('getBackend')) {
      *
      * @param string $name The name of the backend.
      * @param array $config (Optional) Override the default configuration for the backend.
-     * @param ConfigFile $configFile (Optional) The configuration file to use.
+     * @param ConfigFile|null $configFile (Optional) The configuration file to use.
      * @param array $options (Optional) Additional options.
      *
      * @return iClient The backend client instance.
@@ -2349,7 +2349,7 @@ if (!function_exists('compress_files')) {
         }
 
         if (true !== $zip->open($to, ZipArchive::CREATE)) {
-            return false;
+            throw new InvalidArgumentException(r("Unable to open archive '{archive}'.", ['archive' => $to]));
         }
 
         foreach ($files as $file) {
@@ -2371,6 +2371,7 @@ if (!function_exists('uncompressed_file')) {
      * to the same directory as the file.
      *
      * @return bool Whether the file was uncompressed.
+     * @noinspection PhpUnused
      */
     function uncompress_file(string $file, string|null $destination = null): bool
     {
