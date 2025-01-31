@@ -947,7 +947,7 @@ class Import
 
         $end = microtime(true);
         $this->logger->info(
-            "Parsing '{client}: {backend}' library '{library.title} {segment.number}/{segment.of}' completed in '{time.duration}'.",
+            "Parsing '{client}: {backend}' library '{library.title} {segment.number}/{segment.of}' completed in '{time.duration}'s.",
             [
                 'client' => $context->clientName,
                 'backend' => $context->backendName,
