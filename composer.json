@@ -45,7 +45,8 @@
         "dragonmantank/cron-expression": "^3.4.0",
         "halaxa/json-machine": "^1.2.0",
         "psy/psysh": "^0.12.7",
-        "ramsey/uuid": "^4.7.6"
+        "ramsey/uuid": "^4.7.6",
+        "perftools/php-profiler": "^1.1.2"
     },
     "suggest": {
         "ext-sockets": "For UDP communications."
@@ -53,7 +54,6 @@
     "require-dev": {
         "roave/security-advisories": "dev-latest",
         "symfony/var-dumper": "^7.2",
-        "perftools/php-profiler": "^1.1.2",
         "phpunit/phpunit": "^11.5.2",
         "phpstan/phpstan": "^2.0",
         "psalm/phar": "^5.26"
