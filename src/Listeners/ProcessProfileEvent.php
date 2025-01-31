@@ -168,6 +168,31 @@ final readonly class ProcessProfileEvent
                 }
             } catch (Throwable) {
             }
+
+            $queryString = ag($data, 'meta.SERVER.QUERY_STRING');
+            if (!empty($queryString)) {
+                $parsed = [];
+                parse_str($queryString, $parsed);
+                foreach ($maskKeys as $key => $mask) {
+                    if (false === str_starts_with($key, 'meta.get.')) {
+                        continue;
+                    }
+
+                    $key = substr($key, 9);
+
+                    if (false === ag_exists($parsed, $key)) {
+                        continue;
+                    }
+
+                    if (true === $mask) {
+                        $parsed = ag_set($parsed, $key, '__masked__');
+                        continue;
+                    }
+
+                    $parsed = ag_delete($parsed, $key);
+                }
+                $data = ag_set($data, 'meta.SERVER.QUERY_STRING', http_build_query($parsed));
+            }
         }
 
         return $data;
