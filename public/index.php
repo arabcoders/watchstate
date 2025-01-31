@@ -6,6 +6,7 @@ use App\Command;
 use App\Libs\Emitter;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Profiler;
+use App\Libs\Uri;
 use App\Listeners\ProcessProfileEvent;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
@@ -57,7 +58,102 @@ set_exception_handler(function (Throwable $e) {
 
 $factory = new Psr17Factory();
 $request = new ServerRequestCreator($factory, $factory, $factory, $factory)->fromGlobals();
-$profiler = new Profiler(callback: fn(array $data) => queueEvent(ProcessProfileEvent::NAME, $data));
+$profiler = new Profiler(callback: function (array $data) {
+    $filter = function (array $data): array {
+        $data['env'] = [];
+
+        $maskKeys = [
+            'meta.SERVER.HTTP_USER_AGENT' => true,
+            'meta.SERVER.PHP_AUTH_USER' => true,
+            'meta.SERVER.REMOTE_USER' => true,
+            'meta.SERVER.UNIQUE_ID' => true,
+            'meta.get.apikey' => true,
+            'meta.get.' . Profiler::QUERY_NAME => false,
+        ];
+
+        foreach ($maskKeys as $key => $mask) {
+            if (false === ag_exists($data, $key)) {
+                continue;
+            }
+
+            if (true === $mask) {
+                $data = ag_set($data, $key, '__masked__');
+                continue;
+            }
+
+            $data = ag_delete($data, $key);
+        }
+
+        if ('CLI' !== ag($data, 'meta.SERVER.REQUEST_METHOD')) {
+            try {
+                if (null !== ($query = ag($data, 'meta.url'))) {
+                    $url = new Uri($query);
+                    $query = $url->getQuery();
+                    if (!empty($query)) {
+                        $parsed = [];
+                        parse_str($query, $parsed);
+                        foreach ($maskKeys as $key => $mask) {
+                            if (false === str_starts_with($key, 'meta.get.')) {
+                                continue;
+                            }
+
+                            $key = substr($key, 9);
+
+                            if (false === ag_exists($parsed, $key)) {
+                                continue;
+                            }
+
+                            if (true === $mask) {
+                                $parsed = ag_set($parsed, $key, '__masked__');
+                                continue;
+                            }
+
+                            $parsed = ag_delete($parsed, $key);
+                        }
+                        $data = ag_set($data, 'meta.url', (string)$url->withQuery(http_build_query($parsed)));
+                    }
+                }
+            } catch (Throwable) {
+            }
+
+            try {
+                if (null !== ($url = ag($data, 'meta.simple_url'))) {
+                    $url = new Uri($url)->withQuery('');
+                    $data = ag_set($data, 'meta.simple_url', (string)$url);
+                }
+            } catch (Throwable) {
+            }
+
+            $queryString = ag($data, 'meta.SERVER.QUERY_STRING');
+            if (!empty($queryString)) {
+                $parsed = [];
+                parse_str($queryString, $parsed);
+                foreach ($maskKeys as $key => $mask) {
+                    if (false === str_starts_with($key, 'meta.get.')) {
+                        continue;
+                    }
+
+                    $key = substr($key, 9);
+
+                    if (false === ag_exists($parsed, $key)) {
+                        continue;
+                    }
+
+                    if (true === $mask) {
+                        $parsed = ag_set($parsed, $key, '__masked__');
+                        continue;
+                    }
+
+                    $parsed = ag_delete($parsed, $key);
+                }
+                $data = ag_set($data, 'meta.SERVER.QUERY_STRING', http_build_query($parsed));
+            }
+        }
+
+        return $data;
+    };
+    queueEvent(ProcessProfileEvent::NAME, $filter($data));
+});
 
 $exitCode = $profiler->process(function () use ($request) {
     try {

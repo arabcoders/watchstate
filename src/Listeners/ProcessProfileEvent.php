@@ -8,9 +8,7 @@ use App\Libs\Config;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
-use App\Libs\Profiler;
 use App\Libs\Stream;
-use App\Libs\Uri;
 use App\Model\Events\EventListener;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
@@ -51,7 +49,7 @@ final readonly class ProcessProfileEvent
             return $e;
         }
 
-        $data = json_encode($this->filterData($e->getData()));
+        $data = json_encode($e->getData());
         if (false === $data) {
             $writer(Level::Error, 'Failed to encode profile data.');
             return $e;
@@ -102,99 +100,4 @@ final readonly class ProcessProfileEvent
         return $e;
     }
 
-    private function filterData(array $data): array
-    {
-        $maskKeys = [
-            'meta.env.WS_CACHE_URL' => true,
-            'meta.env.WS_API_KEY' => true,
-            'meta.env.X_APIKEY' => true,
-            'meta.SERVER.HTTP_USER_AGENT' => true,
-            'meta.SERVER.PHP_AUTH_USER' => true,
-            'meta.SERVER.REMOTE_USER' => true,
-            'meta.SERVER.UNIQUE_ID' => true,
-            'meta.get.apikey' => true,
-            'meta.get.' . Profiler::QUERY_NAME => false,
-        ];
-
-        foreach ($maskKeys as $key => $mask) {
-            if (false === ag_exists($data, $key)) {
-                continue;
-            }
-
-            if (true === $mask) {
-                $data = ag_set($data, $key, '__masked__');
-                continue;
-            }
-
-            $data = ag_delete($data, $key);
-        }
-
-        if ('CLI' !== ag($data, 'meta.SERVER.REQUEST_METHOD')) {
-            try {
-                if (null !== ($query = ag($data, 'meta.url'))) {
-                    $url = new Uri($query);
-                    $query = $url->getQuery();
-                    if (!empty($query)) {
-                        $parsed = [];
-                        parse_str($query, $parsed);
-                        foreach ($maskKeys as $key => $mask) {
-                            if (false === str_starts_with($key, 'meta.get.')) {
-                                continue;
-                            }
-
-                            $key = substr($key, 9);
-
-                            if (false === ag_exists($parsed, $key)) {
-                                continue;
-                            }
-
-                            if (true === $mask) {
-                                $parsed = ag_set($parsed, $key, '__masked__');
-                                continue;
-                            }
-
-                            $parsed = ag_delete($parsed, $key);
-                        }
-                        $data = ag_set($data, 'meta.url', (string)$url->withQuery(http_build_query($parsed)));
-                    }
-                }
-            } catch (Throwable) {
-            }
-
-            try {
-                if (null !== ($url = ag($data, 'meta.simple_url'))) {
-                    $url = new Uri($url)->withQuery('');
-                    $data = ag_set($data, 'meta.simple_url', (string)$url);
-                }
-            } catch (Throwable) {
-            }
-
-            $queryString = ag($data, 'meta.SERVER.QUERY_STRING');
-            if (!empty($queryString)) {
-                $parsed = [];
-                parse_str($queryString, $parsed);
-                foreach ($maskKeys as $key => $mask) {
-                    if (false === str_starts_with($key, 'meta.get.')) {
-                        continue;
-                    }
-
-                    $key = substr($key, 9);
-
-                    if (false === ag_exists($parsed, $key)) {
-                        continue;
-                    }
-
-                    if (true === $mask) {
-                        $parsed = ag_set($parsed, $key, '__masked__');
-                        continue;
-                    }
-
-                    $parsed = ag_delete($parsed, $key);
-                }
-                $data = ag_set($data, 'meta.SERVER.QUERY_STRING', http_build_query($parsed));
-            }
-        }
-
-        return $data;
-    }
 }
