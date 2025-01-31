@@ -15,6 +15,7 @@ use App\Commands\System\PruneCommand;
 use App\Libs\Mappers\Import\MemoryMapper;
 use Cron\CronExpression;
 use Monolog\Level;
+use Xhgui\Profiler\ProfilingFlags;
 
 return (function () {
     $inContainer = inContainer();
@@ -148,14 +149,15 @@ return (function () {
 
     $config['debug'] = [
         'enabled' => (bool)env('WS_DEBUG', false),
-        'profiler' => [
-            'options' => [
-                'save.handler' => 'file',
-                'save.handler.file' => [
-                    'filename' => ag($config, 'tmpDir') . '/profiler/run.' . makeDate()->format('Ymd_His') . '.json'
-                ],
-            ],
-        ],
+    ];
+
+    $config['profiler'] = [
+        'sampler' => (int)env('WS_PROFILER_SAMPLER', 3000),
+        'save' => (bool)env('WS_PROFILER_SAVE', true),
+        'path' => env('WS_PROFILER_PATH', fn() => ag($config, 'tmpDir') . '/profiler'),
+        'collector' => env('WS_PROFILER_COLLECTOR', null),
+        'flags' => [ProfilingFlags::CPU, ProfilingFlags::MEMORY, ProfilingFlags::NO_BUILTINS],
+        'config' => []
     ];
 
     $config['cache'] = [

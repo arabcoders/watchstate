@@ -171,6 +171,26 @@ return (function () {
             'description' => 'Enable Push play state to backends. This feature depends on webhooks being enabled.',
             'type' => 'bool',
         ],
+        [
+            'key' => 'WS_PROFILER_COLLECTOR',
+            'description' => 'The XHProf data collector URL to send the profiler data to.',
+            'type' => 'string',
+        ],
+        [
+            'key' => 'WS_PROFILER_SAMPLER',
+            'description' => 'The XHProf sampler value.',
+            'type' => 'int',
+        ],
+        [
+            'key' => 'WS_PROFILER_SAVE',
+            'description' => 'Save the profiler data to disk.',
+            'type' => 'bool',
+        ],
+        [
+            'key' => 'WS_PROFILER_PATH',
+            'description' => 'The path to save the profiler data.',
+            'type' => 'string',
+        ],
     ];
 
     $validateCronExpression = function (string $value): string {
