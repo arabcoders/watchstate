@@ -43,6 +43,7 @@ final class Options
     public const string ONLY_LIBRARY_ID = 'ONLY_LIBRARY_ID';
     public const string ALT_NAME = 'ALT_NAME';
     public const string ALT_ID = 'ALT_ID';
+    public const string CONTEXT_USER = 'CONTEXT_USER';
 
     private function __construct()
     {

@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Backends\Common\Cache as BackendCache;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Model\Events\EventListener;
@@ -27,8 +31,11 @@ final readonly class ProcessPushEvent
      *
      * @param iLogger $logger The logger object.
      */
-    public function __construct(private iLogger $logger, private iDB $db, private QueueRequests $queue)
-    {
+    public function __construct(
+        #[Inject(DirectMapper::class)] private iEImport $mapper,
+        private iLogger $logger,
+        private QueueRequests $queue
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
     }
@@ -42,8 +49,18 @@ final readonly class ProcessPushEvent
 
         $e->stopPropagation();
 
-        if (null === ($item = $this->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{id}' is not found or has been deleted.", [
+        $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
+
+        try {
+            $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $ex) {
+            $writer(Level::Error, $ex->getMessage());
+            return $e;
+        }
+
+        if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
+            $writer(Level::Error, "Item '{user}: {id}' is not found or has been deleted.", [
+                'user' => $user,
                 'id' => ag($e->getData(), 'id', '?')
             ]);
             return $e;
@@ -53,19 +70,21 @@ final readonly class ProcessPushEvent
         $list = [];
         $supported = Config::get('supported', []);
 
-        foreach ((array)Config::get('servers', []) as $backendName => $backend) {
+        foreach ($userContext->config->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool)ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Export to '{backend}' is disabled by user.", [
+                $writer(Level::Notice, "Export to '{user}@{backend}' is disabled by user.", [
+                    'user' => $user,
                     'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $writer(Level::Error, "The backend '{backend}' is using invalid type '{type}'.", [
+                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid type '{type}'.", [
                     'type' => $type,
+                    'user' => $user,
                     'backend' => $backendName,
                     'condition' => [
                         'expected' => implode(', ', array_keys($supported)),
@@ -76,7 +95,8 @@ final readonly class ProcessPushEvent
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $writer(Level::Error, "The backend '{backend}' URL is invalid.", [
+                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                    'user' => $user,
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
                 ]);
@@ -88,7 +108,7 @@ final readonly class ProcessPushEvent
         }
 
         if (empty($list)) {
-            $writer(Level::Error, 'There are no backends with export enabled.');
+            $writer(Level::Error, 'There are no eligible backends receive the event.');
             return $e;
         }
 
@@ -109,13 +129,18 @@ final readonly class ProcessPushEvent
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = getBackend(name: $name, config: $backend);
+                $backend['class'] = makeBackend($backend, $name, [
+                    BackendCache::class => Container::get(BackendCache::class)->with(
+                        adapter: $userContext->cache
+                    )
+                ]);
                 $backend['class']->push(entities: [$item->id => $item], queue: $this->queue);
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{backend}' push events. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' push events. '{error.message}' at '{error.file}:{error.line}'.",
                     [
+                        'user' => $user,
                         'backend' => $name,
                         'error' => [
                             'kind' => $e::class,
@@ -141,7 +166,8 @@ final readonly class ProcessPushEvent
             return $e;
         }
 
-        $writer(Level::Notice, "Processing '{id}' -  '{via}: {title}' '{state}' push event.", [
+        $writer(Level::Notice, "Processing '{user}: {id}' - '{via}: {title}' '{state}' push event.", [
+            'user' => $user,
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
@@ -150,22 +176,27 @@ final readonly class ProcessPushEvent
 
         foreach ($this->queue->getQueue() as $response) {
             $context = ag($response->getInfo('user_data'), 'context', []);
+            $context['user'] = $user;
 
             try {
                 if (Status::OK !== Status::from($response->getStatusCode())) {
                     $writer(
                         Level::Error,
-                        "Request to change '{backend}: {item.title}' play state returned with unexpected '{status_code}' status code.",
+                        "Request to change '{user}@{backend}: {item.title}' play state returned with unexpected '{status_code}' status code.",
                         $context
                     );
                     continue;
                 }
 
-                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch state to '{play_state}'.", $context);
+                $writer(
+                    Level::Notice,
+                    "Updated '{user}@{backend}: {item.title}' watch state to '{play_state}'.",
+                    $context
+                );
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                     [
                         'error' => [
                             'kind' => $e::class,

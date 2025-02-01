@@ -392,20 +392,22 @@ class MemoryMapper implements ExtendedImportInterface
         Message::increment("{$entity->via}.{$entity->type}.ignored_not_played_since_last_sync");
 
         if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
-            $this->logger->notice(
-                "{mapper}: [O] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
-                [
-                    'mapper' => afterLast(self::class, '\\'),
-                    'id' => $this->objects[$pointer]->id,
-                    'backend' => $entity->via,
-                    'remote_date' => makeDate($entity->updated),
-                    'local_date' => makeDate($opts['after']),
-                    'state' => $entity->isWatched() ? 'played' : 'unplayed',
-                    'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
-                    'title' => $entity->getName(),
-                ]
-            );
-            return $this;
+            if ($this->inTraceMode()) {
+                $this->logger->debug(
+                    "{mapper}: [O] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
+                    [
+                        'mapper' => afterLast(self::class, '\\'),
+                        'id' => $this->objects[$pointer]->id,
+                        'backend' => $entity->via,
+                        'remote_date' => makeDate($entity->updated),
+                        'local_date' => makeDate($opts['after']),
+                        'state' => $entity->isWatched() ? 'played' : 'unplayed',
+                        'local_state' => $this->objects[$pointer]->isWatched() ? 'played' : 'unplayed',
+                        'title' => $entity->getName(),
+                    ]
+                );
+            }
+            return $this->handleTainted($pointer, $cloned, $entity, $opts);
         }
 
         if ($this->inTraceMode()) {

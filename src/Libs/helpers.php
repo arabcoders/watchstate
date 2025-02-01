@@ -29,10 +29,12 @@ use App\Libs\Extends\Date;
 use App\Libs\Extends\ReflectionContainer;
 use App\Libs\Guid;
 use App\Libs\Initializer;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Response;
 use App\Libs\Stream;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use App\Listeners\ProcessPushEvent;
 use App\Model\Events\Event as EventInfo;
 use App\Model\Events\EventListener;
@@ -559,8 +561,9 @@ if (!function_exists('queuePush')) {
      *
      * @param iState $entity The entity to push to the queue.
      * @param bool $remove Whether to remove the event from the queue if it's in pending state. Default is false.
+     * @param UserContext|null $userContext The user context to use for the push event. Default is null.
      */
-    function queuePush(iState $entity, bool $remove = false): void
+    function queuePush(iState $entity, bool $remove = false, UserContext|null $userContext = null): void
     {
         $logger = Container::get(iLogger::class);
 
@@ -580,8 +583,13 @@ if (!function_exists('queuePush')) {
             return;
         }
 
+        $id = r('push://{id}', ['id' => $entity->id]);
+        if (null !== $userContext) {
+            $id = r('push://{user}@{id}', ['user' => $userContext->name, 'id' => $entity->id]);
+        }
+
         if (true === $remove) {
-            Container::get(EventsRepository::class)->removeByReference(r('push://{id}', ['id' => $entity->id]));
+            Container::get(EventsRepository::class)->removeByReference($id);
             return;
         }
 
@@ -594,9 +602,15 @@ if (!function_exists('queuePush')) {
             return;
         }
 
-        queueEvent(ProcessPushEvent::NAME, [iState::COLUMN_ID => $entity->id], [
-            EventsTable::COLUMN_REFERENCE => r('push://{id}', ['id' => $entity->id]),
-        ]);
+        $opts = [
+            EventsTable::COLUMN_REFERENCE => $id,
+        ];
+
+        if (null !== $userContext) {
+            $opts[Options::CONTEXT_USER] = $userContext->name;
+        }
+
+        queueEvent(ProcessPushEvent::NAME, [iState::COLUMN_ID => $entity->id], $opts);
     }
 }
 
@@ -2033,6 +2047,7 @@ if (!function_exists('queueEvent')) {
             } else {
                 $item = $refItem;
             }
+
             unset($refItem);
         }
 
@@ -2045,12 +2060,17 @@ if (!function_exists('queueEvent')) {
         } else {
             $item->created_at = makeDate();
         }
+
         $item->options = [
             'class' => ag($opts, 'class', DataEvent::class),
         ];
 
         if (ag_exists($opts, EventsTable::COLUMN_OPTIONS) && is_array($opts[EventsTable::COLUMN_OPTIONS])) {
             $item->options = array_replace_recursive($opts[EventsTable::COLUMN_OPTIONS], $item->options);
+        }
+
+        if (ag_exists($opts, Options::CONTEXT_USER) && !empty($opts[Options::CONTEXT_USER])) {
+            $item->options[Options::CONTEXT_USER] = $opts[Options::CONTEXT_USER];
         }
 
         if ($reference) {
@@ -2214,7 +2234,18 @@ if (!function_exists('perUserDb')) {
             }
         }
 
-        $dbFile = fixPath(r("{path}/{user}.db", ['path' => $path, 'user' => $user]));
+        $dbFile = fixPath(r("{path}/user.db", ['path' => $path]));
+        $oldDb = fixPath(r("{path}/{user}.db", ['path' => $path, 'user' => $user]));
+        if (true === file_exists($oldDb)) {
+            if (false === file_exists($dbFile)) {
+                rename($oldDb, $dbFile);
+                clearstatcache(true, $oldDb);
+                clearstatcache(true, $dbFile);
+            } else {
+                unlink($oldDb);
+            }
+        }
+
         $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
         $dsn = r('sqlite:{src}', ['src' => $inTestMode ? ':memory:' : $dbFile]);
 
@@ -2234,7 +2265,7 @@ if (!function_exists('perUserDb')) {
 
         $db = Container::get(iDB::class)->with(db: Container::get(DBLayer::class)->withPDO($pdo));
 
-        if (!$db->isMigrated()) {
+        if (false === $db->isMigrated()) {
             $db->migrations(iDB::MIGRATE_UP);
             $db->ensureIndex();
             $db->migrateData(Config::get('database.version'), Container::get(iLogger::class));
@@ -2261,7 +2292,7 @@ if (!function_exists('perUserConfig')) {
             }
         }
 
-        return ConfigFile::open(fixPath(r("{path}/servers.yaml", ['path' => $path])), 'yaml');
+        return ConfigFile::open(fixPath(r("{path}/servers.yaml", ['path' => $path])), 'yaml', autoCreate: true);
     }
 }
 
@@ -2283,36 +2314,7 @@ if (!function_exists('perUserCacheAdapter')) {
         }
 
         try {
-            $cacheUrl = Config::get('cache.url');
-
-            if (empty($cacheUrl)) {
-                throw new RuntimeException('No cache server was set.');
-            }
-
-            if (!extension_loaded('redis')) {
-                throw new RuntimeException('Redis extension is not loaded.');
-            }
-
-            $uri = new Uri($cacheUrl);
-            $params = [];
-
-            if (!empty($uri->getQuery())) {
-                parse_str($uri->getQuery(), $params);
-            }
-
-            $redis = new Redis();
-
-            $redis->connect($uri->getHost(), $uri->getPort() ?? 6379);
-
-            if (null !== ag($params, 'password')) {
-                $redis->auth(ag($params, 'password'));
-            }
-
-            if (null !== ag($params, 'db')) {
-                $redis->select((int)ag($params, 'db'));
-            }
-
-            $backend = new RedisAdapter(redis: $redis, namespace: $ns);
+            $backend = new RedisAdapter(redis: Container::get(Redis::class), namespace: $ns);
         } catch (Throwable) {
             // -- in case of error, fallback to file system cache.
             $path = fixPath(r("{path}/users/{user}/cache", ['path' => Config::get('path'), 'user' => $user]));
@@ -2390,7 +2392,6 @@ if (!function_exists('uncompressed_file')) {
     }
 }
 
-
 if (!function_exists('readFileFromArchive')) {
     /**
      * Read file from archive.
@@ -2417,5 +2418,111 @@ if (!function_exists('readFileFromArchive')) {
 
         // -- we return the zip file to not lose the reference to it, thus we risk losing the stream.
         return [Stream::make($stream, 'r'), $zip];
+    }
+}
+
+if (!function_exists('getUsersContext')) {
+    /**
+     * Retrieves users configuration and related classes.
+     *
+     * @param iEImport $mapper Import mapper instance.
+     * @param iLogger $logger logger instance.
+     * @param array $opts (Optional) Additional options.
+     *
+     * @return array<array-key, UserContext> The user data.
+     * @throws RuntimeException If the users directory is not readable.
+     */
+    function getUsersContext(iEImport $mapper, iLogger $logger, array $opts = []): array
+    {
+        $configs = [
+            'main' => new UserContext(
+                name: 'main',
+                config: ConfigFile::open(Config::get('backends_file'), 'yaml'),
+                mapper: $mapper,
+                cache: Container::get(iCache::class),
+                db: Container::get(iDB::class),
+            )
+        ];
+
+        if (true === (bool)ag($opts, 'main_user_only', false)) {
+            return $configs;
+        }
+
+        if (true === (bool)ag($opts, 'no_main_user', false)) {
+            $configs = [];
+        }
+
+        $usersDir = Config::get('path') . '/users';
+
+        if (false === is_dir($usersDir)) {
+            return $configs;
+        }
+
+        if (false === is_readable($usersDir)) {
+            throw new RuntimeException(r("Unable to read '{dir}' directory.", ['dir' => $usersDir]));
+        }
+
+        $mainUserIds = array_map(
+            fn($backend) => ag($backend, 'user'),
+            ConfigFile::open(Config::get('backends_file'), 'yaml')->getAll()
+        );
+
+        foreach (new DirectoryIterator(Config::get('path') . '/users') as $dir) {
+            if ($dir->isDot() || false === $dir->isDir()) {
+                continue;
+            }
+
+            $config = perUserConfig($dir->getBasename());
+
+            $subUserIds = array_map(fn($backend) => ag($backend, 'user'), $config->getAll());
+            foreach ($mainUserIds as $mainId) {
+                if (false === in_array($mainId, $subUserIds)) {
+                    continue;
+                }
+                continue 2;
+            }
+
+            $userName = $dir->getBasename();
+            $perUserCache = perUserCacheAdapter($userName);
+            $db = perUserDb($userName);
+
+            $mapper = $mapper->withDB($db)
+                ->withCache($perUserCache)
+                ->withLogger($logger)
+                ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $userName]));
+            assert($mapper instanceof iEImport);
+
+            $configs[$userName] = new UserContext(
+                name: $userName,
+                config: $config,
+                mapper: $mapper,
+                cache: $perUserCache,
+                db: $db,
+            );
+        }
+
+        return $configs;
+    }
+}
+
+if (!function_exists('getUserContext')) {
+    /**
+     * Get the user context.
+     *
+     * @param string $user The username.
+     * @param iEImport $mapper The mapper instance.
+     * @param iLogger $logger The logger instance.
+     *
+     * @return UserContext The user context.
+     * @throws RuntimeException If the user is not found.
+     */
+    function getUserContext(string $user, iEImport $mapper, iLogger $logger): UserContext
+    {
+        $users = getUsersContext($mapper, $logger);
+        if (false === in_array($user, array_keys($users), true)) {
+            throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]), 1001);
+        }
+
+        return $users[$user];
     }
 }

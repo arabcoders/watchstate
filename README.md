@@ -9,25 +9,27 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-02-01
+
+Breaking changes as of version 20250201~, in earlier versions, if you want to sync multi-user play state, you only had
+to run `state:sync` command, However, due to us extending support for more operation to support multi-user data, we
+needed a way to generate per user config instead of relying on `state:sync`, thus we have introduced a new command
+called `backends:create`, the purpose of this command is to generate the needed config files for each user.
+
+This change allow us to support more operations in the future.
+
+We also have minor breaking change in per user db name, before it was named `user_name.db`, now it's named `user.db`
+this change shouldn't effect you as we have backward compatibility in place to rename the old db to the new name.
+
+for more information about multi-user, Please read the FAQ entry about it
+at [this link](FAQ.md#is-there-support-for-multi-user-setup).
+
 ### 2025-01-24
 
 We are excited to share that multi-user sync is now fully supported! Our first goal was to make sure the feature worked,
 and since releasing it, we’ve worked hard to improve it based on feedback and testing. We’re now confident that it works
 as expected and are happy to invite you to start using it. To learn more and get started, please check out the FAQ entry
 here: [this link](FAQ.md#is-there-support-for-multi-user-setup).
-
-### 2025-01-18
-
-Due to popular demand, we finally have added the ability to sync all users data, however, it's limited to only
-play state, no progress syncing implemented at this stage. This feature still in alpha expect bugs and issues.
-
-However our local tests shows that it's working as expected, but we need more testing to be sure. Please report any
-issues you encounter. To enable this feature, you will see new task in the `Tasks` page called `Sync`.
-
-This task will sync all your users play state, However you need to have the backends added with admin token for plex and
-API key for jellyfin and emby. Enable the task and let it run, it will sync all users play state.
-
-Please read the FAQ entry about it at [this link](FAQ.md#is-there-support-for-multi-user-setup).
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.

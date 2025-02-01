@@ -17,8 +17,8 @@ use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
@@ -33,22 +33,18 @@ class Command extends BaseCommand
      *
      * @var array<string>
      */
-    public const array DISPLAY_OUTPUT = [
-        'table',
-        'json',
-        'yaml',
-    ];
+    public const array DISPLAY_OUTPUT = ['table', 'json', 'yaml'];
 
     /**
      * Execute the command.
      *
-     * @param InputInterface $input The input object.
-     * @param OutputInterface $output The output object.
+     * @param iInput $input The input object.
+     * @param iOutput $output The output object.
      *
      * @return int The command exit status.
      * @throws RuntimeException If the profiler was enabled and the run was unsuccessful.
      */
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function execute(iInput $input, iOutput $output): int
     {
         if ($input->hasOption('debug') && $input->getOption('debug')) {
             $input->setOption('context', true);
@@ -57,7 +53,7 @@ class Command extends BaseCommand
             if (function_exists('putenv')) {
                 @putenv('SHELL_VERBOSITY=3');
             }
-            $output->setVerbosity(OutputInterface::VERBOSITY_DEBUG);
+            $output->setVerbosity(iOutput::VERBOSITY_DEBUG);
         }
 
         if ($input->hasOption('context') && true === $input->getOption('context')) {
@@ -83,7 +79,7 @@ class Command extends BaseCommand
         $profiler = new \Xhgui\Profiler\Profiler(Config::get('profiler.config', []));
         $profiler->enable(Config::get('profiler.flags', null));
         $status = $this->runCommand($input, $output);
-        
+
         try {
             $data = $profiler->disable();
         } catch (Throwable) {
@@ -133,11 +129,11 @@ class Command extends BaseCommand
      * Executes the provided closure in a single instance, ensuring that only one instance of the command is running at a time.
      *
      * @param Closure $closure The closure to be executed.
-     * @param OutputInterface $output The OutputInterface instance for writing output messages.
+     * @param iOutput $output The OutputInterface instance for writing output messages.
      *
      * @return int The return value of the closure.
      */
-    protected function single(Closure $closure, OutputInterface $output): int
+    protected function single(Closure $closure, iOutput $output): int
     {
         try {
             if (!$this->lock(getAppVersion() . ':' . $this->getName())) {
@@ -159,12 +155,12 @@ class Command extends BaseCommand
     /**
      * Runs the command and returns the return value.
      *
-     * @param InputInterface $input The InputInterface instance for retrieving input data.
-     * @param OutputInterface $output The OutputInterface instance for writing output messages.
+     * @param iInput $input The InputInterface instance for retrieving input data.
+     * @param iOutput $output The OutputInterface instance for writing output messages.
      *
      * @return int The return value of the command execution.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         return self::SUCCESS;
     }
@@ -196,10 +192,10 @@ class Command extends BaseCommand
      * Displays the content in the specified mode.
      *
      * @param array $content The content to display.
-     * @param OutputInterface $output The OutputInterface instance for writing output messages.
+     * @param iOutput $output The OutputInterface instance for writing output messages.
      * @param string $mode The display mode. Default is 'json'.
      */
-    protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void
+    protected function displayContent(array $content, iOutput $output, string $mode = 'json'): void
     {
         switch ($mode) {
             case 'json':

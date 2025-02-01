@@ -107,7 +107,7 @@ final class ListCommand extends Command
             $query['backend'] = $backends[0];
         }
 
-        $response = APIRequest('GET', '/ignore/?' . http_build_query($query));
+        $response = APIRequest('GET', '/ignore/', opts: ['query' => $query]);
 
         foreach ($response->body as $item) {
             if ('table' === $input->getOption('output')) {

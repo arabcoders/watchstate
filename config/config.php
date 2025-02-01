@@ -276,7 +276,7 @@ return (function () {
             SyncCommand::TASK_NAME => [
                 'command' => SyncCommand::ROUTE,
                 'name' => SyncCommand::TASK_NAME,
-                'info' => 'Sync ALL users play state. Read the FAQ.',
+                'info' => 'Sync sub users play states.',
                 'enabled' => (bool)env('WS_CRON_SYNC', false),
                 'timer' => $checkTaskTimer((string)env('WS_CRON_SYNC_AT', '9 */3 * * *'), '9 */3 * * *'),
                 'args' => env('WS_CRON_SYNC_ARGS', '-v'),

@@ -16,9 +16,13 @@ use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Uri;
+use App\Libs\UserContext;
+use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\UriInterface as iUri;
+use Psr\Log\LoggerInterface as iLogger;
 
 trait APITraits
 {
@@ -33,9 +37,9 @@ trait APITraits
      * @return iClient The backend client instance.
      * @throws RuntimeException If no backend with the specified name is found.
      */
-    protected function getClient(string $name, array $config = []): iClient
+    protected function getClient(string $name, array $config = [], UserContext|null $userContext = null): iClient
     {
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        $configFile = $userContext?->config ?? ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
         if (null === $configFile->get("{$name}.type", null)) {
             throw new RuntimeException(r("Backend '{backend}' doesn't exists.", ['backend' => $name]), 1000);
@@ -44,6 +48,14 @@ trait APITraits
         $default = $configFile->get($name);
         $default['name'] = $name;
 
+        if (null !== $userContext) {
+            $opts = ag($default, 'options', []);
+            $opts[BackendCache::class] = Container::get(BackendCache::class)->with(
+                adapter: $userContext->cache
+            );
+            $default['options'] = $opts;
+        }
+
         return makeBackend(array_replace_recursive($default, $config), $name);
     }
 
@@ -51,15 +63,17 @@ trait APITraits
      * Get the list of backends.
      *
      * @param string|null $name Filter result by backend name.
+     * @param UserContext|null $userContext (Optional) The user context.
+     *
      * @return array The list of backends.
      */
-    protected function getBackends(string|null $name = null): array
+    protected function getBackends(string|null $name = null, UserContext|null $userContext = null): array
     {
         $backends = [];
 
-        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true)->getAll();
+        $list = $userContext?->config ?? ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
 
-        foreach ($list as $backendName => $backend) {
+        foreach ($list->getAll() as $backendName => $backend) {
             $backend = ['name' => $backendName, ...$backend];
 
             if (null !== ($import = ag($backend, 'import.lastSync'))) {
@@ -94,9 +108,9 @@ trait APITraits
         return $backends;
     }
 
-    protected function getBackend(string $name): array|null
+    protected function getBackend(string $name, UserContext|null $userContext = null): array|null
     {
-        $backends = $this->getBackends($name);
+        $backends = $this->getBackends($name, userContext: $userContext);
         return count($backends) > 0 ? array_pop($backends) : null;
     }
 
@@ -160,15 +174,20 @@ trait APITraits
      * @param string $backend The backend name.
      * @param string $type The item type.
      * @param string|int $id The item ID.
+     * @param UserContext|null $userContext (Optional) The user context.
      *
      * @return iUri The web URL.
      */
-    protected function getBackendItemWebUrl(string $backend, string $type, string|int $id): iUri
-    {
+    protected function getBackendItemWebUrl(
+        string $backend,
+        string $type,
+        string|int $id,
+        UserContext|null $userContext = null
+    ): iUri {
         static $clients = [];
 
         if (!isset($clients[$backend])) {
-            $clients[$backend] = $this->getClient(name: $backend);
+            $clients[$backend] = $this->getClient(name: $backend, userContext: $userContext);
         }
 
         return $clients[$backend]->getWebUrl($type, $id);
@@ -179,17 +198,21 @@ trait APITraits
      *
      * @param iState|array $entity The entity to format.
      * @param bool $includeContext (Optional) Include the contextual data.
+     * @param UserContext|null $userContext (Optional) The user context.
      *
      * @return array The formatted entity.
      */
-    protected function formatEntity(iState|array $entity, bool $includeContext = false): array
-    {
+    protected function formatEntity(
+        iState|array $entity,
+        bool $includeContext = false,
+        UserContext|null $userContext = null
+    ): array {
         if (true === is_array($entity)) {
             $entity = Container::get(iState::class)::fromArray($entity);
         }
 
         if (empty($this->_backendsNames)) {
-            $this->_backendsNames = array_column($this->getBackends(), 'name');
+            $this->_backendsNames = array_column($this->getBackends(userContext: $userContext), 'name');
         }
 
         $item = $entity->getAll();
@@ -212,18 +235,20 @@ trait APITraits
         if (!empty($item[iState::COLUMN_META_DATA])) {
             foreach ($item[iState::COLUMN_META_DATA] as $key => &$metadata) {
                 $metadata['webUrl'] = (string)$this->getBackendItemWebUrl(
-                    $key,
-                    ag($metadata, iState::COLUMN_TYPE),
-                    ag($metadata, iState::COLUMN_ID),
+                    backend: $key,
+                    type: ag($metadata, iState::COLUMN_TYPE),
+                    id: ag($metadata, iState::COLUMN_ID),
+                    userContext: $userContext
                 );
                 $item['reported_by'][] = $key;
             }
         }
 
         $item['webUrl'] = (string)$this->getBackendItemWebUrl(
-            $entity->via,
-            $entity->type,
-            ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 0),
+            backend: $entity->via,
+            type: $entity->type,
+            id: ag($entity->getMetadata($entity->via), iState::COLUMN_ID, 0),
+            userContext: $userContext
         );
 
         $item['not_reported_by'] = array_values(
@@ -237,5 +262,22 @@ trait APITraits
         }
 
         return $item;
+    }
+
+    /**
+     * Get the user context.
+     *
+     * @param iRequest $request The request object.
+     *
+     * @return UserContext The user context.
+     * @throws RuntimeException If the user is not found.
+     */
+    protected function getUserContext(iRequest $request, iEImport $mapper, iLogger $logger): UserContext
+    {
+        if (null === ($user = $request->hasHeader('X-User') ? $request->getHeaderLine('X-User') : null)) {
+            $user = ag($request->getQueryParams(), 'user', 'main');
+        }
+
+        return getUserContext($user, $mapper, $logger);
     }
 }
