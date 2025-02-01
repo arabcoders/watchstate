@@ -140,6 +140,16 @@ body {
     border: var(--bulma-control-border-width) solid rgba(56, 56, 56, 0.38);
 }
 
+.button.is-purple {
+    background-color: #5f00d1;
+    border-color: transparent;
+    color: #fff;
+}
+
+.has-text-purple {
+    color: #5f00d1;
+}
+
 @media screen and (min-width: 769px), print {
     .field.is-grouped-tablet {
         display: flex;

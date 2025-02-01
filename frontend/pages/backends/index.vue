@@ -8,6 +8,12 @@
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
+            <p class="control" v-if="backends && backends.length>0">
+              <button class="button is-purple" v-tooltip.bottom="'Create sub users backends.'"
+                      @click="navigateTo(makeConsoleCommand('backend:create -v', true))">
+                <span class="icon"><i class="fas fa-users"></i></span>
+              </button>
+            </p>
             <p class="control">
               <button class="button is-primary" v-tooltip.bottom="'Add New Backend'"
                       @click="toggleForm = !toggleForm" :disabled="isLoading">
@@ -163,6 +169,10 @@
               </li>
               <li>
                 <strong>Export</strong> means pushing data from the local database to the backends.
+              </li>
+              <li>
+                To create sub users backends, click on the <span class="icon has-text-purple"><i class="fas fa-users"/></span>
+                button.
               </li>
             </ul>
           </Message>

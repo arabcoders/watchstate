@@ -7,18 +7,23 @@ namespace App;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
+use App\Libs\Container;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Options;
 use App\Listeners\ProcessProfileEvent;
 use Closure;
 use DirectoryIterator;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableSeparator;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
@@ -42,13 +47,13 @@ class Command extends BaseCommand
     /**
      * Execute the command.
      *
-     * @param InputInterface $input The input object.
-     * @param OutputInterface $output The output object.
+     * @param iInput $input The input object.
+     * @param iOutput $output The output object.
      *
      * @return int The command exit status.
      * @throws RuntimeException If the profiler was enabled and the run was unsuccessful.
      */
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function execute(iInput $input, iOutput $output): int
     {
         if ($input->hasOption('debug') && $input->getOption('debug')) {
             $input->setOption('context', true);
@@ -57,7 +62,7 @@ class Command extends BaseCommand
             if (function_exists('putenv')) {
                 @putenv('SHELL_VERBOSITY=3');
             }
-            $output->setVerbosity(OutputInterface::VERBOSITY_DEBUG);
+            $output->setVerbosity(iOutput::VERBOSITY_DEBUG);
         }
 
         if ($input->hasOption('context') && true === $input->getOption('context')) {
@@ -83,7 +88,7 @@ class Command extends BaseCommand
         $profiler = new \Xhgui\Profiler\Profiler(Config::get('profiler.config', []));
         $profiler->enable(Config::get('profiler.flags', null));
         $status = $this->runCommand($input, $output);
-        
+
         try {
             $data = $profiler->disable();
         } catch (Throwable) {
@@ -133,11 +138,11 @@ class Command extends BaseCommand
      * Executes the provided closure in a single instance, ensuring that only one instance of the command is running at a time.
      *
      * @param Closure $closure The closure to be executed.
-     * @param OutputInterface $output The OutputInterface instance for writing output messages.
+     * @param iOutput $output The OutputInterface instance for writing output messages.
      *
      * @return int The return value of the closure.
      */
-    protected function single(Closure $closure, OutputInterface $output): int
+    protected function single(Closure $closure, iOutput $output): int
     {
         try {
             if (!$this->lock(getAppVersion() . ':' . $this->getName())) {
@@ -159,12 +164,12 @@ class Command extends BaseCommand
     /**
      * Runs the command and returns the return value.
      *
-     * @param InputInterface $input The InputInterface instance for retrieving input data.
-     * @param OutputInterface $output The OutputInterface instance for writing output messages.
+     * @param iInput $input The InputInterface instance for retrieving input data.
+     * @param iOutput $output The OutputInterface instance for writing output messages.
      *
      * @return int The return value of the command execution.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
         return self::SUCCESS;
     }
@@ -196,10 +201,10 @@ class Command extends BaseCommand
      * Displays the content in the specified mode.
      *
      * @param array $content The content to display.
-     * @param OutputInterface $output The OutputInterface instance for writing output messages.
+     * @param iOutput $output The OutputInterface instance for writing output messages.
      * @param string $mode The display mode. Default is 'json'.
      */
-    protected function displayContent(array $content, OutputInterface $output, string $mode = 'json'): void
+    protected function displayContent(array $content, iOutput $output, string $mode = 'json'): void
     {
         switch ($mode) {
             case 'json':
@@ -255,6 +260,85 @@ class Command extends BaseCommand
                 $output->writeln(Yaml::dump(input: $content, inline: 8, indent: 2));
                 break;
         }
+    }
+
+    /**
+     * Retrieves per user data..
+     *
+     * @param iEImport $mapper The import mapper instance.
+     * @param iLogger $logger The logger instance.
+     * @param array $opts (Optional) Additional options.
+     *
+     * @return array<array-key, array{config:ConfigFile, mapper:iEImport, cache:iCache}> The user data.
+     * @throws RuntimeException If the users directory is not readable.
+     */
+    protected function getUserData(iEImport $mapper, iLogger $logger, array $opts = []): array
+    {
+        $configs = [
+            'main' => [
+                'config' => ConfigFile::open(Config::get('backends_file'), 'yaml'),
+                'mapper' => $mapper,
+                'cache' => Container::get(iCache::class),
+            ]
+        ];
+
+        if (true === (bool)ag($opts, 'main_user_only', false)) {
+            return $configs;
+        }
+
+        if (true === (bool)ag($opts, 'no_main_user', false)) {
+            $configs = [];
+        }
+
+        $usersDir = Config::get('path') . '/users';
+
+        if (false === is_dir($usersDir)) {
+            return $configs;
+        }
+
+        if (false === is_readable($usersDir)) {
+            throw new RuntimeException(r("Unable to read '{dir}' directory.", ['dir' => $usersDir]));
+        }
+
+        $mainUserIds = array_map(
+            fn($backend) => ag($backend, 'user'),
+            ConfigFile::open(Config::get('backends_file'), 'yaml')->getAll()
+        );
+
+        foreach (new DirectoryIterator(Config::get('path') . '/users') as $dir) {
+            if ($dir->isDot() || false === $dir->isDir()) {
+                continue;
+            }
+
+            $config = perUserConfig($dir->getBasename());
+
+            $subUserIds = array_map(fn($backend) => ag($backend, 'user'), $config->getAll());
+            foreach ($mainUserIds as $mainId) {
+                if (false === in_array($mainId, $subUserIds)) {
+                    continue;
+                }
+                continue 2;
+            }
+
+            $userName = $dir->getBasename();
+            $perUserCache = perUserCacheAdapter($userName);
+
+            $configs[$userName] = [
+                'config' => $config,
+                'mapper' => $mapper->withDB(perUserDb($userName))
+                    ->withCache($perUserCache)
+                    ->withLogger($logger)
+                    ->withOptions(
+                        array_replace_recursive($mapper->getOptions(), [
+                            Options::ALT_NAME => $userName
+                        ])
+                    )
+                    ->loadData(),
+                'cache' => $perUserCache,
+            ];
+        }
+
+        return $configs;
     }
 
     /**

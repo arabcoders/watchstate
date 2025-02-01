@@ -14,7 +14,6 @@ use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
-use DirectoryIterator;
 use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -154,73 +153,6 @@ class BackupCommand extends Command
         return $this->single(fn(): int => $this->process($input), $output);
     }
 
-    private function getBackends(iInput $input): array
-    {
-        $configs = [
-            'main' => [
-                'config' => ConfigFile::open(Config::get('backends_file'), 'yaml'),
-                'mapper' => $this->mapper,
-                'cache' => null,
-            ]
-        ];
-
-        if (true === $input->getOption('only-main-user')) {
-            return $configs;
-        }
-
-        $usersDir = Config::get('path') . '/users';
-
-        if (false === is_dir($usersDir)) {
-            return $configs;
-        }
-
-        if (!is_readable($usersDir)) {
-            $this->logger->error("SYSTEM: Unable to read '{dir}' directory.", ['dir' => $usersDir]);
-            return $configs;
-        }
-
-        $mainUserIds = array_map(fn($backend) => ag($backend, 'user'), ag($configs, 'main.config')->getAll());
-
-        foreach (new DirectoryIterator(Config::get('path') . '/users') as $dir) {
-            if ($dir->isDot() || false === $dir->isDir()) {
-                continue;
-            }
-
-            $config = perUserConfig($dir->getBasename());
-            $subUserIds = array_map(fn($backend) => ag($backend, 'user'), $config->getAll());
-
-            foreach ($mainUserIds as $mainId) {
-                if (false === in_array($mainId, $subUserIds)) {
-                    continue;
-                }
-
-                $this->logger->debug("SYSTEM: Skipping '{user}' backends as it's same as main user.", [
-                    'user' => $dir->getBasename(),
-                    'main' => $mainUserIds,
-                    'sub' => $subUserIds,
-                ]);
-                continue 2;
-            }
-
-            $userName = $dir->getBasename();
-            $perUserCache = perUserCacheAdapter($userName);
-
-            $configs[$userName] = [
-                'config' => $config,
-                'mapper' => $this->mapper->withDB(perUserDb($userName))
-                    ->withCache($perUserCache)
-                    ->withLogger($this->logger)
-                    ->withOptions(
-                        array_replace_recursive($this->mapper->getOptions(), [Options::ALT_NAME => $userName])
-                    )
-                    ->loadData(),
-                'cache' => $perUserCache,
-            ];
-        }
-
-        return $configs;
-    }
-
     /**
      * Execute the command.
      *
@@ -245,8 +177,13 @@ class BackupCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
+        $opts = [];
+        if (true === (bool)$input->getOption('only-main-user')) {
+            $opts = ['main_user_only' => true];
+        }
+
         $this->logger->notice("Using WatchState version - '{version}'.", ['version' => getAppVersion()]);
-        foreach ($this->getBackends($input) as $user => $opt) {
+        foreach ($this->getUserData($this->mapper, $this->logger, $opts) as $user => $opt) {
             try {
                 $this->process_backup($input, $user, $opt);
             } finally {
@@ -449,7 +386,7 @@ class BackupCommand extends Command
             gc_collect_cycles();
         }
 
-        foreach ($list as $backend) {
+        foreach ($list as $b => $backend) {
             if (null === ($backend['fp'] ?? null)) {
                 continue;
             }
@@ -462,7 +399,8 @@ class BackupCommand extends Command
 
                 if (false === $noCompression) {
                     $file = $backend['fp']->getMetadata('uri');
-                    $this->logger->notice("SYSTEM: Compressing '{user}@{file}'.", [
+                    $this->logger->notice("SYSTEM: Compressing '{user}@{name}' backup file '{file}'.", [
+                        'name' => $b,
                         'user' => $user,
                         'file' => $file
                     ]);

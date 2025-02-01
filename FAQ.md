@@ -211,23 +211,32 @@ database state back to the selected backend.
 
 ### Is there support for Multi-user setup?
 
-There are minimal support for multi-user setup via `state:sync` command. There are some requirements to get it working
-correctly. The tools will try to match the users based on the name, and fallback on the `mapper.yaml` file if it's
-provided. The tool will try to sync the users data between the backends.
+We are on early stage of supporting multi-user setups, initially few operations are supported. To get started, first you
+need to create your own main user backends using admin token for Plex and api key for Jellyfin/Emby.
 
-#### Things that will get synced
+Once your own main user is added, make sure to turn on the `import` and `export` for all backends, as the sub users are
+initial configuration is based on your own main user configuration. Once your own user is working, turn on the `import`
+and `export` tasks in the Tasks page.
 
-* Play status, i.e. watched/unwatched.
-* Watch progress.
+Now, to create the sub users configurations, you need to run `backend:create` command, which can be done via
+`WebUI > Backends > Purple button (users) icon` or via CLI by running the following command:
 
-#### Requirements to get the command working
+```bash
+$ docker exec -ti watchstate console backend:create -v
+```
 
-* All backends need to have admin level access, this is needed to inquiry about the users and generate the required
-  access tokens.
-* That means for plex, it needs the admin token, to find it
-  check [plex article about it](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
-* For jellyfin/emby you need to use the API key, not the user password. You can generate api keys via Dashboard >
-  Advanced > API Keys.
+Once the configuration is created, You can start using the multi-user functionality. Start by enabling the `sync` task
+which is responsible for syncing the users play state and watch progress between the backends.
+
+To enable the task, you can do it via `WebUI > Tasks` page or via CLI by running the following command:
+
+```bash
+$ docker exec -ti watchstate console system:env -k WS_CRON_SYNC -e true
+```
+
+If your users usernames are different between the backends, you can use the `mapper.yaml` file to map the users between
+the backends. For more information about the `mapper.yaml` file, please refer to
+the [mapper.yaml](#whats-the-schema-for-the-mapperyaml-file) section.
 
 #### Whats the schema for the `mapper.yaml` file?
 
@@ -243,7 +252,7 @@ The schema is simple, it's a list of users in the following format:
     my_emby_server:
         name: "mikeJones"
         options: { }
-
+# 2nd user...
 -   my_emby_server:
         name: "jiji_jones"
         options: { }
@@ -253,15 +262,12 @@ The schema is simple, it's a list of users in the following format:
     my_jellyfin_server:
         name: "jijiJones"
         options: { }
+#.... more users
 ```
 
-This yaml file helps map your users accounts in the different backends, so the tool can sync the correct user data.
-
-Then simply run `state:sync -v` it will generate the required tokens and match users data between the backends.
-then sync the difference. By default, the task is scheduled to run every 3 hour, you can change the schedule by
-altering the `WS_CRON_SYNC_AT` environment variable via `ENV` page or `system:env` command.
-
-To have the task run automatically, you need to enable the task via the `WebUI > Tasks` page or `system:env` command.
+This yaml file helps map your users username in the different backends, so the tool can sync the correct user data. If
+you added or updated mapping, you should delete `users` directory and generate new data. by running the `backend:create`
+command as described in the previous section.
 
 ----
 

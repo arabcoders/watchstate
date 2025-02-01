@@ -2214,7 +2214,18 @@ if (!function_exists('perUserDb')) {
             }
         }
 
-        $dbFile = fixPath(r("{path}/{user}.db", ['path' => $path, 'user' => $user]));
+        $dbFile = fixPath(r("{path}/user.db", ['path' => $path]));
+        $oldDb = fixPath(r("{path}/{user}.db", ['path' => $path, 'user' => $user]));
+        if (true === file_exists($oldDb)) {
+            if (false === file_exists($dbFile)) {
+                rename($oldDb, $dbFile);
+                clearstatcache(true, $oldDb);
+                clearstatcache(true, $dbFile);
+            } else {
+                unlink($oldDb);
+            }
+        }
+
         $inTestMode = true === (defined('IN_TEST_MODE') && true === IN_TEST_MODE);
         $dsn = r('sqlite:{src}', ['src' => $inTestMode ? ':memory:' : $dbFile]);
 
@@ -2261,7 +2272,7 @@ if (!function_exists('perUserConfig')) {
             }
         }
 
-        return ConfigFile::open(fixPath(r("{path}/servers.yaml", ['path' => $path])), 'yaml');
+        return ConfigFile::open(fixPath(r("{path}/servers.yaml", ['path' => $path])), 'yaml', autoCreate: true);
     }
 }
 
@@ -2283,36 +2294,7 @@ if (!function_exists('perUserCacheAdapter')) {
         }
 
         try {
-            $cacheUrl = Config::get('cache.url');
-
-            if (empty($cacheUrl)) {
-                throw new RuntimeException('No cache server was set.');
-            }
-
-            if (!extension_loaded('redis')) {
-                throw new RuntimeException('Redis extension is not loaded.');
-            }
-
-            $uri = new Uri($cacheUrl);
-            $params = [];
-
-            if (!empty($uri->getQuery())) {
-                parse_str($uri->getQuery(), $params);
-            }
-
-            $redis = new Redis();
-
-            $redis->connect($uri->getHost(), $uri->getPort() ?? 6379);
-
-            if (null !== ag($params, 'password')) {
-                $redis->auth(ag($params, 'password'));
-            }
-
-            if (null !== ag($params, 'db')) {
-                $redis->select((int)ag($params, 'db'));
-            }
-
-            $backend = new RedisAdapter(redis: $redis, namespace: $ns);
+            $backend = new RedisAdapter(redis: Container::get(Redis::class), namespace: $ns);
         } catch (Throwable) {
             // -- in case of error, fallback to file system cache.
             $path = fixPath(r("{path}/users/{user}/cache", ['path' => Config::get('path'), 'user' => $user]));
@@ -2419,3 +2401,4 @@ if (!function_exists('readFileFromArchive')) {
         return [Stream::make($stream, 'r'), $zip];
     }
 }
+
