@@ -298,18 +298,13 @@ onMounted(async () => {
   try {
     const response = await request('/system/env/WS_CONSOLE_ENABLE_ALL')
     const json = await response.json()
-    if (200 !== response.status) {
-      allEnabled.value = false
-      return
-    }
-    allEnabled.value = Boolean(json.value)
+    allEnabled.value = 200 === response.status ? Boolean(json.value) : false
   } catch (e) {
     allEnabled.value = false
   }
 
   const run = route.query?.run ? Boolean(route.query.run) : false
-
-  if (run || '' === command.value) {
+  if (run && '' === command.value) {
     await RunCommand()
   }
 })
