@@ -7,15 +7,10 @@ namespace App;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
-use App\Libs\Container;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
-use App\Libs\Options;
 use App\Listeners\ProcessProfileEvent;
 use Closure;
 use DirectoryIterator;
-use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface as iCache;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -38,11 +33,7 @@ class Command extends BaseCommand
      *
      * @var array<string>
      */
-    public const array DISPLAY_OUTPUT = [
-        'table',
-        'json',
-        'yaml',
-    ];
+    public const array DISPLAY_OUTPUT = ['table', 'json', 'yaml'];
 
     /**
      * Execute the command.
@@ -260,85 +251,6 @@ class Command extends BaseCommand
                 $output->writeln(Yaml::dump(input: $content, inline: 8, indent: 2));
                 break;
         }
-    }
-
-    /**
-     * Retrieves per user data..
-     *
-     * @param iEImport $mapper The import mapper instance.
-     * @param iLogger $logger The logger instance.
-     * @param array $opts (Optional) Additional options.
-     *
-     * @return array<array-key, array{config:ConfigFile, mapper:iEImport, cache:iCache}> The user data.
-     * @throws RuntimeException If the users directory is not readable.
-     */
-    protected function getUserData(iEImport $mapper, iLogger $logger, array $opts = []): array
-    {
-        $configs = [
-            'main' => [
-                'config' => ConfigFile::open(Config::get('backends_file'), 'yaml'),
-                'mapper' => $mapper,
-                'cache' => Container::get(iCache::class),
-            ]
-        ];
-
-        if (true === (bool)ag($opts, 'main_user_only', false)) {
-            return $configs;
-        }
-
-        if (true === (bool)ag($opts, 'no_main_user', false)) {
-            $configs = [];
-        }
-
-        $usersDir = Config::get('path') . '/users';
-
-        if (false === is_dir($usersDir)) {
-            return $configs;
-        }
-
-        if (false === is_readable($usersDir)) {
-            throw new RuntimeException(r("Unable to read '{dir}' directory.", ['dir' => $usersDir]));
-        }
-
-        $mainUserIds = array_map(
-            fn($backend) => ag($backend, 'user'),
-            ConfigFile::open(Config::get('backends_file'), 'yaml')->getAll()
-        );
-
-        foreach (new DirectoryIterator(Config::get('path') . '/users') as $dir) {
-            if ($dir->isDot() || false === $dir->isDir()) {
-                continue;
-            }
-
-            $config = perUserConfig($dir->getBasename());
-
-            $subUserIds = array_map(fn($backend) => ag($backend, 'user'), $config->getAll());
-            foreach ($mainUserIds as $mainId) {
-                if (false === in_array($mainId, $subUserIds)) {
-                    continue;
-                }
-                continue 2;
-            }
-
-            $userName = $dir->getBasename();
-            $perUserCache = perUserCacheAdapter($userName);
-
-            $configs[$userName] = [
-                'config' => $config,
-                'mapper' => $mapper->withDB(perUserDb($userName))
-                    ->withCache($perUserCache)
-                    ->withLogger($logger)
-                    ->withOptions(
-                        array_replace_recursive($mapper->getOptions(), [
-                            Options::ALT_NAME => $userName
-                        ])
-                    )
-                    ->loadData(),
-                'cache' => $perUserCache,
-            ];
-        }
-
-        return $configs;
     }
 
     /**

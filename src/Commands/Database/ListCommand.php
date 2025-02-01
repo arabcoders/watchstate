@@ -6,6 +6,7 @@ namespace App\Commands\Database;
 
 use App\API\History\Index;
 use App\Command;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -13,7 +14,9 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
@@ -38,7 +41,7 @@ final class ListCommand extends Command
      *
      * @return void
      */
-    public function __construct(private DirectMapper $mapper)
+    public function __construct(#[Inject(DirectMapper::class)] private iEImport $mapper, private iLogger $logger)
     {
         parent::__construct();
     }
@@ -58,6 +61,7 @@ final class ListCommand extends Command
         $list = implode(', ', $list);
 
         $this->setName(self::ROUTE)
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Display this user history.')
             ->addOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit results to this number', 20)
             ->addOption(
                 'via',
@@ -292,9 +296,17 @@ final class ListCommand extends Command
             $params['sort'] = r('{field}:{dir}', $matches);
         }
 
-        $response = APIRequest('GET', '/history', [
-            'query' => $params,
-        ]);
+        $opts = [];
+
+        if ($input->getOption('user')) {
+            $opts['headers'] = [
+                'X-User' => $input->getOption('user'),
+            ];
+        }
+        
+        $opts['query'] = $params;
+
+        $response = APIRequest('GET', '/history', opts: $opts);
 
         if (Status::OK !== $response->status) {
             $output->writeln(r("<error>API error. {status}: {message}</error>", [
@@ -354,8 +366,10 @@ final class ListCommand extends Command
                 }
             }
 
+            $userContext = getUserContext($input->getOption('user'), $this->mapper, $this->logger);
+
             foreach ($rows as $row) {
-                $entity = $this->mapper->get(
+                $entity = $userContext->mapper->get(
                     Container::get(iState::class)->fromArray([iState::COLUMN_ID => $row['id']])
                 );
 
@@ -366,9 +380,9 @@ final class ListCommand extends Command
                     iState::COLUMN_EXTRA_DATE => (string)makeDate('now'),
                 ]);
 
-                $this->mapper->add($entity);
+                $userContext->mapper->add($entity)->commit();
 
-                queuePush($entity);
+                queuePush($entity, userContext: $userContext);
             }
 
             $output->writeln(

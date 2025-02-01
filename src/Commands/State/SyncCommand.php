@@ -10,7 +10,6 @@ use App\Command;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
@@ -21,6 +20,7 @@ use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Stream;
+use App\Libs\UserContext;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\Log\NullLogger;
@@ -151,28 +151,25 @@ class SyncCommand extends Command
             'no_main_user' => !$input->getOption('include-main-user'),
         ];
 
-        $backends = $this->getUserData($this->mapper, $this->logger, $userOpt);
+        $usersContext = getUsersContext($this->mapper, $this->logger, $userOpt);
 
-        if (empty($backends)) {
+        if (empty($usersContext)) {
             $this->logger->warning('No users were found. Please create sub users via the backends:create command.');
             return self::SUCCESS;
         }
 
-        foreach ($backends as $user => $userConf) {
+        foreach ($usersContext as $userContext) {
             try {
                 $this->queue->reset();
 
-                $config = ag($userConf, 'config');
-                assert($config instanceof ConfigFile);
-
                 $list = [];
 
-                foreach ($config->getAll() as $backendName => $backend) {
+                foreach ($userContext->config->getAll() as $backendName => $backend) {
                     $type = strtolower(ag($backend, 'type', 'unknown'));
 
                     if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
                         $this->logger->info("SYSTEM: Ignoring '{user}@{backend}' as requested.", [
-                            'user' => $user,
+                            'user' => $userContext->name,
                             'backend' => $backendName
                         ]);
                         continue;
@@ -180,7 +177,7 @@ class SyncCommand extends Command
 
                     if (true !== (bool)ag($backend, 'import.enabled')) {
                         $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
-                            'user' => $user,
+                            'user' => $userContext->name,
                             'backend' => $backendName
                         ]);
                         continue;
@@ -188,7 +185,7 @@ class SyncCommand extends Command
 
                     if (!isset($supported[$type])) {
                         $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
-                            'user' => $user,
+                            'user' => $userContext->name,
                             'type' => $type,
                             'backend' => $backendName,
                         ]);
@@ -197,7 +194,7 @@ class SyncCommand extends Command
 
                     if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
                         $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
-                            'user' => $user,
+                            'user' => $userContext->name,
                             'url' => $url ?? 'None',
                             'backend' => $backendName,
                         ]);
@@ -226,7 +223,7 @@ class SyncCommand extends Command
                     $backend['name'] = $backendName;
                     $backend['class'] = makeBackend($backend, $backendName, [
                         BackendCache::class => Container::get(BackendCache::class)->with(
-                            adapter: ag($userConf, 'cache')
+                            adapter: $userContext->cache
                         )
                     ])->setLogger($this->logger);
 
@@ -242,18 +239,14 @@ class SyncCommand extends Command
 
                 $start = makeDate();
                 $this->logger->notice("SYSTEM: Syncing user '{user}: {list}'.", [
-                    'user' => $user,
+                    'user' => $userContext->name,
                     'list' => join(', ', array_keys($list)),
                     'started' => $start,
                 ]);
 
-                /** @var iEImport $mapper */
-                $mapper = ag($userConf, 'mapper');
-                assert($mapper instanceof iEImport);
+                $this->handleImport($userContext, $list, $input->getOption('force-full'));
 
-                $this->handleImport($mapper, $user, $list, $input->getOption('force-full'), $config);
-
-                $changes = $mapper->computeChanges(array_keys($list));
+                $changes = $userContext->mapper->computeChanges(array_keys($list));
 
                 foreach ($changes as $b => $changed) {
                     $count = count($changed);
@@ -261,7 +254,7 @@ class SyncCommand extends Command
                         continue;
                     }
                     $this->logger->notice("SYSTEM: '{changes}' changes detected for '{name}@{backend}'.", [
-                        'name' => $user,
+                        'name' => $userContext->name,
                         'backend' => $b,
                         'changes' => $count,
                         'items' => array_map(
@@ -280,11 +273,11 @@ class SyncCommand extends Command
                     $client->updateState($changed, $this->queue);
                 }
 
-                $this->handleExport($user, $list);
+                $this->handleExport($userContext, $list);
 
                 $end = makeDate();
                 $this->logger->notice("SYSTEM: Completed syncing user '{name}: {list}' in '{time.duration}'s", [
-                    'name' => $user,
+                    'name' => $userContext->name,
                     'list' => join(', ', array_keys($list)),
                     'time' => [
                         'start' => $start,
@@ -299,16 +292,16 @@ class SyncCommand extends Command
 
                 // -- Release memory.
                 if (false === $input->getOption('dry-run')) {
-                    $mapper->commit();
+                    $userContext->mapper->commit();
 
                     foreach ($list as $b => $_) {
-                        $config->set("{$b}.import.lastSync", time());
-                        $config->set("{$b}.export.lastSync", time());
+                        $userContext->config->set("{$b}.import.lastSync", time());
+                        $userContext->config->set("{$b}.export.lastSync", time());
                     }
 
-                    $config->persist();
+                    $userContext->config->persist();
                 } else {
-                    $mapper->reset();
+                    $userContext->mapper->reset();
                 }
 
                 $this->logger->info("SYSTEM: Memory usage after reset '{memory}'.", [
@@ -318,7 +311,7 @@ class SyncCommand extends Command
                 $this->logger->error(
                     "SYSTEM: Exception '{error.kind}' was thrown unhandled during '{name}' sync. '{error.message}' at '{error.file}:{error.line}'.",
                     [
-                        'name' => $user,
+                        'name' => $userContext->name,
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
@@ -339,24 +332,21 @@ class SyncCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function handleImport(
-        iEImport $mapper,
-        string $name,
-        array $backends,
-        bool $isFull,
-        ConfigFile $config
-    ): void {
+    protected function handleImport(UserContext $userContext, array $backends, bool $isFull): void
+    {
         /** @var array<array-key,ResponseInterface> $queue */
         $queue = [];
 
         $this->logger->info("SYSTEM: Loading '{user}' mapper data. Current memory usage '{memory}'.", [
-            'user' => $name,
+            'user' => $userContext->name,
             'memory' => getMemoryUsage(),
         ]);
-        $mapper->loadData();
+
+        $userContext->mapper->loadData();
+
         $this->logger->info("SYSTEM: loading of '{user}' mapper data '{count}' completed using '{memory}' of memory.", [
-            'user' => $name,
-            'count' => $mapper->count(),
+            'user' => $userContext->name,
+            'count' => $userContext->mapper->count(),
             'memory' => getMemoryUsage(),
         ]);
 
@@ -365,24 +355,24 @@ class SyncCommand extends Command
             $client = ag($backend, 'class');
             assert($client instanceof iClient);
 
-            $context = $client->getContext();
+            $backendContext = $client->getContext();
 
-            if (true === $isFull || ag($context->options, Options::FORCE_FULL)) {
+            if (true === $isFull || ag($backendContext->options, Options::FORCE_FULL)) {
                 $after = null;
             } else {
-                $after = $config->get($context->backendName . '.import.lastSync');
+                $after = $userContext->config->get($backendContext->backendName . '.import.lastSync');
             }
 
             if (null !== $after) {
                 $after = makeDate($after);
             }
 
-            array_push($queue, ...$client->pull(mapper: $mapper, after: $after));
+            array_push($queue, ...$client->pull(mapper: $userContext->mapper, after: $after));
         }
 
         $start = makeDate();
         $this->logger->notice("SYSTEM: Waiting on '{total}' requests for '{name}: {backends}' data.", [
-            'name' => $name,
+            'name' => $userContext->name,
             'backends' => join(', ', array_keys($backends)),
             'total' => number_format(count($queue)),
             'time' => [
@@ -412,7 +402,7 @@ class SyncCommand extends Command
         $this->logger->notice(
             "SYSTEM: Finished waiting on '{total}' requests in '{time.duration}'s for importing '{name}: {backends}' data. Parsed '{responses.size}' of data.",
             [
-                'name' => $name,
+                'name' => $userContext->name,
                 'backends' => join(', ', array_keys($backends)),
                 'total' => number_format(count($queue)),
                 'time' => [
@@ -433,19 +423,19 @@ class SyncCommand extends Command
         Message::add('response.size', 0);
     }
 
-    protected function handleExport(string $name, array $backends): void
+    protected function handleExport(UserContext $userContext, array $backends): void
     {
         $total = count($this->queue->getQueue());
         if ($total < 1) {
             $this->logger->notice("SYSTEM: No play state changes detected for '{name}: {backends}'.", [
-                'name' => $name,
+                'name' => $userContext->name,
                 'backends' => join(', ', array_keys($backends))
             ]);
             return;
         }
 
         $this->logger->notice("SYSTEM: Sending '{total}' change play state requests for '{name}: {backends}'.", [
-            'name' => $name,
+            'name' => $userContext->name,
             'total' => $total,
             'backends' => join(', ', array_keys($backends)),
         ]);
@@ -458,7 +448,7 @@ class SyncCommand extends Command
                     $this->logger->error(
                         "Request to change '{name}@{backend}' '{item.title}' play state returned with unexpected '{status_code}' status code.",
                         [
-                            'name' => $name,
+                            'name' => $userContext->name,
                             'status_code' => $statusCode,
                             ...$context,
                         ],
@@ -467,14 +457,14 @@ class SyncCommand extends Command
                 }
 
                 $this->logger->notice("Marked '{name}@{backend}' '{item.title}' as '{play_state}'.", [
-                    'name' => $name,
+                    'name' => $userContext->name,
                     ...$context
                 ]);
             } catch (Throwable $e) {
                 $this->logger->error(
                     message: "Exception '{error.kind}' was thrown unhandled during '{name}@{backend}' request to change play state of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
-                        'name' => $name,
+                        'name' => $userContext->name,
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
@@ -494,7 +484,7 @@ class SyncCommand extends Command
         }
 
         $this->logger->notice("SYSTEM: Sent '{total}' change play state requests for '{name}: {backends}'.", [
-            'name' => $name,
+            'name' => $userContext->name,
             'total' => $total,
             'backends' => join(', ', array_keys($backends)),
         ]);

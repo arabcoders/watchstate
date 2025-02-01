@@ -5,22 +5,22 @@ declare(strict_types=1);
 namespace App\API\History;
 
 use App\API\Player\Subtitle;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Traits\APITraits;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\Log\LoggerInterface as iLogger;
 use RuntimeException;
 use SplFileInfo;
 use Throwable;
@@ -48,15 +48,26 @@ final class Index
 
     public const string URL = '%{api.prefix}/history';
 
-    public function __construct(private readonly iDB $db, private DirectMapper $mapper, private iCache $cache)
-    {
+    public function __construct(
+        #[Inject(DirectMapper::class)] private iEImport $mapper,
+        private iLogger $logger
+    ) {
     }
 
     #[Get(self::URL . '[/]', name: 'history.list')]
-    public function list(DBLayer $db, iRequest $request): iResponse
+    public function list(iRequest $request): iResponse
     {
-        $es = fn(string $val) => $db->escapeIdentifier($val, true);
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        $db = $userContext->db->getDBLayer();
+
         $data = DataUtil::fromArray($request->getQueryParams());
+
+        $es = fn(string $val) => $db->escapeIdentifier($val, true);
         $filters = [];
 
         $page = (int)$data->get('page', 1);
@@ -184,7 +195,7 @@ final class Index
                 );
             }
 
-            if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
+            if (preg_match('/[^a-zA-Z0-9_.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
                     Status::BAD_REQUEST
@@ -206,9 +217,7 @@ final class Index
         }
 
         if ($data->get(iState::COLUMN_META_PATH)) {
-            foreach ($this->getBackends() as $backend) {
-                $bName = $backend['name'];
-
+            foreach (array_keys($userContext->config->getAll()) as $bName) {
                 if ($data->get('exact')) {
                     $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.path') = :path_{$bName}";
                 } else {
@@ -222,9 +231,7 @@ final class Index
         }
 
         if ($data->get('subtitle')) {
-            foreach ($this->getBackends() as $backend) {
-                $bName = $backend['name'];
-
+            foreach (array_keys($userContext->config->getAll()) as $bName) {
                 if ($data->get('exact')) {
                     $or[] = "json_extract(" . iState::COLUMN_META_DATA . ",'$.{$bName}.extra.title') = :subtitle_{$bName}";
                 } else {
@@ -247,7 +254,7 @@ final class Index
                 );
             }
 
-            if (preg_match('/[^a-zA-Z0-9_\.]/', $sField)) {
+            if (preg_match('/[^a-zA-Z0-9_.]/', $sField)) {
                 return api_error(
                     'Invalid value for key query string expected value format is [a-zA-Z0-9_].',
                     Status::BAD_REQUEST
@@ -276,6 +283,7 @@ final class Index
             $sql[] = 'WHERE ' . implode(' AND ', $where);
         }
 
+        syslog(LOG_DEBUG, json_encode($data->getAll()));
         $stmt = $db->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
         $stmt->execute($params);
         $total = $stmt->fetchColumn();
@@ -447,7 +455,7 @@ final class Index
         ];
 
         while ($row = $stmt->fetch()) {
-            $response['history'][] = $this->formatEntity($row);
+            $response['history'][] = $this->formatEntity($row, userContext: $userContext);
         }
 
         return api_response(Status::OK, $response);
@@ -456,13 +464,19 @@ final class Index
     #[Get(self::URL . '/{id:\d+}[/]', name: 'history.read')]
     public function read(iRequest $request, string $id): iResponse
     {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
-        if (null === ($item = $this->db->get($entity))) {
+        if (null === ($item = $userContext->db->get($entity))) {
             return api_error('Not found', Status::NOT_FOUND);
         }
 
-        $entity = $this->formatEntity($item);
+        $entity = $this->formatEntity($item, userContext: $userContext);
 
         if (!empty($entity['content_path'])) {
             $entity['content_exists'] = file_exists($entity['content_path']);
@@ -488,7 +502,7 @@ final class Index
                 }
 
                 try {
-                    $data = ffprobe_file($file, $this->cache);
+                    $data = ffprobe_file($file, $userContext->cache);
                 } catch (RuntimeException|JsonException) {
                     continue;
                 }
@@ -549,15 +563,21 @@ final class Index
     }
 
     #[Delete(self::URL . '/{id:\d+}[/]', name: 'history.delete')]
-    public function delete(string $id): iResponse
+    public function delete(iRequest $request, string $id): iResponse
     {
-        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
-
-        if (null === ($item = $this->db->get($entity))) {
-            return api_error('Not found', Status::NOT_FOUND);
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        $this->db->remove($item);
+        $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
+
+        if (null === ($item = $userContext->db->get($entity))) {
+            return api_error('item Not found.', Status::NOT_FOUND);
+        }
+
+        $userContext->db->remove($item);
 
         return api_response(Status::OK);
     }
@@ -565,9 +585,15 @@ final class Index
     #[Route(['GET', 'POST', 'DELETE'], self::URL . '/{id:\d+}/watch[/]', name: 'history.watch')]
     public function changePlayState(iRequest $request, string $id): iResponse
     {
+        try {
+            $userContext = $this->getUserContext(request: $request, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
         $entity = Container::get(iState::class)::fromArray([iState::COLUMN_ID => $id]);
 
-        if (null === ($item = $this->db->get($entity))) {
+        if (null === ($item = $userContext->db->get($entity))) {
             return api_error('Not found', Status::NOT_FOUND);
         }
 
@@ -590,9 +616,9 @@ final class Index
             iState::COLUMN_EXTRA_DATE => (string)makeDate('now'),
         ]);
 
-        $this->mapper->add($item)->commit();
+        $userContext->mapper->add($item)->commit();
 
-        queuePush($item);
+        queuePush($item, userContext: $userContext);
 
         return $this->read($request, $id);
     }

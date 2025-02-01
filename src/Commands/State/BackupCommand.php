@@ -8,12 +8,11 @@ use App\Backends\Common\Cache as BackendCache;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\Container;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
+use App\Libs\UserContext;
 use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
@@ -183,18 +182,18 @@ class BackupCommand extends Command
         }
 
         $this->logger->notice("Using WatchState version - '{version}'.", ['version' => getAppVersion()]);
-        foreach ($this->getUserData($this->mapper, $this->logger, $opts) as $user => $opt) {
+        foreach (getUsersContext($this->mapper, $this->logger, $opts) as $userContext) {
             try {
-                $this->process_backup($input, $user, $opt);
+                $this->process_backup($input, $userContext);
             } finally {
-                ag($opt, 'mapper')->reset();
+                $userContext->mapper->reset();
             }
         }
 
         return self::SUCCESS;
     }
 
-    private function process_backup(iInput $input, string $user, array $opt): void
+    private function process_backup(iInput $input, UserContext $userContext): void
     {
         $list = [];
 
@@ -204,44 +203,38 @@ class BackupCommand extends Command
 
         $noCompression = $input->getOption('no-compress');
 
-        $config = ag($opt, 'config');
-        assert($config instanceof ConfigFile);
-
-        foreach ($config->getAll() as $backendName => $backend) {
+        foreach ($userContext->config->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
-                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}' as requested by [-s, --select-backend].", [
-                    'user' => $user,
+                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}' as requested.", [
+                    'user' => $userContext->name,
                     'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (true !== (bool)ag($backend, 'import.enabled')) {
-                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}' as the backend has import disabled.", [
-                    'user' => $user,
+                $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
+                    'user' => $userContext->name,
                     'backend' => $backendName
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $this->logger->error(
-                    "SYSTEM: Ignoring '{user}@{backend}' due to unexpected type '{type}'. Expecting '{types}'.",
-                    [
-                        'user' => $user,
-                        'type' => $type,
-                        'backend' => $backendName,
-                        'types' => implode(', ', array_keys($supported)),
-                    ]
-                );
+                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
+                    'user' => $userContext->name,
+                    'type' => $type,
+                    'backend' => $backendName,
+                    'types' => implode(', ', array_keys($supported)),
+                ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}' due to invalid URL. '{url}'.", [
-                    'user' => $user,
+                $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                    'user' => $userContext->name,
                     'url' => $url ?? 'None',
                     'backend' => $backendName,
                 ]);
@@ -259,13 +252,10 @@ class BackupCommand extends Command
             return;
         }
 
-        $mapper = ag($opt, 'mapper');
-        assert($mapper instanceof iEImport);
-
         if (true !== $input->getOption('no-enhance')) {
             $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data.", [
-                'user' => $user,
-                'mapper' => afterLast($mapper::class, '\\'),
+                'user' => $userContext->name,
+                'mapper' => afterLast($userContext->mapper::class, '\\'),
                 'memory' => [
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
@@ -273,11 +263,11 @@ class BackupCommand extends Command
             ]);
 
             $start = microtime(true);
-            $this->mapper->loadData();
+            $userContext->mapper->loadData();
 
             $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data completed in '{duration}s'.", [
-                'user' => $user,
-                'mapper' => afterLast($this->mapper::class, '\\'),
+                'user' => $userContext->name,
+                'mapper' => afterLast($userContext->mapper::class, '\\'),
                 'duration' => round(microtime(true) - $start, 2),
                 'memory' => [
                     'now' => getMemoryUsage(),
@@ -293,31 +283,24 @@ class BackupCommand extends Command
             $opts = ag($backend, 'options', []);
 
             if ($input->getOption('trace')) {
-                $opts[Options::DEBUG_TRACE] = true;
+                $opts = ag_set($opts, Options::DEBUG_TRACE, true);
             }
 
             if ($input->getOption('dry-run')) {
-                $opts[Options::DRY_RUN] = true;
+                $opts = ag_set($opts, Options::DEBUG_TRACE, true);
             }
 
             if ($input->getOption('timeout')) {
-                $opts['client']['timeout'] = (float)$input->getOption('timeout');
+                $opts = ag_set($opts, 'client.timeout', (float)$input->getOption('timeout'));
             }
 
             $backend['options'] = $opts;
-
-            $backendOpts = [];
-
-            if (null !== ag($opt, 'cache')) {
-                $backendOpts = [
-                    BackendCache::class => Container::get(BackendCache::class)->with(adapter: ag($opt, 'cache')),
-                ];
-            }
-
-            $backend['class'] = makeBackend($backend, $name, $backendOpts)->setLogger($this->logger);
+            $backend['class'] = makeBackend($backend, $name, [
+                BackendCache::class => Container::get(BackendCache::class)->with(adapter: $userContext->cache),
+            ])->setLogger($this->logger);
 
             $this->logger->notice("SYSTEM: Backing up '{user}@{backend}' play state.", [
-                'user' => $user,
+                'user' => $userContext->name,
                 'backend' => $name,
             ]);
 
@@ -344,7 +327,7 @@ class BackupCommand extends Command
                 }
 
                 $this->logger->notice("SYSTEM: '{user}@{backend}' is using '{file}' as backup target.", [
-                    'user' => $user,
+                    'user' => $userContext->name,
                     'file' => realpath($fileName),
                     'backend' => $name,
                 ]);
@@ -353,7 +336,7 @@ class BackupCommand extends Command
                 $backend['fp']->write('[');
             }
 
-            array_push($queue, ...$backend['class']->backup($mapper, $backend['fp'] ?? null, [
+            array_push($queue, ...$backend['class']->backup($userContext->mapper, $backend['fp'] ?? null, [
                 'no_enhance' => true === $input->getOption('no-enhance'),
                 Options::DRY_RUN => (bool)$input->getOption('dry-run'),
             ]));
@@ -363,7 +346,7 @@ class BackupCommand extends Command
 
         $start = microtime(true);
         $this->logger->notice("SYSTEM: Waiting on '{total}' requests for '{user}: {backends}' backends.", [
-            'user' => $user,
+            'user' => $userContext->name,
             'total' => number_format(count($queue)),
             'backends' => implode(', ', array_keys($list)),
             'memory' => [
@@ -399,12 +382,14 @@ class BackupCommand extends Command
 
                 if (false === $noCompression) {
                     $file = $backend['fp']->getMetadata('uri');
-                    $this->logger->notice("SYSTEM: Compressing '{user}@{name}' backup file '{file}'.", [
-                        'name' => $b,
-                        'user' => $user,
-                        'file' => $file
+                    $this->logger->notice("SYSTEM: Compressing '{user}@{backend}' backup file '{file}'.", [
+                        'backend' => $b,
+                        'file' => $file,
+                        'user' => $userContext->name,
                     ]);
+
                     $status = compress_files($file, [$file], ['affix' => 'zip']);
+
                     if (true === $status) {
                         unlink($file);
                     }
@@ -415,7 +400,7 @@ class BackupCommand extends Command
         }
 
         $this->logger->notice("SYSTEM: Backup operation for '{user}: {backends}' backends finished in '{duration}s'.", [
-            'user' => $user,
+            'user' => $userContext->name,
             'backends' => implode(', ', array_keys($list)),
             'duration' => round(microtime(true) - $start, 2),
             'memory' => [

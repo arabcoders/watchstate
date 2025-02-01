@@ -170,7 +170,7 @@
               <li>
                 <strong>Export</strong> means pushing data from the local database to the backends.
               </li>
-              <li>
+              <li v-if="backends && backends.length>0">
                 To create sub users backends, click on the <span class="icon has-text-purple"><i class="fas fa-users"/></span>
                 button.
               </li>
