@@ -303,7 +303,7 @@ final class ListCommand extends Command
                 'X-User' => $input->getOption('user'),
             ];
         }
-        
+
         $opts['query'] = $params;
 
         $response = APIRequest('GET', '/history', opts: $opts);

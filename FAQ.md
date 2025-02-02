@@ -225,14 +225,7 @@ Now, to create the sub users configurations, you need to run `backend:create` co
 $ docker exec -ti watchstate console backend:create -v
 ```
 
-Once the configuration is created, You can start using the multi-user functionality. Start by enabling the `sync` task
-which is responsible for syncing the users play state and watch progress between the backends.
-
-To enable the task, you can do it via `WebUI > Tasks` page or via CLI by running the following command:
-
-```bash
-$ docker exec -ti watchstate console system:env -k WS_CRON_SYNC -e true
-```
+Once the sub users configuration is created, You can start using the multi-user functionality.
 
 If your users usernames are different between the backends, you can use the `mapper.yaml` file to map the users between
 the backends. For more information about the `mapper.yaml` file, please refer to
@@ -243,6 +236,7 @@ the [mapper.yaml](#whats-the-schema-for-the-mapperyaml-file) section.
 The schema is simple, it's a list of users in the following format:
 
 ```yaml
+# 1st user...
 -   my_plex_server:
         name: "mike_jones"
         options: { }

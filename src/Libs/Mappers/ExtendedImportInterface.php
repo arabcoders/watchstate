@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libs\Mappers;
 
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\UserContext;
 use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\CacheInterface as iCache;
 
@@ -33,6 +34,15 @@ interface ExtendedImportInterface extends ImportInterface
      * @return self Instance of the class
      */
     public function withLogger(iLogger $logger): self;
+
+    /**
+     * Set User Context
+     *
+     * @param UserContext $userContext User Context
+     *
+     * @return self
+     */
+    public function withUserContext(UserContext $userContext): self;
 
     /**
      * Compute the play state for each backend.

@@ -14,6 +14,7 @@ use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\Import\ReadOnlyMapper;
@@ -275,12 +276,13 @@ return (function (): array {
         ],
 
         iImport::class => [
-            'class' => function (iImport $mapper): iImport {
-                return $mapper;
-            },
-            'args' => [
-                MemoryMapper::class
-            ],
+            'class' => fn(iImport $mapper): iImport => $mapper,
+            'args' => [MemoryMapper::class],
+        ],
+
+        iEImport::class => [
+            'class' => fn(iEImport $mapper): iEImport => $mapper,
+            'args' => [MemoryMapper::class],
         ],
 
         EventDispatcherInterface::class => [

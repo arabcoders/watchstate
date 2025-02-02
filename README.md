@@ -9,6 +9,12 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-02-02
+
+We are happy to announce that we have merged in direct support for multi-user in `state:import` and `state:export`
+commands and tasks. Therefore, `state:sync` command has been removed. Once you generate the sub users configs. it will
+start working alongside the main user.
+
 ### 2025-02-01
 
 Breaking changes as of version 20250201~, in earlier versions, if you want to sync multi-user play state, you only had

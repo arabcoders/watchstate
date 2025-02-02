@@ -702,12 +702,19 @@ if (!function_exists('makeBackend')) {
             );
         }
 
+        if (null !== ($userContext = ag($options, UserContext::class, null))) {
+            assert($userContext instanceof UserContext);
+            $cache = Container::get(BackendCache::class)->with(adapter: $userContext->cache);
+        } else {
+            $cache = $options[BackendCache::class] ?? Container::get(BackendCache::class);
+        }
+
         return Container::getNew($class)->withContext(
             new Context(
                 clientName: $backendType,
                 backendName: $name ?? ag($backend, 'name', '??'),
                 backendUrl: new Uri(ag($backend, 'url')),
-                cache: $options[BackendCache::class] ?? Container::get(BackendCache::class),
+                cache: $cache,
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
@@ -1177,6 +1184,7 @@ if (false === function_exists('isValidURL')) {
      *
      * @return bool True if the URL is valid, false otherwise.
      * @SuppressWarnings
+     * @noinspection all
      */
     function isValidURL(string $url): bool
     {
@@ -2434,13 +2442,15 @@ if (!function_exists('getUsersContext')) {
      */
     function getUsersContext(iEImport $mapper, iLogger $logger, array $opts = []): array
     {
+        $dbOpts = ag($opts, iDB::class, []);
+
         $configs = [
             'main' => new UserContext(
                 name: 'main',
                 config: ConfigFile::open(Config::get('backends_file'), 'yaml'),
                 mapper: $mapper,
                 cache: Container::get(iCache::class),
-                db: Container::get(iDB::class),
+                db: Container::get(iDB::class)->setOptions($dbOpts),
             )
         ];
 
@@ -2485,6 +2495,9 @@ if (!function_exists('getUsersContext')) {
             $userName = $dir->getBasename();
             $perUserCache = perUserCacheAdapter($userName);
             $db = perUserDb($userName);
+            if (count($dbOpts) > 0) {
+                $db->setOptions($dbOpts);
+            }
 
             $mapper = $mapper->withDB($db)
                 ->withCache($perUserCache)

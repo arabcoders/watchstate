@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Commands\State;
 
-use App\Backends\Common\Cache as BackendCache;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
@@ -295,8 +293,8 @@ class BackupCommand extends Command
             }
 
             $backend['options'] = $opts;
-            $backend['class'] = makeBackend($backend, $name, [
-                BackendCache::class => Container::get(BackendCache::class)->with(adapter: $userContext->cache),
+            $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                UserContext::class => $userContext,
             ])->setLogger($this->logger);
 
             $this->logger->notice("SYSTEM: Backing up '{user}@{backend}' play state.", [
@@ -410,8 +408,8 @@ class BackupCommand extends Command
         ]);
     }
 
-    private function in_array(array $haystack, string $needle): bool
+    private function in_array(array $list, string $search): bool
     {
-        return array_any($haystack, fn($item) => str_starts_with($item, $needle));
+        return array_any($list, fn($item) => str_starts_with($search, $item));
     }
 }

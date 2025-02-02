@@ -4,22 +4,24 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
 use App\Libs\Exceptions\Backends\NotImplementedException;
 use App\Libs\Exceptions\Backends\UnexpectedVersionException;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\UserContext;
 use App\Model\Events\EventListener;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
-use App\Libs\ConfigFile;
-use App\Backends\Common\Cache as BackendCache;
 
 #[EventListener(self::NAME)]
 final readonly class ProcessProgressEvent
@@ -31,8 +33,12 @@ final readonly class ProcessProgressEvent
      *
      * @param iLogger $logger The logger object.
      */
-    public function __construct(private iLogger $logger, private iDB $db, private QueueRequests $queue)
-    {
+    public function __construct(
+        #[Inject(DirectMapper::class)]
+        private iEImport $mapper,
+        private iLogger $logger,
+        private QueueRequests $queue
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
     }
@@ -43,74 +49,77 @@ final readonly class ProcessProgressEvent
             $e->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
         };
-
         $e->stopPropagation();
+
+        $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
+
+        try {
+            $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
+        } catch (RuntimeException $ex) {
+            $writer(Level::Error, $ex->getMessage());
+            return $e;
+        }
 
         $options = $e->getOptions();
 
-        if (null !== ($altName = ag($options, Options::ALT_NAME))) {
-            $db = perUserDb($altName);
-            $writer(Level::Info, "Using alternate user '{name}' config for this event.", ['name' => $altName]);
-        } else {
-            $db = $this->db;
-        }
-
-        if (null === ($item = $db->get(Container::get(iState::class)::fromArray($e->getData())))) {
-            $writer(Level::Error, "Item '{id}' Is not referenced locally yet.", ['id' => ag($e->getData(), 'id', '?')]);
+        if (null === ($item = $userContext->db->get(Container::get(iState::class)::fromArray($e->getData())))) {
+            $writer(Level::Error, "'{user}' item '{id}' is not referenced locally yet.", [
+                'user' => $userContext->name,
+                'id' => ag($e->getData(), 'id', '?'),
+            ]);
             return $e;
         }
 
         if ($item->isWatched()) {
-            $writer(Level::Info, "Item '{id}: {title}' is marked as watched. Not updating watch process.", [
+            $writer(Level::Info, "'{user}' item - '{id}: {title}' is marked as watched. Not updating watch process.", [
                 'id' => $item->id,
-                'title' => $item->getName()
+                'title' => $item->getName(),
+                'user' => $userContext->name,
             ]);
             return $e;
         }
 
         if (false === $item->hasPlayProgress()) {
-            $writer(Level::Info, "Item '{title}' has no watch progress to export.", ['title' => $item->title]);
+            $writer(Level::Info, "'{user}' item '{title}' has no watch progress to export.", [
+                'title' => $item->title,
+                'user' => $userContext->name,
+            ]);
             return $e;
         }
 
         $list = [];
 
-        $configFile = $altName ? perUserConfig($altName) : ConfigFile::open(Config::get('backends_file'), 'yaml');
-        $configFile->setLogger($this->logger);
-        $cache = Container::get(BackendCache::class);
-        if (null !== $altName) {
-            $perUserCache = perUserCacheAdapter($altName);
-            $cache = $cache->with(adapter: $perUserCache);
-        }
-
         $supported = Config::get('supported', []);
 
-        foreach ($configFile->getAll() as $backendName => $backend) {
+        foreach ($userContext->config->getAll() as $backendName => $backend) {
             $type = strtolower(ag($backend, 'type', 'unknown'));
 
             if (true !== (bool)ag($backend, 'export.enabled')) {
-                $writer(Level::Notice, "Export to '{backend}' is disabled by user.", [
-                    'backend' => $backendName
+                $writer(Level::Notice, "Ignoring '{user}@{backend}'. Export is disabled.", [
+                    'backend' => $backendName,
+                    'user' => $userContext->name,
                 ]);
                 continue;
             }
 
             if (!isset($supported[$type])) {
-                $writer(Level::Error, "The backend '{backend}' is using invalid type '{type}'.", [
+                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid type '{type}'.", [
                     'type' => $type,
                     'backend' => $backendName,
                     'condition' => [
                         'expected' => implode(', ', array_keys($supported)),
                         'given' => $type,
                     ],
+                    'user' => $userContext->name,
                 ]);
                 continue;
             }
 
             if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $writer(Level::Error, "The backend '{backend}' URL is invalid.", [
+                $writer(Level::Error, "Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
                     'backend' => $backendName,
                     'url' => $url ?? 'None',
+                    'user' => $userContext->name,
                 ]);
                 continue;
             }
@@ -120,7 +129,7 @@ final readonly class ProcessProgressEvent
         }
 
         if (empty($list)) {
-            $writer(Level::Error, 'There are no backends with export enabled.');
+            $writer(Level::Error, 'There are no backends to send the events to.');
             return $e;
         }
 
@@ -141,15 +150,16 @@ final readonly class ProcessProgressEvent
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = getBackend(name: $name, config: $backend, configFile: $configFile, options: [
-                    BackendCache::class => $cache
+                $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                    UserContext::class => $userContext,
                 ]);
                 $backend['class']->progress(entities: [$item->id => $item], queue: $this->queue);
-            } catch (UnexpectedVersionException | NotImplementedException $e) {
+            } catch (UnexpectedVersionException|NotImplementedException $e) {
                 $writer(
                     Level::Notice,
-                    "This feature is not available for '{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "This feature is not available for '{user}@{backend}'. '{error.message}' at '{error.file}:{error.line}'.",
                     [
+                        'user' => $userContext->name,
                         'backend' => $name,
                         'error' => [
                             'kind' => $e::class,
@@ -169,8 +179,9 @@ final readonly class ProcessProgressEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{backend}' request to sync progress. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to sync progress. '{error.message}' at '{error.file}:{error.line}'.",
                     [
+                        'user' => $userContext->name,
                         'backend' => $name,
                         'error' => [
                             'kind' => $e::class,
@@ -181,7 +192,7 @@ final readonly class ProcessProgressEvent
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
-                            'kind' => get_class($e),
+                            'kind' => $e::class,
                             'message' => $e->getMessage(),
                             'trace' => $e->getTrace(),
                         ],
@@ -193,13 +204,14 @@ final readonly class ProcessProgressEvent
         unset($backend);
 
         if (count($this->queue) < 1) {
-            $writer(Level::Notice, "Backend handlers didn't queue items to be updated.");
+            $writer(Level::Notice, "Backend clients didn't queue items to be updated.");
             return $e;
         }
 
         $progress = formatDuration($item->getPlayProgress());
 
-        $writer(Level::Notice, "Processing '{id}' - '{via}: {title}' watch progress '{progress}' event.", [
+        $writer(Level::Notice, "Processing '{user}' - '{id}' - '{via}: {title}' watch progress '{progress}' event.", [
+            'user' => $userContext->name,
             'id' => $item->id,
             'via' => $item->via,
             'title' => $item->getName(),
@@ -208,10 +220,11 @@ final readonly class ProcessProgressEvent
 
         foreach ($this->queue->getQueue() as $response) {
             $context = ag($response->getInfo('user_data'), 'context', []);
+            $context['user'] = $userContext->name;
 
             try {
                 if (ag($options, 'trace')) {
-                    $writer(Level::Debug, "Processing '{backend}: {item.title}' response.", [
+                    $writer(Level::Debug, "Processing '{user}@{backend}: {item.title}' response.", [
                         'url' => ag($context, 'remote.url', '??'),
                         'status_code' => $response->getStatusCode(),
                         'headers' => $response->getHeaders(false),
@@ -223,7 +236,7 @@ final readonly class ProcessProgressEvent
                 if (!in_array($response->getStatusCode(), [Status::OK->value, Status::NO_CONTENT->value])) {
                     $writer(
                         Level::Error,
-                        "Request to change '{backend}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
+                        "Request to change '{user}@{backend}: {item.title}' watch progress returned with unexpected '{status_code}' status code.",
                         [
                             'status_code' => $response->getStatusCode(),
                             ...$context
@@ -232,7 +245,7 @@ final readonly class ProcessProgressEvent
                     continue;
                 }
 
-                $writer(Level::Notice, "Updated '{backend}: {item.title}' watch progress to '{progress}'.", [
+                $writer(Level::Notice, "Updated '{user}@{backend}: {item.title}' watch progress to '{progress}'.", [
                     ...$context,
                     'progress' => $progress,
                     'status_code' => $response->getStatusCode(),
@@ -240,7 +253,7 @@ final readonly class ProcessProgressEvent
             } catch (Throwable $e) {
                 $writer(
                     Level::Error,
-                    "Exception '{error.kind}' was thrown unhandled during '{backend}' request to change watch progress of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{user}@{backend}' request to change watch progress of {item.type} '{item.title}'. '{error.message}' at '{error.file}:{error.line}'.",
                     [
                         'error' => [
                             'kind' => $e::class,
