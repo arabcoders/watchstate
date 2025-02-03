@@ -193,7 +193,7 @@ jobs:
 
       - name: Generate Changelog
         run: |
-          python container/make_changelog.py . --changelog_path ./CHANGELOG.md --branch_name $BRANCH_NAME
+          python container/make_changelog.py --repo_path . --changelog_path ./CHANGELOG.md --branch_name $BRANCH_NAME
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
