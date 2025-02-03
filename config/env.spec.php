@@ -167,11 +167,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_PUSH_ENABLED',
-            'description' => 'Enable Push play state to backends. This feature depends on webhooks being enabled.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_PROFILER_COLLECTOR',
             'description' => 'The XHProf data collector URL to send the profiler data to.',
             'type' => 'string',
@@ -211,7 +206,7 @@ return (function () {
     };
 
     // -- Do not forget to update the tasks list if you add a new task.
-    $tasks = ['import', 'export', 'backup', 'prune', 'indexes', 'sync'];
+    $tasks = ['import', 'export', 'backup', 'prune', 'indexes'];
     $task_env = [
         [
             'key' => 'WS_CRON_{TASK}',

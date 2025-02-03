@@ -45,18 +45,17 @@ trait APITraits
             throw new RuntimeException(r("Backend '{backend}' doesn't exists.", ['backend' => $name]), 1000);
         }
 
+        $opts = [];
         $default = $configFile->get($name);
         $default['name'] = $name;
 
         if (null !== $userContext) {
-            $opts = ag($default, 'options', []);
             $opts[BackendCache::class] = Container::get(BackendCache::class)->with(
                 adapter: $userContext->cache
             );
-            $default['options'] = $opts;
         }
 
-        return makeBackend(array_replace_recursive($default, $config), $name);
+        return makeBackend(array_replace_recursive($default, $config), $name, options: $opts);
     }
 
     /**

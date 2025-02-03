@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
-use App\Backends\Common\Cache as BackendCache;
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Config;
 use App\Libs\Container;
@@ -16,6 +15,7 @@ use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use App\Libs\UserContext;
 use App\Model\Events\EventListener;
 use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
@@ -129,10 +129,8 @@ final readonly class ProcessPushEvent
                 }
 
                 $backend['options'] = $opts;
-                $backend['class'] = makeBackend($backend, $name, [
-                    BackendCache::class => Container::get(BackendCache::class)->with(
-                        adapter: $userContext->cache
-                    )
+                $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                    UserContext::class => $userContext,
                 ]);
                 $backend['class']->push(entities: [$item->id => $item], queue: $this->queue);
             } catch (Throwable $e) {

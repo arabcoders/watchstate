@@ -7,19 +7,21 @@ namespace App\Commands\State;
 use App\Command;
 use App\Commands\Backend\Library\UnmatchedCommand;
 use App\Commands\Config\EditCommand;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\Container;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Stream;
+use App\Libs\UserContext;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Helper\Table;
@@ -45,13 +47,14 @@ class ImportCommand extends Command
     /**
      * Class Constructor.
      *
-     * @param iDB $db The database interface object.
-     * @param iImport $mapper The import interface object.
+     * @param iEImport $mapper The import interface object.
      * @param iLogger $logger The logger interface object.
+     * @param LogSuppressor $suppressor The log suppressor object.
+     *
      */
     public function __construct(
-        private iDB $db,
-        private iImport $mapper,
+        #[Inject(MemoryMapper::class)]
+        private iEImport $mapper,
         private iLogger $logger,
         private LogSuppressor $suppressor
     ) {
@@ -71,6 +74,7 @@ class ImportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Import this specific user data. Default all users.')
             ->addOption(
                 'select-backend',
                 's',
@@ -206,7 +210,7 @@ class ImportCommand extends Command
 
                     After that, do single backend export by using the following command:
 
-                    {cmd} <cmd>state:export</cmd> <flag>-vvifs</flag> <value>new_backend_name</value>
+                    {cmd} <cmd>state:export</cmd> <flag>-vv -ifs</flag> <value>new_backend_name</value>
 
                     Running this command will force full export your current database state to the selected backend. Once that done you can
                     turn on import from the new backend. by editing the backend setting:
@@ -253,16 +257,11 @@ class ImportCommand extends Command
             ]);
         }
 
-        $configFile = ConfigFile::open(Config::get('backends_file'), 'yaml');
-        $configFile->setLogger($this->logger);
+        if ($input->getOption('direct-mapper')) {
+            $this->mapper = Container::get(DirectMapper::class);
+        }
 
-        $list = [];
-
-        $selected = $input->getOption('select-backend');
-        $isCustom = !empty($selected) && count($selected) > 0;
-        $supported = Config::get('supported', []);
-
-        $mapperOpts = [];
+        $mapperOpts = $dbOpts = [];
 
         if ($input->getOption('dry-run')) {
             $this->logger->notice('Dry run mode. No changes will be committed.');
@@ -271,266 +270,327 @@ class ImportCommand extends Command
 
         if ($input->getOption('trace')) {
             $mapperOpts[Options::DEBUG_TRACE] = true;
-            $this->db->setOptions(options: [Options::DEBUG_TRACE => true]);
+            $dbOpts[Options::DEBUG_TRACE] = true;
         }
 
         if ($input->getOption('always-update-metadata')) {
             $mapperOpts[Options::MAPPER_ALWAYS_UPDATE_META] = true;
         }
 
-        if ($input->getOption('direct-mapper')) {
-            $this->mapper = Container::get(DirectMapper::class);
+        $this->mapper->setOptions($mapperOpts);
+
+        $users = getUsersContext(mapper: $this->mapper, logger: $this->logger, opts: [
+            DatabaseInterface::class => $dbOpts,
+        ]);
+        if (null !== ($user = $input->getOption('user'))) {
+            $users = array_filter($users, fn($k) => $k === $user, mode: ARRAY_FILTER_USE_KEY);
+            if (empty($users)) {
+                $output->writeln(r("<error>User '{user}' not found.</error>", ['user' => $user]));
+                return self::FAILURE;
+            }
         }
 
-        if (!empty($mapperOpts)) {
-            $this->mapper->setOptions(options: $mapperOpts);
-        }
+        $selected = $input->getOption('select-backend');
+        $isCustom = !empty($selected) && count($selected) > 0;
+        $supported = Config::get('supported', []);
 
-        foreach ($configFile->getAll() as $backendName => $backend) {
-            $type = strtolower(ag($backend, 'type', 'unknown'));
-            $metadata = false;
+        foreach ($users as $userContext) {
+            $list = [];
+            $userStart = microtime(true);
 
-            if ($isCustom && $input->getOption('exclude') === in_array($backendName, $selected)) {
-                $this->logger->info("SYSTEM: Ignoring '{backend}' as requested by [-s, --select-backend].", [
-                    'backend' => $backendName
-                ]);
-                continue;
-            }
+            $this->logger->notice("SYSTEM: Importing '{user}' play states.", [
+                'user' => $userContext->name,
+                'backends' => join(', ', array_keys($list)),
+            ]);
 
-            // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
-            if (true === (bool)ag($backend, 'import.enabled')) {
-                if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                    $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
-                }
-            }
+            foreach ($userContext->config->getAll() as $backendName => $backend) {
+                $type = strtolower(ag($backend, 'type', 'unknown'));
+                $metadata = false;
 
-            if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                $metadata = true;
-            }
-
-            if (true === $input->getOption('metadata-only')) {
-                $metadata = true;
-            }
-
-            if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
-                if ($isCustom) {
-                    $this->logger->warning("SYSTEM: Importing from import disabled backend '{backend}' as requested.", [
-                        'backend' => $backendName
-                    ]);
-                } else {
-                    $this->logger->info("SYSTEM: Ignoring '{backend}' as the backend has import disabled.", [
+                if ($isCustom && $input->getOption('exclude') === $this->in_array($selected, $backendName)) {
+                    $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. as requested.", [
+                        'user' => $userContext->name,
                         'backend' => $backendName
                     ]);
                     continue;
                 }
-            }
 
-            if (!isset($supported[$type])) {
-                $this->logger->error(
-                    "SYSTEM: Ignoring '{backend}' due to unexpected type '{type}'. Expecting '{types}'.",
-                    [
+                // -- sanity check in case user has both import.enabled and options.IMPORT_METADATA_ONLY enabled.
+                if (true === (bool)ag($backend, 'import.enabled')) {
+                    if (true === ag_exists($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                        $backend = ag_delete($backend, 'options.' . Options::IMPORT_METADATA_ONLY);
+                    }
+                }
+
+                if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                    $metadata = true;
+                }
+
+                if (true === $input->getOption('metadata-only')) {
+                    $metadata = true;
+                }
+
+                if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
+                    if ($isCustom) {
+                        $this->logger->warning(
+                            "SYSTEM: Importing from import disabled '{user}@{backend}' As requested.",
+                            [
+                                'user' => $userContext->name,
+                                'backend' => $backendName
+                            ]
+                        );
+                    } else {
+                        $this->logger->info("SYSTEM: Ignoring '{user}@{backend}'. Import disabled.", [
+                            'user' => $userContext->name,
+                            'backend' => $backendName
+                        ]);
+                        continue;
+                    }
+                }
+
+                if (!isset($supported[$type])) {
+                    $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
+                        'user' => $userContext->name,
                         'type' => $type,
                         'backend' => $backendName,
                         'types' => implode(', ', array_keys($supported)),
-                    ]
+                    ]);
+                    continue;
+                }
+
+                if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
+                    $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Invalid URL '{url}'.", [
+                        'user' => $userContext->name,
+                        'url' => $url ?? 'None',
+                        'backend' => $backendName,
+                    ]);
+                    continue;
+                }
+
+                $backend['name'] = $backendName;
+                $list[$backendName] = $backend;
+            }
+
+            if (empty($list)) {
+                $this->logger->warning(
+                    $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
                 );
                 continue;
             }
 
-            if (null === ($url = ag($backend, 'url')) || false === isValidURL($url)) {
-                $this->logger->error("SYSTEM: Ignoring '{backend}' due to invalid URL. '{url}'.", [
-                    'url' => $url ?? 'None',
-                    'backend' => $backendName,
-                ]);
-                continue;
-            }
+            /** @var array<array-key,ResponseInterface> $queue */
+            $queue = [];
 
-            $backend['name'] = $backendName;
-            $list[$backendName] = $backend;
-        }
-
-        if (empty($list)) {
-            $this->logger->warning(
-                $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
-            );
-            return self::FAILURE;
-        }
-
-        /** @var array<array-key,ResponseInterface> $queue */
-        $queue = [];
-
-        $this->logger->notice("Using WatchState Version - '{version}'.", ['version' => getAppVersion()]);
-
-        $this->logger->notice("SYSTEM: Preloading '{mapper}' data.", [
-            'mapper' => afterLast($this->mapper::class, '\\'),
-            'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
-            ],
-        ]);
-
-        $time = microtime(true);
-        $this->mapper->loadData();
-
-        $this->logger->notice("SYSTEM: Preloading '{mapper}' data completed in '{duration}s'.", [
-            'mapper' => afterLast($this->mapper::class, '\\'),
-            'duration' => round(microtime(true) - $time, 2),
-            'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
-            ],
-        ]);
-
-        foreach ($list as $name => &$backend) {
-            $metadata = false;
-            $opts = ag($backend, 'options', []);
-
-            if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
-                $opts[Options::IMPORT_METADATA_ONLY] = true;
-                $metadata = true;
-            }
-
-            if (true === $input->getOption('metadata-only')) {
-                $opts[Options::IMPORT_METADATA_ONLY] = true;
-                $metadata = true;
-            }
-
-            if ($input->getOption('trace')) {
-                $opts[Options::DEBUG_TRACE] = true;
-            }
-
-            if ($input->getOption('timeout')) {
-                $opts['client']['timeout'] = (float)$input->getOption('timeout');
-            }
-
-            $backend['options'] = $opts;
-            $backend['class'] = $this->getBackend($name, $backend);
-
-            $after = ag($backend, 'import.lastSync', null);
-
-            if (true === (bool)ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
-                $after = null;
-            }
-
-            if (null !== $after) {
-                $after = makeDate($after);
-            }
-
-            $this->logger->notice("SYSTEM: Importing '{backend}' {import_type} changes.", [
-                'backend' => $name,
-                'import_type' => true === $metadata ? 'metadata' : 'metadata & play state',
-                'since' => null === $after ? 'Beginning' : $after->format('Y-m-d H:i:s T'),
+            $this->logger->notice("SYSTEM: Preloading '{user}' '{mapper}' data. Memory: {memory.now}.", [
+                'user' => $userContext->name,
+                'mapper' => afterLast($userContext->mapper::class, '\\'),
+                'memory' => [
+                    'now' => getMemoryUsage(),
+                    'peak' => getPeakMemoryUsage(),
+                ],
             ]);
 
-            array_push($queue, ...$backend['class']->pull($this->mapper, $after));
+            $time = microtime(true);
+            $userContext->mapper->loadData();
 
-            $inDryMode = $this->mapper->inDryRunMode() || ag($backend, 'options.' . Options::DRY_RUN);
+            $this->logger->notice(
+                "SYSTEM: Preloading '{user}' '{mapper}' data completed in '{duration}s'. Memory: {memory.now}.",
+                [
+                    'user' => $userContext->name,
+                    'mapper' => afterLast($userContext->mapper::class, '\\'),
+                    'duration' => round(microtime(true) - $time, 4),
+                    'memory' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                ]
+            );
 
-            if (false === $inDryMode) {
-                if (true === (bool)Message::get("{$name}.has_errors")) {
-                    $this->logger->warning(
-                        "SYSTEM: Not updating '{backend}' import last sync date. There was errors recorded during the operation.",
-                        [
-                            'backend' => $name,
-                        ]
-                    );
-                } else {
-                    $configFile->set("{$name}.import.lastSync", time());
+            foreach ($list as $name => &$backend) {
+                $metadata = false;
+                $opts = ag($backend, 'options', []);
+
+                if (true === (bool)ag($backend, 'options.' . Options::IMPORT_METADATA_ONLY)) {
+                    $opts[Options::IMPORT_METADATA_ONLY] = true;
+                    $metadata = true;
+                }
+
+                if (true === $input->getOption('metadata-only')) {
+                    $opts[Options::IMPORT_METADATA_ONLY] = true;
+                    $metadata = true;
+                }
+
+                if ($input->getOption('trace')) {
+                    $opts[Options::DEBUG_TRACE] = true;
+                }
+
+                if ($input->getOption('timeout')) {
+                    $opts['client']['timeout'] = (float)$input->getOption('timeout');
+                }
+
+                $backend['options'] = $opts;
+                $backend['class'] = makeBackend(backend: $backend, name: $name, options: [
+                    UserContext::class => $userContext,
+                ]);
+
+                $after = ag($backend, 'import.lastSync', null);
+
+                if (true === (bool)ag($opts, Options::FORCE_FULL, false) || true === $input->getOption('force-full')) {
+                    $after = null;
+                }
+
+                if (null !== $after) {
+                    $after = makeDate($after);
+                }
+
+                $this->logger->notice("SYSTEM: Importing '{user}@{backend}' {import_type} changes.", [
+                    'user' => $userContext->name,
+                    'backend' => $name,
+                    'import_type' => true === $metadata ? 'metadata' : 'metadata & play state',
+                    'since' => null === $after ? 'Beginning' : (string)$after,
+                ]);
+
+                array_push($queue, ...$backend['class']->pull($userContext->mapper, $after));
+
+                $inDryMode = $userContext->mapper->inDryRunMode() || ag($backend, 'options.' . Options::DRY_RUN);
+
+                if (false === $inDryMode) {
+                    if (true === (bool)Message::get("{$name}.has_errors")) {
+                        $this->logger->warning(
+                            "SYSTEM: Not updating '{user}@{backend}' import last sync date. There was errors recorded during the operation.",
+                            [
+                                'user' => $userContext->name,
+                                'backend' => $name,
+                            ]
+                        );
+                    } else {
+                        $userContext->config->set("{$name}.import.lastSync", time());
+                    }
                 }
             }
-        }
 
-        unset($backend);
+            unset($backend);
 
-        $start = makeDate();
-        $this->logger->notice("SYSTEM: Waiting on '{total}' requests.", [
-            'total' => number_format(count($queue)),
-            'time' => [
-                'start' => $start,
-            ],
-            'memory' => [
-                'now' => getMemoryUsage(),
-                'peak' => getPeakMemoryUsage(),
-            ],
-        ]);
-
-        foreach ($queue as $_key => $response) {
-            $requestData = $response->getInfo('user_data');
-
-            try {
-                $requestData['ok']($response);
-            } catch (Throwable $e) {
-                $requestData['error']($e);
-            }
-
-            $queue[$_key] = null;
-
-            gc_collect_cycles();
-        }
-
-        $end = makeDate();
-
-        $this->logger->notice(
-            "SYSTEM: Completed waiting on '{total}' requests in '{time.duration}'s. Parsed '{responses.size}' of data.",
-            [
+            $start = makeDate();
+            $this->logger->notice("SYSTEM: Waiting on '{total}' requests for '{user}' backends.", [
+                'user' => $userContext->name,
                 'total' => number_format(count($queue)),
                 'time' => [
                     'start' => $start,
-                    'end' => $end,
-                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
                 ],
-                'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-                'responses' => [
-                    'size' => fsize((int)Message::get('response.size', 0)),
-                ],
-            ]
-        );
-
-        $queue = $requestData = null;
-
-        $total = count($this->mapper);
-
-        if ($total >= 1) {
-            $this->logger->notice("SYSTEM: Found '{total}' updated items.", [
-                'total' => $total,
                 'memory' => [
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
                 ],
             ]);
-        }
 
-        $operations = $this->mapper->commit();
+            foreach ($queue as $_key => $response) {
+                $requestData = $response->getInfo('user_data');
 
-        $a = [
-            [
-                'Type' => ucfirst(iState::TYPE_MOVIE),
-                'Added' => $operations[iState::TYPE_MOVIE]['added'] ?? '-',
-                'Updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? '-',
-                'Failed' => $operations[iState::TYPE_MOVIE]['failed'] ?? '-',
-            ],
-            new TableSeparator(),
-            [
-                'Type' => ucfirst(iState::TYPE_EPISODE),
-                'Added' => $operations[iState::TYPE_EPISODE]['added'] ?? '-',
-                'Updated' => $operations[iState::TYPE_EPISODE]['updated'] ?? '-',
-                'Failed' => $operations[iState::TYPE_EPISODE]['failed'] ?? '-',
-            ],
-        ];
+                try {
+                    $requestData['ok']($response);
+                } catch (Throwable $e) {
+                    $requestData['error']($e);
+                }
 
-        new Table($output)->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
+                $queue[$_key] = null;
 
-        if (false === $input->getOption('dry-run')) {
-            $configFile->persist();
-        }
+                gc_collect_cycles();
+            }
 
-        if ($input->getOption('show-messages')) {
-            $this->displayContent(Message::getAll(), $output, $input->getOption('output') === 'json' ? 'json' : 'yaml');
+            $end = makeDate();
+
+            $this->logger->notice(
+                "SYSTEM: Completed waiting on '{total}' requests in '{time.duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
+                [
+                    'user' => $userContext->name,
+                    'total' => number_format(count($queue)),
+                    'time' => [
+                        'start' => $start,
+                        'end' => $end,
+                        'duration' => $end->getTimestamp() - $start->getTimestamp(),
+                    ],
+                    'memory' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                    'responses' => [
+                        'size' => fsize((int)Message::get('response.size', 0)),
+                    ],
+                ]
+            );
+
+            $queue = $requestData = null;
+
+            $total = count($userContext->mapper);
+
+            if ($total >= 1) {
+                $this->logger->notice("SYSTEM: '{user}' Found '{total}' updated items.", [
+                    'user' => $userContext->name,
+                    'total' => $total,
+                    'memory' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                ]);
+            }
+
+            $operations = $userContext->mapper->commit();
+
+            $a = [
+                [
+                    'Type' => ucfirst(iState::TYPE_MOVIE),
+                    'Added' => $operations[iState::TYPE_MOVIE]['added'] ?? '-',
+                    'Updated' => $operations[iState::TYPE_MOVIE]['updated'] ?? '-',
+                    'Failed' => $operations[iState::TYPE_MOVIE]['failed'] ?? '-',
+                ],
+                new TableSeparator(),
+                [
+                    'Type' => ucfirst(iState::TYPE_EPISODE),
+                    'Added' => $operations[iState::TYPE_EPISODE]['added'] ?? '-',
+                    'Updated' => $operations[iState::TYPE_EPISODE]['updated'] ?? '-',
+                    'Failed' => $operations[iState::TYPE_EPISODE]['failed'] ?? '-',
+                ],
+            ];
+
+            Message::reset();
+            $userContext->mapper->reset();
+
+            $this->logger->info(
+                "SYSTEM: Importing '{user}' play states completed in '{duration}'s. Memory: {memory.now}.",
+                [
+                    'user' => $userContext->name,
+                    'backends' => join(', ', array_keys($list)),
+                    'duration' => round(microtime(true) - $userStart, 4),
+                    'memory' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                ]
+            );
+
+            $output->writeln('');
+            new Table($output)->setHeaders(array_keys($a[0]))->setStyle('box')->setRows(array_values($a))->render();
+            $output->writeln('');
+
+            if (false === $input->getOption('dry-run')) {
+                $userContext->config->persist();
+            }
+
+            if ($input->getOption('show-messages')) {
+                $this->displayContent(
+                    Message::getAll(),
+                    $output,
+                    $input->getOption('output') === 'json' ? 'json' : 'yaml'
+                );
+            }
         }
 
         return self::SUCCESS;
+    }
+
+    private function in_array(array $list, string $search): bool
+    {
+        return array_any($list, fn($item) => str_starts_with($search, $item));
     }
 }

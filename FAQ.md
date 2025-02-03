@@ -225,14 +225,7 @@ Now, to create the sub users configurations, you need to run `backend:create` co
 $ docker exec -ti watchstate console backend:create -v
 ```
 
-Once the configuration is created, You can start using the multi-user functionality. Start by enabling the `sync` task
-which is responsible for syncing the users play state and watch progress between the backends.
-
-To enable the task, you can do it via `WebUI > Tasks` page or via CLI by running the following command:
-
-```bash
-$ docker exec -ti watchstate console system:env -k WS_CRON_SYNC -e true
-```
+Once the sub users configuration is created, You can start using the multi-user functionality.
 
 If your users usernames are different between the backends, you can use the `mapper.yaml` file to map the users between
 the backends. For more information about the `mapper.yaml` file, please refer to
@@ -243,6 +236,7 @@ the [mapper.yaml](#whats-the-schema-for-the-mapperyaml-file) section.
 The schema is simple, it's a list of users in the following format:
 
 ```yaml
+# 1st user...
 -   my_plex_server:
         name: "mike_jones"
         options: { }
@@ -614,9 +608,10 @@ Those are some webhook limitations we discovered for the following media backend
 
 * Emby does not send webhooks events for newly added items.
   ~~[See feature request](https://emby.media/community/index.php?/topic/97889-new-content-notification-webhook/)~~
-  implemented in `4.7.9` still does not work as expected no metadata being sent when the item notification goes out.
-* Emby webhook test event does not contain data. To test if your setup works, play something or do mark an item as
-  played or unplayed you should see changes reflected in `docker exec -ti watchstate console db:list`.
+  implemented in `4.7.9` ~~still does not work as expected no metadata being sent when the item notification goes out.
+* Emby webhook test event does not contain data~~. It seems to have been fixed in `4.9.0.37+` To test if your setup
+  works, play something or do mark an item as played or unplayed you should see changes reflected in
+  `docker exec -ti watchstate console db:list`.
 
 #### Jellyfin
 

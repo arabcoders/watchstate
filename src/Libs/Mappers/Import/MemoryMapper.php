@@ -10,6 +10,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Mappers\ExtendedImportInterface;
 use App\Libs\Message;
 use App\Libs\Options;
+use App\Libs\UserContext;
 use App\Listeners\ProcessProgressEvent;
 use App\Model\Events\EventsTable;
 use DateTimeInterface as iDate;
@@ -58,6 +59,11 @@ class MemoryMapper implements ExtendedImportInterface
     protected array $options = [];
 
     protected bool $fullyLoaded = false;
+
+    /**
+     * @var UserContext|null The User Context
+     */
+    protected UserContext|null $userContext = null;
 
     /**
      * Class Constructor.
@@ -131,6 +137,16 @@ class MemoryMapper implements ExtendedImportInterface
     /**
      * @inheritdoc
      */
+    public function withUserContext(UserContext $userContext): static
+    {
+        $instance = clone $this;
+        $instance->userContext = $userContext;
+        return $instance;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function loadData(iDate|null $date = null): self
     {
         $this->fullyLoaded = null === $date;
@@ -146,11 +162,15 @@ class MemoryMapper implements ExtendedImportInterface
             $this->addPointers($this->objects[$pointer], $pointer);
         }
 
-        $this->logger->info("{mapper}: Preloaded '{pointers}' pointers, and '{objects}' objects into memory.", [
-            'mapper' => afterLast(self::class, '\\'),
-            'pointers' => number_format(count($this->pointers)),
-            'objects' => number_format(count($this->objects)),
-        ]);
+        $this->logger->info(
+            "{mapper}: '{user}' Preloaded '{pointers}' pointers, and '{objects}' objects into memory.",
+            [
+                'user' => $this->userContext?->name ?? 'main',
+                'mapper' => afterLast(self::class, '\\'),
+                'pointers' => number_format(count($this->pointers)),
+                'objects' => number_format(count($this->objects)),
+            ]
+        );
 
         return $this;
     }
@@ -169,8 +189,9 @@ class MemoryMapper implements ExtendedImportInterface
         if (true === (bool)ag($opts, Options::IMPORT_METADATA_ONLY)) {
             Message::increment("{$entity->via}.{$entity->type}.failed");
             $this->logger->notice(
-                "{mapper}: [N] Ignoring '{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
+                "{mapper}: [N] Ignoring '{user}@{backend}' '{title}'. Does not exist in database. And backend set as metadata source only.",
                 [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'metaOnly' => true,
                     'backend' => $entity->via,
@@ -210,7 +231,8 @@ class MemoryMapper implements ExtendedImportInterface
             ];
         }
 
-        $this->logger->notice("{mapper}: [N] '{backend}' added '{title}' as new item.", [
+        $this->logger->notice("{mapper}: [N] '{user}@{backend}' added '{title}' as new item.", [
+            'user' => $this->userContext?->name ?? 'main',
             'mapper' => afterLast(self::class, '\\'),
             'backend' => $entity->via,
             'title' => $entity->getName(),
@@ -248,7 +270,8 @@ class MemoryMapper implements ExtendedImportInterface
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
             if (count($changes) >= 1) {
-                $this->logger->notice("{mapper}: [T] '{backend}' updated '{title}' metadata.", [
+                $this->logger->notice("{mapper}: [T] '{user}@{backend}' updated '{title}' metadata.", [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -274,8 +297,9 @@ class MemoryMapper implements ExtendedImportInterface
             }
 
             $this->logger->notice(
-                "{mapper}: [T] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
+                "{mapper}: [T] '{user}@{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the following reason '{reasons}' it was not considered as valid state.",
                 [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $this->objects[$pointer]->id,
                     'backend' => $entity->via,
@@ -290,7 +314,8 @@ class MemoryMapper implements ExtendedImportInterface
         }
 
         if (true === $this->inTraceMode()) {
-            $this->logger->info("{mapper}: [T] '{backend}' '{title}' No metadata changes detected.", [
+            $this->logger->info("{mapper}: [T] '{user}@{backend}' '{title}' No metadata changes detected.", [
+                'user' => $this->userContext?->name ?? 'main',
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
@@ -320,7 +345,8 @@ class MemoryMapper implements ExtendedImportInterface
             );
 
             if (count($changes) >= 1) {
-                $this->logger->notice("{mapper}: [O] '{backend}' marked '{title}' as 'unplayed'.", [
+                $this->logger->notice("{mapper}: [O] '{user}@{backend}' marked '{title}' as 'unplayed'.", [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -362,8 +388,9 @@ class MemoryMapper implements ExtendedImportInterface
                     $this->objects[$pointer] = $this->objects[$pointer]->apply(entity: $entity, fields: $_keys);
 
                     $this->logger->notice(
-                        $progress ? "{mapper}: [O] '{backend}' updated '{title}' due to play progress change." : "{mapper}: [O] '{backend}' updated '{title}' metadata.",
+                        $progress ? "{mapper}: [O] '{user}@{backend}' updated '{title}' due to play progress change." : "{mapper}: [O] '{backend}' updated '{title}' metadata.",
                         [
+                            'user' => $this->userContext?->name ?? 'main',
                             'mapper' => afterLast(self::class, '\\'),
                             'id' => $cloned->id,
                             'backend' => $entity->via,
@@ -394,8 +421,9 @@ class MemoryMapper implements ExtendedImportInterface
         if ($entity->isWatched() !== $this->objects[$pointer]->isWatched()) {
             if ($this->inTraceMode()) {
                 $this->logger->debug(
-                    "{mapper}: [O] '{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
+                    "{mapper}: [O] '{user}@{backend}' item '{id}: {title}' is marked as '{state}' vs local state '{local_state}', However due to the remote item date '{remote_date}' being older than the last backend sync date '{local_date}'. it was not considered as valid state.",
                     [
+                        'user' => $this->userContext?->name ?? 'main',
                         'mapper' => afterLast(self::class, '\\'),
                         'id' => $this->objects[$pointer]->id,
                         'backend' => $entity->via,
@@ -411,7 +439,8 @@ class MemoryMapper implements ExtendedImportInterface
         }
 
         if ($this->inTraceMode()) {
-            $this->logger->debug("{mapper}: [O] Ignoring '{backend}' '{title}'. No changes detected.", [
+            $this->logger->debug("{mapper}: [O] Ignoring '{user}@{backend}' '{title}'. No changes detected.", [
+                'user' => $this->userContext?->name ?? 'main',
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
@@ -428,20 +457,25 @@ class MemoryMapper implements ExtendedImportInterface
     public function add(iState $entity, array $opts = []): self
     {
         if (false === $entity->hasGuids() && false === $entity->hasRelativeGuid()) {
-            $this->logger->warning("{mapper}: [O] Ignoring '{backend}' '{title}'. No valid/supported external ids.", [
-                'mapper' => afterLast(self::class, '\\'),
-                'id' => $entity->id,
-                'backend' => $entity->via,
-                'title' => $entity->getName(),
-            ]);
+            $this->logger->warning(
+                "{mapper}: [O] Ignoring '{user}@{backend}' '{title}'. No valid/supported external ids.",
+                [
+                    'user' => $this->userContext?->name ?? 'main',
+                    'mapper' => afterLast(self::class, '\\'),
+                    'id' => $entity->id,
+                    'backend' => $entity->via,
+                    'title' => $entity->getName(),
+                ]
+            );
             Message::increment("{$entity->via}.{$entity->type}.failed_no_guid");
             return $this;
         }
 
         if (true === $entity->isEpisode() && $entity->episode < 1) {
             $this->logger->warning(
-                "{mapper}: [N] Ignoring '{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
+                "{mapper}: [N] Ignoring '{user}@{backend}' '{id}: {title}'. Item was marked as episode but no episode number was provided.",
                 [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $entity->id ?? ag($entity->getMetadata($entity->via), iState::COLUMN_ID, ''),
                     'backend' => $entity->via,
@@ -489,7 +523,7 @@ class MemoryMapper implements ExtendedImportInterface
          * 3 - mark entity as tainted and re-process it.
          */
         if (true === $hasAfter && true === $cloned->isWatched() && false === $entity->isWatched()) {
-            $message = "{mapper}: [N] Watch state conflict detected in '{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
+            $message = "{mapper}: [N] Watch state conflict detected in '{user}@{backend}: {title}' '{new_state}' vs local state '{id}: {current_state}'.";
             $hasMeta = count($cloned->getMetadata($entity->via)) >= 1;
             $hasDate = $entity->updated === ag($cloned->getMetadata($entity->via), iState::COLUMN_META_DATA_PLAYED_AT);
 
@@ -500,6 +534,7 @@ class MemoryMapper implements ExtendedImportInterface
             }
 
             $this->logger->warning($message, [
+                'user' => $this->userContext?->name ?? 'main',
                 'mapper' => afterLast(self::class, '\\'),
                 'id' => $cloned->id,
                 'backend' => $entity->via,
@@ -538,14 +573,15 @@ class MemoryMapper implements ExtendedImportInterface
 
             $changes = $this->objects[$pointer]->diff(fields: $keys);
 
-            $message = "{mapper}: [N] '{backend}' Updated '{title}'.";
+            $message = "{mapper}: [N] '{user}@{backend}' Updated '{title}'.";
 
             if ($cloned->isWatched() !== $this->objects[$pointer]->isWatched()) {
-                $message = "{mapper}: '{backend}' Updated and marked '{id}: {title}' as '{state}'.";
+                $message = "{mapper}: '{user}@{backend}' Updated and marked '{id}: {title}' as '{state}'.";
             }
 
             if (count($changes) >= 1) {
                 $this->logger->notice($message, [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'id' => $cloned->id,
                     'backend' => $entity->via,
@@ -564,6 +600,7 @@ class MemoryMapper implements ExtendedImportInterface
             'id' => $cloned->id,
             'backend' => $entity->via,
             'title' => $cloned->getName(),
+            'user' => $this->userContext?->name ?? 'main',
         ];
 
         if (true === $this->inTraceMode()) {
@@ -574,7 +611,7 @@ class MemoryMapper implements ExtendedImportInterface
         }
 
         $this->logger->debug(
-            "{mapper}: [N] Ignoring '{backend}' '{title}'. Metadata & play state are identical.",
+            "{mapper}: [N] Ignoring '{user}@{backend}' '{title}'. Metadata & play state are identical.",
             $context
         );
 
@@ -636,7 +673,8 @@ class MemoryMapper implements ExtendedImportInterface
             $inDryRunMode = $this->inDryRunMode();
 
             if (true === $inDryRunMode) {
-                $this->logger->notice("{mapper}: Recorded '{total}' object changes.", [
+                $this->logger->notice("{mapper}: '{user}' Recorded '{total}' object changes.", [
+                    'user' => $this->userContext?->name ?? 'main',
                     'mapper' => afterLast(self::class, '\\'),
                     'total' => $count
                 ]);
@@ -661,8 +699,9 @@ class MemoryMapper implements ExtendedImportInterface
                     $list[$entity->type]['failed']++;
                     $this->logger->error(
                         ...lw(
-                            message: "{mapper}: Exception '{error.kind}' was thrown unhandled in {mode} '{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
+                            message: "{mapper}: Exception '{error.kind}' was thrown unhandled in {mode} '{user}@{backend}: {title}'. '{error.message}' at '{error.file}:{error.line}'.",
                             context: [
+                                'user' => $this->userContext?->name ?? 'main',
                                 'mapper' => afterLast(self::class, '\\'),
                                 'error' => [
                                     'kind' => $e::class,
@@ -691,9 +730,8 @@ class MemoryMapper implements ExtendedImportInterface
                         'unique' => true,
                     ];
 
-                    // -- make it possible to sync other users watch progress.
-                    if (null !== ($altName = ag($this->options, Options::ALT_NAME))) {
-                        $opts = ag_set($opts, EventsTable::COLUMN_OPTIONS . '.' . Options::ALT_NAME, $altName);
+                    if (null !== $this->userContext) {
+                        $opts = ag_set($opts, Options::CONTEXT_USER, $this->userContext->name);
                     }
 
                     foreach ($this->progressItems as $entity) {

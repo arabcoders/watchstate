@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\Import\MemoryMapper;
 use Psr\SimpleCache\CacheInterface as iCache;
 
 final class UserContext
 {
+    public readonly iEImport $mapper;
+
     /**
      * Make User Context.
      *
@@ -23,11 +27,13 @@ final class UserContext
     public function __construct(
         public readonly string $name,
         public readonly ConfigFile $config,
-        public readonly iEImport $mapper,
+        #[Inject(MemoryMapper::class)]
+        iEImport $mapper,
         public readonly iCache $cache,
         public readonly iDB $db,
         public array $data = [],
     ) {
+        $this->mapper = $mapper->withUserContext($this);
     }
 
     public function getBackendsNames(): string
