@@ -76,3 +76,40 @@ jobs:
           # (Optional) Clean up the worktree directory.
           cd ..
           rm -rf $WORKTREE_DIR
+
+      - name: Commit and Push to GitHub Pages
+        run: |
+          # Configure git with a name and email for the commit.
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          # Define a temporary directory for the gh-pages worktree.
+          WORKTREE_DIR=gh-pages-worktree
+
+          # If the gh-pages branch exists, remove any old worktree folder before adding a new one.
+          if git show-ref --verify --quiet refs/heads/gh-pages; then
+            [ -d "$WORKTREE_DIR" ] && rm -rf "$WORKTREE_DIR"
+            git worktree add "$WORKTREE_DIR" gh-pages
+          else
+            git worktree add -B gh-pages "$WORKTREE_DIR"
+          fi
+
+          # Change into the worktree directory.
+          cd "$WORKTREE_DIR"
+
+          # Update the worktree with remote changes to avoid non-fast-forward issues.
+          git pull --rebase origin gh-pages || true
+
+          # Copy the updated changelog file from the repository root (parent directory) into the worktree.
+          python .github/scripts/generate_changelog.py --repo_path . --changelog_path ./CHANGELOG-${BRANCH_NAME}.json --branch_name $BRANCH_NAME
+
+          # Stage and commit the changelog file.
+          git add CHANGELOG-${BRANCH_NAME}.json
+          git commit -m "Update Changelog for ${TAG_NAME}" || echo "No changes to commit"
+
+          # Push the changes to the remote gh-pages branch.
+          git push origin gh-pages
+
+          # Return to the repository root and clean up the worktree directory.
+          cd ..
+          rm -rf "$WORKTREE_DIR"
