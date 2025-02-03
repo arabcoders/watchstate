@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: [ 8.4 ]
+        php: [8.4]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -144,6 +144,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensure all commit history is available
 
       - uses: bahmutov/npm-install@v1
         with:
@@ -162,6 +164,36 @@ jobs:
           placeholder: "$(version_via_ci)"
           with_date: "true"
           with_branch: "true"
+
+      - name: Version tag
+        uses: arabcoders/action-python-autotagger@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repo_name: arabcoders/watchstate
+          path: config/config.php
+          regex: "'version'\\s\\=\\>\\s\\'(.+?)\\'\\,"
+
+      - name: Determine current branch
+        id: branch
+        run: |
+          echo "BRANCH_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install gitpython
+
+      - name: Generate Changelog
+        run: |
+          python container/make_changelog.py . --changelog_path ./CHANGELOG.md --branch_name $BRANCH_NAME
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -208,14 +240,6 @@ jobs:
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
-      - name: Version tag
-        uses: arabcoders/action-python-autotagger@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repo_name: arabcoders/watchstate
-          path: config/config.php
-          regex: "'version'\\s\\=\\>\\s\\'(.+?)\\'\\,"
-
   dockerhub-sync-readme:
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' && endsWith(github.ref, github.event.repository.default_branch)) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true')
@@ -242,7 +266,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # so we can see all tags + full history
+          fetch-depth: 0 # so we can see all tags + full history
 
       - name: Determine current branch
         id: branch
