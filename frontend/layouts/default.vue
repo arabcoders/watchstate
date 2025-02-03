@@ -330,7 +330,7 @@
           -
           <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'"/>
           -
-          <NuxtLink @click="loadFile = '/CHANGELOG.md'" v-text="'ChangeLog'"/>
+          <NuxtLink to="/changelog" v-text="'ChangeLog'"/>
         </div>
         <div class="column is-6 is-4-mobile has-text-right">
           {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
