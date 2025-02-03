@@ -67,6 +67,7 @@ final class Index
         $params = DataUtil::fromArray($request->getQueryParams());
         $limit = (int)$params->get('limit', 50);
         $limit = $limit < 1 ? 50 : $limit;
+        $regex = "/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:[+-][0-9]{2}:[0-9]{2}))\]/i";
 
         foreach (glob($path . '/*.*.log') as $file) {
             preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
@@ -97,7 +98,12 @@ final class Index
                     if (empty($line)) {
                         continue;
                     }
-                    $builder['lines'][] = $line;
+
+                    $match = preg_match($regex, $line, $matches);
+                    $builder['lines'][] = [
+                        'date' => 1 === $match ? $matches[1] : null,
+                        'text' => 1 === $match ? trim(preg_replace($regex, '', $line)) : $line,
+                    ];
                 }
             }
 

@@ -38,6 +38,7 @@ final class ServeStatic implements LoggerAwareInterface
         '/README.md' => __DIR__ . '/../../README.md',
         '/NEWS.md' => __DIR__ . '/../../NEWS.md',
         '/FAQ.md' => __DIR__ . '/../../FAQ.md',
+        '/CHANGELOG.md' => __DIR__ . '/../../CHANGELOG.md',
     ];
 
     private const array MD_IMAGES = [
