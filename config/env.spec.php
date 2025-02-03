@@ -167,11 +167,6 @@ return (function () {
             'type' => 'bool',
         ],
         [
-            'key' => 'WS_PUSH_ENABLED',
-            'description' => 'Enable Push play state to backends. This feature depends on webhooks being enabled.',
-            'type' => 'bool',
-        ],
-        [
             'key' => 'WS_PROFILER_COLLECTOR',
             'description' => 'The XHProf data collector URL to send the profiler data to.',
             'type' => 'string',

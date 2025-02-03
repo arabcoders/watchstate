@@ -74,10 +74,7 @@ return (function () {
             'header' => (string)env('WS_TRUST_HEADER', 'X-Forwarded-For'),
         ],
         'sync' => [
-            'progress' => (bool)env('WS_SYNC_PROGRESS', false),
-        ],
-        'push' => [
-            'enabled' => (bool)env('WS_PUSH_ENABLED', false),
+            'progress' => (bool)env('WS_SYNC_PROGRESS', true),
         ],
     ];
 

@@ -567,14 +567,6 @@ if (!function_exists('queuePush')) {
     {
         $logger = Container::get(iLogger::class);
 
-        if (false === (bool)Config::get('push.enabled', false)) {
-            $logger->debug("Push is disabled. Unable to push '{via}: {entity}'.", [
-                'via' => $entity->via,
-                'entity' => $entity->getName()
-            ]);
-            return;
-        }
-
         if (!$entity->id) {
             $logger->error("Unable to push event '{via}: {entity}'. It has no local id yet.", [
                 'via' => $entity->via,
