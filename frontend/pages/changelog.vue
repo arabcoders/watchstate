@@ -11,24 +11,28 @@
         </div>
       </div>
     </div>
-    <div class="column is-12" v-for="log in logs" :key="log.tag">
-      <h1 class="is-4">
-        <span class="icon-text">
-          <span class="icon"><i class="fas fa-code-branch"></i></span>
-          <span>
-            {{ log.tag }} <span class="subtitle" v-if="log.tag === api_version">Installed</span>
+    <div class="column is-12" v-for="(log, index) in logs" :key="log.tag">
+      <div class="content">
+        <h1 class="is-4">
+          <span class="icon-text">
+            <span class="icon"><i class="fas fa-code-branch"></i></span>
+            <span>
+              {{ log.tag }} <span class="subtitle" v-if="log.tag === api_version">Installed</span>
+            </span>
           </span>
-        </span>
-      </h1>
-      <ul>
-        <li v-for="commit in log.commits" :key="commit.sha">
-          <p>
-            <strong>{{ commit.message }}</strong>
-            <br>
-            <small>{{ commit.sha }} - {{ moment(commit.date).fromNow() }}</small>
-          </p>
-        </li>
-      </ul>
+        </h1>
+        <hr>
+        <ul>
+          <li v-for="commit in log.commits" :key="commit.sha">
+            <strong>{{ ucFirst(commit.message).replace(/\.$/, "") }}.</strong> -
+            <small>
+              <span class="has-tooltip" v-tooltip="`Date: ${commit.date}`">
+                {{ moment(commit.date).fromNow() }}
+              </span></small>
+          </li>
+        </ul>
+        <hr v-if="index < logs.length - 1">
+      </div>
     </div>
   </div>
 </template>
@@ -43,7 +47,8 @@ const logs = ref([]);
 const api_version = ref('master');
 
 const branch = computed(() => {
-  return String(api_version.value).split('-')[0] ?? 'master';
+  const branch = String(api_version.value).split('-')[0] ?? 'master';
+  return ['master', 'dev'].includes(branch) ? branch : 'dev';
 });
 
 const loadContent = async () => {

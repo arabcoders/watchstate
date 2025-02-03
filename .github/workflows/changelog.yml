@@ -35,17 +35,13 @@ jobs:
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
           echo "Detected Tag: $TAG_NAME on Branch: $BRANCH_NAME"
 
-      - name: Generate Changelog JSON
-        run: |
-          python .github/scripts/generate_changelog.py --repo_path . --changelog_path ./CHANGELOG-${BRANCH_NAME}.json --branch_name $BRANCH_NAME
-
       - name: Commit and Push to GitHub Pages
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git checkout gh-pages || git checkout --orphan gh-pages
           git pull origin gh-pages || true
-          mv CHANGELOG-*.json .
+          python .github/scripts/generate_changelog.py --repo_path . --changelog_path ./CHANGELOG-${BRANCH_NAME}.json --branch_name $BRANCH_NAME
           git add CHANGELOG-*.json
           git commit -m "Update Changelog for $TAG_NAME"
           git push origin gh-pages
