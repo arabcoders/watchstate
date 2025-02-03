@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "*"  # Trigger on any tag push
+  workflow_dispatch:  # Allows manual trigger of the workflow
 
 jobs:
   generate-changelog:
