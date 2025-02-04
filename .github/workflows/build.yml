@@ -41,7 +41,7 @@ on:
       - "master"
     paths-ignore:
       - "**.md"
-      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/**"
 
 env:
   DOCKERHUB_SLUG: arabcoders/watchstate
