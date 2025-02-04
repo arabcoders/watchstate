@@ -216,6 +216,54 @@ jobs:
           path: config/config.php
           regex: "'version'\\s\\=\\>\\s\\'(.+?)\\'\\,"
 
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install gitpython
+
+      - name: Get Branch Name from Tag
+        id: branch_name
+        run: |
+          TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "${TAG_NAME}" ]; then
+            TAG_NAME=$(git rev-parse --abbrev-ref HEAD)
+          fi
+          # Assume the tag (or branch name) is in the format "branch-something".
+          BRANCH_NAME=$(echo "${TAG_NAME}" | cut -d '-' -f1)
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+          echo "Detected Tag: ${TAG_NAME} on Branch: ${BRANCH_NAME}"
+
+      - name: Push CHANGELOG to gh-pages.
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          WORKTREE_DIR=gh-pages-worktree
+
+          if git show-ref --verify --quiet refs/heads/gh-pages; then
+            [ -d "$WORKTREE_DIR" ] && rm -rf "$WORKTREE_DIR"
+            git worktree add "$WORKTREE_DIR" gh-pages
+          else
+            git worktree add -B gh-pages "$WORKTREE_DIR"
+          fi
+
+          python .github/scripts/generate_changelog.py --repo_path . --changelog_path ./CHANGELOG-${BRANCH_NAME}.json --branch_name $BRANCH_NAME
+
+          cd "$WORKTREE_DIR"
+          git pull --rebase origin gh-pages || true
+          cp ../CHANGELOG-${BRANCH_NAME}.json .
+          git add CHANGELOG-${BRANCH_NAME}.json
+          git commit -m "Update Changelog for ${BRANCH_NAME}" || echo "No changes to commit"
+          git push origin gh-pages
+
+
   dockerhub-sync-readme:
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' && endsWith(github.ref, github.event.repository.default_branch)) || (github.event_name == 'workflow_dispatch' && github.event.inputs.update_readme == 'true')
