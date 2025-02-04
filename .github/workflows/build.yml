@@ -239,6 +239,9 @@ jobs:
           echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
           echo "Detected Tag: ${TAG_NAME} on Branch: ${BRANCH_NAME}"
 
+      - name: Disable Git ref logging
+        run: git config --global core.logAllRefUpdates false
+
       - name: Push CHANGELOG to gh-pages.
         run: |
           git config --global user.name "github-actions"
@@ -252,6 +255,10 @@ jobs:
           else
             git worktree add -B gh-pages "$WORKTREE_DIR"
           fi
+          
+          # (Optional) Fix file permissions on the remote ref log (Option 2)
+          # Uncomment the next line if you prefer to adjust permissions instead.
+          # sudo chmod -R a+rw ../.git/logs/refs/remotes/origin/gh-pages || true
 
           cd "$WORKTREE_DIR"
           git pull --rebase origin gh-pages || true
