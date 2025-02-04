@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250204-67c8575",
+        "date": "2025-02-04",
+        "commits": [
+            {
+                "sha": "67c8575",
+                "message": "Merge pull request #604 from arabcoders/dev\n\nUpdate external packages.",
+                "author": "Abdulmohsen",
+                "date": "2025-02-04"
+            }
+        ]
+    },
+    {
         "tag": "master-20250203-74e3822",
         "date": "2025-02-03",
         "commits": [
