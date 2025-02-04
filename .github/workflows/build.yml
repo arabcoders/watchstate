@@ -253,11 +253,9 @@ jobs:
             git worktree add -B gh-pages "$WORKTREE_DIR"
           fi
 
-          python .github/scripts/generate_changelog.py --repo_path . --changelog_path ./CHANGELOG-${BRANCH_NAME}.json --branch_name $BRANCH_NAME
-
           cd "$WORKTREE_DIR"
           git pull --rebase origin gh-pages || true
-          cp ../CHANGELOG-${BRANCH_NAME}.json .
+          python .github/scripts/generate_changelog.py --repo_path ../ --changelog_path ./CHANGELOG-${BRANCH_NAME}.json --branch_name $BRANCH_NAME
           git add CHANGELOG-${BRANCH_NAME}.json
           git commit -m "Update Changelog for ${BRANCH_NAME}" || echo "No changes to commit"
           git push origin gh-pages
