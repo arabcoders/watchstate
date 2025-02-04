@@ -283,7 +283,6 @@ final class Index
             $sql[] = 'WHERE ' . implode(' AND ', $where);
         }
 
-        syslog(LOG_DEBUG, json_encode($data->getAll()));
         $stmt = $db->prepare('SELECT COUNT(*) ' . implode(' ', array_map('trim', $sql)));
         $stmt->execute($params);
         $total = $stmt->fetchColumn();

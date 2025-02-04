@@ -20,7 +20,7 @@
         </button>
       </div>
 
-      <div class="navbar-menu" :class="{'is-active':showMenu}">
+      <div class="navbar-menu" :class="{ 'is-active': showMenu }">
         <div class="navbar-start" v-if="hasAPISettings">
           <NuxtLink class="navbar-item" to="/backends" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
@@ -30,7 +30,7 @@
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/history"
-                    @click.native="(e) => changeRoute(e,() => dEvent('history_main_link_clicked',{'clear':true}))">
+            @click.native="(e) => changeRoute(e, () => dEvent('history_main_link_clicked', { 'clear': true }))">
             <span class="icon-text">
               <span class="icon"><i class="fas fa-history"></i></span>
               <span>History</span>
@@ -130,16 +130,16 @@
 
           <div class="navbar-item">
             <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Light theme'"
-                    v-if="'auto' === selectedTheme" @click="selectTheme('light')">
-              <span class="icon has-text-warning"><i class="fas fa-sun"/></span>
+              v-if="'auto' === selectedTheme" @click="selectTheme('light')">
+              <span class="icon has-text-warning"><i class="fas fa-sun" /></span>
             </button>
             <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Dark theme'"
-                    v-if="'light' === selectedTheme" @click="selectTheme('dark')">
-              <span class="icon"><i class="fas fa-moon"/></span>
+              v-if="'light' === selectedTheme" @click="selectTheme('dark')">
+              <span class="icon"><i class="fas fa-moon" /></span>
             </button>
             <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to auto theme'"
-                    v-if="'dark' === selectedTheme" @click="selectTheme('auto')">
-              <span class="icon"><i class="fas fa-microchip"/></span>
+              v-if="'dark' === selectedTheme" @click="selectTheme('auto')">
+              <span class="icon"><i class="fas fa-microchip" /></span>
             </button>
           </div>
 
@@ -147,7 +147,7 @@
             <button class="button is-dark" @click="showTaskRunner = !showTaskRunner" v-tooltip="'Task Runner Status'">
               <span class="icon">
                 <i class="fas fa-microchip"
-                   :class="{ 'has-text-success': taskRunner.status, 'has-text-warning': !taskRunner.status}"></i>
+                  :class="{ 'has-text-success': taskRunner.status, 'has-text-warning': !taskRunner.status }"></i>
               </span>
             </button>
           </div>
@@ -186,12 +186,12 @@
                       <div class="field has-addons">
                         <div class="control is-expanded">
                           <input class="input" id="api_token" v-model="api_token" required placeholder="API Token..."
-                                 @keyup="api_status = false; api_response = ''"
-                                 :type="false === exposeToken ? 'password' : 'text'">
+                            @keyup="api_status = false; api_response = ''"
+                            :type="false === exposeToken ? 'password' : 'text'">
                         </div>
                         <div class="control">
                           <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                                  v-tooltip="'Show/Hide token'">
+                            v-tooltip="'Show/Hide token'">
                             <span class="icon" v-if="!exposeToken"><i class="fas fa-eye"></i></span>
                             <span class="icon" v-else><i class="fas fa-eye-slash"></i></span>
                           </button>
@@ -218,8 +218,7 @@
                     <div class="field">
                       <div class="control">
                         <input class="input" id="api_url" type="url" v-model="api_url" required
-                               placeholder="API URL... http://localhost:8081"
-                               @keyup="api_status = false; api_response = ''">
+                          placeholder="API URL... http://localhost:8081" @keyup="api_status = false; api_response = ''">
                         <p class="help">
                           Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
                         </p>
@@ -239,8 +238,7 @@
                     <div class="field">
                       <div class="control">
                         <input class="input" id="api_path" type="text" v-model="api_path" required
-                               placeholder="API Path... /v1/api"
-                               @keyup="api_status = false; api_response = ''">
+                          placeholder="API Path... /v1/api" @keyup="api_status = false; api_response = ''">
                         <p class="help">
                           Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API Path</a>.
                         </p>
@@ -255,7 +253,7 @@
                       <div class="field has-addons">
                         <div class="control is-expanded">
                           <input class="input" type="text" v-model="api_response" readonly disabled
-                                 :class="{'has-background-success': true===api_status,'has-background-warning': true!==api_status}">
+                            :class="{ 'has-background-success': true === api_status, 'has-background-warning': true !== api_status }">
                         </div>
                         <div class="control">
                           <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
@@ -283,16 +281,16 @@
         </div>
 
         <div class="column is-12 mt-2">
-          <Message title="Information" message_class="has-background-info-90 has-text-dark"
-                   icon="fas fa-info-circle">
+          <Message title="Information" message_class="has-background-info-90 has-text-dark" icon="fas fa-info-circle">
             <p>
               It's possible to automatically setup the API connection for this client and <strong
-                class="has-text-danger">ALL VISITORS</strong> by setting the following environment variable <code>WS_API_AUTO=true</code>
+                class="has-text-danger">ALL VISITORS</strong> by setting the following environment variable
+              <code>WS_API_AUTO=true</code>
               in <code>/config/.env</code> file. Understand that this option <strong class="has-text-danger">PUBLICLY
-              EXPOSES YOUR API TOKEN</strong> to <u>ALL VISITORS</u>. Anyone who is able to reach this page will be
+                EXPOSES YOUR API TOKEN</strong> to <u>ALL VISITORS</u>. Anyone who is able to reach this page will be
               granted access to your <code>WatchState API</code> which exposes your other media backends data including
               their secrets. <strong>this option is great security risk and SHOULD NEVER be used if
-              <code>WatchState</code> is exposed to the internet.</strong>
+                <code>WatchState</code> is exposed to the internet.</strong>
             </p>
 
             <p>Please visit
@@ -309,10 +307,10 @@
       </div>
 
       <div>
-        <TaskRunnerStatus v-if="showTaskRunner || false === taskRunner?.status"
-                          :status="taskRunner" @taskrunner_update="e => taskRunner = e"/>
-        <NuxtPage v-if="!showConnection && hasAPISettings"/>
-        <no-api v-if="!hasAPISettings"/>
+        <TaskRunnerStatus v-if="showTaskRunner || false === taskRunner?.status" :status="taskRunner"
+          @taskrunner_update="e => taskRunner = e" />
+        <NuxtPage v-if="!showConnection && hasAPISettings" />
+        <no-api v-if="!hasAPISettings" />
       </div>
 
       <div class="columns is-multiline is-mobile mt-3">
@@ -324,13 +322,13 @@
         </div>
 
         <div class="column is-6 is-9-mobile has-text-left">
-          <NuxtLink @click="loadFile = '/README.md'" v-text="'README'"/>
+          <NuxtLink @click="loadFile = '/README.md'" v-text="'README'" />
           -
-          <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'"/>
+          <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'" />
           -
-          <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'"/>
+          <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'" />
           -
-          <NuxtLink to="/changelog" v-text="'ChangeLog'"/>
+          <NuxtLink :to="changelog_url" v-text="'ChangeLog'" />
         </div>
         <div class="column is-6 is-4-mobile has-text-right">
           {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
@@ -339,7 +337,7 @@
 
       <template v-if="loadFile">
         <Overlay @closeOverlay="closeOverlay" :title="loadFile">
-          <Markdown :file="loadFile"/>
+          <Markdown :file="loadFile" />
         </Overlay>
       </template>
     </div>
@@ -347,11 +345,11 @@
 </template>
 
 <script setup>
-import {ref} from 'vue'
+import { ref } from 'vue'
 import 'assets/css/bulma.css'
 import 'assets/css/style.css'
 import 'assets/css/all.css'
-import {useStorage} from '@vueuse/core'
+import { useStorage } from '@vueuse/core'
 import request from '~/utils/request.js'
 import Markdown from '~/components/Markdown.vue'
 import TaskRunnerStatus from "~/components/TaskRunnerStatus.vue";
@@ -359,7 +357,7 @@ import TaskRunnerStatus from "~/components/TaskRunnerStatus.vue";
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
 const showConnection = ref(false)
 
-const taskRunner = ref({status: true, message: '', restartable: false})
+const taskRunner = ref({ status: true, message: '', restartable: false })
 const showTaskRunner = ref(false)
 
 const real_api_url = useStorage('api_url', window.location.origin)
@@ -373,6 +371,9 @@ const api_token = ref(toRaw(real_api_token.value))
 const api_status = ref(false)
 const api_response = ref('Status: Unknown')
 const api_version = ref()
+const changelog_url = ref('/changelog')
+
+watch(() => api_version.value, () => changelog_url.value = `/changelog?version=${api_version.value}`)
 
 const showMenu = ref(false)
 const exposeToken = ref(false)
@@ -520,7 +521,7 @@ const autoConfig = async () => {
       headers: {
         'Accept': 'application/json'
       },
-      body: JSON.stringify({'origin': window.location.origin})
+      body: JSON.stringify({ 'origin': window.location.origin })
     })
 
     const json = await response.json()
