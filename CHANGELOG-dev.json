@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250204-9127a89",
+        "tag": "dev-20250204-1252e71",
         "date": "2025-02-04",
         "commits": [
+            {
+                "sha": "1252e71",
+                "message": "minor fixes for changelog and getAppVersion",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            },
             {
                 "sha": "9127a89",
                 "message": "minor improvements on how we display changelog.",
