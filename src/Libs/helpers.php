@@ -788,17 +788,35 @@ if (!function_exists('getAppVersion')) {
         if ('$(version_via_ci)' === $version) {
             $gitDir = ROOT_PATH . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR;
 
-            if (is_dir($gitDir)) {
-                $cmdVersion = [
-                    'git --git-dir=%1$s describe --exact-match --tags',
-                    'git --git-dir=%1$s rev-parse --short HEAD',
-                ];
-                foreach ($cmdVersion as $cmd) {
-                    $proc = Process::fromShellCommandline(sprintf($cmd, escapeshellarg($gitDir)));
-                    $proc->run();
-                    if ($proc->isSuccessful()) {
-                        return trim(explode(PHP_EOL, $proc->getOutput())[0]);
-                    }
+            if (is_dir($gitDir) && is_executable('git')) {
+                try {
+                    // Get the current branch name.
+                    $cmdBranch = 'git --git-dir=%1$s rev-parse --abbrev-ref HEAD';
+                    $procBranch = Process::fromShellCommandline(sprintf($cmdBranch, escapeshellarg($gitDir)));
+                    $procBranch->run();
+                    $branch = $procBranch->isSuccessful() ? trim($procBranch->getOutput()) : 'unknown';
+
+                    // Get the short commit hash.
+                    $cmdCommit = 'git --git-dir=%1$s rev-parse --short HEAD';
+                    $procCommit = Process::fromShellCommandline(sprintf($cmdCommit, escapeshellarg($gitDir)));
+                    $procCommit->run();
+                    $commit = $procCommit->isSuccessful() ? trim($procCommit->getOutput()) : 'unknown';
+
+                    // Get the commit date (from HEAD) in YYYYMMDD format.
+                    // This uses "git show" with a custom date format.
+                    $cmdDate = 'git --git-dir=%1$s show -s --format=%cd --date=format:%Y%m%d HEAD';
+                    $procDate = Process::fromShellCommandline(sprintf($cmdDate, escapeshellarg($gitDir)));
+                    $procDate->run();
+                    $commitDate = $procDate->isSuccessful() ? trim($procDate->getOutput()) : date('Ymd');
+
+                    // Return the version in the format: branch-date-sha
+                    return r('{branch}-{date}-{commit}', [
+                        'branch' => $branch,
+                        'date' => $commitDate,
+                        'commit' => $commit,
+                    ]);
+                } catch (Throwable) {
+                    return $version;
                 }
             }
 
@@ -1707,13 +1725,11 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         switch (PHP_OS) {
-            case 'Linux':
-                {
+            case 'Linux': {
                     $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
                 }
                 break;
-            case 'WINNT':
-                {
+            case 'WINNT': {
                     // -- Windows does not have a /proc directory so we need different way to get the status.
                     @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
                     // -- windows doesn't return 0 if the process is not found. we need to parse the output.

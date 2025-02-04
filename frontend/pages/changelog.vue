@@ -37,17 +37,17 @@
   </div>
 </template>
 <script setup>
-import {notification} from '~/utils/index'
+import { notification } from '~/utils/index'
 import moment from 'moment'
 
-useHead({title: 'Change log'})
+useHead({ title: 'Change log' })
 
-const REPO_URL = "https://arabcoders.github.io/watchstate/CHANGELOG-{branch}.json";
+const REPO_URL = "https://arabcoders.github.io/watchstate/CHANGELOG-{branch}.json?version={version}";
 const logs = ref([]);
-const api_version = ref('master');
+const api_version = ref('dev');
 
 const branch = computed(() => {
-  const branch = String(api_version.value).split('-')[0] ?? 'master';
+  const branch = String(api_version.value).split('-')[0] ?? 'dev';
   return ['master', 'dev'].includes(branch) ? branch : 'dev';
 });
 
@@ -62,7 +62,7 @@ const loadContent = async () => {
   }
 
   try {
-    const changes = await fetch(r(REPO_URL, {branch: branch.value}));
+    const changes = await fetch(r(REPO_URL, { branch: branch.value, version: api_version.value }));
     logs.value = await changes.json();
   } catch (e) {
     console.error(e);
@@ -72,4 +72,3 @@ const loadContent = async () => {
 
 onMounted(() => loadContent());
 </script>
-
