@@ -34,8 +34,8 @@ def generate_changelog(repo_path, changelog_path, branch_name):
     tags = get_tags(repo, branch_name)
     changelog_data = []
 
-    # No tags: output an "Initial Release" entry covering the entire history.
     if not tags:
+        # No tags exist: output an "Initial Release" entry covering the entire history.
         start_commit = repo.commit(repo.git.rev_list("--max-parents=0", "HEAD"))
         commits = get_commits_between(repo, start_commit.hexsha, "HEAD")
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -53,24 +53,16 @@ def generate_changelog(repo_path, changelog_path, branch_name):
             }
             release_entry["commits"].append(commit_entry)
         changelog_data.append(release_entry)
-
     else:
-        # Process each pair of tags (newest tag down to the second oldest tag).
-        # This will output a changelog entry for each tag that has commits
-        # between it and the next tag.
+        # Process each pair of tags (newer tag and the one immediately older).
         for i in range(len(tags) - 1):
-            tag = tags[i]         # Newest tag in the pair.
-            next_tag = tags[i + 1]  # Older tag
-
-            # Retrieve commits between the older and newer tag.
-            commits = get_commits_between(repo, next_tag.commit.hexsha, tag.commit.hexsha)
-
+            newer_tag = tags[i]
+            older_tag = tags[i + 1]
+            commits = get_commits_between(repo, older_tag.commit.hexsha, newer_tag.commit.hexsha)
             if not commits:
                 continue
-
-            # Use the commit date of the tag for the release entry.
-            date_str = tag.commit.committed_datetime.strftime("%Y-%m-%d")
-            formatted_tag = format_tag(tag, branch_name)
+            date_str = newer_tag.commit.committed_datetime.isoformat()
+            formatted_tag = format_tag(newer_tag, branch_name)
             release_entry = {
                 "tag": formatted_tag,
                 "date": date_str,
@@ -81,14 +73,40 @@ def generate_changelog(repo_path, changelog_path, branch_name):
                     "sha": commit.hexsha[:7],
                     "message": commit.message.strip(),
                     "author": commit.author.name,
-                    "date": commit.committed_datetime.strftime("%Y-%m-%d")
+                    "date": commit.committed_datetime.isoformat()
                 }
                 release_entry["commits"].append(commit_entry)
             changelog_data.append(release_entry)
 
+        # If HEAD is ahead of the most recent tag, add a changelog entry for commits from the latest tag to HEAD.
+        head_commit = repo.head.commit
+        if head_commit.hexsha != tags[0].commit.hexsha:
+            commits = get_commits_between(repo, tags[0].commit.hexsha, head_commit.hexsha)
+            if commits:
+                date_str = head_commit.committed_datetime.isoformat()
+                # Generate a tag for HEAD using its commit info.
+                formatted_tag = f"{branch_name}-{head_commit.committed_datetime.strftime('%Y%m%d')}-{head_commit.hexsha[:7]}"
+                release_entry = {
+                    "tag": formatted_tag,
+                    "date": date_str,
+                    "commits": []
+                }
+                for commit in commits:
+                    commit_entry = {
+                        "sha": commit.hexsha[:7],
+                        "message": commit.message.strip(),
+                        "author": commit.author.name,
+                        "date": commit.committed_datetime.isoformat()
+                    }
+                    release_entry["commits"].append(commit_entry)
+                # Insert this entry at the beginning since it is the most recent.
+                changelog_data.insert(0, release_entry)
+
     # Write the changelog data as a JSON file.
     with open(changelog_path, "w", encoding="utf-8") as f:
         json.dump(changelog_data, f, indent=4)
+
+    #print(json.dumps(changelog_data))
 
 
 if __name__ == "__main__":
@@ -115,3 +133,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     generate_changelog(args.repo_path, args.changelog_path, args.branch_name)
+
