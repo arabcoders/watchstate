@@ -788,24 +788,24 @@ if (!function_exists('getAppVersion')) {
         if ('$(version_via_ci)' === $version) {
             $gitDir = ROOT_PATH . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR;
 
-            if (is_dir($gitDir) && is_executable('git')) {
+            if (is_dir($gitDir)) {
                 try {
                     // Get the current branch name.
-                    $cmdBranch = 'git --git-dir=%1$s rev-parse --abbrev-ref HEAD';
-                    $procBranch = Process::fromShellCommandline(sprintf($cmdBranch, escapeshellarg($gitDir)));
+                    $cmdBranch = 'git --git-dir={cwd} rev-parse --abbrev-ref HEAD';
+                    $procBranch = Process::fromShellCommandline(r($cmdBranch, ['cwd' => escapeshellarg($gitDir)]));
                     $procBranch->run();
                     $branch = $procBranch->isSuccessful() ? trim($procBranch->getOutput()) : 'unknown';
 
                     // Get the short commit hash.
-                    $cmdCommit = 'git --git-dir=%1$s rev-parse --short HEAD';
-                    $procCommit = Process::fromShellCommandline(sprintf($cmdCommit, escapeshellarg($gitDir)));
+                    $cmdCommit = 'git --git-dir={cwd} rev-parse --short HEAD';
+                    $procCommit = Process::fromShellCommandline(r($cmdCommit, ['cwd' => escapeshellarg($gitDir)]));
                     $procCommit->run();
                     $commit = $procCommit->isSuccessful() ? trim($procCommit->getOutput()) : 'unknown';
 
                     // Get the commit date (from HEAD) in YYYYMMDD format.
                     // This uses "git show" with a custom date format.
-                    $cmdDate = 'git --git-dir=%1$s show -s --format=%cd --date=format:%Y%m%d HEAD';
-                    $procDate = Process::fromShellCommandline(sprintf($cmdDate, escapeshellarg($gitDir)));
+                    $cmdDate = 'git --git-dir={cwd} show -s --format=%cd --date=format:%Y%m%d HEAD';
+                    $procDate = Process::fromShellCommandline(r($cmdDate, ['cwd' => escapeshellarg($gitDir)]));
                     $procDate->run();
                     $commitDate = $procDate->isSuccessful() ? trim($procDate->getOutput()) : date('Ymd');
 
@@ -816,7 +816,7 @@ if (!function_exists('getAppVersion')) {
                         'commit' => $commit,
                     ]);
                 } catch (Throwable) {
-                    return $version;
+                    return 'dev-master';
                 }
             }
 

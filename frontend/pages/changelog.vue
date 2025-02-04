@@ -17,7 +17,7 @@
           <span class="icon-text">
             <span class="icon"><i class="fas fa-code-branch"></i></span>
             <span>
-              {{ log.tag }} <span class="subtitle" v-if="log.tag === api_version">Installed</span>
+              {{ log.tag }} <span class="subtitle has-text-success" v-if="log.tag === api_version">Installed</span>
             </span>
           </span>
         </h1>
@@ -26,9 +26,12 @@
           <li v-for="commit in log.commits" :key="commit.sha">
             <strong>{{ ucFirst(commit.message).replace(/\.$/, "") }}.</strong> -
             <small>
-              <span class="has-tooltip" v-tooltip="`Date: ${commit.date}`">
-                {{ moment(commit.date).fromNow() }}
-              </span></small>
+              <NuxtLink :to="`https://github.com/arabcoders/watchstate/commit/${commit.sha}`" target="_blank">
+                <span class="has-tooltip" v-tooltip="`SHA: ${commit.sha} - Date: ${commit.date}`">
+                  {{ moment(commit.date).fromNow() }}
+                </span>
+              </NuxtLink>
+            </small>
           </li>
         </ul>
         <hr v-if="index < logs.length - 1">
@@ -39,16 +42,17 @@
 <script setup>
 import { notification } from '~/utils/index'
 import moment from 'moment'
+import { NuxtLink } from '#components';
 
 useHead({ title: 'Change log' })
 
 const REPO_URL = "https://arabcoders.github.io/watchstate/CHANGELOG-{branch}.json?version={version}";
 const logs = ref([]);
-const api_version = ref('dev');
+const api_version = ref('master');
 
 const branch = computed(() => {
-  const branch = String(api_version.value).split('-')[0] ?? 'dev';
-  return ['master', 'dev'].includes(branch) ? branch : 'dev';
+  const branch = String(api_version.value).split('-')[0] ?? 'master';
+  return ['master', 'dev'].includes(branch) ? branch : 'master';
 });
 
 const loadContent = async () => {
