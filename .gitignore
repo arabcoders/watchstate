@@ -1,0 +1,7 @@
+/.idea/*
+/vendor/*
+/.env
+/.phpunit.result.cache
+/.vscode
+/frontend/exported/
+.phpactor.json
