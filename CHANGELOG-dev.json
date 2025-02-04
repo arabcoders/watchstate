@@ -1,8 +1,32 @@
 [
     {
-        "tag": "dev-20250204-2006bdb",
+        "tag": "master-20250204-617f278",
         "date": "2025-02-04",
         "commits": [
+            {
+                "sha": "5865d37",
+                "message": "update build",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            }
+        ]
+    },
+    {
+        "tag": "master-20250204-67c8575",
+        "date": "2025-02-04",
+        "commits": [
+            {
+                "sha": "89ab126",
+                "message": "fix python build",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            },
+            {
+                "sha": "f8f1967",
+                "message": "updated external packages.",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            },
             {
                 "sha": "2d776e1",
                 "message": "dont run pr-build-test on .github changes",
@@ -26,7 +50,13 @@
                 "message": "more github action changes.",
                 "author": "ArabCoders",
                 "date": "2025-02-03"
-            },
+            }
+        ]
+    },
+    {
+        "tag": "master-20250203-74e3822",
+        "date": "2025-02-03",
+        "commits": [
             {
                 "sha": "8ea02be",
                 "message": "no longer auto create release",
@@ -42,7 +72,7 @@
         ]
     },
     {
-        "tag": "dev-20250203-2ef4083",
+        "tag": "master-20250203-2ef4083",
         "date": "2025-02-03",
         "commits": [
             {
@@ -54,7 +84,7 @@
         ]
     },
     {
-        "tag": "dev-20250203-5d9d338",
+        "tag": "master-20250203-5d9d338",
         "date": "2025-02-03",
         "commits": [
             {
@@ -66,7 +96,7 @@
         ]
     },
     {
-        "tag": "dev-20250203-4982ef9",
+        "tag": "master-20250203-4982ef9",
         "date": "2025-02-03",
         "commits": [
             {
@@ -90,7 +120,7 @@
         ]
     },
     {
-        "tag": "dev-20250203-95f4154",
+        "tag": "master-20250203-95f4154",
         "date": "2025-02-03",
         "commits": [
             {
@@ -120,7 +150,7 @@
         ]
     },
     {
-        "tag": "dev-20250201-92e1f20",
+        "tag": "master-20250201-92e1f20",
         "date": "2025-02-01",
         "commits": [
             {
@@ -150,7 +180,7 @@
         ]
     },
     {
-        "tag": "dev-20250131-3a2f0af",
+        "tag": "master-20250131-3a2f0af",
         "date": "2025-01-31",
         "commits": [
             {
@@ -168,7 +198,7 @@
         ]
     },
     {
-        "tag": "dev-20250131-612ec4f",
+        "tag": "master-20250131-612ec4f",
         "date": "2025-01-31",
         "commits": [
             {
@@ -222,7 +252,7 @@
         ]
     },
     {
-        "tag": "dev-20250130-bdff9e2",
+        "tag": "master-20250130-bdff9e2",
         "date": "2025-01-31",
         "commits": [
             {
@@ -234,7 +264,7 @@
         ]
     },
     {
-        "tag": "dev-20250130-db10485",
+        "tag": "master-20250130-db10485",
         "date": "2025-01-30",
         "commits": [
             {
@@ -246,7 +276,7 @@
         ]
     },
     {
-        "tag": "dev-20250123-8c212c5",
+        "tag": "master-20250123-8c212c5",
         "date": "2025-01-24",
         "commits": [
             {
@@ -258,7 +288,7 @@
         ]
     },
     {
-        "tag": "dev-20250122-9fee1ca",
+        "tag": "master-20250122-9fee1ca",
         "date": "2025-01-22",
         "commits": [
             {
@@ -288,7 +318,7 @@
         ]
     },
     {
-        "tag": "dev-20250122-b347cc8",
+        "tag": "master-20250122-b347cc8",
         "date": "2025-01-22",
         "commits": [
             {
@@ -306,7 +336,7 @@
         ]
     },
     {
-        "tag": "dev-20250121-4144c65",
+        "tag": "master-20250121-4144c65",
         "date": "2025-01-21",
         "commits": [
             {
@@ -324,7 +354,7 @@
         ]
     },
     {
-        "tag": "dev-20250121-c50c9be",
+        "tag": "master-20250121-c50c9be",
         "date": "2025-01-21",
         "commits": [
             {
@@ -344,6 +374,66 @@
                 "message": "Clarify the SyncCommand limitation",
                 "author": "ArabCoders",
                 "date": "2025-01-20"
+            }
+        ]
+    },
+    {
+        "tag": "master-20250120-254c4e9",
+        "date": "2025-01-20",
+        "commits": [
+            {
+                "sha": "5f86569",
+                "message": "Update auto release.",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            },
+            {
+                "sha": "2f5afba",
+                "message": "Update auto release.",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            },
+            {
+                "sha": "807d88f",
+                "message": "Update auto release.",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            }
+        ]
+    },
+    {
+        "tag": "master-20250120-30594aa",
+        "date": "2025-01-20",
+        "commits": [
+            {
+                "sha": "06c35db",
+                "message": "make build work on manual dispatch as well",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            },
+            {
+                "sha": "5a80483",
+                "message": "fix permissions",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            },
+            {
+                "sha": "fa2410f",
+                "message": "re-enable dev builds",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            },
+            {
+                "sha": "9dd9cae",
+                "message": "test new tagging",
+                "author": "ArabCoders",
+                "date": "2025-01-20"
+            },
+            {
+                "sha": "8075fbb",
+                "message": "Fix release title.",
+                "author": "ArabCoders",
+                "date": "2025-01-18"
             }
         ]
     }
