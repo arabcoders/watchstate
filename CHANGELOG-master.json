@@ -1,8 +1,26 @@
 [
     {
-        "tag": "master-20250204-fe1e366",
+        "tag": "master-20250204-5715b39",
         "date": "2025-02-04",
         "commits": [
+            {
+                "sha": "1252e71",
+                "message": "minor fixes for changelog and getAppVersion",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            },
+            {
+                "sha": "9127a89",
+                "message": "minor improvements on how we display changelog.",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            },
+            {
+                "sha": "34906a3",
+                "message": "build the changelogs externally, it doesnt seems to want to work on github for some reason.",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            },
             {
                 "sha": "b602101",
                 "message": "disable reflog for CHANGELOG generation",
