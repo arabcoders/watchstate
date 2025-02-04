@@ -3593,12 +3593,12 @@
       "source": {
         "type": "git",
         "url": "https://github.com/Roave/SecurityAdvisories.git",
-        "reference": "b6841f6613aeea6dbf722ac1663e6409653873d5"
+        "reference": "4015f7fbd4aedd2ebe19143e26e9f64fafae8d88"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/b6841f6613aeea6dbf722ac1663e6409653873d5",
-        "reference": "b6841f6613aeea6dbf722ac1663e6409653873d5",
+        "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/4015f7fbd4aedd2ebe19143e26e9f64fafae8d88",
+        "reference": "4015f7fbd4aedd2ebe19143e26e9f64fafae8d88",
         "shasum": ""
       },
       "conflict": {
@@ -3697,6 +3697,7 @@
         "codeigniter4/framework": "<4.5.8",
         "codeigniter4/shield": "<1.0.0.0-beta8",
         "codiad/codiad": "<=2.8.4",
+        "components/jquery": ">=1.0.3,<3.5",
         "composer/composer": "<1.10.27|>=2,<2.2.24|>=2.3,<2.7.7",
         "concrete5/concrete5": "<9.3.4",
         "concrete5/core": "<8.5.8|>=9,<9.1",
@@ -4076,7 +4077,7 @@
         "phpmyfaq/phpmyfaq": "<3.2.5|==3.2.5|>=3.2.10,<=4.0.1",
         "phpoffice/common": "<0.2.9",
         "phpoffice/phpexcel": "<1.8.1",
-        "phpoffice/phpspreadsheet": "<1.29.8|>=2,<2.1.7|>=2.2,<2.3.6|>=3,<3.8",
+        "phpoffice/phpspreadsheet": "<1.29.9|>=2,<2.1.8|>=2.2,<2.3.7|>=3,<3.9",
         "phpseclib/phpseclib": "<2.0.47|>=3,<3.0.36",
         "phpservermon/phpservermon": "<3.6",
         "phpsysinfo/phpsysinfo": "<3.4.3",
@@ -4456,7 +4457,7 @@
           "type": "tidelift"
         }
       ],
-      "time": "2025-01-30T23:05:03+00:00"
+      "time": "2025-02-03T16:05:30+00:00"
     },
     {
       "name": "sebastian/cli-parser",
