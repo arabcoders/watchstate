@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250204-1252e71",
-        "date": "2025-02-04T15:11:21+00:00",
+        "tag": "dev-20250204-a246ca7",
+        "date": "2025-02-04T18:42:54+00:00",
+        "commits": [
+            {
+                "sha": "a246ca7",
+                "message": "Add initial support in webhooks for sub-users.",
+                "author": "ArabCoders",
+                "date": "2025-02-04T18:42:54+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250204-5715b39",
+        "date": "2025-02-04T16:05:13+00:00",
         "commits": [
             {
                 "sha": "1252e71",
