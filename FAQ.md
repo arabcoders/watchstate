@@ -479,14 +479,20 @@ $ docker exec -ti watchstate console system:env --list
 
 ### How to add webhooks?
 
-The Webhook URL is backend specific, the request path is `/v1/api/backend/[BACKEND_NAME]/webhook`,
-Where `[BACKEND_NAME]` is the name of the backend you want to add webhook for. Typically, the full URL
-is `http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`. Or simply go to the `WebUI > Backends` and click
+The Webhook URL is backend specific, the request path is `/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`,
+Where `[USER]` is the username for sub user or `main` for main user and `[BACKEND_NAME]` is the name of the backend you
+want to add webhook for. Typically, the full URL
+is `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`. Or simply go to the `WebUI > Backends` and
+click
 on `Copy Webhook URL`.
 
 > [!NOTE]
 > You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the
 > future. It has no effect except as pointer to the new method.
+
+> [!IMPORTANT]
+> As support more sub users expands, it's important to turn on `Webhook match user` for all backends to prevent
+> sub users from changing the main user watch state. in case of plex backend.
 
 -----
 
@@ -496,9 +502,10 @@ Go to your Manage Emby Server > Server > Webhooks > (Click Add Webhook)
 
 ##### Webhook/Notifications URL:
 
-`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`
+`http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[USER]` with the `main` for main user or the sub user username.
 
 ##### Request content type (Emby v4.9+):
 
@@ -536,9 +543,10 @@ Go to your Plex Web UI > Settings > Your Account > Webhooks > (Click ADD WEBHOOK
 
 ##### URL:
 
-`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`
+`http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[USER]` with the `main` for main user or the sub user username.
 
 > [!IMPORTANT]
 > If you have enabled `WS_SECURE_API_ENDPOINTS`, you have to add `?apikey=yourapikey` to the end of the URL.
@@ -566,9 +574,10 @@ go back again to dashboard > plugins > webhook. Add `Add Generic Destination`,
 
 ##### Webhook Url:
 
-`http://localhost:8080/v1/api/backend/[BACKEND_NAME]/webhook`
+`http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`
 
 * Replace `[BACKEND_NAME]` with the name you have chosen for your backend.
+* Replace `[USER]` with the `main` for main user or the sub user username.
 
 ##### Notification Type:
 

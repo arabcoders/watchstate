@@ -6,11 +6,13 @@ namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
+use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
+use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
@@ -55,7 +57,7 @@ final class Webhooks
      *
      * @return iResponse The response object.
      */
-    #[Route(['POST', 'PUT'], Index::URL . '/{name:backend}/webhook[/]', name: 'backend.webhook')]
+    #[Route(['POST', 'PUT'], Index::URL . '/{name:ubackend}/webhook[/]', name: 'backend.webhook')]
     public function __invoke(iRequest $request, array $args = []): iResponse
     {
         if (null === ($name = ag($args, 'name'))) {
@@ -76,14 +78,35 @@ final class Webhooks
     private function process(string $name, iRequest $request): iResponse
     {
         try {
-            $backend = $this->getBackends(name: $name);
+            // -- sub-user
+            if (true === str_contains($name, '@')) {
+                [$user, $ubackend] = explode('@', $name, 2);
+            } else {
+                $user = 'main';
+                $ubackend = $name;
+            }
+
+            try {
+                $userContext = getUserContext(
+                    user: $user,
+                    mapper: Container::get(DirectMapper::class),
+                    logger: Container::get(iLogger::class)
+                );
+            } catch (RuntimeException $ex) {
+                return api_error($ex->getMessage(), Status::NOT_FOUND);
+            }
+
+            $backend = $this->getBackends(name: $ubackend, userContext: $userContext);
             if (empty($backend)) {
-                throw new RuntimeException(r("Backend '{backend}' not found.", ['backend ' => $name]));
+                throw new RuntimeException(r("Backend '{user}@{backend}' {backends} not found.", [
+                    'user' => $user,
+                    'backend' => $ubackend,
+                ]));
             }
 
             $backend = array_pop($backend);
 
-            $client = $this->getClient(name: $name);
+            $client = $this->getClient(name: $ubackend, userContext: $userContext);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
         }
@@ -103,7 +126,7 @@ final class Webhooks
             }
 
             if (false === hash_equals((string)$userId, (string)$requestUser)) {
-                $message = r('Request user id [{req_user}] does not match configured value [{config_user}]', [
+                $message = r("Request user id '{req_user}' does not match configured value '{config_user}'.", [
                     'req_user' => $requestUser ?? 'NOT SET',
                     'config_user' => $userId,
                 ]);
@@ -120,7 +143,7 @@ final class Webhooks
             }
 
             if (false === hash_equals((string)$uuid, (string)$requestBackendId)) {
-                $message = r('Request backend unique id [{req_uid}] does not match backend uuid [{config_uid}].', [
+                $message = r("Request backend unique id '{req_uid}' does not match backend uuid '{config_uid}'.", [
                     'req_uid' => $requestBackendId ?? 'NOT SET',
                     'config_uid' => $uuid,
                 ]);
@@ -139,7 +162,8 @@ final class Webhooks
 
         if (true !== $metadataOnly && true !== (bool)ag($backend, 'import.enabled')) {
             $response = api_response(Status::NOT_ACCEPTABLE);
-            $this->write($request, Level::Error, r('Import are disabled for [{backend}].', [
+            $this->write($request, Level::Error, r("Import are disabled for '{user}@{backend}'.", [
+                'user' => $userContext->name,
                 'backend' => $client->getName(),
             ]), forceContext: true);
 
@@ -156,8 +180,9 @@ final class Webhooks
             $this->write(
                 $request,
                 Level::Info,
-                'Ignoring [{backend}] {item.type} [{item.title}]. No valid/supported external ids.',
+                "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No valid/supported external ids.",
                 [
+                    'user' => $userContext->name,
                     'backend' => $entity->via,
                     'item' => [
                         'title' => $entity->getName(),
@@ -173,8 +198,9 @@ final class Webhooks
             $this->write(
                 $request,
                 Level::Notice,
-                'Ignoring [{backend}] {item.type} [{item.title}]. No episode/season number present.',
+                "Ignoring '{user}@{backend}' {item.type} '{item.title}'. No episode/season number present.",
                 [
+                    'user' => $userContext->name,
                     'backend' => $entity->via,
                     'item' => [
                         'title' => $entity->getName(),
@@ -188,7 +214,8 @@ final class Webhooks
             return api_response(Status::NOT_MODIFIED);
         }
 
-        $itemId = r('{type}://{id}:{tainted}@{backend}', [
+        $itemId = r('{type}://{id}:{tainted}@{backend}/{user}', [
+            'user' => $userContext->name,
             'type' => $entity->type,
             'backend' => $entity->via,
             'tainted' => $entity->isTainted() ? 'tainted' : 'untainted',
@@ -203,13 +230,15 @@ final class Webhooks
                 Options::IMPORT_METADATA_ONLY => $metadataOnly,
                 Options::REQUEST_ID => ag($request->getServerParams(), 'X_REQUEST_ID'),
             ],
+            Options::CONTEXT_USER => $userContext->name,
         ]);
 
         $this->write(
             $request,
             Level::Info,
-            "Queued {tainted} request '{backend}: {event}' {item.type} '{item.title}' - 'state: {state}, progress: {has_progress}'. request_id '{req}'.",
+            "Queued {tainted} request '{user}@{backend}: {event}' {item.type} '{item.title}' - 'state: {state}, progress: {has_progress}'. request_id '{req}'.",
             [
+                'user' => $userContext->name,
                 'backend' => $entity->via,
                 'event' => ag($entity->getExtra($entity->via), iState::COLUMN_EXTRA_EVENT),
                 'has_progress' => $entity->hasPlayProgress() ? 'Yes' : 'No',

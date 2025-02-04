@@ -83,7 +83,8 @@ trait APITraits
                 $backend = ag_set($backend, 'export.lastSync', $export ? makeDate($export) : null);
             }
 
-            $webhookUrl = parseConfigValue(Index::URL) . "/{$backendName}/webhook";
+            $user = $userContext?->name ?? 'main';
+            $webhookUrl = parseConfigValue(Index::URL) . "/{$user}@{$backendName}/webhook";
 
             if (true === (bool)Config::get('api.secure')) {
                 $webhookUrl .= '?apikey=' . Config::get('api.key');
