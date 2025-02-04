@@ -1,403 +1,403 @@
 [
     {
         "tag": "dev-20250204-1252e71",
-        "date": "2025-02-04T18:11:21+03:00",
+        "date": "2025-02-04T15:11:21+00:00",
         "commits": [
             {
                 "sha": "1252e71",
                 "message": "minor fixes for changelog and getAppVersion",
                 "author": "ArabCoders",
-                "date": "2025-02-04T18:11:21+03:00"
+                "date": "2025-02-04T15:11:21+00:00"
             },
             {
                 "sha": "9127a89",
                 "message": "minor improvements on how we display changelog.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T16:50:31+03:00"
+                "date": "2025-02-04T13:50:31+00:00"
             },
             {
                 "sha": "34906a3",
                 "message": "build the changelogs externally, it doesnt seems to want to work on github for some reason.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T10:05:17+03:00"
+                "date": "2025-02-04T07:05:17+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250204-fe1e366",
-        "date": "2025-02-04T09:34:51+03:00",
+        "date": "2025-02-04T06:34:51+00:00",
         "commits": [
             {
                 "sha": "b602101",
                 "message": "disable reflog for CHANGELOG generation",
                 "author": "ArabCoders",
-                "date": "2025-02-04T09:34:02+03:00"
+                "date": "2025-02-04T06:34:02+00:00"
             },
             {
                 "sha": "5865d37",
                 "message": "update build",
                 "author": "ArabCoders",
-                "date": "2025-02-04T09:22:32+03:00"
+                "date": "2025-02-04T06:22:32+00:00"
             },
             {
                 "sha": "89ab126",
                 "message": "fix python build",
                 "author": "ArabCoders",
-                "date": "2025-02-04T09:06:15+03:00"
+                "date": "2025-02-04T06:06:15+00:00"
             },
             {
                 "sha": "f8f1967",
                 "message": "updated external packages.",
                 "author": "ArabCoders",
-                "date": "2025-02-04T09:03:01+03:00"
+                "date": "2025-02-04T06:03:01+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250204-2006bdb",
-        "date": "2025-02-04T08:53:49+03:00",
+        "date": "2025-02-04T05:53:49+00:00",
         "commits": [
             {
                 "sha": "2d776e1",
                 "message": "dont run pr-build-test on .github changes",
                 "author": "ArabCoders",
-                "date": "2025-02-04T08:53:14+03:00"
+                "date": "2025-02-04T05:53:14+00:00"
             },
             {
                 "sha": "35239da",
                 "message": "more workflow changes",
                 "author": "ArabCoders",
-                "date": "2025-02-04T08:51:56+03:00"
+                "date": "2025-02-04T05:51:56+00:00"
             },
             {
                 "sha": "4fbc7d7",
                 "message": "fix changelog generator",
                 "author": "ArabCoders",
-                "date": "2025-02-03T23:28:44+03:00"
+                "date": "2025-02-03T20:28:44+00:00"
             },
             {
                 "sha": "2763ac1",
                 "message": "more github action changes.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T23:25:25+03:00"
+                "date": "2025-02-03T20:25:25+00:00"
             },
             {
                 "sha": "8ea02be",
                 "message": "no longer auto create release",
                 "author": "ArabCoders",
-                "date": "2025-02-03T23:15:15+03:00"
+                "date": "2025-02-03T20:15:15+00:00"
             },
             {
                 "sha": "289c4ee",
                 "message": "instead of relying on changelog being generated on commit, we rely on tag instead",
                 "author": "ArabCoders",
-                "date": "2025-02-03T23:05:19+03:00"
+                "date": "2025-02-03T20:05:19+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250203-2ef4083",
-        "date": "2025-02-03T22:31:12+03:00",
+        "date": "2025-02-03T19:31:12+00:00",
         "commits": [
             {
                 "sha": "63af731",
                 "message": "more changelog changes",
                 "author": "ArabCoders",
-                "date": "2025-02-03T22:27:38+03:00"
+                "date": "2025-02-03T19:27:38+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250203-5d9d338",
-        "date": "2025-02-03T22:13:55+03:00",
+        "date": "2025-02-03T19:13:55+00:00",
         "commits": [
             {
                 "sha": "a5cf50c",
                 "message": "generate changelog json files on tag",
                 "author": "ArabCoders",
-                "date": "2025-02-03T22:09:19+03:00"
+                "date": "2025-02-03T19:09:19+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250203-4982ef9",
-        "date": "2025-02-03T20:00:01+03:00",
+        "date": "2025-02-03T17:00:01+00:00",
         "commits": [
             {
                 "sha": "821e611",
                 "message": "minor improvements to logs display in index to use more human readable dates.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T19:42:53+03:00"
+                "date": "2025-02-03T16:42:53+00:00"
             },
             {
                 "sha": "030fe8b",
                 "message": "fixed repo path",
                 "author": "ArabCoders",
-                "date": "2025-02-03T18:42:33+03:00"
+                "date": "2025-02-03T15:42:33+00:00"
             },
             {
                 "sha": "03fdef2",
                 "message": "Add CHANGELOG to container.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T18:39:39+03:00"
+                "date": "2025-02-03T15:39:39+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250203-95f4154",
-        "date": "2025-02-03T12:08:13+03:00",
+        "date": "2025-02-03T09:08:13+00:00",
         "commits": [
             {
                 "sha": "225ff0b",
                 "message": "Removed WS_PUSH_ENABLED as its always on now, and turn WS_SYNC_PROGRESS on by default.",
                 "author": "ArabCoders",
-                "date": "2025-02-03T12:00:35+03:00"
+                "date": "2025-02-03T09:00:35+00:00"
             },
             {
                 "sha": "2d5c63e",
                 "message": "Merged SyncCommand functionality into state:import and state:export And removed SyncCommand.",
                 "author": "ArabCoders",
-                "date": "2025-02-02T22:43:28+03:00"
+                "date": "2025-02-02T19:43:28+00:00"
             },
             {
                 "sha": "a3fd28b",
                 "message": "followup fix for console",
                 "author": "ArabCoders",
-                "date": "2025-02-01T22:01:11+03:00"
+                "date": "2025-02-01T19:01:11+00:00"
             },
             {
                 "sha": "b53a93d",
                 "message": "Fixed bug in trigger auto run for commands in console.vue",
                 "author": "ArabCoders",
-                "date": "2025-02-01T21:53:08+03:00"
+                "date": "2025-02-01T18:53:08+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250201-92e1f20",
-        "date": "2025-02-01T21:39:09+03:00",
+        "date": "2025-02-01T18:39:09+00:00",
         "commits": [
             {
                 "sha": "b4783a8",
                 "message": "Standardize how we handle UserContext, added support for multi user in db:list command.",
                 "author": "ArabCoders",
-                "date": "2025-02-01T21:35:35+03:00"
+                "date": "2025-02-01T18:35:35+00:00"
             },
             {
                 "sha": "dd84251",
                 "message": "Redesigned redesigned how we create sub users config data",
                 "author": "ArabCoders",
-                "date": "2025-02-01T19:02:20+03:00"
+                "date": "2025-02-01T16:02:20+00:00"
             },
             {
                 "sha": "54a8556",
                 "message": "fix the prev commit",
                 "author": "ArabCoders",
-                "date": "2025-01-31T22:17:41+03:00"
+                "date": "2025-01-31T19:17:41+00:00"
             },
             {
                 "sha": "87ac7e7",
                 "message": "remove use backend id for X-Plex-Client-Identifier to not generate events for each version change",
                 "author": "ArabCoders",
-                "date": "2025-01-31T22:14:33+03:00"
+                "date": "2025-01-31T19:14:33+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250131-3a2f0af",
-        "date": "2025-01-31T22:11:29+03:00",
+        "date": "2025-01-31T19:11:29+00:00",
         "commits": [
             {
                 "sha": "d10a03c",
                 "message": "support backing up mutli-user data.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T22:08:30+03:00"
+                "date": "2025-01-31T19:08:30+00:00"
             },
             {
                 "sha": "3e23a3b",
                 "message": "Filter data before saving it into events table",
                 "author": "ArabCoders",
-                "date": "2025-01-31T19:58:46+03:00"
+                "date": "2025-01-31T16:58:46+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250131-612ec4f",
-        "date": "2025-01-31T19:21:48+03:00",
+        "date": "2025-01-31T16:21:48+00:00",
         "commits": [
             {
                 "sha": "b3e32fe",
                 "message": "filter env.SERVER.QUERY_STRING data as well",
                 "author": "ArabCoders",
-                "date": "2025-01-31T19:18:30+03:00"
+                "date": "2025-01-31T16:18:30+00:00"
             },
             {
                 "sha": "7c57c50",
                 "message": "re-designed how we profile the http API to include bigger scope",
                 "author": "ArabCoders",
-                "date": "2025-01-31T19:14:45+03:00"
+                "date": "2025-01-31T16:14:45+00:00"
             },
             {
                 "sha": "44d3b32",
                 "message": "Fixed performance regression in HTTP API",
                 "author": "ArabCoders",
-                "date": "2025-01-31T18:24:47+03:00"
+                "date": "2025-01-31T15:24:47+00:00"
             },
             {
                 "sha": "1d2a1da",
                 "message": "updated composer packages.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T17:16:58+03:00"
+                "date": "2025-01-31T14:16:58+00:00"
             },
             {
                 "sha": "b6aad34",
                 "message": "dont use ProfilingFlags directly.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T17:08:44+03:00"
+                "date": "2025-01-31T14:08:44+00:00"
             },
             {
                 "sha": "677ecc7",
                 "message": "imporved the profiling process.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T17:00:51+03:00"
+                "date": "2025-01-31T14:00:51+00:00"
             },
             {
                 "sha": "80f341e",
                 "message": "minor style changes",
                 "author": "ArabCoders",
-                "date": "2025-01-31T01:46:01+03:00"
+                "date": "2025-01-30T22:46:01+00:00"
             },
             {
                 "sha": "2987dea",
                 "message": "Show zip files in api and remove the uncompressed file if compressing was done.",
                 "author": "ArabCoders",
-                "date": "2025-01-31T01:26:23+03:00"
+                "date": "2025-01-30T22:26:23+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250130-bdff9e2",
-        "date": "2025-01-31T01:17:14+03:00",
+        "date": "2025-01-30T22:17:14+00:00",
         "commits": [
             {
                 "sha": "7fe90aa",
                 "message": "Compress backup files by default and extends lifetime of backups to 90days",
                 "author": "ArabCoders",
-                "date": "2025-01-31T01:07:36+03:00"
+                "date": "2025-01-30T22:07:36+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250130-db10485",
-        "date": "2025-01-30T18:40:41+03:00",
+        "date": "2025-01-30T15:40:41+00:00",
         "commits": [
             {
                 "sha": "826b0f9",
                 "message": "Added new command to diff two backup files and find the difference",
                 "author": "ArabCoders",
-                "date": "2025-01-30T18:27:43+03:00"
+                "date": "2025-01-30T15:27:43+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250123-8c212c5",
-        "date": "2025-01-24T00:23:02+03:00",
+        "date": "2025-01-23T21:23:02+00:00",
         "commits": [
             {
                 "sha": "96ccd88",
                 "message": "Fully implemented our vision for Multi-user sync via state:sync command",
                 "author": "ArabCoders",
-                "date": "2025-01-24T00:12:01+03:00"
+                "date": "2025-01-23T21:12:01+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250122-9fee1ca",
-        "date": "2025-01-22T21:38:14+03:00",
+        "date": "2025-01-22T18:38:14+00:00",
         "commits": [
             {
                 "sha": "a65f8db",
                 "message": "updated dependencies",
                 "author": "ArabCoders",
-                "date": "2025-01-22T21:34:16+03:00"
+                "date": "2025-01-22T18:34:16+00:00"
             },
             {
                 "sha": "8da381c",
                 "message": "Removed NullMapper as it's no longer used, updated both DirectMapper & MemoryMapper to update entities metadata if no metadata exists even if the date is older.",
                 "author": "ArabCoders",
-                "date": "2025-01-22T21:29:10+03:00"
+                "date": "2025-01-22T18:29:10+00:00"
             },
             {
                 "sha": "7d4feb2",
                 "message": "Implements progress ync for alt users.",
                 "author": "ArabCoders",
-                "date": "2025-01-22T20:09:22+03:00"
+                "date": "2025-01-22T17:09:22+00:00"
             },
             {
                 "sha": "fc476d4",
                 "message": "remove use old_progress endpoint for plex",
                 "author": "ArabCoders",
-                "date": "2025-01-22T20:06:54+03:00"
+                "date": "2025-01-22T17:06:54+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250122-b347cc8",
-        "date": "2025-01-22T11:41:44+03:00",
+        "date": "2025-01-22T08:41:44+00:00",
         "commits": [
             {
                 "sha": "266bf1a",
                 "message": "Free memory after each user sync, and prevent syncing main user by default as it's covered by the regular import/export, and provide flag to enable it.",
                 "author": "ArabCoders",
-                "date": "2025-01-22T11:32:20+03:00"
+                "date": "2025-01-22T08:32:20+00:00"
             },
             {
                 "sha": "6369103",
                 "message": "Update reflection container to support manual injecting",
                 "author": "ArabCoders",
-                "date": "2025-01-22T11:31:18+03:00"
+                "date": "2025-01-22T08:31:18+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250121-4144c65",
-        "date": "2025-01-21T22:36:35+03:00",
+        "date": "2025-01-21T19:36:35+00:00",
         "commits": [
             {
                 "sha": "de37955",
                 "message": "Build images on PR",
                 "author": "ArabCoders",
-                "date": "2025-01-21T22:26:19+03:00"
+                "date": "2025-01-21T19:26:19+00:00"
             },
             {
                 "sha": "547f338",
                 "message": "Implement per user servers.yaml, and support mark as unplayed for all users.",
                 "author": "ArabCoders",
-                "date": "2025-01-21T21:58:27+03:00"
+                "date": "2025-01-21T18:58:27+00:00"
             }
         ]
     },
     {
         "tag": "dev-20250121-c50c9be",
-        "date": "2025-01-21T14:25:14+03:00",
+        "date": "2025-01-21T11:25:14+00:00",
         "commits": [
             {
                 "sha": "624ebb1",
                 "message": "more changes to support multi-user sync",
                 "author": "ArabCoders",
-                "date": "2025-01-21T14:15:29+03:00"
+                "date": "2025-01-21T11:15:29+00:00"
             },
             {
                 "sha": "3caa5dc",
                 "message": "Clarify the SyncCommand limitation",
                 "author": "ArabCoders",
-                "date": "2025-01-20T22:07:59+03:00"
+                "date": "2025-01-20T19:07:59+00:00"
             },
             {
                 "sha": "2ab88ca",
                 "message": "Clarify the SyncCommand limitation",
                 "author": "ArabCoders",
-                "date": "2025-01-20T22:07:50+03:00"
+                "date": "2025-01-20T19:07:50+00:00"
             }
         ]
     }
