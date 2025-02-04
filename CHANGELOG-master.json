@@ -1,5 +1,17 @@
 [
     {
+        "tag": "master-20250204-fe1e366",
+        "date": "2025-02-04",
+        "commits": [
+            {
+                "sha": "b602101",
+                "message": "disable reflog for CHANGELOG generation",
+                "author": "ArabCoders",
+                "date": "2025-02-04"
+            }
+        ]
+    },
+    {
         "tag": "master-20250204-617f278",
         "date": "2025-02-04",
         "commits": [
