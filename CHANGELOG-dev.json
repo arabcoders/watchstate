@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250205-37b7cf5",
-        "date": "2025-02-05T13:20:01+00:00",
+        "tag": "dev-20250205-87efadd",
+        "date": "2025-02-05T13:55:37+00:00",
         "commits": [
+            {
+                "sha": "87efadd",
+                "message": "minor design change.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T13:55:37+00:00"
+            },
+            {
+                "sha": "79b4d74",
+                "message": "minor changes to history api",
+                "author": "ArabCoders",
+                "date": "2025-02-05T13:25:24+00:00"
+            },
             {
                 "sha": "37b7cf5",
                 "message": "wrap getUserContext in try catch",
