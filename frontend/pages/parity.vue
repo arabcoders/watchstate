@@ -298,6 +298,7 @@ const last_page = computed(() => Math.ceil(total.value / perpage.value))
 const isLoading = ref(false)
 const isDeleting = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const api_user = useStorage('api_user', 'main')
 const filter = ref(route.query.filter ?? '')
 const showFilter = ref(!!filter.value)
 const min = ref(route.query.min ?? null)
@@ -309,7 +310,7 @@ const selected_ids = ref([])
 const massActionInProgress = ref(false)
 watch(selectAll, v => selected_ids.value = v ? filteredRows(items.value).map(i => i.id) : [])
 
-const cache = useSessionCache()
+const cache = useSessionCache(api_user.value)
 
 
 const toggleFilter = () => {
@@ -493,12 +494,17 @@ const deleteData = async () => {
 onMounted(async () => {
   const response = await request(`/backends/`)
   const json = await response.json()
+
+  cache.setNameSpace(api_user.value)
+
   max.value = json.length
+
   if (min.value === null) {
     min.value = json.length
   } else {
     await loadContent(page.value ?? 1)
   }
+
   window.addEventListener('popstate', stateCallBack)
 })
 
