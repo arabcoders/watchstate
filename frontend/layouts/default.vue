@@ -4,13 +4,13 @@
       <div class="navbar-brand pl-5">
         <NuxtLink class="navbar-item" to="/" @click.native="(e) => changeRoute(e)">
           <span class="icon-text">
-            <span class="icon"><i class="fas fa-home" /></span>
+            <span class="icon"><i class="fas fa-home"/></span>
             <span>Home</span>
           </span>
         </NuxtLink>
 
         <a class="navbar-item is-hidden-tablet" id="top" href="#bottom">
-          <span class="icon"><i class="fas fa-arrow-down" /></span>
+          <span class="icon"><i class="fas fa-arrow-down"/></span>
         </a>
 
         <button class="navbar-burger burger" @click="showMenu = !showMenu">
@@ -24,36 +24,36 @@
         <div class="navbar-start" v-if="hasAPISettings && !showConnection">
           <NuxtLink class="navbar-item" to="/backends" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-server" /></span>
+              <span class="icon"><i class="fas fa-server"/></span>
               <span>Backends</span>
             </span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/history"
-            @click.native="(e) => changeRoute(e, () => dEvent('history_main_link_clicked', { 'clear': true }))">
+                    @click.native="(e) => changeRoute(e, () => dEvent('history_main_link_clicked', { 'clear': true }))">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-history" /></span>
+              <span class="icon"><i class="fas fa-history"/></span>
               <span>History</span>
             </span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/tasks" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-tasks" /></span>
+              <span class="icon"><i class="fas fa-tasks"/></span>
               <span>Tasks</span>
             </span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/env" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-cogs" /></span>
+              <span class="icon"><i class="fas fa-cogs"/></span>
               <span>Env</span>
             </span>
           </NuxtLink>
 
           <NuxtLink class="navbar-item" to="/logs" @click.native="(e) => changeRoute(e)">
             <span class="icon-text">
-              <span class="icon"><i class="fas fa-globe" /></span>
+              <span class="icon"><i class="fas fa-globe"/></span>
               <span>Logs</span>
             </span>
           </NuxtLink>
@@ -61,7 +61,7 @@
           <div class="navbar-item has-dropdown">
             <a class="navbar-link" @click="(e) => openMenu(e)">
               <span class="icon-text">
-                <span class="icon"><i class="fas fa-ellipsis-vertical" /></span>
+                <span class="icon"><i class="fas fa-ellipsis-vertical"/></span>
                 <span>More</span>
               </span>
             </a>
@@ -69,7 +69,7 @@
 
               <NuxtLink class="navbar-item" to="/console" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
                 <span class="icon-text">
-                  <span class="icon"><i class="fas fa-terminal" /></span>
+                  <span class="icon"><i class="fas fa-terminal"/></span>
                   <span>Console</span>
                 </span>
               </NuxtLink>
@@ -77,53 +77,53 @@
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/parity" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-database" /></span>
+                <span class="icon"><i class="fas fa-database"/></span>
                 <span>Data Parity</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/integrity" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-file" /></span>
+                <span class="icon"><i class="fas fa-file"/></span>
                 <span>Files Integrity</span>
               </NuxtLink>
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/events" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-calendar-alt" /></span>
+                <span class="icon"><i class="fas fa-calendar-alt"/></span>
                 <span>Events</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/ignore" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-ban" /></span>
+                <span class="icon"><i class="fas fa-ban"/></span>
                 <span>Ignore List</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/report" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-flag" /></span>
+                <span class="icon"><i class="fas fa-flag"/></span>
                 <span>Basic Report</span>
               </NuxtLink>
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/suppression" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-bug-slash" /></span>
+                <span class="icon"><i class="fas fa-bug-slash"/></span>
                 <span>Log Suppression</span>
               </NuxtLink>
 
               <NuxtLink class="navbar-item" to="/custom" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-map" /></span>
+                <span class="icon"><i class="fas fa-map"/></span>
                 <span>Custom GUIDs</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/backup" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-sd-card" /></span>
+                <span class="icon"><i class="fas fa-sd-card"/></span>
                 <span>Backups</span>
               </NuxtLink>
 
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/reset" @click.native="(e) => changeRoute(e)">
-                <span class="icon"><i class="fas fa-redo" /></span>
+                <span class="icon"><i class="fas fa-redo"/></span>
                 <span>System reset</span>
               </NuxtLink>
             </div>
@@ -132,200 +132,56 @@
         <div class="navbar-end pr-3">
           <div class="navbar-item">
             <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Light theme'"
-              v-if="'auto' === selectedTheme" @click="selectTheme('light')">
-              <span class="icon has-text-warning"><i class="fas fa-sun" /></span>
+                    v-if="'auto' === selectedTheme" @click="selectTheme('light')">
+              <span class="icon has-text-warning"><i class="fas fa-sun"/></span>
             </button>
             <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Dark theme'"
-              v-if="'light' === selectedTheme" @click="selectTheme('dark')">
-              <span class="icon"><i class="fas fa-moon" /></span>
+                    v-if="'light' === selectedTheme" @click="selectTheme('dark')">
+              <span class="icon"><i class="fas fa-moon"/></span>
             </button>
             <button class="button is-dark has-tooltip-bottom" v-tooltip.bottom="'Switch to Auto theme'"
-              v-if="'dark' === selectedTheme" @click="selectTheme('auto')">
-              <span class="icon"><i class="fas fa-microchip" /></span>
+                    v-if="'dark' === selectedTheme" @click="selectTheme('auto')">
+              <span class="icon"><i class="fas fa-microchip"/></span>
             </button>
           </div>
 
           <div class="navbar-item" v-if="hasAPISettings">
             <button class="button is-dark" @click="showUserSelection = !showUserSelection" v-tooltip="'Change User'">
-              <span class="icon"><i class="fas fa-users" /></span>
+              <span class="icon"><i class="fas fa-users"/></span>
             </button>
           </div>
 
           <div class="navbar-item">
             <button class="button is-dark" @click="showConnection = !showConnection" v-tooltip="'Configure connection'">
-              <span class="icon"><i class="fas fa-cog" /></span>
+              <span class="icon"><i class="fas fa-cog"/></span>
             </button>
           </div>
         </div>
       </div>
     </nav>
     <div>
-      <div class="columns is-multiline" v-if="showConnection">
-        <div class="column is-12 mt-2">
-          <div class="card">
-            <header class="card-header">
-              <p class="card-header-title">
-                Configure API Connection
-              </p>
-              <span class="card-header-icon">
-                <span class="icon"><i class="fas fa-cog" /></span>
-              </span>
-            </header>
-            <div class="card-content">
-              <form @submit.prevent="testApi">
-                <div class="field">
-                  <label class="label" for="api_token">
-                    <span class="icon-text">
-                      <span class="icon"><i class="fas fa-key" /></span>
-                      <span>API Token</span>
-                    </span>
-                  </label>
-                  <div class="field-body">
-                    <div class="field">
-                      <div class="field has-addons">
-                        <div class="control is-expanded">
-                          <input class="input" id="api_token" v-model="api_token" required placeholder="API Token..."
-                            @keyup="api_status = false; api_response = ''"
-                            :type="false === exposeToken ? 'password' : 'text'">
-                        </div>
-                        <div class="control">
-                          <button type="button" class="button is-primary" @click="exposeToken = !exposeToken"
-                            v-tooltip="'Show/Hide token'">
-                            <span class="icon" v-if="!exposeToken"><i class="fas fa-eye" /></span>
-                            <span class="icon" v-else><i class="fas fa-eye-slash" /></span>
-                          </button>
-                        </div>
-                      </div>
-                      <p class="help">
-                        You can obtain the <code>API TOKEN</code> by using the <code>system:apikey</code> command or by
-                        viewing the <code>/config/.env</code> inside <code>WS_DATA_PATH</code> variable and looking for
-                        the
-                        <code>WS_API_KEY=</code> key.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label class="label" for="api_url">
-                    <span class="icon-text">
-                      <span class="icon"><i class="fas fa-link" /></span>
-                      <span>API URL</span>
-                    </span>
-                  </label>
-                  <div class="field-body">
-                    <div class="field">
-                      <div class="control">
-                        <input class="input" id="api_url" type="url" v-model="api_url" required
-                          placeholder="API URL... http://localhost:8081" @keyup="api_status = false; api_response = ''">
-                        <p class="help">
-                          Use <a href="javascript:void(0)" @click="setOrigin">current page URL</a>.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label class="label" for="api_path">
-                    <span class="icon-text">
-                      <span class="icon"><i class="fas fa-folder" /></span>
-                      <span>API Path</span>
-                    </span>
-                  </label>
-                  <div class="field-body">
-                    <div class="field">
-                      <div class="control">
-                        <input class="input" id="api_path" type="text" v-model="api_path" required
-                          placeholder="API Path... /v1/api" @keyup="api_status = false; api_response = ''">
-                        <p class="help">
-                          Use <a href="javascript:void(0)" @click="api_path = '/v1/api'">Set default API Path</a>.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="field-body">
-                    <div class="field">
-                      <div class="field has-addons">
-                        <div class="control is-expanded">
-                          <input class="input" type="text" v-model="api_response" readonly disabled
-                            :class="{ 'has-background-success': true === api_status, 'has-background-warning': true !== api_status }">
-                        </div>
-                        <div class="control">
-                          <button type="submit" class="button is-primary" :disabled="!api_url || !api_token">
-                            <span class="icon-text">
-                              <span class="icon"><i class="fas fa-save" /></span>
-                              <span>Save</span>
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                      <p class="help">
-                        <span class="icon-text">
-                          <span class="icon has-text-danger"><i class="fas fa-info" /></span>
-                          <span>These settings are stored locally in your browser. You need to re-add them if you access
-                            the
-                            <code>WebUI</code> from different browser.</span>
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <div class="column is-12 mt-2">
-          <Message title="Information" message_class="has-background-info-90 has-text-dark" icon="fas fa-info-circle">
-            <p>
-              It's possible to automatically setup the API connection for this client and <strong
-                class="has-text-danger">ALL VISITORS</strong> by setting the following environment variable
-              <code>WS_API_AUTO=true</code>
-              in <code>/config/.env</code> file. Understand that this option <strong class="has-text-danger">PUBLICLY
-                EXPOSES YOUR API TOKEN</strong> to <u>ALL VISITORS</u>. Anyone who is able to reach this page will be
-              granted access to your <code>WatchState API</code> which exposes your other media backends data including
-              their secrets. <strong>this option is great security risk and SHOULD NEVER be used if
-                <code>WatchState</code> is exposed to the internet.</strong>
-            </p>
-
-            <p>Please visit
-              <span class="icon">
-                <i class="fab fa-github" />
-              </span>
-              <NuxtLink target="_blank" to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#ws_api_auto">
-                This link
-              </NuxtLink>
-              . to learn more, this environment variable is important enough to have its own section entry in the FAQ.
-            </p>
-          </Message>
-        </div>
-      </div>
-
       <div>
-        <NuxtPage v-if="!showConnection && hasAPISettings" />
-        <no-api v-if="!hasAPISettings" />
+        <no-api v-if="!hasAPISettings"/>
+        <Connection v-if="showConnection" @update="data => handleConnection(data)"/>
+        <NuxtPage v-if="!showConnection && hasAPISettings"/>
       </div>
 
       <div class="columns is-multiline is-mobile mt-3">
         <div class="column is-12 is-hidden-tablet has-text-centered">
           <a href="#top" id="bottom" class="button">
-            <span class="icon"><i class="fas fa-arrow-up" />&nbsp;</span>
+            <span class="icon"><i class="fas fa-arrow-up"/>&nbsp;</span>
             <span>Go to Top</span>
           </a>
         </div>
 
         <div class="column is-6 is-9-mobile has-text-left">
-          <NuxtLink @click="loadFile = '/README.md'" v-text="'README'" />
+          <NuxtLink @click="loadFile = '/README.md'" v-text="'README'"/>
           -
-          <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'" />
+          <NuxtLink @click="loadFile = '/FAQ.md'" v-text="'FAQ'"/>
           -
-          <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'" />
+          <NuxtLink @click="loadFile = '/NEWS.md'" v-text="'News'"/>
           -
-          <NuxtLink :to="changelog_url" v-text="'ChangeLog'" />
+          <NuxtLink :to="changelog_url" v-text="'ChangeLog'"/>
         </div>
         <div class="column is-6 is-4-mobile has-text-right">
           {{ api_version }} - <a href="https://github.com/arabcoders/watchstate" target="_blank">WatchState</a>
@@ -334,13 +190,13 @@
 
       <template v-if="loadFile">
         <Overlay @closeOverlay="closeOverlay" :title="loadFile">
-          <Markdown :file="loadFile" />
+          <Markdown :file="loadFile"/>
         </Overlay>
       </template>
 
       <template v-if="showUserSelection">
         <Overlay @closeOverlay="() => showUserSelection = false" title="Change User">
-          <UserSelection />
+          <UserSelection/>
         </Overlay>
       </template>
     </div>
@@ -348,39 +204,28 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import {ref} from 'vue'
 import 'assets/css/bulma.css'
 import 'assets/css/style.css'
 import 'assets/css/all.css'
-import { useStorage } from '@vueuse/core'
-import request from '~/utils/request.js'
-import Markdown from '~/components/Markdown.vue'
-import UserSelection from '~/components/UserSelection.vue'
+import {useStorage} from '@vueuse/core'
+import request from '~/utils/request'
+import Markdown from '~/components/Markdown'
+import UserSelection from '~/components/UserSelection'
+import Connection from "~/components/Connection"
 
 const selectedTheme = useStorage('theme', (() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')())
+const showUserSelection = ref(false)
 const showConnection = ref(false)
 
-const showUserSelection = ref(false)
-
-const real_api_user = useStorage('api_user', 'main')
-const real_api_url = useStorage('api_url', window.location.origin)
-const real_api_path = useStorage('api_path', '/v1/api')
-const real_api_token = useStorage('api_token', '')
-
-const api_url = ref(toRaw(real_api_url.value))
-const api_path = ref(toRaw(real_api_path.value))
-const api_user = ref(toRaw(real_api_user.value))
-const api_token = ref(toRaw(real_api_token.value))
-
-const api_status = ref(false)
-const api_response = ref('Status: Unknown')
+const api_url = useStorage('api_user', 'main')
+const api_token = useStorage('api_token', '')
 const api_version = ref()
-const changelog_url = ref('/changelog')
 
+const changelog_url = ref('/changelog')
 watch(() => api_version.value, () => changelog_url.value = `/changelog?version=${api_version.value}`)
 
 const showMenu = ref(false)
-const exposeToken = ref(false)
 
 const loadFile = ref()
 
@@ -433,17 +278,12 @@ onMounted(async () => {
   try {
     applyPreferredColorScheme(selectedTheme.value)
 
-    if ('' === api_token.value) {
-      await autoConfig()
-    }
-
     if ('' === api_token.value || '' === api_url.value) {
       showConnection.value = true
       return
     }
 
     await getVersion()
-
   } catch (e) {
   }
 })
@@ -455,50 +295,7 @@ watch(selectedTheme, value => {
   }
 })
 
-watch(api_token, value => {
-  if ('' === value) {
-    api_status.value = false;
-    api_response.value = 'Status: Unknown'
-    showConnection.value = true
-  }
-})
-
-const testApi = async () => {
-  try {
-    const response = await fetch(`${api_url.value}${api_path.value}/backends`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${api_token.value}`
-      }
-    })
-    const json = await response.json()
-
-    if (json.error) {
-      api_status.value = false;
-      api_response.value = `Error ${json.error.code} - ${json.error.message}`
-      return
-    }
-
-    if (200 === response.status) {
-      real_api_url.value = api_url.value
-      real_api_user.value = api_user.value
-      real_api_path.value = api_path.value
-      real_api_token.value = api_token.value
-      await getVersion(false)
-    }
-
-    api_status.value = 200 === response.status;
-    api_response.value = 200 === response.status ? `Status: OK` : `Status: ${response.status} - ${response.statusText}`;
-    notification('success', 'API Connection', `${response.status}: ${api_response.value}`)
-    showConnection.value = false
-  } catch (e) {
-    api_status.value = false;
-    api_response.value = `Request error. ${e.message}`;
-  }
-}
-
-const getVersion = async (updateStatus = true) => {
+const getVersion = async () => {
   if (api_version.value) {
     return;
   }
@@ -507,51 +304,12 @@ const getVersion = async (updateStatus = true) => {
     const response = await request('/system/version')
     const json = await response.json()
     api_version.value = json.version
-    if (updateStatus) {
-      api_status.value = true
-      api_response.value = 'Status: OK'
-    }
   } catch (e) {
     return 'Unknown'
   }
 }
 
-const autoConfig = async () => {
-  try {
-    const response = await fetch(`${api_url.value}${api_path.value}/system/auto`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ 'origin': window.location.origin })
-    })
-
-    const json = await response.json()
-
-    if (200 !== response.status) {
-      return;
-    }
-
-    if (!api_url.value) {
-      api_url.value = json.url
-    }
-
-    if (!api_path.value) {
-      api_path.value = json.path
-    }
-
-    if (!api_token.value) {
-      api_token.value = json.token
-    }
-
-    await testApi();
-  } catch (e) {
-  }
-}
-
-const setOrigin = () => api_url.value = window.location.origin;
-
-const hasAPISettings = computed(() => '' !== real_api_token.value && '' !== real_api_url.value)
+const hasAPISettings = computed(() => '' !== api_token.value && '' !== api_url.value)
 
 const closeOverlay = () => loadFile.value = ''
 
@@ -581,4 +339,10 @@ const selectTheme = theme => {
     return window.location.reload()
   }
 }
+
+const handleConnection = data => {
+  api_version.value = data.version
+  showConnection.value = false
+}
+
 </script>
