@@ -3,6 +3,7 @@ import {useStorage} from "@vueuse/core";
 const api_path = useStorage('api_path', '/v1/api')
 const api_url = useStorage('api_url', '')
 const api_token = useStorage('api_token', '')
+const api_user = useStorage('api_user', 'main')
 
 /**
  * Request content from the API. This function will automatically add the API token to the request headers.
@@ -29,6 +30,11 @@ export default async function request(url, options = {}) {
     if (options.headers['Accept'] === undefined) {
         options.headers['Accept'] = 'application/json';
     }
+
+    if (options.headers['X-User'] === undefined) {
+        options.headers['X-User'] = api_user.value;
+    }
+
     return fetch(`${api_url.value}${api_path.value}${url}`, options);
 }
 
