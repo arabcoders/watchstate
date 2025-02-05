@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250204-a246ca7",
-        "date": "2025-02-04T18:42:54+00:00",
+        "tag": "dev-20250205-a4aec9e",
+        "date": "2025-02-05T10:12:21+00:00",
         "commits": [
+            {
+                "sha": "a4aec9e",
+                "message": "Added initial support for browing as selected user in WebUI",
+                "author": "ArabCoders",
+                "date": "2025-02-05T10:12:21+00:00"
+            },
             {
                 "sha": "a246ca7",
                 "message": "Add initial support in webhooks for sub-users.",
