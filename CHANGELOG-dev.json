@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250205-a4aec9e",
-        "date": "2025-02-05T10:12:21+00:00",
+        "tag": "dev-20250205-c50a9a8",
+        "date": "2025-02-05T11:02:05+00:00",
         "commits": [
+            {
+                "sha": "c50a9a8",
+                "message": "Updated most of backend API endpoints to support sub users.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T11:02:05+00:00"
+            },
             {
                 "sha": "a4aec9e",
                 "message": "Added initial support for browing as selected user in WebUI",
