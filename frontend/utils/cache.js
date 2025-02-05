@@ -8,9 +8,13 @@
 class Cache {
     supportedEngines = ['session', 'local']
 
-    constructor(engine = 'session') {
+    constructor(engine = 'session', namespace = '') {
         if (!this.supportedEngines.includes(engine)) {
             throw new Error(`Engine '${engine}' not supported.`)
+        }
+
+        if (this.namespace) {
+            this.setNameSpace(namespace)
         }
 
         if ('session' === engine) {
@@ -21,6 +25,15 @@ class Cache {
     }
 
     /**
+     * Set the namespace for the cache
+     *
+     * @param namespace {string}
+     */
+    setNameSpace(namespace) {
+        this.namespace = namespace ? `${namespace}:` : ''
+    }
+
+    /**
      * Set a value in the cache
      *
      * @param key {string}
@@ -28,7 +41,7 @@ class Cache {
      * @param ttl {number|null} - Time to live in milliseconds. If null, the value will not expire.
      */
     set(key, value, ttl = null) {
-        this.storage.setItem(key, JSON.stringify({value, ttl, time: Date.now()}))
+        this.storage.setItem(this.namespace + key, JSON.stringify({value, ttl, time: Date.now()}))
     }
 
     /**
@@ -38,7 +51,7 @@ class Cache {
      * @returns {any}
      */
     get(key) {
-        const item = this.storage.getItem(key)
+        const item = this.storage.getItem(this.namespace + key)
         if (null === item) {
             return null
         }
@@ -46,7 +59,7 @@ class Cache {
         try {
             const {value, ttl, time} = JSON.parse(item)
             if (null !== ttl && Date.now() - time > ttl) {
-                this.remove(key)
+                this.remove(this.namespace + key)
                 return null
             }
             return value
@@ -61,7 +74,7 @@ class Cache {
      * @param key {string}
      */
     remove(key) {
-        this.storage.removeItem(key)
+        this.storage.removeItem(this.namespace + key)
     }
 
     /**
@@ -70,11 +83,17 @@ class Cache {
      * @param {function|null} filter - A filter function to remove only specific keys. Or null to clear all.
      */
     clear(filter = null) {
-        if (null !== filter) {
-            Object.keys(this.storage ?? {}).filter(filter).forEach(k => this.storage.removeItem(k))
-        } else {
-            this.storage.clear()
+        let keys = Object.keys(this.storage ?? {})
+
+        if (this.namespace) {
+            keys = keys.filter(k => k.startsWith(this.namespace))
         }
+
+        if (null !== filter) {
+            keys = keys.filter(filter)
+        }
+
+        keys.forEach(k => this.storage.removeItem(k))
     }
 
     /**
@@ -84,11 +103,11 @@ class Cache {
      * @returns {boolean}
      */
     has(key) {
-        return null !== this.get(key)
+        return null !== this.get(this.namespace + key)
     }
 }
 
-const useSessionCache = () => new Cache('session')
-const useLocalCache = () => new Cache('local')
+const useSessionCache = (namespace = '') => new Cache('session', namespace)
+const useLocalCache = (namespace = '') => new Cache('local', namespace)
 
 export {useSessionCache, useLocalCache, Cache}
