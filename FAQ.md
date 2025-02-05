@@ -418,7 +418,7 @@ These environment variables relates to the tool itself, You should manage them v
 command via CLI.
 
 | Key                     | Type    | Description                                                             | Default                  |
-|-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
+| ----------------------- | ------- | ----------------------------------------------------------------------- | ------------------------ |
 | WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var`       |
 | WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`        |
 | WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`                    |
@@ -463,7 +463,7 @@ $ docker exec -ti watchstate console system:env --list
 > the `compose.yaml` file.
 
 | Key           | Type    | Description                          | Default  |
-|---------------|---------|--------------------------------------|----------|
+| ------------- | ------- | ------------------------------------ | -------- |
 | WEBUI_ENABLED | bool    | Enable WebUI. Value casted to a bool | `true`   |
 | DISABLE_HTTP  | integer | Disable included `HTTP Server`.      | `0`      |
 | DISABLE_CRON  | integer | Disable included `Task Scheduler`.   | `0`      |
@@ -483,8 +483,7 @@ The Webhook URL is backend specific, the request path is `/v1/api/backend/[USER]
 Where `[USER]` is the username for sub user or `main` for main user and `[BACKEND_NAME]` is the name of the backend you
 want to add webhook for. Typically, the full URL
 is `http://localhost:8080/v1/api/backend/[USER]@[BACKEND_NAME]/webhook`. Or simply go to the `WebUI > Backends` and
-click
-on `Copy Webhook URL`.
+click on `Copy Webhook URL`.
 
 > [!NOTE]
 > You will keep seeing the `webhook.token` key, it's being kept for backward compatibility, and will be removed in the
