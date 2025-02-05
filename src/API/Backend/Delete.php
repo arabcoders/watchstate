@@ -4,28 +4,27 @@ declare(strict_types=1);
 
 namespace App\API\Backend;
 
-use App\Libs\Config;
-use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class Delete
 {
     use APITraits;
 
     #[\App\Libs\Attributes\Route\Delete(Index::URL . '/{name:backend}[/]', name: 'backend.delete')]
-    public function __invoke(DBLayer $db, iRequest $request, array $args = []): iResponse
+    public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+        $userContext = $this->getUserContext($request, $mapper, $logger);
 
-        if (null === ($data = $this->getBackend(name: $name))) {
+        if (null === ($data = $this->getBackend(name: $name, userContext: $userContext))) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
+
+        $db = $userContext->db->getDBLayer();
 
         set_time_limit(0);
         ignore_user_abort(true);
@@ -53,7 +52,7 @@ final class Delete
 
         $deletedRecords = $stmt->rowCount();
 
-        ConfigFile::open(Config::get('backends_file'), 'yaml')->delete($name)->persist();
+        $userContext->config->delete($name)->persist();
 
         return api_response(Status::OK, [
             'deleted' => [

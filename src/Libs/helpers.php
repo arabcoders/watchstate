@@ -1273,11 +1273,12 @@ if (!function_exists('checkIgnoreRule')) {
      * Check if the given ignore rule is valid.
      *
      * @param string $guid The ignore rule to check.
+     * @param UserContext|null $userContext (Optional) The user context.
      *
      * @return bool True if the ignore rule is valid, false otherwise.
      * @throws RuntimeException Throws an exception if the ignore rule is invalid.
      */
-    function checkIgnoreRule(string $guid): bool
+    function checkIgnoreRule(string $guid, UserContext|null $userContext = null): bool
     {
         $urlParts = parse_url($guid);
 
@@ -1319,7 +1320,11 @@ if (!function_exists('checkIgnoreRule')) {
             throw new RuntimeException('No backend was given.');
         }
 
-        $backends = array_keys(Config::get('servers', []));
+        if (null !== $userContext) {
+            $backends = array_keys($userContext->config->getAll());
+        } else {
+            $backends = array_keys(Config::get('servers', []));
+        }
 
         if (false === in_array($backend, $backends)) {
             throw new RuntimeException(r("Invalid backend name '{backend}' was given. Expected values are '{list}'.", [
@@ -1725,11 +1730,13 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         switch (PHP_OS) {
-            case 'Linux': {
+            case 'Linux':
+                {
                     $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
                 }
                 break;
-            case 'WINNT': {
+            case 'WINNT':
+                {
                     // -- Windows does not have a /proc directory so we need different way to get the status.
                     @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
                     // -- windows doesn't return 0 if the process is not found. we need to parse the output.

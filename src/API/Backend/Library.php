@@ -7,33 +7,35 @@ namespace App\API\Backend;
 use App\API\Backend\Index as BackendsIndex;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Attributes\Route\Route;
-use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 final class Library
 {
     use APITraits;
 
-    #[Get(BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backend.library')]
-    public function listLibraries(string $name): iResponse
+    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
     {
-        if (empty($name)) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+    }
 
-        if (null === $this->getBackend(name: $name)) {
+    #[Get(BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backend.library')]
+    public function listLibraries(iRequest $request, string $name): iResponse
+    {
+        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
-            $client = $this->getClient(name: $name);
+            $client = $this->getClient(name: $name, userContext: $userContext);
             return api_response(Status::OK, $client->listLibraries());
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
@@ -43,31 +45,23 @@ final class Library
     }
 
     #[Route(['POST', 'DELETE'], BackendsIndex::URL . '/{name:backend}/library/{id}[/]', name: 'backend.library.ignore')]
-    public function ignoreLibrary(iRequest $request, array $args = []): iResponse
+    public function ignoreLibrary(iRequest $request, string $name, string|int $id): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
 
-        if (null === $this->getBackend(name: $name)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
-        }
-
-        if (null === ($id = ag($args, 'id'))) {
-            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
         }
 
         $remove = 'DELETE' === $request->getMethod();
 
-        $config = ConfigFile::open(Config::get('backends_file'), 'yaml');
-
-        if (null === $config->get($name)) {
+        if (null === $userContext->config->get($name)) {
             return api_error(r("Backend '{backend}' not found.", ['backend' => $name]), Status::NOT_FOUND);
         }
 
         $ignoreIds = array_map(
             fn($v) => trim($v),
-            explode(',', (string)$config->get("{$name}.options." . Options::IGNORE, ''))
+            explode(',', (string)$userContext->config->get("{$name}.options." . Options::IGNORE, ''))
         );
 
         $mode = !(true === $remove);
@@ -80,7 +74,7 @@ final class Library
 
         $found = false;
 
-        $libraries = $this->getClient(name: $name)->listLibraries();
+        $libraries = $this->getClient(name: $name, userContext: $userContext)->listLibraries();
 
         foreach ($libraries as &$library) {
             if ((string)ag($library, 'id') === (string)$id) {
@@ -101,7 +95,9 @@ final class Library
             $ignoreIds = array_diff($ignoreIds, [$id]);
         }
 
-        $config->set("{$name}.options." . Options::IGNORE, implode(',', array_values($ignoreIds)))->persist();
+        $userContext->config
+            ->set("{$name}.options." . Options::IGNORE, implode(',', array_values($ignoreIds)))
+            ->persist();
 
         return api_response(Status::OK, $libraries);
     }

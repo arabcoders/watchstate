@@ -8,9 +8,11 @@ use App\Libs\Attributes\Route\Post;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Throwable;
 
@@ -23,13 +25,11 @@ final class AccessToken
     }
 
     #[Post(Index::URL . '/{name:backend}/accesstoken[/]', name: 'backend.accesstoken')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+        $userContext = $this->getUserContext($request, $mapper, $logger);
 
-        if (null === $this->getBackend(name: $name)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
@@ -40,7 +40,7 @@ final class AccessToken
         }
 
         try {
-            $client = $this->getClient(name: $name);
+            $client = $this->getClient(name: $name, userContext: $userContext);
             $token = $client->getUserToken(
                 userId: $id,
                 username: $data->get('username', $client->getContext()->backendName . '_user'),

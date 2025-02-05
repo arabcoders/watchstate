@@ -11,9 +11,11 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 final class Ignore
@@ -22,19 +24,17 @@ final class Ignore
 
     private ConfigFile $file;
 
-    public function __construct()
+    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
     {
         $this->file = new ConfigFile(Config::get('path') . '/config/ignore.yaml', type: 'yaml', autoCreate: true);
     }
 
     #[Get(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds')]
-    public function ignoredIds(string $name): iResponse
+    public function ignoredIds(iRequest $request, string $name): iResponse
     {
-        if (empty($name)) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
 
-        if (null === $this->getBackend(name: $name)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
@@ -70,19 +70,11 @@ final class Ignore
     }
 
     #[Delete(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds.delete')]
-    public function deleteRule(iRequest $request, array $args = []): iResponse
+    public function deleteRule(iRequest $request, string $name): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
 
-        if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
-        }
-
-        $data = $this->getBackends(name: $name);
-
-        if (empty($data)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
@@ -93,7 +85,7 @@ final class Ignore
         }
 
         try {
-            checkIgnoreRule($rule);
+            checkIgnoreRule($rule, userContext: $userContext);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
@@ -108,19 +100,11 @@ final class Ignore
     }
 
     #[Post(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds.add')]
-    public function addRule(iRequest $request, array $args = []): iResponse
+    public function addRule(iRequest $request, string $name): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
-        }
+        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
 
-        if (null === $this->getBackend(name: $name)) {
-            return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
-        }
-
-        $data = $this->getBackends(name: $name);
-
-        if (empty($data)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
@@ -150,7 +134,7 @@ final class Ignore
         }
 
         try {
-            checkIgnoreRule($rule);
+            checkIgnoreRule($rule, userContext: $userContext);
             $id = makeIgnoreId($rule);
         } catch (Throwable $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
