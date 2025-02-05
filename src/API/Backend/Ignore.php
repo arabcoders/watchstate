@@ -11,6 +11,7 @@ use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -32,7 +33,11 @@ final class Ignore
     #[Get(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds')]
     public function ignoredIds(iRequest $request, string $name): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
@@ -72,7 +77,11 @@ final class Ignore
     #[Delete(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds.delete')]
     public function deleteRule(iRequest $request, string $name): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
@@ -102,7 +111,11 @@ final class Ignore
     #[Post(Index::URL . '/{name:backend}/ignore[/]', name: 'backend.ignoredIds.add')]
     public function addRule(iRequest $request, string $name): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

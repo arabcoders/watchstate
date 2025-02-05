@@ -7,6 +7,7 @@ namespace App\API\Backend;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
@@ -24,7 +25,11 @@ final class Discover
     #[Get(Index::URL . '/{name:backend}/discover[/]', name: 'backend.discover')]
     public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger, iHttp $http): iResponse
     {
-        $userContext = $this->getUserContext($request, $mapper, $logger);
+        try {
+            $userContext = $this->getUserContext($request, $mapper, $logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

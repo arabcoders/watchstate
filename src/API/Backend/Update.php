@@ -14,6 +14,7 @@ use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\ValidationException;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
@@ -37,14 +38,16 @@ final class Update
         'export',
     ];
 
-    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger) {}
 
     #[Put(Index::URL . '/{name:backend}[/]', name: 'backend.update')]
     public function update(iRequest $request, string $name): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (false === $userContext->config->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
@@ -90,7 +93,7 @@ final class Update
             $backend = array_pop($backend);
 
             return api_response(Status::OK, $backend);
-        } catch (InvalidContextException|ValidationException $e) {
+        } catch (InvalidContextException | ValidationException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
     }
@@ -98,7 +101,11 @@ final class Update
     #[Patch(Index::URL . '/{name:backend}[/]', name: 'backend.patch')]
     public function patchUpdate(iRequest $request, string $name): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (false === $userContext->config->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

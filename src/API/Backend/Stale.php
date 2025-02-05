@@ -33,7 +33,11 @@ final class Stale
     #[Get(backendIndex::URL . '/{name:backend}/stale/{id}[/]', name: 'backend.stale.list')]
     public function listContent(iRequest $request, string $name, string|int $id): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
@@ -64,7 +68,11 @@ final class Stale
     #[Delete(backendIndex::URL . '/{name:backend}/stale/{id}[/]', name: 'backend.stale.delete')]
     public function deleteContent(iRequest $request, string $name, string|int $id, DirectMapper $mapper): iResponse
     {
-        $userContext = $this->getUserContext($request, $mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

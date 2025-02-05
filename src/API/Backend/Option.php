@@ -8,6 +8,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\ValidationException;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -18,14 +19,16 @@ final class Option
 {
     use APITraits;
 
-    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger) {}
 
     #[Route(['GET', 'POST', 'PATCH', 'DELETE'], Index::URL . '/{name:backend}/option[/{option}[/]]')]
     public function __invoke(iRequest $request, string $name, string|null $option = null): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (false === $userContext->config->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

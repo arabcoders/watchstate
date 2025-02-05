@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\API\Backend;
 
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
-use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
@@ -24,16 +25,19 @@ use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
-use Psr\SimpleCache\CacheInterface as iCache;
 
 final class Webhooks
 {
     use APITraits;
 
-    private iLogger $logfile;
+    private Logger $logfile;
 
-    public function __construct(private iCache $cache, LogSuppressor $suppressor)
-    {
+    public function __construct(
+        #[Inject(DirectMapper::class)]
+        private readonly iEImport $mapper,
+        private readonly iLogger $logger,
+        LogSuppressor $suppressor,
+    ) {
         $this->logfile = new Logger(name: 'webhook', processors: [new LogMessageProcessor()]);
 
         $level = Config::get('webhook.debug') ? Level::Debug : Level::Info;
@@ -58,27 +62,9 @@ final class Webhooks
      * @return iResponse The response object.
      */
     #[Route(['POST', 'PUT'], Index::URL . '/{name:ubackend}/webhook[/]', name: 'backend.webhook')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
-    {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for id path parameter.', Status::BAD_REQUEST);
-        }
-
-        return $this->process($name, $request);
-    }
-
-    /**
-     * Process the incoming webhook request.
-     *
-     * @param string $name The backend name.
-     * @param iRequest $request The incoming request object.
-     *
-     * @return iResponse The response object.
-     */
-    private function process(string $name, iRequest $request): iResponse
+    public function __invoke(iRequest $request, string $name): iResponse
     {
         try {
-            // -- sub-user
             if (true === str_contains($name, '@')) {
                 [$user, $ubackend] = explode('@', $name, 2);
             } else {
@@ -86,17 +72,10 @@ final class Webhooks
                 $ubackend = $name;
             }
 
-            try {
-                $userContext = getUserContext(
-                    user: $user,
-                    mapper: Container::get(DirectMapper::class),
-                    logger: Container::get(iLogger::class)
-                );
-            } catch (RuntimeException $ex) {
-                return api_error($ex->getMessage(), Status::NOT_FOUND);
-            }
+            $userContext = getUserContext(user: $user, mapper: $this->mapper, logger: $this->logger);
 
             $backend = $this->getBackends(name: $ubackend, userContext: $userContext);
+
             if (empty($backend)) {
                 throw new RuntimeException(r("Backend '{user}@{backend}' {backends} not found.", [
                     'user' => $user,

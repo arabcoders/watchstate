@@ -6,6 +6,7 @@ namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -21,7 +22,11 @@ final class Index
     #[Get(self::URL . '/{name:backend}[/]', name: 'backend.view')]
     public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger): iResponse
     {
-        $userContext = $this->getUserContext($request, $mapper, $logger);
+        try {
+            $userContext = $this->getUserContext($request, $mapper, $logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === ($data = $this->getBackend(name: $name, userContext: $userContext))) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

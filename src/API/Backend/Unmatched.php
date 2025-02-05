@@ -29,7 +29,11 @@ final class Unmatched
     #[Get(backendIndex::URL . '/{name:backend}/unmatched[/[{id}[/]]]', name: 'backend.unmatched')]
     public function __invoke(iRequest $request, string $name, string|int|null $id = null): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

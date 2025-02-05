@@ -21,14 +21,16 @@ final class Library
 {
     use APITraits;
 
-    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
-    {
-    }
+    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger) {}
 
     #[Get(BackendsIndex::URL . '/{name:backend}/library[/]', name: 'backend.library')]
     public function listLibraries(iRequest $request, string $name): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
@@ -47,7 +49,11 @@ final class Library
     #[Route(['POST', 'DELETE'], BackendsIndex::URL . '/{name:backend}/library/{id}[/]', name: 'backend.library.ignore')]
     public function ignoreLibrary(iRequest $request, string $name, string|int $id): iResponse
     {
-        $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
