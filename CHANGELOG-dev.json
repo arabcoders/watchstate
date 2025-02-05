@@ -1,8 +1,38 @@
 [
     {
-        "tag": "dev-20250205-87efadd",
-        "date": "2025-02-05T13:55:37+00:00",
+        "tag": "dev-20250205-40cae7f",
+        "date": "2025-02-05T19:06:09+00:00",
         "commits": [
+            {
+                "sha": "40cae7f",
+                "message": "Add sub users support for parity feature.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:06:09+00:00"
+            },
+            {
+                "sha": "59fbae4",
+                "message": "Add sub users support for integrity feature.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:05:58+00:00"
+            },
+            {
+                "sha": "720e5d9",
+                "message": "Allow client side cache to use namespace for keys.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:05:33+00:00"
+            },
+            {
+                "sha": "a093878",
+                "message": "Move connection settings into standalone component.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:04:53+00:00"
+            },
+            {
+                "sha": "e555f17",
+                "message": "updated docs about webhook support for sub users.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T14:00:12+00:00"
+            },
             {
                 "sha": "87efadd",
                 "message": "minor design change.",
