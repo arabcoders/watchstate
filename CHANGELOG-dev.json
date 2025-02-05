@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250205-c50a9a8",
-        "date": "2025-02-05T11:02:05+00:00",
+        "tag": "dev-20250205-37b7cf5",
+        "date": "2025-02-05T13:20:01+00:00",
         "commits": [
+            {
+                "sha": "37b7cf5",
+                "message": "wrap getUserContext in try catch",
+                "author": "ArabCoders",
+                "date": "2025-02-05T13:20:01+00:00"
+            },
             {
                 "sha": "c50a9a8",
                 "message": "Updated most of backend API endpoints to support sub users.",
