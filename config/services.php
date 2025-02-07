@@ -15,7 +15,6 @@ use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\Import\ReadOnlyMapper;
@@ -282,17 +281,12 @@ return (function (): array {
             'args' => [MemoryMapper::class],
         ],
 
-        iEImport::class => [
-            'class' => fn(iEImport $mapper): iEImport => $mapper,
-            'args' => [MemoryMapper::class],
-        ],
-
         EventDispatcherInterface::class => [
             'class' => fn(): EventDispatcher => new EventDispatcher(),
         ],
 
         UserContext::class => [
-            'class' => fn(iCache $cache, iEImport $mapper, iDB $db): UserContext => new UserContext(
+            'class' => fn(iCache $cache, iImport $mapper, iDB $db): UserContext => new UserContext(
                 name: 'main',
                 config: new ConfigFile(
                     file: Config::get('backends_file'),
@@ -304,7 +298,7 @@ return (function (): array {
                 cache: $cache,
                 db: $db
             ),
-            'args' => [iCache::class, iEImport::class, iDB::class]
+            'args' => [iCache::class, iImport::class, iDB::class]
         ],
     ];
 })();

@@ -11,8 +11,8 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\libs\Events\DataEvent;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\UserContext;
@@ -32,7 +32,7 @@ final readonly class ProcessPushEvent
      * @param iLogger $logger The logger object.
      */
     public function __construct(
-        #[Inject(DirectMapper::class)] private iEImport $mapper,
+        #[Inject(DirectMapper::class)] private iImport $mapper,
         private iLogger $logger,
         private QueueRequests $queue
     ) {

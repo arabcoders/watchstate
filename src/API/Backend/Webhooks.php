@@ -13,7 +13,7 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
@@ -34,7 +34,7 @@ final class Webhooks
 
     public function __construct(
         #[Inject(DirectMapper::class)]
-        private readonly iEImport $mapper,
+        private readonly iImport $mapper,
         private readonly iLogger $logger,
         LogSuppressor $suppressor,
     ) {
@@ -57,7 +57,7 @@ final class Webhooks
      * Receive a webhook request from a backend.
      *
      * @param iRequest $request The incoming request object.
-     * @param array $args The request path arguments.
+     * @param string $name backend name.
      *
      * @return iResponse The response object.
      */

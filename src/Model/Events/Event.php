@@ -16,52 +16,52 @@ final class Event extends EntityTable
     protected string $primaryKey = EntityTable::TABLE_PRIMARY_KEY;
 
     /**
-     * @uses EntityTable::COLUMN_ID
+     * @implements EntityTable::COLUMN_ID
      */
     public string|null $id = null;
 
     /**
-     * @uses EntityTable::COLUMN_STATUS
+     * @implements EntityTable::COLUMN_STATUS
      */
     public EventStatus $status = EventStatus::PENDING;
 
     /**
-     * @uses EntityTable::COLUMN_REFERENCE
+     * @implements EntityTable::COLUMN_REFERENCE
      */
     public string|null $reference = null;
 
     /**
-     * @uses EntityTable::COLUMN_EVENT
+     * @implements EntityTable::COLUMN_EVENT
      */
     public string $event = '';
 
     /**
-     * @uses EntityTable::COLUMN_EVENT_DATA
+     * @implements EntityTable::COLUMN_EVENT_DATA
      */
     public array $event_data = [];
 
     /**
-     * @uses EntityTable::COLUMN_OPTIONS
+     * @implements EntityTable::COLUMN_OPTIONS
      */
     public array $options = [];
 
     /**
-     * @uses EntityTable::COLUMN_ATTEMPTS
+     * @implements EntityTable::COLUMN_ATTEMPTS
      */
     public int $attempts = 0;
 
     /**
-     * @uses EntityTable::COLUMN_LOGS
+     * @implements EntityTable::COLUMN_LOGS
      */
     public array $logs = [];
 
     /**
-     * @uses EntityTable::COLUMN_CREATED_AT
+     * @implements EntityTable::COLUMN_CREATED_AT
      */
     public Date|string $created_at = '';
 
     /**
-     * @uses EntityTable::COLUMN_UPDATED_AT
+     * @implements EntityTable::COLUMN_UPDATED_AT
      */
     public Date|string|null $updated_at = null;
 

@@ -29,7 +29,7 @@ use App\Libs\Extends\Date;
 use App\Libs\Extends\ReflectionContainer;
 use App\Libs\Guid;
 use App\Libs\Initializer;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Response;
 use App\Libs\Stream;
@@ -2450,14 +2450,14 @@ if (!function_exists('getUsersContext')) {
     /**
      * Retrieves users configuration and related classes.
      *
-     * @param iEImport $mapper Import mapper instance.
+     * @param iImport $mapper Import mapper instance.
      * @param iLogger $logger logger instance.
      * @param array $opts (Optional) Additional options.
      *
      * @return array<array-key, UserContext> The user data.
      * @throws RuntimeException If the users directory is not readable.
      */
-    function getUsersContext(iEImport $mapper, iLogger $logger, array $opts = []): array
+    function getUsersContext(iImport $mapper, iLogger $logger, array $opts = []): array
     {
         $dbOpts = ag($opts, iDB::class, []);
 
@@ -2520,7 +2520,7 @@ if (!function_exists('getUsersContext')) {
                 ->withCache($perUserCache)
                 ->withLogger($logger)
                 ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $userName]));
-            assert($mapper instanceof iEImport);
+            assert($mapper instanceof iImport);
 
             $configs[$userName] = new UserContext(
                 name: $userName,
@@ -2540,13 +2540,13 @@ if (!function_exists('getUserContext')) {
      * Get the user context.
      *
      * @param string $user The username.
-     * @param iEImport $mapper The mapper instance.
+     * @param iImport $mapper The mapper instance.
      * @param iLogger $logger The logger instance.
      *
      * @return UserContext The user context.
      * @throws RuntimeException If the user is not found.
      */
-    function getUserContext(string $user, iEImport $mapper, iLogger $logger): UserContext
+    function getUserContext(string $user, iImport $mapper, iLogger $logger): UserContext
     {
         $users = getUsersContext($mapper, $logger);
         if (false === in_array($user, array_keys($users), true)) {

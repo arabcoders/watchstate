@@ -11,8 +11,8 @@ use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use App\Libs\UserContext;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -24,7 +24,7 @@ final class Stale
 {
     use APITraits;
 
-    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
         set_time_limit(0);
         ini_set('memory_limit', '-1');

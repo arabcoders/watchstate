@@ -11,12 +11,14 @@ use App\Libs\Extends\StreamableChunks;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Stream;
+use App\Libs\UserContext;
 use DateTimeInterface as iDate;
 use JsonMachine\Items;
 use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
 
 /**
  * Class RestoreMapper
@@ -43,6 +45,11 @@ final class RestoreMapper implements iImport
     protected array $options = [];
 
     /**
+     * @var UserContext|null The User Context
+     */
+    protected UserContext|null $userContext = null;
+
+    /**
      * Class constructor.
      *
      * @param iLogger $logger An instance of the iLogger interface.
@@ -52,6 +59,42 @@ final class RestoreMapper implements iImport
      */
     public function __construct(private iLogger $logger, private Stream|string $file)
     {
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withDB(iDB $db): self
+    {
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withCache(iCache $cache): self
+    {
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withUserContext(UserContext $userContext): self
+    {
+        $instance = clone $this;
+        $instance->userContext = $userContext;
+        return $instance;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function withLogger(iLogger $logger): self
+    {
+        $instance = clone $this;
+        $instance->logger = $logger;
+        return $instance;
     }
 
     /**
@@ -328,6 +371,11 @@ final class RestoreMapper implements iImport
      * @inheritdoc
      */
     public function getChangedList(): array
+    {
+        return [];
+    }
+
+    public function computeChanges(array $backends): array
     {
         return [];
     }

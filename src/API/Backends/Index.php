@@ -6,7 +6,7 @@ namespace App\API\Backends;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -27,7 +27,7 @@ final class Index
     ];
 
     #[Get(self::URL . '[/]', name: 'backends')]
-    public function __invoke(iRequest $request, iEImport $mapper, iLogger $logger): iResponse
+    public function __invoke(iRequest $request, iImport $mapper, iLogger $logger): iResponse
     {
         $list = [];
         $user = $this->getUserContext($request, $mapper, $logger);

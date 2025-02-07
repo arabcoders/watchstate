@@ -14,7 +14,7 @@ use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -30,7 +30,7 @@ final class Add
      * @throws RandomException
      */
     #[Post(Index::URL . '[/]', name: 'backends.add')]
-    public function BackendAdd(iRequest $request, iEImport $mapper, iLogger $logger): iResponse
+    public function BackendAdd(iRequest $request, iImport $mapper, iLogger $logger): iResponse
     {
         try {
             $userContext = $this->getUserContext($request, $mapper, $logger);

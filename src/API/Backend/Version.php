@@ -6,9 +6,9 @@ namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\InvalidArgumentException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -20,7 +20,7 @@ final class Version
     use APITraits;
 
     #[Get(Index::URL . '/{name:backend}/version[/]', name: 'backend.version')]
-    public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger): iResponse
+    public function __invoke(iRequest $request, string $name, iImport $mapper, iLogger $logger): iResponse
     {
         try {
             $userContext = $this->getUserContext($request, $mapper, $logger);

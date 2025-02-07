@@ -62,7 +62,7 @@ class PlexGuidTest extends TestCase
     {
         $this->handler->clear();
         $logger = new Logger('test', [new NullHandler()]);
-        $cache = new Cache($logger, new Psr16Cache(new ArrayAdapter()));
+        $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
         $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
         $db->migrations('up');
 
@@ -226,7 +226,6 @@ class PlexGuidTest extends TestCase
             $yaml = ['links' => [['type' => 'plex']]];
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
-            dump($this->handler->getRecords());
             $this->assertCount(0, $this->handler->getRecords(), "There should be no messages logged for empty list.");
             $this->handler->clear();
 

@@ -7,9 +7,9 @@ namespace App\API\Backend;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\InvalidArgumentException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
@@ -22,7 +22,7 @@ final class Users
     use APITraits;
 
     #[Get(Index::URL . '/{name:backend}/users[/]', name: 'backend.users')]
-    public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger): iResponse
+    public function __invoke(iRequest $request, string $name, iImport $mapper, iLogger $logger): iResponse
     {
         try {
             $userContext = $this->getUserContext($request, $mapper, $logger);

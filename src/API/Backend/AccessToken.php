@@ -7,9 +7,9 @@ namespace App\API\Backend;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
-use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\InvalidArgumentException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -21,10 +21,12 @@ final class AccessToken
 {
     use APITraits;
 
-    public function __construct(private readonly iHttp $http) {}
+    public function __construct(private readonly iHttp $http)
+    {
+    }
 
     #[Post(Index::URL . '/{name:backend}/accesstoken[/]', name: 'backend.accesstoken')]
-    public function __invoke(iRequest $request, string $name, iEImport $mapper, iLogger $logger): iResponse
+    public function __invoke(iRequest $request, string $name, iImport $mapper, iLogger $logger): iResponse
     {
         try {
             $userContext = $this->getUserContext($request, $mapper, $logger);

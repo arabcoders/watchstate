@@ -9,7 +9,7 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -21,7 +21,7 @@ final class Parity
 
     public const string URL = '%{api.prefix}/system/parity';
 
-    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
     }
 

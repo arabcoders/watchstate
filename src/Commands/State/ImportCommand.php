@@ -15,9 +15,9 @@ use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Stream;
@@ -47,14 +47,14 @@ class ImportCommand extends Command
     /**
      * Class Constructor.
      *
-     * @param iEImport $mapper The import interface object.
+     * @param iImport $mapper The import interface object.
      * @param iLogger $logger The logger interface object.
      * @param LogSuppressor $suppressor The log suppressor object.
      *
      */
     public function __construct(
         #[Inject(MemoryMapper::class)]
-        private iEImport $mapper,
+        private iImport $mapper,
         private iLogger $logger,
         private LogSuppressor $suppressor
     ) {

@@ -7,7 +7,7 @@ namespace App\Libs\Mappers\Import;
 use App\Libs\Config;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Mappers\ExtendedImportInterface;
+use App\Libs\Mappers\ImportInterface;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\UserContext;
@@ -24,9 +24,9 @@ use Psr\SimpleCache\CacheInterface as iCache;
  * This class is the default import mapper, it uses memory to store the entities. until they are committed.
  * This leads to faster processing and less database calls overall in exchange for higher memory usage.
  *
- * @implements ExtendedImportInterface
+ * @implements ImportInterface
  */
-class MemoryMapper implements ExtendedImportInterface
+class MemoryMapper implements ImportInterface
 {
     /**
      * @var string Local database GUID prefix.

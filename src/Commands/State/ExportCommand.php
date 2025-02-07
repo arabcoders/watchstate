@@ -13,8 +13,8 @@ use App\Libs\Database\DatabaseInterface;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Extends\StreamLogHandler;
 use App\Libs\LogSuppressor;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -50,7 +50,7 @@ class ExportCommand extends Command
      */
     public function __construct(
         #[Inject(DirectMapper::class)]
-        private iEImport $mapper,
+        private iImport $mapper,
         private QueueRequests $queue,
         private iLogger $logger,
         private LogSuppressor $suppressor,

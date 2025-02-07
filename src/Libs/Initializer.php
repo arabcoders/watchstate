@@ -347,11 +347,10 @@ final class Initializer
 
         $uri = r('/v1/api/backends/{backend}/webhook', ['backend' => ag($backend, 'name')]);
         return Container::get(Webhooks::class)(
-            $request->withUri($request->getUri()->withPath($uri)->withQuery(''))
-                ->withHeader('Authorization', 'Bearer ' . Config::get('api.key'))->withoutHeader('X-Apikey'),
-            [
-                'name' => $backend['name']
-            ]
+            request: $request->withUri($request->getUri()->withPath($uri)->withQuery(''))
+                ->withHeader('Authorization', 'Bearer ' . Config::get('api.key'))
+                ->withoutHeader('X-Apikey'),
+            name: $backend['name'],
         );
     }
 

@@ -20,6 +20,7 @@ use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\TestCase;
 use App\Libs\Uri;
 use App\Libs\UserContext;
+use Monolog\Handler\NullHandler;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -60,9 +61,9 @@ class JellyfinGuidTest extends TestCase
     private function getClass(): JellyfinGuid
     {
         $this->handler->clear();
-
+        $logger = new Logger('test', [new NullHandler()]);
         $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
-        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
+        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
         $db->migrations('up');
 
         return new JellyfinGuid($this->logger)->withContext(
@@ -80,7 +81,7 @@ class JellyfinGuidTest extends TestCase
                         autoBackup: false
                     ),
                     mapper: new MemoryMapper(
-                        logger: $this->logger,
+                        logger: $logger,
                         db: $db,
                         cache: $cache->getInterface()
                     ),

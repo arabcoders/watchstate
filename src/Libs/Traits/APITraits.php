@@ -16,7 +16,7 @@ use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Uri;
 use App\Libs\UserContext;
@@ -273,7 +273,7 @@ trait APITraits
      * @return UserContext The user context.
      * @throws RuntimeException If the user is not found.
      */
-    protected function getUserContext(iRequest $request, iEImport $mapper, iLogger $logger): UserContext
+    protected function getUserContext(iRequest $request, iImport $mapper, iLogger $logger): UserContext
     {
         if (null === ($user = $request->hasHeader('X-User') ? $request->getHeaderLine('X-User') : null)) {
             $user = ag($request->getQueryParams(), 'user', 'main');
