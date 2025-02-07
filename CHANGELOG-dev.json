@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250207-441343d",
-        "date": "2025-02-07T13:38:47+00:00",
+        "tag": "dev-20250207-c2d4e6a",
+        "date": "2025-02-07T14:11:53+00:00",
         "commits": [
+            {
+                "sha": "c2d4e6a",
+                "message": "Merged ExtendedImportInterface into ImportInterface",
+                "author": "ArabCoders",
+                "date": "2025-02-07T14:11:53+00:00"
+            },
             {
                 "sha": "441343d",
                 "message": "Made it possible to pass UserContext via Backend Context",
