@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250205-40cae7f",
-        "date": "2025-02-05T19:06:09+00:00",
+        "tag": "dev-20250207-441343d",
+        "date": "2025-02-07T13:38:47+00:00",
         "commits": [
+            {
+                "sha": "441343d",
+                "message": "Made it possible to pass UserContext via Backend Context",
+                "author": "ArabCoders",
+                "date": "2025-02-07T13:38:47+00:00"
+            },
             {
                 "sha": "40cae7f",
                 "message": "Add sub users support for parity feature.",
