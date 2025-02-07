@@ -8,13 +8,19 @@ use App\Backends\Common\Cache;
 use App\Backends\Common\Context;
 use App\Backends\Plex\Action\GetLibrariesList;
 use App\Backends\Plex\PlexClient;
+use App\Libs\ConfigFile;
+use App\Libs\Database\DBLayer;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\TestCase;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
+use PDO;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
@@ -37,11 +43,31 @@ class GetLibrariesListTest extends TestCase
             associative: true
         );
 
+        $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
+        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
+        $db->migrations('up');
+
         $this->context = new Context(
             clientName: PlexClient::CLIENT_NAME,
             backendName: PlexClient::CLIENT_NAME,
             backendUrl: new Uri('http://plex-test.example.com'),
-            cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+            cache: $cache,
+            userContext: new UserContext(
+                name: PlexClient::CLIENT_NAME,
+                config: new ConfigFile(
+                    file: __DIR__ . '/../../Fixtures/test_servers.yaml',
+                    autoSave: false,
+                    autoCreate: false,
+                    autoBackup: false
+                ),
+                mapper: new MemoryMapper(
+                    logger: $this->logger,
+                    db: $db,
+                    cache: $cache->getInterface()
+                ),
+                cache: $cache->getInterface(),
+                db: $db
+            ),
             backendId: 'za3g3543d0d637b4f9144099965f8f785cdf9f26',
             backendToken: 'fake-plex-token',
             backendUser: 1,

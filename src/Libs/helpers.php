@@ -707,6 +707,8 @@ if (!function_exists('makeBackend')) {
                 backendName: $name ?? ag($backend, 'name', '??'),
                 backendUrl: new Uri(ag($backend, 'url')),
                 cache: $cache,
+                userContext: $userContext ?? Container::get(UserContext::class),
+                logger: ag($options, iLogger::class, fn() => Container::get(iLogger::class)),
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),

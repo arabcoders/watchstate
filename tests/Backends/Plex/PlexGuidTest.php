@@ -10,14 +10,21 @@ use App\Backends\Common\Context;
 use App\Backends\Plex\PlexClient;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
+use App\Libs\Database\DBLayer;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
+use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\TestCase;
 use App\Libs\Uri;
+use App\Libs\UserContext;
+use Monolog\Handler\NullHandler;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use PDO;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Yaml\Yaml;
@@ -54,12 +61,33 @@ class PlexGuidTest extends TestCase
     private function getClass(): PlexGuid
     {
         $this->handler->clear();
+        $logger = new Logger('test', [new NullHandler()]);
+        $cache = new Cache($logger, new Psr16Cache(new ArrayAdapter()));
+        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
+        $db->migrations('up');
+
         return new PlexGuid($this->logger)->withContext(
             new Context(
                 clientName: PlexClient::CLIENT_NAME,
                 backendName: 'test_plex',
                 backendUrl: new Uri('http://127.0.0.1:34000'),
-                cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+                cache: $cache,
+                userContext: new UserContext(
+                    name: PlexClient::CLIENT_NAME,
+                    config: new ConfigFile(
+                        file: __DIR__ . '/../../Fixtures/test_servers.yaml',
+                        autoSave: false,
+                        autoCreate: false,
+                        autoBackup: false
+                    ),
+                    mapper: new MemoryMapper(
+                        logger: $logger,
+                        db: $db,
+                        cache: $cache->getInterface()
+                    ),
+                    cache: $cache->getInterface(),
+                    db: $db
+                ),
                 logger: $this->logger,
                 backendId: 's00000000000000000000000000000000000000p',
                 backendToken: 't000000000000000000p',
@@ -198,6 +226,7 @@ class PlexGuidTest extends TestCase
             $yaml = ['links' => [['type' => 'plex']]];
             file_put_contents($tmpFile, Yaml::dump($yaml));
             $this->getClass()->parseGUIDFile($tmpFile);
+            dump($this->handler->getRecords());
             $this->assertCount(0, $this->handler->getRecords(), "There should be no messages logged for empty list.");
             $this->handler->clear();
 

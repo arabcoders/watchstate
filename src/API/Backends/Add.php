@@ -9,16 +9,17 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\Attributes\Route\Post;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Random\RandomException;
 
 final class Add
@@ -29,8 +30,14 @@ final class Add
      * @throws RandomException
      */
     #[Post(Index::URL . '[/]', name: 'backends.add')]
-    public function BackendAdd(iRequest $request): iResponse
+    public function BackendAdd(iRequest $request, iEImport $mapper, iLogger $logger): iResponse
     {
+        try {
+            $userContext = $this->getUserContext($request, $mapper, $logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
         $requestData = $request->getParsedBody();
 
         if (!is_array($requestData)) {
@@ -53,7 +60,7 @@ final class Add
             return api_error('Invalid name was given.', Status::BAD_REQUEST);
         }
 
-        $backend = $this->getBackends(name: $name);
+        $backend = $this->getBackends(name: $name, userContext: $userContext);
 
         if (!empty($backend)) {
             return api_error(r("Backend '{backend}' already exists.", [
@@ -74,8 +81,7 @@ final class Add
         }
 
         if (null === ($class = Config::get("supported.{$type}", null))) {
-            return api_error(r("Unexpected client type '{type}' was given.", ['type' => $type]),
-                Status::BAD_REQUEST);
+            return api_error(r("Unexpected client type '{type}' was given.", ['type' => $type]), Status::BAD_REQUEST);
         }
 
         $instance = Container::getNew($class);
@@ -89,6 +95,7 @@ final class Add
                 backendName: $name,
                 backendUrl: new Uri($config->get('url')),
                 cache: Container::get(BackendCache::class),
+                userContext: $userContext,
                 backendId: $config->get('uuid', null),
                 backendToken: $token,
                 backendUser: $config->get('user', null),
@@ -107,14 +114,12 @@ final class Add
                 $config = $config->with('webhook.token', bin2hex(random_bytes(Config::get('webhook.tokenLength'))));
             }
 
-            ConfigFile::open(Config::get('backends_file'), 'yaml')
-                ->set($name, $config->getAll())
-                ->persist();
+            $userContext->config->set($name, $config->getAll())->persist();
         } catch (InvalidContextException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
 
-        $data = $this->getBackends(name: $name);
+        $data = $this->getBackends(name: $name, userContext: $userContext);
         $data = array_pop($data);
 
         return api_response(Status::CREATED, $data);

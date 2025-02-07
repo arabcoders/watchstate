@@ -10,14 +10,20 @@ use App\Backends\Common\Context;
 use App\Backends\Emby\EmbyClient;
 use App\Backends\Emby\EmbyGuid;
 use App\Libs\Config;
+use App\Libs\ConfigFile;
+use App\Libs\Database\DBLayer;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
+use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\TestCase;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use PDO;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Yaml\Yaml;
@@ -54,12 +60,32 @@ class EmbyGuidTest extends TestCase
     private function getClass(): EmbyGuid
     {
         $this->handler->clear();
+        $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
+        $db = new PDOAdapter($this->logger, new DBLayer(new PDO('sqlite::memory:')));
+        $db->migrations('up');
+
         return new EmbyGuid($this->logger)->withContext(
             new Context(
                 clientName: EmbyClient::CLIENT_NAME,
                 backendName: 'test_emby',
                 backendUrl: new Uri('http://127.0.0.1:8096'),
-                cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+                cache: $cache,
+                userContext: new UserContext(
+                    name: EmbyClient::CLIENT_NAME,
+                    config: new ConfigFile(
+                        file: __DIR__ . '/../../Fixtures/test_servers.yaml',
+                        autoSave: false,
+                        autoCreate: false,
+                        autoBackup: false
+                    ),
+                    mapper: new MemoryMapper(
+                        logger: $this->logger,
+                        db: $db,
+                        cache: $cache->getInterface()
+                    ),
+                    cache: $cache->getInterface(),
+                    db: $db
+                ),
                 logger: $this->logger,
                 backendId: 's000000000000000000000000000000e',
                 backendToken: 't000000000000000000000000000000e',

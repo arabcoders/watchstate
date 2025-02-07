@@ -13,8 +13,8 @@ use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
-use App\Libs\Exceptions\ValidationException;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Exceptions\ValidationException;
 use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
@@ -38,7 +38,9 @@ final class Update
         'export',
     ];
 
-    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger) {}
+    public function __construct(private readonly iEImport $mapper, private readonly iLogger $logger)
+    {
+    }
 
     #[Put(Index::URL . '/{name:backend}[/]', name: 'backend.update')]
     public function update(iRequest $request, string $name): iResponse
@@ -63,6 +65,8 @@ final class Update
                 backendName: $name,
                 backendUrl: new Uri($config->get('url')),
                 cache: Container::get(BackendCache::class)->with(adapter: $userContext->cache),
+                userContext: $userContext,
+                logger: Container::get(iLogger::class),
                 backendId: $config->get('uuid', null),
                 backendToken: $userContext->config->get("{$name}.token", null),
                 backendUser: $config->get('user', null),
@@ -93,7 +97,7 @@ final class Update
             $backend = array_pop($backend);
 
             return api_response(Status::OK, $backend);
-        } catch (InvalidContextException | ValidationException $e) {
+        } catch (InvalidContextException|ValidationException $e) {
             return api_error($e->getMessage(), Status::BAD_REQUEST);
         }
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
@@ -21,6 +22,7 @@ use App\Libs\Mappers\Import\ReadOnlyMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use Monolog\Logger;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\UriInterface;
@@ -289,5 +291,20 @@ return (function (): array {
             'class' => fn(): EventDispatcher => new EventDispatcher(),
         ],
 
+        UserContext::class => [
+            'class' => fn(iCache $cache, iEImport $mapper, iDB $db): UserContext => new UserContext(
+                name: 'main',
+                config: new ConfigFile(
+                    file: Config::get('backends_file'),
+                    type: 'yaml',
+                    autoSave: false,
+                    autoCreate: true
+                ),
+                mapper: $mapper,
+                cache: $cache,
+                db: $db
+            ),
+            'args' => [iCache::class, iEImport::class, iDB::class]
+        ],
     ];
 })();

@@ -160,10 +160,11 @@ trait APITraits
                 backendName: $data->get('name', 'basic_' . $type),
                 backendUrl: new Uri($data->get('url')),
                 cache: Container::get(BackendCache::class),
+                userContext: Container::get(UserContext::class),
+                logger: Container::get(iLogger::class),
                 backendId: $data->get('uuid'),
                 backendToken: $data->get('token'),
-                backendUser: $data->get('user'),
-                options: $options,
+                backendUser: $data->get('user'), backendHeaders: [], trace: false, options: $options,
             )
         );
     }
