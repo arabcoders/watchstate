@@ -4,8 +4,19 @@ declare(strict_types=1);
 
 namespace App\Libs;
 
+use App\Libs\Database\DBLayer;
+use App\Libs\Database\PDO\PDOAdapter;
+use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\ImportInterface;
 use Closure;
+use Monolog\Handler\NullHandler;
 use Monolog\Handler\TestHandler;
+use Monolog\Logger;
+use PDO;
+use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Psr16Cache;
 use Throwable;
 
 class TestCase extends \PHPUnit\Framework\TestCase
@@ -57,5 +68,40 @@ class TestCase extends \PHPUnit\Framework\TestCase
                 }
             }
         }
+    }
+
+    protected function createUserContext(
+        string $name = 'test',
+        ConfigFile|null $configFile = null,
+        LoggerInterface|null $logger = null,
+        CacheInterface|null $cache = null,
+        PDOAdapter|null $db = null,
+        ImportInterface|null $mapper = null,
+        array $data = [],
+    ): UserContext {
+        static $instances = null;
+
+        if (null !== ($instances[$name] ?? null)) {
+            return $instances[$name];
+        }
+
+        $logger ??= new Logger('test', [new NullHandler()]);
+        $cache ??= new Psr16Cache(new ArrayAdapter());
+        if (null === $db) {
+            $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
+            $db->migrations('up');
+        }
+
+        $filePath = TESTS_PATH . '/Fixtures/test_servers.yaml';
+        $instances[$name] = new UserContext(
+            name: $name,
+            config: $configFile ?? new ConfigFile($filePath, 'yaml', false, false, false),
+            mapper: $mapper ?? new MemoryMapper(logger: $logger, db: $db, cache: $cache),
+            cache: $cache,
+            db: $db,
+            data: $data,
+        );
+
+        return $instances[$name];
     }
 }

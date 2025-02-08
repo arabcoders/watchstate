@@ -10,24 +10,32 @@ use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 final class Unmatched
 {
     use APITraits;
 
-    #[Get(backendIndex::URL . '/{name:backend}/unmatched[/[{id}[/]]]', name: 'backend.unmatched')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
+    }
+
+    #[Get(backendIndex::URL . '/{name:backend}/unmatched[/[{id}[/]]]', name: 'backend.unmatched')]
+    public function __invoke(iRequest $request, string $name, string|int|null $id = null): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        if (null === $this->getBackend(name: $name)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
@@ -44,13 +52,13 @@ final class Unmatched
         $opts[Options::RAW_RESPONSE] = true;
 
         try {
-            $client = $this->getClient(name: $name, config: $backendOpts);
+            $client = $this->getClient(name: $name, config: $backendOpts, userContext: $userContext);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
         $ids = [];
-        if (null !== ($id = ag($args, 'id'))) {
+        if (null !== $id) {
             $ids[] = $id;
         } else {
             foreach ($client->listLibraries() as $library) {

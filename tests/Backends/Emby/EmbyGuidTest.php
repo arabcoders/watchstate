@@ -60,6 +60,7 @@ class EmbyGuidTest extends TestCase
                 backendName: 'test_emby',
                 backendUrl: new Uri('http://127.0.0.1:8096'),
                 cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+                userContext: $this->createUserContext(EmbyClient::CLIENT_NAME),
                 logger: $this->logger,
                 backendId: 's000000000000000000000000000000e',
                 backendToken: 't000000000000000000000000000000e',
@@ -385,11 +386,28 @@ class EmbyGuidTest extends TestCase
                 'year' => 2021
             ]
         ];
-        Config::save('ignore', [(string)makeIgnoreId('show://imdb:123@test_emby') => 1]);
 
-        $this->assertEquals([],
-            $this->getClass()->get(['imdb' => '123'], $context),
-            'Assert only the the oldest ID is returned for numeric GUIDs.');
+        // -- as we cache the ignore list for each user now,
+        // -- and no longer rely on config.ignore key, we needed a workaround to update the ignore list
+        isIgnoredId(
+            userContext: $this->createUserContext(EmbyClient::CLIENT_NAME),
+            backend: 'test_emby',
+            type: 'show',
+            db: 'imdb',
+            id: '123',
+            opts: [
+                'reset' => true,
+                'list' => [
+                    (string)makeIgnoreId('show://imdb:123@test_emby') => 1
+                ]
+            ]
+        );
+
+        $this->assertEquals(
+            expected: [],
+            actual: $this->getClass()->get(['imdb' => '123'], $context),
+            message: 'Assert only the the oldest ID is returned for numeric GUIDs.'
+        );
 
         $this->assertTrue(
             $this->logged(Level::Debug, 'EmbyGuid: Ignoring', true),

@@ -8,7 +8,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Entity\StateInterface as iState;
-use App\Libs\Mappers\ExtendedImportInterface;
+use App\Libs\Mappers\ImportInterface;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\UserContext;
@@ -28,9 +28,9 @@ use Throwable;
  * Which leads to less memory usage overall and slower performance. This mapper should only be used when memory is a concern.
  * The only thing kept in memory is the list of pointers to the database objects.
  *
- * @implements ExtendedImportInterface
+ * @implements ImportInterface
  */
-class DirectMapper implements ExtendedImportInterface
+class DirectMapper implements ImportInterface
 {
     /**
      * @var array<int,int> List used objects.

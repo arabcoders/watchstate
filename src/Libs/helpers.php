@@ -29,7 +29,7 @@ use App\Libs\Extends\Date;
 use App\Libs\Extends\ReflectionContainer;
 use App\Libs\Guid;
 use App\Libs\Initializer;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Response;
 use App\Libs\Stream;
@@ -59,6 +59,7 @@ use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
@@ -707,6 +708,8 @@ if (!function_exists('makeBackend')) {
                 backendName: $name ?? ag($backend, 'name', '??'),
                 backendUrl: new Uri(ag($backend, 'url')),
                 cache: $cache,
+                userContext: $userContext ?? Container::get(UserContext::class),
+                logger: ag($options, iLogger::class, fn() => Container::get(iLogger::class)),
                 backendId: ag($backend, 'uuid', null),
                 backendToken: ag($backend, 'token', null),
                 backendUser: ag($backend, 'user', null),
@@ -953,21 +956,38 @@ if (false === function_exists('isIgnoredId')) {
      * @throws InvalidArgumentException Throws an exception if an invalid context type is given.
      */
     function isIgnoredId(
+        UserContext $userContext,
         string $backend,
         string $type,
         string $db,
         string|int $id,
-        string|int|null $backendId = null
+        string|int|null $backendId = null,
+        array $opts = [],
     ): bool {
+        static $ignoreList = [];
+
         if (false === in_array($type, iState::TYPES_LIST)) {
             throw new InvalidArgumentException(sprintf('Invalid context type \'%s\' was given.', $type));
         }
 
-        $list = Config::get('ignore', []);
+        if (!isset($ignoreList[$userContext->name]) || isset($opts['reset'])) {
+            $ignoreList[$userContext->name] = $opts['list'] ?? [];
+            $ignoreFile = $userContext->getPath() . '/ignore.yaml';
+            if (true === file_exists($ignoreFile)) {
+                try {
+                    foreach (Yaml::parseFile($ignoreFile) as $key => $val) {
+                        $ignoreList[$userContext->name][(string)makeIgnoreId($key)] = $val;
+                    }
+                } catch (Throwable) {
+                }
+            }
+        }
+
+        $list = $opts['list'] ?? $ignoreList[$userContext->name];
 
         $key = makeIgnoreId(sprintf('%s://%s:%s@%s?id=%s', $type, $db, $id, $backend, $backendId));
 
-        if (null !== ($list[(string)$key->withQuery('')] ?? null)) {
+        if (isset($list[(string)$key->withQuery('')])) {
             return true;
         }
 
@@ -975,7 +995,7 @@ if (false === function_exists('isIgnoredId')) {
             return false;
         }
 
-        return null !== ($list[(string)$key] ?? null);
+        return isset($list[(string)$key]);
     }
 }
 
@@ -1273,11 +1293,12 @@ if (!function_exists('checkIgnoreRule')) {
      * Check if the given ignore rule is valid.
      *
      * @param string $guid The ignore rule to check.
+     * @param UserContext|null $userContext (Optional) The user context.
      *
      * @return bool True if the ignore rule is valid, false otherwise.
      * @throws RuntimeException Throws an exception if the ignore rule is invalid.
      */
-    function checkIgnoreRule(string $guid): bool
+    function checkIgnoreRule(string $guid, UserContext|null $userContext = null): bool
     {
         $urlParts = parse_url($guid);
 
@@ -1319,7 +1340,11 @@ if (!function_exists('checkIgnoreRule')) {
             throw new RuntimeException('No backend was given.');
         }
 
-        $backends = array_keys(Config::get('servers', []));
+        if (null !== $userContext) {
+            $backends = array_keys($userContext->config->getAll());
+        } else {
+            $backends = array_keys(Config::get('servers', []));
+        }
 
         if (false === in_array($backend, $backends)) {
             throw new RuntimeException(r("Invalid backend name '{backend}' was given. Expected values are '{list}'.", [
@@ -1725,11 +1750,13 @@ if (!function_exists('isTaskWorkerRunning')) {
         }
 
         switch (PHP_OS) {
-            case 'Linux': {
+            case 'Linux':
+                {
                     $status = file_exists(r('/proc/{pid}/status', ['pid' => $pid]));
                 }
                 break;
-            case 'WINNT': {
+            case 'WINNT':
+                {
                     // -- Windows does not have a /proc directory so we need different way to get the status.
                     @exec("tasklist /FI \"PID eq {$pid}\" 2>NUL", $output);
                     // -- windows doesn't return 0 if the process is not found. we need to parse the output.
@@ -2441,14 +2468,14 @@ if (!function_exists('getUsersContext')) {
     /**
      * Retrieves users configuration and related classes.
      *
-     * @param iEImport $mapper Import mapper instance.
+     * @param iImport $mapper Import mapper instance.
      * @param iLogger $logger logger instance.
      * @param array $opts (Optional) Additional options.
      *
      * @return array<array-key, UserContext> The user data.
      * @throws RuntimeException If the users directory is not readable.
      */
-    function getUsersContext(iEImport $mapper, iLogger $logger, array $opts = []): array
+    function getUsersContext(iImport $mapper, iLogger $logger, array $opts = []): array
     {
         $dbOpts = ag($opts, iDB::class, []);
 
@@ -2511,7 +2538,7 @@ if (!function_exists('getUsersContext')) {
                 ->withCache($perUserCache)
                 ->withLogger($logger)
                 ->withOptions(array_replace_recursive($mapper->getOptions(), [Options::ALT_NAME => $userName]));
-            assert($mapper instanceof iEImport);
+            assert($mapper instanceof iImport);
 
             $configs[$userName] = new UserContext(
                 name: $userName,
@@ -2531,13 +2558,13 @@ if (!function_exists('getUserContext')) {
      * Get the user context.
      *
      * @param string $user The username.
-     * @param iEImport $mapper The mapper instance.
+     * @param iImport $mapper The mapper instance.
      * @param iLogger $logger The logger instance.
      *
      * @return UserContext The user context.
      * @throws RuntimeException If the user is not found.
      */
-    function getUserContext(string $user, iEImport $mapper, iLogger $logger): UserContext
+    function getUserContext(string $user, iImport $mapper, iLogger $logger): UserContext
     {
         $users = getUsersContext($mapper, $logger);
         if (false === in_array($user, array_keys($users), true)) {

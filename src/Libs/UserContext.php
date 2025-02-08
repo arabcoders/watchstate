@@ -6,20 +6,20 @@ namespace App\Libs;
 
 use App\Libs\Attributes\DI\Inject;
 use App\Libs\Database\DatabaseInterface as iDB;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\MemoryMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use Psr\SimpleCache\CacheInterface as iCache;
 
 final class UserContext
 {
-    public readonly iEImport $mapper;
+    public readonly iImport $mapper;
 
     /**
      * Make User Context.
      *
      * @param string $name User name.
      * @param ConfigFile $config Per user Configuration file.
-     * @param iEImport $mapper Per user Data mapper
+     * @param iImport $mapper Per user Data mapper
      * @param iCache $cache Per user cache.
      * @param iDB $db Per user database.
      * @param array $data (Optional) Mutable data for the context.
@@ -28,12 +28,21 @@ final class UserContext
         public readonly string $name,
         public readonly ConfigFile $config,
         #[Inject(MemoryMapper::class)]
-        iEImport $mapper,
+        iImport $mapper,
         public readonly iCache $cache,
         public readonly iDB $db,
         public array $data = [],
     ) {
         $this->mapper = $mapper->withUserContext($this);
+    }
+
+    public function getPath(): string
+    {
+        if (isset($this->data['path'])) {
+            return $this->data['path'];
+        }
+
+        return fixPath(Config::get('path') . '/' . ('main' === $this->name ? 'config' : "users/{$this->name}"));
     }
 
     public function getBackendsNames(): string

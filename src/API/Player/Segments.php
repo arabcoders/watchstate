@@ -316,7 +316,8 @@ readonly class Segments
 
             if (!$process->isSuccessful()) {
                 $this->logger->error(
-                    r("Failed to generate segment. '{error}'", ['error' => $process->getErrorOutput()]), [
+                    r("Failed to generate segment. '{error}'", ['error' => $process->getErrorOutput()]),
+                    [
                         'stdout' => $process->getOutput(),
                         'stderr' => $process->getErrorOutput(),
                         'Ffmpeg' => $process->getCommandLine(),

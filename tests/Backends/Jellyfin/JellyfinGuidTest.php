@@ -60,6 +60,7 @@ class JellyfinGuidTest extends TestCase
                 backendName: 'test_jellyfin',
                 backendUrl: new Uri('http://127.0.0.1:8096'),
                 cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+                userContext: $this->createUserContext(JellyfinClient::CLIENT_NAME),
                 logger: $this->logger,
                 backendId: 's000000000000000000000000000000j',
                 backendToken: 't000000000000000000000000000000j',
@@ -383,7 +384,22 @@ class JellyfinGuidTest extends TestCase
                 'year' => 2021
             ]
         ];
-        Config::save('ignore', [(string)makeIgnoreId('show://imdb:123@test_jellyfin') => 1]);
+
+        // -- as we cache the ignore list for each user now,
+        // -- and no longer rely on config.ignore key, we needed a workaround to update the ignore list
+        isIgnoredId(
+            userContext: $this->createUserContext(JellyfinClient::CLIENT_NAME),
+            backend: 'test_plex',
+            type: 'show',
+            db: 'imdb',
+            id: '123',
+            opts: [
+                'reset' => true,
+                'list' => [
+                    (string)makeIgnoreId('show://imdb:123@test_jellyfin') => 1
+                ]
+            ]
+        );
 
         $this->assertEquals([],
             $this->getClass()->get(['imdb' => '123'], $context),

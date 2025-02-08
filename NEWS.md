@@ -1,5 +1,12 @@
 # Old Updates
 
+### 2025-01-24
+
+We are excited to share that multi-user sync is now fully supported! Our first goal was to make sure the feature worked,
+and since releasing it, we’ve worked hard to improve it based on feedback and testing. We’re now confident that it works
+as expected and are happy to invite you to start using it. To learn more and get started, please check out the FAQ entry
+here: [this link](FAQ.md#is-there-support-for-multi-user-setup).
+
 ### 2025-01-18
 
 Due to popular demand, we finally have added the ability to sync all users data, however, it's limited to only

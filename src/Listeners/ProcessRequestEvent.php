@@ -10,8 +10,8 @@ use App\Libs\Entity\StateInterface as iState;
 use App\libs\Events\DataEvent;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Extends\ProxyHandler;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Model\Events\EventListener;
 use Monolog\Level;
@@ -30,7 +30,7 @@ final readonly class ProcessRequestEvent
      */
     public function __construct(
         #[Inject(DirectMapper::class)]
-        private iEImport $mapper,
+        private iImport $mapper,
         private iLogger $logger,
     ) {
         set_time_limit(0);

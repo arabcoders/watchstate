@@ -6,12 +6,14 @@ namespace App\API\System;
 
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
-use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class Parity
 {
@@ -19,7 +21,7 @@ final class Parity
 
     public const string URL = '%{api.prefix}/system/parity';
 
-    public function __construct(private readonly DBLayer $db)
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
     }
 
@@ -28,6 +30,12 @@ final class Parity
     #[Get(self::URL . '[/]', name: 'system.parity')]
     public function __invoke(iRequest $request): iResponse
     {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
         $params = DataUtil::fromArray($request->getQueryParams());
 
         $page = (int)$params->get('page', 1);
@@ -42,7 +50,7 @@ final class Parity
 
         $counter = (int)$params->get('min', 0);
 
-        $backends = $this->getBackends();
+        $backends = $this->getBackends(userContext: $userContext);
         $backendsCount = count($backends);
 
         if ($counter > $backendsCount) {
@@ -54,7 +62,7 @@ final class Parity
         $counter = 0 === $counter ? $backendsCount : $counter;
 
         $sql = "SELECT COUNT(*) FROM state WHERE ( SELECT COUNT(*) FROM JSON_EACH(state.metadata) ) < {$counter}";
-        $stmt = $this->db->query($sql);
+        $stmt = $userContext->db->getDBLayer()->query($sql);
         $total = (int)$stmt->fetchColumn();
 
         $lastPage = @ceil($total / $perpage);
@@ -78,14 +86,14 @@ final class Parity
                     :_start, :_perpage
         ";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $userContext->db->getDBLayer()->prepare($sql);
         $stmt->execute([
             '_start' => $start,
             '_perpage' => $perpage,
         ]);
 
         foreach ($stmt as $row) {
-            $response['items'][] = $this->formatEntity($row);
+            $response['items'][] = $this->formatEntity($row, userContext: $userContext);
         }
 
         $response['paging'] = [
@@ -109,13 +117,19 @@ final class Parity
     #[Delete(self::URL . '[/]', name: 'system.parity.delete')]
     public function deleteRecords(iRequest $request): iResponse
     {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
         $params = DataUtil::fromRequest($request, true);
 
         if (0 === ($counter = (int)$params->get('min', 0))) {
             return api_error('Invalid minimum value.', Status::BAD_REQUEST);
         }
 
-        $count = count($this->getBackends());
+        $count = count($this->getBackends(userContext: $userContext));
 
         if ($counter > $count) {
             return api_error(r("Minimum value cannot be greater than the number of backends '({backends})'.", [
@@ -128,7 +142,7 @@ final class Parity
                 WHERE
                     ( SELECT COUNT(*) FROM JSON_EACH(state.metadata) ) < {$counter}
         ";
-        $stmt = $this->db->query($sql);
+        $stmt = $userContext->db->getDBLayer()->query($sql);
 
         return api_response(Status::OK, [
             'deleted_records' => $stmt->rowCount(),

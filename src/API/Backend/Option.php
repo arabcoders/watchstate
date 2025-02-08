@@ -5,35 +5,40 @@ declare(strict_types=1);
 namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Route;
-use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\ValidationException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class Option
 {
     use APITraits;
 
-    #[Route(['GET', 'POST', 'PATCH', 'DELETE'], Index::URL . '/{name:backend}/option[/{option}[/]]')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
+    }
+
+    #[Route(['GET', 'POST', 'PATCH', 'DELETE'], Index::URL . '/{name:backend}/option[/{option}[/]]')]
+    public function __invoke(iRequest $request, string $name, string|null $option = null): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
-
-        if (false === $list->has($name)) {
+        if (false === $userContext->config->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $data = DataUtil::fromRequest($request);
 
-        if (null === ($option = ag($args, 'option', $data->get('key')))) {
+        if (null === ($option = $option ?? $data->get('key'))) {
             return api_error('No option key was given.', Status::BAD_REQUEST);
         }
 
@@ -52,17 +57,17 @@ final class Option
         }
 
         if ('GET' === $request->getMethod()) {
-            if (false === $list->has($name . '.' . $option)) {
+            if (false === $userContext->config->has($name . '.' . $option)) {
                 return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                     'option' => $option,
                     'name' => $name
                 ]), Status::NOT_FOUND);
             }
 
-            return $this->viewOption($spec, $list->get("{$name}.{$option}"));
+            return $this->viewOption($spec, $userContext->config->get("{$name}.{$option}"));
         }
 
-        if ('DELETE' === $request->getMethod() && false === $list->has("{$name}.{$option}")) {
+        if ('DELETE' === $request->getMethod() && false === $userContext->config->has("{$name}.{$option}")) {
             return api_error(r("Option '{option}' not found in backend '{name}' config.", [
                 'option' => $option,
                 'name' => $name
@@ -70,10 +75,10 @@ final class Option
         }
 
         if ('DELETE' === $request->getMethod()) {
-            if (null !== ($value = $list->get($name . '.' . $option))) {
+            if (null !== ($value = $userContext->config->get($name . '.' . $option))) {
                 settype($value, ag($spec, 'type', 'string'));
             }
-            $list->delete("{$name}.{$option}");
+            $userContext->config->delete("{$name}.{$option}");
         } else {
             if (null !== ($value = $data->get('value'))) {
                 if (ag($spec, 'type', 'string') === 'bool') {
@@ -94,10 +99,10 @@ final class Option
                 }
             }
 
-            $list->set("{$name}.{$option}", $value);
+            $userContext->config->set("{$name}.{$option}", $value);
         }
 
-        $list->persist();
+        $userContext->config->persist();
 
         return api_response(Status::OK, [
             'key' => $option,

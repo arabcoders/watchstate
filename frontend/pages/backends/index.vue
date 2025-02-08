@@ -10,7 +10,8 @@
           <div class="field is-grouped">
             <p class="control" v-if="backends && backends.length>0">
               <button class="button is-purple" v-tooltip.bottom="'Create sub users backends.'"
-                      @click="navigateTo(makeConsoleCommand('backend:create -v', true))">
+                      @click="navigateTo(makeConsoleCommand('backend:create -v', true))"
+                      :disabled="'main' !== api_user">
                 <span class="icon"><i class="fas fa-users"></i></span>
               </button>
             </p>
@@ -196,6 +197,7 @@ useHead({title: 'Backends'})
 const backends = ref([])
 const toggleForm = ref(false)
 const api_url = useStorage('api_url', '')
+const api_user = useStorage('api_user', 'main')
 const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
 const selectedCommand = ref('')

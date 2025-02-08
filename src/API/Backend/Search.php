@@ -8,30 +8,38 @@ use App\Libs\Attributes\Route\Get;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use Throwable;
 
 final class Search
 {
     use APITraits;
 
-    #[Get(Index::URL . '/{name:backend}/search[/[{id}[/]]]', name: 'backend.search')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
+    }
+
+    #[Get(Index::URL . '/{name:backend}/search[/[{id}[/]]]', name: 'backend.search')]
+    public function __invoke(iRequest $request, string $name, string|int|null $id = null): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        if (null === $this->getBackend(name: $name)) {
+        if (null === $this->getBackend(name: $name, userContext: $userContext)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         $params = DataUtil::fromRequest($request, true);
 
-        $id = ag($args, 'id', $params->get('id', null));
+        $id = $id ?? $params->get('id') ?? null;
         $query = $params->get('q', null);
 
         if (null === $id && null === $query) {
@@ -39,7 +47,7 @@ final class Search
         }
 
         try {
-            $backend = $this->getClient(name: $name);
+            $backend = $this->getClient(name: $name, userContext: $userContext);
         } catch (RuntimeException $e) {
             return api_error($e->getMessage(), Status::NOT_FOUND);
         }
@@ -52,7 +60,7 @@ final class Search
             if (null !== $id) {
                 $data = $backend->searchId($id, [Options::RAW_RESPONSE => $raw]);
                 if (!empty($data)) {
-                    $item = $this->formatEntity($data);
+                    $item = $this->formatEntity($data, userContext: $userContext);
                     if (true === $raw) {
                         $item[Options::RAW_RESPONSE] = ag($data, Options::RAW_RESPONSE, []);
                     }
@@ -65,7 +73,7 @@ final class Search
                     opts: [Options::RAW_RESPONSE => $raw]
                 );
                 foreach ($data as $entity) {
-                    $item = $this->formatEntity($entity);
+                    $item = $this->formatEntity($entity, userContext: $userContext);
                     if (true === $raw) {
                         $item[Options::RAW_RESPONSE] = ag($entity, Options::RAW_RESPONSE, []);
                     }

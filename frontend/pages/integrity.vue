@@ -266,6 +266,7 @@ import {awaitElement, copyText, makeName, makeSearchLink, notification, TOOLTIP_
 import moment from 'moment'
 import Lazy from '~/components/Lazy'
 import {useSessionCache} from '~/utils/cache'
+import {useStorage} from "@vueuse/core";
 
 useHead({title: 'File Integrity'})
 
@@ -277,7 +278,9 @@ const isDeleting = ref(false)
 const filter = ref('')
 const showFilter = ref(false)
 const isCached = ref(false)
-const cache = useSessionCache()
+const api_user = useStorage('api_user', 'main')
+
+const cache = useSessionCache(api_user.value)
 
 const selectAll = ref(false)
 const massActionInProgress = ref(false)
@@ -416,6 +419,8 @@ const filterItem = item => {
 }
 
 onMounted(() => {
+  cache.setNameSpace(api_user.value)
+
   if (items.value.length < 1 && cache.has('integrity')) {
     const cachedData = cache.get('integrity')
     items.value = cachedData.items

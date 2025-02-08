@@ -13,15 +13,15 @@ use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Guid;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
-use RuntimeException;
 use SplFileInfo;
 use Throwable;
 
@@ -49,7 +49,8 @@ final class Index
     public const string URL = '%{api.prefix}/history';
 
     public function __construct(
-        #[Inject(DirectMapper::class)] private iEImport $mapper,
+        #[Inject(DirectMapper::class)]
+        private iImport $mapper,
         private iLogger $logger
     ) {
     }

@@ -60,6 +60,7 @@ class PlexGuidTest extends TestCase
                 backendName: 'test_plex',
                 backendUrl: new Uri('http://127.0.0.1:34000'),
                 cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+                userContext: $this->createUserContext(PlexClient::CLIENT_NAME),
                 logger: $this->logger,
                 backendId: 's00000000000000000000000000000000000000p',
                 backendToken: 't000000000000000000p',
@@ -433,7 +434,21 @@ class PlexGuidTest extends TestCase
             ['id' => 'com.plexapp.agents.imdb://2'],
         ], $context), 'Assert only the the oldest ID is returned for numeric GUIDs.');
 
-        Config::save('ignore', [(string)makeIgnoreId('show://imdb:123@test_plex') => 1]);
+        // -- as we cache the ignore list for each user now,
+        // -- and no longer rely on config.ignore key, we needed a workaround to update the ignore list
+        isIgnoredId(
+            userContext: $this->createUserContext(PlexClient::CLIENT_NAME),
+            backend: 'test_plex',
+            type: 'show',
+            db: 'imdb',
+            id: '123',
+            opts: [
+                'reset' => true,
+                'list' => [
+                    (string)makeIgnoreId('show://imdb:123@test_plex') => 1
+                ]
+            ]
+        );
 
         $this->assertEquals([],
             $this->getClass()->get([

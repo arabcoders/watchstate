@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Libs\Config;
+use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Database\DBLayer;
@@ -14,13 +15,13 @@ use App\Libs\Extends\ConsoleOutput;
 use App\Libs\Extends\HttpClient;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\LogSuppressor;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Mappers\Import\ReadOnlyMapper;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use Monolog\Logger;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\UriInterface;
@@ -280,14 +281,24 @@ return (function (): array {
             'args' => [MemoryMapper::class],
         ],
 
-        iEImport::class => [
-            'class' => fn(iEImport $mapper): iEImport => $mapper,
-            'args' => [MemoryMapper::class],
-        ],
-
         EventDispatcherInterface::class => [
             'class' => fn(): EventDispatcher => new EventDispatcher(),
         ],
 
+        UserContext::class => [
+            'class' => fn(iCache $cache, iImport $mapper, iDB $db): UserContext => new UserContext(
+                name: 'main',
+                config: new ConfigFile(
+                    file: Config::get('backends_file'),
+                    type: 'yaml',
+                    autoSave: false,
+                    autoCreate: true
+                ),
+                mapper: $mapper,
+                cache: $cache,
+                db: $db
+            ),
+            'args' => [iCache::class, iImport::class, iDB::class]
+        ],
     ];
 })();

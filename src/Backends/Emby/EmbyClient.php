@@ -41,6 +41,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
@@ -96,7 +97,7 @@ class EmbyClient implements iClient
      *
      * @return void
      */
-    public function __construct(Cache $cache, iLogger $logger, EmbyGuid $guid)
+    public function __construct(Cache $cache, iLogger $logger, EmbyGuid $guid, UserContext $userContext)
     {
         $this->logger = $logger;
         $this->cache = $cache;
@@ -105,6 +106,7 @@ class EmbyClient implements iClient
             backendName: static::CLIENT_NAME,
             backendUrl: new Uri('http://localhost'),
             cache: $this->cache,
+            userContext: $userContext,
         );
         $this->guid = $guid->withContext($this->context);
     }
@@ -119,7 +121,8 @@ class EmbyClient implements iClient
             clientName: static::CLIENT_NAME,
             backendName: $context->backendName,
             backendUrl: $context->backendUrl,
-            cache: $this->cache->withData(static::CLIENT_NAME . '_' . $context->backendName, $context->options),
+            cache: $context->cache->withData(static::CLIENT_NAME . '_' . $context->backendName, $context->options),
+            userContext: $context->userContext,
             logger: $context->logger,
             backendId: $context->backendId,
             backendToken: $context->backendToken,

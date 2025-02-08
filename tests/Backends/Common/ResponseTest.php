@@ -4,12 +4,21 @@ declare(strict_types=1);
 
 namespace Tests\Backends\Common;
 
+use App\Backends\Common\Cache;
 use App\Backends\Common\Error;
+use App\Libs\ConfigFile;
+use App\Libs\Database\DBLayer;
+use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\Backends\RuntimeException;
+use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\TestCase;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
+use PDO;
+use Symfony\Component\Cache\Adapter\NullAdapter;
+use Symfony\Component\Cache\Psr16Cache;
 
 class ResponseTest extends TestCase
 {
@@ -57,15 +66,31 @@ class ResponseTest extends TestCase
 
     public function test_tryResponse(): void
     {
+        $logger = new Logger('test', [new NullHandler()]);
+        $cache = new Cache($logger, new Psr16Cache(new NullAdapter()));
+        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
+        $db->migrations('up');
+
         $context = new \App\Backends\Common\Context(
             clientName: 'test',
             backendName: 'test',
             backendUrl: new Uri('https://example.com'),
-            cache: new \App\Backends\Common\Cache(
-                logger: new Logger('test', [new NullHandler()]),
-                cache: new \Symfony\Component\Cache\Psr16Cache(
-                    new \Symfony\Component\Cache\Adapter\NullAdapter()
+            cache: $cache,
+            userContext: new UserContext(
+                name: 'test',
+                config: new ConfigFile(
+                    file: __DIR__ . '/../../Fixtures/test_servers.yaml',
+                    autoSave: false,
+                    autoCreate: false,
+                    autoBackup: false
                 ),
+                mapper: new MemoryMapper(
+                    logger: $logger,
+                    db: $db,
+                    cache: $cache->getInterface()
+                ),
+                cache: $cache->getInterface(),
+                db: $db
             ),
             trace: false,
         );

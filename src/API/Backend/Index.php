@@ -6,9 +6,12 @@ namespace App\API\Backend;
 
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class Index
 {
@@ -17,13 +20,15 @@ final class Index
     public const string URL = '%{api.prefix}/backend';
 
     #[Get(self::URL . '/{name:backend}[/]', name: 'backend.view')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __invoke(iRequest $request, string $name, iImport $mapper, iLogger $logger): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
+        try {
+            $userContext = $this->getUserContext($request, $mapper, $logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        if (null === ($data = $this->getBackend(name: $name))) {
+        if (null === ($data = $this->getBackend(name: $name, userContext: $userContext))) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 

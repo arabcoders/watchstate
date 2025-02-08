@@ -42,6 +42,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Uri;
+use App\Libs\UserContext;
 use DateTimeInterface as iDate;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Http\Message\StreamInterface as iStream;
@@ -121,7 +122,7 @@ class PlexClient implements iClient
      * @param Cache $cache The cache instance.
      * @param PlexGuid $guid The PlexGuid instance.
      */
-    public function __construct(iLogger $logger, Cache $cache, PlexGuid $guid)
+    public function __construct(iLogger $logger, Cache $cache, PlexGuid $guid, UserContext $userContext)
     {
         $this->cache = $cache;
         $this->logger = $logger;
@@ -130,6 +131,7 @@ class PlexClient implements iClient
             backendName: static::CLIENT_NAME,
             backendUrl: new Uri('http://localhost'),
             cache: $this->cache,
+            userContext: $userContext,
         );
         $this->guid = $guid->withContext($this->context);
     }
@@ -145,7 +147,8 @@ class PlexClient implements iClient
             clientName: static::CLIENT_NAME,
             backendName: $context->backendName,
             backendUrl: $context->backendUrl,
-            cache: $this->cache->withData(static::CLIENT_NAME . '_' . $context->backendName, $context->options),
+            cache: $context->cache->withData(static::CLIENT_NAME . '_' . $context->backendName, $context->options),
+            userContext: $context->userContext,
             logger: $context->logger,
             backendId: $context->backendId,
             backendToken: $context->backendToken,

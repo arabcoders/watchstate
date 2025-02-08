@@ -9,8 +9,14 @@
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <p class="control">
+              <button class="button" @click="showTaskRunner = !showTaskRunner" v-tooltip="'Task Runner Status'"
+                :class="{ 'is-primary': taskRunner.status, 'is-danger': !taskRunner.status }">
+                <span class="icon"><i class="fas fa-microchip" /></span>
+              </button>
+            </p>
+            <p class="control">
               <button class="button is-info" @click="loadContent()" :disabled="isLoading"
-                      :class="{'is-loading':isLoading}">
+                :class="{ 'is-loading': isLoading }">
                 <span class="icon"><i class="fas fa-sync"></i></span>
               </button>
             </p>
@@ -23,16 +29,20 @@
         </div>
       </div>
 
+      <div class="column is-12" v-if="showTaskRunner || false === taskRunner?.status">
+        <TaskRunnerStatus :status="taskRunner" @taskrunner_update="e => taskRunner = e" />
+      </div>
+
       <div id="queued_tasks" class="column is-12" v-if="queued.length > 0">
         <Message message_class="has-background-success-90 has-text-dark" title="Queued Tasks"
-                 icon="fas fa-circle-notch fa-spin">
+          icon="fas fa-circle-notch fa-spin">
           <p>
             The following tasks
             <template v-for="(task, index) in queued" :key="`queued-${index}`">
               <NuxtLink :to="`#${task}`">
                 <span class="tag has-text-dark is-capitalized">{{ task }}</span>
               </NuxtLink>
-              <template v-if="queued.length > index+1">,&nbsp;</template>
+              <template v-if="queued.length > index + 1">,&nbsp;</template>
             </template>
             are queued to be run in background soon.
           </p>
@@ -40,19 +50,19 @@
       </div>
 
       <div class="column is-12" v-if="isLoading">
-        <Message message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+        <Message message_class="has-background-info-90 has-text-dark" title="Loading" icon="fas fa-spinner fa-spin"
+          message="Loading data. Please wait..." />
       </div>
 
       <div v-for="task in tasks" :key="task.name" class="column is-6-tablet is-12-mobile">
-        <div class="card" :class="{ 'is-gray' : !task.enabled, 'is-success': task.enabled }">
+        <div class="card" :class="{ 'is-gray': !task.enabled, 'is-success': task.enabled }">
           <header class="card-header">
             <div class="is-capitalized card-header-title">
               {{ task.name }}
             </div>
             <span class="card-header-icon" v-tooltip="'Enable/Disable Task.'" v-if="task.allow_disable">
               <input :id="task.name" type="checkbox" class="switch is-success" :checked="task.enabled"
-                     @change="toggleTask(task)">
+                @change="toggleTask(task)">
               <label :for="task.name"></label>
             </span>
           </header>
@@ -64,7 +74,7 @@
               <div class="column is-12 has-text-left">
                 <strong class="is-hidden-mobile">Runs: </strong>
                 <NuxtLink class="has-tooltip" target="_blank"
-                          :to="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`">
+                  :to="`https://crontab.guru/#${task.timer.replace(/ /g, '_')}`">
                   {{ cronstrue.toString(task.timer) }}
                 </NuxtLink>
               </div>
@@ -74,7 +84,7 @@
                   {{ task.timer }}
                 </span>
                 <NuxtLink v-else class="has-tooltip"
-                          :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)'>
+                  :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)'>
                   {{ task.timer }}
                 </NuxtLink>
               </div>
@@ -84,7 +94,7 @@
                   {{ task.args }}
                 </span>
                 <NuxtLink v-else class="has-tooltip"
-                          :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)'>
+                  :to='makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)'>
                   {{ task.args }}
                 </NuxtLink>
               </div>
@@ -92,7 +102,7 @@
                 <strong class="is-hidden-mobile">Prev Run:&nbsp;</strong>
                 <template v-if="task.enabled">
                   <span class="has-tooltip"
-                        v-tooltip="`Last run was at: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`">
+                    v-tooltip="`Last run was at: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`">
                     {{ task.prev_run ? moment(task.prev_run).fromNow() : '???' }}
                   </span>
                 </template>
@@ -104,7 +114,7 @@
                 <strong class="is-hidden-mobile">Next Run:&nbsp;</strong>
                 <template v-if="task.enabled">
                   <span class="has-tooltip"
-                        v-tooltip="`Next run will be at: ${moment(task.next_run).format(TOOLTIP_DATE_FORMAT)}`">
+                    v-tooltip="`Next run will be at: ${moment(task.next_run).format(TOOLTIP_DATE_FORMAT)}`">
                     {{ task.next_run ? moment(task.next_run).fromNow() : 'Never' }}
                   </span>
                 </template>
@@ -117,7 +127,7 @@
           <footer class="card-footer">
             <div class="card-footer-item">
               <button class="button is-info" @click="queueTask(task)"
-                      :class="{'is-danger':task.queued,'is-info':!task.queued}">
+                :class="{ 'is-danger': task.queued, 'is-info': !task.queued }">
                 <span class="icon-text">
                   <span class="icon"><i class="fas fa-clock" :class="{ 'fa-spin': task.queued }"></i></span>
                   <span>
@@ -142,7 +152,7 @@
 
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>For long running tasks like <code>Import</code> and <code>Export</code>, you should queue the task to
               run
@@ -152,7 +162,7 @@
             <li>Use the switch next to the task to enable or disable the task from being run automatically.</li>
             <li>To change when task is scheduled to run, please visit
               <span class="icon"><i class="fas fa-cogs"></i>&nbsp;</span>
-              <NuxtLink to="/env" v-text="'Environment variables'"/>
+              <NuxtLink to="/env" v-text="'Environment variables'" />
               page. The <code>WS_CRON_(TASK)_*</code> variables are used to control scheduled tasks.
             </li>
             <li>Clicking on the <code>Runs</code> link will take you to external page that will show for you more
@@ -170,17 +180,20 @@
 import 'assets/css/bulma-switch.css'
 import moment from 'moment'
 import request from '~/utils/request'
-import {awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils/index'
+import { awaitElement, makeConsoleCommand, notification, parse_api_response, TOOLTIP_DATE_FORMAT } from '~/utils/index'
 import cronstrue from 'cronstrue'
 import Message from '~/components/Message'
-import {useStorage} from '@vueuse/core'
+import { useStorage } from '@vueuse/core'
+import TaskRunnerStatus from '~/components/TaskRunnerStatus'
 
-useHead({title: 'Tasks'})
+useHead({ title: 'Tasks' })
 
 const tasks = ref([])
 const queued = ref([])
 const isLoading = ref(false)
 const show_page_tips = useStorage('show_page_tips', true)
+const taskRunner = ref({ status: true, message: '', restartable: false })
+const showTaskRunner = ref(false)
 
 const loadContent = async () => {
   isLoading.value = true
@@ -193,8 +206,7 @@ const loadContent = async () => {
     }
     tasks.value = json.tasks
     queued.value = json.queued
-
-    dEvent('taskrunner_update', json.status);
+    taskRunner.value = json, status
   } catch (e) {
     notification('error', 'Error', `Request error. ${e.message}`)
   } finally {
@@ -212,7 +224,7 @@ const toggleTask = async task => {
 
     const update = await request(`/system/env/${keyName}`, {
       method: 'POST',
-      body: JSON.stringify({"value": !task.enabled})
+      body: JSON.stringify({ "value": !task.enabled })
     })
 
     if (200 !== update.status) {
@@ -237,7 +249,7 @@ const queueTask = async task => {
   }
 
   try {
-    const response = await request(`/tasks/${task.name}/queue`, {method: is_queued ? 'DELETE' : 'POST'})
+    const response = await request(`/tasks/${task.name}/queue`, { method: is_queued ? 'DELETE' : 'POST' })
     if (response.ok) {
       notification('success', 'Success', `Task '${task.name}' has been ${is_queued ? 'cancelled' : 'queued'}.`)
       task.queued = !is_queued

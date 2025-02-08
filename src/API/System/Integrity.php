@@ -7,16 +7,17 @@ namespace App\API\System;
 use App\Libs\Attributes\Route\Delete;
 use App\Libs\Attributes\Route\Get;
 use App\Libs\Container;
-use App\Libs\Database\DBLayer;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Middlewares\ExceptionHandlerMiddleware;
 use App\Libs\Traits\APITraits;
 use DateInterval;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
-use Psr\SimpleCache\CacheInterface as iCache;
+use Psr\Log\LoggerInterface as iLogger;
 use Psr\SimpleCache\InvalidArgumentException;
 
 final class Integrity
@@ -31,21 +32,26 @@ final class Integrity
 
     private bool $fromCache = false;
 
-    public function __construct(private readonly iCache $cache)
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
-        set_time_limit(0);
     }
 
     /**
      * @throws InvalidArgumentException
      */
     #[Get(self::URL . '[/]', middleware: [ExceptionHandlerMiddleware::class], name: 'system.integrity')]
-    public function __invoke(DBLayer $db, iRequest $request): iResponse
+    public function __invoke(iRequest $request): iResponse
     {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
         $params = DataUtil::fromArray($request->getQueryParams());
 
-        if ($this->cache->has('system.integrity')) {
-            $data = $this->cache->get('system.integrity', []);
+        if ($userContext->cache->has('system.integrity')) {
+            $data = $userContext->cache->get('system.integrity', []);
             $this->dirExists = ag($data, 'dir_exists', []);
             $this->checkedFile = ag($data, 'checked_file', []);
             $this->fromCache = true;
@@ -60,7 +66,7 @@ final class Integrity
         ];
 
         $sql = "SELECT * FROM state";
-        $stmt = $db->prepare($sql);
+        $stmt = $userContext->db->getDBLayer()->prepare($sql);
         $stmt->execute();
 
         $base = Container::get(iState::class);
@@ -73,17 +79,36 @@ final class Integrity
             $entity = $base::fromArray($row);
 
             if (false === $this->checkIntegrity($entity)) {
-                $response['items'][] = $this->formatEntity($entity, true);
+                $response['items'][] = $this->formatEntity($entity, true, userContext: $userContext);
                 $response['total']++;
             }
         }
 
-        $this->cache->set('system.integrity', [
+        $userContext->cache->set('system.integrity', [
             'dir_exists' => $this->dirExists,
             'checked_file' => $this->checkedFile,
         ], new DateInterval('PT1H'));
 
         return api_response(Status::OK, $response);
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    #[Delete(self::URL . '[/]', name: 'system.integrity.reset')]
+    public function resetCache(iRequest $request): iResponse
+    {
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
+
+        if ($userContext->cache->has('system.integrity')) {
+            $userContext->cache->delete('system.integrity');
+        }
+
+        return api_response(Status::OK);
     }
 
     private function checkIntegrity(iState $entity): bool
@@ -145,19 +170,6 @@ final class Integrity
         }
 
         return true;
-    }
-
-    /**
-     * @throws InvalidArgumentException
-     */
-    #[Delete(self::URL . '[/]', name: 'system.integrity.reset')]
-    public function resetCache(): iResponse
-    {
-        if ($this->cache->has('system.integrity')) {
-            $this->cache->delete('system.integrity');
-        }
-
-        return api_response(Status::OK);
     }
 
     private function checkPath(string $file): bool

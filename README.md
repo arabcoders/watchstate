@@ -9,6 +9,12 @@ out of the box, this tool support `Jellyfin`, `Plex` and `Emby` media servers.
 
 ## Updates
 
+### 2025-02-05
+
+We have added initial support to browse the WebUI as sub user, it's still in early stages, only few Endpoints support it.
+We have also added support to webhooks to allow sub users, you simply have to add new hooks using `user@backend`. Please
+take look at [this FAQ](FAQ.md#how-to-add-webhooks) to learn how to use it for sub users.
+
 ### 2025-02-02
 
 We are happy to announce that we have merged in direct support for multi-user in `state:import` and `state:export`
@@ -29,13 +35,6 @@ this change shouldn't effect you as we have backward compatibility in place to r
 
 for more information about multi-user, Please read the FAQ entry about it
 at [this link](FAQ.md#is-there-support-for-multi-user-setup).
-
-### 2025-01-24
-
-We are excited to share that multi-user sync is now fully supported! Our first goal was to make sure the feature worked,
-and since releasing it, we’ve worked hard to improve it based on feedback and testing. We’re now confident that it works
-as expected and are happy to invite you to start using it. To learn more and get started, please check out the FAQ entry
-here: [this link](FAQ.md#is-there-support-for-multi-user-setup).
 
 --- 
 Refer to [NEWS](NEWS.md) for old updates.

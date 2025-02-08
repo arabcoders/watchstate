@@ -34,7 +34,8 @@ return (function () {
             'secure' => (bool)env('WS_SECURE_API_ENDPOINTS', false),
             'auto' => (bool)env('WS_API_AUTO', false),
             'pattern_match' => [
-                'backend' => '[a-zA-Z0-9_-]+',
+                'backend' => '[a-zA-Z0-9_\-]+',
+                'ubackend' => '[a-zA-Z0-9_\-\@]+',
             ],
             'logInternal' => (bool)env('WS_API_LOG_INTERNAL', false),
             'response' => [

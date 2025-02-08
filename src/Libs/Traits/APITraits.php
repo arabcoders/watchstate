@@ -16,7 +16,7 @@ use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Exceptions\RuntimeException;
-use App\Libs\Mappers\ExtendedImportInterface as iEImport;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Uri;
 use App\Libs\UserContext;
@@ -83,7 +83,8 @@ trait APITraits
                 $backend = ag_set($backend, 'export.lastSync', $export ? makeDate($export) : null);
             }
 
-            $webhookUrl = parseConfigValue(Index::URL) . "/{$backendName}/webhook";
+            $user = $userContext?->name ?? 'main';
+            $webhookUrl = parseConfigValue(Index::URL) . "/{$user}@{$backendName}/webhook";
 
             if (true === (bool)Config::get('api.secure')) {
                 $webhookUrl .= '?apikey=' . Config::get('api.key');
@@ -159,10 +160,11 @@ trait APITraits
                 backendName: $data->get('name', 'basic_' . $type),
                 backendUrl: new Uri($data->get('url')),
                 cache: Container::get(BackendCache::class),
+                userContext: Container::get(UserContext::class),
+                logger: Container::get(iLogger::class),
                 backendId: $data->get('uuid'),
                 backendToken: $data->get('token'),
-                backendUser: $data->get('user'),
-                options: $options,
+                backendUser: $data->get('user'), backendHeaders: [], trace: false, options: $options,
             )
         );
     }
@@ -271,7 +273,7 @@ trait APITraits
      * @return UserContext The user context.
      * @throws RuntimeException If the user is not found.
      */
-    protected function getUserContext(iRequest $request, iEImport $mapper, iLogger $logger): UserContext
+    protected function getUserContext(iRequest $request, iImport $mapper, iLogger $logger): UserContext
     {
         if (null === ($user = $request->hasHeader('X-User') ? $request->getHeaderLine('X-User') : null)) {
             $user = ag($request->getQueryParams(), 'user', 'main');

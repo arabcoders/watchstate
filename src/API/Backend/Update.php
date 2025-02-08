@@ -9,19 +9,20 @@ use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
 use App\Libs\Attributes\Route\Patch;
 use App\Libs\Attributes\Route\Put;
-use App\Libs\Config;
-use App\Libs\ConfigFile;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Exceptions\ValidationException;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use App\Libs\Uri;
 use JsonException;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class Update
 {
@@ -37,36 +38,37 @@ final class Update
         'export',
     ];
 
-    private ConfigFile $backendFile;
-
-    public function __construct()
+    public function __construct(private readonly iImport $mapper, private readonly iLogger $logger)
     {
-        $this->backendFile = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
     }
 
     #[Put(Index::URL . '/{name:backend}[/]', name: 'backend.update')]
-    public function update(iRequest $request, array $args = []): iResponse
+    public function update(iRequest $request, string $name): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        if (false === $this->backendFile->has($name)) {
+        if (false === $userContext->config->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
-            $client = $this->getClient($name);
+            $client = $this->getClient($name, userContext: $userContext);
 
-            $config = DataUtil::fromArray($this->fromRequest($this->backendFile->get($name), $request, $client));
+            $config = DataUtil::fromArray($this->fromRequest($userContext->config->get($name), $request, $client));
 
             $context = new Context(
-                clientName: $this->backendFile->get("{$name}.type"),
+                clientName: $userContext->config->get("{$name}.type"),
                 backendName: $name,
                 backendUrl: new Uri($config->get('url')),
-                cache: Container::get(BackendCache::class),
+                cache: Container::get(BackendCache::class)->with(adapter: $userContext->cache),
+                userContext: $userContext,
+                logger: Container::get(iLogger::class),
                 backendId: $config->get('uuid', null),
-                backendToken: $this->backendFile->get("{$name}.token", null),
+                backendToken: $userContext->config->get("{$name}.token", null),
                 backendUser: $config->get('user', null),
                 options: $config->get('options', []),
             );
@@ -75,18 +77,18 @@ final class Update
                 return api_error('Context information validation failed.', Status::BAD_REQUEST);
             }
 
-            $this->backendFile->set($name, $config->getAll());
+            $userContext->config->set($name, $config->getAll());
 
             // -- sanity check.
-            if (true === (bool)$this->backendFile->get("{$name}.import.enabled", false)) {
-                if ($this->backendFile->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
-                    $this->backendFile->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
+            if (true === (bool)$userContext->config->get("{$name}.import.enabled", false)) {
+                if ($userContext->config->has("{$name}.options." . Options::IMPORT_METADATA_ONLY)) {
+                    $userContext->config->delete("{$name}.options." . Options::IMPORT_METADATA_ONLY);
                 }
             }
 
-            $this->backendFile->persist();
+            $userContext->config->persist();
 
-            $backend = $this->getBackends(name: $name);
+            $backend = $this->getBackends(name: $name, userContext: $userContext);
 
             if (empty($backend)) {
                 return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
@@ -101,21 +103,22 @@ final class Update
     }
 
     #[Patch(Index::URL . '/{name:backend}[/]', name: 'backend.patch')]
-    public function patchUpdate(iRequest $request, array $args = []): iResponse
+    public function patchUpdate(iRequest $request, string $name): iResponse
     {
-        if (null === ($name = ag($args, 'name'))) {
-            return api_error('Invalid value for name path parameter.', Status::BAD_REQUEST);
+        try {
+            $userContext = $this->getUserContext($request, $this->mapper, $this->logger);
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
         }
 
-        if (false === $this->backendFile->has($name)) {
+        if (false === $userContext->config->has($name)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);
         }
 
         try {
             $data = json_decode((string)$request->getBody(), true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            return api_error(r('Invalid JSON data. {error}', ['error' => $e->getMessage()]),
-                Status::BAD_REQUEST);
+            return api_error(r('Invalid JSON data. {error}', ['error' => $e->getMessage()]), Status::BAD_REQUEST);
         }
 
         $updates = [];
@@ -154,12 +157,12 @@ final class Update
         }
 
         foreach ($updates as $key => $value) {
-            $this->backendFile->set($key, $value);
+            $userContext->config->set($key, $value);
         }
 
-        $this->backendFile->persist();
+        $userContext->config->persist();
 
-        $backend = $this->getBackends(name: $name);
+        $backend = $this->getBackends(name: $name, userContext: $userContext);
 
         if (empty($backend)) {
             return api_error(r("Backend '{name}' not found.", ['name' => $name]), Status::NOT_FOUND);

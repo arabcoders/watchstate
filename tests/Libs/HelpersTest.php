@@ -750,14 +750,14 @@ class HelpersTest extends TestCase
     {
         $key = sprintf('%s://%s:%s@%s?id=%s', 'movie', 'guid_tvdb', '1200', 'test_plex', '121');
 
-        Config::init([
-            'ignore' => [
-                (string)makeIgnoreId($key) => makeDate(),
-            ]
-        ]);
+        $userContext = $this->createUserContext();
 
         $this->assertTrue(
-            isIgnoredId('test_plex', 'movie', 'guid_tvdb', '1200', '121'),
+            isIgnoredId($userContext, 'test_plex', 'movie', 'guid_tvdb', '1200', '121', opts: [
+                'list' => [
+                    (string)makeIgnoreId($key) => makeDate(),
+                ],
+            ]),
             'When exact ignore url is passed, and it is found in ignore list, true is returned.'
         );
 
@@ -768,17 +768,29 @@ class HelpersTest extends TestCase
         ]);
 
         $this->assertTrue(
-            isIgnoredId('test_plex', 'movie', 'guid_tvdb', '1200', '121'),
+            isIgnoredId($userContext, 'test_plex', 'movie', 'guid_tvdb', '1200', '121', opts: [
+                'list' => [
+                    (string)makeIgnoreId($key)->withQuery('') => makeDate()
+                ]
+            ]),
             'When ignore url is passed with and ignore list has url without query string, true is returned.'
         );
 
         $this->assertFalse(
-            isIgnoredId('test_plex', 'movie', 'guid_tvdb', '1201', '121'),
+            isIgnoredId($userContext, 'test_plex', 'movie', 'guid_tvdb', '1201', '121', opts: [
+                'list' => [
+                    (string)makeIgnoreId($key)->withQuery('') => makeDate()
+                ]
+            ]),
             'When ignore url is passed with and ignore list does not contain the url, false is returned.'
         );
 
         $this->expectException(InvalidArgumentException::class);
-        isIgnoredId('test_plex', 'not_real_type', 'guid_tvdb', '1200', '121');
+        isIgnoredId($userContext, 'test_plex', 'not_real_type', 'guid_tvdb', '1200', '121', opts: [
+            'list' => [
+                (string)makeIgnoreId($key)->withQuery('') => makeDate()
+            ]
+        ]);
     }
 
     public function test_r(): void
