@@ -10,21 +10,14 @@ use App\Backends\Common\Context;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Config;
-use App\Libs\ConfigFile;
-use App\Libs\Database\DBLayer;
-use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\Guid;
-use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\TestCase;
 use App\Libs\Uri;
-use App\Libs\UserContext;
-use Monolog\Handler\NullHandler;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
-use PDO;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Yaml\Yaml;
@@ -61,33 +54,13 @@ class JellyfinGuidTest extends TestCase
     private function getClass(): JellyfinGuid
     {
         $this->handler->clear();
-        $logger = new Logger('test', [new NullHandler()]);
-        $cache = new Cache($this->logger, new Psr16Cache(new ArrayAdapter()));
-        $db = new PDOAdapter($logger, new DBLayer(new PDO('sqlite::memory:')));
-        $db->migrations('up');
-
         return new JellyfinGuid($this->logger)->withContext(
             new Context(
                 clientName: JellyfinClient::CLIENT_NAME,
                 backendName: 'test_jellyfin',
                 backendUrl: new Uri('http://127.0.0.1:8096'),
-                cache: $cache,
-                userContext: new UserContext(
-                    name: JellyfinClient::CLIENT_NAME,
-                    config: new ConfigFile(
-                        file: __DIR__ . '/../../Fixtures/test_servers.yaml',
-                        autoSave: false,
-                        autoCreate: false,
-                        autoBackup: false
-                    ),
-                    mapper: new MemoryMapper(
-                        logger: $logger,
-                        db: $db,
-                        cache: $cache->getInterface()
-                    ),
-                    cache: $cache->getInterface(),
-                    db: $db
-                ),
+                cache: new Cache($this->logger, new Psr16Cache(new ArrayAdapter())),
+                userContext: $this->createUserContext(JellyfinClient::CLIENT_NAME),
                 logger: $this->logger,
                 backendId: 's000000000000000000000000000000j',
                 backendToken: 't000000000000000000000000000000j',
@@ -411,7 +384,22 @@ class JellyfinGuidTest extends TestCase
                 'year' => 2021
             ]
         ];
-        Config::save('ignore', [(string)makeIgnoreId('show://imdb:123@test_jellyfin') => 1]);
+
+        // -- as we cache the ignore list for each user now,
+        // -- and no longer rely on config.ignore key, we needed a workaround to update the ignore list
+        isIgnoredId(
+            userContext: $this->createUserContext(JellyfinClient::CLIENT_NAME),
+            backend: 'test_plex',
+            type: 'show',
+            db: 'imdb',
+            id: '123',
+            opts: [
+                'reset' => true,
+                'list' => [
+                    (string)makeIgnoreId('show://imdb:123@test_jellyfin') => 1
+                ]
+            ]
+        );
 
         $this->assertEquals([],
             $this->getClass()->get(['imdb' => '123'], $context),

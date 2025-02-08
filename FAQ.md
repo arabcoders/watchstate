@@ -1089,12 +1089,12 @@ the event log.
 
 ### API/WebUI endpoints that supports sub users.
 
-These endpoints sub users via `?user=username` query parameter, or via `X-User` header.
+These endpoints supports sub-users via `?user=username` query parameter, or via `X-User` header.
 
 * `/v1/api/backend/*`.
 * `/v1/api/system/parity`.
 * `/v1/api/system/parity`.
-* `/v1/api/ignore`.
+* `/v1/api/ignore/*`.
 * `/v1/api/history/*`.
 
 ### CLI commands that supports sub users.

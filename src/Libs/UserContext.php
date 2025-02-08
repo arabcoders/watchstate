@@ -38,11 +38,11 @@ final class UserContext
 
     public function getPath(): string
     {
-        if ($this->has('path')) {
-            return $this->get('path');
+        if (isset($this->data['path'])) {
+            return $this->data['path'];
         }
 
-        return Config::get('path') . '/' . ('main' === $this->name ? 'config' : "users/{$this->name}");
+        return fixPath(Config::get('path') . '/' . ('main' === $this->name ? 'config' : "users/{$this->name}"));
     }
 
     public function getBackendsNames(): string

@@ -59,6 +59,7 @@ use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
@@ -955,21 +956,38 @@ if (false === function_exists('isIgnoredId')) {
      * @throws InvalidArgumentException Throws an exception if an invalid context type is given.
      */
     function isIgnoredId(
+        UserContext $userContext,
         string $backend,
         string $type,
         string $db,
         string|int $id,
-        string|int|null $backendId = null
+        string|int|null $backendId = null,
+        array $opts = [],
     ): bool {
+        static $ignoreList = [];
+
         if (false === in_array($type, iState::TYPES_LIST)) {
             throw new InvalidArgumentException(sprintf('Invalid context type \'%s\' was given.', $type));
         }
 
-        $list = Config::get('ignore', []);
+        if (!isset($ignoreList[$userContext->name]) || isset($opts['reset'])) {
+            $ignoreList[$userContext->name] = $opts['list'] ?? [];
+            $ignoreFile = $userContext->getPath() . '/ignore.yaml';
+            if (true === file_exists($ignoreFile)) {
+                try {
+                    foreach (Yaml::parseFile($ignoreFile) as $key => $val) {
+                        $ignoreList[$userContext->name][(string)makeIgnoreId($key)] = $val;
+                    }
+                } catch (Throwable) {
+                }
+            }
+        }
+
+        $list = $opts['list'] ?? $ignoreList[$userContext->name];
 
         $key = makeIgnoreId(sprintf('%s://%s:%s@%s?id=%s', $type, $db, $id, $backend, $backendId));
 
-        if (null !== ($list[(string)$key->withQuery('')] ?? null)) {
+        if (isset($list[(string)$key->withQuery('')])) {
             return true;
         }
 
@@ -977,7 +995,7 @@ if (false === function_exists('isIgnoredId')) {
             return false;
         }
 
-        return null !== ($list[(string)$key] ?? null);
+        return isset($list[(string)$key]);
     }
 }
 
