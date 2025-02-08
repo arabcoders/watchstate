@@ -1,5 +1,95 @@
 [
     {
+        "tag": "master-20250208-ff036da",
+        "date": "2025-02-08T14:16:58+00:00",
+        "commits": [
+            {
+                "sha": "00c65e4",
+                "message": "each user get their own ignore.yaml file now.",
+                "author": "ArabCoders",
+                "date": "2025-02-08T14:02:52+00:00"
+            },
+            {
+                "sha": "c2d4e6a",
+                "message": "Merged ExtendedImportInterface into ImportInterface",
+                "author": "ArabCoders",
+                "date": "2025-02-07T14:11:53+00:00"
+            },
+            {
+                "sha": "441343d",
+                "message": "Made it possible to pass UserContext via Backend Context",
+                "author": "ArabCoders",
+                "date": "2025-02-07T13:38:47+00:00"
+            },
+            {
+                "sha": "40cae7f",
+                "message": "Add sub users support for parity feature.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:06:09+00:00"
+            },
+            {
+                "sha": "59fbae4",
+                "message": "Add sub users support for integrity feature.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:05:58+00:00"
+            },
+            {
+                "sha": "720e5d9",
+                "message": "Allow client side cache to use namespace for keys.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:05:33+00:00"
+            },
+            {
+                "sha": "a093878",
+                "message": "Move connection settings into standalone component.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T19:04:53+00:00"
+            },
+            {
+                "sha": "e555f17",
+                "message": "updated docs about webhook support for sub users.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T14:00:12+00:00"
+            },
+            {
+                "sha": "87efadd",
+                "message": "minor design change.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T13:55:37+00:00"
+            },
+            {
+                "sha": "79b4d74",
+                "message": "minor changes to history api",
+                "author": "ArabCoders",
+                "date": "2025-02-05T13:25:24+00:00"
+            },
+            {
+                "sha": "37b7cf5",
+                "message": "wrap getUserContext in try catch",
+                "author": "ArabCoders",
+                "date": "2025-02-05T13:20:01+00:00"
+            },
+            {
+                "sha": "c50a9a8",
+                "message": "Updated most of backend API endpoints to support sub users.",
+                "author": "ArabCoders",
+                "date": "2025-02-05T11:02:05+00:00"
+            },
+            {
+                "sha": "a4aec9e",
+                "message": "Added initial support for browing as selected user in WebUI",
+                "author": "ArabCoders",
+                "date": "2025-02-05T10:12:21+00:00"
+            },
+            {
+                "sha": "a246ca7",
+                "message": "Add initial support in webhooks for sub-users.",
+                "author": "ArabCoders",
+                "date": "2025-02-04T18:42:54+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250204-5715b39",
         "date": "2025-02-04T16:05:13+00:00",
         "commits": [
