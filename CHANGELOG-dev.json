@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250208-00c65e4",
-        "date": "2025-02-08T14:02:52+00:00",
+        "tag": "dev-20250209-0235936",
+        "date": "2025-02-09T18:59:10+00:00",
+        "commits": [
+            {
+                "sha": "0235936",
+                "message": "Enabled sub-user support for backend:restore command",
+                "author": "ArabCoders",
+                "date": "2025-02-09T18:59:10+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250208-ff036da",
+        "date": "2025-02-08T14:16:58+00:00",
         "commits": [
             {
                 "sha": "00c65e4",
