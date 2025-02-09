@@ -1104,4 +1104,5 @@ These commands sub users can via `--user` flag.
 * `state:import`.
 * `state:export`.
 * `db:list`
+* `backend:restore`
 

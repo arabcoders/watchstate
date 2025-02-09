@@ -74,7 +74,7 @@ class ImportCommand extends Command
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full import. Ignore last sync date.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit any changes.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Set request timeout in seconds.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Import this specific user data. Default all users.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select sub user. Default all users.')
             ->addOption(
                 'select-backend',
                 's',
