@@ -8,6 +8,7 @@ use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Guid;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -39,11 +40,12 @@ final class ListCommand extends Command
     protected function configure(): void
     {
         $this->setName(self::ROUTE)
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
             ->addOption(
                 'select-backend',
                 's',
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
-                'Filter based on backend.'
+                'Select backend.'
             )
             ->addOption('type', 't', InputOption::VALUE_REQUIRED, 'Filter based on type.')
             ->addOption('db', 'd', InputOption::VALUE_REQUIRED, 'Filter based on db.')
@@ -59,6 +61,10 @@ final class ListCommand extends Command
                     -------
                     <notice>[ FAQ ]</notice>
                     -------
+
+                    <question># Viewing sub user ignore list</question>
+
+                    To view sub-user ignore list, simply append [<flag>-u, --user</flag>] flag to the command.
 
                     <question># List all ignore rules that relate to specific backend.</question>
 
@@ -107,7 +113,20 @@ final class ListCommand extends Command
             $query['backend'] = $backends[0];
         }
 
-        $response = APIRequest('GET', '/ignore/', opts: ['query' => $query]);
+        $response = APIRequest('GET', '/ignore/', opts: [
+            'query' => $query,
+            'headers' => [
+                'X-User' => $input->getOption('user'),
+            ],
+        ]);
+
+        if (Status::OK !== $response->status) {
+            $output->writeln(r("<error>{status}: {message}</error>", [
+                'status' => $response->status->value,
+                'message' => ag($response->body, 'error.message', 'Unknown error.')
+            ]));
+            return self::FAILURE;
+        }
 
         foreach ($response->body as $item) {
             if ('table' === $input->getOption('output')) {

@@ -12,9 +12,9 @@ use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
 use App\Libs\Guid;
 use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
 
 /**
  * Class ManageCommand
@@ -32,6 +32,7 @@ final class ManageCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Add/remove a ignore rule.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user.', 'main')
             ->addOption('remove', 'r', InputOption::VALUE_NONE, 'Remove rule from ignore list.')
             ->addArgument('rule', InputArgument::REQUIRED, 'rule')
             ->setHelp(
@@ -50,11 +51,15 @@ final class ManageCommand extends Command
 
                     <flag>type</flag>      Expects the value to be one of [{listOfTypes}]
                     <flag>db</flag>        Expects the value to be one of [{supportedGuids}]
-                    <flag>backend</flag>   Expects the value to be one of [{listOfBackends}]
+                    <flag>backend</flag>   The User backend name.
 
                     -------
                     <notice>[ FAQ ]</notice>
                     -------
+
+                    <question># Managing sub users ignore list</question>
+
+                    To add or remove a rule from ignore list for sub-user, simply append [<flag>-u, --user</flag>] flag to the command.
 
                     <question># Adding GUID to ignore list</question>
 
@@ -91,11 +96,6 @@ final class ManageCommand extends Command
                             ', ',
                             array_map(fn($val) => '<value>' . after($val, 'guid_') . '</value>', iState::TYPES_LIST)
                         ),
-                        'listOfBackends' => implode(
-                            ', ',
-                            array_map(fn($val) => '<value>' . after($val, 'guid_') . '</value>',
-                                array_keys(Config::get('servers', [])))
-                        ),
                     ]
                 )
             );
@@ -104,31 +104,31 @@ final class ManageCommand extends Command
     /**
      * Run the command.
      *
-     * @param InputInterface $input The input interface.
-     * @param OutputInterface $output The output interface.
+     * @param iInput $input The input interface.
+     * @param iOutput $output The output interface.
      *
      * @return int The command status code.
-     * @throws InvalidArgumentException if the "id" argument is missing.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
-        $path = Config::get('path') . '/config/ignore.yaml';
-
-        if (false === file_exists($path)) {
-            touch($path);
-        }
-
         $rule = $input->getArgument('rule');
 
         if (empty($rule)) {
-            throw new InvalidArgumentException('Rule argument cannot be empty.');
+            $output->writeln('<error>Rule argument cannot be empty.</error>');
+            return self::FAILURE;
         }
 
+        $opts = [
+            'headers' => [
+                'X-User' => $input->getOption('user'),
+            ],
+        ];
+
         if ($input->getOption('remove')) {
-            $response = APIRequest('DELETE', '/ignore/', ['rule' => $rule]);
+            $response = APIRequest('DELETE', '/ignore/', ['rule' => $rule], opts: $opts);
 
             if (Status::OK !== $response->status) {
-                $output->writeln(r("<error>API error. {status}: {message}</error>", [
+                $output->writeln(r("<error>{status}: {message}</error>", [
                     'key' => $rule,
                     'status' => $response->status->value,
                     'message' => ag($response->body, 'error.message', 'Unknown error.')
@@ -140,10 +140,10 @@ final class ManageCommand extends Command
             return self::SUCCESS;
         }
 
-        $response = APIRequest('POST', '/ignore/', ['rule' => $rule]);
+        $response = APIRequest('POST', '/ignore/', ['rule' => $rule], opts: $opts);
 
         if (Status::OK !== $response->status) {
-            $output->writeln(r("<error>API error. {status}: {message}</error>", [
+            $output->writeln(r("<error>{status}: {message}</error>", [
                 'key' => $rule,
                 'status' => $response->status->value,
                 'message' => ag($response->body, 'error.message', 'Unknown error.')
