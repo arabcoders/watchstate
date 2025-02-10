@@ -7,14 +7,18 @@ namespace App\Commands\Backend;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Extends\StreamLogHandler;
+use App\Libs\LogSuppressor;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Mappers\Import\RestoreMapper;
 use App\Libs\Message;
 use App\Libs\Options;
+use App\Libs\Stream;
 use App\Libs\QueueRequests;
 use App\Libs\UserContext;
 use DirectoryIterator;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
@@ -43,8 +47,11 @@ class RestoreCommand extends Command
      *
      * @return void
      */
-    public function __construct(private readonly QueueRequests $queue, private readonly iLogger $logger)
-    {
+    public function __construct(
+        private readonly QueueRequests $queue,
+        private readonly iLogger $logger,
+        private LogSuppressor $suppressor
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -64,6 +71,7 @@ class RestoreCommand extends Command
             ->addOption('select-backend', 's', InputOption::VALUE_REQUIRED, 'Select backend.')
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select sub user.', 'main')
             ->addArgument('file', InputArgument::REQUIRED, 'Backup file to restore from')
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -139,6 +147,12 @@ class RestoreCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+            $this->logger->setHandlers([
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+            ]);
+        }
+
         return $this->single(fn(): int => $this->process($input, $output), $output);
     }
 
@@ -180,7 +194,7 @@ class RestoreCommand extends Command
             $file = $newFile;
         }
 
-        $opStart = makeDate();
+        $opStart = microtime(true);
 
         $mapper = new RestoreMapper($this->logger, $file);
 
@@ -209,29 +223,35 @@ class RestoreCommand extends Command
             return self::FAILURE;
         }
 
-        if (true === (bool)ag($backend, 'import.enabled') && false === $input->getOption('assume-yes')) {
-            $helper = $this->getHelper('question');
-            $text =
-                <<<TEXT
-            <options=bold,underscore>Are you sure?</> <comment>[Y|N] [Default: No]</comment>
-            -----------------
-            You are about to restore backend that has imports enabled.
+        if (true === (bool)ag($backend, 'import.enabled')) {
+            if (false === $input->getOption('assume-yes')) {
+                $helper = $this->getHelper('question');
+                $text = <<<TEXT
+                <options=bold,underscore>Are you sure?</> <comment>[Y|N] [Default: No]</comment>
+                -----------------
+                You are about to restore backend that has imports enabled.
 
-            <fg=white;bg=red;options=bold>The changes will propagate back to your backends.</>
+                <fg=white;bg=red;options=bold>The changes will propagate back to your backends.</>
 
-            <comment>If you understand the risks then answer with [<info>yes</info>]
-            If you don't please run same command with <info>[--help]</info> flag.
-            </comment>
-            -----------------
-            TEXT;
+                <comment>If you understand the risks then answer with [<info>yes</info>]
+                If you don't please run same command with <info>[--help]</info> flag.
+                </comment>
+                -----------------
+                TEXT;
 
-            $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
+                $question = new ConfirmationQuestion($text . PHP_EOL . '> ', false);
 
-            if (false === $helper->ask($input, $output, $question)) {
-                $output->writeln(
-                    '<comment>Restore operation is cancelled, you answered no for risk assessment, or interaction is disabled.</comment>'
-                );
-                return self::SUCCESS;
+                if (false === $helper->ask($input, $output, $question)) {
+                    $output->writeln(
+                        '<comment>Restore operation is cancelled, you answered no for risk assessment, or interaction is disabled.</comment>'
+                    );
+                    return self::SUCCESS;
+                }
+            } else {
+                $this->logger->notice("The restore target '{user}@{backend}' has import enabled, which means the changes will propagate back to the other backends.", [
+                    'user' => $userContext->name,
+                    'backend' => $name,
+                ]);
             }
         }
 
@@ -244,12 +264,11 @@ class RestoreCommand extends Command
             ],
         ]);
 
-        $start = makeDate();
+        $start = microtime(true);
         $mapper->loadData();
-        $end = makeDate();
 
         $this->logger->notice(
-            "SYSTEM: Loading restore data of '{user}@{backend}' completed in '{time.duration}'s. Memory usage '{memory.now}'.",
+            "SYSTEM: Loading restore data of '{user}@{backend}' completed in '{duration}'s. Memory usage '{memory.now}'.",
             [
                 'backend' => $name,
                 'user' => $userContext->name,
@@ -257,16 +276,12 @@ class RestoreCommand extends Command
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
                 ],
-                'time' => [
-                    'start' => $start,
-                    'end' => $end,
-                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
-                ],
+                'duration' => round(microtime(true) - $start, 4),
             ]
         );
 
         if (false === $input->getOption('execute')) {
-            $output->writeln('<info>No changes will be committed to backend.</info>');
+            $this->logger->notice("No changes will be committed to backend. To execute the changes pass '--execute' flag option.");
         }
 
         $opts = [
@@ -291,7 +306,7 @@ class RestoreCommand extends Command
 
         $requests = $backend->export($mapper, $this->queue, null);
 
-        $start = makeDate();
+        $start = microtime(true);
         $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}@{backend}'.", [
             'backend' => $name,
             'total' => count($requests),
@@ -307,16 +322,11 @@ class RestoreCommand extends Command
             }
         }
 
-        $end = makeDate();
-        $this->logger->notice("SYSTEM: Completed '{total}' requests in '{time.duration}'s for '{user}@{backend}'.", [
+        $this->logger->notice("SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}@{backend}'.", [
             'backend' => $name,
             'total' => count($requests),
             'user' => $userContext->name,
-            'time' => [
-                'start' => $start,
-                'end' => $end,
-                'duration' => $end->getTimestamp() - $start->getTimestamp(),
-            ],
+            'duration' => round(microtime(true) - $start, 4),
         ]);
 
         $total = count($this->queue->getQueue());
@@ -335,7 +345,7 @@ class RestoreCommand extends Command
                 'user' => $userContext->name,
             ]);
         }
-        
+
         if ($total < 1 || false === $input->getOption('execute')) {
             return self::SUCCESS;
         }
@@ -378,19 +388,14 @@ class RestoreCommand extends Command
             }
         }
 
-        $opEnd = makeDate();
         $this->logger->notice(
-            "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{time.duration}'s.",
+            "SYSTEM: Sent '{total}' change play state requests to '{client}: {user}@{backend}' in '{duration}'s.",
             [
                 'total' => $total,
                 'backend' => $name,
                 'user' => $userContext->name,
                 'client' => $backend->getContext()->clientName,
-                'time' => [
-                    'start' => $opStart,
-                    'end' => $opEnd,
-                    'duration' => $opEnd->getTimestamp() - $opStart->getTimestamp(),
-                ],
+                'duration' => round(microtime(true) - $opStart, 4),
             ]
         );
 

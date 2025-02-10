@@ -223,7 +223,9 @@ class ExportCommand extends Command
                     }
 
                     if (!isset($supported[$type])) {
-                        $this->logger->error("SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.", [
+                        $this->logger->error(
+                            "SYSTEM: Ignoring '{user}@{backend}'. Unexpected type '{type}'.",
+                            [
                                 'type' => $type,
                                 'backend' => $backendName,
                                 'user' => $userContext->name,
@@ -625,7 +627,7 @@ class ExportCommand extends Command
             'backends' => implode(', ', array_keys($backends)),
         ]);
 
-        $this->logger->notice("SYSTEM: Preloading '{user}' - '{mapper}' data. Memory: {memory.now}", [
+        $this->logger->notice("SYSTEM: Preloading '{user}' - '{mapper}' data. Memory usage '{memory.now}'.", [
             'user' => $userContext->name,
             'mapper' => afterLast($userContext->mapper::class, '\\'),
             'memory' => [
@@ -636,7 +638,7 @@ class ExportCommand extends Command
 
         $userContext->mapper->reset()->loadData();
 
-        $this->logger->notice("SYSTEM: Preloading '{mapper}' data is complete. Memory: {memory.now}", [
+        $this->logger->notice("SYSTEM: Preloading '{mapper}' data is complete. Memory usage '{memory.now}'.", [
             'mapper' => afterLast($userContext->mapper::class, '\\'),
             'memory' => [
                 'now' => getMemoryUsage(),
@@ -685,7 +687,7 @@ class ExportCommand extends Command
             }
         }
 
-        $start = makeDate();
+        $start = microtime(true);
         $this->logger->notice("SYSTEM: Sending '{total}' play state comparison requests for '{user}'.", [
             'total' => count($requests),
             'user' => $userContext->name,
@@ -700,30 +702,10 @@ class ExportCommand extends Command
             }
         }
 
-        $end = makeDate();
-        $this->logger->notice(
-            "SYSTEM: Completed '{total}' play state comparison requests for '{user}' in '{time.duration}'s. Parsed '{responses.size}' of data.",
-            [
-                'user' => $userContext->name,
-                'total' => count($requests),
-                'time' => [
-                    'start' => $start,
-                    'end' => $end,
-                    'duration' => $end->getTimestamp() - $start->getTimestamp(),
-                ],
-                'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-                'responses' => [
-                    'size' => fsize((int)Message::get('response.size', 0)),
-                ],
-            ]
-        );
-
-        $this->logger->notice("Export mode ended for '{user}: {backends}'.", [
+        $this->logger->notice("Export mode ended for '{user}: {backends}' in '{duration}'s.", [
             'user' => $userContext->name,
             'backends' => implode(', ', array_keys($backends)),
+            'duration' => round(microtime(true) - $start, 4),
         ]);
     }
 

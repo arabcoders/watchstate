@@ -381,7 +381,7 @@ class ImportCommand extends Command
             /** @var array<array-key,ResponseInterface> $queue */
             $queue = [];
 
-            $this->logger->notice("SYSTEM: Preloading '{user}' '{mapper}' data. Memory: {memory.now}.", [
+            $this->logger->notice("SYSTEM: Preloading '{user}' '{mapper}' data. Memory usage '{memory.now}'.", [
                 'user' => $userContext->name,
                 'mapper' => afterLast($userContext->mapper::class, '\\'),
                 'memory' => [
@@ -394,7 +394,7 @@ class ImportCommand extends Command
             $userContext->mapper->loadData();
 
             $this->logger->notice(
-                "SYSTEM: Preloading '{user}' '{mapper}' data completed in '{duration}s'. Memory: {memory.now}.",
+                "SYSTEM: Preloading '{user}' '{mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
                 [
                     'user' => $userContext->name,
                     'mapper' => afterLast($userContext->mapper::class, '\\'),
@@ -471,13 +471,10 @@ class ImportCommand extends Command
 
             unset($backend);
 
-            $start = makeDate();
+            $start = microtime(true);
             $this->logger->notice("SYSTEM: Waiting on '{total}' requests for '{user}' backends.", [
                 'user' => $userContext->name,
                 'total' => number_format(count($queue)),
-                'time' => [
-                    'start' => $start,
-                ],
                 'memory' => [
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
@@ -498,18 +495,12 @@ class ImportCommand extends Command
                 gc_collect_cycles();
             }
 
-            $end = makeDate();
-
             $this->logger->notice(
-                "SYSTEM: Completed waiting on '{total}' requests in '{time.duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
+                "SYSTEM: Completed '{total}' requests in '{duration}'s for '{user}' backends. Parsed '{responses.size}' of data.",
                 [
                     'user' => $userContext->name,
                     'total' => number_format(count($queue)),
-                    'time' => [
-                        'start' => $start,
-                        'end' => $end,
-                        'duration' => $end->getTimestamp() - $start->getTimestamp(),
-                    ],
+                    'duration' => round(microtime(true) - $start, 4),
                     'memory' => [
                         'now' => getMemoryUsage(),
                         'peak' => getPeakMemoryUsage(),
@@ -557,7 +548,7 @@ class ImportCommand extends Command
             $userContext->mapper->reset();
 
             $this->logger->info(
-                "SYSTEM: Importing '{user}' play states completed in '{duration}'s. Memory: {memory.now}.",
+                "SYSTEM: Importing '{user}' play states completed in '{duration}'s. Memory usage '{memory.now}'.",
                 [
                     'user' => $userContext->name,
                     'backends' => join(', ', array_keys($list)),
