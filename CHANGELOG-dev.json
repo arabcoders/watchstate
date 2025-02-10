@@ -1,8 +1,26 @@
 [
     {
-        "tag": "dev-20250209-0235936",
-        "date": "2025-02-09T18:59:10+00:00",
+        "tag": "dev-20250210-e7adc3a",
+        "date": "2025-02-10T15:30:26+00:00",
         "commits": [
+            {
+                "sha": "e7adc3a",
+                "message": "Made possible to be able to restore backend data using the backup page.",
+                "author": "ArabCoders",
+                "date": "2025-02-10T15:30:26+00:00"
+            },
+            {
+                "sha": "fc7f4b8",
+                "message": "Added support for sub users in state:backup command.",
+                "author": "ArabCoders",
+                "date": "2025-02-10T14:21:30+00:00"
+            },
+            {
+                "sha": "ab3b788",
+                "message": "Added support for sub users in backend:ignore:* commands.",
+                "author": "ArabCoders",
+                "date": "2025-02-10T14:21:08+00:00"
+            },
             {
                 "sha": "0235936",
                 "message": "Enabled sub-user support for backend:restore command",
