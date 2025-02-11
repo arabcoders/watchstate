@@ -39,6 +39,8 @@ final class AccessTokenCommand extends Command
                 'User UUID as seen via [<cmd>' . ListCommand::ROUTE . '</cmd>] command.'
             )
             ->addOption('include-raw-response', null, InputOption::VALUE_NONE, 'Include unfiltered raw response.')
+            ->addOption('external-user', 'E', InputOption::VALUE_NONE, 'The user is an external user.')
+            ->addOption('no-cache', null, InputOption::VALUE_NONE, 'Ignore cache.')
             ->addOption('use-token', 'u', InputOption::VALUE_REQUIRED, 'Override backend token with this one.')
             ->setHelp(
                 r(
@@ -72,6 +74,11 @@ final class AccessTokenCommand extends Command
         $uuid = $input->getArgument('uuid');
         $backend = $input->getOption('select-backend');
 
+        if (empty($backend)) {
+            $output->writeln(r('<error>ERROR: Backend not provided.</error>'));
+            return self::FAILURE;
+        }
+
         if (null === ag(Config::get('servers', []), $backend, null)) {
             $output->writeln(r("<error>ERROR: Backend '{backend}' not found.</error>", ['backend' => $backend]));
             return self::FAILURE;
@@ -93,7 +100,21 @@ final class AccessTokenCommand extends Command
 
         $client = $this->getBackend($backend, $backendOpts);
 
-        $token = $client->getUserToken(userId: $uuid, username: $client->getContext()->backendName . '_user');
+        $tokenOpts = [];
+
+        if ($input->getOption('external-user')) {
+            $tokenOpts[Options::PLEX_EXTERNAL_USER] = true;
+        }
+
+        if ($input->getOption('no-cache')) {
+            $tokenOpts[Options::NO_CACHE] = true;
+        }
+
+        $token = $client->getUserToken(
+            userId: $uuid,
+            username: $client->getContext()->backendName . '_user',
+            opts: $tokenOpts
+        );
 
         $output->writeln(
             r(

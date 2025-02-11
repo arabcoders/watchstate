@@ -265,10 +265,11 @@ interface ClientInterface
      *
      * @param int|string $userId user id.
      * @param string $username username.
+     * @param array $opts options.
      *
      * @return string|bool return user token as string or bool(false) if not supported.
      */
-    public function getUserToken(int|string $userId, string $username): string|bool;
+    public function getUserToken(int|string $userId, string $username, array $opts = []): string|bool;
 
     /**
      * Get item Web Url

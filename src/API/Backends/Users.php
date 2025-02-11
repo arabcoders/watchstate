@@ -8,6 +8,7 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\InvalidArgumentException;
+use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -34,8 +35,12 @@ final class Users
 
         $users = $opts = [];
 
-        if (true === (bool)$params->get('tokens', false)) {
-            $opts['tokens'] = true;
+        if (true === (bool)$params->get(Options::GET_TOKENS, false)) {
+            $opts[Options::GET_TOKENS] = true;
+        }
+
+        if (true === (bool)$params->get('no_cache', false)) {
+            $opts[Options::NO_CACHE] = true;
         }
 
         try {

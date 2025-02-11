@@ -173,5 +173,11 @@ return [
         'visible' => false,
         'description' => 'Plex user PIN.',
     ],
+    [
+        'key' => 'options.plex_external_user',
+        'type' => 'bool',
+        'visible' => false,
+        'description' => 'Mark the plex user as external user.',
+    ],
 ];
 

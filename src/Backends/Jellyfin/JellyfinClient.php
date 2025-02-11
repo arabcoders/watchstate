@@ -576,7 +576,7 @@ class JellyfinClient implements iClient
     /**
      * @inheritdoc
      */
-    public function getUserToken(int|string $userId, string $username): string|bool
+    public function getUserToken(int|string $userId, string $username, array $opts = []): string|bool
     {
         return $this->context->backendToken;
     }

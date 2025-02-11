@@ -101,7 +101,7 @@ class CreateUsersCommand extends Command
 
                     If you want to update the user configuration based on the main user configuration, you can use the <flag>--update</flag> option.
 
-                    <question># Do i need to map the main user?</question>
+                    <question># Do I need to map the main user?</question>
 
                     No, There is no need, as the main user is already configured.
 
@@ -194,13 +194,15 @@ class CreateUsersCommand extends Command
                     ]);
                     $info['displayName'] = ag($user, 'name');
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
-                    $info = ag_delete($info, 'options.' . Options::ADMIN_TOKEN);
                     $info = ag_set($info, 'options.' . Options::ALT_NAME, ag($backend, 'name'));
                     $info = ag_set($info, 'options.' . Options::ALT_ID, ag($backend, 'user'));
                     if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'type'))) {
                         $info = ag_set($info, 'token', 'reuse_or_generate_token');
                         $info = ag_set($info, 'options.' . Options::PLEX_USER_NAME, ag($user, 'name'));
                         $info = ag_set($info, 'options.' . Options::PLEX_USER_UUID, ag($user, 'uuid'));
+                        if (true === (bool)ag($user, 'guest', false)) {
+                            $info = ag_set($info, 'options.' . Options::PLEX_EXTERNAL_USER, true);
+                        }
                     }
 
                     $user['backend'] = ag($backend, 'name');
@@ -299,9 +301,14 @@ class CreateUsersCommand extends Command
                         $client = ag($backend, 'client_data.class');
                         assert($client instanceof iClient);
                         if (PlexClient::CLIENT_NAME === $client->getType()) {
+                            $requestOpts = [];
+                            if (ag($clientData, 'options.' . Options::PLEX_EXTERNAL_USER, false)) {
+                                $requestOpts[Options::PLEX_EXTERNAL_USER] = true;
+                            }
                             $clientData['token'] = $client->getUserToken(
-                                ag($clientData, 'options.' . Options::PLEX_USER_UUID),
-                                ag($clientData, 'options.' . Options::PLEX_USER_NAME)
+                                userId: ag($clientData, 'options.' . Options::PLEX_USER_UUID),
+                                username: ag($clientData, 'options.' . Options::PLEX_USER_NAME),
+                                opts: $requestOpts,
                             );
                             $perUser->set("{$name}.token", $clientData['token']);
                         }

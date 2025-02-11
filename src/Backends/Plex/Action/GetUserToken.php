@@ -11,7 +11,7 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Options;
-use Psr\Http\Message\UriInterface;
+use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -42,15 +42,17 @@ final class GetUserToken
      */
     public function __invoke(Context $context, int|string $userId, string $username, array $opts = []): Response
     {
-        return $this->tryResponse(
-            context: $context,
-            fn: fn() => $this->getUserToken($context, $userId, $username),
-            action: $this->action,
-        );
+        if (true === (bool)ag($opts, Options::PLEX_EXTERNAL_USER, false)) {
+            $fn = fn() => $this->GetExternalUserToken($context, $userId, $username, $opts);
+        } else {
+            $fn = fn() => $this->getUserToken($context, $userId, $username);
+        }
+
+        return $this->tryResponse(context: $context, fn: $fn, action: $this->action);
     }
 
     /**
-     * Request tokens from plex.tv api.
+     * Request accesstoken from plex.tv api.
      *
      * @param Context $context
      * @param int|string $userId
@@ -61,7 +63,7 @@ final class GetUserToken
     private function getUserToken(Context $context, int|string $userId, string $username): Response
     {
         try {
-            $url = Container::getNew(UriInterface::class)
+            $url = Container::getNew(iUri::class)
                 ->withPort(443)->withScheme('https')->withHost('plex.tv')
                 ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
 
@@ -143,7 +145,7 @@ final class GetUserToken
 
             $tempToken = ag($json, 'authToken', null);
 
-            $url = Container::getNew(UriInterface::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
+            $url = Container::getNew(iUri::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
                 ->withPath('/api/v2/resources')->withQuery(
                     http_build_query([
                         'includeIPv6' => 1,
@@ -254,5 +256,49 @@ final class GetUserToken
                 ),
             );
         }
+    }
+
+    /**
+     * Get external user accesstoken.
+     *
+     * @param Context $context
+     * @param int|string $userId
+     * @param string $username
+     *
+     * @return Response
+     */
+    private function GetExternalUserToken(Context $context, int|string $userId, string $username): Response
+    {
+        $class = Container::get(GetUsersList::class);
+        $response = $class(context: $context, opts: [
+            Options::PLEX_EXTERNAL_USER => true,
+            Options::GET_TOKENS => true,
+        ]);
+
+        if ($response->hasError()) {
+            return $response;
+        }
+
+        foreach ($response->response as $user) {
+            if ($userId !== ag($user, 'id') && $username !== ag($user, 'username') && $userId !== ag($user, 'uuid')) {
+                continue;
+            }
+
+            return new Response(status: true, response: ag($user, 'token'));
+        }
+
+        return new Response(
+            status: false,
+            error: new Error(
+                message: "Failed to generate '{user}@{backend}'. '{userId}:{username}' accesstoken.",
+                context: [
+                    'user' => $context->userContext->name,
+                    'backend' => $context->backendName,
+                    'userId' => $userId,
+                    'username' => $username,
+                ],
+                level: Levels::ERROR
+            ),
+        );
     }
 }
