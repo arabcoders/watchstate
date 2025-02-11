@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250210-e7adc3a",
-        "date": "2025-02-10T15:30:26+00:00",
+        "tag": "dev-20250211-71dd9e8",
+        "date": "2025-02-11T20:09:57+00:00",
         "commits": [
+            {
+                "sha": "71dd9e8",
+                "message": "Added initial support to generate accesstokens for external plex users.",
+                "author": "ArabCoders",
+                "date": "2025-02-11T20:09:57+00:00"
+            },
             {
                 "sha": "e7adc3a",
                 "message": "Made possible to be able to restore backend data using the backup page.",
