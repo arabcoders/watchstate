@@ -179,5 +179,42 @@ return [
         'visible' => false,
         'description' => 'Mark the plex user as external user.',
     ],
+    [
+        'key' => 'options.ADMIN_PLEX_USER_PIN',
+        'type' => 'int',
+        'visible' => false,
+        'description' => 'Plex admin user PIN.',
+    ],
+    [
+        'key' => 'options.plex_user_uuid',
+        'type' => 'string',
+        'visible' => false,
+        'description' => 'Plex.tv user UUID.',
+    ],
+    [
+        'key' => 'options.ALT_NAME',
+        'type' => 'string',
+        'visible' => false,
+        'description' => 'The original backend name of which this backend created from.',
+    ],
+    [
+        'key' => 'options.ALT_ID',
+        'type' => 'int',
+        'visible' => false,
+        'description' => 'The original user ID of which this user is sub user of.',
+    ],
+    [
+        'key' => 'options.plex_user_name',
+        'type' => 'int',
+        'visible' => false,
+        'description' => 'The plex user name.',
+    ],
+    [
+        'key' => 'options.use_old_progress_endpoint',
+        'type' => 'bool',
+        'visible' => false,
+        'description' => 'Whether to use old progress endpoint for plex.',
+    ],
+
 ];
 
