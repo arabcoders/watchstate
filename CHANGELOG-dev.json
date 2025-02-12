@@ -1,8 +1,44 @@
 [
     {
-        "tag": "dev-20250211-71dd9e8",
-        "date": "2025-02-11T20:09:57+00:00",
+        "tag": "dev-20250212-79843e7",
+        "date": "2025-02-12T19:43:13+00:00",
         "commits": [
+            {
+                "sha": "79843e7",
+                "message": "Added missing status_code for update play state fail.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:43:13+00:00"
+            },
+            {
+                "sha": "61ad858",
+                "message": "Mostly clean up commit to support plex external users more widely",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:40:13+00:00"
+            },
+            {
+                "sha": "6e9e8e0",
+                "message": "Made backend:create only update specfic keys when requested.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:39:24+00:00"
+            },
+            {
+                "sha": "95be540",
+                "message": "Made plex.GetUser rely on GetUsersList to support external users.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:38:49+00:00"
+            },
+            {
+                "sha": "3120b94",
+                "message": "Remove debug statements from code.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:37:39+00:00"
+            },
+            {
+                "sha": "20cdf3c",
+                "message": "updated servers.spec to include desc for new keys.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:36:13+00:00"
+            },
             {
                 "sha": "71dd9e8",
                 "message": "Added initial support to generate accesstokens for external plex users.",
