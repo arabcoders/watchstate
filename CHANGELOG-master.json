@@ -1,5 +1,77 @@
 [
     {
+        "tag": "master-20250212-7243e78",
+        "date": "2025-02-12T19:54:33+00:00",
+        "commits": [
+            {
+                "sha": "79843e7",
+                "message": "Added missing status_code for update play state fail.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:43:13+00:00"
+            },
+            {
+                "sha": "61ad858",
+                "message": "Mostly clean up commit to support plex external users more widely",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:40:13+00:00"
+            },
+            {
+                "sha": "6e9e8e0",
+                "message": "Made backend:create only update specfic keys when requested.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:39:24+00:00"
+            },
+            {
+                "sha": "95be540",
+                "message": "Made plex.GetUser rely on GetUsersList to support external users.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:38:49+00:00"
+            },
+            {
+                "sha": "3120b94",
+                "message": "Remove debug statements from code.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:37:39+00:00"
+            },
+            {
+                "sha": "20cdf3c",
+                "message": "updated servers.spec to include desc for new keys.",
+                "author": "ArabCoders",
+                "date": "2025-02-12T19:36:13+00:00"
+            },
+            {
+                "sha": "71dd9e8",
+                "message": "Added initial support to generate accesstokens for external plex users.",
+                "author": "ArabCoders",
+                "date": "2025-02-11T20:09:57+00:00"
+            },
+            {
+                "sha": "e7adc3a",
+                "message": "Made possible to be able to restore backend data using the backup page.",
+                "author": "ArabCoders",
+                "date": "2025-02-10T15:30:26+00:00"
+            },
+            {
+                "sha": "fc7f4b8",
+                "message": "Added support for sub users in state:backup command.",
+                "author": "ArabCoders",
+                "date": "2025-02-10T14:21:30+00:00"
+            },
+            {
+                "sha": "ab3b788",
+                "message": "Added support for sub users in backend:ignore:* commands.",
+                "author": "ArabCoders",
+                "date": "2025-02-10T14:21:08+00:00"
+            },
+            {
+                "sha": "0235936",
+                "message": "Enabled sub-user support for backend:restore command",
+                "author": "ArabCoders",
+                "date": "2025-02-09T18:59:10+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250208-ff036da",
         "date": "2025-02-08T14:16:58+00:00",
         "commits": [
