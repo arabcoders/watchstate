@@ -243,8 +243,6 @@ const forwardCommand = async backend => {
   const index = selectedCommand.value
   selectedCommand.value = ''
 
-  console.log(index)
-
   const util = {
     date: moment().format('YYYYMMDD'),
   }

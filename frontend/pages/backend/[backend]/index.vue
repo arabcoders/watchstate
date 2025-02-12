@@ -79,7 +79,7 @@
         <div class="column is-12">
           <Message message_class="is-background-warning-80 has-text-dark" title="Warning"
                    icon="fas fa-exclamation-circle"
-                   message="No items were found. There are probably no items in the local database yet."/>
+                   message="No items were found. There are probably no items in the local database yet or the backend data not imported yet."/>
         </div>
       </div>
 
@@ -186,7 +186,7 @@ const loadRecentHistory = async () => {
     return
   }
 
-  if (200 !== response.status) {
+  if (200 !== response.status && 404 !== response.status) {
     notification('error', 'Error loading data', `${json.error.code}: ${json.error.message}`);
     return
   }
