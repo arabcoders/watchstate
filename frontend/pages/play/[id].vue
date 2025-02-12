@@ -373,7 +373,6 @@ const changeStream = async (e, path = null) => {
   selectedItem.value = item.value.files.find(item => item.path === path);
   filterStreams(['subtitle', 'audio']).forEach(s => {
     if (1 === parseInt(ag(s, 'disposition.default', 0))) {
-      console.debug(`Setting default '${s.codec_type}' stream to '${s.index}'`)
       config.value['audio' === s.codec_type ? 'audio' : 'subtitle'] = s.index
     }
   })

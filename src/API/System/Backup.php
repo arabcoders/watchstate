@@ -29,7 +29,7 @@ final class Backup
                 continue;
             }
 
-            $isAuto = 1 === preg_match('/\w+\.\d{8}\.json(\.zip)?$/i', $file->getBasename());
+            $isAuto = 1 === preg_match('/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i', $file->getBasename());
 
             $builder = [
                 'filename' => $file->getBasename(),

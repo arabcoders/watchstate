@@ -242,14 +242,10 @@ const searchContent = async (fromPopState = false) => {
   try {
     const response = await request(`/backend/${backend}/search?${search.toString()}`)
     const json = await response.json()
-    if (useRoute().name !== 'backend-backend-search') {
-      return
-    }
     const currentUrl = window.location.pathname + '?' + (new URLSearchParams(window.location.search)).toString()
     const newUrl = window.location.pathname + '?' + search.toString()
 
     if (false === fromPopState && currentUrl !== newUrl) {
-      console.log('Updating URL')
       await router.push({
         path: `/backend/${backend}/search`, title: title, query: {
           limit: limit.value,

@@ -113,9 +113,9 @@ final class PruneCommand extends Command
                 'base' => Config::get('path'),
                 'filter' => '/\.json$|\.json.zip$/',
                 'validate' => fn(SplFileInfo $f): bool => 1 === @preg_match(
-                        '/\w+\.\d{8}\.json(\.zip)?$/i',
-                        $f->getBasename()
-                    ),
+                    '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
+                    $f->getBasename()
+                ),
                 'time' => strtotime('-90 DAYS', $time)
             ],
         ];

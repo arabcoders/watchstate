@@ -418,7 +418,7 @@ These environment variables relates to the tool itself, You should manage them v
 command via CLI.
 
 | Key                     | Type    | Description                                                             | Default                  |
-|-------------------------|---------|-------------------------------------------------------------------------|--------------------------|
+| ----------------------- | ------- | ----------------------------------------------------------------------- | ------------------------ |
 | WS_DATA_PATH            | string  | Where to store main data. (config, db).                                 | `${BASE_PATH}/var`       |
 | WS_TMP_DIR              | string  | Where to store temp data. (logs, cache)                                 | `${WS_DATA_PATH}`        |
 | WS_TZ                   | string  | Set timezone. Fallback to to `TZ` variable if `WS_TZ` not set.          | `UTC`                    |
@@ -463,7 +463,7 @@ $ docker exec -ti watchstate console system:env --list
 > the `compose.yaml` file.
 
 | Key           | Type    | Description                          | Default  |
-|---------------|---------|--------------------------------------|----------|
+| ------------- | ------- | ------------------------------------ | -------- |
 | WEBUI_ENABLED | bool    | Enable WebUI. Value casted to a bool | `true`   |
 | DISABLE_HTTP  | integer | Disable included `HTTP Server`.      | `0`      |
 | DISABLE_CRON  | integer | Disable included `Task Scheduler`.   | `0`      |
@@ -1089,19 +1089,23 @@ the event log.
 
 ### API/WebUI endpoints that supports sub users.
 
-These endpoints supports sub-users via `?user=username` query parameter, or via `X-User` header.
+These endpoints supports sub-users via `?user=username` query parameter, or via `X-User` header. The recommended 
+approach is to use the header.
 
 * `/v1/api/backend/*`.
 * `/v1/api/system/parity`.
-* `/v1/api/system/parity`.
+* `/v1/api/system/integrity`.
 * `/v1/api/ignore/*`.
 * `/v1/api/history/*`.
 
 ### CLI commands that supports sub users.
 
-These commands sub users can via `--user` flag.
+These commands sub users can via `[-u, --user]` option flag.
 
 * `state:import`.
 * `state:export`.
-* `db:list`
+* `state:backup`.
+* `db:list`.
+* `backend:restore`.
+* `backend:ignore:*`.
 

@@ -406,10 +406,6 @@ const stateCallBack = async e => {
   if (!e.state && !e.detail) {
     return
   }
-  const state = e.detail ?? e.state
-
-  console.log(state)
-
   const route = useRoute()
   if (!route.query?.edit) {
     await cancelForm()

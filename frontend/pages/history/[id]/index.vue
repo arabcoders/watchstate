@@ -529,8 +529,6 @@ const loadContent = async (id) => {
     return
   }
 
-  console.log(useRoute().name)
-
   isLoading.value = false
 
   if (200 !== response.status) {

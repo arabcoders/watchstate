@@ -53,7 +53,10 @@
 
               <div class="column is-6" v-if="item?.updatedAt">
                 <strong>Updated:&nbsp;</strong>
-                <span class="has-tooltip" v-tooltip="moment(item.updatedAt).format(TOOLTIP_DATE_FORMAT)">
+                <span v-if="item.updatedAt === 'external_user' || item.updatedAt === 'never'">
+                  {{ item.updatedAt }}
+                </span>
+                <span class="has-tooltip" v-tooltip="moment(item.updatedAt).format(TOOLTIP_DATE_FORMAT)" v-else>
                   {{ moment(item.updatedAt).fromNow() }}
                 </span>
               </div>
@@ -121,10 +124,6 @@ const loadContent = async () => {
         message: response.statusText
       }
     }
-  }
-
-  if (useRoute().name !== 'backend-backend-users') {
-    return
   }
 
   isLoading.value = false

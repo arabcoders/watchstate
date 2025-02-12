@@ -177,6 +177,7 @@ final readonly class ProcessPushEvent
             $context['user'] = $user;
 
             try {
+                $context['status_code'] = $response->getStatusCode();
                 if (Status::OK !== Status::from($response->getStatusCode())) {
                     $writer(
                         Level::Error,

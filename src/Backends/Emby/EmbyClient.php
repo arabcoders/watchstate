@@ -533,17 +533,9 @@ class EmbyClient implements iClient
     }
 
     /**
-     * For Emby we do not generate api access token, thus we simply return
-     * the given the access token.
-     *
-     * @param int|string $userId
-     * @param string $username
-     * @return string|bool
-     */
-    /**
      * @inheritdoc
      */
-    public function getUserToken(int|string $userId, string $username): string|bool
+    public function getUserToken(int|string $userId, string $username, array $opts = []): string|bool
     {
         return $this->context->backendToken;
     }

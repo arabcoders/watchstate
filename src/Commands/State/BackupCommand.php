@@ -7,11 +7,14 @@ namespace App\Commands\State;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
+use App\Libs\Extends\StreamLogHandler;
+use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\UserContext;
 use Psr\Http\Message\StreamInterface as iStream;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -37,8 +40,11 @@ class BackupCommand extends Command
      * @param DirectMapper $mapper The direct mapper instance.
      * @param iLogger $logger The logger instance.
      */
-    public function __construct(private DirectMapper $mapper, private iLogger $logger)
-    {
+    public function __construct(
+        private DirectMapper $mapper,
+        private iLogger $logger,
+        private LogSuppressor $suppressor
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -52,6 +58,7 @@ class BackupCommand extends Command
     {
         $this->setName(self::ROUTE)
             ->setDescription('Backup backends play state.')
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Select user. Default is all users')
             ->addOption(
                 'keep',
                 'k',
@@ -79,8 +86,8 @@ class BackupCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Full path backup file. Will only be used if backup list is 1'
             )
-            ->addOption('only-main-user', 'M', InputOption::VALUE_NONE, 'Only backup main user data.')
             ->addOption('no-compress', 'N', InputOption::VALUE_NONE, 'Do not compress the backup file.')
+            ->addOption('logfile', null, InputOption::VALUE_REQUIRED, 'Save console output to file.')
             ->setHelp(
                 r(
                     <<<HELP
@@ -107,6 +114,10 @@ class BackupCommand extends Command
                     <notice>[ FAQ ]</notice>
                     -------
 
+                    <question># Backup specfic user backends data?</question>
+
+                    Simply append [<flag>-u, --user</flag>] option flag to the command.
+
                     <question># Where are my backups stored?</question>
 
                     By default, we store backups at [<value>{backupDir}</value>].
@@ -119,12 +130,26 @@ class BackupCommand extends Command
 
                     <question># I want different file name for my backup?</question>
 
-                    Backup names are something tricky, however it's possible to choose the backup filename if the total number
-                    of backed up backends are 1. So, in essence you have to combine two flags [<flag>-s</flag>, <flag>--select-backend</flag>] and [<flag>--file</flag>].
+                    Simply pass <flag>--file</flag> option flag, to choose the filename, however if you don't use <value>{backend}</value> in the filename,
+                    the backup will be overwrriten. So, it's fine to use static filename like `/foo/mybackup.json` if used with only single backend.
 
-                    For example, to back up [<value>backend_name</value>] backend data to [<value>/tmp/backend_name.json</value>] do the following:
+                    However this become tricky if you to backup multiple backends, thus to make it work we have the following magic replacement words
+                    to dynamicly update the filename.
 
-                    {cmd} <cmd>{route}</cmd> <flag>--select-backend</flag> <value>backend_name</value> <flag>--file</flag> <value>/tmp/my_backend.json</value>
+                    * <value>{user}</value>    = sub user name.
+                    * <value>{backend}</value> = the backend name
+                    * <value>{date}</value>    = the current date.
+
+                    so if you supply the following option flag [<flag>--file</flag> <value>./backup_{backend}.json</value>] the filename will be translated
+                    to <value>./backup_backend_name.json</value> for each target. For example
+
+                    {cmd} <cmd>{route}</cmd> <flag>--file</flag> <value>/tmp/{user}.{backend}.json</value>
+
+                    This will save the following files.
+
+                    * <value>/tmp/main.backend1.json.zip</value>
+                    * <value>/tmp/main.backend2.json.zip</value>
+                    * <value>/tmp/main.backend3.json.zip</value>
 
                     HELP,
                     [
@@ -147,6 +172,12 @@ class BackupCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
+        if (null !== ($logfile = $input->getOption('logfile')) && true === ($this->logger instanceof Logger)) {
+            $this->logger->setHandlers([
+                $this->suppressor->withHandler(new StreamLogHandler(new Stream($logfile, 'w'), $output))
+            ]);
+        }
+
         return $this->single(fn(): int => $this->process($input), $output);
     }
 
@@ -174,13 +205,20 @@ class BackupCommand extends Command
             $this->mapper->setOptions(options: $mapperOpts);
         }
 
-        $opts = [];
-        if (true === (bool)$input->getOption('only-main-user')) {
-            $opts = ['main_user_only' => true];
+        $user = $input->getOption('user');
+        $users = getUsersContext($this->mapper, $this->logger);
+        if (!empty($user)) {
+            $users = array_filter($users, fn($u) => $u === $user, ARRAY_FILTER_USE_KEY);
+        }
+
+        if (empty($users)) {
+            $message = $user ? r("Invalid user '{user}' selected.", ['user' => $user]) : 'No users were found.';
+            $this->logger->error($message);
+            return self::FAILURE;
         }
 
         $this->logger->notice("Using WatchState version - '{version}'.", ['version' => getAppVersion()]);
-        foreach (getUsersContext($this->mapper, $this->logger, $opts) as $userContext) {
+        foreach ($users as $userContext) {
             try {
                 $this->process_backup($input, $userContext);
             } finally {
@@ -266,7 +304,7 @@ class BackupCommand extends Command
             $this->logger->notice("SYSTEM: Preloading '{user}@{mapper}' data completed in '{duration}s'.", [
                 'user' => $userContext->name,
                 'mapper' => afterLast($userContext->mapper::class, '\\'),
-                'duration' => round(microtime(true) - $start, 2),
+                'duration' => round(microtime(true) - $start, 4),
                 'memory' => [
                     'now' => getMemoryUsage(),
                     'peak' => getPeakMemoryUsage(),
@@ -302,12 +340,13 @@ class BackupCommand extends Command
                 'backend' => $name,
             ]);
 
-            if (null === ($fileName = $input->getOption('file')) || empty($fileName)) {
-                $fileName = Config::get('path') . '/backup/{backend}.{date}.json';
-            }
+            $fileName = $input->getOption('file');
 
-            if ($input->getOption('keep')) {
-                $fileName = Config::get('path') . '/backup/{backend}.json';
+            if (empty($fileName)) {
+                $fileName = Config::get('path') . '/backup/{user}.{backend}.{date}.json';
+                if ($input->getOption('keep')) {
+                    $fileName = Config::get('path') . '/backup/{user}.{backend}.json';
+                }
             }
 
             if (count($list) <= 1 && null !== ($file = $input->getOption('file'))) {
@@ -315,12 +354,13 @@ class BackupCommand extends Command
             }
 
             if (false === $input->getOption('dry-run')) {
-                $fileName = r($fileName ?? Config::get('path') . '/backup/{backend}.{date}.json', [
-                    'backend' => ag($backend, 'name', 'Unknown??'),
+                $fileName = r($fileName ?? Config::get('path') . '/backup/{user}.{backend}.{date}.json', [
+                    'user' => $userContext->name,
+                    'backend' => ag($backend, 'name', 'Unknown'),
                     'date' => makeDate()->format('Ymd'),
                 ]);
 
-                if (!file_exists($fileName)) {
+                if (false === file_exists($fileName)) {
                     touch($fileName);
                 }
 
@@ -334,10 +374,13 @@ class BackupCommand extends Command
                 $backend['fp']->write('[');
             }
 
-            array_push($queue, ...$backend['class']->backup($userContext->mapper, $backend['fp'] ?? null, [
-                'no_enhance' => true === $input->getOption('no-enhance'),
-                Options::DRY_RUN => (bool)$input->getOption('dry-run'),
-            ]));
+            array_push(
+                $queue,
+                ...$backend['class']->backup($userContext->mapper, $backend['fp'] ?? null, [
+                    'no_enhance' => true === $input->getOption('no-enhance'),
+                    Options::DRY_RUN => (bool)$input->getOption('dry-run'),
+                ])
+            );
         }
 
         unset($backend);
@@ -400,7 +443,7 @@ class BackupCommand extends Command
         $this->logger->notice("SYSTEM: Backup operation for '{user}: {backends}' backends finished in '{duration}s'.", [
             'user' => $userContext->name,
             'backends' => implode(', ', array_keys($list)),
-            'duration' => round(microtime(true) - $start, 2),
+            'duration' => round(microtime(true) - $start, 4),
             'memory' => [
                 'now' => getMemoryUsage(),
                 'peak' => getPeakMemoryUsage(),

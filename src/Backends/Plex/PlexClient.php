@@ -548,9 +548,9 @@ class PlexClient implements iClient
     /**
      * @inheritdoc
      */
-    public function getUserToken(int|string $userId, string $username): string|bool
+    public function getUserToken(int|string $userId, string $username, array $opts = []): string|bool
     {
-        $response = Container::get(GetUserToken::class)($this->context, $userId, $username);
+        $response = Container::get(GetUserToken::class)($this->context, $userId, $username, $opts);
 
         if (false === $response->isSuccessful()) {
             if ($response->hasError()) {

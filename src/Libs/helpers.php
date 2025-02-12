@@ -2507,25 +2507,12 @@ if (!function_exists('getUsersContext')) {
             throw new RuntimeException(r("Unable to read '{dir}' directory.", ['dir' => $usersDir]));
         }
 
-        $mainUserIds = array_map(
-            fn($backend) => ag($backend, 'user'),
-            ConfigFile::open(Config::get('backends_file'), 'yaml')->getAll()
-        );
-
         foreach (new DirectoryIterator(Config::get('path') . '/users') as $dir) {
             if ($dir->isDot() || false === $dir->isDir()) {
                 continue;
             }
 
             $config = perUserConfig($dir->getBasename());
-
-            $subUserIds = array_map(fn($backend) => ag($backend, 'user'), $config->getAll());
-            foreach ($mainUserIds as $mainId) {
-                if (false === in_array($mainId, $subUserIds)) {
-                    continue;
-                }
-                continue 2;
-            }
 
             $userName = $dir->getBasename();
             $perUserCache = perUserCacheAdapter($userName);
@@ -2568,6 +2555,10 @@ if (!function_exists('getUserContext')) {
     {
         $users = getUsersContext($mapper, $logger);
         if (false === in_array($user, array_keys($users), true)) {
+            $logger->error("User '{user}' not found.", [
+                'user' => $user,
+                'users' => array_keys($users)
+            ]);
             throw new RuntimeException(r("User '{user}' not found.", ['user' => $user]), 1001);
         }
 

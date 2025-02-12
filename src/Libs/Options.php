@@ -28,6 +28,7 @@ final class Options
     public const string ADMIN_TOKEN = 'ADMIN_TOKEN';
     public const string PLEX_USER_UUID = 'plex_user_uuid';
     public const string PLEX_USER_NAME = 'plex_user_name';
+    public const string PLEX_EXTERNAL_USER = 'plex_external_user';
     public const string NO_THROW = 'NO_THROW';
     public const string NO_LOGGING = 'NO_LOGGING';
     public const string MAX_EPISODE_RANGE = 'MAX_EPISODE_RANGE';
@@ -39,11 +40,13 @@ final class Options
     public const string NO_CHECK = 'NO_CHECK';
     public const string LOG_WRITER = 'LOG_WRITER';
     public const string PLEX_USER_PIN = 'PLEX_USER_PIN';
+    public const string ADMIN_PLEX_USER_PIN = 'PLEX_USER_PIN';
     public const string REQUEST_ID = 'REQUEST_ID';
     public const string ONLY_LIBRARY_ID = 'ONLY_LIBRARY_ID';
     public const string ALT_NAME = 'ALT_NAME';
     public const string ALT_ID = 'ALT_ID';
     public const string CONTEXT_USER = 'CONTEXT_USER';
+    public const string GET_TOKENS = 'tokens';
 
     private function __construct()
     {

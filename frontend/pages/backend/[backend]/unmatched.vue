@@ -157,10 +157,6 @@ const loadContent = async (useCache = true) => {
       json = await response.json()
       cache.set(cacheKey, json)
 
-      if (useRoute().name !== 'backend-backend-unmatched') {
-        return
-      }
-
       if (!response.ok) {
         notification('error', 'Error', `${json.error.code ?? response.status}: ${json.error.message ?? response.statusText}`)
         return

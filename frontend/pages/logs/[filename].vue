@@ -106,7 +106,6 @@ const stream = ref(null)
 const logContainer = ref(null)
 
 const loadContent = async () => {
-  console.log(useRoute().name)
   try {
     isLoading.value = true
     const response = await request(`/log/${filename}`)

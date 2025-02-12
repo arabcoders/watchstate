@@ -101,7 +101,7 @@ class CreateUsersCommand extends Command
 
                     If you want to update the user configuration based on the main user configuration, you can use the <flag>--update</flag> option.
 
-                    <question># Do i need to map the main user?</question>
+                    <question># Do I need to map the main user?</question>
 
                     No, There is no need, as the main user is already configured.
 
@@ -194,13 +194,19 @@ class CreateUsersCommand extends Command
                     ]);
                     $info['displayName'] = ag($user, 'name');
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
-                    $info = ag_delete($info, 'options.' . Options::ADMIN_TOKEN);
                     $info = ag_set($info, 'options.' . Options::ALT_NAME, ag($backend, 'name'));
                     $info = ag_set($info, 'options.' . Options::ALT_ID, ag($backend, 'user'));
                     if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'type'))) {
                         $info = ag_set($info, 'token', 'reuse_or_generate_token');
                         $info = ag_set($info, 'options.' . Options::PLEX_USER_NAME, ag($user, 'name'));
                         $info = ag_set($info, 'options.' . Options::PLEX_USER_UUID, ag($user, 'uuid'));
+                        $info = ag_set($info, 'options.' . Options::ADMIN_TOKEN, ag($backend, [
+                            'options.' . Options::ADMIN_TOKEN,
+                            'token'
+                        ]));
+                        if (true === (bool)ag($user, 'guest', false)) {
+                            $info = ag_set($info, 'options.' . Options::PLEX_EXTERNAL_USER, true);
+                        }
                     }
 
                     $user['backend'] = ag($backend, 'name');
@@ -285,11 +291,46 @@ class CreateUsersCommand extends Command
                     $clientData = ag_delete($clientData, ['token', 'import.lastSync', 'export.lastSync']);
                     $clientData = array_replace_recursive($perUser->get($name), $clientData);
                     if ($input->getOption('update')) {
+                        $update = [
+                            'url' => ag($backend, 'client_data.url'),
+                            'options.ALT_NAME' => ag($backend, 'client_data.name'),
+                            'options.ALT_ID' => ag($backend, 'client_data.user'),
+                        ];
+
+                        if (null !== ($val = ag($backend, 'client_data.options.' . Options::IGNORE))) {
+                            $update['options.' . Options::IGNORE] = $val;
+                        }
+
+                        if (null !== ($val = ag($backend, 'client_data.options.' . Options::LIBRARY_SEGMENT))) {
+                            $update['options.' . Options::LIBRARY_SEGMENT] = $val;
+                        }
+
+                        if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'client_data.type'))) {
+                            $update['options.' . Options::PLEX_USER_NAME] = $userName;
+                            $update['options.' . Options::PLEX_USER_UUID] = ag($backend, 'uuid');
+
+                            if (null !== ($val = ag($backend, 'client_data.options.' . Options::PLEX_EXTERNAL_USER))) {
+                                $update['options.' . Options::PLEX_EXTERNAL_USER] = (bool)$val;
+                            }
+                            
+                            if (null !== ($val = ag($backend, 'client_data.options.use_old_progress_endpoint'))) {
+                                $update['options.use_old_progress_endpoint'] = $val;
+                            }
+                            $adminToken = ag($backend, [
+                                'client_data.options.' . Options::ADMIN_TOKEN,
+                                'client_data.token'
+                            ]);
+                            $update['options.' . Options::ADMIN_TOKEN] = $adminToken;
+                        }
+
                         $this->logger->info("SYSTEM: Updating user configuration for '{user}@{name}' backend.", [
                             'name' => $name,
                             'user' => $userName,
                         ]);
-                        $perUser->set($name, $clientData);
+
+                        foreach ($update as $key => $value) {
+                            $perUser->set("{$name}.{$key}", $value);
+                        }
                     }
                 }
 
@@ -299,11 +340,26 @@ class CreateUsersCommand extends Command
                         $client = ag($backend, 'client_data.class');
                         assert($client instanceof iClient);
                         if (PlexClient::CLIENT_NAME === $client->getType()) {
-                            $clientData['token'] = $client->getUserToken(
-                                ag($clientData, 'options.' . Options::PLEX_USER_UUID),
-                                ag($clientData, 'options.' . Options::PLEX_USER_NAME)
+                            $requestOpts = [];
+                            if (ag($clientData, 'options.' . Options::PLEX_EXTERNAL_USER, false)) {
+                                $requestOpts[Options::PLEX_EXTERNAL_USER] = true;
+                            }
+                            $token = $client->getUserToken(
+                                userId: ag($clientData, 'options.' . Options::PLEX_USER_UUID),
+                                username: ag($clientData, 'options.' . Options::PLEX_USER_NAME),
+                                opts: $requestOpts,
                             );
-                            $perUser->set("{$name}.token", $clientData['token']);
+                            if (false === $token) {
+                                $this->logger->error(
+                                    "Failed to generate access token for '{user}@{backend}' backend.",
+                                    [
+                                        'user' => $userName,
+                                        'backend' => $name,
+                                    ]
+                                );
+                            } else {
+                                $perUser->set("{$name}.token", $token);
+                            }
                         }
                     }
                 } catch (Throwable $e) {
@@ -606,5 +662,4 @@ class CreateUsersCommand extends Command
 
         return $chunks;
     }
-
 }

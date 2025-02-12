@@ -77,9 +77,9 @@
             <div class="card-footer-item">
               <NuxtLink :to="`/backend/${backend}/stale/${item.id}?name=${item.title}`">
                 <span class="icon-text">
-                <span class="icon"><i class="fas fa-sync"></i></span>
-                <span>Check Content Staleness</span>
-                  </span>
+                  <span class="icon"><i class="fas fa-sync"></i></span>
+                  <span>Check Content Staleness</span>
+                </span>
               </NuxtLink>
             </div>
           </div>
@@ -128,10 +128,6 @@ const loadContent = async () => {
           message: response.statusText
         }
       }
-    }
-
-    if (useRoute().name !== 'backend-backend-libraries') {
-      return
     }
 
     if (200 !== response.status) {
