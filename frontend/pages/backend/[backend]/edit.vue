@@ -186,17 +186,15 @@
                   <p class="help">
                     <span v-if="'plex' === backend.type">
                       Plex doesn't use standard API practice for identifying users. They use <code>X-Plex-Token</code>
-                      to
-                      identify the user. The user selected here will only be used for webhook matching and filtering.
+                      to identify the user. The list can only be populated if the user is admin or has
+                      <code>ADMIN_TOKEN</code> set in Additional options.
                     </span>
                     <span v-else>
                       Which <code>{{ ucFirst(backend.type) }}</code> user should this backend use? The User ID will
-                      determine the
-                      data we get from the backend. And for webhook matching and filtering.
+                      determine the data we get from the backend. And for webhook matching and filtering.
                     </span>
-                    This tool is meant for single user use.
                     <a href="javascript:void(0)" @click="getUsers" v-if="!isLimitedToken">
-                      Retrieve User ids from backend.
+                      Get users.
                     </a>
                   </p>
                 </div>
@@ -388,9 +386,6 @@ useHead({title: 'Backends - Edit: ' + id})
 const loadContent = async () => {
   const content = await request(`/backend/${id}`)
   let json = await content.json()
-  if (useRoute().name !== 'backend-backend-edit') {
-    return
-  }
 
   if (!json?.options || typeof json.options !== 'object') {
     json.options = {}
@@ -523,13 +518,14 @@ const getUsers = async (showAlert = true) => {
       ADMIN_TOKEN: backend.value.options.ADMIN_TOKEN
     }
   }
+
   if (backend.value.options && backend.value.options?.is_limited_token) {
     data.options = {
       is_limited_token: Boolean(backend.value.options.is_limited_token)
     }
   }
 
-  const response = await request(`/backends/users/${backend.value.type}`, {
+  const response = await request(`/backends/users/${backend.value.type}?tokens=1`, {
     method: 'POST',
     body: JSON.stringify(data)
   })
@@ -617,6 +613,38 @@ const updateIdentifier = async () => {
   backend.value.uuid = servers.value.find(s => s.uri === backend.value.url).identifier
   await getUsers()
 }
+
+watch(() => backend.value.user, async () => {
+  if (users.value.length < 1 || 'plex' !== backend.value.type) {
+    return
+  }
+
+  // -- get token for the user
+  users.value.forEach(u => {
+    if (u.id !== backend.value.user) {
+      return
+    }
+
+    if (u?.guest) {
+      backend.value.options.plex_external_user = true
+    } else {
+      if (backend.value.options?.plex_external_user) {
+        delete backend.value.options.plex_external_user
+      }
+    }
+
+    backend.value.options.plex_user_name = u.name
+    backend.value.options.plex_user_uuid = u.uuid
+
+
+    if (!u?.token) {
+      notification('error', 'Error', `User token not found`)
+      return
+    }
+
+    backend.value.token = u.token
+  })
+})
 
 onMounted(async () => await loadContent())
 

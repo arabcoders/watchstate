@@ -12,11 +12,14 @@ use App\Libs\Options;
 use App\Libs\Traits\APITraits;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 final class Users
 {
     use APITraits;
+
+    public function __construct(private readonly LoggerInterface $logger) {}
 
     #[Route(['GET', 'POST'], Index::URL . '/users/{type}[/]', name: 'backends.get.users')]
     public function __invoke(iRequest $request, array $args = []): iResponse
@@ -48,6 +51,7 @@ final class Users
                 $users[] = $user;
             }
         } catch (Throwable $e) {
+            $this->logger->error($e->getMessage(), ['trace' => $e->getTrace()]);
             return api_error($e->getMessage(), Status::INTERNAL_SERVER_ERROR);
         }
 

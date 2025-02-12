@@ -85,6 +85,7 @@ final class GetUsersList
     /**
      * Get Home Users.
      *
+     * @param Response $users External users.
      * @param Context $context The context.
      * @param array $opts The options.
      *
@@ -92,7 +93,7 @@ final class GetUsersList
      * @throws iException if an error occurs during the request.
      * @throws JsonException if an error occurs during the JSON parsing.
      */
-    private function getHomeUsers(Response $resp, Context $context, array $opts = []): Response
+    private function getHomeUsers(Response $users, Context $context, array $opts = []): Response
     {
         $url = Container::getNew(iUri::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
             ->withPath('/api/v2/home/users/');
@@ -128,7 +129,7 @@ final class GetUsersList
             );
         }
 
-        return $this->processHomeUsers($resp, $context, $url, $response, $opts);
+        return $this->processHomeUsers($users, $context, $url, $response, $opts);
     }
 
     /**
@@ -228,7 +229,7 @@ final class GetUsersList
     private function processExternalUsers(iResponse $response, Context $context, iUri $url): array
     {
         $data = json_decode(
-            json: json_encode(simplexml_load_string($response->getContent())),
+            json: json_encode(simplexml_load_string($response->getContent(false))),
             associative: true,
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
@@ -262,7 +263,7 @@ final class GetUsersList
     }
 
     /**
-     * Process users accesstokens.
+     * Process external users access tokens.
      *
      * @param array $users List of users.
      * @param Context $context The context.
@@ -280,7 +281,7 @@ final class GetUsersList
         }
 
         $json = json_decode(
-            json: json_encode(simplexml_load_string($response->getContent())),
+            json: json_encode(simplexml_load_string($response->getContent(false))),
             associative: true,
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
@@ -311,6 +312,7 @@ final class GetUsersList
     /**
      * Process home-users response.
      *
+     * @param Response $users External users.
      * @param Context $context The context.
      * @param iUri $url The URL.
      * @param iResponse $response The response.
@@ -321,14 +323,14 @@ final class GetUsersList
      * @throws JsonException if an error occurs during the JSON parsing.
      */
     private function processHomeUsers(
-        Response $resp,
+        Response $users,
         Context $context,
         iUri $url,
         iResponse $response,
         array $opts
     ): Response {
         $json = json_decode(
-            json: $response->getContent(),
+            json: $response->getContent(false),
             associative: true,
             flags: JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_IGNORE
         );
@@ -342,7 +344,11 @@ final class GetUsersList
             ]);
         }
 
-        $users = $resp->response;
+        if ($users->hasError()) {
+            $this->logger->log($users->error->level(), $users->error->message, $users->error->context);
+        }
+
+        $users = $users->isSuccessful() ? $users->response : [];
 
         $list = [];
 
@@ -407,20 +413,28 @@ final class GetUsersList
      */
     private function request(iUri $url, Context $context, array $opts = []): iResponse
     {
-        if (null !== ag($context->options, Options::ADMIN_TOKEN)) {
-            $response = $this->http->request('GET', (string)$url, [
+        if (null !== ($adminToken = ag($context->options, Options::ADMIN_TOKEN))) {
+            if (null !== ($adminPin = ag($context->options, Options::ADMIN_PLEX_USER_PIN))) {
+                parse_str($url->getQuery(), $query);
+                $url = $url->withQuery(http_build_query(['pin' => $adminPin, ...$query,]));
+            }
+            $response = $this->http->request(ag($opts, 'method', 'GET'), (string)$url, [
                 'headers' => array_replace_recursive([
-                    'X-Plex-Token' => $context->backendToken,
+                    'X-Plex-Token' => $adminToken,
                     'X-Plex-Client-Identifier' => $context->backendId,
                 ], ag($opts, 'headers', [])),
             ]);
-
             if (Status::OK === Status::from($response->getStatusCode())) {
                 return $response;
             }
         }
+        
+        if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
+            parse_str($url->getQuery(), $query);
+            $url = $url->withQuery(http_build_query(['pin' => $pin, ...$query,]));
+        }
 
-        $response = $this->http->request('GET', (string)$url, [
+        $response = $this->http->request(ag($opts, 'method', 'GET'), (string)$url, [
             'headers' => array_replace_recursive([
                 'X-Plex-Token' => $context->backendToken,
                 'X-Plex-Client-Identifier' => $context->backendId,
@@ -432,11 +446,17 @@ final class GetUsersList
         }
 
         throw new InvalidArgumentException(
-            r("Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code.", [
+            r(
+                "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}",
+                [
                     'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                     'status_code' => $response->getStatusCode(),
-                    'body' => $response->getContent(),
+                    'body' => $response->getContent(false),
+                    'tokenType' => ag_exists(
+                        $context->options,
+                        Options::ADMIN_TOKEN
+                    ) ? 'user & admin token' : 'user token',
                 ]
             )
         );

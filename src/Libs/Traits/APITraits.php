@@ -126,7 +126,9 @@ trait APITraits
     protected function getBasicClient(string $type, DataUtil $data): iClient
     {
         if (null === ($class = Config::get("supported.{$type}", null))) {
-            throw new InvalidArgumentException(r("Unexpected client type '{type}' was given.", ['type' => $type]), 2000
+            throw new InvalidArgumentException(
+                r("Unexpected client type '{type}' was given.", ['type' => $type]),
+                2000
             );
         }
 
@@ -164,7 +166,10 @@ trait APITraits
                 logger: Container::get(iLogger::class),
                 backendId: $data->get('uuid'),
                 backendToken: $data->get('token'),
-                backendUser: $data->get('user'), backendHeaders: [], trace: false, options: $options,
+                backendUser: $data->get('user'),
+                backendHeaders: [],
+                trace: false,
+                options: $options,
             )
         );
     }

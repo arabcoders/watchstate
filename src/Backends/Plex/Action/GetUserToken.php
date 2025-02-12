@@ -10,11 +10,15 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\RetryableHttpClient;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as iException;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
 use Throwable;
 
 final class GetUserToken
@@ -67,62 +71,22 @@ final class GetUserToken
                 ->withPort(443)->withScheme('https')->withHost('plex.tv')
                 ->withPath(r('/api/v2/home/users/{user_id}/switch', ['user_id' => $userId]));
 
-            $pin = ag($context->options, Options::PLEX_USER_PIN);
-
-            $this->logger->debug("Requesting temporary access token for '{backend}' user '{username}'{pin}", [
+            $this->logger->debug("Requesting temporary access token for '{user}@{backend}' user '{username}'.", [
+                'user' => $context->userContext->name,
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
                 'url' => (string)$url,
-                'pin' => null !== $pin ? ' with PIN.' : '.',
             ]);
 
-            if (null !== $pin) {
-                $url = $url->withQuery(http_build_query(['pin' => $pin]));
-            }
-
-            $response = $this->http->request('POST', (string)$url, [
+            $response = $this->request(Method::POST, $url, Status::CREATED, $context, [
                 'headers' => [
                     'Accept' => 'application/json',
-                    'X-Plex-Token' => $context->backendToken,
-                    'X-Plex-Client-Identifier' => $context->backendId,
                 ],
             ]);
 
-            if (429 === $response->getStatusCode()) {
-                return new Response(
-                    status: false,
-                    error: new Error(
-                        message: "Request for temporary access token for '{backend}' user '{username}'{pin} failed due to rate limit. error 429.",
-                        context: [
-                            'backend' => $context->backendName,
-                            'username' => $username,
-                            'user_id' => $userId,
-                            'status_code' => $response->getStatusCode(),
-                            'headers' => $response->getHeaders(),
-                            'pin' => null !== $pin ? ' with pin' : '',
-                        ],
-                        level: Levels::ERROR
-                    ),
-                );
-            }
-
-            if (201 !== $response->getStatusCode()) {
-                return new Response(
-                    status: false,
-                    error: new Error(
-                        message: "Request for '{backend}' user '{username}'{pin} temporary access token responded with unexpected '{status_code}' status code.",
-                        context: [
-                            'backend' => $context->backendName,
-                            'username' => $username,
-                            'user_id' => $userId,
-                            'status_code' => $response->getStatusCode(),
-                            'headers' => $response->getHeaders(),
-                            'pin' => null !== $pin ? ' with pin' : '',
-                        ],
-                        level: Levels::ERROR
-                    ),
-                );
+            if (true === ($response instanceof Response)) {
+                return $response;
             }
 
             $json = json_decode(
@@ -132,41 +96,36 @@ final class GetUserToken
             );
 
             if ($context->trace) {
-                $this->logger->debug("Parsing temporary access token for '{backend}' user '{username}'{pin} payload.", [
+                $this->logger->debug("Parsing temporary access token for '{user}@{backend}' user '{username}'.", [
+                    'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                     'username' => $username,
                     'user_id' => $userId,
                     'url' => (string)$url,
                     'trace' => $json,
                     'headers' => $response->getHeaders(),
-                    'pin' => null !== $pin ? ' with pin' : '',
                 ]);
             }
 
             $tempToken = ag($json, 'authToken', null);
 
             $url = Container::getNew(iUri::class)->withPort(443)->withScheme('https')->withHost('plex.tv')
-                ->withPath('/api/v2/resources')->withQuery(
-                    http_build_query([
-                        'includeIPv6' => 1,
-                        'includeHttps' => 1,
-                        'includeRelay' => 1
-                    ])
-                );
+                ->withPath('/api/v2/resources')
+                ->withQuery(http_build_query(['includeIPv6' => 1, 'includeHttps' => 1, 'includeRelay' => 1]));
 
-            $this->logger->debug("Requesting permanent access token for '{backend}' user '{username}'{pin}.", [
+            $this->logger->debug("Requesting permanent access token for '{user}@{backend}' user '{username}'.", [
+                'user' => $context->userContext->name,
                 'backend' => $context->backendName,
                 'username' => $username,
                 'user_id' => $userId,
                 'url' => (string)$url,
-                'pin' => null !== $pin ? ' with pin' : '',
             ]);
 
-            $response = $this->http->request('GET', (string)$url, [
+            $response = $this->request(Method::GET, $url, Status::OK, $context, [
+                'no_admin' => true,
                 'headers' => [
                     'Accept' => 'application/json',
                     'X-Plex-Token' => $tempToken,
-                    'X-Plex-Client-Identifier' => $context->backendId,
                 ],
             ]);
 
@@ -177,14 +136,17 @@ final class GetUserToken
             );
 
             if ($context->trace) {
-                $this->logger->debug("Parsing permanent access token for '{backend}' user '{username}'{pin} payload.", [
-                    'backend' => $context->backendName,
-                    'username' => $username,
-                    'user_id' => $userId,
-                    'url' => (string)$url,
-                    'trace' => $json,
-                    'pin' => null !== $pin ? ' with pin' : '',
-                ]);
+                $this->logger->debug(
+                    "Parsing permanent access token for '{user}@{backend}' user '{username}' payload.",
+                    [
+                        'user' => $context->userContext->name,
+                        'backend' => $context->backendName,
+                        'username' => $username,
+                        'user_id' => $userId,
+                        'url' => (string)$url,
+                        'trace' => $json,
+                    ]
+                );
             }
 
             $servers = [];
@@ -204,9 +166,10 @@ final class GetUserToken
             }
 
             $this->logger->error(
-                "Response had '{count}' associated servers, non match '{backend}: {backend_id}' unique identifier.",
+                "Response had '{count}' associated servers, non match '{user}@{backend}: {backend_id}' unique identifier.",
                 [
                     'count' => count(($json)),
+                    'user' => $context->userContext->name,
                     'backend' => $context->backendName,
                     'backend_id' => $context->backendId,
                     'servers' => $servers,
@@ -216,12 +179,12 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "No permanent access token was found for '{username}'{pin} in '{backend}' response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [--debug] flag for more information.",
+                    message: "No permanent access token was found for '{username}' in '{user}@{backend}' response. Likely invalid unique identifier was selected or plex.tv API error, check https://status.plex.tv or try running same command with [--debug] flag for more information.",
                     context: [
+                        'user' => $context->userContext->name,
                         'backend' => $context->backendName,
                         'username' => $username,
                         'user_id' => $userId,
-                        'pin' => null !== $pin ? ' with pin' : '',
                     ],
                     level: Levels::ERROR
                 ),
@@ -230,8 +193,9 @@ final class GetUserToken
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' request for '{username}'{pin} access token. Error '{error.message}' at '{error.file}:{error.line}'.",
+                    message: "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' request for '{username}'{pin} access token. Error '{error.message}' at '{error.file}:{error.line}'.",
                     context: [
+                        'user' => $context->userContext->name,
                         'backend' => $context->backendName,
                         'client' => $context->clientName,
                         'pin' => isset($pin) ? ' with pin' : '',
@@ -299,6 +263,80 @@ final class GetUserToken
                 ],
                 level: Levels::ERROR
             ),
+        );
+    }
+
+    /**
+     * Do the actual API request.
+     *
+     * @param Method $method The method.
+     * @param iUri $url The URL.
+     * @param Status $expectedStatus The expected status.
+     * @param Context $context The context.
+     * @param array $opts The options.
+     *
+     * @return iResponse|Response Return {@see iResponse} the response if successful. return {@see Response} if failed.
+     * @throws iException if an error occurs during the request.
+     */
+    private function request(
+        Method $method,
+        iUri $url,
+        Status $expectedStatus,
+        Context $context,
+        array $opts = []
+    ): iResponse|Response {
+        if (true !== ag($opts, 'no_admin') && null !== ($adminToken = ag($context->options, Options::ADMIN_TOKEN))) {
+            if (null !== ($adminPin = ag($context->options, Options::ADMIN_PLEX_USER_PIN))) {
+                parse_str($url->getQuery(), $query);
+                $url = $url->withQuery(http_build_query(['pin' => $adminPin, ...$query,]));
+            }
+
+            $response = $this->http->request($method->value, (string)$url, [
+                'headers' => array_replace_recursive([
+                    'X-Plex-Token' => $adminToken,
+                    'X-Plex-Client-Identifier' => $context->backendId,
+                ], ag($opts, 'headers', [])),
+                ...ag($opts, 'options', []),
+            ]);
+            if ($expectedStatus === Status::from($response->getStatusCode())) {
+                return $response;
+            }
+        }
+
+        if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
+            parse_str($url->getQuery(), $query);
+            $url = $url->withQuery(http_build_query(['pin' => $pin, ...$query,]));
+        }
+
+        $response = $this->http->request($method->value, (string)$url, [
+            'headers' => array_replace_recursive([
+                'X-Plex-Token' => $context->backendToken,
+                'X-Plex-Client-Identifier' => $context->backendId,
+            ], ag($opts, 'headers', [])),
+            ...ag($opts, 'options', []),
+        ]);
+
+        if ($expectedStatus === Status::from($response->getStatusCode())) {
+            return $response;
+        }
+
+        return new Response(
+            status: false,
+            error: new Error(
+                message: "Request for '{user}@{backend}' users list returned with unexpected '{status_code}' status code. {tokenType}",
+                context: [
+                    'user' => $context->userContext->name,
+                    'backend' => $context->backendName,
+                    'status_code' => $response->getStatusCode(),
+                    'body' => $response->getContent(false),
+                    'tokenType' => ag_exists(
+                        $context->options,
+                        Options::ADMIN_TOKEN
+                    ) ? 'user & admin token' : 'user token',
+                    'response' => $response,
+                ],
+                level: Levels::ERROR
+            )
         );
     }
 }

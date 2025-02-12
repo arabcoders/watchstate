@@ -20,15 +20,11 @@ use App\Libs\Uri;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Psr\Log\LoggerInterface as iLogger;
-use Random\RandomException;
 
 final class Add
 {
     use APITraits;
 
-    /**
-     * @throws RandomException
-     */
     #[Post(Index::URL . '[/]', name: 'backends.add')]
     public function BackendAdd(iRequest $request, iImport $mapper, iLogger $logger): iResponse
     {
@@ -108,10 +104,6 @@ final class Add
 
             if (!$config->get('uuid')) {
                 $config = $config->with('uuid', $instance->withContext($context)->getIdentifier());
-            }
-
-            if (!$config->has('webhook.token')) {
-                $config = $config->with('webhook.token', bin2hex(random_bytes(Config::get('webhook.tokenLength'))));
             }
 
             $userContext->config->set($name, $config->getAll())->persist();
