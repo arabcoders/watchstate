@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250214-510c54f",
-        "date": "2025-02-13T21:56:30+00:00",
+        "tag": "dev-20250214-5aa2372",
+        "date": "2025-02-13T22:05:20+00:00",
         "commits": [
+            {
+                "sha": "5aa2372",
+                "message": "Make changelog.vue compare the tag only",
+                "author": "ArabCoders",
+                "date": "2025-02-13T22:05:20+00:00"
+            },
             {
                 "sha": "510c54f",
                 "message": "Cleaned up and updated jellyfin/emby log messages.",
