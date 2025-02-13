@@ -17,7 +17,7 @@
           <span class="icon-text">
             <span class="icon"><i class="fas fa-code-branch"></i></span>
             <span>
-              {{ log.tag }} <span class="subtitle has-text-success" v-if="isInstalled(log.tag)">Installed</span>
+              {{ log.tag }} <span class="tag has-text-success" v-if="isInstalled(log.tag)">Installed</span>
             </span>
           </span>
         </h1>
