@@ -1,7 +1,31 @@
 [
     {
-        "tag": "dev-20250212-79843e7",
-        "date": "2025-02-12T19:43:13+00:00",
+        "tag": "dev-20250214-510c54f",
+        "date": "2025-02-13T21:56:30+00:00",
+        "commits": [
+            {
+                "sha": "510c54f",
+                "message": "Cleaned up and updated jellyfin/emby log messages.",
+                "author": "ArabCoders",
+                "date": "2025-02-13T21:56:30+00:00"
+            },
+            {
+                "sha": "bce50ef",
+                "message": "updated external packages",
+                "author": "ArabCoders",
+                "date": "2025-02-13T21:56:11+00:00"
+            },
+            {
+                "sha": "e6f5154",
+                "message": "dont show merge commits in log",
+                "author": "ArabCoders",
+                "date": "2025-02-13T13:07:47+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250212-7243e78",
+        "date": "2025-02-12T19:54:33+00:00",
         "commits": [
             {
                 "sha": "79843e7",
