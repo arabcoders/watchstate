@@ -10,9 +10,12 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Config;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
+use SensitiveParameter;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
@@ -36,7 +39,7 @@ class GenerateAccessToken
      * @param iHttp $http The HTTP client instance.
      * @param iLogger $logger The logger instance.
      */
-    public function __construct(protected iHttp $http, protected iLogger $logger)
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
     {
     }
 
@@ -74,48 +77,53 @@ class GenerateAccessToken
     private function generateToken(
         Context $context,
         string|int $identifier,
-        string $password,
+        #[SensitiveParameter] string $password,
         array $opts = []
     ): Response {
         $url = $context->backendUrl->withPath('/Users/AuthenticateByName');
 
-        $this->logger->debug("Requesting '{backend}' to generate access token for '{username}'.", [
-            'username' => (string)$identifier,
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
             'backend' => $context->backendName,
+            'user' => $context->userContext->name,
             'url' => (string)$url,
-        ]);
+            'username' => (string)$identifier,
+        ];
 
-        $response = $this->http->request('POST', (string)$url, [
+        $this->logger->debug(
+            message: "{action}: Requesting '{client}: {user}@{backend}' to generate access token for '{username}'.",
+            context: $logContext
+        );
+
+        $response = $this->http->request(Method::POST->value, (string)$url, [
             'json' => [
                 'Username' => (string)$identifier,
                 'Pw' => $password,
             ],
             'headers' => [
                 'Accept' => 'application/json',
-                'Authorization' => r(
-                    '{Agent} Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}"',
-                    [
-                        'Agent' => 'Emby' == $context->clientName ? 'Emby' : 'MediaBrowser',
-                        'app' => Config::get('name') . '/' . $context->clientName,
-                        'os' => PHP_OS,
-                        'id' => md5(Config::get('name') . '/' . $context->clientName),
-                        'version' => getAppVersion(),
-                    ]
-                ),
+                'Authorization' => r('{Agent} Client="{app}", Device="{os}", DeviceId="{id}", Version="{version}"', [
+                    'Agent' => 'Emby' == $context->clientName ? 'Emby' : 'MediaBrowser',
+                    'app' => Config::get('name') . '/' . $context->clientName,
+                    'os' => PHP_OS,
+                    'id' => md5(Config::get('name') . '/' . $context->clientName),
+                    'version' => getAppVersion(),
+                ]),
             ],
         ]);
 
-        if (200 !== $response->getStatusCode()) {
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{client}: {backend}' to generate access for '{username}' token returned with unexpected '{status_code}' status code. {body}",
+                    message: "{action}: Request for '{client}: {user}@{backend}' to generate access for '{username}' token returned with unexpected '{status_code}' status code. {body}",
                     context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'username' => (string)$identifier,
+                        ...$logContext,
                         'status_code' => $response->getStatusCode(),
-                        'body' => $response->getContent(false),
+                        'response' => [
+                            'body' => $response->getContent(false),
+                        ],
                     ],
                     level: Levels::ERROR
                 ),
@@ -129,11 +137,13 @@ class GenerateAccessToken
         );
 
         if ($context->trace) {
-            $this->logger->debug("Parsing '{backend}' access token response payload.", [
-                'backend' => $context->backendName,
-                'url' => (string)$url,
-                'trace' => $json,
-            ]);
+            $this->logger->debug(
+                message: "{action}: Parsing '{client}: {user}@{backend}' - '{username}' access token response payload.",
+                context: [
+                    ...$logContext,
+                    'trace' => $json,
+                ]
+            );
         }
 
         $info = [

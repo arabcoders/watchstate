@@ -69,7 +69,7 @@ class JellyfinClient implements iClient
     public const string COLLECTION_TYPE_MOVIES = 'movies';
 
     /**
-     * @var array<string> This constant represents a list of extra fields tobe included in the request.
+     * @var array<string> This constant represents a list of extra fields to be included in the request.
      */
     public const array EXTRA_FIELDS = [
         'ProviderIds',
@@ -255,9 +255,7 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-            ]
+            opts: [Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')]
         );
 
         if ($response->hasError()) {
@@ -280,10 +278,10 @@ class JellyfinClient implements iClient
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: $opts + [
+            opts: ag_sets($opts, [
                 'writer' => $writer,
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-            ]
+                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')
+            ])
         );
 
         if ($response->hasError()) {
@@ -359,8 +357,11 @@ class JellyfinClient implements iClient
                 response: new Response(
                     status: false,
                     error: new Error(
-                        message: 'Jellyfin play progress support works on Jellyfin version {version.required} and above. You are currently running {version.current}.',
+                        message: "Watch progress support works on {client} version {version.required} and above. '{user}@{backend}' is running {version.current}.",
                         context: [
+                            'client' => static::CLIENT_NAME,
+                            'user' => $this->context->userContext->name,
+                            'backend' => $this->context->backendName,
                             'version' => [
                                 'current' => $version,
                                 'required' => '10.9.x',
@@ -465,11 +466,10 @@ class JellyfinClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: [
+            opts: ag_sets($opts, [
                 Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
                 Options::ONLY_LIBRARY_ID => $libraryId,
-                ...$opts,
-            ]
+            ])
         );
 
         if ($response->hasError()) {

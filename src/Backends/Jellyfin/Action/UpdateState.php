@@ -9,6 +9,7 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
@@ -40,6 +41,13 @@ class UpdateState
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $entities, $opts, $queue) {
+                $rContext = [
+                    'action' => $this->action,
+                    'client' => $context->clientName,
+                    'backend' => $context->backendName,
+                    'user' => $context->backendUser,
+                ];
+
                 foreach ($entities as $entity) {
                     $meta = $entity->getMetadata($context->backendName);
                     if (count($meta) < 1) {
@@ -71,9 +79,9 @@ class UpdateState
 
                     if (true === (bool)ag($context->options, Options::DRY_RUN, false)) {
                         $this->logger->notice(
-                            "Would mark '{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
-                            [
-                                'backend' => $context->backendName,
+                            message: "{action}: Would mark '{client}: {user}@{backend}' {item.type} '{item.title}' as '{item.play_state}'.",
+                            context: [
+                                ...$rContext,
                                 'item' => [
                                     'id' => $itemId,
                                     'title' => $entity->getName(),
@@ -87,12 +95,12 @@ class UpdateState
 
                     $queue->add(
                         $this->http->request(
-                            method: $entity->isWatched() ? 'POST' : 'DELETE',
+                            method: ($entity->isWatched() ? Method::POST : Method::DELETE)->value,
                             url: (string)$url,
                             options: $context->backendHeaders + [
                                 'user_data' => [
                                     'context' => [
-                                        'backend' => $context->backendName,
+                                        ...$rContext,
                                         'play_state' => $entity->isWatched() ? 'played' : 'unplayed',
                                         'item' => [
                                             'id' => $itemId,

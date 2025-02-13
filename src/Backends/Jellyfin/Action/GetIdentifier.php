@@ -7,9 +7,8 @@ namespace App\Backends\Jellyfin\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetIdentifier
@@ -28,16 +27,12 @@ class GetIdentifier
     /**
      * Class constructor.
      *
-     * @param HttpClientInterface $http The HTTP client instance to use.
-     * @param LoggerInterface $logger The logger instance to use.
-     * @param CacheInterface $cache The cache instance to use.
+     * @param iHttp $http The HTTP client instance to use.
+     * @param iLogger $logger The logger instance to use.
      * @return void
      */
-    public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-        protected CacheInterface $cache
-    ) {
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
+    {
     }
 
     /**
@@ -53,7 +48,7 @@ class GetIdentifier
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $opts) {
-                $info = new GetInfo($this->http, $this->logger, $this->cache)(context: $context, opts: $opts);
+                $info = new GetInfo($this->http, $this->logger)(context: $context, opts: $opts);
 
                 if (false === $info->status) {
                     return $info;

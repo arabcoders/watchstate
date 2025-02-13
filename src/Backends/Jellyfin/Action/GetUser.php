@@ -9,6 +9,8 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -64,15 +66,19 @@ class GetUser
      */
     private function getUser(Context $context, array $opts = []): Response
     {
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
+
         if (null === $context->backendUser) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{client}: {backend}' user info failed. User not set.",
-                    context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                    ],
+                    message: "{action}: Request for '{client}: {user}@{backend}' user info failed. User not set.",
+                    context: $logContext,
                     level: Levels::ERROR
                 ),
             );
@@ -80,12 +86,10 @@ class GetUser
 
         $url = $context->backendUrl->withPath('/Users/' . $context->backendUser);
 
-        $this->logger->debug("Requesting '{client}: {backend}' user '{user}' info.", [
-            'user' => $context->backendUrl,
-            'client' => $context->clientName,
-            'backend' => $context->backendName,
-            'url' => (string)$url,
-        ]);
+        $logContext['url'] = (string)$url;
+        $logContext['userId'] = $context->backendUser;
+
+        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' user '{userId}' info.", $logContext);
 
         $headers = $context->backendHeaders;
 
@@ -97,24 +101,21 @@ class GetUser
             ];
         }
 
-        $response = $this->http->request('GET', (string)$url, $headers);
+        $response = $this->http->request(Method::GET->value, (string)$url, $headers);
 
-        if (200 !== $response->getStatusCode()) {
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{client}: {backend}' user '{user}' info returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{client}: {user}@{backend}' user '{userId}' info returned with unexpected '{status_code}' status code.",
                     context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'user' => $context->backendUser,
+                        ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
                     level: Levels::ERROR
                 ),
             );
         }
-
         $json = json_decode(
             json: $response->getContent(),
             associative: true,
@@ -122,12 +123,9 @@ class GetUser
         );
 
         if ($context->trace) {
-            $this->logger->debug("Parsing '{client}: {backend}' user '{user}' info payload.", [
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
-                'user' => $context->backendUser,
-                'url' => (string)$url,
-                'trace' => $json,
+            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' user '{userId}' info payload.", [
+                ...$logContext,
+                'response' => ['body' => $json],
             ]);
         }
 

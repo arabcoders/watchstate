@@ -9,12 +9,13 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use DateInterval;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetMetaData
@@ -33,15 +34,12 @@ class GetMetaData
     /**
      * Class Constructor.
      *
-     * @param HttpClientInterface $http The HTTP client instance.
-     * @param LoggerInterface $logger The logger instance.
-     * @param CacheInterface $cache The cache instance.
+     * @param iHttp $http The HTTP client instance.
+     * @param iLogger $logger The logger instance.
+     * @param iCache $cache The cache instance.
      */
-    public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-        protected CacheInterface $cache
-    ) {
+    public function __construct(protected iHttp $http, protected iLogger $logger, protected iCache $cache)
+    {
     }
 
     /**
@@ -49,7 +47,7 @@ class GetMetaData
      *
      * @param Context $context Backend context.
      * @param string|int $id the backend id.
-     * @param array $opts (Optional) options.
+     * @param array{query?:array,headers?:array,CACHE_TTL?:DateInterval,NO_CACHE?:bool} $opts (Optional) options.
      *
      * @return Response The wrapped response.
      */
@@ -64,51 +62,50 @@ class GetMetaData
                     $cacheKey = $context->clientName . '_' . $context->backendName . '_' . $id . '_metadata';
                 }
 
-                $url = $context->backendUrl
-                    ->withPath(
-                        r('/Users/{user_id}/items/{item_id}', [
-                            'user_id' => $context->backendUser,
-                            'item_id' => $id
-                        ])
+                $url = $context->backendUrl->withPath(
+                    r('/Users/{user_id}/items/{item_id}', ['user_id' => $context->backendUser, 'item_id' => $id])
+                )->withQuery(
+                    http_build_query(
+                        array_merge_recursive([
+                            'recursive' => 'false',
+                            'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
+                            'enableUserData' => 'true',
+                            'enableImages' => 'false',
+                            'includeItemTypes' => 'Episode,Movie,Series',
+                        ], $opts['query'] ?? []),
                     )
-                    ->withQuery(
-                        http_build_query(
-                            array_merge_recursive([
-                                'recursive' => 'false',
-                                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                                'enableUserData' => 'true',
-                                'enableImages' => 'false',
-                                'includeItemTypes' => 'Episode,Movie,Series',
-                            ], $opts['query'] ?? []),
-                        )
-                    );
+                );
 
-                $this->logger->debug("{client}: Requesting '{backend}: {id}' item metadata.", [
+                $logContext = [
                     'id' => $id,
-                    'url' => $url,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
-                ]);
+                    'user' => $context->userContext->name,
+                    'url' => (string)$url,
+                ];
+
+                $this->logger->debug(
+                    "{action}: Requesting '{client}: {user}@{backend}' - '{id}' item metadata.",
+                    $logContext
+                );
 
                 if (null !== $cacheKey && $this->cache->has($cacheKey)) {
                     $item = $this->cache->get(key: $cacheKey);
                     $fromCache = true;
                 } else {
                     $response = $this->http->request(
-                        'GET',
-                        (string)$url,
-                        array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                        method: Method::GET->value,
+                        url: (string)$url,
+                        options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                     );
 
                     if (Status::OK !== Status::from($response->getStatusCode())) {
                         $response = new Response(
                             status: false,
                             error: new Error(
-                                message: "{client} Request for '{backend}: {id}' item returned with unexpected '{status_code}' status code.",
+                                message: "{action}: Request for '{client}: {user}@{backend}' - '{id}' item returned with unexpected '{status_code}' status code.",
                                 context: [
-                                    'id' => $id,
-                                    'client' => $context->clientName,
-                                    'backend' => $context->backendName,
+                                    ...$logContext,
                                     'status_code' => $response->getStatusCode(),
                                 ]
                             )
@@ -135,12 +132,12 @@ class GetMetaData
                 }
 
                 if (true === $context->trace) {
-                    $this->logger->debug("{client} Processing '{backend}: {id}' item payload.", [
-                        'id' => $id,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
+                    $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' - '{id}' item payload.", [
+                        ...$logContext,
                         'cached' => $fromCache,
-                        'trace' => $item,
+                        'response' => [
+                            'body' => $item
+                        ],
                     ]);
                 }
 

@@ -11,13 +11,15 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use DateInterval;
 use JsonException;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetLibrariesList
@@ -33,10 +35,10 @@ class GetLibrariesList
     /**
      * Class constructor
      *
-     * @param HttpClientInterface $http The HTTP client object.
-     * @param LoggerInterface $logger The logger object.
+     * @param iHttp $http The HTTP client object.
+     * @param iLogger $logger The logger object.
      */
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
     {
     }
 
@@ -70,23 +72,29 @@ class GetLibrariesList
 
         try {
             $json = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
-                $context,
-                'library_list',
-                $cls,
-                new DateInterval('PT1M'),
-                $this->logger
+                context: $context,
+                key: 'library_list',
+                fn: $cls,
+                ttl: new DateInterval('PT1M'),
+                logger: $this->logger
             );
         } catch (RuntimeException $e) {
             return new Response(
-                status: false,
-                error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e)
+                status: false, error: new Error(message: $e->getMessage(), level: Levels::ERROR, previous: $e)
             );
         }
 
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
+
         if ($context->trace) {
-            $this->logger->debug('Parsing [{backend}] libraries payload.', [
-                'backend' => $context->backendName,
-                'trace' => $json,
+            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' libraries payload.", [
+                ...$logContext,
+                'response' => ['body' => $json],
             ]);
         }
 
@@ -96,9 +104,9 @@ class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [{backend}] libraries returned empty list.',
+                    message: "{action}: Request for '{client}: {user}@{backend}' libraries returned empty list.",
                     context: [
-                        'backend' => $context->backendName,
+                        ...$logContext,
                         'response' => ['body' => $json],
                     ],
                     level: Levels::WARNING
@@ -165,19 +173,27 @@ class GetLibrariesList
     {
         $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]));
 
-        $this->logger->debug('Requesting [{backend}] libraries list.', [
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
             'backend' => $context->backendName,
+            'user' => $context->userContext->name,
             'url' => (string)$url
-        ]);
+        ];
 
-        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
+        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
 
-        if (200 !== $response->getStatusCode()) {
+        $response = $this->http->request(Method::GET->value, (string)$url, $context->backendHeaders);
+
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
-                r('Request for [{backend}] libraries returned with unexpected [{status_code}] status code.', [
-                    'backend' => $context->backendName,
-                    'status_code' => $response->getStatusCode(),
-                ])
+                r(
+                    text: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
+                    context: [
+                        ...$logContext,
+                        'status_code' => $response->getStatusCode(),
+                    ]
+                )
             );
         }
 

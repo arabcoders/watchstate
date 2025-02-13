@@ -7,9 +7,8 @@ namespace App\Backends\Jellyfin\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetVersion
@@ -28,15 +27,11 @@ class GetVersion
     /**
      * Class Constructor.
      *
-     * @param HttpClientInterface $http The HTTP client instance.
-     * @param LoggerInterface $logger The logger instance.
-     * @param CacheInterface $cache The cache instance.
+     * @param iHttp $http The HTTP client instance.
+     * @param iLogger $logger The logger instance.
      */
-    public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-        protected CacheInterface $cache
-    ) {
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
+    {
     }
 
     /**
@@ -52,7 +47,7 @@ class GetVersion
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $opts) {
-                $info = new GetInfo($this->http, $this->logger, $this->cache)(context: $context, opts: $opts);
+                $info = new GetInfo($this->http, $this->logger)(context: $context, opts: $opts);
 
                 if (false === $info->status) {
                     return $info;

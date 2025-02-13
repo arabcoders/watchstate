@@ -13,6 +13,8 @@ use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient;
 use App\Backends\Jellyfin\JellyfinGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -75,9 +77,7 @@ class SearchQuery
     private function search(Context $context, string $query, int $limit = 25, array $opts = []): Response
     {
         $url = $context->backendUrl->withPath(
-            r('/Users/{user_id}/items/', [
-                'user_id' => $context->backendUser
-            ])
+            path: r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
         )->withQuery(
             http_build_query(
                 array_replace_recursive([
@@ -91,26 +91,31 @@ class SearchQuery
                 ], $opts['query'] ?? [])
             )
         );
-        $this->logger->debug('Searching [{backend}] libraries for [{query}].', [
-            'backend' => $context->backendName,
+
+        $logContext = [
             'query' => $query,
-            'url' => $url
-        ]);
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+            'url' => (string)$url,
+        ];
+
+        $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
 
         $response = $this->http->request(
-            'GET',
-            (string)$url,
-            array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+            method: Method::GET->value,
+            url: (string)$url,
+            options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
         );
 
-        if (200 !== $response->getStatusCode()) {
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Search request for [{query}] in [{backend}] returned with unexpected [{status_code}] status code.',
+                    message: "{action}: Search request for '{query}' in '{client}: {user}@{backend}' returned with unexpected '{status_code}' status code.",
                     context: [
-                        'backend' => $context->backendName,
-                        'query' => $query,
+                        ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
                     level: Levels::ERROR
@@ -125,21 +130,27 @@ class SearchQuery
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing Searching [{backend}] libraries for [{query}] payload.', [
-                'backend' => $context->backendName,
-                'query' => $query,
-                'url' => (string)$url,
-                'trace' => $json,
-            ]);
+            $this->logger->debug(
+                message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
+                context: [
+                    ...$logContext,
+                    'response' => ['body' => $json],
+                ]
+            );
         }
 
         $list = [];
+
         $jellyfinGuid = $this->jellyfinGuid->withContext($context);
+
         foreach (ag($json, 'Items', []) as $item) {
             try {
                 $entity = $this->createEntity($context, $jellyfinGuid, $item, $opts);
             } catch (\Throwable $e) {
-                $this->logger->error('Error creating entity: {error}', ['error' => $e->getMessage()]);
+                $this->logger->error("{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}", [
+                    ...$logContext,
+                    'error' => $e->getMessage()
+                ]);
                 continue;
             }
 

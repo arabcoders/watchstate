@@ -8,7 +8,7 @@ use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
-use App\Backends\Jellyfin\JellyfinGuid;
+use App\Backends\Jellyfin\JellyfinGuid as iGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
@@ -31,14 +31,9 @@ class SearchId
      */
     protected string $action = 'jellyfin.searchId';
 
-    public function __construct(
-        protected iHttp $http,
-        protected iLogger $logger,
-        private JellyfinGuid $jellyfinGuid,
-        private iDB $db
-    ) {
+    public function __construct(protected iHttp $http, protected iLogger $logger, private iGuid $iGuid, private iDB $db)
+    {
     }
-
 
     /**
      * Wrap the operation in a try response block.
@@ -73,7 +68,7 @@ class SearchId
     {
         $item = $this->getItemDetails($context, $id, $opts);
 
-        $entity = $this->createEntity($context, $this->jellyfinGuid->withContext($context), $item);
+        $entity = $this->createEntity($context, $this->iGuid->withContext($context), $item);
 
         if (null !== ($localEntity = $this->db->get($entity))) {
             $entity->id = $localEntity->id;

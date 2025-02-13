@@ -235,9 +235,7 @@ class EmbyClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-            ]
+            opts: [Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')]
         );
 
         if ($response->hasError()) {
@@ -260,10 +258,10 @@ class EmbyClient implements iClient
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: $opts + [
+            opts: ag_sets($opts, [
                 'writer' => $writer,
                 Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-            ]
+            ])
         );
 
         if ($response->hasError()) {
@@ -424,11 +422,10 @@ class EmbyClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: [
+            opts: ag_sets($opts, [
                 Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
                 Options::ONLY_LIBRARY_ID => $libraryId,
-                ...$opts,
-            ]
+            ])
         );
 
         if ($response->hasError()) {

@@ -11,8 +11,10 @@ use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
-use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
@@ -86,10 +88,13 @@ class GetLibrary
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'No Library with id [{id}] found in [{backend}] response.',
+                    message: "{action}: No library with id '{id}' found in '{client}: {user}@{backend}' response.",
                     context: [
-                        'id' => $id,
+                        'action' => $this->action,
+                        'client' => $context->clientName,
                         'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                        'id' => $id,
                         'response' => [
                             'body' => $libraries
                         ],
@@ -102,6 +107,10 @@ class GetLibrary
         unset($libraries);
 
         $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
             'library' => [
                 'id' => $id,
                 'type' => ag($section, 'CollectionType', 'unknown'),
@@ -109,18 +118,14 @@ class GetLibrary
             ],
         ];
 
-        if (true !== in_array(
-                ag($logContext, 'library.type'),
-                [JellyfinClient::COLLECTION_TYPE_MOVIES, JellyfinClient::COLLECTION_TYPE_SHOWS]
-            )) {
+        $types = [JFC::COLLECTION_TYPE_MOVIES, JFC::COLLECTION_TYPE_SHOWS];
+
+        if (true !== in_array(ag($logContext, 'library.type'), $types)) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'The Requested [{backend}] Library [{library.id}: {library.title}] returned with unsupported type [{library.type}].',
-                    context: [
-                        'backend' => $context->backendName,
-                        ...$logContext,
-                    ],
+                    message: "{action}: The request for '{client}: {user}@{backend}' library '{library.id}: {library.title}' returned with unsupported type '{library.type}'.",
+                    context: $logContext,
                     level: Levels::WARNING
                 ),
             );
@@ -132,36 +137,31 @@ class GetLibrary
             $extraQueryParams['Limit'] = (int)$limit;
         }
 
-        $url = $context->backendUrl->withPath(
-            r('/Users/{user_id}/items/', ['user_id' => $context->backendUser])
-        )->withQuery(
-            http_build_query([
-                'parentId' => $id,
-                'enableUserData' => 'false',
-                'enableImages' => 'false',
-                'excludeLocationTypes' => 'Virtual',
-                'include' => implode(',', [JellyfinClient::TYPE_SHOW, JellyfinClient::TYPE_MOVIE]),
-                'fields' => implode(',', JellyfinClient::EXTRA_FIELDS),
-                ...$extraQueryParams,
-            ])
-        );
+        $url = $context->backendUrl->withPath(r('/Users/{user_id}/items/', ['user_id' => $context->backendUser]))
+            ->withQuery(
+                http_build_query([
+                    'parentId' => $id,
+                    'enableUserData' => 'false',
+                    'enableImages' => 'false',
+                    'excludeLocationTypes' => 'Virtual',
+                    'include' => implode(',', [JFC::TYPE_SHOW, JFC::TYPE_MOVIE]),
+                    'fields' => implode(',', JFC::EXTRA_FIELDS),
+                    ...$extraQueryParams,
+                ])
+            );
 
         $logContext['library']['url'] = (string)$url;
 
-        $this->logger->debug('Requesting [{backend}] library [{library.title}] content.', [
-            'backend' => $context->backendName,
-            ...$logContext,
-        ]);
+        $this->logger->debug("Requesting '{client}: {user}@{backend}' library '{library.title}' content.", $logContext);
 
-        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
+        $response = $this->http->request(Method::GET->value, (string)$url, $context->backendHeaders);
 
-        if (200 !== $response->getStatusCode()) {
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Request for [{backend}] library [{library.title}] returned with unexpected [{status_code}] status code.',
+                    message: "{action}: Request for '{client}: {user}@{backend}' library '{library.title}' items returned with unexpected '{status_code}' status code.",
                     context: [
-                        'backend' => $context->backendName,
                         'status_code' => $response->getStatusCode(),
                         ...$logContext,
                     ],
@@ -185,9 +185,8 @@ class GetLibrary
         foreach ($it as $entity) {
             if ($entity instanceof DecodingError) {
                 $this->logger->warning(
-                    'Failed to decode one item of [{backend}] library [{library.title}] content.',
+                    "{action}: Failed to decode one item of '{client}: {user}@{backend}' library '{library.title}' content.",
                     [
-                        'backend' => $context->backendName,
                         ...$logContext,
                         'error' => [
                             'message' => $entity->getErrorMessage(),
@@ -263,21 +262,21 @@ class GetLibrary
         $url = $context->backendUrl->withPath(sprintf('/Users/%s/items/%s', $context->backendUser, ag($item, 'Id')));
         $possibleTitlesList = ['Name', 'OriginalTitle', 'SortName', 'ForcedSortName'];
 
-        $data = [
-            'backend' => $context->backendName,
-            ...$log,
-        ];
+        $data = $log;
 
         if ($context->trace) {
             $data['trace'] = $item;
         }
 
-        $this->logger->debug('Processing [{backend}] {item.type} [{item.title} ({item.year})].', $data);
+        $this->logger->debug(
+            message: "{action}: Processing '{client}: {user}@{backend}' {item.type} '{item.title} ({item.year})'.",
+            context: $data
+        );
 
         $webUrl = $url->withPath('/web/index.html')->withFragment(r('!/{action}?id={id}&serverId={backend_id}', [
             'backend_id' => $context->backendId,
             'id' => ag($item, 'Id'),
-            'action' => JellyfinClient::CLIENT_NAME === $context->clientName ? 'details' : 'item',
+            'action' => JFC::CLIENT_NAME === $context->clientName ? 'details' : 'item',
         ]));
 
         $metadata = [

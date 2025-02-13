@@ -185,6 +185,25 @@ if (!function_exists('ag')) {
     }
 }
 
+if (!function_exists('ag_sets')) {
+    /**
+     * Set multiple key paths in an array using "dot" notation.
+     *
+     * @param array $array The array to set the values in.
+     * @param array $path The key paths to set the values at.
+     * @param string $separator The separator used in the key paths (default is '.').
+     *
+     * @return array The modified array.
+     */
+    function ag_sets(array $array, array $path, string $separator = '.'): array
+    {
+        foreach ($path as $key => $value) {
+            $array = ag_set($array, $key, $value, $separator);
+        }
+        return $array;
+    }
+}
+
 if (!function_exists('ag_set')) {
     /**
      * Set an array item to a given value using "dot" notation.

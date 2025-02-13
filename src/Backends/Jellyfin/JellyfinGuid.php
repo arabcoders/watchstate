@@ -246,10 +246,11 @@ class JellyfinGuid implements iGuid
                 if (true === isIgnoredId($this->context->userContext, $bName, $type, $key, $value, $id)) {
                     if (true === $log) {
                         $this->logger->debug(
-                            "{class}: Ignoring '{client}: {backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
+                            "{class}: Ignoring '{client}: {user}@{backend}' external id '{source}' for {item.type} '{item.id}: {item.title}' as requested.",
                             [
                                 'class' => afterLast(static::class, '\\'),
                                 'client' => $this->context->clientName,
+                                'user' => $this->context->userContext->name,
                                 'backend' => $bName,
                                 'source' => $key . '://' . $value,
                                 'guid' => [
@@ -267,11 +268,12 @@ class JellyfinGuid implements iGuid
             } catch (Throwable $e) {
                 if (true === $log) {
                     $this->logger->error(
-                        message: "{class}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' parsing '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}'.",
+                        message: "{class}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' parsing '{agent}' identifier. Error '{error.message}' at '{error.file}:{error.line}'.",
                         context: [
                             'class' => afterLast(static::class, '\\'),
                             'backend' => $this->context->backendName,
                             'client' => $this->context->clientName,
+                            'user' => $this->context->userContext->name,
                             'error' => [
                                 'kind' => $e::class,
                                 'line' => $e->getLine(),
@@ -306,8 +308,6 @@ class JellyfinGuid implements iGuid
      */
     public function getConfig(): array
     {
-        return [
-            'guidMapper' => $this->guidMapper,
-        ];
+        return ['guidMapper' => $this->guidMapper];
     }
 }

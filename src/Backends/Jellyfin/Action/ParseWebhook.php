@@ -14,6 +14,7 @@ use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
 use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Options;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
@@ -86,10 +87,20 @@ final class ParseWebhook
      */
     private function parse(Context $context, iGuid $guid, iRequest $request): Response
     {
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
+
         if (null === ($json = $request->getParsedBody())) {
             return new Response(status: false, extra: [
-                'http_code' => 400,
-                'message' => r('{client}: No payload.', ['client' => $context->clientName]),
+                'http_code' => Status::BAD_REQUEST->value,
+                'message' => r(
+                    text: "Ignoring '{client}: {user}@{backend}' request. Invalid request, no payload.",
+                    context: $logContext
+                ),
             ]);
         }
 
@@ -99,28 +110,28 @@ final class ParseWebhook
 
         if (null === $type || false === in_array($type, self::WEBHOOK_ALLOWED_TYPES)) {
             return new Response(status: false, extra: [
-                'http_code' => 200,
-                'message' => r('{backend}: Webhook content type [{type}] is not supported.', [
-                    'backend' => $context->backendName,
-                    'type' => $type,
-                ])
+                'http_code' => Status::OK->value,
+                'message' => r(
+                    text: "{user}@{backend}: Webhook content type '{type}' is not supported.",
+                    context: [...$logContext, 'type' => $type]
+                )
             ]);
         }
 
         if (null === $event || false === in_array($event, self::WEBHOOK_ALLOWED_EVENTS)) {
             return new Response(status: false, extra: [
-                'http_code' => 200,
-                'message' => r('{backend}: Webhook event type [{event}] is not supported.', [
-                    'backend' => $context->backendName,
-                    'event' => $event
-                ])
+                'http_code' => Status::OK->value,
+                'message' => r(
+                    text: "{user}@{backend}: Webhook event type '{event}' is not supported.",
+                    context: [...$logContext, 'event' => $event]
+                )
             ]);
         }
 
         if (null === $id) {
             return new Response(status: false, extra: [
-                'http_code' => 400,
-                'message' => r('{backend}: No item id was found in body.', ['client' => $context->backendName]),
+                'http_code' => Status::BAD_REQUEST->value,
+                'message' => r('{user}@{backend}: No item id was found in body.', $logContext),
             ]);
         }
 
@@ -131,6 +142,7 @@ final class ParseWebhook
             $lastPlayedAt = true === $isPlayed ? makeDate() : null;
 
             $logContext = [
+                ...$logContext,
                 'item' => [
                     'id' => ag($obj, 'Id'),
                     'type' => ag($obj, 'Type'),
@@ -145,9 +157,7 @@ final class ParseWebhook
                             'episode' => str_pad((string)ag($obj, 'IndexNumber', 0), 3, '0', STR_PAD_LEFT),
                         ]),
                         default => throw new InvalidArgumentException(
-                            r('Unexpected Content type [{type}] was received.', [
-                                'type' => $type
-                            ])
+                            r('Unexpected Content type [{type}] was received.', ['type' => $type])
                         ),
                     },
                     'year' => ag($obj, 'ProductionYear'),
@@ -219,10 +229,10 @@ final class ParseWebhook
                 return new Response(
                     status: false,
                     error: new Error(
-                        message: 'Ignoring [{backend}] [{title}] webhook event. No valid/supported external ids.',
+                        message: "{action}: Ignoring '{client}: {user}@{backend}' - '{title}' webhook event. No valid/supported external ids.",
                         context: [
-                            'backend' => $context->backendName,
                             'title' => $entity->getName(),
+                            ...$logContext,
                             'context' => [
                                 'attributes' => $request->getAttributes(),
                                 'parsed' => $entity->getAll(),
@@ -232,8 +242,8 @@ final class ParseWebhook
                         level: Levels::ERROR
                     ),
                     extra: [
-                        'http_code' => 200,
-                        'message' => $context->backendName . ': Import ignored. No valid/supported external ids.'
+                        'http_code' => Status::OK->value,
+                        'message' => r("{user}@{backend}: No valid/supported external ids.", $logContext)
                     ],
                 );
             }
@@ -243,16 +253,15 @@ final class ParseWebhook
             return new Response(
                 status: false,
                 error: new Error(
-                    message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] webhook event parsing. Error [{error.message} @ {error.file}:{error.line}].',
+                    message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' webhook event parsing. {error.message} at '{error.file}:{error.line}'.",
                     context: [
-                        'backend' => $context->backendName,
-                        'client' => $context->clientName,
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
+                        ...$logContext,
                         'exception' => [
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
@@ -269,8 +278,12 @@ final class ParseWebhook
                     previous: $e
                 ),
                 extra: [
-                    'http_code' => 200,
-                    'message' => $context->backendName . ': Failed to handle payload. Check logs.'
+                    'http_code' => Status::OK->value,
+                    'message' => r("{user}@{backend}: Failed to process event check logs.", [
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext->name,
+                    ])
                 ],
             );
         }
