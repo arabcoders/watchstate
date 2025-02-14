@@ -245,7 +245,7 @@ class Progress
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
-                            method: Method::POST->value,
+                            method: Method::POST,
                             url: (string)$url,
                             options: array_replace_recursive($context->backendHeaders, [
                                 'headers' => [

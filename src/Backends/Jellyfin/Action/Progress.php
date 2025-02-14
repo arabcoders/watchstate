@@ -11,6 +11,7 @@ use App\Backends\Common\Response;
 use App\Backends\Jellyfin\JellyfinActionTrait;
 use App\Libs\Container;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Options;
@@ -175,10 +176,7 @@ class Progress
                     message: "{action}: Not processing '{item.title}' for '{client}: {user}@{backend}'. Event date is older than backend local item date.",
                     context: [
                         ...$logContext,
-                        'compare' => [
-                            'remote' => makeDate($datetime),
-                            'sender' => makeDate($senderDate),
-                        ],
+                        'compare' => ['remote' => makeDate($datetime), 'sender' => makeDate($senderDate),],
                     ]
                 );
                 continue;
@@ -196,14 +194,8 @@ class Progress
             }
 
             try {
-                $remoteItem = $this->createEntity(
-                    $context,
-                    $guid,
-                    $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true,]),
-                    [
-                        'latest_date' => true,
-                    ]
-                );
+                $remoteData = $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]);
+                $remoteItem = $this->createEntity($context, $guid, $remoteData, ['latest_date' => true]);
 
                 if (false === $ignoreDate && makeDate($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(
@@ -212,7 +204,7 @@ class Progress
                             ...$logContext,
                             'compare' => [
                                 'remote' => makeDate($remoteItem->updated),
-                                'sender' => makeDate($senderDate),
+                                'sender' => makeDate($senderDate)
                             ],
                         ]
                     );
@@ -274,18 +266,22 @@ class Progress
 
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
-                        $this->http->request('POST', (string)$url, array_replace_recursive($context->backendHeaders, [
-                            'headers' => [
-                                'Content-Type' => 'application/json',
-                            ],
-                            'json' => [
-                                'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
-                            ],
-                            'user_data' => [
-                                'id' => $key,
-                                'context' => $logContext,
-                            ],
-                        ]))
+                        $this->http->request(
+                            method: Method::POST,
+                            url: (string)$url,
+                            options: array_replace_recursive($context->backendHeaders, [
+                                'headers' => [
+                                    'Content-Type' => 'application/json',
+                                ],
+                                'json' => [
+                                    'PlaybackPositionTicks' => (string)floor($entity->getPlayProgress() * 1_00_00),
+                                ],
+                                'user_data' => [
+                                    'id' => $key,
+                                    'context' => $logContext,
+                                ],
+                            ])
+                        )
                     );
                 }
             } catch (Throwable $e) {

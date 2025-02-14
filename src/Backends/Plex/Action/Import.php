@@ -14,6 +14,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Guid;
 use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
@@ -26,7 +27,6 @@ use JsonMachine\JsonDecoder\DecodingError;
 use JsonMachine\JsonDecoder\ErrorWrappingDecoder;
 use JsonMachine\JsonDecoder\ExtJsonDecoder;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
@@ -38,7 +38,7 @@ class Import
     use CommonTrait;
     use PlexActionTrait;
 
-    private string $action = 'plex.import';
+    protected string $action = 'plex.import';
 
     protected RetryableHttpClient $http;
 
@@ -125,7 +125,7 @@ class Import
 
             $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries.", $rContext);
 
-            $response = $this->http->request(Method::GET->value, (string)$url, $context->backendHeaders);
+            $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
 
             $payload = $response->getContent(false);
 
@@ -330,7 +330,7 @@ class Import
 
             try {
                 $requests[] = $this->http->request(
-                    method: Method::GET->value,
+                    method: Method::GET,
                     url: (string)$url,
                     options: array_replace_recursive($context->backendHeaders, [
                         'headers' => [
@@ -359,7 +359,7 @@ class Import
                     );
 
                     $requests[] = $this->http->request(
-                        method: Method::GET->value,
+                        method: Method::GET,
                         url: (string)$logContextSub['library']['url'],
                         options: array_replace_recursive($context->backendHeaders, [
                             'headers' => [
@@ -582,7 +582,7 @@ class Import
                     );
 
                     $requests[] = $this->http->request(
-                        method: Method::GET->value,
+                        method: Method::GET,
                         url: (string)$url,
                         options: array_replace_recursive($context->backendHeaders, [
                             'headers' => [
@@ -726,7 +726,7 @@ class Import
                     );
 
                     $requests[] = $this->http->request(
-                        method: Method::GET->value,
+                        method: Method::GET,
                         url: (string)$url,
                         options: array_replace_recursive($context->backendHeaders, [
                             'headers' => [
@@ -810,6 +810,7 @@ class Import
 
     /**
      * @throws TransportExceptionInterface
+     * @noinspection PhpUnusedParameterInspection
      */
     protected function handle(Context $context, iResponse $response, Closure $callback, array $logContext = []): void
     {

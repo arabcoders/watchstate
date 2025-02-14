@@ -183,7 +183,7 @@ class GetLibrariesList
 
         $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
 
-        $response = $this->http->request(Method::GET->value, (string)$url, $context->backendHeaders);
+        $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(

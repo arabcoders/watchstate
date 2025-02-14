@@ -34,6 +34,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\DataUtil;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Exceptions\HttpException;
@@ -277,10 +278,10 @@ class PlexClient implements iClient
             context: $this->context,
             guid: $this->guid,
             mapper: $mapper,
-            opts: $opts + [
+            opts: ag_sets($opts, [
                 'writer' => $writer,
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-            ]
+                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')
+            ])
         );
 
         if ($response->hasError()) {
@@ -304,10 +305,7 @@ class PlexClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: $after,
-            opts: [
-                'queue' => $queue,
-                Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
-            ],
+            opts: ['queue' => $queue, Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid')],
         );
 
         if ($response->hasError()) {
@@ -437,11 +435,10 @@ class PlexClient implements iClient
             guid: $this->guid,
             mapper: $mapper,
             after: null,
-            opts: [
+            opts: ag_sets($opts, [
                 Options::DISABLE_GUID => (bool)Config::get('episodes.disable.guid'),
                 Options::ONLY_LIBRARY_ID => $libraryId,
-                ...$opts,
-            ]
+            ]),
         );
 
         if ($response->hasError()) {
@@ -734,11 +731,11 @@ class PlexClient implements iClient
     public static function discover(iHttp $http, string $token, array $opts = []): array
     {
         try {
-            $response = $http->request('GET', 'https://plex.tv/api/resources?includeHttps=1&includeRelay=0', [
-                'headers' => [
-                    'X-Plex-Token' => $token,
-                ],
-            ]);
+            $response = $http->request(
+                method: Method::GET,
+                url: 'https://plex.tv/api/resources?includeHttps=1&includeRelay=0',
+                options: ['headers' => ['X-Plex-Token' => $token]]
+            );
 
             $payload = $response->getContent(false);
 
@@ -766,7 +763,7 @@ class PlexClient implements iClient
         } catch (TransportExceptionInterface $e) {
             throw new RuntimeException(
                 r(
-                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. '{error}' at '{file}:{line}'.",
+                    text: "PlexClient: Exception '{kind}' was thrown unhandled during request for plex servers list, likely network related error. {error} at '{file}:{line}'.",
                     context: [
                         'kind' => $e::class,
                         'error' => $e->getMessage(),
@@ -824,10 +821,7 @@ class PlexClient implements iClient
                 if (false !== filter_var(ag($arr, 'address'), FILTER_VALIDATE_IP)) {
                     $list['list'][] = array_replace_recursive($arr, [
                         'proto' => 'http',
-                        'uri' => r('http://{ip}:{port}', [
-                            'ip' => ag($arr, 'address'),
-                            'port' => ag($arr, 'port')
-                        ]),
+                        'uri' => r('http://{ip}:{port}', ['ip' => ag($arr, 'address'), 'port' => ag($arr, 'port')]),
                     ]);
                 }
 

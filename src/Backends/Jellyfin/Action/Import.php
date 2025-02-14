@@ -148,7 +148,7 @@ class Import
 
             $this->logger->debug("Requesting '{client}: {user}@{backend}' libraries.", $rContext);
 
-            $response = $this->http->request(Method::GET->value, (string)$url, $context->backendHeaders);
+            $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
 
             $payload = $response->getContent(false);
 
@@ -336,7 +336,7 @@ class Import
 
             try {
                 $requests[] = $this->http->request(
-                    method: Method::GET->value,
+                    method: Method::GET,
                     url: (string)$url,
                     options: array_replace_recursive($context->backendHeaders, ['user_data' => $logContext])
                 );
@@ -528,7 +528,7 @@ class Import
 
             try {
                 $requests[] = $this->http->request(
-                    method: Method::GET->value,
+                    method: Method::GET,
                     url: (string)$url,
                     options: array_replace_recursive($context->backendHeaders, [
                         'user_data' => [
@@ -666,7 +666,7 @@ class Import
                     );
 
                     $requests[] = $this->http->request(
-                        method: Method::GET->value,
+                        method: Method::GET,
                         url: (string)$url,
                         options: array_replace_recursive($context->backendHeaders, [
                             'user_data' => [

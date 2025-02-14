@@ -74,7 +74,7 @@ final readonly class ProcessProfileEvent
 
         if (null !== $url) {
             try {
-                $response = $this->client->request(Method::POST->value, $url, ['body' => ['payload' => $data]]);
+                $response = $this->client->request(Method::POST, $url, ['body' => ['payload' => $data]]);
 
                 $statusCode = $response->getStatusCode();
 

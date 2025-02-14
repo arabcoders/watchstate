@@ -9,8 +9,8 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Extends\RetryableHttpClient;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class GetUser

@@ -20,6 +20,7 @@ use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Throwable;
 
 /**
  * Class SearchQuery
@@ -104,7 +105,7 @@ class SearchQuery
         $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
 
         $response = $this->http->request(
-            method: Method::GET->value,
+            method: Method::GET,
             url: (string)$url,
             options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
         );
@@ -132,10 +133,7 @@ class SearchQuery
         if ($context->trace) {
             $this->logger->debug(
                 message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
-                context: [
-                    ...$logContext,
-                    'response' => ['body' => $json],
-                ]
+                context: [...$logContext, 'response' => ['body' => $json]]
             );
         }
 
@@ -146,11 +144,11 @@ class SearchQuery
         foreach (ag($json, 'Items', []) as $item) {
             try {
                 $entity = $this->createEntity($context, $jellyfinGuid, $item, $opts);
-            } catch (\Throwable $e) {
-                $this->logger->error("{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}", [
-                    ...$logContext,
-                    'error' => $e->getMessage()
-                ]);
+            } catch (Throwable $e) {
+                $this->logger->error(
+                    message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
+                    context: [...$logContext, 'error' => $e->getMessage()]
+                );
                 continue;
             }
 

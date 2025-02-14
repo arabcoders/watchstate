@@ -79,7 +79,7 @@ class JellyfinValidateContext
     {
         try {
             $url = $context->backendUrl->withPath('/system/Info');
-            $request = $this->http->request(Method::GET->value, (string)$url, [
+            $request = $this->http->request(Method::GET, (string)$url, [
                 'headers' => [
                     'Accept' => 'application/json',
                     'X-MediaBrowser-Token' => $context->backendToken,

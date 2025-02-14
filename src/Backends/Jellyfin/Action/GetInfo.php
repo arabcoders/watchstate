@@ -61,7 +61,7 @@ class GetInfo
                 $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' info.", $logContext);
 
                 $response = $this->http->request(
-                    method: Method::GET->value,
+                    method: Method::GET,
                     url: (string)$url,
                     options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                 );

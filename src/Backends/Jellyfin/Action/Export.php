@@ -234,7 +234,7 @@ class Export extends Import
 
             $queue->add(
                 $this->http->request(
-                    method: ($entity->isWatched() ? Method::POST : Method::DELETE)->value,
+                    method: $entity->isWatched() ? Method::POST : Method::DELETE,
                     url: (string)$url,
                     options: $context->backendHeaders + [
                         'user_data' => [

@@ -137,14 +137,11 @@ class Push
                 );
 
                 $requests[] = $this->http->request(
-                    method: Method::GET->value,
+                    method: Method::GET,
                     url: (string)$url,
                     options: array_replace_recursive($context->backendHeaders, [
-                        'user_data' => [
-                            'id' => $key,
-                            'context' => $logContext,
-                        ]
-                    ])
+                        'user_data' => ['id' => $key, 'context' => $logContext]
+                    ]),
                 );
             } catch (Throwable $e) {
                 $this->logger->error(
@@ -194,18 +191,12 @@ class Push
                     if (Status::NOT_FOUND === Status::tryFrom($response->getStatusCode())) {
                         $this->logger->warning(
                             message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '{item.title}' metadata returned with (404: Not Found) status code.",
-                            context: [
-                                ...$logContext,
-                                'status_code' => $response->getStatusCode(),
-                            ]
+                            context: [...$logContext, 'status_code' => $response->getStatusCode()]
                         );
                     } else {
                         $this->logger->error(
                             message: "{action}: Request for '{client}: {user}@{backend}' {item.type} '{item.title}' metadata returned with unexpected '{status_code}' status code.",
-                            context: [
-                                'status_code' => $response->getStatusCode(),
-                                ...$logContext
-                            ]
+                            context: [...$logContext, 'status_code' => $response->getStatusCode()]
                         );
                     }
 
@@ -221,10 +212,7 @@ class Push
                 if ($context->trace) {
                     $this->logger->debug(
                         message: "{action}: Parsing '{client}: {user}@{backend}' {item.type} '{item.title}' payload.",
-                        context: [
-                            ...$logContext,
-                            'response' => ['body' => $json],
-                        ]
+                        context: [...$logContext, 'response' => ['body' => $json]]
                     );
                 }
 
@@ -243,13 +231,7 @@ class Push
                     if (null === ($date = ag($json, $dateKey))) {
                         $this->logger->error(
                             message: "{action}: Ignoring '{client}: {user}@{backend}' {item.type} '{item.title}'. No {date_key} is set on backend object.",
-                            context: [
-                                'date_key' => $dateKey,
-                                ...$logContext,
-                                'response' => [
-                                    'body' => $json,
-                                ],
-                            ]
+                            context: ['date_key' => $dateKey, ...$logContext, 'response' => ['body' => $json]]
                         );
                         continue;
                     }
@@ -267,9 +249,7 @@ class Push
                                     'database' => makeDate($entity->updated),
                                     'backend' => $date,
                                     'difference' => $date->getTimestamp() - $entity->updated,
-                                    'extra_margin' => [
-                                        Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra,
-                                    ],
+                                    'extra_margin' => [Options::EXPORT_ALLOWED_TIME_DIFF => $timeExtra],
                                 ],
                             ]
                         );
@@ -296,21 +276,18 @@ class Push
 
                 $this->logger->debug(
                     message: "{action}: Queuing request to change '{client}: {user}@{backend}' {item.type} '{item.title}' play state to '{play_state}'.",
-                    context: [
-                        ...$logContext,
-                        'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
-                    ]
+                    context: [...$logContext, 'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed']
                 );
 
                 if (false === (bool)ag($context->options, Options::DRY_RUN, false)) {
                     $queue->add(
                         $this->http->request(
-                            method: ($entity->isWatched() ? Method::POST : Method::DELETE)->value,
+                            method: $entity->isWatched() ? Method::POST : Method::DELETE,
                             url: (string)$url,
                             options: array_replace_recursive($context->backendHeaders, [
                                 'user_data' => [
                                     'context' => $logContext + [
-                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed',
+                                            'play_state' => $entity->isWatched() ? 'Played' : 'Unplayed'
                                         ],
                                 ],
                             ])

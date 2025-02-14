@@ -12,12 +12,12 @@ use App\Backends\Common\Response;
 use App\Libs\Container;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
+use App\Libs\Extends\RetryableHttpClient;
 use App\Libs\Options;
 use DateInterval;
 use JsonException;
 use Psr\Http\Message\UriInterface as iUri;
 use Psr\Log\LoggerInterface as iLogger;
-use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as iException;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
@@ -428,7 +428,7 @@ final class GetUsersList
                 return $response;
             }
         }
-        
+
         if (null !== ($pin = ag($context->options, Options::PLEX_USER_PIN))) {
             parse_str($url->getQuery(), $query);
             $url = $url->withQuery(http_build_query(['pin' => $pin, ...$query,]));

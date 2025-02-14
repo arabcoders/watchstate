@@ -95,9 +95,9 @@ class UpdateState
 
                     $queue->add(
                         $this->http->request(
-                            method: ($entity->isWatched() ? Method::POST : Method::DELETE)->value,
+                            method: $entity->isWatched() ? Method::POST : Method::DELETE,
                             url: (string)$url,
-                            options: $context->backendHeaders + [
+                            options: array_replace_recursive($context->backendHeaders, [
                                 'user_data' => [
                                     'context' => [
                                         ...$rContext,
@@ -111,7 +111,7 @@ class UpdateState
                                         'url' => (string)$url,
                                     ]
                                 ],
-                            ]
+                            ])
                         )
                     );
                 }

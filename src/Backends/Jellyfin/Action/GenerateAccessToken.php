@@ -96,7 +96,7 @@ class GenerateAccessToken
             context: $logContext
         );
 
-        $response = $this->http->request(Method::POST->value, (string)$url, [
+        $response = $this->http->request(Method::POST, (string)$url, [
             'json' => [
                 'Username' => (string)$identifier,
                 'Pw' => $password,

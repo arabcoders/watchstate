@@ -101,7 +101,7 @@ class GetUser
             ];
         }
 
-        $response = $this->http->request(Method::GET->value, (string)$url, $headers);
+        $response = $this->http->request(Method::GET, (string)$url, $headers);
 
         if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
