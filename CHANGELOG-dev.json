@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250214-2445c1e",
-        "date": "2025-02-14T17:40:03+00:00",
+        "tag": "dev-20250214-321379b",
+        "date": "2025-02-14T18:15:00+00:00",
         "commits": [
+            {
+                "sha": "321379b",
+                "message": "Added new endpoint to show running processes.",
+                "author": "ArabCoders",
+                "date": "2025-02-14T18:15:00+00:00"
+            },
             {
                 "sha": "2445c1e",
                 "message": "fixed failing tests",
