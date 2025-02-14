@@ -73,17 +73,6 @@
           </table>
         </div>
       </div>
-
-      <div class="column is-12">
-        <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
-          <ul>
-            <li>Ignoring specific GUID sometimes helps in preventing incorrect data being added to WatchState, due to
-              incorrect metadata being provided by backends.
-            </li>
-          </ul>
-        </Message>
-      </div>
     </div>
   </div>
 </template>
@@ -92,16 +81,12 @@
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import {awaitElement, notification} from '~/utils/index'
-import {useStorage} from '@vueuse/core'
 import Message from '~/components/Message'
 
 useHead({title: 'Processes'})
-const route = useRoute()
-
 const items = ref([])
-const show_page_tips = useStorage('show_page_tips', true)
 const isLoading = ref(false)
-const filter = ref(route.query.filter ?? '')
+const filter = ref(String(useRoute().query.filter ?? ''))
 const showFilter = ref(!!filter.value)
 
 const loadContent = async () => {
