@@ -1,8 +1,26 @@
 [
     {
-        "tag": "dev-20250214-94fc831",
-        "date": "2025-02-14T14:52:50+00:00",
+        "tag": "dev-20250214-2445c1e",
+        "date": "2025-02-14T17:40:03+00:00",
         "commits": [
+            {
+                "sha": "2445c1e",
+                "message": "fixed failing tests",
+                "author": "ArabCoders",
+                "date": "2025-02-14T17:40:03+00:00"
+            },
+            {
+                "sha": "d116dea",
+                "message": "log message if the task command is stuck",
+                "author": "ArabCoders",
+                "date": "2025-02-14T17:34:50+00:00"
+            },
+            {
+                "sha": "4d4ff09",
+                "message": "finish updating backends log messages to account for sub-users",
+                "author": "ArabCoders",
+                "date": "2025-02-14T17:34:33+00:00"
+            },
             {
                 "sha": "94fc831",
                 "message": "mainly log messages cleanup",
