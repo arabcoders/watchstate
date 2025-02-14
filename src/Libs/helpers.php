@@ -778,6 +778,49 @@ if (!function_exists('arrayToString')) {
     }
 }
 
+if (!function_exists('arrayToJson')) {
+    /**
+     * Convert an array to a JSON string in safe way.
+     *
+     * @param array $data array to convert.
+     * @param bool $direct whether to return the result directly or not.
+     *
+     * @return string|array The string representation of the array.
+     *
+     */
+    function arrayToJson(array $data, bool $direct = false): string|array
+    {
+        $list = [];
+        $safeClasses = [JsonSerializable::class, Stringable::class, DatetimeInterface::class];
+
+        foreach ($data as $key => $val) {
+            if (true === is_object($val) && !in_array($val::class, $safeClasses, true)) {
+                if (method_exists($val, '__toString')) {
+                    $val = (string)$val;
+                } else {
+                    $val = get_object_vars($val);
+                }
+            }
+
+            if (is_array($val)) {
+                $val = arrayToJson($val, direct: true);
+            } elseif (is_bool($val)) {
+                $val = true === $val ? 'true' : 'false';
+            } else {
+                $val = $val ?? 'None';
+            }
+
+            $list[$key] = $val;
+        }
+
+        if ($direct) {
+            return $list;
+        }
+
+        return json_encode($list, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE);
+    }
+}
+
 if (!function_exists('commandContext')) {
     /**
      * Returns the command context based on the environment.
