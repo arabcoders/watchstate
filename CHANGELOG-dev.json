@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250214-321379b",
-        "date": "2025-02-14T18:15:00+00:00",
+        "tag": "dev-20250214-2378125",
+        "date": "2025-02-14T18:28:00+00:00",
         "commits": [
+            {
+                "sha": "2378125",
+                "message": "minor changes to processes.vue display.",
+                "author": "ArabCoders",
+                "date": "2025-02-14T18:28:00+00:00"
+            },
             {
                 "sha": "321379b",
                 "message": "Added new endpoint to show running processes.",
