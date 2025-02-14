@@ -41,6 +41,7 @@ use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Options;
 use Closure;
 use InvalidArgumentException;
+use Monolog\Level;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -111,7 +112,10 @@ final class TestCommand extends Command
      */
     protected function runCommand(iInput $input, iOutput $output): int
     {
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input, $output), $output, [
+            iLogger::class => $this->logger,
+            Level::class => Level::Error,
+        ]);
     }
 
     /**

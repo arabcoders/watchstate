@@ -7,17 +7,18 @@ namespace App\Commands\Backend;
 use App\Command;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Config;
-use App\Libs\Extends\StreamLogHandler;
-use App\Libs\LogSuppressor;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
+use App\Libs\Extends\StreamLogHandler;
+use App\Libs\LogSuppressor;
 use App\Libs\Mappers\Import\RestoreMapper;
 use App\Libs\Message;
 use App\Libs\Options;
-use App\Libs\Stream;
 use App\Libs\QueueRequests;
+use App\Libs\Stream;
 use App\Libs\UserContext;
 use DirectoryIterator;
+use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -153,7 +154,10 @@ class RestoreCommand extends Command
             ]);
         }
 
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input, $output), $output, [
+            iLogger::class => $this->logger,
+            Level::class => Level::Error,
+        ]);
     }
 
     /**
@@ -248,10 +252,13 @@ class RestoreCommand extends Command
                     return self::SUCCESS;
                 }
             } else {
-                $this->logger->notice("The restore target '{user}@{backend}' has import enabled, which means the changes will propagate back to the other backends.", [
-                    'user' => $userContext->name,
-                    'backend' => $name,
-                ]);
+                $this->logger->notice(
+                    "The restore target '{user}@{backend}' has import enabled, which means the changes will propagate back to the other backends.",
+                    [
+                        'user' => $userContext->name,
+                        'backend' => $name,
+                    ]
+                );
             }
         }
 
@@ -281,7 +288,9 @@ class RestoreCommand extends Command
         );
 
         if (false === $input->getOption('execute')) {
-            $this->logger->notice("No changes will be committed to backend. To execute the changes pass '--execute' flag option.");
+            $this->logger->notice(
+                "No changes will be committed to backend. To execute the changes pass '--execute' flag option."
+            );
         }
 
         $opts = [

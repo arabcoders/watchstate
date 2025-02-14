@@ -11,6 +11,8 @@ use App\Libs\Exceptions\RuntimeException;
 use App\Listeners\ProcessProfileEvent;
 use Closure;
 use DirectoryIterator;
+use Monolog\Level;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -130,19 +132,24 @@ class Command extends BaseCommand
      *
      * @param Closure $closure The closure to be executed.
      * @param iOutput $output The OutputInterface instance for writing output messages.
+     * @param array $opts (Optional) Additional options to pass to the closure.
      *
      * @return int The return value of the closure.
      */
-    protected function single(Closure $closure, iOutput $output): int
+    protected function single(Closure $closure, iOutput $output, array $opts = []): int
     {
         try {
             if (!$this->lock(getAppVersion() . ':' . $this->getName())) {
-                $output->writeln(
-                    sprintf(
-                        '<error>The command \'%s\' is already running in another process.</error>',
-                        $this->getName()
-                    )
-                );
+                $message = r("The command/task '{name}' is already running in another process.", [
+                    'name' => $this->getName()
+                ]);
+
+                $output->writeln("<error>$message</error>");
+
+                if (null !== ($logger = ag($opts, iLogger::class))) {
+                    assert($logger instanceof iLogger);
+                    $logger->log(ag($opts, Level::class, Level::Notice), $message);
+                }
 
                 return self::SUCCESS;
             }
