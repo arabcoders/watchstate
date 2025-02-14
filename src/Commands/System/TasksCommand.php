@@ -202,7 +202,7 @@ final class TasksCommand extends Command
             $this->writer = function ($msg) use (&$event) {
                 static $lastSave = null;
 
-                $timeNow = hrtime(as_number: true);
+                $timeNow = time();
 
                 if (null === $lastSave) {
                     $lastSave = $timeNow;
@@ -210,9 +210,9 @@ final class TasksCommand extends Command
 
                 $event->addLog($msg);
 
-                if ($timeNow > $lastSave) {
+                if ($timeNow >= $lastSave) {
                     $this->eventsRepo->save($event->getEvent());
-                    $lastSave = $timeNow + (10 * 1_000_000_000);
+                    $lastSave = $timeNow + 5;
                 }
             };
 
