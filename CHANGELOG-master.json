@@ -1,5 +1,89 @@
 [
     {
+        "tag": "master-20250214-d918756",
+        "date": "2025-02-14T20:40:40+00:00",
+        "commits": [
+            {
+                "sha": "7f61ac9",
+                "message": "update task event log every 5secs",
+                "author": "ArabCoders",
+                "date": "2025-02-14T20:16:11+00:00"
+            },
+            {
+                "sha": "2378125",
+                "message": "minor changes to processes.vue display.",
+                "author": "ArabCoders",
+                "date": "2025-02-14T18:28:00+00:00"
+            },
+            {
+                "sha": "321379b",
+                "message": "Added new endpoint to show running processes.",
+                "author": "ArabCoders",
+                "date": "2025-02-14T18:15:00+00:00"
+            },
+            {
+                "sha": "2445c1e",
+                "message": "fixed failing tests",
+                "author": "ArabCoders",
+                "date": "2025-02-14T17:40:03+00:00"
+            },
+            {
+                "sha": "d116dea",
+                "message": "log message if the task command is stuck",
+                "author": "ArabCoders",
+                "date": "2025-02-14T17:34:50+00:00"
+            },
+            {
+                "sha": "4d4ff09",
+                "message": "finish updating backends log messages to account for sub-users",
+                "author": "ArabCoders",
+                "date": "2025-02-14T17:34:33+00:00"
+            },
+            {
+                "sha": "94fc831",
+                "message": "mainly log messages cleanup",
+                "author": "ArabCoders",
+                "date": "2025-02-14T14:52:50+00:00"
+            },
+            {
+                "sha": "5cdcf23",
+                "message": "use arrayToJson instead of arrayToString for log context.",
+                "author": "ArabCoders",
+                "date": "2025-02-14T14:51:56+00:00"
+            },
+            {
+                "sha": "52bb264",
+                "message": "make latest tag more clear",
+                "author": "ArabCoders",
+                "date": "2025-02-13T22:09:51+00:00"
+            },
+            {
+                "sha": "5aa2372",
+                "message": "Make changelog.vue compare the tag only",
+                "author": "ArabCoders",
+                "date": "2025-02-13T22:05:20+00:00"
+            },
+            {
+                "sha": "510c54f",
+                "message": "Cleaned up and updated jellyfin/emby log messages.",
+                "author": "ArabCoders",
+                "date": "2025-02-13T21:56:30+00:00"
+            },
+            {
+                "sha": "bce50ef",
+                "message": "updated external packages",
+                "author": "ArabCoders",
+                "date": "2025-02-13T21:56:11+00:00"
+            },
+            {
+                "sha": "e6f5154",
+                "message": "dont show merge commits in log",
+                "author": "ArabCoders",
+                "date": "2025-02-13T13:07:47+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250212-7243e78",
         "date": "2025-02-12T19:54:33+00:00",
         "commits": [
