@@ -17,7 +17,7 @@
           <span class="icon-text">
             <span class="icon"><i class="fas fa-code-branch"></i></span>
             <span>
-              {{ log.tag }} <span class="subtitle has-text-success" v-if="log.tag === api_version">Installed</span>
+              {{ log.tag }} <span class="tag has-text-success" v-if="isInstalled(log.tag)">Installed</span>
             </span>
           </span>
         </h1>
@@ -40,11 +40,11 @@
   </div>
 </template>
 <script setup>
-import { notification } from '~/utils/index'
+import {notification} from '~/utils/index'
 import moment from 'moment'
-import { NuxtLink } from '#components';
+import {NuxtLink} from '#components';
 
-useHead({ title: 'Change log' })
+useHead({title: 'Change log'})
 
 const REPO_URL = "https://arabcoders.github.io/watchstate/CHANGELOG-{branch}.json?version={version}";
 const logs = ref([]);
@@ -66,12 +66,17 @@ const loadContent = async () => {
   }
 
   try {
-    const changes = await fetch(r(REPO_URL, { branch: branch.value, version: api_version.value }));
+    const changes = await fetch(r(REPO_URL, {branch: branch.value, version: api_version.value}));
     logs.value = await changes.json();
   } catch (e) {
     console.error(e);
     notification('error', 'Error', `Failed to fetch changelog. ${e.message}`);
   }
+}
+
+const isInstalled = tag => {
+  const installed = String(api_version.value).split('-').pop();
+  return tag.endsWith(installed);
 }
 
 onMounted(() => loadContent());

@@ -13,8 +13,9 @@ use App\Libs\Mappers\Import\DirectMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\UserContext;
-use Psr\Http\Message\StreamInterface as iStream;
+use Monolog\Level;
 use Monolog\Logger;
+use Psr\Http\Message\StreamInterface as iStream;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
@@ -178,7 +179,10 @@ class BackupCommand extends Command
             ]);
         }
 
-        return $this->single(fn(): int => $this->process($input), $output);
+        return $this->single(fn(): int => $this->process($input), $output, [
+            iLogger::class => $this->logger,
+            Level::class => Level::Error,
+        ]);
     }
 
     /**
@@ -377,9 +381,9 @@ class BackupCommand extends Command
             array_push(
                 $queue,
                 ...$backend['class']->backup($userContext->mapper, $backend['fp'] ?? null, [
-                    'no_enhance' => true === $input->getOption('no-enhance'),
-                    Options::DRY_RUN => (bool)$input->getOption('dry-run'),
-                ])
+                'no_enhance' => true === $input->getOption('no-enhance'),
+                Options::DRY_RUN => (bool)$input->getOption('dry-run'),
+            ])
             );
         }
 

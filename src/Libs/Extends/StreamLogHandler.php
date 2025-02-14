@@ -57,7 +57,7 @@ class StreamLogHandler extends ConsoleHandler
         ]);
 
         if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
-            $message .= ' { ' . arrayToString($record['context']) . ' }';
+            $message .= ' ' . arrayToJson($record['context']);
         }
 
         $this->stream->write(trim($message) . PHP_EOL);

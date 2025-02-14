@@ -7,6 +7,7 @@ namespace App\Backends\Jellyfin\Action;
 use App\Backends\Common\Context;
 use App\Backends\Common\GuidInterface as iGuid;
 use App\Backends\Jellyfin\JellyfinClient as JFC;
+use App\Libs\Entity\StateEntity;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Exceptions\Backends\InvalidArgumentException;
 use App\Libs\Mappers\ImportInterface as iImport;
@@ -18,8 +19,6 @@ use Throwable;
  * Class Backup
  *
  * This class is responsible for performing backup operations on Jellyfin backend.
- *
- * @extends Import
  */
 class Backup extends Import
 {
@@ -48,6 +47,11 @@ class Backup extends Import
         array $logContext = [],
         array $opts = [],
     ): void {
+        $logContext['action'] = $this->action;
+        $logContext['client'] = $context->clientName;
+        $logContext['backend'] = $context->backendName;
+        $logContext['user'] = $context->userContext->name;
+
         if (JFC::TYPE_SHOW === ($type = ag($item, 'Type'))) {
             $this->processShow(context: $context, guid: $guid, item: $item, logContext: $logContext);
             return;
@@ -57,10 +61,9 @@ class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug('Processing [{backend}] payload.', [
-                    'backend' => $context->backendName,
+                $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' payload.", [
                     ...$logContext,
-                    'payload' => $item,
+                    'response' => ['body' => $item],
                 ]);
             }
 
@@ -88,7 +91,6 @@ class Backup extends Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->info($e->getMessage(), [
-                    'backend' => $context->backendName,
                     ...$logContext,
                     'body' => $item,
                 ]);
@@ -101,6 +103,8 @@ class Backup extends Import
                 item: $item,
                 opts: $opts + ['library' => ag($logContext, 'library.id')]
             );
+
+            assert($entity instanceof StateEntity);
 
             $arr = [
                 iState::COLUMN_TYPE => $entity->type,
@@ -161,7 +165,7 @@ class Backup extends Import
                             fn($key) => str_contains($key, 'guid_'),
                             ARRAY_FILTER_USE_KEY
                         ),
-                        $arr[iState::COLUMN_PARENT]
+                        $arr[iState::COLUMN_PARENT] ?? []
                     );
                 }
             }
@@ -171,10 +175,8 @@ class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: 'Exception [{error.kind}] was thrown unhandled during [{client}: {backend}] backup. Error [{error.message} @ {error.file}:{error.line}].',
+                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' backup. {error.message} at '{error.file}:{error.line}'.",
                 context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
                     'error' => [
                         'kind' => $e::class,
                         'line' => $e->getLine(),

@@ -12,6 +12,7 @@ use App\Libs\ConfigFile;
 use App\Libs\Database\DBLayer;
 use App\Libs\Database\PDO\PDOAdapter;
 use App\Libs\Extends\LogMessageProcessor;
+use App\Libs\Extends\MockHttpClient;
 use App\Libs\Mappers\Import\MemoryMapper;
 use App\Libs\Options;
 use App\Libs\Stream;
@@ -24,7 +25,6 @@ use PDO;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Psr16Cache;
-use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 class GetLibrariesListTest extends TestCase
@@ -145,7 +145,7 @@ class GetLibrariesListTest extends TestCase
         $this->assertFalse($response->status);
         $this->assertNotNull($response->error);
         $this->assertStringContainsString(
-            "ERROR: Request for 'Plex' libraries returned with unexpected '401' status code.",
+            "libraries returned with unexpected '401' status code",
             (string)$response->error
         );
 

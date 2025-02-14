@@ -20,6 +20,7 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Stream;
 use App\Libs\UserContext;
+use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Input\InputInterface;
@@ -136,7 +137,10 @@ class ExportCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input, $output), $output, [
+            iLogger::class => $this->logger,
+            Level::class => Level::Error,
+        ]);
     }
 
     /**

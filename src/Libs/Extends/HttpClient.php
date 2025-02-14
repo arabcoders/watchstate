@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace App\Libs\Extends;
 
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerInterface;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Uri;
+use Psr\Log\LoggerAwareInterface as iLoggerAware;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
-use Symfony\Contracts\HttpClient\ResponseStreamInterface;
-use Symfony\Contracts\Service\ResetInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface as iResponseStream;
+use Symfony\Contracts\Service\ResetInterface as iReset;
 
 /**
  * Http Client proxy. This Class acts as proxy in front of the Symfony HttpClient.
  *
  */
-class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInterface
+class HttpClient implements iHttp, iLoggerAware, iReset
 {
     /**
      * @var array $blacklisted An array containing the names of blacklisted headers.
@@ -27,33 +29,37 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
         'authorization'
     ];
 
-    private LoggerInterface|null $logger = null;
+    private iLogger|null $logger = null;
 
     /**
      * Constructor.
      *
-     * @param HttpClientInterface $client The HTTP client instance.
+     * @param iHttp $client The HTTP client instance.
      * @return void
      */
-    public function __construct(private HttpClientInterface $client)
+    public function __construct(private iHttp $client)
     {
     }
 
     /**
      * Sends an HTTP request.
      *
-     * @param string $method The HTTP method (GET, POST, PUT, DELETE, etc.) to use for the request.
+     * @param string|Method $method The HTTP method (GET, POST, PUT, DELETE, etc.) to use for the request.
      * @param string $url The URL to which the request is sent.
      * @param array $options An optional array of request options.
      *                       Possible options include 'headers' to specify custom request headers,
      *                       'user_data' to provide additional user-defined data as an associate array,
      *                       and other options supported by the underlying HTTP client.
      *
-     * @return ResponseInterface The response obtained from the remote server.
+     * @return iResponse The response obtained from the remote server.
      * @throws TransportExceptionInterface If an error occurs while processing the request.
      */
-    public function request(string $method, string $url, array $options = []): ResponseInterface
+    public function request(string|Method $method, string $url, array $options = []): iResponse
     {
+        if (true === ($method instanceof Method)) {
+            $method = $method->value;
+        }
+
         if (null !== $this->logger) {
             $headers = [];
 
@@ -61,9 +67,23 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
                 $headers[$key] = in_array(strtolower($key), $this->blacklisted) ? '**hidden**' : $value;
             }
 
-            $this->logger->debug('HttpClient - Request [ {method}: {url}]', [
+            $rUrl = new Uri($url);
+            $query = $rUrl->getQuery();
+            if (!empty($query)) {
+                parse_str($query, $params);
+                if (!empty($params)) {
+                    $params = array_map(
+                        fn($value, $key) => in_array($key, $this->blacklisted) ? '**hidden**' : $value,
+                        $params,
+                        array_keys($params)
+                    );
+                    $rUrl = $rUrl->withQuery(http_build_query($params));
+                }
+            }
+
+            $this->logger->debug('HttpClient - Request [ {method}: {url} ]', [
                 'method' => $method,
-                'url' => $url,
+                'url' => (string)$rUrl,
                 'options' => array_replace_recursive($options, [
                     'headers' => $headers,
                     'user_data' => [
@@ -80,15 +100,15 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
     /**
      * Streams multiple HTTP responses asynchronously.
      *
-     * @param iterable|ResponseInterface $responses An iterable collection of ResponseInterface objects,
+     * @param iterable|iResponse $responses An iterable collection of ResponseInterface objects,
      *                                where each object represents an HTTP response to stream.
      * @param float|null $timeout An optional timeout in seconds for the stream operation.
      *                           If not provided, the default timeout value will be used.
      *
-     * @return ResponseStreamInterface A ResponseStreamInterface object that allows you to iterate over
+     * @return iResponseStream A ResponseStreamInterface object that allows you to iterate over
      *                                the streamed HTTP responses asynchronously.
      */
-    public function stream(iterable|ResponseInterface $responses, ?float $timeout = null): ResponseStreamInterface
+    public function stream(iterable|iResponse $responses, ?float $timeout = null): iResponseStream
     {
         return $this->client->stream($responses, $timeout);
     }
@@ -106,14 +126,14 @@ class HttpClient implements HttpClientInterface, LoggerAwareInterface, ResetInte
         return new self($this->client->withOptions($options));
     }
 
-    public function setLogger(LoggerInterface $logger): void
+    public function setLogger(iLogger $logger): void
     {
         $this->logger = $logger;
     }
 
     public function reset(): void
     {
-        if ($this->client instanceof ResetInterface) {
+        if ($this->client instanceof iReset) {
             $this->client->reset();
         }
     }

@@ -53,7 +53,7 @@ final class ProxyHandler extends AbstractProcessingHandler
         ]);
 
         if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
-            $message .= ' { ' . arrayToString($record['context']) . ' }';
+            $message .= ' ' . arrayToJson($record['context']);
         }
 
         ($this->callback)($message, $record);

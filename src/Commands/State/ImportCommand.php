@@ -22,6 +22,7 @@ use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\Stream;
 use App\Libs\UserContext;
+use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Component\Console\Helper\Table;
@@ -238,7 +239,10 @@ class ImportCommand extends Command
      */
     protected function runCommand(InputInterface $input, OutputInterface $output): int
     {
-        return $this->single(fn(): int => $this->process($input, $output), $output);
+        return $this->single(fn(): int => $this->process($input, $output), $output, [
+            iLogger::class => $this->logger,
+            Level::class => Level::Error,
+        ]);
     }
 
     /**
@@ -298,7 +302,7 @@ class ImportCommand extends Command
             $list = [];
             $userStart = microtime(true);
 
-            $this->logger->notice("SYSTEM: Importing '{user}' play states.", [
+            $this->logger->notice("SYSTEM: Importing user '{user}' play states.", [
                 'user' => $userContext->name,
                 'backends' => join(', ', array_keys($list)),
             ]);
@@ -333,8 +337,8 @@ class ImportCommand extends Command
                 if (true !== $metadata && true !== (bool)ag($backend, 'import.enabled')) {
                     if ($isCustom) {
                         $this->logger->warning(
-                            "SYSTEM: Importing from import disabled '{user}@{backend}' As requested.",
-                            [
+                            message: "SYSTEM: Importing from import disabled '{user}@{backend}' As requested.",
+                            context: [
                                 'user' => $userContext->name,
                                 'backend' => $backendName
                             ]
@@ -373,7 +377,9 @@ class ImportCommand extends Command
 
             if (empty($list)) {
                 $this->logger->warning(
-                    $isCustom ? '[-s, --select-backend] flag did not match any backend.' : 'No backends were found.'
+                    $isCustom ? r("[-s, --select-backend] flag did not match any backend for '{user}'.", [
+                        'user' => $userContext->name,
+                    ]) : 'No backends were found.'
                 );
                 continue;
             }
@@ -381,21 +387,24 @@ class ImportCommand extends Command
             /** @var array<array-key,ResponseInterface> $queue */
             $queue = [];
 
-            $this->logger->notice("SYSTEM: Preloading '{user}' '{mapper}' data. Memory usage '{memory.now}'.", [
-                'user' => $userContext->name,
-                'mapper' => afterLast($userContext->mapper::class, '\\'),
-                'memory' => [
-                    'now' => getMemoryUsage(),
-                    'peak' => getPeakMemoryUsage(),
-                ],
-            ]);
+            $this->logger->notice(
+                message: "SYSTEM: Preloading user '{user}: {mapper}' mapping data. Memory usage '{memory.now}'.",
+                context: [
+                    'user' => $userContext->name,
+                    'mapper' => afterLast($userContext->mapper::class, '\\'),
+                    'memory' => [
+                        'now' => getMemoryUsage(),
+                        'peak' => getPeakMemoryUsage(),
+                    ],
+                ]
+            );
 
             $time = microtime(true);
             $userContext->mapper->loadData();
 
             $this->logger->notice(
-                "SYSTEM: Preloading '{user}' '{mapper}' data completed in '{duration}s'. Memory usage '{memory.now}'.",
-                [
+                message: "SYSTEM: Preloading user '{user}: {mapper}' mapping data completed in '{duration}s'. Memory usage '{memory.now}'.",
+                context: [
                     'user' => $userContext->name,
                     'mapper' => afterLast($userContext->mapper::class, '\\'),
                     'duration' => round(microtime(true) - $time, 4),
@@ -457,8 +466,8 @@ class ImportCommand extends Command
                 if (false === $inDryMode) {
                     if (true === (bool)Message::get("{$name}.has_errors")) {
                         $this->logger->warning(
-                            "SYSTEM: Not updating '{user}@{backend}' import last sync date. There was errors recorded during the operation.",
-                            [
+                            message: "SYSTEM: Not updating '{user}@{backend}' import last sync date. There was errors recorded during the operation.",
+                            context: [
                                 'user' => $userContext->name,
                                 'backend' => $name,
                             ]
@@ -516,7 +525,7 @@ class ImportCommand extends Command
             $total = count($userContext->mapper);
 
             if ($total >= 1) {
-                $this->logger->notice("SYSTEM: '{user}' Found '{total}' updated items.", [
+                $this->logger->notice("SYSTEM: Found '{total}' updated items from '{user}' backends.", [
                     'user' => $userContext->name,
                     'total' => $total,
                     'memory' => [

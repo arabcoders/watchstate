@@ -7,6 +7,7 @@ namespace App\Backends\Jellyfin;
 use App\Backends\Common\Context;
 use App\Backends\Jellyfin\Action\GetUser;
 use App\Libs\Container;
+use App\Libs\Enums\Http\Method;
 use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\Backends\InvalidContextException;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -33,7 +34,9 @@ class JellyfinValidateContext
         $backendId = ag($data, 'Id');
 
         if (empty($backendId)) {
-            throw new InvalidContextException('Failed to get backend id.');
+            throw new InvalidContextException(r('Failed to get backend id. Check {client} logs for errors.', [
+                'client' => $context->clientName,
+            ]));
         }
 
         if (null !== $context->backendId && $backendId !== $context->backendId) {
@@ -76,18 +79,18 @@ class JellyfinValidateContext
     {
         try {
             $url = $context->backendUrl->withPath('/system/Info');
-            $request = $this->http->request('GET', (string)$url, [
+            $request = $this->http->request(Method::GET, (string)$url, [
                 'headers' => [
                     'Accept' => 'application/json',
                     'X-MediaBrowser-Token' => $context->backendToken,
                 ],
             ]);
 
-            if (Status::UNAUTHORIZED->value === $request->getStatusCode()) {
+            if (Status::UNAUTHORIZED === Status::tryFrom($request->getStatusCode())) {
                 throw new InvalidContextException('Backend responded with 401. Most likely means token is invalid.');
             }
 
-            if (Status::NOT_FOUND->value === $request->getStatusCode()) {
+            if (Status::NOT_FOUND === Status::tryFrom($request->getStatusCode())) {
                 throw new InvalidContextException('Backend responded with 404. Most likely means url is incorrect.');
             }
 

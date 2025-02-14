@@ -9,9 +9,11 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
-use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class GetSessions
 {
@@ -19,10 +21,8 @@ final class GetSessions
 
     private string $action = 'plex.getSessions';
 
-    public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-    ) {
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
+    {
     }
 
     /**
@@ -40,32 +40,36 @@ final class GetSessions
             fn: function () use ($context, $opts) {
                 $url = $context->backendUrl->withPath('/status/sessions');
 
-                $this->logger->debug('Requesting [{client}: {backend}] play sessions.', [
+                $logContext = [
+                    'action' => $this->action,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
-                    'url' => $url
-                ]);
+                    'user' => $context->userContext->name,
+                    'url' => (string)$url,
+                ];
+
+                $this->logger->debug(
+                    message: "{action}: Requesting '{client}: {user}@{backend}' active play sessions.",
+                    context: $logContext
+                );
 
                 $response = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                    method: Method::GET,
+                    url: (string)$url,
+                    options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                 );
 
                 $content = $response->getContent(false);
 
-                if (200 !== $response->getStatusCode()) {
+                if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with unexpected [{status_code}] status code.',
+                            message: "{action}: Request for '{client}: {user}@{backend}' active play sessions returned with unexpected '{status_code}' status code.",
                             context: [
-                                'action' => $this->action,
-                                'client' => $context->clientName,
-                                'backend' => $context->backendName,
+                                ...$logContext,
                                 'status_code' => $response->getStatusCode(),
-                                'url' => (string)$url,
-                                'response' => $content,
+                                'response' => ['body' => $content],
                             ],
                             level: Levels::WARNING
                         )
@@ -76,13 +80,11 @@ final class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with empty response.',
+                            message: "{action}: Request for '{client}: {user}@{backend}' active play sessions returned with empty response.",
                             context: [
-                                'action' => $this->action,
-                                'client' => $context->clientName,
-                                'backend' => $context->backendName,
-                                'url' => (string)$url,
-                                'response' => $content,
+                                ...$logContext,
+                                'status_code' => $response->getStatusCode(),
+                                'response' => ['body' => $content],
                             ],
                             level: Levels::ERROR
                         )
@@ -96,12 +98,10 @@ final class GetSessions
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [{client}: {backend}] {action} payload.', [
-                        'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'trace' => $item,
-                    ]);
+                    $this->logger->debug(
+                        message: "{action}: Processing '{client}: {user}@{backend}' active play sessions payload.",
+                        context: [...$logContext, 'response' => ['body' => $content]]
+                    );
                 }
 
                 $data = ag($item, 'MediaContainer.Metadata', []);
@@ -116,9 +116,9 @@ final class GetSessions
 
                 foreach ($data as $session) {
                     $uuid = preg_match(
-                        '#/users/(.+?)/avatar#i',
-                        ag($session, 'User.thumb'),
-                        $matches
+                        pattern: '#/users/(.+?)/avatar#i',
+                        subject: ag($session, 'User.thumb'),
+                        matches: $matches
                     ) ? $matches[1] : null;
 
                     $item = [

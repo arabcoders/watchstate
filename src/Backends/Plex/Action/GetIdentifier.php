@@ -7,21 +7,17 @@ namespace App\Backends\Plex\Action;
 use App\Backends\Common\CommonTrait;
 use App\Backends\Common\Context;
 use App\Backends\Common\Response;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class GetIdentifier
 {
     use CommonTrait;
 
-    private string $action = 'plex.getIdentifier';
+    protected string $action = 'plex.getIdentifier';
 
-    public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-        protected CacheInterface $cache
-    ) {
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
+    {
     }
 
     /**
@@ -37,7 +33,7 @@ final class GetIdentifier
         return $this->tryResponse(
             context: $context,
             fn: function () use ($context, $opts) {
-                $info = new GetInfo($this->http, $this->logger, $this->cache)(context: $context, opts: $opts);
+                $info = new GetInfo($this->http, $this->logger)(context: $context, opts: $opts);
 
                 if (false === $info->status) {
                     return $info;

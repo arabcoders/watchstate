@@ -9,10 +9,11 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetInfo
@@ -25,11 +26,14 @@ class GetInfo
 
     protected string $action = 'jellyfin.getInfo';
 
-    public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-        protected CacheInterface $cache
-    ) {
+    /**
+     * Class constructor.
+     *
+     * @param iHttp $http The HTTP client instance to use.
+     * @param iLogger $logger The logger instance to use.
+     */
+    public function __construct(protected readonly iHttp $http, protected readonly iLogger $logger)
+    {
     }
 
     /**
@@ -46,34 +50,35 @@ class GetInfo
             context: $context,
             fn: function () use ($context, $opts) {
                 $url = $context->backendUrl->withPath('/system/Info');
-
-                $this->logger->debug("{action}: Requesting '{client}: {backend}' info.", [
+                $logContext = [
                     'action' => $this->action,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
-                    'url' => $url
-                ]);
+                    'user' => $context->userContext->name,
+                    'url' => (string)$url
+                ];
+
+                $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' info.", $logContext);
 
                 $response = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                    method: Method::GET,
+                    url: (string)$url,
+                    options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                 );
 
                 $content = $response->getContent(false);
 
-                if (200 !== $response->getStatusCode()) {
+                if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: '{client}: {backend}' request returned with unexpected '{status_code}' status code.",
+                            message: "{action}: '{client}: {user}@{backend}' request returned with unexpected '{status_code}' status code.",
                             context: [
-                                'action' => $this->action,
-                                'client' => $context->clientName,
-                                'backend' => $context->backendName,
+                                ...$logContext,
                                 'status_code' => $response->getStatusCode(),
-                                'url' => (string)$url,
-                                'response' => $content,
+                                'response' => [
+                                    'body' => $content,
+                                ],
                             ],
                             level: Levels::WARNING
                         )
@@ -84,13 +89,13 @@ class GetInfo
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: "{action}: '{client}: {backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
+                            message: "{action}: '{client}: {user}@{backend}' request returned with empty response. Please make sure the container can communicate with the backend.",
                             context: [
-                                'action' => $this->action,
-                                'client' => $context->clientName,
-                                'backend' => $context->backendName,
-                                'url' => (string)$url,
-                                'response' => $content,
+                                ...$logContext,
+                                'response' => [
+                                    'status_code' => $response->getStatusCode(),
+                                    'body' => $content
+                                ],
                             ],
                             level: Levels::ERROR
                         )
@@ -104,10 +109,8 @@ class GetInfo
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug("{action}: Processing '{client}: {backend}' request payload.", [
-                        'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
+                    $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' request payload.", [
+                        ...$logContext,
                         'trace' => $item,
                     ]);
                 }

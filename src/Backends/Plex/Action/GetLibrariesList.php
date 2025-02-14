@@ -11,13 +11,15 @@ use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Backends\Plex\PlexClient;
 use App\Libs\Entity\StateInterface as iState;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Options;
 use DateInterval;
 use JsonException;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 final class GetLibrariesList
 {
@@ -25,7 +27,7 @@ final class GetLibrariesList
 
     private string $action = 'plex.getLibrariesList';
 
-    public function __construct(protected HttpClientInterface $http, protected LoggerInterface $logger)
+    public function __construct(protected iHttp $http, protected iLogger $logger)
     {
     }
 
@@ -55,8 +57,15 @@ final class GetLibrariesList
      */
     private function action(Context $context, array $opts = []): Response
     {
+        $logContext = [
+            'action' => $this->action,
+            'client' => $context->clientName,
+            'backend' => $context->backendName,
+            'user' => $context->userContext->name,
+        ];
+
         try {
-            $cls = fn() => $this->real_request($context);
+            $cls = fn() => $this->real_request($context, $logContext);
 
             $json = true === (bool)ag($opts, Options::NO_CACHE) ? $cls() : $this->tryCache(
                 $context,
@@ -73,10 +82,10 @@ final class GetLibrariesList
         }
 
         if ($context->trace) {
-            $this->logger->debug('Parsing [{backend}] libraries payload.', [
-                'backend' => $context->backendName,
-                'trace' => $json,
-            ]);
+            $this->logger->debug(
+                message: "{action}: Parsing '{client}: {user}@{backend}' libraries payload.",
+                context: [...$logContext, 'response' => ['body' => $json]],
+            );
         }
 
         $listDirs = ag($json, 'MediaContainer.Directory', []);
@@ -85,13 +94,8 @@ final class GetLibrariesList
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{backend}' libraries returned empty list.",
-                    context: [
-                        'backend' => $context->backendName,
-                        'response' => [
-                            'body' => $json
-                        ],
-                    ],
+                    message: "{action}: Request for '{client}: {user}@{backend}' libraries returned empty list.",
+                    context: [...$logContext, 'response' => ['key' => 'MediaContainer.Directory', 'body' => $json]],
                     level: Levels::WARNING
                 ),
             );
@@ -147,38 +151,39 @@ final class GetLibrariesList
     /**
      * Fetches the libraries from the backend.
      *
+     * @param Context $context Backend context.
+     * @param array $logContext Log context.
+     *
      * @return array The fetched libraries.
      *
      * @throws ExceptionInterface when an error happens during the request.
      * @throws JsonException when the response is not a valid JSON.
      */
-    private function real_request(Context $context): array
+    private function real_request(Context $context, array $logContext = []): array
     {
         $url = $context->backendUrl->withPath('/library/sections');
 
-        $this->logger->debug("Requesting '{backend}' libraries list.", [
-            'backend' => $context->backendName,
-            'url' => (string)$url
-        ]);
+        $logContext['url'] = (string)$url;
 
-        $response = $this->http->request('GET', (string)$url, $context->backendHeaders);
+        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' libraries list.", $logContext);
+
+        $response = $this->http->request(Method::GET, (string)$url, $context->backendHeaders);
 
         $payload = $response->getContent(false);
 
         if ($context->trace) {
-            $this->logger->debug("Processing '{backend}' response.", [
-                'backend' => $context->backendName,
-                'url' => (string)$url,
-                'response' => $payload,
-            ]);
+            $this->logger->debug(
+                message: "{action}: Processing '{client}: {user}@{backend}' response.",
+                context: [...$logContext, 'response' => ['body' => $payload]],
+            );
         }
 
-        if (200 !== $response->getStatusCode()) {
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             throw new RuntimeException(
-                r("Request for '{backend}' libraries returned with unexpected '{status_code}' status code.", [
-                    'backend' => $context->backendName,
-                    'status_code' => $response->getStatusCode(),
-                ])
+                r(
+                    text: "{action}: Request for '{client}: {user}@{backend}' libraries returned with unexpected '{status_code}' status code.",
+                    context: [...$logContext, 'status_code' => $response->getStatusCode()]
+                )
             );
         }
 

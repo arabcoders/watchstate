@@ -16,7 +16,7 @@ class GetWebUrl
 {
     use CommonTrait;
 
-    private string $action = 'jellyfin.getWebUrl';
+    protected string $action = 'jellyfin.getWebUrl';
 
     private array $supportedTypes = [
         iState::TYPE_MOVIE,
@@ -40,7 +40,14 @@ class GetWebUrl
             return new Response(
                 status: false,
                 error: new Error(
-                    message: r('Invalid Web url type "{type}".', ['type' => $type]),
+                    message: "{action}: Invalid Web url type '{type}' for '{client}: {user}@{backend}'.",
+                    context: [
+                        'type' => $type,
+                        'action' => $this->action,
+                        'client' => $context->clientName,
+                        'backend' => $context->backendName,
+                        'user' => $context->userContext,
+                    ],
                     level: Levels::WARNING,
                 )
             );
@@ -48,17 +55,16 @@ class GetWebUrl
 
         return $this->tryResponse(
             context: $context,
-            fn: function () use ($context, $type, $id, $opts) {
-                $webUrl = $context->backendUrl->withPath('/web/index.html')->withFragment(
+            fn: fn() => new Response(
+                status: true,
+                response: $context->backendUrl->withPath('/web/index.html')->withFragment(
                     r('!/{action}?id={id}&serverId={backend_id}', [
                         'backend_id' => $context->backendId,
                         'id' => $id,
                         'action' => JellyfinClient::CLIENT_NAME === $context->clientName ? 'details' : 'item',
                     ])
-                );
-
-                return new Response(status: true, response: $webUrl);
-            },
+                )
+            ),
             action: $this->action
         );
     }

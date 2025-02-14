@@ -124,7 +124,7 @@ class ConsoleHandler extends AbstractProcessingHandler
         ]);
 
         if (false === empty($record['context']) && true === (bool)Config::get('logs.context')) {
-            $message .= ' { ' . arrayToString($record['context']) . ' }';
+            $message .= ' ' . arrayToJson($record['context']);
         }
 
         $errOutput = $this->output instanceof ConsoleOutputInterface ? $this->output->getErrorOutput() : $this->output;

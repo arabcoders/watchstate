@@ -36,7 +36,7 @@ final class InspectRequest
         return $this->tryResponse(
             context: $context,
             fn: function () use ($request) {
-                $userAgent = ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
+                $userAgent = (string)ag($request->getServerParams(), 'HTTP_USER_AGENT', '');
 
                 if (false === str_starts_with($userAgent, 'Jellyfin-Server/')) {
                     return new Response(status: false);

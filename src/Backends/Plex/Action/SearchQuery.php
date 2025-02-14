@@ -12,11 +12,14 @@ use App\Backends\Common\Response;
 use App\Backends\Plex\PlexActionTrait;
 use App\Backends\Plex\PlexGuid;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
+use Throwable;
 
 final class SearchQuery
 {
@@ -76,28 +79,30 @@ final class SearchQuery
             )
         );
 
-        $this->logger->debug("Searching '{client}: {backend}' libraries for '{query}'.", [
+        $logContext = [
+            'query' => $query,
+            'action' => $this->action,
             'client' => $context->clientName,
             'backend' => $context->backendName,
-            'query' => $query,
-            'url' => $url
-        ]);
+            'user' => $context->userContext->name,
+            'url' => (string)$url,
+        ];
+
+        $this->logger->debug("{action}: Searching '{client}: {user}@{backend}' libraries for '{query}'.", $logContext);
 
         $response = $this->http->request(
-            'GET',
-            (string)$url,
-            array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+            method: Method::GET,
+            url: (string)$url,
+            options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
         );
 
-        if (200 !== $response->getStatusCode()) {
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Search request for '{query}' in '{client}: {backend}' returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Search request for '{query}' in '{client}: {user}@{backend}' returned with unexpected '{status_code}' status code.",
                     context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'query' => $query,
+                        ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
                     level: Levels::ERROR
@@ -112,13 +117,10 @@ final class SearchQuery
         );
 
         if ($context->trace) {
-            $this->logger->debug("Parsing [{client}: {backend}] search results for '{query}' payload.", [
-                'client' => $context->clientName,
-                'backend' => $context->backendName,
-                'query' => $query,
-                'url' => (string)$url,
-                'trace' => $json,
-            ]);
+            $this->logger->debug(
+                message: "{action}: Parsing Searching '{client}: {user}@{backend}' libraries for '{query}' payload.",
+                context: [...$logContext, 'response' => ['body' => $json]]
+            );
         }
 
         $list = [];
@@ -135,8 +137,11 @@ final class SearchQuery
             foreach (ag($leaf, 'Metadata', []) as $item) {
                 try {
                     $entity = $this->createEntity($context, $plexGuid, $item, $opts);
-                } catch (\Throwable $e) {
-                    $this->logger->error('Error creating entity: {error}', ['error' => $e->getMessage()]);
+                } catch (Throwable $e) {
+                    $this->logger->error(
+                        message: "{action}: Failed to map '{client}: {user}@{backend}' item to entity. {error}",
+                        context: [...$logContext, 'error' => $e->getMessage()]
+                    );
                     continue;
                 }
 

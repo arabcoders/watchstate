@@ -16,6 +16,8 @@ use Throwable;
 
 final class Backup extends Import
 {
+    protected string $action = 'plex.backup';
+
     private const int JSON_FLAGS = JSON_INVALID_UTF8_IGNORE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
     protected function process(
@@ -35,11 +37,11 @@ final class Backup extends Import
 
         try {
             if ($context->trace) {
-                $this->logger->debug("Processing '{client}: {backend}' payload.", [
-                    'client' => $context->clientName,
-                    'backend' => $context->backendName,
+                $this->logger->debug("{action}: Processing '{client}: {backend}' payload.", [
                     ...$logContext,
-                    'payload' => $item,
+                    'response' => [
+                        'body' => $item,
+                    ],
                 ]);
             }
 
@@ -72,18 +74,18 @@ final class Backup extends Import
                 ];
             } catch (InvalidArgumentException $e) {
                 $this->logger->info(
-                    "Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
-                    [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
+                    message: "{action}: Failed to parse '{client}: {backend}' item response. '{error.kind}' with '{error.message}' at '{error.file}:{error.line}' ",
+                    context: [
+                        ...$logContext,
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
                             'message' => $e->getMessage(),
                             'file' => after($e->getFile(), ROOT_PATH),
                         ],
-                        ...$logContext,
-                        'body' => $item,
+                        'response' => [
+                            'body' => $item,
+                        ],
                     ]
                 );
                 return;
@@ -174,17 +176,15 @@ final class Backup extends Import
             }
         } catch (Throwable $e) {
             $this->logger->error(
-                message: "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' backup. '{error.message}' at '{error.file}:{error.line}'.",
+                message: "{action}: Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' backup. {error.message} at '{error.file}:{error.line}'.",
                 context: [
-                    'backend' => $context->backendName,
-                    'client' => $context->clientName,
+                    ...$logContext,
                     'error' => [
                         'kind' => $e::class,
                         'line' => $e->getLine(),
                         'message' => $e->getMessage(),
                         'file' => after($e->getFile(), ROOT_PATH),
                     ],
-                    ...$logContext,
                     'exception' => [
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),

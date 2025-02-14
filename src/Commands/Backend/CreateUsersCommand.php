@@ -188,22 +188,47 @@ class CreateUsersCommand extends Command
                     /** @var array $info */
                     $info = $backend;
                     $info['user'] = ag($user, 'id', ag($info, 'user'));
-                    $info['backendName'] = r("{backend}_{user}", [
+                    $info['backendName'] = strtolower(r("{backend}_{user}", [
                         'backend' => ag($backend, 'name'),
                         'user' => ag($user, 'name'),
-                    ]);
+                    ]));
+
+                    if (false === isValidName($info['backendName'])) {
+                        $rename = substr(md5($info['backendName']), 0, 8);
+                        $this->logger->error(
+                            message: "SYSTEM: Renaming invalid backend name '{name}'. backend name must be in [a-z_0-9], renaming to '{renamed}'",
+                            context: ['name' => $info['backendName'], 'renamed' => $rename]
+                        );
+                        $info['backendName'] = $rename;
+                    }
+
                     $info['displayName'] = ag($user, 'name');
+                    if (false === isValidName($info['displayName'])) {
+                        $rename = substr(md5($info['displayName']), 0, 8);
+                        $this->logger->error(
+                            message: "SYSTEM: Renaming invalid username '{name}'. username must be in [a-z_0-9], renaming to '{renamed}'",
+                            context: ['name' => $info['displayName'], 'renamed' => $rename]
+                        );
+                        $info['displayName'] = $rename;
+                    }
+
                     $info = ag_delete($info, 'options.' . Options::PLEX_USER_PIN);
-                    $info = ag_set($info, 'options.' . Options::ALT_NAME, ag($backend, 'name'));
-                    $info = ag_set($info, 'options.' . Options::ALT_ID, ag($backend, 'user'));
+                    $info = ag_sets($info, [
+                        'options.' . Options::ALT_NAME => ag($backend, 'name'),
+                        'options.' . Options::ALT_ID => ag($backend, 'user')
+                    ]);
+
+                    // -- of course, Plex has to be special.
                     if (PlexClient::CLIENT_NAME === ucfirst(ag($backend, 'type'))) {
-                        $info = ag_set($info, 'token', 'reuse_or_generate_token');
-                        $info = ag_set($info, 'options.' . Options::PLEX_USER_NAME, ag($user, 'name'));
-                        $info = ag_set($info, 'options.' . Options::PLEX_USER_UUID, ag($user, 'uuid'));
-                        $info = ag_set($info, 'options.' . Options::ADMIN_TOKEN, ag($backend, [
-                            'options.' . Options::ADMIN_TOKEN,
-                            'token'
-                        ]));
+                        $info = ag_sets($info, [
+                            'token' => 'reuse_or_generate_token',
+                            'options.' . Options::PLEX_USER_NAME => ag($user, 'name'),
+                            'options.' . Options::PLEX_USER_UUID => ag($user, 'uuid'),
+                            'options.' . Options::ADMIN_TOKEN => ag(
+                                array: $backend,
+                                path: ['options.' . Options::ADMIN_TOKEN, 'token']
+                            )
+                        ]);
                         if (true === (bool)ag($user, 'guest', false)) {
                             $info = ag_set($info, 'options.' . Options::PLEX_EXTERNAL_USER, true);
                         }
@@ -215,10 +240,11 @@ class CreateUsersCommand extends Command
                 }
             } catch (Throwable $e) {
                 $this->logger->error(
-                    "Exception '{error.kind}' was thrown unhandled during '{client}: {backend}' get users list. '{error.message}' at '{error.file}:{error.line}'.",
+                    "Exception '{error.kind}' was thrown unhandled during '{client}: {user}@{backend}' get users list. '{error.message}' at '{error.file}:{error.line}'.",
                     [
-                        'backend' => $client->getContext()->backendName,
                         'client' => $client->getContext()->clientName,
+                        'backend' => $client->getContext()->backendName,
+                        'user' => $client->getContext()->userContext->name,
                         'error' => [
                             'kind' => $e::class,
                             'line' => $e->getLine(),
@@ -248,7 +274,15 @@ class CreateUsersCommand extends Command
         ]);
 
         foreach ($users as $user) {
-            $userName = ag($user, 'name', 'Unknown');
+            $userName = strtolower(ag($user, 'name', 'Unknown'));
+            if (false === isValidName($userName)) {
+                $rename = substr(md5($userName), 0, 8);
+                $this->logger->error(
+                    message: "SYSTEM: Renaming invalid username '{user}'. Username must be in [a-z_0-9], renaming to '{renamed}'",
+                    context: ['user' => $userName, 'renamed' => $rename]
+                );
+                $userName = $rename;
+            }
 
             $subUserPath = r(fixPath(Config::get('path') . '/users/{user}'), ['user' => $userName]);
 
@@ -257,8 +291,9 @@ class CreateUsersCommand extends Command
                     'user' => $userName,
                     'path' => $subUserPath
                 ]);
+
                 if (false === mkdir($subUserPath, 0755, true)) {
-                    $this->logger->error("SYSTEM: Failed to '{user}' directory '{path}'.", [
+                    $this->logger->error("SYSTEM: Failed to create '{user}' directory '{path}'.", [
                         'user' => $userName,
                         'path' => $subUserPath
                     ]);
@@ -278,13 +313,21 @@ class CreateUsersCommand extends Command
 
             foreach (ag($user, 'backends', []) as $backend) {
                 $name = ag($backend, 'client_data.backendName');
+                if (false === isValidName($name)) {
+                    $rename = substr(md5($name), 0, 8);
+                    $this->logger->error(
+                        message: "SYSTEM: Renaming invalid backend name '{name}'. backend name must be in [a-z_0-9], renaming to '{renamed}'",
+                        context: ['name' => $name, 'renamed' => $rename]
+                    );
+                    $name = $rename;
+                }
+
                 $clientData = ag_delete(ag($backend, 'client_data'), 'class');
                 $clientData['name'] = $name;
 
                 if (false === $perUser->has($name)) {
                     $data = $clientData;
-                    $data = ag_set($data, 'import.lastSync', null);
-                    $data = ag_set($data, 'export.lastSync', null);
+                    $data = ag_sets($data, ['import.lastSync' => null, 'export.lastSync' => null]);
                     $data = ag_delete($data, ['webhook', 'name', 'backendName', 'displayName']);
                     $perUser->set($name, $data);
                 } else {
@@ -312,7 +355,7 @@ class CreateUsersCommand extends Command
                             if (null !== ($val = ag($backend, 'client_data.options.' . Options::PLEX_EXTERNAL_USER))) {
                                 $update['options.' . Options::PLEX_EXTERNAL_USER] = (bool)$val;
                             }
-                            
+
                             if (null !== ($val = ag($backend, 'client_data.options.use_old_progress_endpoint'))) {
                                 $update['options.use_old_progress_endpoint'] = $val;
                             }
@@ -351,11 +394,8 @@ class CreateUsersCommand extends Command
                             );
                             if (false === $token) {
                                 $this->logger->error(
-                                    "Failed to generate access token for '{user}@{backend}' backend.",
-                                    [
-                                        'user' => $userName,
-                                        'backend' => $name,
-                                    ]
+                                    message: "Failed to generate access token for '{user}@{backend}' backend.",
+                                    context: ['user' => $userName, 'backend' => $name]
                                 );
                             } else {
                                 $perUser->set("{$name}.token", $token);
@@ -364,8 +404,8 @@ class CreateUsersCommand extends Command
                     }
                 } catch (Throwable $e) {
                     $this->logger->error(
-                        "Failed to generate access token for '{user}@{name}' backend. '{error}' at '{file}:{line}'.",
-                        [
+                        message: "Failed to generate access token for '{user}@{name}' backend. {error} at '{file}:{line}'.",
+                        context: [
                             'name' => $name,
                             'user' => $userName,
                             'error' => [
@@ -386,7 +426,7 @@ class CreateUsersCommand extends Command
                 }
             }
 
-            $dbFile = r($subUserPath . "/{user}.db", ['user' => $userName]);
+            $dbFile = r($subUserPath . "/{user}.db", ['user' => 'user']);
             if (false === file_exists($dbFile)) {
                 $this->logger->notice("SYSTEM: Creating '{user}' database '{db}'.", [
                     'user' => $userName,

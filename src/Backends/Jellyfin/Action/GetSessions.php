@@ -9,10 +9,12 @@ use App\Backends\Common\Context;
 use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
-use Psr\Log\LoggerInterface;
-use Psr\SimpleCache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Psr\Log\LoggerInterface as iLogger;
+use Psr\SimpleCache\CacheInterface as iCache;
+use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 
 /**
  * Class GetInfo
@@ -26,9 +28,9 @@ class GetSessions
     protected string $action = 'jellyfin.getSessions';
 
     public function __construct(
-        protected HttpClientInterface $http,
-        protected LoggerInterface $logger,
-        protected CacheInterface $cache
+        protected readonly iHttp $http,
+        protected readonly iLogger $logger,
+        protected readonly iCache $cache
     ) {
     }
 
@@ -47,32 +49,33 @@ class GetSessions
             fn: function () use ($context, $opts) {
                 $url = $context->backendUrl->withPath('/Sessions');
 
-                $this->logger->debug('Requesting [{client}: {backend}] play sessions.', [
+                $logContext = [
+                    'action' => $this->action,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
-                    'url' => $url
-                ]);
+                    'user' => $context->userContext->name,
+                    'url' => (string)$url
+                ];
+
+                $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' play sessions.", $logContext);
 
                 $response = $this->http->request(
-                    'GET',
-                    (string)$url,
-                    array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
+                    method: Method::GET,
+                    url: (string)$url,
+                    options: array_replace_recursive($context->backendHeaders, $opts['headers'] ?? [])
                 );
 
                 $content = $response->getContent(false);
 
-                if (200 !== $response->getStatusCode()) {
+                if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with unexpected [{status_code}] status code.',
+                            message: "{action}: Request for '{client}: {user}@{backend}' get sessions returned with unexpected '{status_code}' status code.",
                             context: [
-                                'action' => $this->action,
-                                'client' => $context->clientName,
-                                'backend' => $context->backendName,
+                                ...$logContext,
                                 'status_code' => $response->getStatusCode(),
-                                'url' => (string)$url,
-                                'response' => $content,
+                                'response' => ['body' => $content],
                             ],
                             level: Levels::WARNING
                         )
@@ -83,13 +86,10 @@ class GetSessions
                     return new Response(
                         status: false,
                         error: new Error(
-                            message: 'Request for [{backend}] {action} returned with empty response. Please make sure the container can communicate with the backend.',
+                            message: "{action}: Request for '{client}: {user}@{backend}' get sessions returned with empty response.",
                             context: [
-                                'action' => $this->action,
-                                'client' => $context->clientName,
-                                'backend' => $context->backendName,
-                                'url' => (string)$url,
-                                'response' => $content,
+                                ...$logContext,
+                                'response' => ['status_code' => $response->getStatusCode(), 'body' => $content],
                             ],
                             level: Levels::ERROR
                         )
@@ -103,11 +103,9 @@ class GetSessions
                 );
 
                 if (true === $context->trace) {
-                    $this->logger->debug('Processing [{client}: {backend}] {action} payload.', [
-                        'action' => $this->action,
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
-                        'trace' => $items,
+                    $this->logger->debug("Processing '{client}: {user}@{backend}' {action} payload.", [
+                        ...$logContext,
+                        'response' => ['body' => $items],
                     ]);
                 }
 

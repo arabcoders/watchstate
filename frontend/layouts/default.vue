@@ -74,6 +74,13 @@
                 </span>
               </NuxtLink>
 
+              <NuxtLink class="navbar-item" to="/processes" @click.native="(e) => changeRoute(e)" v-if="hasAPISettings">
+                <span class="icon-text">
+                  <span class="icon"><i class="fas fa-microchip"/></span>
+                  <span>Processes</span>
+                </span>
+              </NuxtLink>
+
               <hr class="navbar-divider">
 
               <NuxtLink class="navbar-item" to="/parity" @click.native="(e) => changeRoute(e)">

@@ -10,6 +10,8 @@ use App\Backends\Common\Error;
 use App\Backends\Common\Levels;
 use App\Backends\Common\Response;
 use App\Libs\Container;
+use App\Libs\Enums\Http\Method;
+use App\Libs\Enums\Http\Status;
 use App\Libs\Options;
 use JsonException;
 use Psr\Log\LoggerInterface as iLogger;
@@ -75,11 +77,15 @@ class GetUsersList
 
         $url = $context->backendUrl->withPath('/Users/');
 
-        $this->logger->debug("Requesting '{client}: {backend}' users list.", [
+        $logContext = [
+            'action' => $this->action,
             'client' => $context->clientName,
             'backend' => $context->backendName,
+            'user' => $context->userContext->name,
             'url' => (string)$url,
-        ]);
+        ];
+
+        $this->logger->debug("{action}: Requesting '{client}: {user}@{backend}' users list.", $logContext);
 
         $headers = $context->backendHeaders;
 
@@ -91,15 +97,15 @@ class GetUsersList
             ];
         }
 
-        $response = $this->http->request('GET', (string)$url, $headers);
-        if (200 !== $response->getStatusCode()) {
+        $response = $this->http->request(Method::GET, (string)$url, $headers);
+
+        if (Status::OK !== Status::tryFrom($response->getStatusCode())) {
             return new Response(
                 status: false,
                 error: new Error(
-                    message: "Request for '{client}: {backend}' users list returned with unexpected '{status_code}' status code.",
+                    message: "{action}: Request for '{client}: {user}@{backend}' users list returned with unexpected '{status_code}' status code.",
                     context: [
-                        'client' => $context->clientName,
-                        'backend' => $context->backendName,
+                        ...$logContext,
                         'status_code' => $response->getStatusCode(),
                     ],
                     level: Levels::ERROR
@@ -114,10 +120,9 @@ class GetUsersList
         );
 
         if ($context->trace) {
-            $this->logger->debug('Parsing [{backend}] user list payload.', [
-                'backend' => $context->backendName,
-                'url' => (string)$url,
-                'trace' => $json,
+            $this->logger->debug("{action}: Parsing '{client}: {user}@{backend}' user list payload.", [
+                ...$logContext,
+                'response' => ['body' => $json],
             ]);
         }
 

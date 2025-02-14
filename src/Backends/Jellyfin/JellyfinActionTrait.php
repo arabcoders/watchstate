@@ -65,7 +65,9 @@ trait JellyfinActionTrait
         }
 
         $logContext = [
+            'client' => $context->clientName,
             'backend' => $context->backendName,
+            'user' => $context->userContext->name,
             'item' => [
                 'id' => (string)ag($item, 'Id'),
                 'type' => $type,

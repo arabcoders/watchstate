@@ -185,6 +185,25 @@ if (!function_exists('ag')) {
     }
 }
 
+if (!function_exists('ag_sets')) {
+    /**
+     * Set multiple key paths in an array using "dot" notation.
+     *
+     * @param array $array The array to set the values in.
+     * @param array $path The key paths to set the values at.
+     * @param string $separator The separator used in the key paths (default is '.').
+     *
+     * @return array The modified array.
+     */
+    function ag_sets(array $array, array $path, string $separator = '.'): array
+    {
+        foreach ($path as $key => $value) {
+            $array = ag_set($array, $key, $value, $separator);
+        }
+        return $array;
+    }
+}
+
 if (!function_exists('ag_set')) {
     /**
      * Set an array item to a given value using "dot" notation.
@@ -756,6 +775,49 @@ if (!function_exists('arrayToString')) {
         }
 
         return implode($separator, $list);
+    }
+}
+
+if (!function_exists('arrayToJson')) {
+    /**
+     * Convert an array to a JSON string in safe way.
+     *
+     * @param array $data array to convert.
+     * @param bool $direct whether to return the result directly or not.
+     *
+     * @return string|array The string representation of the array.
+     *
+     */
+    function arrayToJson(array $data, bool $direct = false): string|array
+    {
+        $list = [];
+        $safeClasses = [JsonSerializable::class, Stringable::class, DatetimeInterface::class];
+
+        foreach ($data as $key => $val) {
+            if (true === is_object($val) && !in_array($val::class, $safeClasses, true)) {
+                if (method_exists($val, '__toString')) {
+                    $val = (string)$val;
+                } else {
+                    $val = get_object_vars($val);
+                }
+            }
+
+            if (is_array($val)) {
+                $val = arrayToJson($val, direct: true);
+            } elseif (is_bool($val)) {
+                $val = true === $val ? 'true' : 'false';
+            } else {
+                $val = $val ?? 'None';
+            }
+
+            $list[$key] = $val;
+        }
+
+        if ($direct) {
+            return $list;
+        }
+
+        return json_encode($list, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE);
     }
 }
 
