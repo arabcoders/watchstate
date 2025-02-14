@@ -153,12 +153,13 @@ class Import
             $payload = $response->getContent(false);
 
             if ($context->trace) {
+                $json = json_decode($payload, true);
                 $this->logger->debug("{action}: Processing '{client}: {user}@{backend}' response.", [
                     ...$rContext,
                     'response' => [
                         'headers' => $response->getHeaders(false),
                         'status_code' => $response->getStatusCode(),
-                        'body' => $payload
+                        'body' => false === $json ? $payload : $json,
                     ],
                 ]);
             }
@@ -417,7 +418,7 @@ class Import
                             ...$logContext,
                             'response' => [
                                 'headers' => $response->getHeaders(),
-                                'body' => $response->getContent(false)
+                                'body' => false === $json ? $response->getContent(false) : $json,
                             ],
                         ]
                     );
@@ -1076,7 +1077,7 @@ class Import
                     message: "{action}: Ignoring '{client}: {user}@{backend}' - '{item.id}: {item.title}'. No date key '{date_key}' is set on object. '{response.body}'",
                     context: [
                         'date_key' => $dateKey,
-                        'response' => ['body' => arrayToString($item)],
+                        'response' => ['body' => $item],
                         ...$logContext,
                     ]
                 );

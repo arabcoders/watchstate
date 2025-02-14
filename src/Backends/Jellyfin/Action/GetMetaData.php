@@ -78,6 +78,7 @@ class GetMetaData
 
                 $logContext = [
                     'id' => $id,
+                    'action' => $this->action,
                     'client' => $context->clientName,
                     'backend' => $context->backendName,
                     'user' => $context->userContext->name,
