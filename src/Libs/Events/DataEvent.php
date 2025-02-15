@@ -29,6 +29,11 @@ class DataEvent extends Event
         $this->eventInfo->logs[] = $log;
     }
 
+    public function clearLogs(): void
+    {
+        $this->eventInfo->logs = [];
+    }
+
     public function getLogs(): array
     {
         return $this->eventInfo->logs;
