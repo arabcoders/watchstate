@@ -10,6 +10,7 @@ use App\Libs\Config;
 use App\Libs\Container;
 use App\Libs\Events\DataEvent;
 use App\Libs\Extends\ConsoleOutput;
+use App\Libs\LogSuppressor;
 use App\Libs\Stream;
 use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
@@ -23,6 +24,7 @@ use Symfony\Component\Console\Input\InputInterface as iInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Symfony\Component\Process\Exception\ExceptionInterface as ProcessException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -42,11 +44,18 @@ final class TasksCommand extends Command
 
     private Closure|null $writer = null;
 
+    private Closure|null $clear = null;
+    private Closure|null $save = null;
+    private int $sleep = 1000;
+    private bool $needToSave = false;
+
     /**
      * Class Constructor.
      */
-    public function __construct(private EventsRepository $eventsRepo)
-    {
+    public function __construct(
+        private readonly EventsRepository $eventsRepo,
+        private readonly LogSuppressor $suppressor,
+    ) {
         set_time_limit(0);
         ini_set('memory_limit', '-1');
 
@@ -199,6 +208,10 @@ final class TasksCommand extends Command
             $input->setOption('save-log', true);
             $input->setOption('live', false);
 
+            $this->clear = fn() => $event->clearLogs();
+
+            $this->save = fn() => $this->eventsRepo->save($event->getEvent());
+
             $this->writer = function ($msg) use (&$event) {
                 static $lastSave = null;
 
@@ -211,8 +224,11 @@ final class TasksCommand extends Command
                 $event->addLog($msg);
 
                 if ($timeNow >= $lastSave) {
-                    $this->eventsRepo->save($event->getEvent());
-                    $lastSave = $timeNow + 5;
+                    ($this->save)();
+                    $lastSave = $timeNow + 3;
+                    $this->needToSave = false;
+                } else {
+                    $this->needToSave = true;
                 }
             };
 
@@ -223,7 +239,9 @@ final class TasksCommand extends Command
                 'code' => $exitCode,
             ]));
         } finally {
-            $this->writer = null;
+            $this->needToSave = false;
+            $this->writer = $this->clear = null;
+            $this->sleep = 1000;
         }
 
         return $event;
@@ -315,48 +333,79 @@ final class TasksCommand extends Command
 
         $process->start(function ($std, $out) use ($input, $output) {
             assert($output instanceof ConsoleOutputInterface);
+            $out = trim((string)$out);
 
             if (empty($out)) {
                 return;
             }
 
-            $this->taskOutput[] = trim($out);
+            $this->taskOutput[] = $out;
+
+            if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
+                try {
+                    ($this->writer)($out);
+                } catch (Throwable) {
+                    // Do nothing
+                }
+            }
 
             if (!$input->hasOption('live') && $input->getOption('live')) {
                 return;
             }
 
-            ('err' === $std ? $output->getErrorOutput() : $output)->writeln(trim($out));
+            ('err' === $std ? $output->getErrorOutput() : $output)->writeln($out);
         });
 
         if ($process->isRunning()) {
-            $process->wait();
+            if (null === $this->save) {
+                $process->wait();
+            } else {
+                while ($process->isRunning()) {
+                    try {
+                        if (true === $this->needToSave) {
+                            $this->needToSave = false;
+                            ($this->save)();
+                        }
+                        $process->checkTimeout();
+                        usleep($this->sleep);
+                    } catch (ProcessException $e) {
+                        $process->stop();
+                        $this->write(r('Task: {name} (Failed). ({type}: {message}', [
+                            'name' => $task['name'],
+                            'startDate' => $started,
+                            'type' => $e::class,
+                            'message' => $e->getMessage(),
+                        ]), $input, $output);
+                        break;
+                    }
+                }
+            }
         }
 
         if (count($this->taskOutput) < 1) {
-            return $process->getExitCode();
+            return $process->getExitCode() ?? self::INVALID;
         }
 
         $ended = makeDate()->format('D, H:i:s T');
 
+        if (null !== $this->clear) {
+            try {
+                ($this->clear)();
+            } catch (Throwable) {
+                // Do nothing
+            }
+        }
+
         $this->write('--------------------------', $input, $output);
-        $this->write(
-            r('Task: {name} (Started: {startDate})', [
-                'name' => $task['name'],
-                'startDate' => $started,
-            ]),
-            $input,
-            $output
-        );
+        $this->write(r('Task: {name} (Started: {startDate})', [
+            'name' => $task['name'],
+            'startDate' => $started,
+        ]), $input, $output);
         $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(
-            r('Exit Code: {code} (Ended: {endDate})', [
-                'code' => $process->getExitCode(),
-                'endDate' => $ended,
-            ]),
-            $input,
-            $output
-        );
+        $this->write(r('Exit Code: {code} (Ended: {endDate})', [
+            'code' => $process->getExitCode() ?? self::INVALID,
+            'endDate' => $ended,
+        ]), $input, $output);
         $this->write('--------------------------', $input, $output);
         $this->write(' ' . PHP_EOL, $input, $output);
 
@@ -366,7 +415,7 @@ final class TasksCommand extends Command
 
         $this->taskOutput = [];
 
-        return $process->getExitCode();
+        return $process->getExitCode() ?? self::INVALID;
     }
 
     /**
