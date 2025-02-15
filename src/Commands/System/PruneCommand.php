@@ -113,9 +113,9 @@ final class PruneCommand extends Command
                 'base' => Config::get('path'),
                 'filter' => '/\.json$|\.json.zip$/',
                 'validate' => fn(SplFileInfo $f): bool => 1 === @preg_match(
-                    '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
-                    $f->getBasename()
-                ),
+                        '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
+                        $f->getBasename()
+                    ),
                 'time' => strtotime('-90 DAYS', $time)
             ],
         ];
@@ -147,7 +147,6 @@ final class PruneCommand extends Command
 
             $validate = ag($item, 'validate', null);
 
-
             foreach (new DirectoryIterator($path) as $file) {
                 if ($file->isDot() || $file->isDir() || false === $file->isFile() || $file->isLink()) {
                     continue;
@@ -156,7 +155,6 @@ final class PruneCommand extends Command
                 $file = new SplFileInfo($file->getRealPath());
 
                 $fileName = $file->getBasename();
-
 
                 if (null !== $filter && false === @preg_match($filter, $fileName)) {
                     $this->logger->debug("{name}: File '{file}' did not pass filter checks.", [
@@ -189,7 +187,7 @@ final class PruneCommand extends Command
                 ]);
 
                 if (false === $inDryRunMode) {
-                    #unlink($file->getRealPath());
+                    unlink($file->getRealPath());
                 }
             }
         }
@@ -207,9 +205,7 @@ final class PruneCommand extends Command
                 WHERE
                 " . EventsTable::COLUMN_CREATED_AT . " < datetime(:before)
         ";
-        $stmt = $this->db->query($sql, [
-            'before' => $before->format('Y-m-d'),
-        ]);
+        $stmt = $this->db->query($sql, ['before' => $before->format('Y-m-d')]);
 
         $count = $stmt->rowCount();
         if ($count > 1) {
