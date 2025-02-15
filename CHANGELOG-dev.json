@@ -1,7 +1,37 @@
 [
     {
-        "tag": "dev-20250214-7f61ac9",
-        "date": "2025-02-14T20:16:11+00:00",
+        "tag": "dev-20250215-15bea97",
+        "date": "2025-02-15T09:23:25+00:00",
+        "commits": [
+            {
+                "sha": "15bea97",
+                "message": "updated frontend packages",
+                "author": "ArabCoders",
+                "date": "2025-02-15T09:23:25+00:00"
+            },
+            {
+                "sha": "bbdc512",
+                "message": "Forgot to turn on the prune file deletion.",
+                "author": "ArabCoders",
+                "date": "2025-02-15T09:21:55+00:00"
+            },
+            {
+                "sha": "8c955db",
+                "message": "imporved the logging process for tasks run via events to give more realtime updates",
+                "author": "ArabCoders",
+                "date": "2025-02-15T09:21:27+00:00"
+            },
+            {
+                "sha": "1d294cb",
+                "message": "added a way to clear event logs",
+                "author": "ArabCoders",
+                "date": "2025-02-15T09:21:05+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250214-d918756",
+        "date": "2025-02-14T20:40:40+00:00",
         "commits": [
             {
                 "sha": "7f61ac9",
