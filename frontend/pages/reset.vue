@@ -33,16 +33,15 @@
           <Message message_class="is-background-warning-80 has-text-dark" title="Important information"
                    icon="fas fa-exclamation-triangle">
             <p>
-              Are you sure you want to reset the system state? This operation will remove all records and metadata from
-              the database. This action is irreversible.
+              Are you sure you want to reset <span class="has-text-danger is-bold is-underlined">{{ api_user }}</span> user local state?
             </p>
 
-            <h5 class="has-text-dark">This operation will do the following</h5>
+            <h5 class="has-text-dark">This operation will do the following:</h5>
 
             <ul>
-              <li>Remove all data from local database.</li>
-              <li>Attempt to flush the cache.</li>
-              <li>Reset the backends last sync date.</li>
+              <li>Remove all data from user local database.</li>
+              <li>Attempt to flush the cache related to user.</li>
+              <li>Reset the user backends last sync date.</li>
             </ul>
 
             <p>There is no undo operation. This action is irreversible.</p>
@@ -51,7 +50,7 @@
 
         <div class="column is-12">
           <Confirm @confirmed="resetSystem()"
-                   title="Perform system reset"
+                   :title="`Perform local state reset for: ${api_user}`"
                    title-icon="fa-redo"
                    warning="Depending on your hardware speed, the reset operation might take long time. do not interrupt the process, or close the browser tab. You will be redirected to the index page automatically once the process is complete. Otherwise, you might end up with a corrupted database and/or state."
           />
@@ -62,6 +61,7 @@
 </template>
 
 <script setup>
+import {useStorage} from '@vueuse/core'
 import 'assets/css/bulma-switch.css'
 import request from '~/utils/request'
 import Message from '~/components/Message'
@@ -71,6 +71,7 @@ import {useSessionCache} from '~/utils/cache'
 
 const error = ref()
 const isResetting = ref(false)
+const api_user = useStorage('api_user', 'main')
 
 const resetSystem = async () => {
   if (!confirm('Last chance! Are you sure you want to reset the system state?')) {
