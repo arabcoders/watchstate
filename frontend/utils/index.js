@@ -1,3 +1,5 @@
+import {useStorage} from '@vueuse/core'
+
 const toast = useToast()
 
 const AG_SEPARATOR = '.'
@@ -251,7 +253,7 @@ const makeGUIDLink = (type, source, guid, data) => {
 
     const link = ag(guid_links, `${type}.${source}`, null)
 
-    return null == link ? '' : r(link, {_guid: guid, ...toRaw(data)})
+    return null == link ? '' : r(link, { _guid: guid, ...toRaw(data) })
 }
 
 /**
@@ -337,7 +339,7 @@ const makeSearchLink = (type, query) => {
  * @param detail
  * @returns {boolean}
  */
-const dEvent = (eventName, detail = {}) => window.dispatchEvent(new CustomEvent(eventName, {detail}))
+const dEvent = (eventName, detail = {}) => window.dispatchEvent(new CustomEvent(eventName, { detail }))
 
 /**
  * Make name
@@ -356,7 +358,7 @@ const makeName = (item, asMovie = false) => {
     const type = ag(item, 'type', 'movie');
 
     if (['show', 'movie'].includes(type) || asMovie) {
-        return r('{title} ({year})', {title, year})
+        return r('{title} ({year})', { title, year })
     }
 
     return r('{title} ({year}) - {season}x{episode}', {
@@ -468,8 +470,27 @@ const parse_api_response = async r => {
     try {
         return await r.json()
     } catch (e) {
-        return {error: {code: r.status, message: r.statusText}}
+        return { error: { code: r.status, message: r.statusText } }
     }
+}
+
+const goto_history_item = async item => {
+    if (!item.item_id) {
+        return
+    }
+
+    const api_user = useStorage('api_user', 'main')
+
+    const log_user = item?.user ?? api_user.value
+
+    if (log_user !== api_user.value) {
+        if (false === confirm(`This item is related to '${item.user}' user. And you are currently using '${api_user.value}' Do you want to switch to view the item?`)) {
+            return
+        }
+        api_user.value = log_user
+    }
+
+    await navigateTo(`/history/${item.item_id}`)
 }
 
 export {
@@ -494,4 +515,5 @@ export {
     explode,
     basename,
     parse_api_response,
+    goto_history_item
 }
