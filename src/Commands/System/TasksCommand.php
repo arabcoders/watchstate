@@ -414,7 +414,7 @@ final class TasksCommand extends Command
                     'duration' => $ended->getTimestamp() - $started->getTimestamp(),
                 ]);
                 $event->logs[] = '--------------------------';
-                $event->logs = $event->logs + $this->taskOutput;
+                $event->logs = $event->logs + array_slice($this->taskOutput, -200);
                 if (count($this->taskOutput) < 1) {
                     if (0 === $process->getExitCode()) {
                         $event->logs[] = 'Task completed successfully. And did not produce any output.';
