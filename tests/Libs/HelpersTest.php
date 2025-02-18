@@ -1239,7 +1239,7 @@ class HelpersTest extends TestCase
             $response->getHeaderLine('Access-Control-Allow-Methods')
         );
         $this->assertSame(
-            'X-Application-Version, X-Request-Id, *',
+            'X-Application-Version, X-Request-Id, Authorization, *',
             $response->getHeaderLine('Access-Control-Allow-Headers')
         );
         $this->assertGreaterThanOrEqual(600, (int)$response->getHeaderLine('Access-Control-Max-Age'));
