@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Commands\System;
 
 use App\Command;
+use App\Libs\Attributes\DI\Inject;
 use App\Libs\Attributes\Route\Cli;
 use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Mappers\Import\DirectMapper;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Options;
-use Symfony\Component\Console\Input\InputInterface;
+use App\Libs\UserContext;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\InputInterface as iInput;
+use Symfony\Component\Console\Output\OutputInterface as iOutput;
+use Psr\Log\LoggerInterface as iLogger;
 
 /**
  * Class IndexCommand
@@ -29,8 +34,11 @@ final class IndexCommand extends Command
      *
      * @param iDB $db An instance of the iDB class.
      */
-    public function __construct(private iDB $db)
-    {
+    public function __construct(
+        #[Inject(DirectMapper::class)]
+        private readonly iImport $mapper,
+        private readonly iLogger $logger,
+    ) {
         parent::__construct();
     }
 
@@ -74,20 +82,29 @@ final class IndexCommand extends Command
     /**
      * Run a command.
      *
-     * @param InputInterface $input An instance of the InputInterface interface.
-     * @param OutputInterface $output An instance of the OutputInterface interface.
+     * @param iInput $input An instance of the InputInterface interface.
+     * @param iOutput $output An instance of the OutputInterface interface.
      *
      * @return int The status code indicating the success or failure of the command execution.
      */
-    protected function runCommand(InputInterface $input, OutputInterface $output): int
+    protected function runCommand(iInput $input, iOutput $output): int
     {
-        $this->db->ensureIndex([
-            Options::DRY_RUN => (bool)$input->getOption('dry-run'),
-            'force-reindex' => (bool)$input->getOption('force-reindex'),
-        ]);
+        foreach (getUsersContext(mapper:$this->mapper, logger: $this->logger) as $userContext) {
+            $output->writeln(r("Ensuring user '{user}' database has correct indexes.", [
+                'user' => $userContext->name
+            ]), iOutput::VERBOSITY_VERBOSE);
 
-        if ($input->getOption('force-reindex')) {
-            $output->writeln('<info>Indexes have been recreated successfully.</info>');
+            $userContext->db->ensureIndex([
+                UserContext::class => $userContext,
+                Options::DRY_RUN => (bool)$input->getOption('dry-run'),
+                'force-reindex' => (bool)$input->getOption('force-reindex'),
+            ]);
+
+            if ($input->getOption('force-reindex')) {
+                $output->writeln(r("User '{user}' Database Indexes have been recreated successfully.", [
+                    'user' => $userContext->name
+                ]));
+            }
         }
 
         return self::SUCCESS;

@@ -9,6 +9,7 @@ use App\Libs\Database\DBLayer;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use App\Libs\Options;
+use App\Libs\UserContext;
 use Psr\Log\LoggerInterface as iLogger;
 
 /**
@@ -28,6 +29,7 @@ final class PDOIndexer
         iState::COLUMN_EXTRA,
         iState::COLUMN_META_DATA,
     ];
+
     /**
      * @var array<string> Extra indexes for backend sub columns.
      */
@@ -75,15 +77,11 @@ final class PDOIndexer
                 $name = ag($row, 'name');
                 $query = r(
                     text: $drop,
-                    context: [
-                        'name' => $name
-                    ],
-                    opts: [
-                        'tag_left' => '${',
-                        'tag_right' => '}'
-                    ]
+                    context: [ 'name' => $name ],
+                    opts: ['tag_left' => '${','tag_right' => '}']
                 );
-                $this->logger->debug('PDOIndexer: Dropping Index [{index}].', [
+
+                $this->logger->info("PDOIndexer: Dropping Index '{index}'.", [
                     'index' => $name,
                     'query' => $query,
                 ]);
@@ -109,7 +107,7 @@ final class PDOIndexer
                 ]
             );
 
-            $this->logger->debug('PDOIndexer: Generating index on [{column}].', [
+            $this->logger->info("PDOIndexer: Generating index on '{column}'.", [
                 'column' => $column,
                 'query' => $query,
             ]);
@@ -129,7 +127,7 @@ final class PDOIndexer
                     opts: ['tag_left' => '${', 'tag_right' => '}']
                 );
 
-                $this->logger->debug('PDOIndexer: Generating index on {column} column [{key}] key.', [
+                $this->logger->debug("PDOIndexer: Generating index on '{column}' column '{key}' key.", [
                     'column' => $column,
                     'key' => $subKey,
                     'query' => $query,
@@ -139,8 +137,16 @@ final class PDOIndexer
             }
         }
 
+        if (null !== ($userContext = $opts[UserContext::class] ?? null)) {
+            assert($userContext instanceof UserContext);
+            $servers = $userContext->config->getAll();
+        } else {
+            $servers = Config::get('servers', []);
+        }
+
+
         // -- Ensure backends metadata.id,metadata.show are indexed
-        foreach (array_keys(Config::get('servers', [])) as $backend) {
+        foreach (array_keys($servers) as $backend) {
             foreach (self::BACKEND_INDEXES as $subKey) {
                 $query = r(
                     text: $insert,
@@ -151,7 +157,7 @@ final class PDOIndexer
                     opts: ['tag_left' => '${', 'tag_right' => '}']
                 );
 
-                $this->logger->debug('PDOIndexer: Generating index on [{backend}] metadata column [{key}] key.', [
+                $this->logger->info("PDOIndexer: Generating index on '{backend}' metadata column '{key}' key.", [
                     'backend' => $backend,
                     'key' => $subKey,
                     'query' => $query,
@@ -173,7 +179,7 @@ final class PDOIndexer
         }
 
         foreach ($queries as $query) {
-            $this->logger->debug('PDOIndexer: Running query.', [
+            $this->logger->debug("PDOIndexer: Running SQL query '{query}'.", [
                 'query' => $query,
                 'start' => makeDate(),
             ]);
