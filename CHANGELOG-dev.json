@@ -1,7 +1,19 @@
 [
     {
-        "tag": "dev-20250218-8b044bb",
-        "date": "2025-02-18T10:34:06+00:00",
+        "tag": "dev-20250218-e1a4e50",
+        "date": "2025-02-18T10:49:42+00:00",
+        "commits": [
+            {
+                "sha": "e1a4e50",
+                "message": "limit task event log to 200 lines",
+                "author": "ArabCoders",
+                "date": "2025-02-18T10:49:42+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250218-e8e2dbe",
+        "date": "2025-02-18T10:45:59+00:00",
         "commits": [
             {
                 "sha": "8b044bb",
