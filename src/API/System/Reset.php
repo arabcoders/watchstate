@@ -5,41 +5,55 @@ declare(strict_types=1);
 namespace App\API\System;
 
 use App\Libs\Attributes\Route\Delete;
-use App\Libs\Config;
-use App\Libs\ConfigFile;
-use App\Libs\Database\DatabaseInterface as iDB;
+use App\Libs\Exceptions\RuntimeException;
 use App\Libs\Enums\Http\Status;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
 use Redis;
 use RedisException;
+use App\Libs\Mappers\ImportInterface as iImport;
+use App\Libs\Traits\APITraits;
+use Psr\Log\LoggerInterface as iLogger;
 
 final class Reset
 {
+    use APITraits;
+
     public const string URL = '%{api.prefix}/system/reset';
 
-    public function __construct(private Redis $redis, private iDB $db)
-    {
-    }
-
     #[Delete(self::URL . '[/]', name: 'system.reset')]
-    public function __invoke(iRequest $request, array $args = []): iResponse
+    public function __invoke(iRequest $request, Redis $redis, iImport $mapper, iLogger $logger): iResponse
     {
-        $this->db->reset();
+        try {
+            $userContext = $this->getUserContext($request, $mapper, $logger);
+            $user = $userContext->name;
+        } catch (RuntimeException $e) {
+            return api_error($e->getMessage(), Status::NOT_FOUND);
+        }
 
         try {
-            $this->redis->flushDB();
+            $ns = getAppVersion();
+
+            if (true === isValidName($user)) {
+                $ns .= isValidName($user) ? '.' . $user : '.' . md5($user);
+            }
+
+            $keys = $redis->keys("{$ns}*");
+
+            if ($keys && is_array($keys)) {
+                $redis->del($keys);
+            }
         } catch (RedisException) {
         }
 
-        $list = ConfigFile::open(Config::get('backends_file'), 'yaml', autoCreate: true);
+        $userContext->db->reset();
 
-        foreach ($list->getAll() as $name => $backend) {
-            $list->set("{$name}.import.lastSync", null);
-            $list->set("{$name}.export.lastSync", null);
+        foreach (array_keys($userContext->config->getAll()) as $name) {
+            $userContext->config->set("{$name}.import.lastSync", null);
+            $userContext->config->set("{$name}.export.lastSync", null);
         }
 
-        $list->persist();
+        $userContext->config->persist();
 
         return api_response(Status::OK, ['message' => 'System reset.']);
     }

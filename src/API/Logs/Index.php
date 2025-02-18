@@ -9,18 +9,23 @@ use App\Libs\Attributes\Route\Route;
 use App\Libs\Config;
 use App\Libs\DataUtil;
 use App\Libs\Enums\Http\Status;
+use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Stream;
 use App\Libs\StreamedBody;
+use App\Libs\Traits\APITraits;
 use finfo;
 use LimitIterator;
 use Psr\Http\Message\ResponseInterface as iResponse;
 use Psr\Http\Message\ServerRequestInterface as iRequest;
+use Psr\Log\LoggerInterface as iLogger;
 use SplFileObject;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 final class Index
 {
+    use APITraits;
+
     public const string URL = '%{api.prefix}/logs';
     public const string URL_FILE = '%{api.prefix}/log';
     private const int DEFAULT_LIMIT = 1000;
@@ -56,8 +61,10 @@ final class Index
     }
 
     #[Get(Index::URL . '/recent[/]', name: 'logs.recent')]
-    public function recent(iRequest $request): iResponse
+    public function recent(iRequest $request, iImport $mapper, iLogger $logger): iResponse
     {
+        $users = array_keys(getUsersContext(mapper: $mapper, logger: $logger));
+
         $path = fixPath(Config::get('tmpDir') . '/logs');
 
         $list = [];
@@ -67,7 +74,9 @@ final class Index
         $params = DataUtil::fromArray($request->getQueryParams());
         $limit = (int)$params->get('limit', 50);
         $limit = $limit < 1 ? 50 : $limit;
-        $regex = "/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:[+-][0-9]{2}:[0-9]{2}))\]/i";
+        $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
+        $identRegex = "/\'(?P<user>\w+)\@(?P<backend>\w+)\'/i";
+        $idRegex = "/\'#(?P<id>\d+)\:/";
 
         foreach (glob($path . '/*.*.log') as $file) {
             preg_match('/(\w+)\.(\w+)\.log/i', basename($file), $matches);
@@ -99,11 +108,28 @@ final class Index
                         continue;
                     }
 
-                    $match = preg_match($regex, $line, $matches);
-                    $builder['lines'][] = [
+                    $match = preg_match($dateRegex, $line, $matches);
+                    $idMatch = preg_match($idRegex, $line, $idMatches);
+                    $identMatch = preg_match($identRegex, $line, $identMatches);
+
+                    $logLine = [
+                        'id' => null,
+                        'user' => null,
+                        'backend' => null,
                         'date' => 1 === $match ? $matches[1] : null,
-                        'text' => 1 === $match ? trim(preg_replace($regex, '', $line)) : $line,
+                        'text' => 1 === $match ? trim(preg_replace($dateRegex, '', $line)) : $line,
                     ];
+
+                    if (1 === $idMatch) {
+                        $logLine['id'] = $idMatches['id'];
+                    }
+
+                    if (1 === $identMatch && in_array($identMatches['user'], $users, true)) {
+                        $logLine['user'] = $identMatches['user'];
+                        $logLine['backend'] = $identMatches['backend'];
+                    }
+
+                    $builder['lines'][] = $logLine;
                 }
             }
 

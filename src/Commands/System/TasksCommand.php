@@ -14,6 +14,7 @@ use App\Libs\LogSuppressor;
 use App\Libs\Stream;
 use App\Model\Events\EventListener;
 use App\Model\Events\EventsRepository;
+use App\Model\Events\EventStatus;
 use Closure;
 use Cron\CronExpression;
 use Exception;
@@ -43,11 +44,11 @@ final class TasksCommand extends Command
     private array $taskOutput = [];
 
     private Closure|null $writer = null;
-
     private Closure|null $clear = null;
     private Closure|null $save = null;
     private int $sleep = 1000;
     private bool $needToSave = false;
+    private bool $viaEvent = false;
 
     /**
      * Class Constructor.
@@ -202,6 +203,8 @@ final class TasksCommand extends Command
         }
 
         try {
+            $this->viaEvent = true;
+
             $input = new ArrayInput([], $this->getDefinition());
             $input->setOption('run', null);
             $input->setOption('task', null);
@@ -242,6 +245,7 @@ final class TasksCommand extends Command
             $this->needToSave = false;
             $this->writer = $this->clear = null;
             $this->sleep = 1000;
+            $this->viaEvent = false;
         }
 
         return $event;
@@ -329,7 +333,7 @@ final class TasksCommand extends Command
 
         $process = Process::fromShellCommandline(implode(' ', $cmd), timeout: null);
 
-        $started = makeDate()->format('D, H:i:s T');
+        $started = makeDate();
 
         $process->start(function ($std, $out) use ($input, $output) {
             assert($output instanceof ConsoleOutputInterface);
@@ -339,7 +343,13 @@ final class TasksCommand extends Command
                 return;
             }
 
-            $this->taskOutput[] = $out;
+            foreach (explode(PHP_EOL, $out) as $line) {
+                if (empty($line)) {
+                    continue;
+                }
+
+                $this->taskOutput[] = $line;
+            }
 
             if (null !== $this->writer && false === $this->suppressor->isSuppressed($out)) {
                 try {
@@ -372,7 +382,7 @@ final class TasksCommand extends Command
                         $process->stop();
                         $this->write(r('Task: {name} (Failed). ({type}: {message}', [
                             'name' => $task['name'],
-                            'startDate' => $started,
+                            'startDate' => $started->format('D, H:i:s T'),
                             'type' => $e::class,
                             'message' => $e->getMessage(),
                         ]), $input, $output);
@@ -382,11 +392,43 @@ final class TasksCommand extends Command
             }
         }
 
+        $ended = makeDate();
+
+        if (false === $this->viaEvent) {
+            $event = $this->eventsRepo->getObject([]);
+            $event->status = 0 === $process->getExitCode() ? EventStatus::SUCCESS : EventStatus::FAILED;
+            $event->event = self::NAME . '.' . $task['name'];
+            $event->created_at = $started;
+            $event->updated_at = $ended;
+            if ($task['name'] !== 'dispatch' || count($this->taskOutput) > 0) {
+                $event->logs[] = '--------------------------';
+                $event->logs[] = r('Task: {name} (Started: {startDate})', [
+                    'name' => $task['name'],
+                    'startDate' => $started->format('D, H:i:s T'),
+                ]);
+                $event->logs[] = r('Command: {cmd}', ['cmd' => $process->getCommandLine()]);
+                $event->logs[] = r('Exit Code: {code}:{Status} (Ended: {endDate}) - Took {duration}s', [
+                    'Status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+                    'code' => $process->getExitCode() ?? self::INVALID,
+                    'endDate' => $ended->format('D, H:i:s T'),
+                    'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+                ]);
+                $event->logs[] = '--------------------------';
+                $event->logs = $event->logs + $this->taskOutput;
+                if (count($this->taskOutput) < 1) {
+                    if (0 === $process->getExitCode()) {
+                        $event->logs[] = 'Task completed successfully. And did not produce any output.';
+                    } else {
+                        $event->logs[] = 'Task failed to complete. And did not produce any output.';
+                    }
+                }
+                $this->eventsRepo->save($event);
+            }
+        }
+
         if (count($this->taskOutput) < 1) {
             return $process->getExitCode() ?? self::INVALID;
         }
-
-        $ended = makeDate()->format('D, H:i:s T');
 
         if (null !== $this->clear) {
             try {
@@ -399,12 +441,14 @@ final class TasksCommand extends Command
         $this->write('--------------------------', $input, $output);
         $this->write(r('Task: {name} (Started: {startDate})', [
             'name' => $task['name'],
-            'startDate' => $started,
+            'startDate' => $started->format('D, H:i:s T'),
         ]), $input, $output);
         $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(r('Exit Code: {code} (Ended: {endDate})', [
+        $this->write(r('Exit Code: {code}:{Status} (Ended: {endDate}) - Took {duration}s', [
+            'Status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
             'code' => $process->getExitCode() ?? self::INVALID,
-            'endDate' => $ended,
+            'endDate' => $ended->format('D, H:i:s T'),
+            'duration' => $ended->getTimestamp() - $started->getTimestamp(),
         ]), $input, $output);
         $this->write('--------------------------', $input, $output);
         $this->write(' ' . PHP_EOL, $input, $output);
@@ -435,12 +479,14 @@ final class TasksCommand extends Command
         assert($output instanceof ConsoleOutput);
         $output->writeln($text, $level);
 
+        $message = $output->getLastMessage();
+
         if (null !== $this->writer) {
-            ($this->writer)($output->getLastMessage());
+            ($this->writer)($message);
         }
 
         if ($input->hasOption('save-log') && $input->getOption('save-log')) {
-            $this->logs[] = $output->getLastMessage();
+            $this->logs[] = $message;
         }
     }
 

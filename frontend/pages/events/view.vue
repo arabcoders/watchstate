@@ -9,6 +9,16 @@
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
+            <div class="control has-icons-left" v-if="toggleFilter">
+              <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
+              <span class="icon is-left"><i class="fas fa-filter"></i></span>
+            </div>
+
+            <div class="control">
+              <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
+                <span class="icon"><i class="fas fa-filter"></i></span>
+              </button>
+            </div>
 
             <p class="control">
               <button class="button is-warning" @click="resetEvent(0 === item.status ? 4 : 0)"
@@ -52,13 +62,13 @@
             </template>
             was created
             <span class="tag is-warning">
-              <time class="has-tooltip" v-tooltip="moment(item.created_at).format(tooltip_dateformat)">
+              <time class="has-tooltip" v-tooltip="moment(item.created_at).format(TOOLTIP_DATE_FORMAT)">
                 {{ moment(item.created_at).fromNow() }}
               </time>
             </span>, and last updated
             <span class="tag is-danger">
               <span v-if="!item.updated_at">not started</span>
-              <time v-else class="has-tooltip" v-tooltip="moment(item.updated_at).format(tooltip_dateformat)">
+              <time v-else class="has-tooltip" v-tooltip="moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)">
                 {{ moment(item.updated_at).fromNow() }}
               </time>
             </span>,
@@ -90,7 +100,7 @@
         </h2>
         <pre class="p-0 is-pre-wrap" v-if="toggleLogs"><code
             style="word-break: break-word" class="language-json">{{
-            JSON.stringify(item.logs, null, 2)
+            JSON.stringify(filteredRows, null, 2)
           }}</code></pre>
       </div>
       <div class="column is-12" v-if="item.options">
@@ -110,7 +120,7 @@
 </template>
 
 <script setup>
-import {notification, parse_api_response} from '~/utils/index'
+import {notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import request from '~/utils/request'
 import moment from 'moment'
 import {getStatusClass, makeName} from '~/utils/events/helpers'
@@ -120,12 +130,27 @@ const route = useRoute()
 
 const id = ref(route.query.id)
 
-const isLoading = ref(true)
+const query = ref()
 const item = ref({})
+const isLoading = ref(true)
+const toggleFilter = ref(false)
 
 const toggleLogs = useStorage('events_toggle_logs', true)
 const toggleData = useStorage('events_toggle_data', true)
 const toggleOptions = useStorage('events_toggle_options', true)
+
+watch(toggleFilter, () => {
+  if (!toggleFilter.value) {
+    query.value = ''
+  }
+});
+
+const filteredRows = computed(() => {
+  if (!query.value) {
+    return item.value.logs ?? []
+  }
+  return item.value.logs.filter(m => m.toLowerCase().includes(query.value.toLowerCase()));
+});
 
 onMounted(async () => {
   if (!id.value) {
