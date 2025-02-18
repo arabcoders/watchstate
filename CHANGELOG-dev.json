@@ -1,7 +1,43 @@
 [
     {
-        "tag": "dev-20250215-15bea97",
-        "date": "2025-02-15T09:23:25+00:00",
+        "tag": "dev-20250218-8b044bb",
+        "date": "2025-02-18T10:34:06+00:00",
+        "commits": [
+            {
+                "sha": "8b044bb",
+                "message": "Log an event when task is run",
+                "author": "ArabCoders",
+                "date": "2025-02-18T10:34:06+00:00"
+            },
+            {
+                "sha": "7b2d1b1",
+                "message": "Added task logs filter",
+                "author": "ArabCoders",
+                "date": "2025-02-18T10:33:53+00:00"
+            },
+            {
+                "sha": "0102b1c",
+                "message": "parse some data from logs to make it easier to navigate to effected item",
+                "author": "ArabCoders",
+                "date": "2025-02-18T09:58:18+00:00"
+            },
+            {
+                "sha": "35e35aa",
+                "message": "updated mappers to report record if when possible",
+                "author": "ArabCoders",
+                "date": "2025-02-17T17:01:57+00:00"
+            },
+            {
+                "sha": "d4328e0",
+                "message": "Made system/reset API  endpoint sub-user aware.",
+                "author": "ArabCoders",
+                "date": "2025-02-17T17:01:41+00:00"
+            }
+        ]
+    },
+    {
+        "tag": "dev-20250215-638a359",
+        "date": "2025-02-15T10:49:33+00:00",
         "commits": [
             {
                 "sha": "15bea97",
