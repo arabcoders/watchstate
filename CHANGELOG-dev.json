@@ -1,8 +1,26 @@
 [
     {
-        "tag": "dev-20250218-e1a4e50",
-        "date": "2025-02-18T10:49:42+00:00",
+        "tag": "dev-20250218-fdd1cf1",
+        "date": "2025-02-18T16:16:53+00:00",
         "commits": [
+            {
+                "sha": "fdd1cf1",
+                "message": "updated testcase to include missing header.",
+                "author": "ArabCoders",
+                "date": "2025-02-18T16:16:53+00:00"
+            },
+            {
+                "sha": "50ebcb2",
+                "message": "Update database maintenance tasks to include sub-users dbs",
+                "author": "ArabCoders",
+                "date": "2025-02-18T16:08:04+00:00"
+            },
+            {
+                "sha": "90e73bc",
+                "message": "use jsonl for logs to allow us better control on lines display.",
+                "author": "ArabCoders",
+                "date": "2025-02-18T14:13:03+00:00"
+            },
             {
                 "sha": "e1a4e50",
                 "message": "limit task event log to 200 lines",
