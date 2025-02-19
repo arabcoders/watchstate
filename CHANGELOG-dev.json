@@ -1,8 +1,26 @@
 [
     {
-        "tag": "dev-20250218-fdd1cf1",
-        "date": "2025-02-18T16:16:53+00:00",
+        "tag": "dev-20250219-48e5e4d",
+        "date": "2025-02-19T10:06:36+00:00",
         "commits": [
+            {
+                "sha": "48e5e4d",
+                "message": "experimental support for syncing watch progress for played items. #617",
+                "author": "ArabCoders",
+                "date": "2025-02-19T10:06:36+00:00"
+            },
+            {
+                "sha": "2f287ae",
+                "message": "Added the ability to remove all events that are not in pending state",
+                "author": "ArabCoders",
+                "date": "2025-02-19T10:05:37+00:00"
+            },
+            {
+                "sha": "cd8a2fd",
+                "message": "Update log formatter to account for different user@backend format",
+                "author": "ArabCoders",
+                "date": "2025-02-19T10:04:59+00:00"
+            },
             {
                 "sha": "fdd1cf1",
                 "message": "updated testcase to include missing header.",
