@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250219-6926a38",
-        "date": "2025-02-19T18:31:28+00:00",
+        "tag": "dev-20250219-90ab9e2",
+        "date": "2025-02-19T19:16:38+00:00",
         "commits": [
+            {
+                "sha": "90ab9e2",
+                "message": "minor task changes",
+                "author": "ArabCoders",
+                "date": "2025-02-19T19:16:38+00:00"
+            },
             {
                 "sha": "6926a38",
                 "message": "reverted a fix for logs view, which didnt display whitespace correctly",
