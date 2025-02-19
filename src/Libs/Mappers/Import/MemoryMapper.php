@@ -383,7 +383,8 @@ class MemoryMapper implements ImportInterface
 
                 $changes = $this->objects[$pointer]->diff(fields: $keys);
                 $progress = $playChanged && $entity->hasPlayProgress();
-                if ($entity->isWatched() && $allowUpdate < 180) {
+                $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+                if ($entity->isWatched() && $allowUpdate < $minThreshold) {
                     $progress = false;
                 }
 

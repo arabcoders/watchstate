@@ -202,7 +202,8 @@ class Progress
 
                 if ($remoteItem->isWatched()) {
                     $allowUpdate = (int)Config::get('progress.threshold', 0);
-                    if (false === ($allowUpdate >= 300 && time() > ($entity->updated + $allowUpdate))) {
+                    $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+                    if (false === ($allowUpdate >= $minThreshold && time() > ($entity->updated + $allowUpdate))) {
                         $this->logger->info(
                             message: "{action}: Not processing '#{item.id}: {item.title}' for '{client}: {user}@{backend}'. The backend says the item is marked as watched.",
                             context: $logContext,

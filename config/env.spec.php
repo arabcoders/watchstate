@@ -196,7 +196,7 @@ return (function () {
 
                 $cmp = (int)$value;
 
-                if (0 !== $cmp && $cmp < 181) {
+                if (0 !== $cmp && $cmp < 180) {
                     throw new ValidationException('Invalid progress threshold. Must be at least 180 seconds.');
                 }
 

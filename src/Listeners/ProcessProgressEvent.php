@@ -49,6 +49,7 @@ final readonly class ProcessProgressEvent
             $e->addLog($level->getName() . ': ' . r($message, $context));
             $this->logger->log($level, $message, $context);
         };
+
         $e->stopPropagation();
 
         $user = ag($e->getOptions(), Options::CONTEXT_USER, 'main');
@@ -72,14 +73,21 @@ final readonly class ProcessProgressEvent
 
         if ($item->isWatched()) {
             $allowUpdate = (int)Config::get('progress.threshold', 0);
-            if (false === ($allowUpdate >= 300 && time() > ($item->updated + $allowUpdate))) {
+            $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+            if (false === ($allowUpdate >= $minThreshold && time() > ($item->updated + $allowUpdate))) {
                 $writer(
                     level: Level::Info,
-                    message: "'{user}' item - '#{id}: {title}' is marked as watched. Not updating watch progress.",
+                    message: "'{user}' item - '#{id}: {title}' is marked as watched. Not updating watch progress. {comp}",
                     context: [
                         'id' => $item->id,
                         'title' => $item->getName(),
                         'user' => $userContext->name,
+                        'comp' => $allowUpdate > $minThreshold ? arrayToString([
+                            'threshold' => $allowUpdate,
+                            'now' => ['secs' => time(), 'time' => makeDate(time())],
+                            'updated' => ['secs' => $item->updated, 'time' => makeDate($item->updated)],
+                            'diff' => time() - ($item->updated + $allowUpdate),
+                        ]) : 'watch progress sync for played items is disabled.',
                     ]
                 );
                 return $e;

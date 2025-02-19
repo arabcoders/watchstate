@@ -334,9 +334,10 @@ class DirectMapper implements ImportInterface
 
                 $changes = $local->diff(fields: $keys);
                 $allowUpdate = (int)Config::get('progress.threshold', 0);
+                $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
 
                 $progress = $playChanged && $entity->hasPlayProgress();
-                if ($entity->isWatched() && $allowUpdate < 180) {
+                if ($entity->isWatched() && $allowUpdate < $minThreshold) {
                     $progress = false;
                 }
 
@@ -552,11 +553,12 @@ class DirectMapper implements ImportInterface
 
                     $this->removePointers($cloned)->addPointers($local, $local->id);
 
-                    $allowUpdate = (int)Config::get('progress.threshold', 0);
-
                     $changes = $local->diff(fields: $keys);
+                    $allowUpdate = (int)Config::get('progress.threshold', 0);
+                    $minThreshold = (int)Config::get('progress.minThreshold', 86_400);
+
                     $progress = $playChanged && $entity->hasPlayProgress();
-                    if ($entity->isWatched() && $allowUpdate < 180) {
+                    if ($entity->isWatched() && $allowUpdate < $minThreshold) {
                         $progress = false;
                     }
 

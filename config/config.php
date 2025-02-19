@@ -82,6 +82,8 @@ return (function () {
         'progress' => [
             // -- Allows to sync watch progress for played items.
             'threshold' => $progressTimeCheck((int)env('WS_PROGRESS_THRESHOLD', 0), 60 * 10),
+            // -- Minimum time to consider item as progress sync-able.
+            'minThreshold' => 180,
         ],
     ];
 
