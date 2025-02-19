@@ -12,46 +12,46 @@
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter" /></span>
+              <span class="icon is-left"><i class="fas fa-filter"/></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" v-tooltip.bottom="'Filter log lines.'"
-                @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter" /></span>
+                      @click="toggleFilter = !toggleFilter">
+                <span class="icon"><i class="fas fa-filter"/></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-danger" v-tooltip.bottom="'Delete Logfile.'" @click="deleteFile">
-                <span class="icon"><i class="fas fa-trash" /></span>
+                <span class="icon"><i class="fas fa-trash"/></span>
               </button>
             </p>
 
             <p class="control">
               <button class="button is-purple is-light" v-tooltip.bottom="'Download the entire logfile.'"
-                @click="downloadFile" :class="{ 'is-loading': isDownloading }">
-                <span class="icon"><i class="fas fa-download" /></span>
+                      @click="downloadFile" :class="{ 'is-loading': isDownloading }">
+                <span class="icon"><i class="fas fa-download"/></span>
               </button>
             </p>
 
             <p class="control" v-if="filename.includes(moment().format('YYYYMMDD'))">
               <button class="button" v-tooltip.bottom="'Watch log'" @click="watchLog"
-                :class="{ 'is-primary': !stream, 'is-danger': stream }">
-                <span class="icon"><i class="fas fa-stream" /></span>
+                      :class="{ 'is-primary': !stream, 'is-danger': stream }">
+                <span class="icon"><i class="fas fa-stream"/></span>
               </button>
             </p>
 
             <p class="control">
               <button class="button is-warning" @click="wrapLines = !wrapLines" v-tooltip.bottom="'Toggle wrap line'">
-                <span class="icon"><i class="fas fa-text-width" /></span>
+                <span class="icon"><i class="fas fa-text-width"/></span>
               </button>
             </p>
 
             <p class="control">
               <button class="button is-info" @click="loadContent" :disabled="isLoading"
-                :class="{ 'is-loading': isLoading }">
-                <span class="icon"><i class="fas fa-sync" /></span>
+                      :class="{ 'is-loading': isLoading }">
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
 
@@ -69,31 +69,31 @@
         </div>
 
         <div class="is-relative" v-if="!error">
-          <div ref="logContainer" class="box logs-container"
-            :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
-            <div class="is-log-line is-block pt-1" v-for="(item, index) in filterItems" :key="'log_line-' + index">
+          <code ref="logContainer" class="box logs-container"
+                :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+            <span class="is-log-line is-block pt-1" v-for="(item, index) in filterItems" :key="'log_line-' + index">
               <span v-if="item.date">
                 [<span class="has-tooltip" :title="item.date">{{ formatDate(item.date) }}</span>]:&nbsp;
               </span>
               <span v-if="item?.item_id">
                 <NuxtLink @click="goto_history_item(item)">
                   <span class="icon-text">
-                    <span class="icon"><i class="fas fa-history" /></span>
+                    <span class="icon"><i class="fas fa-history"/></span>
                     <span>View</span>
                   </span>
                 </NuxtLink>&nbsp;
               </span>
               <span>{{ item.text }}</span>
-            </div>
-          </div>
+            </span>
+          </code>
           <button class="button m-4" v-tooltip="'Copy logs'"
-            @click="() => copyText(filterItems.map(i => i.text).join('\n'))"
-            style="position: absolute; top:0; right:0;">
+                  @click="() => copyText(filterItems.map(i => i.text).join('\n'))"
+                  style="position: absolute; top:0; right:0;">
             <span class="icon"><i class="fas fa-copy"></i></span>
           </button>
         </div>
         <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark" :message="error"
-          :use-close="true" @close="router.push('/logs')" />
+                 :use-close="true" @close="router.push('/logs')"/>
       </div>
     </div>
   </div>
@@ -110,14 +110,14 @@
 <script setup>
 import Message from '~/components/Message'
 import moment from 'moment'
-import { useStorage } from '@vueuse/core'
-import { notification, goto_history_item } from '~/utils/index'
+import {useStorage} from '@vueuse/core'
+import {goto_history_item, notification} from '~/utils/index'
 import request from '~/utils/request'
 
 const router = useRouter()
 const filename = useRoute().params.filename
 
-useHead({ title: `Logs : ${filename}` })
+useHead({title: `Logs : ${filename}`})
 
 const query = ref()
 const data = ref([])
@@ -266,7 +266,7 @@ const deleteFile = async () => {
   try {
     closeStream();
 
-    const response = await request(`/log/${filename}`, { method: 'DELETE' })
+    const response = await request(`/log/${filename}`, {method: 'DELETE'})
 
     if (response.ok) {
       notification('success', 'Information', `Logfile '${filename}' has been deleted.`)
@@ -281,7 +281,7 @@ const deleteFile = async () => {
       json = await response.json()
     } catch (e) {
       json = {
-        error: { code: response.status, message: response.statusText }
+        error: {code: response.status, message: response.statusText}
       }
     }
 
