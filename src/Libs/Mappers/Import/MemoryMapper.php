@@ -314,13 +314,16 @@ class MemoryMapper implements ImportInterface
         }
 
         if (true === $this->inTraceMode()) {
-            $this->logger->info("{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.", [
-                'user' => $this->userContext?->name ?? 'main',
-                'mapper' => afterLast(self::class, '\\'),
-                'id' => $cloned->id ?? 'New',
-                'backend' => $entity->via,
-                'title' => $cloned->getName(),
-            ]);
+            $this->logger->info(
+                "{mapper}: [T] Ignoring '{user}@{backend}' - '#{id}: {title}'. No metadata changes detected.",
+                [
+                    'user' => $this->userContext?->name ?? 'main',
+                    'mapper' => afterLast(self::class, '\\'),
+                    'id' => $cloned->id ?? 'New',
+                    'backend' => $entity->via,
+                    'title' => $cloned->getName(),
+                ]
+            );
         }
 
         return $this;
@@ -376,8 +379,13 @@ class MemoryMapper implements ImportInterface
 
                 $this->removePointers($cloned)->addPointers($this->objects[$pointer], $pointer);
 
+                $allowUpdate = (int)Config::get('progress.threshold', 0);
+
                 $changes = $this->objects[$pointer]->diff(fields: $keys);
-                $progress = !$entity->isWatched() && $playChanged && $entity->hasPlayProgress();
+                $progress = $playChanged && $entity->hasPlayProgress();
+                if ($entity->isWatched() && $allowUpdate < 180) {
+                    $progress = false;
+                }
 
                 if (count($changes) >= 1) {
                     $_keys = array_merge($keys, [iState::COLUMN_EXTRA]);
@@ -400,7 +408,7 @@ class MemoryMapper implements ImportInterface
                         ]
                     );
 
-                    if (true === $entity->hasPlayProgress() && !$entity->isWatched()) {
+                    if (true === $progress) {
                         $itemId = r('{type}://{id}:{tainted}@{backend}', [
                             'type' => $entity->type,
                             'backend' => $entity->via,

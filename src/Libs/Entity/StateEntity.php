@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Libs\Entity;
 
+use App\Libs\Config;
 use App\Libs\Entity\StateInterface as iState;
 use App\Libs\Guid;
 use Psr\Log\LoggerAwareTrait;
@@ -566,12 +567,14 @@ final class StateEntity implements iState
      */
     public function hasPlayProgress(): bool
     {
-        if ($this->isWatched()) {
+        $allowUpdate = (int)Config::get('progress.threshold', 0);
+
+        if ($this->isWatched() && $allowUpdate < 1) {
             return false;
         }
 
         foreach ($this->getMetadata() as $metadata) {
-            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0)) {
+            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
             if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) > 1000) {
@@ -587,14 +590,15 @@ final class StateEntity implements iState
      */
     public function getPlayProgress(): int
     {
-        if ($this->isWatched()) {
+        $allowUpdate = (int)Config::get('progress.threshold', 0);
+        if ($this->isWatched() && $allowUpdate < 1) {
             return 0;
         }
 
         $compare = [];
 
         foreach ($this->getMetadata() as $backend => $metadata) {
-            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0)) {
+            if (0 !== (int)ag($metadata, iState::COLUMN_WATCHED, 0) && $allowUpdate < 1) {
                 continue;
             }
             if ((int)ag($metadata, iState::COLUMN_META_DATA_PROGRESS, 0) < 1000) {

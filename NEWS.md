@@ -1,5 +1,26 @@
 # Old Updates
 
+### 2025-02-02
+
+We are happy to announce that we have merged in direct support for multi-user in `state:import` and `state:export`
+commands and tasks. Therefore, `state:sync` command has been removed. Once you generate the sub users configs. it will
+start working alongside the main user.
+
+### 2025-02-01
+
+Breaking changes as of version 20250201~, in earlier versions, if you want to sync multi-user play state, you only had
+to run `state:sync` command, However, due to us extending support for more operation to support multi-user data, we
+needed a way to generate per user config instead of relying on `state:sync`, thus we have introduced a new command
+called `backends:create`, the purpose of this command is to generate the needed config files for each user.
+
+This change allow us to support more operations in the future.
+
+We also have minor breaking change in per user db name, before it was named `user_name.db`, now it's named `user.db`
+this change shouldn't effect you as we have backward compatibility in place to rename the old db to the new name.
+
+for more information about multi-user, Please read the FAQ entry about it
+at [this link](FAQ.md#is-there-support-for-multi-user-setup).
+
 ### 2025-01-24
 
 We are excited to share that multi-user sync is now fully supported! Our first goal was to make sure the feature worked,

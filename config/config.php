@@ -17,6 +17,8 @@ use Monolog\Level;
 
 return (function () {
     $inContainer = inContainer();
+    $progressTimeCheck = fn(int $v, int $d): int => 0 === $v || $v >= 180 ? $v : $d;
+
     $config = [
         'name' => 'WatchState',
         'version' => '$(version_via_ci)',
@@ -76,6 +78,10 @@ return (function () {
         ],
         'sync' => [
             'progress' => (bool)env('WS_SYNC_PROGRESS', true),
+        ],
+        'progress' => [
+            // -- Allows to sync watch progress for played items.
+            'threshold' => $progressTimeCheck((int)env('WS_PROGRESS_THRESHOLD', 0), 60 * 10),
         ],
     ];
 
