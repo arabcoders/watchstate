@@ -30,9 +30,17 @@ body {
     white-space: nowrap;
 }
 
-.is-masked, .is-full-mask, .is-full-mask :not(figure) {
+.is-masked,
+.is-full-mask,
+.is-full-mask :not(figure) {
     color: transparent !important;
     text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: light) {
+    .has-tooltip {
+        border-bottom-color: #000;
+    }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,8 +76,13 @@ body {
         white-space: nowrap;
     }
 
-    .is-masked, .is-full-mask, .is-full-mask :not(figure) {
+    .is-masked,
+    .is-full-mask,
+    .is-full-mask :not(figure) {
         text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+    }
+    .has-tooltip {
+        border-bottom-color: rgba(255, 255, 255, 0.3);
     }
 }
 
@@ -86,7 +99,7 @@ body {
 
 .has-tooltip {
     cursor: help;
-    border-bottom: 1px dotted #000;
+    border-bottom: 1px dotted;
 }
 
 .is-justify-center {
@@ -150,18 +163,19 @@ body {
     color: #5f00d1;
 }
 
-@media screen and (min-width: 769px), print {
+@media screen and (min-width: 769px),
+print {
     .field.is-grouped-tablet {
         display: flex;
         gap: 0.75rem;
         justify-content: flex-start;
     }
 
-    .field.is-grouped-tablet > .control {
+    .field.is-grouped-tablet>.control {
         flex-shrink: 0;
     }
 
-    .field.is-grouped-tablet > .control.is-expanded {
+    .field.is-grouped-tablet>.control.is-expanded {
         flex-grow: 1;
         flex-shrink: 1;
     }
@@ -191,10 +205,12 @@ body {
     display: contents;
 }
 
-.page-enter-active, .page-leave-active {
+.page-enter-active,
+.page-leave-active {
     transition: opacity 0.2s ease;
 }
 
-.page-enter-from, .page-leave-to {
+.page-enter-from,
+.page-leave-to {
     opacity: 0;
 }

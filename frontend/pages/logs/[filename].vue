@@ -67,21 +67,31 @@
             <span>Streaming log content...</span>
           </span>
         </div>
-        <code ref="logContainer" class="box logs-container" v-if="!error"
-          :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
-          <span class="is-log-line is-block pt-1" v-for="(item, index) in filterItems" :key="'log_line-' + index">
-            <template v-if="item.date">[{{ item.date }}]:&nbsp;</template>
-<template v-if="item?.item_id">
-              <NuxtLink @click="goto_history_item(item)">
-                <span class="icon-text">
-                  <span class="icon"><i class="fas fa-history"/></span>
-                  <span>View</span>
-                </span>
-              </NuxtLink>&nbsp;
-            </template>
-<span>{{ item.text }}</span>
-</span>
-</code>
+
+        <div class="is-relative" v-if="!error">
+          <div ref="logContainer" class="box logs-container"
+            :class="{ 'is-pre': !wrapLines, 'is-pre-wrap': wrapLines }">
+            <div class="is-log-line is-block pt-1" v-for="(item, index) in filterItems" :key="'log_line-' + index">
+              <span v-if="item.date">
+                [<span class="has-tooltip" :title="item.date">{{ formatDate(item.date) }}</span>]:&nbsp;
+              </span>
+              <span v-if="item?.item_id">
+                <NuxtLink @click="goto_history_item(item)">
+                  <span class="icon-text">
+                    <span class="icon"><i class="fas fa-history" /></span>
+                    <span>View</span>
+                  </span>
+                </NuxtLink>&nbsp;
+              </span>
+              <span>{{ item.text }}</span>
+            </div>
+          </div>
+          <button class="button m-4" v-tooltip="'Copy logs'"
+            @click="() => copyText(filterItems.map(i => i.text).join('\n'))"
+            style="position: absolute; top:0; right:0;">
+            <span class="icon"><i class="fas fa-copy"></i></span>
+          </button>
+        </div>
         <Message v-if="error" title="API Error" message_class="has-background-warning-90 has-text-dark" :message="error"
           :use-close="true" @close="router.push('/logs')" />
       </div>
@@ -289,4 +299,6 @@ onUpdated(() => {
   }
   updateScroll()
 });
+
+const formatDate = dt => moment(dt).format('DD/MM HH:mm')
 </script>
