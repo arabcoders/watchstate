@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250219-ea4c113",
-        "date": "2025-02-19T15:52:25+00:00",
+        "tag": "dev-20250219-5845160",
+        "date": "2025-02-19T18:21:06+00:00",
         "commits": [
+            {
+                "sha": "5845160",
+                "message": "standardize on 180secs as minimum to trigger watch progress sync for played items.",
+                "author": "ArabCoders",
+                "date": "2025-02-19T18:21:06+00:00"
+            },
             {
                 "sha": "ea4c113",
                 "message": "Better log display and filtering",
