@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250219-5845160",
-        "date": "2025-02-19T18:21:06+00:00",
+        "tag": "dev-20250219-6926a38",
+        "date": "2025-02-19T18:31:28+00:00",
         "commits": [
+            {
+                "sha": "6926a38",
+                "message": "reverted a fix for logs view, which didnt display whitespace correctly",
+                "author": "ArabCoders",
+                "date": "2025-02-19T18:31:28+00:00"
+            },
             {
                 "sha": "5845160",
                 "message": "standardize on 180secs as minimum to trigger watch progress sync for played items.",
