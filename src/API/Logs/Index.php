@@ -116,7 +116,9 @@ final class Index
             $list[] = $builder;
         }
 
-        return api_response(Status::OK, $list);
+        return api_response(Status::OK, $list, headers: [
+            'X-No-AccessLog' => '1'
+        ]);
     }
 
     #[Route(['GET', 'DELETE'], Index::URL_FILE . '/{filename}[/]', name: 'logs.view')]
@@ -171,11 +173,6 @@ final class Index
 
         foreach ($it as $line) {
             $line = trim((string)$line);
-
-            if (!is_string($line)) {
-                continue;
-            }
-
             $stream->write(json_encode(self::formatLog($line, $this->users)) . PHP_EOL);
         }
 
@@ -287,14 +284,14 @@ final class Index
     public static function formatLog(string $line, array $users = []): array
     {
         if (empty($line)) {
-            return [ 'item_id' => null, 'user' => null, 'backend' => null, 'date' => null, 'text' => $line];
+            return ['item_id' => null, 'user' => null, 'backend' => null, 'date' => null, 'text' => $line];
         }
 
         $dateRegex = '/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?[+-][0-9]{2}:[0-9]{2})]/i';
 
         $dateMatch = preg_match($dateRegex, $line, $matches);
-        $idMatch = preg_match("/\'#(?P<item_id>\d+)\:/", $line, $idMatches);
-        $identMatch = preg_match("/\'(?P<user>\w+)\@(?P<backend>\w+)\'/i", $line, $identMatches);
+        $idMatch = preg_match("/'#(?P<item_id>\d+):/", $line, $idMatches);
+        $identMatch = preg_match("/'((?P<client>\w+):\s)?(?P<user>\w+)@(?P<backend>\w+)'/i", $line, $identMatches);
 
         $logLine = [
             'item_id' => null,
