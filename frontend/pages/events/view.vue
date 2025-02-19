@@ -4,42 +4,43 @@
       <div class="column is-12 is-clearfix is-unselectable">
         <span class="title is-4">
           <span class="icon"><i class="fas fa-calendar-alt"></i>&nbsp;</span>
-          <NuxtLink to="/events" v-text="'Events'" />
+          <NuxtLink to="/events" v-text="'Events'"/>
           : {{ makeName(id) }}
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
             <div class="control has-icons-left" v-if="toggleFilter">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter" /></span>
+              <span class="icon is-left"><i class="fas fa-filter"/></span>
             </div>
 
             <div class="control">
-              <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter" :disabled="!item?.logs || item.logs.length < 1"
-                v-tooltip.bottom="'Filter event logs.'">
-                <span class="icon"><i class="fas fa-filter" /></span>
+              <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter"
+                      :disabled="!item?.logs || item.logs.length < 1"
+                      v-tooltip.bottom="'Filter event logs.'">
+                <span class="icon"><i class="fas fa-filter"/></span>
               </button>
             </div>
 
             <p class="control">
               <button class="button is-warning" @click="resetEvent(0 === item.status ? 4 : 0)"
-                :disabled="1 === item.status" v-tooltip.bottom="'Reset event.'">
+                      :disabled="1 === item.status" v-tooltip.bottom="'Reset event.'">
                 <span class="icon">
                   <i class="fas"
-                    :class="{ 'fa-trash-arrow-up': 0 !== item.status, 'fa-power-off': 0 === item.status }"></i>
+                     :class="{ 'fa-trash-arrow-up': 0 !== item.status, 'fa-power-off': 0 === item.status }"></i>
                 </span>
               </button>
             </p>
             <p class="control">
               <button class="button is-danger" @click="deleteItem" :disabled="1 === item.status"
-                v-tooltip.bottom="'Delete event.'">
-                <span class="icon"><i class="fas fa-trash" /></span>
+                      v-tooltip.bottom="'Delete event.'">
+                <span class="icon"><i class="fas fa-trash"/></span>
               </button>
             </p>
             <p class="control">
               <button class="button is-info" @click="loadContent()" :class="{ 'is-loading': isLoading }"
-                :disabled="isLoading" v-tooltip.bottom="'Reload event data.'">
-                <span class="icon"><i class="fas fa-sync" /></span>
+                      :disabled="isLoading" v-tooltip.bottom="'Reload event data.'">
+                <span class="icon"><i class="fas fa-sync"/></span>
               </button>
             </p>
           </div>
@@ -51,7 +52,7 @@
 
       <div class="column is-12" v-if="isLoading">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
+                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
       </div>
     </div>
 
@@ -76,55 +77,77 @@
               </time>
             </span>,
             with status of <span class="tag" :class="getStatusClass(item.status)">{{ item.status }}:
-              {{ item.status_name }}</span>.
+            {{ item.status_name }}</span>.
           </p>
         </div>
       </div>
 
-      <div class="column is-12" v-if="Object.keys(item.event_data).length > 0">
+      <div class="column is-12" v-if="item?.event_data && Object.keys(item.event_data).length > 0">
         <h2 class="title is-4 is-clickable is-unselectable" @click="toggleData = !toggleData">
           <span class="icon">
             <i class="fas" :class="{ 'fa-arrow-down': !toggleData, 'fa-arrow-up': toggleData }"></i>
           </span>&nbsp;
           <span>Show attached data</span>
         </h2>
-        <pre class="p-0 is-pre-wrap" v-if="toggleData"><code style="word-break: break-word" class="language-json">{{
-          JSON.stringify(item.event_data, null, 2)
-        }}</code></pre>
+        <div v-if="toggleData" class="is-relative">
+          <code style="word-break: break-word" class="is-pre-wrap is-block">
+            {{ JSON.stringify(item.event_data, null, 2) }}
+          </code>
+          <button class="button m-4" v-tooltip="'Copy event data'"
+                  @click="() => copyText(JSON.stringify(item.event_data, null, 2))"
+                  style="position: absolute; top:0; right:0;">
+            <span class="icon"><i class="fas fa-copy"></i></span>
+          </button>
+        </div>
       </div>
 
-      <div class="column is-12" v-if="item.logs">
+      <div class="column is-12" v-if="item?.logs && item.logs.length > 0">
         <h2 class="title is-4 is-clickable is-unselectable" @click="toggleLogs = !toggleLogs">
           <span class="icon">
             <i class="fas" :class="{ 'fa-arrow-down': !toggleLogs, 'fa-arrow-up': toggleLogs }"></i>
           </span>&nbsp;
           <span>Show event logs</span>
         </h2>
-        <pre class="p-0 is-pre-wrap" v-if="toggleLogs"><code style="word-break: break-word" class="language-json">{{
-          JSON.stringify(filteredRows, null, 2)
-        }}</code></pre>
+        <div v-if="toggleLogs" class="is-relative">
+          <code style="word-break: break-word" class="is-pre-wrap is-block">
+            {{ JSON.stringify(filteredRows, null, 2) }}
+          </code>
+          <button class="button m-4" v-tooltip="'Copy logs'"
+                  @click="() => copyText(JSON.stringify(filteredRows, null, 2))"
+                  style="position: absolute; top:0; right:0;">
+            <span class="icon"><i class="fas fa-copy"></i></span>
+          </button>
+        </div>
       </div>
-      <div class="column is-12" v-if="item.options">
+
+      <div class="column is-12" v-if="item?.options">
         <h2 class="title is-4 is-clickable is-unselectable" @click="toggleOptions = !toggleOptions">
           <span class="icon">
             <i class="fas" :class="{ 'fa-arrow-down': !toggleOptions, 'fa-arrow-up': toggleOptions }"></i>
           </span>&nbsp;
           <span>Show attached options</span>
         </h2>
-        <pre class="p-0 is-pre-wrap" v-if="toggleOptions"><code style="word-break: break-word" class="language-json">{{
-          JSON.stringify(item.options, null, 2)
-        }}</code></pre>
+        <div v-if="toggleOptions" class="is-relative">
+          <code style="word-break: break-word" class="is-pre-wrap is-block">
+            {{ JSON.stringify(item.options, null, 2) }}
+          </code>
+          <button class="button m-4" v-tooltip="'Copy options'"
+                  @click="() => copyText(JSON.stringify(item.options, null, 2))"
+                  style="position: absolute; top:0; right:0;">
+            <span class="icon"><i class="fas fa-copy"></i></span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { notification, parse_api_response, TOOLTIP_DATE_FORMAT } from '~/utils/index'
+import {copyText, notification, parse_api_response, TOOLTIP_DATE_FORMAT} from '~/utils/index'
 import request from '~/utils/request'
 import moment from 'moment'
-import { getStatusClass, makeName } from '~/utils/events/helpers'
-import { useStorage } from '@vueuse/core'
+import {getStatusClass, makeName} from '~/utils/events/helpers'
+import {useStorage} from '@vueuse/core'
 
 const route = useRoute()
 
@@ -175,7 +198,7 @@ const loadContent = async () => {
 
     item.value = json
 
-    useHead({ title: `Event: ${json.id}` })
+    useHead({title: `Event: ${json.id}`})
   } catch (e) {
     console.error(e)
     notification('crit', 'Error', `Errors viewItem Request failure. ${e.message}`
@@ -191,7 +214,7 @@ const deleteItem = async () => {
   }
 
   try {
-    const response = await request(`/system/events/${item.value.id}`, { method: 'DELETE' })
+    const response = await request(`/system/events/${item.value.id}`, {method: 'DELETE'})
 
     if (200 !== response.status) {
       const json = await parse_api_response(response)
