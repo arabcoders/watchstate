@@ -394,36 +394,35 @@ final class TasksCommand extends Command
 
         $ended = makeDate();
 
-        if (false === $this->viaEvent) {
+        if (false === $this->viaEvent && ($task['name'] !== 'dispatch' || count($this->taskOutput) > 0)) {
             $event = $this->eventsRepo->getObject([]);
             $event->status = 0 === $process->getExitCode() ? EventStatus::SUCCESS : EventStatus::FAILED;
             $event->event = self::NAME . '.' . $task['name'];
             $event->created_at = $started;
             $event->updated_at = $ended;
-            if ($task['name'] !== 'dispatch' || count($this->taskOutput) > 0) {
-                $event->logs[] = '--------------------------';
-                $event->logs[] = r('Task: {name} (Started: {startDate})', [
-                    'name' => $task['name'],
-                    'startDate' => $started->format('D, H:i:s T'),
-                ]);
-                $event->logs[] = r('Command: {cmd}', ['cmd' => $process->getCommandLine()]);
-                $event->logs[] = r('Exit Code: {code}:{Status} (Ended: {endDate}) - Took {duration}s', [
-                    'Status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
-                    'code' => $process->getExitCode() ?? self::INVALID,
-                    'endDate' => $ended->format('D, H:i:s T'),
-                    'duration' => $ended->getTimestamp() - $started->getTimestamp(),
-                ]);
-                $event->logs[] = '--------------------------';
-                $event->logs = $event->logs + array_slice($this->taskOutput, -200);
-                if (count($this->taskOutput) < 1) {
-                    if (0 === $process->getExitCode()) {
-                        $event->logs[] = 'Task completed successfully. And did not produce any output.';
-                    } else {
-                        $event->logs[] = 'Task failed to complete. And did not produce any output.';
-                    }
+            $event->logs[] = '--------------------------';
+            $event->logs[] = r('Task: {name} (Started: {start_date})', [
+                'name' => $task['name'],
+                'start_date' => $started->format('D, H:i:s T'),
+            ]);
+            $event->logs[] = r('Command: {cmd}', ['cmd' => $process->getCommandLine()]);
+            $event->logs[] = r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+                'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+                'code' => $process->getExitCode() ?? self::INVALID,
+                'end_date' => $ended->format('D, H:i:s T'),
+                'duration' => $ended->getTimestamp() - $started->getTimestamp(),
+            ]);
+            $event->logs[] = '--------------------------';
+            if (count($this->taskOutput) < 1) {
+                if (0 === $process->getExitCode()) {
+                    $event->logs[] = 'Task completed successfully. And did not produce any output.';
+                } else {
+                    $event->logs[] = 'Task failed to complete. And did not produce any output.';
                 }
-                $this->eventsRepo->save($event);
+            } else {
+                $event->logs = array_merge($event->logs, array_slice($this->taskOutput, -200));
             }
+            $this->eventsRepo->save($event);
         }
 
         if (count($this->taskOutput) < 1) {
@@ -444,10 +443,10 @@ final class TasksCommand extends Command
             'startDate' => $started->format('D, H:i:s T'),
         ]), $input, $output);
         $this->write(r('Command: {cmd}', ['cmd' => $process->getCommandLine()]), $input, $output);
-        $this->write(r('Exit Code: {code}:{Status} (Ended: {endDate}) - Took {duration}s', [
-            'Status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
+        $this->write(r('Exit Code: {code}:{status} (Ended: {end_date}) - Took {duration}s', [
+            'status' => 0 === $process->getExitCode() ? 'Success' : 'Failed',
             'code' => $process->getExitCode() ?? self::INVALID,
-            'endDate' => $ended->format('D, H:i:s T'),
+            'end_date' => $ended->format('D, H:i:s T'),
             'duration' => $ended->getTimestamp() - $started->getTimestamp(),
         ]), $input, $output);
         $this->write('--------------------------', $input, $output);
