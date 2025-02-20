@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250220-a29a53b",
-        "date": "2025-02-20T14:13:43+00:00",
+        "tag": "dev-20250220-c1c7431",
+        "date": "2025-02-20T14:31:25+00:00",
         "commits": [
+            {
+                "sha": "c1c7431",
+                "message": "display event logs as actual logs instead of JSON array.",
+                "author": "ArabCoders",
+                "date": "2025-02-20T14:31:25+00:00"
+            },
             {
                 "sha": "a29a53b",
                 "message": "made the short ID display for UUID more unique.",
