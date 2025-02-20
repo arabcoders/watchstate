@@ -8,27 +8,27 @@
         </span>
         <div class="is-pulled-right">
           <div class="field is-grouped">
-            <div class="control has-icons-left" v-if="toggleFilter">
+            <div class="control has-icons-left" v-if="toggleFilter || query">
               <input type="search" v-model.lazy="query" class="input" id="filter" placeholder="Filter">
-              <span class="icon is-left"><i class="fas fa-filter"/></span>
+              <span class="icon is-left"><i class="fas fa-filter" /></span>
             </div>
 
             <div class="control">
               <button class="button is-danger is-light" @click="toggleFilter = !toggleFilter">
-                <span class="icon"><i class="fas fa-filter"/></span>
+                <span class="icon"><i class="fas fa-filter" /></span>
               </button>
             </div>
 
             <div class="control">
               <button class="button is-danger" @click="deleteAll" v-tooltip.bottom="'Remove All non pending events.'">
-                <span class="icon"><i class="fas fa-trash"/></span>
+                <span class="icon"><i class="fas fa-trash" /></span>
               </button>
             </div>
 
             <p class="control">
-              <button class="button is-info" @click="loadContent(page, false)"
-                      :class="{'is-loading': isLoading}" :disabled="isLoading">
-                <span class="icon"><i class="fas fa-sync"/></span>
+              <button class="button is-info" @click="loadContent(page, false)" :class="{ 'is-loading': isLoading }"
+                :disabled="isLoading">
+                <span class="icon"><i class="fas fa-sync" /></span>
               </button>
             </p>
           </div>
@@ -41,16 +41,16 @@
       </div>
 
       <div class="column is-12" v-if="total && last_page > 1">
-        <Pager @navigate="ePage => loadContent(ePage)" :last_page="last_page" :page="page" :is-loading="isLoading"/>
+        <Pager @navigate="ePage => loadContent(ePage)" :last_page="last_page" :page="page" :is-loading="isLoading" />
       </div>
     </div>
 
     <div class="columns is-multiline" v-if="filteredRows.length < 1">
       <div class="column is-12">
         <Message v-if="isLoading" message_class="has-background-info-90 has-text-dark" title="Loading"
-                 icon="fas fa-spinner fa-spin" message="Loading data. Please wait..."/>
+          icon="fas fa-spinner fa-spin" message="Loading data. Please wait..." />
         <Message v-else class="has-background-warning-80 has-text-dark" title="Warning"
-                 icon="fas fa-exclamation-triangle">
+          icon="fas fa-exclamation-triangle">
           <p>No items found.</p>
           <p v-if="query">Search for <strong>{{ query }}</strong> returned no results.</p>
         </Message>
@@ -62,23 +62,21 @@
         <div class="card">
           <header class="card-header is-align-self-flex-end">
             <div class="card-header-title is-block">
-              <NuxtLink :to="`/events/view/?id=${item.id}`" v-text="makeName(item.id)"/>
+              <NuxtLink @click="quick_view = item.id" v-text="makeName(item.id)" />
               <div class="is-pulled-right is-hidden-tablet">
                 <span class="tag" :class="getStatusClass(item.status)">{{ statuses[item.status].name }}</span>
               </div>
             </div>
-            <div class="card-header-icon" @click="item._display = !item._display"
-                 v-if="Object.keys(item.event_data).length > 0">
-              <span class="icon">
-                <i class="fas" :class="{'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }"></i>
+            <div class="card-header-icon">
+              <span class="icon" @click="item._display = !item._display" v-if="Object.keys(item.event_data).length > 0">
+                <i class="fas" :class="{ 'fa-arrow-up': item?._display, 'fa-arrow-down': !item?._display }" />
               </span>
             </div>
           </header>
           <div class="card-content p-0 m-0" v-if="item._display">
-            <pre class="p-0 is-pre" style="position: relative; max-height:30vh; overflow-y:scroll;"><code
-                class="language-json">{{
-                JSON.stringify(item.event_data, null, 2)
-              }}</code><button class="button is-small m-4"
+            <pre class="p-0 is-pre" style="position: relative; max-height:30vh; overflow-y:scroll;"><code>{{
+              JSON.stringify(item.event_data, null, 2)
+            }}</code><button class="button is-small m-4"
                                @click="() => copyText(JSON.stringify(item.event_data), false)"
                                style="position: absolute; top:0; right:0;">
                 <span class="icon"><i class="fas fa-copy"></i></span></button></pre>
@@ -109,7 +107,7 @@
             </span>
           </div>
           <footer class="card-footer">
-            <div class="card-footer-item" v-text="item.event"/>
+            <div class="card-footer-item" v-text="item.event" />
             <div class="card-footer-item">
               <button class="button is-warning is-fullwidth" @click="resetEvent(item, 0 === item.status ? 4 : 0)">
                 <span class="icon"><i class="fas fa-trash-arrow-up"></i></span>
@@ -130,7 +128,7 @@
     <div class="columns is-multiline">
       <div class="column is-12">
         <Message message_class="has-background-info-90 has-text-dark" :toggle="show_page_tips"
-                 @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
+          @toggle="show_page_tips = !show_page_tips" :use-toggle="true" title="Tips" icon="fas fa-info-circle">
           <ul>
             <li>Resetting event will return it to the queue to be dispatched again.</li>
             <li>Stopping event will prevent it from being dispatched.</li>
@@ -139,17 +137,23 @@
         </Message>
       </div>
     </div>
+
+    <template v-if="quick_view">
+      <Overlay @closeOverlay="quick_view = null" :title="`#${makeName(quick_view)}`">
+        <EventView :id="quick_view" @delete="item => deleteItem(item)" />
+      </Overlay>
+    </template>
   </div>
 </template>
 
 <script setup>
-import {copyText, notification, parse_api_response} from '~/utils/index'
+import { copyText, notification, parse_api_response } from '~/utils/index'
 import request from '~/utils/request'
 import moment from 'moment'
 import Pager from '~/components/Pager'
-import {getStatusClass, makeName} from '~/utils/events/helpers'
+import { getStatusClass, makeName } from '~/utils/events/helpers'
 import Message from '~/components/Message'
-import {useStorage} from '@vueuse/core'
+import { useStorage } from '@vueuse/core'
 
 const route = useRoute()
 
@@ -162,8 +166,9 @@ const isLoading = ref(false)
 const toggleDispatcher = ref(false)
 const items = ref([])
 const statuses = ref([])
-const query = ref()
+const query = ref(route.query.filter ?? '')
 const toggleFilter = ref(false)
+const quick_view = ref()
 const show_page_tips = useStorage('show_page_tips', true)
 
 watch(toggleFilter, () => {
@@ -205,6 +210,9 @@ const loadContent = async (pageNumber, updateHistory = true) => {
     let queryParams = new URLSearchParams()
     queryParams.append('page', pageNumber)
     queryParams.append('perpage', p_perpage)
+    if (query.value) {
+      queryParams.append('filter', query.value)
+    }
 
     isLoading.value = true
     toggleDispatcher.value = false
@@ -220,16 +228,19 @@ const loadContent = async (pageNumber, updateHistory = true) => {
 
     let title = `Events - Page #${pageNumber}`
 
-    useHead({title})
+    useHead({ title })
 
     if (true === Boolean(updateHistory)) {
-      await useRouter().push({
-        path: '/events',
-        query: {
-          perpage: p_perpage,
-          page: pageNumber,
-        }
-      })
+      let history_query = {
+        perpage: p_perpage,
+        page: pageNumber,
+      }
+
+      if (query.value) {
+        history_query.filter = query.value
+      }
+
+      await useRouter().push({ path: '/events', query: history_query })
     }
 
     if ('paging' in json) {
@@ -276,7 +287,7 @@ const deleteItem = async item => {
   }
 
   try {
-    const response = await request(`/system/events/${item.id}`, {method: 'DELETE'})
+    const response = await request(`/system/events/${item.id}`, { method: 'DELETE' })
 
     if (200 !== response.status) {
       const json = await parse_api_response(response)
@@ -284,7 +295,9 @@ const deleteItem = async item => {
       return
     }
 
-    items.value = items.value.filter(i => i.id !== item.id)
+    deletedItem(item.id)
+
+    notification('success', 'Success', `Event '${makeName(item.id)}' successfully deleted.`)
   } catch (e) {
     console.error(e)
     notification('crit', 'Error', `Events delete Request failure. ${e.message}`
@@ -333,7 +346,7 @@ const deleteAll = async () => {
   }
 
   try {
-    const response = await request(`/system/events/`, {method: 'DELETE'})
+    const response = await request(`/system/events/`, { method: 'DELETE' })
     if (200 !== response.status) {
       const json = await parse_api_response(response)
       notification('error', 'Error', `Failed to delete events. ${json.error.code}: ${json.error.message}`)
@@ -347,4 +360,43 @@ const deleteAll = async () => {
     )
   }
 }
+
+const deletedItem = id => {
+  items.value = items.value.filter(i => i.id !== id)
+  if (quick_view.value) {
+    quick_view.value = null
+  }
+}
+
+watch(query, val => {
+  const route = useRoute()
+  const router = useRouter()
+  if (!val) {
+    if (!route?.query['filter']) {
+      return;
+    }
+
+    router.push({
+      'path': '/events',
+      'query': {
+        ...route.query,
+        'filter': undefined
+      }
+    })
+    return;
+  }
+
+  if (route?.query['filter'] === val) {
+    return;
+  }
+
+  router.push({
+    'path': '/events',
+    'query': {
+      ...route.query,
+      'filter': val
+    }
+  })
+})
+
 </script>
