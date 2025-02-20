@@ -1,4 +1,4 @@
-const makeName = id => id.split('-').slice(0)[0]
+const makeName = id => id.replace(/-/g, '').slice(0, 12)
 
 const getStatusClass = status => {
     switch (status) {
