@@ -1,8 +1,14 @@
 [
     {
-        "tag": "dev-20250219-90ab9e2",
-        "date": "2025-02-19T19:16:38+00:00",
+        "tag": "dev-20250220-25dfed2",
+        "date": "2025-02-20T14:05:20+00:00",
         "commits": [
+            {
+                "sha": "25dfed2",
+                "message": "better view of event logs",
+                "author": "ArabCoders",
+                "date": "2025-02-20T14:05:20+00:00"
+            },
             {
                 "sha": "90ab9e2",
                 "message": "minor task changes",
