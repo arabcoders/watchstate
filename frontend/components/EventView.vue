@@ -104,11 +104,11 @@
                     <span>Show event logs</span>
                 </h2>
                 <div v-if="toggleLogs" class="is-relative">
-                    <code style="word-break: break-word" class="is-pre-wrap is-block">
-            {{ JSON.stringify(filteredRows, null, 2) }}
+                    <code class="is-pre-wrap is-block">
+            <span class="is-log-line is-block pt-1" v-for="(item, index) in filteredRows" :key="'log_line-' + index"
+                v-text="item" />
         </code>
-                    <button class="button m-4" v-tooltip="'Copy logs'"
-                        @click="() => copyText(JSON.stringify(filteredRows, null, 2))"
+                    <button class="button m-4" v-tooltip="'Copy logs'" @click="() => copyText(filteredRows.join('\n'))"
                         style="position: absolute; top:0; right:0;">
                         <span class="icon"><i class="fas fa-copy"></i></span>
                     </button>
