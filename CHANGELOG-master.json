@@ -1,5 +1,107 @@
 [
     {
+        "tag": "master-20250221-4758e86",
+        "date": "2025-02-21T14:45:57+00:00",
+        "commits": [
+            {
+                "sha": "89c284a",
+                "message": "minor change on how we display http erros for emby to only display it once",
+                "author": "ArabCoders",
+                "date": "2025-02-21T14:38:26+00:00"
+            },
+            {
+                "sha": "03db2ff",
+                "message": "minor updates to how we display data in events view page.",
+                "author": "ArabCoders",
+                "date": "2025-02-21T14:37:52+00:00"
+            },
+            {
+                "sha": "c1c7431",
+                "message": "display event logs as actual logs instead of JSON array.",
+                "author": "ArabCoders",
+                "date": "2025-02-20T14:31:25+00:00"
+            },
+            {
+                "sha": "a29a53b",
+                "message": "made the short ID display for UUID more unique.",
+                "author": "ArabCoders",
+                "date": "2025-02-20T14:13:43+00:00"
+            },
+            {
+                "sha": "25dfed2",
+                "message": "better view of event logs",
+                "author": "ArabCoders",
+                "date": "2025-02-20T14:05:20+00:00"
+            },
+            {
+                "sha": "90ab9e2",
+                "message": "minor task changes",
+                "author": "ArabCoders",
+                "date": "2025-02-19T19:16:38+00:00"
+            },
+            {
+                "sha": "6926a38",
+                "message": "reverted a fix for logs view, which didnt display whitespace correctly",
+                "author": "ArabCoders",
+                "date": "2025-02-19T18:31:28+00:00"
+            },
+            {
+                "sha": "5845160",
+                "message": "standardize on 180secs as minimum to trigger watch progress sync for played items.",
+                "author": "ArabCoders",
+                "date": "2025-02-19T18:21:06+00:00"
+            },
+            {
+                "sha": "ea4c113",
+                "message": "Better log display and filtering",
+                "author": "ArabCoders",
+                "date": "2025-02-19T15:52:25+00:00"
+            },
+            {
+                "sha": "48e5e4d",
+                "message": "experimental support for syncing watch progress for played items. #617",
+                "author": "ArabCoders",
+                "date": "2025-02-19T10:06:36+00:00"
+            },
+            {
+                "sha": "2f287ae",
+                "message": "Added the ability to remove all events that are not in pending state",
+                "author": "ArabCoders",
+                "date": "2025-02-19T10:05:37+00:00"
+            },
+            {
+                "sha": "cd8a2fd",
+                "message": "Update log formatter to account for different user@backend format",
+                "author": "ArabCoders",
+                "date": "2025-02-19T10:04:59+00:00"
+            },
+            {
+                "sha": "fdd1cf1",
+                "message": "updated testcase to include missing header.",
+                "author": "ArabCoders",
+                "date": "2025-02-18T16:16:53+00:00"
+            },
+            {
+                "sha": "50ebcb2",
+                "message": "Update database maintenance tasks to include sub-users dbs",
+                "author": "ArabCoders",
+                "date": "2025-02-18T16:08:04+00:00"
+            },
+            {
+                "sha": "90e73bc",
+                "message": "use jsonl for logs to allow us better control on lines display.",
+                "author": "ArabCoders",
+                "date": "2025-02-18T14:13:03+00:00"
+            },
+            {
+                "sha": "e1a4e50",
+                "message": "limit task event log to 200 lines",
+                "author": "ArabCoders",
+                "date": "2025-02-18T10:49:42+00:00"
+            }
+        ]
+    },
+    {
         "tag": "master-20250218-e8e2dbe",
         "date": "2025-02-18T10:45:59+00:00",
         "commits": [
