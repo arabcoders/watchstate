@@ -1,8 +1,20 @@
 [
     {
-        "tag": "dev-20250220-c1c7431",
-        "date": "2025-02-20T14:31:25+00:00",
+        "tag": "dev-20250221-89c284a",
+        "date": "2025-02-21T14:38:26+00:00",
         "commits": [
+            {
+                "sha": "89c284a",
+                "message": "minor change on how we display http erros for emby to only display it once",
+                "author": "ArabCoders",
+                "date": "2025-02-21T14:38:26+00:00"
+            },
+            {
+                "sha": "03db2ff",
+                "message": "minor updates to how we display data in events view page.",
+                "author": "ArabCoders",
+                "date": "2025-02-21T14:37:52+00:00"
+            },
             {
                 "sha": "c1c7431",
                 "message": "display event logs as actual logs instead of JSON array.",
